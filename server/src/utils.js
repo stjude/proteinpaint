@@ -791,31 +791,6 @@ export function snpgtCacheFile(cacheid, ds) {
 	return path.join(cachedir, 'snpgt', cacheid)
 }
 
-export async function run_fdr(plst) {
-	// list of pvalues
-	const infile = path.join(cachedir, Math.random().toString())
-	const outfile = infile + '.out'
-	try {
-		await write_file(infile, plst.join('\t'))
-		await run_fdr_2(infile, outfile)
-		const text = await read_file(outfile)
-		return text.trim().split('\n').map(Number)
-	} finally {
-		// also when Rscript fails, so that the temporary files do not accumulate in cachedir
-		fs.unlink(infile, () => {})
-		fs.unlink(outfile, () => {})
-	}
-}
-
-function run_fdr_2(infile, outfile) {
-	return new Promise((resolve, reject) => {
-		// --vanilla, same as run_R()
-		const sp = spawn('Rscript', ['--vanilla', path.join(serverconfig.binpath, 'utils/fdr.R'), infile, outfile])
-		sp.on('close', () => resolve())
-		sp.on('error', reject)
-	})
-}
-
 export function stripJsScript(text) {
 	return text.replace(/\<script|\bon[\w]{1,38}\b[\ \t\n]*\=/gi, ' _')
 	/*

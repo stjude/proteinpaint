@@ -3,31 +3,48 @@ import type { ChildProcessWithoutNullStreams } from 'child_process'
 import path from 'path'
 import serverconfig from '../serverconfig.js'
 import { illegalUrlHost } from '../utils.js'
+import { specs as fimoSpecs } from './fimo.ts'
+import { specs as gfClientSpecs } from './gfClient.ts'
+import { specs as h5dumpSpecs } from './h5dump.ts'
 import { specs as hicstrawSpecs } from './hicstraw.ts'
+import { specs as rscriptSpecs } from './rscript.ts'
+import { specs as systemSpecs } from './system.ts'
+import { specs as versionSpecs } from './versions.ts'
 
 /*
 Starts an external tool from a named operation and its input fields, instead of from an argv array.
 
 Each operation has a spec, in a file of this dir, with its input fields and an argv template. runTool():
 - requires the input to be a plain object with exactly the fields of the spec
-- checks each field value by the field type: an enum, an integer range, a string pattern, or a file path or url
+- checks each field value by the field type: an enum, an integer or number range, a string pattern, a file path
+  under an allowed root dir, or a file path or url
 - builds argv from the template, so that a field value can only be in the argv slot that the spec gives it
 - checks every value slot again: a non-empty string of bounded length, with no control character, that does
   not start with "-"
 - throws before the tool is started if any check fails
+
+runToolOutput() does the same and resolves with the exit code and output of the tool.
 
 The specs are checked when this module is loaded, see checkSpec().
 
 see test/tools.unit.spec.ts for the specs of this module
 */
 
+/** a root dir of a file field: tp is serverconfig.tpmasterdir, cache is serverconfig.cachedir */
+export type FileRoot = 'tp' | 'cache'
+
 export type Field =
 	/** one of the listed strings */
 	| { type: 'enum'; values: readonly string[] }
-	/** a number that is an integer from min to max */
+	/** a number that is an integer from min to max, where min >= 0 */
 	| { type: 'int'; min: number; max: number }
+	/** a finite number from min to max, where min >= 0 */
+	| { type: 'number'; min: number; max: number }
 	/** a string that matches the pattern, which must start with ^ and end with $ */
 	| { type: 'string'; pattern: RegExp; maxLength: number }
+	/** a path under one of the roots; with debugmodeAnyRoot, any absolute path is allowed when serverconfig.debugmode
+	 * is true, for a dataset file that a dev environment may keep outside tp */
+	| { type: 'file'; roots: readonly FileRoot[]; debugmodeAnyRoot?: boolean }
 	/** a path under serverconfig.tpmasterdir, or an http or https url with an allowed host */
 	| { type: 'fileOrUrl' }
 
@@ -39,10 +56,22 @@ export type ToolSpec = {
 	argv: readonly string[]
 }
 
+export type ToolOutput = { code: number | null; stdout: string; stderr: string }
+
 /** the upper limit of the length of an argument */
 const maxArgLength = 4096
 
-export const specs: Readonly<Record<string, ToolSpec>> = deepFreeze({ ...hicstrawSpecs })
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
+
+const fileRoots: Readonly<Record<FileRoot, () => string>> = Object.freeze({
+	tp: () => serverconfig.tpmasterdir,
+	cache: () => cachedir
+})
+
+export const specs: Readonly<Record<string, ToolSpec>> = deepFreeze(
+	mergeSpecs([fimoSpecs, gfClientSpecs, h5dumpSpecs, hicstrawSpecs, rscriptSpecs, systemSpecs, versionSpecs])
+)
 for (const [op, spec] of Object.entries(specs)) checkSpec(op, spec)
 
 /** op: a key of specs, such as 'hicstraw.query'; input: the field values of the op */
@@ -54,6 +83,22 @@ export function runTool(op: string, input: Record<string, unknown>): ChildProces
 	if (typeof bin != 'string' || !bin) throw `${op}: tool binary is not configured`
 	// no options: the default of no shell, so that each argument reaches the tool as one literal string
 	return spawn(bin, argv)
+}
+
+/** same as runTool(), and resolves with the exit code and output; rejects with the error if the tool cannot be started */
+export function runToolOutput(op: string, input: Record<string, unknown>): Promise<ToolOutput> {
+	return new Promise((resolve, reject) => {
+		const ps = runTool(op, input)
+		const stdout: Buffer[] = []
+		const stderr: Buffer[] = []
+		ps.stdout.on('data', d => stdout.push(d))
+		ps.stderr.on('data', d => stderr.push(d))
+		ps.on('error', reject)
+		ps.on('close', code => {
+			// a multibyte character may be split across chunks, so the chunks are joined before decoding
+			resolve({ code, stdout: Buffer.concat(stdout).toString('utf8'), stderr: Buffer.concat(stderr).toString('utf8') })
+		})
+	})
 }
 
 /** returns the argv of an op from its input, or throws */
@@ -85,37 +130,65 @@ function checkField(field: Field, v: unknown, msg: string): string {
 		case 'int':
 			if (typeof v != 'number' || !Number.isSafeInteger(v) || v < field.min || v > field.max) throw msg
 			return String(v)
+		case 'number':
+			if (typeof v != 'number' || !Number.isFinite(v) || v < field.min || v > field.max) throw msg
+			return String(v)
 		case 'string':
 			// the whole value must match, since an anchored pattern with an alternation, such as /^a|b$/, matches part of xb
 			if (typeof v != 'string' || v.length > field.maxLength || v.match(field.pattern)?.[0] !== v) throw msg
 			return v
+		case 'file':
+			if (field.debugmodeAnyRoot && serverconfig.debugmode) return checkAbsoluteFile(v, msg)
+			return checkFile(v, field.roots, msg)
 		case 'fileOrUrl':
-			return checkFileOrUrl(v, msg)
+			if (typeof v == 'string' && v.includes('://')) return checkUrl(v, msg)
+			return checkFile(v, ['tp'], msg)
 		default:
 			throw msg
 	}
 }
 
-function checkFileOrUrl(v: unknown, msg: string): string {
-	if (typeof v != 'string' || !v) throw msg
-	if (v.includes('://')) {
-		if (!serverconfig.features?.ALLOW_remotefilefromurl) throw msg
-		let protocol
-		try {
-			protocol = new URL(v).protocol
-		} catch (_) {
-			throw msg
-		}
-		if (protocol != 'http:' && protocol != 'https:') throw msg
-		if (illegalUrlHost(v)) throw msg
-		return v
+/** returns the absolute path of a file under one of the roots, where a relative path is resolved under the first root */
+function checkFile(v: unknown, roots: readonly FileRoot[], msg: string): string {
+	if (!isFilePath(v)) throw msg
+	// a ".." segment could leave the root
+	if (v.split('/').includes('..')) throw msg
+	for (const r of path.isAbsolute(v) ? roots : roots.slice(0, 1)) {
+		const dir = fileRoots[r]()
+		if (!dir) continue
+		const root = path.resolve(dir)
+		const file = path.resolve(root, v)
+		if (file.startsWith(root + path.sep)) return file
 	}
-	// a ".." segment could leave the root, and a segment that starts with "-" is not an expected file name
-	if (v.split(/[/\\]/).some(s => s == '..' || s[0] == '-')) throw msg
-	const root = path.resolve(serverconfig.tpmasterdir)
-	const file = path.resolve(root, v)
-	if (!file.startsWith(root + path.sep)) throw msg
-	return file
+	throw msg
+}
+
+function checkAbsoluteFile(v: unknown, msg: string): string {
+	if (!isFilePath(v) || !path.isAbsolute(v)) throw msg
+	return path.resolve(v)
+}
+
+/** the characters of a file path, which include the space and parentheses that some dataset file names have */
+const filePathChars = /^[A-Za-z0-9 _.,+=@~()/-]+$/
+
+/** a file path of the allowed characters, where no segment starts with "-", which is not an expected file name */
+function isFilePath(v: unknown): v is string {
+	return (
+		typeof v == 'string' && v.length <= maxArgLength && filePathChars.test(v) && !v.split('/').some(s => s[0] == '-')
+	)
+}
+
+function checkUrl(v: string, msg: string): string {
+	if (!serverconfig.features?.ALLOW_remotefilefromurl) throw msg
+	let protocol
+	try {
+		protocol = new URL(v).protocol
+	} catch (_) {
+		throw msg
+	}
+	if (protocol != 'http:' && protocol != 'https:') throw msg
+	if (illegalUrlHost(v)) throw msg
+	return v
 }
 
 /** the check of every value slot, whatever its field type */
@@ -145,14 +218,33 @@ export function checkSpec(op: string, spec: ToolSpec) {
 			if (/[gy]/.test(flags)) throw `tool spec ${op}: pattern of ${name} must not have the g or y flag`
 			if (!Number.isInteger(field.maxLength) || field.maxLength < 1 || field.maxLength > maxArgLength)
 				throw `tool spec ${op}: maxLength of ${name} must be from 1 to ${maxArgLength}`
-		} else if (field.type == 'int') {
-			if (!Number.isSafeInteger(field.min) || !Number.isSafeInteger(field.max) || field.min > field.max)
-				throw `tool spec ${op}: min and max of ${name} must be integers, with min <= max`
+		} else if (field.type == 'int' || field.type == 'number') {
+			// a negative value would start with "-", which every value slot rejects
+			const isNum = field.type == 'int' ? Number.isSafeInteger : Number.isFinite
+			if (!isNum(field.min) || !isNum(field.max) || field.min < 0 || field.min > field.max)
+				throw `tool spec ${op}: min and max of ${name} must be ${
+					field.type == 'int' ? 'integers' : 'numbers'
+				}, with 0 <= min <= max`
 		} else if (field.type == 'enum') {
 			if (!field.values.length || !field.values.every(isSafeValueArg))
 				throw `tool spec ${op}: values of ${name} must be safe arguments`
+		} else if (field.type == 'file') {
+			if (!field.roots.length || !field.roots.every(r => Object.hasOwn(fileRoots, r)))
+				throw `tool spec ${op}: roots of ${name} must be one or more of ${Object.keys(fileRoots)}`
 		} else if (field.type != 'fileOrUrl') throw `tool spec ${op}: unknown type of ${name}`
 	}
+}
+
+/** throws if an op is in more than one spec file, which a plain object spread would silently overwrite */
+export function mergeSpecs(lst: Record<string, ToolSpec>[]): Record<string, ToolSpec> {
+	const all: Record<string, ToolSpec> = {}
+	for (const s of lst) {
+		for (const [op, spec] of Object.entries(s)) {
+			if (Object.hasOwn(all, op)) throw `tool spec ${op} is defined more than once`
+			all[op] = spec
+		}
+	}
+	return all
 }
 
 function deepFreeze<T>(o: T): T {

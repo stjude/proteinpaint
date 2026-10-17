@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+import { runToolOutput } from '#src/tools/index.ts'
 
 export async function getH5samples(file: string, path = 'samples'): Promise<string[]> {
 	const stdout = await runH5dump(file, path)
@@ -7,27 +7,10 @@ export async function getH5samples(file: string, path = 'samples'): Promise<stri
 	return samples
 }
 
-function runH5dump(file: string, path: string): Promise<string> {
-	return new Promise((resolve, reject) => {
-		const ps = spawn('h5dump', ['-d', path, file])
-		let stdout = ''
-		let stderr = ''
-
-		ps.stdout.on('data', data => {
-			stdout += data
-		})
-		ps.stderr.on('data', data => {
-			stderr += data
-		})
-		ps.on('error', reject)
-		ps.on('close', code => {
-			if (code === 0) {
-				resolve(stdout)
-			} else {
-				reject(new Error(`h5dump failed for dataset '${path}' of ${file}: ${stderr || `exit code ${code}`}`))
-			}
-		})
-	})
+async function runH5dump(file: string, path: string): Promise<string> {
+	const { code, stdout, stderr } = await runToolOutput('h5dump.dataset', { dataset: path, file })
+	if (code !== 0) throw new Error(`h5dump failed for dataset '${path}' of ${file}: ${stderr || `exit code ${code}`}`)
+	return stdout
 }
 
 function parseH5dumpStrings(text: string): string[] {

@@ -3,7 +3,6 @@ import readline from 'readline'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import { validate_variant2samples } from './mds3.variant2samples.js'
@@ -56,6 +55,7 @@ import { dtTermTypes, getGvQueryRegion, getGvQueryKey, matchesGvQueryEntry } fro
 import { TermTypes } from '#types'
 import { isNumeric } from '#shared/helpers.js'
 import { validate_query_junction } from './j2/validate.ts'
+import { runToolOutput } from './tools/index.ts'
 
 /*
 init
@@ -610,10 +610,8 @@ export async function validate_cumburden(ds) {
 			throw `'..' path segment is not allowed in ds.cohort.cumburden.files.${name}`
 		const f = path.join(serverconfig.tpmasterdir, dir, fname)
 		if (!fs.existsSync(f)) throw `ds.cohort.burden.files.${name}='${fname}' not found`
-		const out = spawnSync(serverconfig.Rscript, ['--vanilla', '-e', `load('${f}')`], {
-			encoding: 'utf-8'
-		})
-		if (out?.status || out?.stderr) {
+		const out = await runToolOutput('Rscript.loadRData', { file: f })
+		if (out.code || out.stderr) {
 			console.log(out)
 			throw `validation error, R loading of ds.cohort.cumburden.files.${name}`
 		}

@@ -7,10 +7,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { mayLog } from '../helpers.ts'
-import { promisify } from 'node:util'
-import { execFile as execFileCallback } from 'node:child_process'
-
-const execFile = promisify(execFileCallback)
+import { runToolOutput } from '../tools/index.ts'
 
 // Constants
 const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
@@ -24,8 +21,8 @@ async function getAvailableMemoryMB(): Promise<number> {
 		// macOS keeps few pages free and fills the rest with reclaimable cache, which process.availableMemory()
 		// and os.freemem() count as used, so free + inactive pages are read from vm_stat
 		try {
-			const { stdout } = await execFile('vm_stat')
-			const output = stdout.toString()
+			const { code, stdout: output } = await runToolOutput('vm_stat', {})
+			if (code !== 0) throw `vm_stat exited with code ${code}`
 
 			// Parse page size from vm_stat header: "page size of 16384 bytes" on Apple silicon, 4096 on Intel macs
 			const headerLine = output.split('\n')[0] || ''

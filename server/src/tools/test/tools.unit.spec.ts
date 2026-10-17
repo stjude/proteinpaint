@@ -3,7 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import { runTool, getArgv, checkSpec, specs } from '#src/tools/index.ts'
+import { runTool, runToolOutput, getArgv, checkSpec, mergeSpecs, specs } from '#src/tools/index.ts'
 import type { ToolSpec } from '#src/tools/index.ts'
 
 /*
@@ -11,14 +11,19 @@ test sections:
 
 hicstraw.query: argv of valid inputs
 hicstraw.query: rejected inputs
+other ops: argv of valid inputs, and rejected values
+file fields: roots and debugmodeAnyRoot
 runTool(): does not start the tool for a rejected input
 runTool(): passes the argv of a valid input
+runToolOutput(): resolves with the exit code and output
 checkSpec(): rejects malformed specs
+mergeSpecs(): rejects an op that is in more than one spec file
 specs are frozen
 */
 
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-tools-'))
 const tp = path.resolve(serverconfig.tpmasterdir)
+const cache = path.resolve(serverconfig.cachedir)
 const op = 'hicstraw.query'
 const spec = specs[op]
 
@@ -60,6 +65,12 @@ const badValues: Record<string, unknown[]> = {
 		path.dirname(tp) + '/x.hic',
 		tp, // the root itself is not a file under it
 		'a/x.hic\0',
+		'a/x.hic;ls',
+		'a/$(ls).hic',
+		'a/`ls`.hic',
+		"a/x'.hic",
+		'a/x|y.hic',
+		'a/*.hic',
 		'file:///etc/passwd',
 		'ftp://a.org/x.hic',
 		['a.hic'],
@@ -171,6 +182,151 @@ tape('hicstraw.query: rejected inputs', test => {
 	test.end()
 })
 
+/** for each op other than hicstraw.query: a valid input, its argv, and values that must be rejected */
+const otherOps: Record<string, { input: Record<string, unknown>; argv: string[]; bad: Record<string, unknown[]> }> = {
+	'fimo.scan': {
+		input: { thresh: 1e-4, motifDb: 'anno/db/motif.meme', fasta: path.join(cache, '0.123') },
+		argv: [
+			'--parse-genomic-coord',
+			'--verbosity',
+			'1',
+			'--text',
+			'--thresh',
+			'0.0001',
+			path.join(tp, 'anno/db/motif.meme'),
+			path.join(cache, '0.123')
+		],
+		bad: {
+			thresh: ['1e-4', '-o', -0.1, 1.5, NaN, Infinity, null],
+			motifDb: ['../x.meme', '/etc/passwd', path.join(cache, 'x.meme'), '-o', ''],
+			fasta: [path.join(tp, 'x.fa'), '/tmp/x.fa', path.join(cache, '../x.fa'), path.join(cache, '-o'), cache]
+		}
+	},
+	'gfClient.align': {
+		input: {
+			host: 'blat.a.org',
+			port: 1234,
+			seqDir: '/home/root/pp/tp/genomes/',
+			queryFile: path.join(cache, 'q'),
+			outFile: path.join(cache, 'q.out')
+		},
+		argv: [
+			'blat.a.org',
+			'1234',
+			'/home/root/pp/tp/genomes/',
+			path.join(cache, 'q'),
+			path.join(cache, 'q.out'),
+			'-q=dna',
+			'-nohead',
+			'-minScore=20',
+			'-minIdentity=0',
+			'-out=psl'
+		],
+		bad: {
+			host: ['-o', 'a.org;ls', 'a org', '', 'a'.repeat(254), 1234],
+			port: ['1234', 0, 65536, 1.5],
+			seqDir: ['-o', '/a dir/', '/a;ls', '', '/a/\n'],
+			queryFile: [path.join(tp, 'q'), '/etc/passwd', path.join(cache, '../q')],
+			outFile: ['/tmp/q.out', path.join(cache, '-o')]
+		}
+	},
+	'h5dump.dataset': {
+		input: { dataset: '/meta/samples/names', file: 'files/hg38/a.h5' },
+		argv: ['-d', '/meta/samples/names', path.join(tp, 'files/hg38/a.h5')],
+		bad: {
+			dataset: ['-o', '/meta//names', '/meta/../names', 'a b', 'a;ls', '/', '', 'a'.repeat(257), ['samples']],
+			file: ['../a.h5', '/etc/passwd', path.join(cache, 'a.h5'), 'a/-o.h5']
+		}
+	},
+	'Rscript.loadRData': {
+		input: { file: path.join(tp, 'files/a.RData') },
+		argv: ['--vanilla', '-e', 'load(commandArgs(trailingOnly = TRUE)[1])', path.join(tp, 'files/a.RData')],
+		bad: { file: ["a'); system('ls'); ('", '/etc/passwd', path.join(tp, '../a.RData'), '-o'] }
+	},
+	vm_stat: { input: {}, argv: [], bad: {} },
+	'samtools.version': { input: {}, argv: ['--version'], bad: {} },
+	'bcftools.version': { input: {}, argv: ['-v'], bad: {} }
+}
+
+tape('other ops: argv of valid inputs, and rejected values', test => {
+	// debugmode allows a dataset file outside tp, see the file fields section
+	const prev = serverconfig.debugmode
+	serverconfig.debugmode = false
+	test.deepEqual(Object.keys(specs).sort(), [...Object.keys(otherOps), op].sort(), 'should test every op')
+	for (const [o, { input, argv, bad }] of Object.entries(otherOps)) {
+		test.deepEqual(getArgv(o, specs[o], input), argv, `${o}: should put each field value in its argv slot`)
+		test.throws(
+			() => getArgv(o, specs[o], { ...input, extra: 'x' }),
+			/unexpected input field/,
+			`${o}: should reject an extra field`
+		)
+		for (const [name, values] of Object.entries(bad)) {
+			for (const v of values) {
+				test.throws(
+					() => getArgv(o, specs[o], { ...input, [name]: v }),
+					new RegExp(`invalid ${name}`),
+					`${o}: should reject ${name}=${JSON.stringify(v)}`
+				)
+			}
+		}
+	}
+	serverconfig.debugmode = prev
+	test.end()
+})
+
+tape('file fields: roots and debugmodeAnyRoot', test => {
+	const s = specs['fimo.scan']
+	const input = otherOps['fimo.scan'].input
+	test.equal(
+		getArgv('fimo.scan', s, { ...input, fasta: '0.123' })[7],
+		path.join(cache, '0.123'),
+		'should resolve a relative path under the root'
+	)
+	test.equal(
+		getArgv('fimo.scan', s, { ...input, fasta: 'a b (1),v2=x@y~.fa' })[7],
+		path.join(cache, 'a b (1),v2=x@y~.fa'),
+		'should accept the space, parentheses, and other allowed characters of a file name'
+	)
+	const both: ToolSpec = { bin: () => 'x', fields: { f: { type: 'file', roots: ['tp', 'cache'] } }, argv: ['$f'] }
+	test.equal(
+		getArgv('t', both, { f: path.join(cache, 'a') })[0],
+		path.join(cache, 'a'),
+		'should accept an absolute path under the second root'
+	)
+	test.equal(
+		getArgv('t', both, { f: 'a' })[0],
+		path.join(tp, 'a'),
+		'should resolve a relative path under the first root only'
+	)
+	const r = specs['Rscript.loadRData']
+	const outside = path.join(path.dirname(tp), 'native/a.RData')
+	const prev = serverconfig.debugmode
+	try {
+		serverconfig.debugmode = false
+		test.throws(
+			() => getArgv('Rscript.loadRData', r, { file: outside }),
+			/invalid file/,
+			'should reject a path outside tp when not in debugmode'
+		)
+		serverconfig.debugmode = true
+		test.deepEqual(
+			getArgv('Rscript.loadRData', r, { file: outside }).at(-1),
+			outside,
+			'should accept an absolute path outside tp in debugmode'
+		)
+		for (const file of ['a.RData', '/a/-o.RData', "/a'); system('ls'); ('"])
+			if (file[0] != '/' || file.includes('-o'))
+				test.throws(
+					() => getArgv('Rscript.loadRData', r, { file }),
+					/invalid file/,
+					`should still reject ${file} in debugmode`
+				)
+	} finally {
+		serverconfig.debugmode = prev
+	}
+	test.end()
+})
+
 tape('runTool(): does not start the tool for a rejected input', async test => {
 	const marker = path.join(tmpdir, 'started')
 	const bin = path.join(tmpdir, 'mark.sh')
@@ -223,6 +379,38 @@ tape('runTool(): passes the argv of a valid input', async test => {
 	test.end()
 })
 
+tape('runToolOutput(): resolves with the exit code and output', async test => {
+	const bin = path.join(tmpdir, 'out.sh')
+	fs.writeFileSync(bin, `#!/bin/sh\nprintf '%s ' "$@"\nprintf 'warn' >&2\nexit 3\n`, { mode: 0o755 })
+	const prev = serverconfig.fimo
+	serverconfig.fimo = bin
+	try {
+		const { input, argv } = otherOps['fimo.scan']
+		const out = await runToolOutput('fimo.scan', input)
+		test.deepEqual(
+			out,
+			{ code: 3, stdout: argv.join(' ') + ' ', stderr: 'warn' },
+			'should resolve with the code, stdout, and stderr'
+		)
+		serverconfig.fimo = path.join(tmpdir, 'missing')
+		try {
+			await runToolOutput('fimo.scan', input)
+			test.fail('should reject when the tool cannot be started')
+		} catch (e: any) {
+			test.equal(e?.code, 'ENOENT', 'should reject with the spawn error when the tool cannot be started')
+		}
+		try {
+			await runToolOutput('fimo.scan', { ...input, thresh: '-o' })
+			test.fail('should reject an invalid input')
+		} catch (e) {
+			test.match(String(e), /invalid thresh/, 'should reject an invalid input')
+		}
+	} finally {
+		serverconfig.fimo = prev
+	}
+	test.end()
+})
+
 tape('checkSpec(): rejects malformed specs', test => {
 	const base = (): ToolSpec => ({
 		bin: () => 'x',
@@ -241,13 +429,28 @@ tape('checkSpec(): rejects malformed specs', test => {
 		['an int with min > max', s => (s.fields.a = { type: 'int', min: 2, max: 1 }), /min <= max/],
 		['an enum value starting with -', s => (s.fields.a = { type: 'enum', values: ['-o'] }), /safe arguments/],
 		['an unknown field type', s => (s.fields.a = { type: 'any' }), /unknown type/],
-		['a bin that is not a function', s => (s.bin = 'x'), /bin must be a function/]
+		['a bin that is not a function', s => (s.bin = 'x'), /bin must be a function/],
+		['a negative int min', s => (s.fields.a = { type: 'int', min: -1, max: 1 }), /0 <= min <= max/],
+		['a non-finite number max', s => (s.fields.a = { type: 'number', min: 0, max: Infinity }), /0 <= min <= max/],
+		['a file field with no roots', s => (s.fields.a = { type: 'file', roots: [] }), /roots of a/],
+		['a file field with an unknown root', s => (s.fields.a = { type: 'file', roots: ['/'] }), /roots of a/]
 	]
 	for (const [label, change, re] of cases) {
 		const s = base()
 		change(s)
 		test.throws(() => checkSpec('t', s), re, `should reject ${label}`)
 	}
+	test.end()
+})
+
+tape('mergeSpecs(): rejects an op that is in more than one spec file', test => {
+	const s: ToolSpec = { bin: () => 'x', fields: {}, argv: [] }
+	test.deepEqual(Object.keys(mergeSpecs([{ a: s }, { b: s }])), ['a', 'b'], 'should merge distinct ops')
+	test.throws(
+		() => mergeSpecs([{ a: s }, { a: s }]),
+		/tool spec a is defined more than once/,
+		'should reject a duplicate op'
+	)
 	test.end()
 })
 
