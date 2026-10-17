@@ -599,7 +599,10 @@ tape('Official - sv/fusion with multiple partner breakpoints', test => {
 			const rows = table.querySelectorAll('tbody tr, tr.sjpp_row_wrapper')
 			test.equal(rows.length, 2, 'sample table has the 2 samples of the most frequent breakpoint')
 
-			if (test._ok) holder.remove()
+			if (test._ok) {
+				tk.itemtip.d.remove()
+				holder.remove()
+			}
 		} catch (e) {
 			test.fail(e?.message || e)
 		}

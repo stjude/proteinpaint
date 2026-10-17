@@ -130,9 +130,10 @@ export class TermSettingApi {
 				disable_terms: self.disable_terms,
 				termCollectionSelectionMode: allowsCollectionFraction(self.usecase) ? 'fraction' : undefined,
 				click_term: async t => {
-					self.dom.nopilldiv.style('display', 'none')
-					self.dom.pilldiv.style('display', 'none')
-					self.dom.loadingdiv.text('Loading ...').style('display', 'inline-block')
+					// with renderAs 'none' there is no pill, nor its nopilldiv, pilldiv and loadingdiv
+					self.dom.nopilldiv?.style('display', 'none')
+					self.dom.pilldiv?.style('display', 'none')
+					self.dom.loadingdiv?.text('Loading ...').style('display', 'inline-block')
 					self.dom.tip.hide()
 					this.toggleOptionalLoadingMasks('')
 					if (testClickTermDelay) await sleep(testClickTermDelay)
@@ -150,21 +151,23 @@ export class TermSettingApi {
 						// tw is now furbished
 					} catch (e: any) {
 						if (this.isAbortError(e)) {
-							self.dom.loadingdiv.text('')
+							self.dom.loadingdiv?.text('')
 						} else {
 							const msg = e.message || e.error || e
-							self.dom.loadingdiv.text(`Error loading term ${self.handler?.getPillName?.(tw.term)}: ${msg}`)
+							const text = `Error loading term ${self.handler?.getPillName?.(tw.term)}: ${msg}`
+							if (self.dom.loadingdiv) self.dom.loadingdiv.text(text)
+							else alert(text)
 						}
-						self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
-						self.dom.pilldiv.style('display', self.term ? 'block' : 'none')
+						self.dom.nopilldiv?.style('display', !self.term ? 'inline-block' : 'none')
+						self.dom.pilldiv?.style('display', self.term ? 'block' : 'none')
 						this.toggleOptionalLoadingMasks('none')
 						return
 					}
 
 					self.opts.callback!(tw)
-					self.dom.loadingdiv.style('display', 'none')
-					self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
-					self.dom.pilldiv.style('display', self.term ? 'block' : 'none')
+					self.dom.loadingdiv?.style('display', 'none')
+					self.dom.nopilldiv?.style('display', !self.term ? 'inline-block' : 'none')
+					self.dom.pilldiv?.style('display', self.term ? 'block' : 'none')
 					this.toggleOptionalLoadingMasks('none')
 				}
 			}

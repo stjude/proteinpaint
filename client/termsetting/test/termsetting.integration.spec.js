@@ -22,6 +22,8 @@ Tests:
 	Numerical term: integer custom bins
 	Conditional term
 	Custom vocabulary
+	renderAs=none: replace a term
+	renderAs=none: error loading the replacement term
 	noTermPromptOptions
 	samplelst term
 	geneVariant term
@@ -1106,6 +1108,112 @@ tape('Custom vocabulary', async test => {
 	)
 
 	if (test._ok) opts.pill.destroy()
+	test.end()
+})
+
+// a pill with renderAs='none' has no holder, as used by a matrix term label or the swimmer legend:
+// the caller shows its menu with showMenu() under an element of its own
+async function getNoPillOpts(_opts = {}) {
+	const vocab = getExample()
+	const state = { vocab, termfilter: {} }
+	const app = { getState: () => state, opts: { state } }
+	const vocabApi = vocabInit({ app, state })
+	await vocabApi.getTermdbConfig()
+	vocabApi.main()
+
+	const opts = { vocab, callbackArgs: [] }
+	// the element that the caller of showMenu() clicked
+	opts.anchor = d3s.select('body').append('div').style('margin', '20px').text('anchor')
+	opts.pill = termsettingInit({
+		renderAs: 'none',
+		vocabApi,
+		menuOptions: '*',
+		customFillTw: _opts.customFillTw,
+		debug: true,
+		callback: tw => opts.callbackArgs.push(tw)
+	})
+	await opts.pill.main({ term: vocab.terms.find(d => d.id === 'c'), q: { type: 'values' } })
+	opts.tip = opts.pill.Inner.dom.tip
+	return opts
+}
+
+// shows the menu under opts.anchor, clicks Replace, then term 'd' in the tree
+async function replaceNoPillTerm(test, opts) {
+	opts.pill.showMenu(null, opts.anchor.node())
+	const tipd = opts.tip.d
+	test.equal(tipd.style('display'), 'block', 'should show the menu')
+	const replaceBtn = tipd
+		.selectAll('.sja_menuoption')
+		.filter(function () {
+			return this.innerText.toLowerCase() == 'replace'
+		})
+		.node()
+	test.equal(replaceBtn instanceof HTMLElement, true, 'should have a Replace menu option')
+	replaceBtn.click()
+
+	await detectLst({ target: tipd.node(), selector: '.termdiv', matchAs: '>=' })
+	tipd
+		.selectAll('.termbtn')
+		.filter(d => d.id === 'a')
+		.node()
+		.click()
+	const clickTerm = await detectGte({ target: tipd.node(), selector: '.sja_tree_click_term', count: 2 })
+	clickTerm.find(d => d.__data__.id === 'd').click()
+}
+
+tape('renderAs=none: replace a term', async test => {
+	test.timeoutAfter(5000)
+
+	let message = 'should not throw without a holder'
+	let opts
+	try {
+		opts = await getNoPillOpts()
+		test.pass(message)
+	} catch (e) {
+		test.fail(message + ': ' + e)
+		test.end()
+		return
+	}
+	test.equal(opts.pill.Inner.dom.pilldiv, undefined, 'should not render a pill')
+
+	await replaceNoPillTerm(test, opts)
+	await whenGone({ target: opts.tip.d.node(), selector: '.sja_menu_div' })
+	// click_term() awaits fillTermWrapper() before calling back
+	for (let i = 0; i < 50 && !opts.callbackArgs.length; i++) await sleep(20)
+
+	test.equal(opts.callbackArgs.length, 1, 'should call back once')
+	test.equal(opts.callbackArgs[0]?.term?.id, 'd', `should call back with the replacement term 'd'`)
+	test.equal(opts.tip.d.style('display'), 'none', 'should hide the menu')
+
+	if (test._ok) opts.pill.destroy()
+	test.end()
+})
+
+tape('renderAs=none: error loading the replacement term', async test => {
+	test.timeoutAfter(5000)
+
+	const alerts = []
+	const alert = window.alert
+	window.alert = msg => alerts.push(msg)
+	try {
+		const opts = await getNoPillOpts({
+			// a term type without a handler makes fillTermWrapper() throw
+			customFillTw: tw => ({ ...tw, term: { ...tw.term, type: 'unknownTestType' } })
+		})
+		await replaceNoPillTerm(test, opts)
+		for (let i = 0; i < 50 && !alerts.length; i++) await sleep(20)
+
+		test.equal(alerts.length, 1, 'should alert the error, as there is no loadingdiv to show it')
+		test.true(
+			alerts[0]?.startsWith('Error loading term') && alerts[0].includes('unknownTestType'),
+			`should alert the term loading error, got '${alerts[0]}'`
+		)
+		test.equal(opts.callbackArgs.length, 0, 'should not call back')
+
+		if (test._ok) opts.pill.destroy()
+	} finally {
+		window.alert = alert
+	}
 	test.end()
 })
 
