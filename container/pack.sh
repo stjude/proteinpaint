@@ -22,6 +22,10 @@ PKGPATH=/home/root/pp/tmppack
 TMPPACKDIR=/home/root/pp/tmppack
 RUST_BINARIES_DIR=../rust-binaries
 
+# the macOS tar, such as in the front prepack script, otherwise adds a ._<name> entry with the extended attributes of
+# each file, which the image would extract with the owner of the host account; no effect with GNU tar
+export COPYFILE_DISABLE=1
+
 # this script should test packing and bundling, should not set up dev aliased exports
 # export NODE_OPTIONS='--conditions=sjpp/dev'
 
