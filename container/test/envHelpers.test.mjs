@@ -359,6 +359,80 @@ test('without process.execve(), a node command runs as a child process with a wa
 	assert.equal(ctx.spawned[0].opts.env.PP_CREDS, '{"a":1}')
 })
 
+test('PP_TOOL_RUNNER=1: the runner gets the child process permission and no credentials, and the server neither', t => {
+	const ctx = fakeContext({
+		env: {
+			PP_TOOL_RUNNER: '1',
+			PP_CREDS: '{"a":1}',
+			PP_CACHEID_CREDS: 'k',
+			PP_CREDS_HANDOFF_FILE: '/tmp/other.json',
+			PP_SERVERCONFIG_OVERRIDES: '{"backend_only":true}',
+			PP_MODE: 'container-prod'
+		}
+	})
+	const errors = []
+	t.mock.method(console, 'error', m => errors.push(m))
+	runInProcess(t, ['node', '--enable-source-maps', 'app.mjs'], ctx)
+	const flags = permissionFlags(getNodeConfig(ctx))
+	assert.ok(flags.includes('--allow-child-process'))
+	const socketPath = '/tmp/user/pp-runner-XXXXXX/tools.sock'
+
+	assert.equal(ctx.spawned.length, 1, 'only the runner is spawned')
+	const runner = ctx.spawned[0]
+	assert.equal(runner.cmd, '/node/v24/bin/node')
+	assert.deepEqual(runner.args, [
+		...flags,
+		'--enable-source-maps',
+		'/app/node_modules/@sjcrh/proteinpaint-server/src/toolRunner.js'
+	])
+	assert.deepEqual(runner.opts.stdio, ['ignore', 'inherit', 'inherit'])
+	assert.deepEqual(runner.opts.env, {
+		PP_TOOL_RUNNER: '1',
+		PP_MODE: 'container-prod',
+		PP_TOOL_RUNNER_SOCKET: socketPath,
+		// merged, and the runner checks a cache file under the configured cachedir
+		PP_SERVERCONFIG_OVERRIDES: '{"backend_only":true,"hideCachedir":false}'
+	})
+
+	assert.equal(ctx.execved.length, 1)
+	const server = ctx.execved[0]
+	assert.deepEqual(server.args, [
+		'node',
+		...flags.filter(f => f != '--allow-child-process'),
+		'--enable-source-maps',
+		'app.mjs'
+	])
+	assert.equal(server.env.PP_TOOL_RUNNER_SOCKET, socketPath)
+	assert.equal(server.env.PP_SERVERCONFIG_OVERRIDES, '{"backend_only":true}')
+	assert.equal(server.env.PP_CREDS, undefined)
+	assert.match(errors.join('\n'), /started the tool runner, the command runs without --allow-child-process/)
+})
+
+test('PP_TOOL_RUNNER: other commands and values are rejected before anything is started', t => {
+	for (const [env, args, re] of [
+		[{ PP_TOOL_RUNNER: '1' }, ['tsx', 'watch', 'server.ts'], /only supported for a node command without --watch/],
+		[{ PP_TOOL_RUNNER: '1' }, ['node', '--watch', 'app.mjs'], /only supported for a node command without --watch/],
+		[{ PP_TOOL_RUNNER: 'true' }, ['node', 'app.mjs'], /invalid PP_TOOL_RUNNER='true'/]
+	]) {
+		const ctx = fakeContext({ env })
+		t.mock.method(console, 'error', () => {})
+		assert.throws(() => runInProcess(t, args, ctx), re, args.join(' '))
+		assert.equal(ctx.spawned.length + ctx.execved.length, 0, args.join(' '))
+	}
+	const ctx = fakeContext({ env: { PP_TOOL_RUNNER: '1' }, execve: null })
+	assert.throws(() => runInProcess(t, ['node', 'app.mjs'], ctx), /with process.execve\(\)/)
+	assert.equal(ctx.spawned.length, 0)
+})
+
+test('without PP_TOOL_RUNNER, a node command has the child process permission and no runner', t => {
+	const ctx = fakeContext({ files: { '/app/.env': 'PP_TOOL_RUNNER=' } })
+	t.mock.method(console, 'error', () => {})
+	runInProcess(t, ['node', 'app.mjs'], ctx)
+	assert.equal(ctx.spawned.length, 0)
+	assert.ok(ctx.execved[0].args.includes('--allow-child-process'))
+	assert.equal('PP_TOOL_RUNNER_SOCKET' in ctx.execved[0].env, false)
+})
+
 test('smoke: the command replaces this process, with the permission model and credentials, and its exit code propagates', () => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'envHelpers-smoke-'))
 	// the handoff dir is created in os.tmpdir(), which is set here to check that the command can remove it
@@ -529,6 +603,7 @@ function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = 
 		tmpdir: '/tmp/user',
 		homedir: '/home/dev',
 		hasPermissionModel: false,
+		resolveToolRunner: () => '/app/node_modules/@sjcrh/proteinpaint-server/src/toolRunner.js',
 		checkPosture: opts => {
 			postureCalls.push(opts)
 			if (posture instanceof Error) throw posture

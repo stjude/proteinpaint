@@ -26,12 +26,12 @@ const scanFiles = ['R/index.js', 'python/index.js', 'rust/index.js']
 
 // files that still import child_process, with what each one starts
 const allowed = new Map([
-	['R/index.js', 'Rscript for run_R()'],
-	['python/index.js', 'python for run_python()'],
-	['rust/index.js', 'rust binaries for run_rust()'],
-	['server/genome/copyDataFilesFromRepo2Tp.js', 'test genome data setup'],
-	['server/src/tools/index.ts', 'the tools of the specs in server/src/tools, see runTool()'],
-	['server/src/utils.js', 'samtools and bcftools reads, see spawnTool() and get_lines_bigfile()']
+	// the server sets each package to start its processes with startProcess() in server/src/toolRunner/client.ts,
+	// and the package spawns them itself only when it is used without the server, such as in its own tests
+	['R/index.js', 'Rscript for run_R(), without the server'],
+	['python/index.js', 'python for run_python(), without the server'],
+	['rust/index.js', 'rust binaries for run_rust(), without the server'],
+	['server/src/toolRunner/spawnCommand.ts', 'the command of a request, in the tool runner or else in the server']
 ])
 
 tape('child_process imports', test => {

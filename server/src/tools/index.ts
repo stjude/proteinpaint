@@ -1,8 +1,8 @@
-import { spawn } from 'child_process'
-import type { ChildProcessWithoutNullStreams } from 'child_process'
 import path from 'path'
 import serverconfig from '../serverconfig.js'
 import { illegalUrlHost } from '../utils.js'
+import { startProcess } from '../toolRunner/client.ts'
+import type { ToolProcess } from '../toolRunner/client.ts'
 import { specs as bigbedSpecs } from './bigbed.ts'
 import { specs as fimoSpecs } from './fimo.ts'
 import { specs as gfClientSpecs } from './gfClient.ts'
@@ -32,6 +32,9 @@ index that it downloads for a url. That is the only field that may be optional. 
 as an absolute path under cachedir, which may have the characters of a url, see checkCacheDir().
 
 runToolOutput() does the same and resolves with the exit code and output of the tool.
+
+The tool is started by startProcess(), see toolRunner/client.ts, which may send the op and input to a tool runner
+process, where the same checks are done again before the tool is started.
 
 The specs are checked when this module is loaded, see checkSpec().
 
@@ -112,14 +115,9 @@ const patterns = new WeakMap<object, RegExp>()
 for (const [op, spec] of Object.entries(specs)) checkSpec(op, spec)
 
 /** op: a key of specs, such as 'hicstraw.query'; input: the field values of the op */
-export function runTool(op: string, input: Record<string, unknown>): ChildProcessWithoutNullStreams {
-	const spec = Object.hasOwn(specs, op) ? specs[op] : undefined
-	if (!spec) throw `unknown tool operation: ${op}`
-	const { argv, cwd } = getCall(op, spec, input)
-	const bin = spec.bin()
-	if (typeof bin != 'string' || !bin) throw `${op}: tool binary is not configured`
-	// no shell option, so that the default of no shell is used and each argument reaches the tool as one literal string
-	return cwd ? spawn(bin, argv, { cwd }) : spawn(bin, argv)
+export function runTool(op: string, input: Record<string, unknown>): ToolProcess {
+	// startProcess() builds the command from the spec, and throws before the tool is started if any check fails
+	return startProcess({ kind: 'tool', op, input })
 }
 
 /** same as runTool(), and resolves with the exit code and output; rejects with the error if the tool cannot be started */
@@ -128,10 +126,10 @@ export function runToolOutput(op: string, input: Record<string, unknown>): Promi
 		const ps = runTool(op, input)
 		const stdout: Buffer[] = []
 		const stderr: Buffer[] = []
-		ps.stdout.on('data', d => stdout.push(d))
-		ps.stderr.on('data', d => stderr.push(d))
+		ps.stdout.on('data', (d: Buffer) => stdout.push(d))
+		ps.stderr.on('data', (d: Buffer) => stderr.push(d))
 		ps.on('error', reject)
-		ps.on('close', code => {
+		ps.on('close', (code: number | null) => {
 			// a multibyte character may be split across chunks, so the chunks are joined before decoding
 			resolve({ code, stdout: Buffer.concat(stdout).toString('utf8'), stderr: Buffer.concat(stderr).toString('utf8') })
 		})
@@ -225,7 +223,12 @@ function checkField(field: Field, v: unknown, msg: string): string {
 	}
 }
 
-/** returns the absolute path of a file under one of the roots, where a relative path is resolved under the first root */
+/** returns the absolute path of a file under one of the roots, where a relative path is resolved under the first root,
+ * or throws msg */
+export function checkFilePath(v: unknown, roots: readonly FileRoot[], msg: string): string {
+	return checkFile(v, roots, msg)
+}
+
 function checkFile(v: unknown, roots: readonly FileRoot[], msg: string): string {
 	if (!isFilePath(v)) throw msg
 	// a ".." segment could leave the root

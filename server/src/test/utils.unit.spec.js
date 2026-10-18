@@ -548,9 +548,9 @@ tape('spawn helpers reject when the process cannot be spawned', async test => {
 	const cacheDir = path.join(serverconfig.cachedir, `nonexistent-${Date.now()}`)
 	const x_gz = path.join(serverconfig.tpmasterdir, 'x.gz')
 	const helpers = {
+		// a cwd of a tool must be under cachedir, so a dir that does not exist there is used
 		get_lines_bigfile: () =>
-			utils.get_lines_bigfile({ args: ['view', '-h', 'x.bcf'], isbcf: true, dir, callback: () => {} }),
-		// a cwd must be under cachedir, so a dir that does not exist there is used
+			utils.get_lines_bigfile({ args: ['view', '-h', 'x.bcf'], isbcf: true, dir: cacheDir, callback: () => {} }),
 		readTabixLines: () =>
 			utils.readTabixLines({
 				file: x_gz,
@@ -562,8 +562,8 @@ tape('spawn helpers reject when the process cannot be spawned', async test => {
 		listTabixChrs: () => utils.listTabixChrs(x_gz, cacheDir),
 		get_lines_txtfile: () => utils.get_lines_txtfile({ args: ['x.txt'], dir, callback: () => {} }),
 		get_header_txt: () => utils.get_header_txt('x.txt', dir),
-		get_header_bcf: () => utils.get_header_bcf('x.bcf', dir),
-		bam_ifnochr: () => utils.bam_ifnochr('x.bam', {}, dir)
+		get_header_bcf: () => utils.get_header_bcf('x.bcf', cacheDir),
+		bam_ifnochr: () => utils.bam_ifnochr('x.bam', {}, cacheDir)
 	}
 	for (const [name, fn] of Object.entries(helpers)) {
 		try {
@@ -571,6 +571,18 @@ tape('spawn helpers reject when the process cannot be spawned', async test => {
 			test.fail(`${name}() should reject`)
 		} catch (e) {
 			test.equal(e?.code, 'ENOENT', `${name}() should reject with the spawn error`)
+		}
+	}
+	// a cwd outside of cachedir is rejected before the tool is started
+	for (const [name, fn] of Object.entries({
+		get_header_bcf: () => utils.get_header_bcf('x.bcf', dir),
+		bam_ifnochr: () => utils.bam_ifnochr('x.bam', {}, dir)
+	})) {
+		try {
+			await fn()
+			test.fail(`${name}() should reject`)
+		} catch (e) {
+			test.match(String(e), /invalid cwd/, `${name}() should reject a cwd outside of cachedir`)
 		}
 	}
 	test.end()

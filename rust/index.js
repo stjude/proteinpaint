@@ -8,6 +8,9 @@ Arguments:
 
 Input data is streamed into the standard input of the rust binary.
 Standard output of the rust binary is returned.
+
+getRustCommand() returns the command that runs a binary, and setRustStarter() replaces how the command is started,
+such as by the server, which may start it through another process.
 */
 
 // Import necessary modules
@@ -23,16 +26,35 @@ const binaryDir = path.join(__dirname, '/target/release/')
 if (!fs.existsSync(binaryDir)) throw `missing rust binary directory='${binaryDir}'`
 if (!fs.readdirSync(binaryDir).length) throw `empty rust binary directory='${binaryDir}'`
 
+// the file name of a binary
+const binaryName = /^[A-Za-z0-9_][A-Za-z0-9_-]*$/
+
+let startRust = ({ binfile, args }) => {
+	const { file, args: argv } = getRustCommand(binfile, args)
+	return spawn(file, argv)
+}
+
+/** start({binfile, args}) returns a child process, or an object with the same streams, events and kill() */
+export function setRustStarter(start) {
+	startRust = start
+}
+
+/** returns {file, args} of the command that runs the rust binary, or throws */
+export function getRustCommand(binfile, args = []) {
+	if (typeof binfile != 'string' || !binaryName.test(binfile)) throw `invalid rust binary name`
+	const binpath = path.join(binaryDir, binfile)
+	if (!fs.statSync(binpath, { throwIfNoEntry: false })?.isFile()) throw `${binpath} does not exist`
+	return { file: binpath, args }
+}
+
 export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 	return new Promise((resolve, reject) => {
-		const binpath = path.join(__dirname, '/target/release/', binfile)
-
 		if (signal?.aborted) {
 			reject(new Error(`run_rust('${binfile}'): aborted before start`))
 			return
 		}
 
-		const ps = spawn(binpath, args)
+		const ps = startRust({ binfile, args })
 		const stdout = []
 		const stderr = []
 

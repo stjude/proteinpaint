@@ -1,7 +1,6 @@
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import * as path from 'path'
 import fs from 'fs'
-import { spawnSync } from 'child_process'
 
 /*
 	copyDataFilesFromRepo2Tp()
@@ -42,10 +41,8 @@ export async function copyDataFilesFromRepo2Tp(testPath) {
 			// to make it easier to switch between native or container dev/test process,
 			// since a local symlink will not work as a container mount
 			console.log(`copying TermdbTest files to tp dir ...`)
-			// do not delete, copy files from repo to tp
-			const ps = spawnSync(`rsync`, ['-av', `${targetDir}/`, datadir], { encoding: 'utf-8' })
-			if (ps.stderr) throw ps.stderr
-			//console.log(421, [ps.stdout, ps.stderr])
+			// do not delete, copy files from repo to tp; a symlink is copied as a symlink, like rsync -a
+			fs.cpSync(targetDir, datadir, { recursive: true, preserveTimestamps: true })
 		} else {
 			console.log('replacing the TermdbTest symlink ...')
 			fs.unlinkSync(datadir)

@@ -33,6 +33,13 @@
 	   With PP_RUNTIME_CHECK=strict, a missing setting in runtimePosture.mjs STRICT_CHECKS, or a check that
 	   cannot be done, is an error instead, and this script exits before it starts the server.
 
+	5. with PP_TOOL_RUNNER=1, does not have the permission to start a child process. A tool runner process, which
+	   has that permission, is started first and starts the processes that the server requests, such as tabix, R,
+	   python and rust, see server/src/toolRunner.ts. The runner gets the same --allow-fs-* flags, an env without
+	   any credentials, and a socket path in a new dir that only this user may list, as PP_TOOL_RUNNER_SOCKET, which
+	   the server also gets. Only for a node command that replaces this process, without a watch mode, since a
+	   restarted server could not reconnect to the runner; the runner exits when the server exits.
+
 	usage: node envHelpers.mjs <node | tsx> [args...]
 	examples:
 	  node envHelpers.mjs node --enable-source-maps app-server.mjs
@@ -55,6 +62,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { parseEnv } from 'node:util'
 import { spawn } from 'node:child_process'
+import { createRequire } from 'node:module'
 // imported only without the permission model, which would deny reading it before envHelpers() can report that error
 const runtimePosture = process.permission ? undefined : await import('./runtimePosture.mjs')
 
@@ -79,11 +87,13 @@ export function envHelpers(args, deps = {}) {
 	for (const conflict of findPrefixConflicts(config)) console.warn(`envHelpers.mjs: WARNING ${conflict}`)
 	const credsFiles = getCredsFiles(ctx)
 	assertCredsFilesNotAllowed(credsFiles, config, ctx)
-	const command = routeCommand(args, config, ctx)
+	const useRunner = usesToolRunner(args, ctx)
+	const command = routeCommand(args, useRunner ? withoutChildProcess(config) : config, ctx)
 	logAllowedPaths(config)
 	const creds = { ...getEnvCreds(ctx), ...readCreds(credsFiles, ctx) }
 	mayCheckRuntimePosture(config, ctx)
-	return runCommand(command, creds, ctx)
+	const env = useRunner ? { PP_TOOL_RUNNER_SOCKET: startToolRunner(config, ctx) } : {}
+	return runCommand(command, creds, ctx, env)
 }
 
 // the side-effecting dependencies and process details, injectable so that tests can run in-process
@@ -96,11 +106,26 @@ export function createContext({
 	execPath = process.execPath,
 	tmpdir = os.tmpdir(),
 	homedir = os.homedir(),
-	checkPosture = runtimePosture?.checkRuntimePosture
+	checkPosture = runtimePosture?.checkRuntimePosture,
+	// the tool runner script of the installed server package
+	resolveToolRunner = () =>
+		createRequire(path.join(cwd, 'package.json')).resolve('@sjcrh/proteinpaint-server/src/toolRunner.js')
 } = {}) {
 	const dotenvFile = path.join(cwd, '.env')
 	const dotenv = _fs.existsSync(dotenvFile) ? parseEnv(_fs.readFileSync(dotenvFile, 'utf8')) : {}
-	return { fs: _fs, spawn: _spawn, execve, env, dotenv, cwd, execPath, tmpdir, homedir, checkPosture }
+	return {
+		fs: _fs,
+		spawn: _spawn,
+		execve,
+		env,
+		dotenv,
+		cwd,
+		execPath,
+		tmpdir,
+		homedir,
+		checkPosture,
+		resolveToolRunner
+	}
 }
 
 // router: a node command gets the permission flags, and a tsx command gets a config file; each is inserted
@@ -124,6 +149,56 @@ export function permissionFlags(config) {
 		else if (value === true) flags.push(`--${key}`)
 	}
 	return flags
+}
+
+// true for PP_TOOL_RUNNER=1, which is only supported for a node command that replaces this process; throws for an
+// unknown value, such as a typo, which must not silently start the server with the child process permission
+function usesToolRunner(args, ctx) {
+	const value = getEnvValue('PP_TOOL_RUNNER', ctx)
+	if (value == '') return false
+	if (value != '1') throw `invalid PP_TOOL_RUNNER='${value}', must be '1' or empty`
+	if (path.basename(args[0] || '') != 'node' || isNodeWatchMode(args) || typeof ctx.execve != 'function')
+		throw 'PP_TOOL_RUNNER=1 is only supported for a node command without --watch, with process.execve()'
+	return true
+}
+
+function withoutChildProcess(config) {
+	const nodeOptions = { ...config.nodeOptions }
+	delete nodeOptions['allow-child-process']
+	return { ...config, nodeOptions }
+}
+
+// starts the tool runner with the same permission flags as the server, and the permission to start a child
+// process; returns its socket path
+function startToolRunner(config, ctx) {
+	const script = ctx.resolveToolRunner()
+	// the socket is in a new dir that only this user may list, with a mode of 0700 from mkdtempSync()
+	const socketPath = path.join(ctx.fs.mkdtempSync(path.join(ctx.tmpdir, 'pp-runner-')), 'tools.sock')
+	const env = { ...ctx.env }
+	for (const name of getEnvCredsNames(env)) delete env[name]
+	delete env.PP_CREDS_HANDOFF_FILE
+	env.PP_TOOL_RUNNER_SOCKET = socketPath
+	// the runner checks a cache file under the configured cachedir, since the cache subdir name of the server is
+	// derived from a credential, see hideCachedir in server/src/serverconfig.js
+	env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({
+		...parseOverrides(env.PP_SERVERCONFIG_OVERRIDES),
+		hideCachedir: false
+	})
+	const args = [...permissionFlags(config), '--enable-source-maps', script]
+	// not detached, and it inherits stdout and stderr, which the server also writes to after process.execve()
+	const child = ctx.spawn(ctx.execPath, args, { stdio: ['ignore', 'inherit', 'inherit'], env })
+	// such as when the node binary cannot be run; otherwise the server fails to connect to the runner
+	child.on('error', e => console.error(`envHelpers.mjs: unable to start the tool runner: ${e.message}`))
+	console.error(`envHelpers.mjs: started the tool runner, the command runs without --allow-child-process`)
+	return socketPath
+}
+
+function parseOverrides(value) {
+	if (!value) return {}
+	const overrides = JSON.parse(value)
+	if (!overrides || typeof overrides != 'object' || Array.isArray(overrides))
+		throw 'PP_SERVERCONFIG_OVERRIDES must be a JSON object'
+	return overrides
 }
 
 // returns the node flag that applies the written config file
@@ -183,7 +258,8 @@ export function getNodeConfig(ctx) {
 			permission: true,
 			'allow-fs-read': removeCoveredPaths(read),
 			'allow-fs-write': removeCoveredPaths(write),
-			// needed for tsx, esbuild, rust/python/R and other tools, but these are not restricted by the permission model
+			// needed for tsx, esbuild, rust/python/R and other tools, but these are not restricted by the permission model;
+			// not given to a node command with PP_TOOL_RUNNER=1, where the tool runner starts them
 			'allow-child-process': true,
 			'allow-worker': true,
 			// needed for native modules such as sqlite, which are also not restricted by the permission model
@@ -300,8 +376,9 @@ function getEnvCreds(ctx) {
 	return Object.fromEntries(getEnvCredsNames(ctx.env).map(name => [name, ctx.env[name]]))
 }
 
-// router: a node command replaces this process, and a tsx command or node watch mode runs as a child process
-function runCommand(command, creds, ctx) {
+// router: a node command replaces this process, and a tsx command or node watch mode runs as a child process;
+// extraEnv is added to the env of the command
+function runCommand(command, creds, ctx, extraEnv = {}) {
 	if (path.basename(command[0]) != 'node' || isNodeWatchMode(command)) return spawnCommand(command, creds, ctx)
 	if (typeof ctx.execve != 'function') {
 		console.warn(
@@ -310,7 +387,7 @@ function runCommand(command, creds, ctx) {
 		)
 		return spawnCommand(command, creds, ctx)
 	}
-	execCommand(command, creds, ctx)
+	execCommand(command, creds, ctx, extraEnv)
 }
 
 // node --watch restarts the server with its initial env, which would name a removed handoff file; a matching
@@ -320,8 +397,8 @@ function isNodeWatchMode([, ...args]) {
 }
 
 // replaces this process with the command, without any <NAME>_CREDS env variable in its initial env
-function execCommand([cmd, ...cmdArgs], creds, ctx) {
-	const env = { ...ctx.env }
+function execCommand([cmd, ...cmdArgs], creds, ctx, extraEnv) {
+	const env = { ...ctx.env, ...extraEnv }
 	for (const name of getEnvCredsNames(env)) delete env[name]
 	// an existing handoff file name, such as from a container env entry, is not passed
 	delete env.PP_CREDS_HANDOFF_FILE

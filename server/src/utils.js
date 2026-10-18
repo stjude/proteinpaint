@@ -1,7 +1,6 @@
 import fs from 'fs'
 import net from 'net'
 import path from 'path'
-import { spawn } from 'child_process'
 import readline from 'readline'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
@@ -12,6 +11,7 @@ import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { minimatch } from 'minimatch'
 import { runTool, runToolOutput } from './tools/index.ts'
+import { startProcess } from './toolRunner/client.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -19,7 +19,7 @@ export * from './cachedFetch.js'
 export * from './xfetch.js'
 export { connect_db } from './sql.ts'
 
-const { samtools, bcftools, bigBedInfo } = serverconfig
+const { bigBedInfo } = serverconfig
 
 /*********************** EXPORTED
 cache_index
@@ -591,7 +591,7 @@ export async function get_header_txt(file, dir) {
 export function get_header_bcf(file, dir) {
 	// file is full path or url
 	return new Promise((resolve, reject) => {
-		const ps = spawnTool(bcftools, ['view', '-h', file], { cwd: dir })
+		const ps = spawnTool('bcftools', ['view', '-h', file], { cwd: dir })
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
 		ps.on('error', reject)
@@ -634,7 +634,7 @@ export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, i
 	// a tabix file is read with readTabixLines(), readTabixHeader(), or listTabixChrs(), which check each argument
 	if (!isbcf && !isbam) throw 'get_lines_bigfile() is only for bcf and bam files'
 	return new Promise((resolve, reject) => {
-		const ps = spawnTool(isbcf ? bcftools : samtools, args, { cwd: dir })
+		const ps = spawnTool(isbcf ? 'bcftools' : 'samtools', args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
 		const em = []
 		rl.on('line', line => callback(line, ps))
@@ -1022,14 +1022,19 @@ genome is used for validating chr names. when routes are fixed, genome should be
 
 throws on any err. makes no return. may update q
 */
-// every samtools/tabix/bcftools spawn goes through here: an argument that starts with "-" and contains ":" is a
-// region built from a request chr (e.g. "-o/path:1-2"), which the tool would parse as an option
+/*
+every samtools and bcftools read goes through here, see the hts request in toolRunner/requests.ts, which checks:
+- the subcommand, the number of arguments, and that each one is a bounded string without a control character
+- that no argument starts with "-" and contains ":", which is a region built from a request chr (e.g. "-o/path:1-2")
+  that the tool would parse as an option
+- that the cwd, if any, is under the cache dir
+
+tool: 'samtools' or 'bcftools'
+opts.cwd: the cache dir of a url file, from cache_index(), or none for a local file
+*/
 // ponytail: catches region-shaped injection only; request values used as a whole argument must still be validated at the route
-export function spawnTool(bin, args, opts) {
-	for (const a of args) {
-		if (typeof a == 'string' && a[0] == '-' && a.includes(':')) throw 'invalid region argument'
-	}
-	return spawn(bin, args, opts)
+export function spawnTool(tool, args, opts = {}) {
+	return startProcess({ kind: 'hts', tool, args, cwd: opts.cwd || null })
 }
 
 // upper limits of a region's pixel width, the sum of the widths and the number of regions, which size

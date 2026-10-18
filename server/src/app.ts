@@ -17,6 +17,7 @@ import { sendMessageToSlack } from './postOnSlack.ts'
 import { routeFiles } from './app.routes.js'
 import { setPythonBinPath } from '@sjcrh/proteinpaint-python'
 import { CacheManager } from './CacheManager.ts'
+import { connectToolRunner } from './toolRunner/client.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -28,6 +29,8 @@ if (serverconfig.python) setPythonBinPath(serverconfig.python)
 
 export async function launch() {
 	try {
+		// before the dataset init, which starts tools such as tabix
+		await connectToolRunner()
 		new CacheManager(
 			Object.assign({ cachedir }, serverconfig.features?.cacheMonitor || {}, {
 				mustExitPendingValidation: serverconfig.features?.mustExitPendingValidation

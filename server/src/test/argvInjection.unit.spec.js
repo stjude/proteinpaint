@@ -275,20 +275,24 @@ tape('/termdb?getLDdata', async test => {
 
 tape('spawnTool() central guard', async test => {
 	// region-shaped arguments that start with "-" are what a request chr turns into
-	for (const args of [
-		['f.gz', `-o${outFile}:1-2`],
-		['f.gz', '-fc:1-2'],
-		['view', 'f.bam', '--help:x-y']
+	for (const [tool, args] of [
+		['bcftools', ['query', 'f.gz', `-o${outFile}:1-2`]],
+		['samtools', ['view', 'f.gz', '-fc:1-2']],
+		['samtools', ['view', 'f.bam', '--help:x-y']]
 	]) {
-		test.throws(() => utils.spawnTool('true', args), /invalid region argument/, `should reject ${JSON.stringify(args)}`)
+		test.throws(() => utils.spawnTool(tool, args), /invalid region argument/, `should reject ${JSON.stringify(args)}`)
 	}
 	// real flags have no ":", and a region after a flag value is fine
-	for (const args of [
-		['-H', 'f.gz'],
-		['view', '-c', 'f.bam', 'chr1:1-2'],
-		['query', 'f.bcf', '-r', 'chr1:1-2']
+	for (const [tool, args] of [
+		['samtools', ['view', '-H', 'f.gz']],
+		['samtools', ['view', '-c', 'f.bam', 'chr1:1-2']],
+		['bcftools', ['query', 'f.bcf', '-r', 'chr1:1-2']]
 	]) {
-		test.doesNotThrow(() => utils.spawnTool('true', args).kill(), `should allow ${JSON.stringify(args)}`)
+		test.doesNotThrow(() => {
+			const ps = utils.spawnTool(tool, args)
+			ps.on('error', () => {})
+			ps.kill()
+		}, `should allow ${JSON.stringify(args)}`)
 	}
 
 	// readTabixLines() checks each region by the tabix.query spec, so a route that forgot to validate its chr is still covered

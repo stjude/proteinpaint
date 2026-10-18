@@ -1,9 +1,12 @@
 import path from 'path'
 import fs from 'fs'
-import { spawn, exec } from 'child_process'
+import { spawn } from 'child_process'
 import { Readable } from 'stream'
 
 const __dirname = import.meta.dirname
+
+// the file name of a script in src/
+const scriptName = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.py$/
 
 let python = 'python3'
 // This should be called at the beginning of the server runtime code,
@@ -14,18 +17,35 @@ export function setPythonBinPath(binpath) {
 	python = binpath
 }
 
+let startPython = ({ pyfile }) => {
+	const { file, args } = getPythonCommand(pyfile)
+	return spawn(file, args)
+}
+
+/** start({pyfile}) returns a child process, or an object with the same streams, events and kill(); such as for
+ * the server, which may start the command of getPythonCommand() through another process */
+export function setPythonStarter(start) {
+	startPython = start
+}
+
+/** returns {file, args} of the command that runs the python script in src/, or throws */
+export function getPythonCommand(pyfile) {
+	if (typeof pyfile != 'string' || !scriptName.test(pyfile)) throw `invalid python script name`
+	const pypath = path.join(__dirname, '/src/', pyfile)
+	if (!fs.existsSync(pypath)) throw `${pypath} does not exist`
+	// -E -s: use only the interpreter defaults, not PYTHON* env variables or the user site dir;
+	// not -I, which also removes the script dir from sys.path that the sibling-module imports need
+	return { file: python, args: ['-E', '-s', pypath] }
+}
+
 export function run_python(pyfile, input_data, { signal } = {}) {
 	return new Promise((resolve, reject) => {
-		const pypath = path.join(__dirname, '/src/', pyfile)
-
 		if (signal?.aborted) {
 			reject(new Error(`run_python('${pyfile}'): aborted before start`))
 			return
 		}
 
-		// -E -s: use only the interpreter defaults, not PYTHON* env variables or the user site dir;
-		// not -I, which also removes the script dir from sys.path that the sibling-module imports need
-		const ps = spawn(python, ['-E', '-s', pypath])
+		const ps = startPython({ pyfile })
 		const stdout = []
 		const stderr = []
 

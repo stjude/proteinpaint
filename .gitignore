@@ -22,6 +22,7 @@ server/test/cache/*
 server/**/*serverTests.js
 server/routes/*.js
 server/src/app.js
+server/src/toolRunner.js
 server/src/health.js
 server/src/hicstat.js
 server/package*/*

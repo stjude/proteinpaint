@@ -9,6 +9,9 @@ Arguments:
 
 Input data is streamed into the standard input of the R script.
 Standard output of the R script is returned.
+
+getRCommand() returns the command that runs a script, and setRStarter() replaces how the command is started,
+such as by the server, which may start it through another process.
 */
 
 import fs from 'fs'
@@ -18,15 +21,37 @@ import path from 'path'
 
 const __dirname = import.meta.dirname // set __dirname for consistency with cjs code
 
-export async function run_R(filename, data, args, subdir = 'src') {
+// the dirs of the R scripts, and the file name of a script
+const subdirs = ['src', 'utils']
+const scriptName = /^[A-Za-z0-9_][A-Za-z0-9_.-]*\.R$/
+
+let startR = ({ filename, args, subdir }) => {
+	const { file, args: argv } = getRCommand(filename, args, subdir)
+	return spawn(file, argv)
+}
+
+/** start({filename, args, subdir}) returns a child process, or an object with the same streams, events and kill() */
+export function setRStarter(start) {
+	startR = start
+}
+
+/** returns {file, args} of the command that runs the R script, or throws */
+export function getRCommand(filename, args, subdir = 'src') {
+	if (!subdirs.includes(subdir)) throw `invalid R script dir`
+	if (typeof filename != 'string' || !scriptName.test(filename)) throw `invalid R script name`
 	const filepath = path.join(__dirname, subdir, filename)
 	if (!fs.existsSync(filepath)) throw `${filepath} does not exist`
+	// --vanilla: use only the R installation defaults, not user or site startup files
+	return { file: 'Rscript', args: ['--vanilla', filepath, ...(args || [])] }
+}
+
+export async function run_R(filename, data, args, subdir = 'src') {
+	// throws before the script is started, such as for a script that does not exist
+	getRCommand(filename, args, subdir)
 	return new Promise((resolve, reject) => {
 		const _stdout = []
 		const _stderr = []
-		// spawn R child process
-		// --vanilla: use only the R installation defaults, not user or site startup files
-		const sp = spawn('Rscript', ['--vanilla', filepath, ...(args || [])])
+		const sp = startR({ filename, args, subdir })
 		if (data) {
 			// stream input data into R
 			try {

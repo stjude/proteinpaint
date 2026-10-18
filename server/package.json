@@ -96,6 +96,7 @@
     "routes/*.js",
     "start.js",
     "src/app.js",
+    "src/toolRunner.js",
     "src/serverconfig.js",
     "src/checkReadingFrame.js",
     "src/bedj.parseBed.js",
