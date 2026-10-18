@@ -17,7 +17,7 @@ USAGE="Usage:
 			 trixie-pp<subdir>:arm64 deps image unless -i is set; the published deps images are linux/amd64.
 			 Implies -z, and always packs new tarballs, with the linux/arm64 rust binaries from the -v volume,
 			 since the image build can neither download nor compile them. Afterwards, also when the build fails,
-			 removes tmppack and restores server/package.json and full/package.json to their content before the pack
+			 restores tmppack, server/package.json and full/package.json to their content before the pack
 	-v RUST_VOLUME: the docker volume with the linux/arm64 rust binaries in release/, for -a; defaults to
 			 sjpp-dev_rust-target, which the sjpp dev container builds
 	-i BASE_IMAGE: the deps image to build on, instead of the published ghcr.io/stjude/pp<subdir> image of
@@ -145,19 +145,29 @@ fi
 
 if [[ "$ARM64" != "" ]]; then
 	# pack.sh sets the tarball paths in these files, which are restored from the copies below, so that any local change
-	# to them is kept
+	# to them is kept. The tarballs of an earlier pack, which the restored files may point to, are moved aside and
+	# restored, and the tarballs of this pack are removed, so that a later linux/amd64 build cannot reuse its arm64
+	# rust tarball.
 	ARM64TMP=$(mktemp -d)
 	RUSTBINDIR="$ARM64TMP/rust"
 	mkdir "$RUSTBINDIR" "$ARM64TMP/server" "$ARM64TMP/full"
 	cp server/package.json "$ARM64TMP/server/"
 	cp full/package.json "$ARM64TMP/full/"
-	# also when the build fails; tmppack is removed, so that a later linux/amd64 build cannot reuse its arm64 rust tarball
+	TMPPACK_MOVED=""
+	# also when the build fails
 	cleanupArm64() {
 		cp "$ARM64TMP/server/package.json" server/package.json
 		cp "$ARM64TMP/full/package.json" full/package.json
-		rm -rf "$ARM64TMP" ./tmppack
+		if [[ "$TMPPACK_MOVED" != "" ]]; then
+			rm -rf ./tmppack
+			mv "$ARM64TMP/tmppack" ./tmppack
+		fi
+		rm -rf "$ARM64TMP"
 	}
 	trap cleanupArm64 EXIT
+	mv ./tmppack "$ARM64TMP/tmppack"
+	TMPPACK_MOVED=1
+	mkdir tmppack
 
 	if ! docker volume inspect "$RUST_VOLUME" >/dev/null 2>&1; then
 		echo "ERROR: no docker volume '$RUST_VOLUME' with the linux/arm64 rust binaries, set it with -v"
@@ -167,13 +177,19 @@ if [[ "$ARM64" != "" ]]; then
 	docker run --rm --platform=linux/arm64 --user "$(id -u):$(id -g)" \
 		-v "$RUST_VOLUME":/t:ro -v "$RUSTBINDIR":/out --entrypoint sh "$BASE_IMAGE" \
 		-c 'find /t/release -maxdepth 1 -type f -perm -u+x ! -name "*.d" -exec cp {} /out/ \;'
-	if [[ -z "$(ls "$RUSTBINDIR")" ]]; then
-		echo "ERROR: no rust binaries in the release/ dir of the $RUST_VOLUME volume"
+	# the rust package postinstall does not download or compile the binaries when target/release exists, so a binary
+	# that is missing here, such as after a cargo build of only some of them, would fail only when the server runs it
+	MISSINGBINS=""
+	for bin in $(awk '/^\[\[bin\]\]/{b=1; next} /^\[/{b=0} b && /^name *=/{gsub(/^name *= *"|".*$/, ""); print}' ../rust/Cargo.toml); do
+		if [[ ! -f "$RUSTBINDIR/$bin" ]]; then
+			MISSINGBINS="$MISSINGBINS $bin"
+		fi
+	done
+	if [[ -z "$(ls "$RUSTBINDIR")" || "$MISSINGBINS" != "" ]]; then
+		echo "ERROR: the release/ dir of the $RUST_VOLUME volume is missing the rust binaries in rust/Cargo.toml:${MISSINGBINS:- all}"
 		exit 1
 	fi
 
-	rm -rf ./tmppack
-	mkdir tmppack
 	echo "packing tarballs, with the linux/arm64 rust binaries ..."
 	./pack.sh $PKGPATH $PKGPATH "$RUSTBINDIR"
 
