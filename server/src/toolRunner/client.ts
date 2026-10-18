@@ -8,6 +8,8 @@ import { setRustStarter } from '@sjcrh/proteinpaint-rust'
 import { getCommand } from './requests.ts'
 import type { ToolRequest } from './requests.ts'
 import { spawnCommand } from './spawnCommand.ts'
+import { getRequestContext } from '../requestContext.ts'
+import type { RequestContext } from '../requestContext.ts'
 import { FrameType, FrameReader, writeFrames, writeJson, parseJson, killSignals } from './protocol.ts'
 
 /*
@@ -20,6 +22,10 @@ Starts every process of the server, from a request, see requests.ts:
 
 startProcess() returns a ToolProcess, which has the stdin, stdout, stderr, kill() and the spawn, error, exit and
 close events of a child process, so that a caller handles either one the same way.
+
+A process that a request starts is stopped when the response of the request is closed, after it is sent or when the
+client disconnects, see requestContext.ts, so that no process of a request runs after its response. The request does
+not have to pass a signal: it is read from the request context. A process is not started after that.
 
 When this module is loaded, the R, python and rust packages are set to start their processes with startProcess().
 
@@ -41,6 +47,9 @@ let socketPath: string | undefined
 /** how long the server waits for the runner, which is started right before the server */
 const connectTimeout = 30_000
 
+/** how long a process may take to exit after SIGTERM, before it is killed */
+const killGrace = 5000
+
 setRStarter(({ filename, args, subdir }: { filename: string; args?: string[]; subdir: string }) => {
 	// no caller passes arguments, and a runner request has none
 	if (args?.length) throw 'run_R() arguments are not supported'
@@ -56,8 +65,38 @@ setRustStarter(({ binfile, args }: { binfile: string; args?: string[] }) => {
 export function startProcess(req: ToolRequest): ToolProcess {
 	// also checked in the runner, but here so that an invalid request throws to the caller, as without a runner
 	const cmd = getCommand(req)
-	if (!socketPath) return spawnCommand(cmd)
-	return new RunnerProcess(socketPath, req)
+	const context = getRequestContext()
+	if (context?.signal.aborted) throw `${describe(req)}: not started, the response of ${context.path} is already closed`
+	const ps = socketPath ? new RunnerProcess(socketPath, req) : spawnCommand(cmd)
+	if (context) stopWithResponse(ps, req, context)
+	return ps
+}
+
+/** stops the process when the response of its request is closed */
+function stopWithResponse(ps: ToolProcess, req: ToolRequest, { signal, path }: RequestContext) {
+	let exited = false
+	const onAbort = () => {
+		if (exited) return
+		console.error(`stopping ${describe(req)}, which still runs after the response of ${path} is closed`)
+		ps.kill('SIGTERM')
+		setTimeout(() => {
+			if (!exited) ps.kill('SIGKILL')
+		}, killGrace).unref()
+	}
+	const onExit = () => {
+		exited = true
+		signal.removeEventListener('abort', onAbort)
+	}
+	ps.once('exit', onExit)
+	ps.once('close', onExit)
+	signal.addEventListener('abort', onAbort, { once: true })
+}
+
+/** names what a request runs, without its argument values */
+function describe(req: ToolRequest) {
+	if (req.kind == 'tool') return req.op
+	if (req.kind == 'hts') return `${req.tool} ${req.args[0]}`
+	return req.kind == 'rust' ? `rust ${req.binary}` : `${req.kind} ${req.script}`
 }
 
 /** true when the processes are started by a tool runner */

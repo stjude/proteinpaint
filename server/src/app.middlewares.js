@@ -16,6 +16,7 @@ import fs from 'fs'
 import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
 import { abortCtrlBy } from './xfetch.js'
+import { setRequestContext } from './requestContext.ts'
 import { mayLog } from './helpers.ts'
 import { validateRglst } from './utils.js'
 import { mayValidateRequestGeneRefs } from './geneRefValidation.ts'
@@ -106,6 +107,9 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	})
 	app.use(bodyParser.text({ limit: '5mb' }))
 	app.use(bodyParser.urlencoded({ extended: true }))
+	// after the body parsers, whose stream callbacks would not keep the context; the processes that a request starts
+	// are stopped when its response is closed
+	app.use(setRequestContext)
 	if (testDataCacheDir)
 		app.use((req, res, next) => {
 			mayWrapResponseSend(testDataCacheDir, req, res)

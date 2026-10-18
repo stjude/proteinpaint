@@ -13,6 +13,9 @@ import { FrameType, FrameReader, writeJson, writeFrames, maxPayload } from '#src
 import { runTool, runToolOutput, getArgv, specs } from '#src/tools/index.ts'
 import * as utils from '#src/utils.js'
 import { StandIns } from '#src/tools/test/standIns.ts'
+import { setRequestContext } from '#src/requestContext.ts'
+import express from 'express'
+import type { Server } from 'http'
 
 /*
 Specs of the tool runner, which starts the processes that the server requests, and of the client that the server
@@ -31,6 +34,7 @@ runner: a rejected request starts nothing
 runner: a tool that cannot be started
 runner: a bcftools query
 runner: tabix reads and a rust binary
+request context: a process is stopped when the response is closed
 control connection
 */
 
@@ -425,6 +429,110 @@ tape('runner: tabix reads and a rust binary', async test => {
 		}
 	})
 	test.equal(direct.lines.length, 2, 'should read the lines of the region')
+	test.end()
+})
+
+/** an express app with the request context middleware, on an ephemeral port; returns its url and a close function */
+async function listenApp(handlers: Record<string, (req: any, res: any) => unknown>) {
+	const app = express()
+	app.use(setRequestContext)
+	for (const [p, h] of Object.entries(handlers)) app.get(p, h)
+	const server = await new Promise<Server>(r => {
+		const s = app.listen(0, () => r(s))
+	})
+	const { port } = server.address() as net.AddressInfo
+	return { url: `http://localhost:${port}`, close: () => new Promise(r => server.close(r)) }
+}
+
+/** resolves with the pid that the stand-in writes to the file */
+async function readPid(file: string) {
+	await waitFor(() => fs.existsSync(file) && fs.readFileSync(file, 'utf8').endsWith('\n'))
+	return Number(fs.readFileSync(file, 'utf8'))
+}
+
+tape('request context: a process is stopped when the response is closed', async test => {
+	const pidFile = path.join(socketDir, 'ctx.pid')
+	const errors: string[] = []
+	const consoleError = console.error
+	console.error = (m: string) => errors.push(m)
+	try {
+		for (const mode of ['without a runner', 'with a runner']) {
+			await withStraw(`echo $$ > ${pidFile}; exec sleep 30`, async () => {
+				if (mode == 'with a runner') setToolRunnerSocket(socketPath)
+				let late: unknown
+				const quick = standIns.add('quick', 'echo done')
+				const { url, close } = await listenApp({
+					// responds while the tool still runs
+					'/early': async (req, res) => {
+						runTool('hicstraw.query', hicInput()).on('error', () => {})
+						// so that the tool has started, since it is stopped right after the response
+						await readPid(pidFile)
+						res.send({ ok: 1 })
+						// a later start, such as from background work of the request
+						res.once('close', () => {
+							try {
+								runTool('hicstraw.query', hicInput())
+							} catch (e) {
+								late = e
+							}
+						})
+					},
+					// waits for the tool, which only ends when it is stopped
+					'/wait': async (req, res) => {
+						await runToolOutput('hicstraw.query', hicInput())
+						res.send({ ok: 1 })
+					},
+					// the tool ends before the response
+					'/done': async (req, res) => {
+						const prev = serverconfig.hicstraw
+						serverconfig.hicstraw = quick
+						try {
+							res.send(await runToolOutput('hicstraw.query', hicInput()))
+						} finally {
+							serverconfig.hicstraw = prev
+						}
+					}
+				})
+				try {
+					fs.rmSync(pidFile, { force: true })
+					await fetch(url + '/early').then(r => r.json())
+					const pid = await readPid(pidFile)
+					test.ok(await waitFor(() => !isRunning(pid)), `${mode}: should stop a tool that runs after the response`)
+					test.match(
+						String(late),
+						/not started, the response of \/early is already closed/,
+						`${mode}: should not start a tool after the response`
+					)
+
+					fs.rmSync(pidFile, { force: true })
+					const ctrl = new AbortController()
+					const pending = fetch(url + '/wait', { signal: ctrl.signal }).catch(() => {})
+					const pid2 = await readPid(pidFile)
+					ctrl.abort()
+					await pending
+					test.ok(await waitFor(() => !isRunning(pid2)), `${mode}: should stop a tool when the client disconnects`)
+
+					const before = errors.length
+					test.deepEqual(
+						await fetch(url + '/done').then(r => r.json()),
+						{ code: 0, stdout: 'done\n', stderr: '' },
+						`${mode}: should not change a tool that ends before the response`
+					)
+					await new Promise(r => setTimeout(r, 100))
+					test.equal(errors.length, before, `${mode}: should not log a tool that ended before the response`)
+				} finally {
+					setToolRunnerSocket(undefined)
+					await close()
+				}
+			})
+		}
+	} finally {
+		console.error = consoleError
+	}
+	test.ok(
+		errors.some(e => /^stopping hicstraw.query, which still runs after the response of \/early is closed$/.test(e)),
+		'should log the stopped tool and the request path'
+	)
 	test.end()
 })
 
