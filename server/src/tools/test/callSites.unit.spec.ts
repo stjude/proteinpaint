@@ -33,6 +33,8 @@ validate_cumburden()
 getMaxLesions()
 checkDependenciesAndVersions()
 readTabixLines(), readTabixHeader(), listTabixChrs()
+readTabixHeader(): the cache dir of a url, and an ftp url
+readTabixLines(): an exit that is not normal rejects, unless the read is stopped
 get_fasta()
 query_bigbed_by_coord(), query_bigbed_by_name(), testIfFileIsBigbed()
 */
@@ -446,6 +448,67 @@ tape('readTabixLines(), readTabixHeader(), listTabixChrs()', async test => {
 		test.deepEqual(standIns.calls('tabix'), [], 'should not start tabix for a rejected call')
 	})
 	fs.rmSync(dir, { recursive: true, force: true })
+	standIns.reset()
+	test.end()
+})
+
+tape('readTabixHeader(): the cache dir of a url, and an ftp url', async test => {
+	const tabix = standIns.add('tabix', 'pwd -P')
+	const features = serverconfig.features
+	const allow = features.ALLOW_remotefilefromurl
+	features.ALLOW_remotefilefromurl = true
+	// the cache dir keeps the url body, with its port, percent-encoded characters, and query string
+	const url = 'https://a.org:8443/x%20y/t.gz?token=1&v=2'
+	const dir = await utils.cache_index(url, undefined)
+	try {
+		await withConfig('tabix', tabix, async () => {
+			test.ok(/[:%?&]/.test(path.relative(cache, dir)), 'should have url characters in the cache dir name')
+			test.deepEqual(
+				await utils.readTabixHeader(url, dir),
+				[fs.realpathSync(dir)],
+				'should run tabix in the cache dir of the url'
+			)
+			standIns.reset()
+			const ftp = 'ftp://a.org/x/t.gz'
+			await utils.readTabixHeader(ftp, await utils.cache_index(ftp, undefined))
+			test.deepEqual(standIns.calls('tabix'), [['-H', ftp]], 'should pass an ftp url, as fileurl() allows it')
+		})
+	} finally {
+		if (allow === undefined) delete features.ALLOW_remotefilefromurl
+		else features.ALLOW_remotefilefromurl = allow
+		fs.rmSync(path.join(cache, 'https/a.org:8443'), { recursive: true, force: true })
+		fs.rmSync(path.join(cache, 'ftp/a.org'), { recursive: true, force: true })
+		standIns.reset()
+	}
+	test.end()
+})
+
+tape('readTabixLines(): an exit that is not normal rejects, unless the read is stopped', async test => {
+	const file = 'files/x.gz'
+	const regions = [{ chr: 'chr1', start: 1, stop: 2 }]
+	for (const [label, script, re] of [
+		['a nonzero exit without error output', 'echo line; exit 3', /tabix.query exited with code 3/],
+		['a nonzero exit with error output', 'echo line; echo cannot open >&2; exit 1', /cannot open/],
+		['a signal', 'echo line; kill -TERM $$', /tabix.query exited with signal SIGTERM/]
+	] as const) {
+		const tabix = standIns.add('tabix', script)
+		await withConfig('tabix', tabix, async () => {
+			const lines: string[] = []
+			try {
+				await utils.readTabixLines({ file, regions, callback: line => lines.push(line) })
+				test.fail(`should reject ${label}`)
+			} catch (e) {
+				test.match(String(e), re, `should reject ${label}`)
+			}
+		})
+	}
+	// a stopped read is killed, which is not an error
+	const tabix = standIns.add('tabix', 'echo a; echo b; exec sleep 30')
+	await withConfig('tabix', tabix, async () => {
+		const lines: string[] = []
+		await utils.readTabixLines({ file, regions, callback: (line, stop) => (lines.push(line), stop()) })
+		test.deepEqual(lines, ['a'], 'should resolve a read that the callback stops')
+	})
 	standIns.reset()
 	test.end()
 })

@@ -28,7 +28,8 @@ Each operation has a spec, in a file of this dir, with its input fields and an a
 - throws before the tool is started if any check fails
 
 A spec may also give the working dir of the tool, as a file field under cachedir, such as the dir where tabix keeps the
-index that it downloads for a url. That is the only field that may be optional.
+index that it downloads for a url. That is the only field that may be optional. It is not an argument, and is checked
+as an absolute path under cachedir, which may have the characters of a url, see checkCacheDir().
 
 runToolOutput() does the same and resolves with the exit code and output of the tool.
 
@@ -52,7 +53,7 @@ export type Field =
 	/** a path under one of the roots; with debugmodeAnyRoot, any absolute path is allowed when serverconfig.debugmode
 	 * is true, for a dataset file that a dev environment may keep outside tp */
 	| { type: 'file'; roots: readonly FileRoot[]; debugmodeAnyRoot?: boolean }
-	/** a path under one of the roots, by default only tp, or an http or https url with an allowed host */
+	/** a path under one of the roots, by default only tp, or an http, https, or ftp url with an allowed host */
 	| { type: 'fileOrUrl'; roots?: readonly FileRoot[] }
 	/** an array of 1 to maxItems values of the item field, which fill consecutive argv slots */
 	| { type: 'list'; item: Field; maxItems: number }
@@ -142,12 +143,21 @@ export function getCall(op: string, spec: ToolSpec, input: Record<string, unknow
 	for (const k of Object.keys(input)) {
 		if (!Object.hasOwn(spec.fields, k)) throw `${op}: unexpected input field ${k}`
 	}
+	const cwdName = spec.cwd ? parseSlot(spec.cwd)!.name : undefined
 	const values = new Map<string, string | string[]>()
 	for (const [name, field] of Object.entries(spec.fields)) {
 		const msg = `${op}: invalid ${name}`
 		if (field.optional && (input[name] === undefined || input[name] === null)) continue
 		if (!Object.hasOwn(input, name)) throw `${op}: missing input field ${name}`
-		values.set(name, field.type == 'list' ? checkList(field, input[name], msg) : checkField(field, input[name], msg))
+		const v = input[name]
+		values.set(
+			name,
+			name === cwdName
+				? checkCacheDir(v, msg)
+				: field.type == 'list'
+				? checkList(field, v, msg)
+				: checkField(field, v, msg)
+		)
 	}
 	const argv: string[] = []
 	for (const a of spec.argv) {
@@ -163,7 +173,6 @@ export function getCall(op: string, spec: ToolSpec, input: Record<string, unknow
 			argv.push(slot.prefix + s)
 		}
 	}
-	const cwdName = spec.cwd ? parseSlot(spec.cwd)!.name : undefined
 	const cwd = cwdName ? (values.get(cwdName) as string | undefined) : undefined
 	if (cwd !== undefined && !isSafeValueArg(cwd)) throw `${op}: invalid ${cwdName}`
 	return { argv, cwd }
@@ -224,6 +233,21 @@ function checkFile(v: unknown, roots: readonly FileRoot[], msg: string): string 
 	throw msg
 }
 
+/*
+returns the absolute path of a working dir under cachedir, or throws msg. The dir is not an argument, so its characters
+are not limited like a file path: the cache dir of a url, from cache_index in utils.js, keeps the url body, which may have a port,
+percent-encoded characters, or a query string. It must not have a ".." segment or a control character.
+*/
+export function checkCacheDir(v: unknown, msg: string): string {
+	// eslint-disable-next-line no-control-regex
+	if (typeof v != 'string' || v.length > maxArgLength || /[\x00-\x1f\x7f]/.test(v)) throw msg
+	if (!path.isAbsolute(v) || v.split('/').includes('..')) throw msg
+	const root = path.resolve(cachedir)
+	const dir = path.resolve(v)
+	if (!dir.startsWith(root + path.sep)) throw msg
+	return dir
+}
+
 function checkAbsoluteFile(v: unknown, msg: string): string {
 	if (!isFilePath(v) || !path.isAbsolute(v)) throw msg
 	return path.resolve(v)
@@ -247,7 +271,8 @@ function checkUrl(v: string, msg: string): string {
 	} catch (_) {
 		throw msg
 	}
-	if (protocol != 'http:' && protocol != 'https:') throw msg
+	// the same protocols as fileurl and cache_index in utils.js, see cacheUrlProtocols
+	if (protocol != 'http:' && protocol != 'https:' && protocol != 'ftp:') throw msg
 	if (illegalUrlHost(v)) throw msg
 	return v
 }

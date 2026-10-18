@@ -725,11 +725,14 @@ function readToolLines(op, input, callback) {
 		ps.stderr.on('data', d => em.push(d))
 		// e.g. a missing cwd; without a listener, the 'error' event would crash the process
 		ps.on('error', reject)
-		ps.on('close', () => {
+		ps.on('close', (code, signal) => {
 			if (failed) return reject(failure)
+			// a stopped read is killed, so its exit and error output, if any, are not about the lines that were read
+			if (stopped) return resolve()
 			const e = em.join('').trim()
-			// a stopped read is killed, so its error output, if any, is not about the lines that were read
-			if (e && !stopped && !tabixnoterror(e)) return reject(e)
+			// such as a file that cannot be opened; the lines that were read may be incomplete
+			if (code !== 0 || signal) return reject(e || `${op} exited with ${signal ? `signal ${signal}` : `code ${code}`}`)
+			if (e && !tabixnoterror(e)) return reject(e)
 			resolve()
 		})
 	})

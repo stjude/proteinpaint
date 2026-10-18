@@ -147,11 +147,14 @@ async function handle_tabixheader(req, res) {
 function handle_svmr(req, res) {
 	if (req.query.file) {
 		const [e, file, isurl] = utils.fileurl(req)
-		if (e) {
+		// only a file under tp is read
+		const tp = path.resolve(serverconfig.tpmasterdir)
+		const resolved = e || isurl ? '' : path.resolve(file)
+		if (!resolved.startsWith(tp + path.sep)) {
 			res.send({ error: 'illegal file name' })
 			return
 		}
-		fs.readFile(file, 'utf8', (err, data) => {
+		fs.readFile(resolved, 'utf8', (err, data) => {
 			if (err) {
 				res.send({ error: 'cannot read file' })
 				return

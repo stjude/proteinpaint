@@ -35,6 +35,7 @@ test sections:
 - /termdb?getLDdata
 - spawnTool() central guard
 - /mdsgeneboxplot and /isoformbycoord, via the real route table
+- /svmr, via the real route table
 */
 
 const hasSamtools = spawnSync(serverconfig.samtools, ['--version']).status === 0
@@ -325,6 +326,30 @@ tape('/mdsgeneboxplot and /isoformbycoord, via the real route table', async test
 		test.equal(box?.error, 'q.rglst[].chr invalid chr name', `/mdsgeneboxplot should reject chr=${chr}`)
 		const iso = await send(routes['/isoformbycoord'], { genome: 'hg38', chr, pos: 1 })
 		test.equal(iso?.error, 'invalid chr/pos', `/isoformbycoord should reject chr=${chr}`)
+	}
+	test.end()
+})
+
+tape('/svmr, via the real route table', async test => {
+	const routes = {}
+	const record = (p, h) => (routes[p] = h)
+	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
+	setRoutes(app, { hg38: getGenome() }, {})
+	// the handler sends from a file read callback
+	const svmr = query =>
+		new Promise(resolve => {
+			const res = { send: resolve, status: () => res, header: () => {}, set: () => {} }
+			routes['/svmr']({ query, get: () => undefined }, res)
+		})
+	const file = 'files/hg38/TermdbTest/trackLst/facet.json'
+	test.equal(
+		(await svmr({ file })).raw,
+		fs.readFileSync(path.join(serverconfig.tpmasterdir, file), 'utf8'),
+		'should send a file under tp'
+	)
+	for (const query of [{ url: 'https://a.org/x.txt' }, { file: '../x.txt' }, { file: leakFile }]) {
+		const r = await svmr(query)
+		test.ok(r.error && !r.raw, `should not read ${JSON.stringify(query)}`)
 	}
 	test.end()
 })

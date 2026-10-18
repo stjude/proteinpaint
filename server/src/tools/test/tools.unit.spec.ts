@@ -75,7 +75,6 @@ const badValues: Record<string, unknown[]> = {
 		'a/x|y.hic',
 		'a/*.hic',
 		'file:///etc/passwd',
-		'ftp://a.org/x.hic',
 		['a.hic'],
 		{ toString: () => 'a.hic' }
 	],
@@ -126,6 +125,11 @@ tape('hicstraw.query: argv of valid inputs', test => {
 			getArgv(op, spec, { ...valid(), file: 'https://a.org/x.hic' })[2],
 			'https://a.org/x.hic',
 			'should accept an https url when remote files are allowed'
+		)
+		test.equal(
+			getArgv(op, spec, { ...valid(), file: 'ftp://a.org/x.hic' })[2],
+			'ftp://a.org/x.hic',
+			'should accept an ftp url, as fileurl() and cache_index() do'
 		)
 	})
 	test.end()
@@ -265,7 +269,7 @@ const otherOps: Record<string, { input: Record<string, unknown>; argv: string[];
 				Array(1001).fill('chr1:1-2'),
 				'chr1:1-2'
 			],
-			dir: [tp, '/tmp', path.join(cache, '../x'), path.join(cache, '-o')]
+			dir: [tp, '/tmp', path.join(cache, '../x'), path.join(cache, 'a\tb'), 'https/a.org']
 		}
 	},
 	'tabix.header': {
@@ -593,6 +597,18 @@ tape('getCall(): the working dir, list slots, and prefixed slots', test => {
 	test.equal(getCall('tabix.query', q, input).cwd, path.join(cache, 'https/a.org'), 'should return the working dir')
 	for (const dir of [null, undefined]) {
 		test.equal(getCall('tabix.query', q, { ...input, dir }).cwd, undefined, `should have no working dir for dir=${dir}`)
+	}
+	// the cache dir of a url keeps the url body
+	const urlDir = path.join(cache, 'https/a.org:8443/x%20y/t.gz?token=1&v=2')
+	test.equal(getCall('tabix.query', q, { ...input, dir: urlDir }).cwd, urlDir, 'should allow url characters in the dir')
+	for (const dir of ['https/a.org', path.join(cache, 'a/../../x'), path.join(cache, 'a\nb'), cache, '/tmp']) {
+		test.throws(
+			() => getCall('tabix.query', q, { ...input, dir }),
+			/invalid dir/,
+			`should reject a dir that is relative, outside of the cache dir, or has a control character: ${JSON.stringify(
+				dir
+			)}`
+		)
 	}
 	const noDir = { ...input }
 	delete noDir.dir
