@@ -29,6 +29,7 @@ runner: kill()
 runner: a closed connection kills the process
 runner: a rejected request starts nothing
 runner: a tool that cannot be started
+runner: a bcftools query
 runner: tabix reads and a rust binary
 control connection
 */
@@ -197,6 +198,13 @@ tape('getCommand(): hts requests', test => {
 		{ file: serverconfig.bcftools, args: ['query', 'a.bcf'], cwd: dir },
 		'should run bcftools in a cache dir'
 	)
+	// the output format of a bcftools query, as in mds3.init.js and termdb.snp.js
+	const query = ['query', 'a.bcf', '-r', 'chr1:1-2', '-f', '%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO[\t%TGT]\n']
+	test.deepEqual(
+		getCommand({ kind: 'hts', tool: 'bcftools', args: query, cwd: null }).args,
+		query,
+		'should allow a tab and newline in a bcftools output format'
+	)
 	const hts = (tool: unknown, args: unknown, cwd: unknown = null) => ({ kind: 'hts', tool, args, cwd })
 	for (const [req, re] of [
 		[hts('tabix', ['view']), /invalid hts tool/],
@@ -209,6 +217,10 @@ tape('getCommand(): hts requests', test => {
 		[hts('samtools', ['view', 1]), /invalid argument/],
 		[hts('samtools', ['view', '']), /invalid argument/],
 		[hts('samtools', ['view', 'a\nb']), /invalid argument/],
+		[hts('bcftools', ['query', 'a\tb.bcf', '-f', '%ID\n']), /invalid argument/],
+		[hts('bcftools', ['query', 'a.bcf', '-f', '%ID\r\n']), /invalid argument/],
+		[hts('bcftools', ['query', 'a.bcf', '-f', '%ID\x00']), /invalid argument/],
+		[hts('samtools', ['view', '-f', '4\n']), /invalid argument/],
 		[hts('samtools', ['view', 'x'.repeat(4097)]), /invalid argument/],
 		[hts('samtools', ['view', 'a.bam', '-o/tmp/x:1-2']), /invalid region argument/],
 		[hts('samtools', ['view', 'a.bam'], '/tmp'), /invalid cwd/],
@@ -362,6 +374,28 @@ tape('runner: a tool that cannot be started', async test => {
 	} finally {
 		serverconfig.hicstraw = prev
 	}
+	test.end()
+})
+
+tape('runner: a bcftools query', async test => {
+	// the real tool, with the output format of mds3.init.js, which has a tab and newline
+	const file = path.join(tp, 'files/hg38/TermdbTest/TermdbTest.bcf.gz')
+	// a chromosome with variants in the test file
+	const chr = '12'
+	const query = async () => {
+		const lines: string[] = []
+		await utils.get_lines_bigfile({
+			isbcf: true,
+			args: ['query', file, '-r', chr, '-f', '%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\n'],
+			callback: line => lines.push(line)
+		})
+		return lines
+	}
+	const direct = await query()
+	test.ok(direct.length > 0 && direct[0].split('\t').length == 6, 'should read the variant lines')
+	await withRunner(async () => {
+		test.deepEqual(await query(), direct, 'should read the same lines with the runner')
+	})
 	test.end()
 })
 

@@ -47,6 +47,11 @@ const htsSubcommands: Readonly<Record<HtsTool, readonly string[]>> = Object.free
 /** the upper limits of the number and length of the arguments of an hts request */
 const maxHtsArgs = 1000
 const maxArgLength = 4096
+// eslint-disable-next-line no-control-regex
+const anyControlChar = /[\x00-\x1f\x7f]/
+/** a control character other than a tab or newline */
+// eslint-disable-next-line no-control-regex
+const formatControlChars = /[\x00-\x08\x0b-\x1f\x7f]/
 
 /** returns the command of a request, or throws */
 export function getCommand(req: unknown): Command {
@@ -96,9 +101,10 @@ function getHtsCommand(r: Extract<ToolRequest, { kind: 'hts' }>): Command {
 	const { args } = r
 	if (!Array.isArray(args) || args.length == 0 || args.length > maxHtsArgs) throw `${r.tool}: invalid args`
 	if (!htsSubcommands[r.tool].includes(args[0])) throw `${r.tool}: unsupported subcommand`
-	for (const a of args) {
-		// eslint-disable-next-line no-control-regex
-		if (typeof a != 'string' || !a || a.length > maxArgLength || /[\x00-\x1f\x7f]/.test(a))
+	for (const [i, a] of args.entries()) {
+		// the bcftools output format, such as '%POS\t%ID\n', is the only argument with a tab or newline
+		const controlChars = r.tool == 'bcftools' && args[i - 1] == '-f' ? formatControlChars : anyControlChar
+		if (typeof a != 'string' || !a || a.length > maxArgLength || controlChars.test(a))
 			throw `${r.tool}: invalid argument`
 		// a region built from a request chr, such as "-o/path:1-2", which the tool would parse as an option
 		if (a[0] == '-' && a.includes(':')) throw 'invalid region argument'
