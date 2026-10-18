@@ -12,12 +12,14 @@ set -euxo pipefail
 #
 # call from the proteinpaint/container dir
 #
-# Usage: ./pack.sh [-s] [PKGPATH] [TMPDIR] [RUST_BINARIES_DIR]
+# Usage: ./pack.sh [-s] [PKGPATH] [TMPPACKDIR] [RUST_BINARIES_DIR]
 #   -s: server-only, to not pack the client and front workspaces, that only the full image installs
 
 # defaults
 PKGPATH=/home/root/pp/tmppack
-TMPDIR=/home/root/pp/tmppack
+# not named TMPDIR, which the environment may export, such as on macOS: a child process, such as the tar in the front
+# prepack script, would then use this container path for its temp files
+TMPPACKDIR=/home/root/pp/tmppack
 RUST_BINARIES_DIR=../rust-binaries
 
 # this script should test packing and bundling, should not set up dev aliased exports
@@ -43,12 +45,12 @@ fi
 
 if (( $# == 2 )); then
   PKGPATH="$1"
-  TMPDIR="$2"
+  TMPPACKDIR="$2"
 fi
 
 if (( $# >= 3 )); then
   PKGPATH="$1"
-  TMPDIR="$2"
+  TMPPACKDIR="$2"
   RUST_BINARIES_DIR="$3"
 fi
 
