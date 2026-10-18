@@ -268,7 +268,7 @@ tape('a gene named like an inherited object property is cached as an own key', a
 
 /* state.reuse is serialized into every saved session, and reopening one merges the parsed
 state into a store: by construction when a url supplies it (see the MassStore constructor),
-or by an app_refresh carrying the full state (see sessionBtn.js). Both go through
+or by an app_refresh carrying the full state (see user.ts). Both go through
 copyMerge(), which walks the parsed keys with for..in and recurses into a matching object
 target -- so an unprefixed '__proto__' key would survive JSON.parse() as an own key whose
 target resolves to Object.prototype through the getter, and the cached list would be written

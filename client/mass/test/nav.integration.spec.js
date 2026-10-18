@@ -151,10 +151,13 @@ tape('filter subheader and tab', function (test) {
 			1,
 			'should add blue pill'
 		)
-		const itemCountTd = tds._groups[0][8]
+		// find the cells by tab and row, not by position in the table, which changes with the number of tabs
+		const filterColNum = nav.Inner.subheaderKeys.indexOf('filter')
+		const getTd = key => tds.filter(d => d.colNum === filterColNum && d.key === key).node()
+		const itemCountTd = getTd('mid')
 		test.equal(itemCountTd.innerText, '1', 'should indicate a filter item count of 1')
 
-		const sampleCountTd = tds._groups[0][13]
+		const sampleCountTd = getTd('btm')
 		const n = 36
 		test.equal(sampleCountTd.innerText, `${n} patients`, 'should display the correct filtered sample count')
 	}

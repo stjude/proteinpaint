@@ -2,12 +2,12 @@ import { getCompInit, multiInit } from '#rx'
 import { recoverInit } from '../rx/src/recover'
 import { chartsInit } from './charts'
 import { groupsInit } from './groups'
-import { sessionBtnInit } from './sessionBtn'
 import { aboutInit } from './about.ts'
 import { chatInit } from './chat.ts'
-import { dofetch3 } from '#common/dofetch'
+import { userInit } from './user'
 import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
+import type { NavTab, NavTabCell } from './types/nav'
 
 /*
 todo: steps to add a new tab
@@ -26,7 +26,7 @@ let instanceNum = 0
 
 // to distinguish from IDs assigned by other code or users
 const idPrefix = '_MASS_AUTOID_' + Math.random().toString().slice(-6)
-let id = (+new Date()).toString().slice(-8)
+let id = Number((+new Date()).toString().slice(-8))
 
 const headtip = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
 headtip.d.style('z-index', 5555)
@@ -37,16 +37,31 @@ const aboutTab = { top: 'ABOUT', mid: '', btm: '', subheader: 'about' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
-const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
+// const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
+const userTab = { top: 'USER', mid: '', btm: '', subheader: 'user' }
 
-export function getId() {
+export function getId(): string {
 	return idPrefix + '_' + id++
 }
 
 class TdbNav {
 	static type = 'nav'
+	type: string
+	instanceNum: number
+	tabs: NavTab[]
+	activeTab: number
+	activeCohort: number
+	samplecounts: Record<string, any>
+	searching: boolean
+	massSessionDuration: any
+	pkgver: any
+	opts: any
+	app: any
+	state: any
+	dom: any;
+	[key: string]: any
 
-	constructor(opts) {
+	constructor(opts: any) {
 		this.type = TdbNav.type
 		this.instanceNum = instanceNum++
 		this.tabs = [] // array of tab objects corresponding to what's shown on header, based on ds customization. hidden tabs are not in this array. filled in initUI()
@@ -55,79 +70,77 @@ class TdbNav {
 		this.samplecounts = {} // tracks sample count by .activeCohort value and stringified filter json
 		this.searching = false
 		this.massSessionDuration = opts.massSessionDuration
-		this.sessionDaysLeft = opts.app.opts.sessionDaysLeft || null
-		this.sessionId = opts.app.opts.sessionId || null
 		this.pkgver = opts.pkgver || null //Release version
 		setInteractivity(this)
 		setRenderers(this)
 	}
 
-	async init(appState) {
-		try {
-			this.cohortFilter = getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
-			this.initUI(appState)
-			if (appState?.termdbConfig?.selectCohort) {
-				this.dom.tds.filter(d => d.colNum === 0).style('display', '')
-				this.cohortNames = appState.termdbConfig.selectCohort.values.map(d => d.keys.slice().sort().join(','))
-			}
-
-			this.components = await multiInit({
-				filter: filterRxCompInit({
-					app: this.app,
-					vocabApi: this.app.vocabApi,
-					holder: this.dom.subheader.filter.append('div').style('margin', '5px'),
-					hideLabel: this.opts.header_mode === 'with_tabs',
-					emptyLabel: '+Add new filter',
-					callback: filter => {
-						this.app.dispatch({
-							type: 'filter_replace',
-							filter
-						})
-					}
-				}),
-				charts: chartsInit({
-					app: this.app,
-					holder: this.dom.subheader.charts,
-					vocab: this.opts.vocab
-				}),
-				groups: groupsInit({
-					app: this.app,
-					holder: this.dom.subheader.groups,
-					vocab: this.opts.vocab
-				}),
-				recover: recoverInit({
-					app: this.app,
-					holder: this.dom.recoverDiv,
-					// TODO: ???? may limit the tracked state to only the filter, activeCohort ???
-					getState: appState => appState,
-					reactsTo: action => action.type != 'plot_edit',
-					maxHistoryLen: 5
-				}),
-				sessionBtn: sessionBtnInit({
-					app: this.app,
-					button: this.dom.saveBtn,
-					massSessionDuration: this.opts.massSessionDuration,
-					sessionDaysLeft: this.app.opts.sessionDaysLeft || null
-				}),
-				about: aboutInit({
-					app: this.app,
-					subheader: this.dom.subheader.about,
-					instanceNum: this.instanceNum,
-					aboutOverrides: appState?.termdbConfig?.massNav?.tabs?.about || null,
-					selectCohort: appState?.termdbConfig?.selectCohort || null
-				}),
-				chat: chatInit({
-					app: this.app,
-					subheader: this.dom.subheader.chat
-				})
-			})
-			this.mayShowMessage_sessionDaysLeft()
-		} catch (e) {
-			throw e
+	async init(appState: any): Promise<void> {
+		// try {
+		this.cohortFilter = getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
+		this.initUI(appState)
+		if (appState?.termdbConfig?.selectCohort) {
+			this.dom.tds.filter(d => d.colNum === 0).style('display', '')
+			this.cohortNames = appState.termdbConfig.selectCohort.values.map(d => d.keys.slice().sort().join(','))
 		}
+
+		this.components = await multiInit({
+			filter: filterRxCompInit({
+				app: this.app,
+				vocabApi: this.app.vocabApi,
+				holder: this.dom.subheader.filter.append('div').style('margin', '5px'),
+				hideLabel: this.opts.header_mode === 'with_tabs',
+				emptyLabel: '+Add new filter',
+				callback: (filter: any) => {
+					this.app.dispatch({
+						type: 'filter_replace',
+						filter
+					})
+				}
+			}),
+			charts: chartsInit({
+				app: this.app,
+				holder: this.dom.subheader.charts,
+				vocab: this.opts.vocab
+			}),
+			groups: groupsInit({
+				app: this.app,
+				holder: this.dom.subheader.groups,
+				vocab: this.opts.vocab
+			}),
+			recover: recoverInit({
+				app: this.app,
+				holder: this.dom.recoverDiv,
+				// TODO: ???? may limit the tracked state to only the filter, activeCohort ???
+				getState: (appState: any) => appState,
+				reactsTo: (action: any) => action.type != 'plot_edit',
+				maxHistoryLen: 5
+			}),
+			about: aboutInit({
+				app: this.app,
+				subheader: this.dom.subheader.about,
+				instanceNum: this.instanceNum,
+				aboutOverrides: appState?.termdbConfig?.massNav?.tabs?.about || null,
+				selectCohort: appState?.termdbConfig?.selectCohort || null
+			}),
+			chat: chatInit({
+				app: this.app,
+				subheader: this.dom.subheader.chat
+			}),
+			user: userInit({
+				app: this.app,
+				subheader: this.dom.subheader.user,
+				massSessionDuration: this.opts.massSessionDuration,
+				sessionDaysLeft: this.app.opts.sessionDaysLeft ?? null,
+				sessionId: this.app.opts.sessionId || null
+			})
+		})
+		// } catch (e) {
+		// 	throw e
+		// }
 	}
 
-	reactsTo(action) {
+	reactsTo(action: any): boolean | undefined {
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type.startsWith('tab')) return true
@@ -142,7 +155,7 @@ class TdbNav {
 		if (action.type.endsWith('_group')) return true
 	}
 
-	getState(appState) {
+	getState(appState: any): any {
 		return {
 			searching: this.searching, // for detection of internal state change
 			nav: appState.nav,
@@ -154,7 +167,7 @@ class TdbNav {
 		}
 	}
 
-	async main() {
+	async main(): Promise<void> {
 		this.dom.tabDiv.style('display', this.state.nav.header_mode === 'with_tabs' ? 'inline-block' : 'none')
 		this.dom.tip.hide()
 		this.activeTab = this.state.nav.activeTab
@@ -190,8 +203,8 @@ class TdbNav {
 
 export const navInit = getCompInit(TdbNav)
 
-function setRenderers(self) {
-	self.initUI = appState => {
+function setRenderers(self: any): void {
+	self.initUI = (appState: any) => {
 		const verifiedToken = self.app.vocabApi.verifiedToken
 		const invalidTokenErrorHandling = appState.termdbConfig.invalidTokenErrorHandling
 		//Show error message if login failed and all charts require login. If the dataset does not require login verifiedToken is true
@@ -199,12 +212,18 @@ function setRenderers(self) {
 		// Note that if the user did not login the public token was used. So only if the user did login and the token passed was invalid this error is shown
 		if (!verifiedToken && invalidTokenErrorHandling?.affectedCharts?.includes('*'))
 			throw new Error(appState.termdbConfig.invalidTokenErrorHandling.errorMessage)
-		const header = self.opts.holder.append('div').style('white-space', 'nowrap')
-		const massNav = appState.termdbConfig?.massNav || {}
-		let titleDiv = header
+		// a flex row, so that the tabs stretch to the height of the controls, which may be taller than the tabs.
+		// the active tab then reaches the border at the bottom of the header
+		const header = self.opts.holder
 			.append('div')
-			.style('display', 'inline-block')
-			.style('float', 'right')
+			.style('white-space', 'nowrap')
+			.style('display', 'flex')
+			.style('align-items', 'stretch')
+		const massNav = appState.termdbConfig?.massNav || {}
+		const titleDiv = header
+			.append('div')
+			.style('order', '2') // rightmost
+			.style('align-self', 'flex-start')
 			.style('font-size', '1.1em')
 			.style('margin', '50px 10px 0 0')
 			.text(massNav?.title?.text) //this line will be executed in update UI to reflect cohort changes
@@ -213,10 +232,10 @@ function setRenderers(self) {
 		const controlsDiv = header
 			//Fix for adding message underneath the search bar and buttons
 			.append('div')
-			.style('vertical-align', 'top')
-			.style('margin', '10px')
-			.style('display', 'inline-block')
-			.style('float', 'right')
+			.style('order', '1') // right of the tabs, left of the title
+			.style('margin', '10px 10px 10px auto')
+			// the icons are at the right edge, beside the title
+			.style('text-align', 'right')
 
 		if (self.opts.header_mode === 'only_buttons') {
 			// if header_mode is only_buttons, show only buttons
@@ -231,7 +250,6 @@ function setRenderers(self) {
 			tabDiv,
 			controlsDiv,
 			searchDiv: controlsDiv.append('div').style('margin', '10px'),
-			sessionDiv: controlsDiv.append('div').style('display', 'inline-block'),
 			recoverDiv: controlsDiv.append('div').style('display', 'inline-block'),
 			pdfDiv: controlsDiv
 				.append('div')
@@ -245,7 +263,6 @@ function setRenderers(self) {
 				.style('vertical-align', 'middle'),
 
 			helpDiv: controlsDiv.append('div').style('display', 'none'),
-			sessionElapsedMessageDiv: controlsDiv.append('div').style('display', 'none'),
 			subheaderDiv: self.opts.holder.append('div').style('display', 'block').style('border-bottom', '1px solid #000'),
 			messageDiv: self.opts.holder.append('div').style('margin', '30px').style('display', 'none'),
 			titleDiv,
@@ -270,7 +287,7 @@ function setRenderers(self) {
 				.style('vertical-align', 'top')
 
 			self.dom.cohortStandaloneDiv.append('label').html('Cohort: ')
-			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', async function () {
+			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', async function (this: any) {
 				self.app.dispatch({ type: 'cohort_set', activeCohort: +this.value })
 			})
 
@@ -309,6 +326,10 @@ function setRenderers(self) {
 			chat: self.dom.subheaderDiv
 				.append('div')
 				.attr('data-testid', 'sjpp-mass-nav-subheader-chat')
+				.style('display', 'none'),
+			user: self.dom.subheaderDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-mass-nav-subheader-user')
 				.style('display', 'none')
 			// cart: self.dom.subheaderDiv.append('div').style('display', 'none').html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>'),
 		})
@@ -359,11 +380,21 @@ function setRenderers(self) {
 				self.tabs.push(searchTab)
 			}
 		}
+		if (!massNav.tabs?.user?.hide) {
+			//User tab is not hidden
+			const override = Object.assign({}, massNav.tabs?.user)
+			if (!appState.termdbConfig?.requiredAuth?.length) {
+				if (!override.top) override.top = 'SESSION'
+			}
+			// a copy, since userTab is shared by all nav instances
+			self.tabs.push(Object.assign({}, userTab, override))
+		}
 
 		const table = self.dom.tabDiv
 			.append('table')
 			.attr('data-testid', 'sjpp-nav-tabs-table')
 			.style('border-collapse', 'collapse')
+			.style('height', '100%')
 
 		// using a table layout for tabs, iterate through each tab
 		// once for each of [top, mid, btm] row
@@ -375,7 +406,7 @@ function setRenderers(self) {
 			.attr('class', (d, i) => `sjpp-nav-tabs-row-${i}`)
 			.style('font-size', (d, i) => (i == 1 ? '20px' : '12px'))
 			.selectAll('td')
-			.data((key, i) =>
+			.data((key: 'top' | 'mid' | 'btm', i: number) =>
 				self.tabs.map((row, colNum) => {
 					return {
 						rowNum: i,
@@ -416,54 +447,22 @@ function setRenderers(self) {
 		self.dom.trs = table.selectAll('tr')
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = self.tabs.map(d => d.subheader)
-
-		self.dom.saveBtn = self.dom.sessionDiv
-			.append('button')
-			.attr('data-testid', 'sjpp-nav-session-btn')
-			.style('margin', '10px')
-			.text('Session ▼')
-
-		//.on('click', self.getSessionUrl)
-
-		if (self.sessionDaysLeft != null) {
-			//Only show if called from `mass-session-id` URL
-			self.dom.fileBtn = self.dom.sessionDiv
-				.append('button')
-				.attr('data-testid', 'sjpp-nav-file-btn')
-				.style('margin', '10px')
-				.text('Export Session')
-				.on('click', event => {
-					self.getSessionFile(event)
-				})
-		}
 	}
 
 	self.deletePlots = () => {
 		const state = self.app.getState()
-		const subactions = []
+		const subactions: any[] = []
 		for (const plot of state.plots) subactions.push({ type: 'plot_delete', id: plot.id })
 
 		self.app.dispatch({ type: 'app_refresh', subactions })
 	}
 
-	self.mayShowMessage_sessionDaysLeft = () => {
-		if (!Number.isFinite(self.sessionDaysLeft)) {
-			// info not available, do not show msg
-			return
-		}
-		self.dom.sessionElapsedMessageDiv.style('display', 'block')
-		self.dom.remainingDaysMessage = self.dom.sessionElapsedMessageDiv
-			.append('div')
-			.style('display', 'block')
-			.style('opacity', '0.65')
-			.html(
-				`<u>${self.sessionDaysLeft} days</u> left until this session is removed. Click the "Session ▼" button and select "Save" option to create a new one.`
-			)
-	}
-
 	self.updateUI = async () => {
 		if (!self.dom.subheaderDiv) return
-		if (self.activeTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
+		// the session controls of the user tab do not depend on a cohort, for example to open a saved session
+		// that selects one, so that tab is shown even when no cohort is selected
+		const isUserTab = self.tabs[self.activeTab]?.subheader === 'user'
+		if (self.activeTab && !isUserTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
 			// showing charts or filter tab; cohort selection is enabled but no cohort is selected
 			self.dom.subheaderDiv.style('display', 'none')
 			self.dom.messageDiv.selectAll('text').remove()
@@ -486,7 +485,7 @@ function setRenderers(self) {
 					? self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 					: 'transparent'
 			)
-			.html(function (d, i) {
+			.html(function (this: any, d: NavTabCell /*, i: number */) {
 				if (d.key == 'top') return this.innerHTML
 
 				if (d.subheader == 'groups') {
@@ -545,8 +544,8 @@ function setRenderers(self) {
 	}
 }
 
-function setInteractivity(self) {
-	self.setTab = async (event, d) => {
+function setInteractivity(self: any): void {
+	self.setTab = async (event: any, d: NavTabCell): Promise<void> => {
 		// a disabled tab is shown to advertise the capability but cannot be activated
 		if (d.disabled) return
 		if (d.colNum === self.activeTab && !self.searching) {
@@ -575,7 +574,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.mouseover = (event, d) => {
+	self.mouseover = (event: any, d: NavTabCell): void => {
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
@@ -592,18 +591,7 @@ function setInteractivity(self) {
 		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? defaultActiveColor : 'transparent'))
 	}
 
-	self.getSessionFile = async event => {
-		//Download mass-session-id file
-		const res = await dofetch3(`/massSession?id=${self.sessionId}`)
-		const a = document.createElement('a')
-		const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(res.state))
-		a.setAttribute('href', dataStr)
-		a.download = `${self.sessionId}.json`
-		a.click()
-		a.remove()
-	}
-
-	self.pickDatasetLabel = appState => {
+	self.pickDatasetLabel = (appState: any): string => {
 		const dslabel = appState.vocab.dslabel.toUpperCase()
 		return dslabel.length > 10 ? `${dslabel.slice(0, 10)}...` : dslabel
 	}

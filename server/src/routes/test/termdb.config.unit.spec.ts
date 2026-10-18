@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getDsAllowedTermTypes, getLoneTermByType } from '../termdb.config.ts'
+import { getDsAllowedTermTypes, getLoneTermByType, getUserTab } from '../termdb.config.ts'
 import {
 	CATEGORICAL,
 	FLOAT,
@@ -408,5 +408,116 @@ tape('getLoneTermByType() - drops a lone term hidden from the requesting user', 
 tape('getLoneTermByType() - returns undefined when every lone term is hidden', function (test) {
 	const ds: any = { cohort: { termdb: { isTermVisible: () => false } } }
 	test.equal(getLoneTermByType({ query: {} }, ds, loneTermByType), undefined, 'Should not send an empty loneTermByType')
+	test.end()
+})
+
+/**************
+ getUserTab()
+***************/
+tape('\n', function (test) {
+	test.comment('-***- #routes/termdb.config getUserTab -***-')
+	test.end()
+})
+
+const getDs = (user: any): any => ({ cohort: { massNav: { tabs: { user } } } })
+
+tape('getUserTab() - computes the message and public access from clientAuthResult', function (test) {
+	const ds = getDs({
+		getMsg: q => (q.clientAuthResult.datasets?.length ? 'authorized' : 'public only'),
+		isPublic: q => !q.clientAuthResult.datasets?.length
+	})
+	test.deepEqual(
+		getUserTab(ds, { datasets: ['a'] }, {}),
+		{ msg: 'authorized' },
+		'Should return the message for an authorized user'
+	)
+	test.deepEqual(
+		getUserTab(ds, {}, {}),
+		{ msg: 'public only', isPublic: true },
+		'Should return the message and isPublic for a user without authorization'
+	)
+	test.end()
+})
+
+tape('getUserTab() - passes the login status and datasets from __protected__ to both hooks', function (test) {
+	const received: any[] = []
+	const ds = getDs({
+		getMsg: q => {
+			received.push(q)
+			return 'msg'
+		},
+		isPublic: q => {
+			received.push(q)
+			return false
+		}
+	})
+	const datasets = Object.freeze(['sjlife', 'ccss'])
+	const __protected__ = Object.freeze({
+		clientAuthResult: { x: 1 },
+		datasets,
+		isUserLoggedIn: true,
+		sessionid: 'abc',
+		ignoredTermIds: []
+	})
+	test.deepEqual(getUserTab(ds, { y: 2 }, __protected__), { msg: 'msg' }, 'Should leave out isPublic when it is false')
+	test.equal(received.length, 2, 'Should call both hooks')
+	test.deepEqual(
+		received[0],
+		{ clientAuthResult: { y: 2 }, datasets: ['sjlife', 'ccss'], isUserLoggedIn: true },
+		'Should pass only clientAuthResult, datasets, and isUserLoggedIn'
+	)
+	test.equal(received[1], received[0], 'Should pass the same argument to both hooks')
+	test.true(Object.isFrozen(received[0]), 'Should pass a frozen argument')
+	test.equal(received[0].datasets, datasets, 'Should pass the frozen datasets of __protected__ as they are')
+
+	// missing or partial __protected__, such as when the server has no auth
+	for (const p of [undefined, {}, { sessionid: 'abc' }, { datasets: 'sjlife', isUserLoggedIn: 'true' }]) {
+		received.length = 0
+		getUserTab(ds, {}, p)
+		test.deepEqual(
+			received[0],
+			{ clientAuthResult: {}, datasets: [], isUserLoggedIn: false },
+			`Should default to no datasets and not logged in for __protected__=${JSON.stringify(p)}`
+		)
+	}
+	test.end()
+})
+
+tape('getUserTab() - returns undefined or leaves out a result without a usable value', function (test) {
+	for (const massNav of [undefined, {}, { tabs: {} }, { tabs: { user: {} } }, { tabs: { user: { top: 'USER' } } }]) {
+		const ds: any = { cohort: { massNav } }
+		test.equal(getUserTab(ds, {}, {}), undefined, `Should return undefined for massNav=${JSON.stringify(massNav)}`)
+	}
+	for (const getMsg of ['x', () => undefined, () => '', () => 7, () => ({ text: 'x' })]) {
+		test.equal(getUserTab(getDs({ getMsg }), {}, {}), undefined, `Should ignore getMsg=${getMsg.toString()}`)
+	}
+	for (const isPublic of [true, () => false, () => 'true', () => 1, () => undefined]) {
+		test.equal(getUserTab(getDs({ isPublic }), {}, {}), undefined, `Should ignore isPublic=${isPublic.toString()}`)
+	}
+	test.deepEqual(
+		getUserTab(getDs({ isPublic: () => true }), {}, {}),
+		{ isPublic: true },
+		'Should return isPublic without a message'
+	)
+
+	const log = console.log
+	console.log = () => {}
+	const fail = () => {
+		throw 'hook error'
+	}
+	try {
+		test.equal(
+			getUserTab(getDs({ getMsg: fail, isPublic: fail }), {}, {}),
+			undefined,
+			'Should not throw when the hooks throw'
+		)
+		test.deepEqual(
+			getUserTab(getDs({ getMsg: fail, isPublic: () => true }), {}, {}),
+			{ isPublic: true },
+			'Should keep the result of a hook when the other one throws'
+		)
+	} finally {
+		console.log = log
+	}
 	test.end()
 })
