@@ -2,7 +2,7 @@ import tape from 'tape'
 import jsonwebtoken from 'jsonwebtoken'
 import { promises as fs } from 'fs'
 import path from 'path'
-import { setAuthRoutes, getDemoJwtInput } from '#src/auth/AuthRoutes.ts'
+import { setAuthRoutes } from '#src/auth/AuthRoutes.ts'
 import { Auth, normalizeReqPath } from '#src/auth/Auth.ts'
 import { setAuthMiddleware, getProtectedRouteMiddlewares } from '#src/auth/AuthMiddleWare.ts'
 
@@ -1834,62 +1834,6 @@ tape('/demoToken: returns ok with new jwt on successful demo token request', asy
 
 	const decoded: any = jsonwebtoken.decode(res.sentData.fakeTokensByRole.user)
 	test.deepEqual(decoded?.datasets, [dslabel], 'should include the dataset in the token payload')
-	test.end()
-})
-
-tape('getDemoJwtInput()', function (test) {
-	const plain = { datasets: ['a'], clientAuthResult: { datasets: ['x'] } }
-	test.equal(getDemoJwtInput(plain, 'user'), plain, 'should return the input as it is when there is no userTab')
-	test.equal(getDemoJwtInput(undefined, 'user'), undefined, 'should return a missing input as it is')
-	const noAuthResult = { datasets: ['a'] }
-	test.equal(getDemoJwtInput(noAuthResult, 'user'), noAuthResult, 'should return an input without clientAuthResult')
-
-	const input = { datasets: ['a'], clientAuthResult: { datasets: ['x'], userTab: { intro: 'intro' } } }
-	const out = getDemoJwtInput(input, 'user')
-	test.deepEqual(
-		out,
-		{ datasets: ['a'], clientAuthResult: { datasets: ['x'], userTab: { intro: 'intro', role: 'user' } } },
-		'should add the role to clientAuthResult.userTab and keep everything else'
-	)
-	test.deepEqual(
-		input,
-		{ datasets: ['a'], clientAuthResult: { datasets: ['x'], userTab: { intro: 'intro' } } },
-		'should not change the input of the dataset'
-	)
-	const overridden = getDemoJwtInput({ clientAuthResult: { userTab: { role: 'other' } } }, 'public')
-	test.equal(overridden.clientAuthResult.userTab.role, 'public', 'should use the key of demoJwtInput as the role')
-	test.end()
-})
-
-tape('/demoToken: adds the role to clientAuthResult.userTab in the token payload', async function (test) {
-	test.timeoutAfter(500)
-	test.plan(2)
-
-	const demoToken = { secret: 'demo-token-secret-role', roles: ['user'], referers: ['example.com'], computedByRole: {} } // pragma: allowlist secret
-	const demoJwtInput = { user: { datasets: [dslabel], clientAuthResult: { userTab: { intro: 'intro' } } } }
-	const genomes = { hg38: { datasets: { [dslabel]: { demoJwtInput } } } }
-	const auth = makeAuthWithJwt({ demoToken }, genomes)
-	const app = makeApp(auth)
-	const req = {
-		query: { dslabel, embedder, genome: 'hg38', role: 'user', route: 'termdb' },
-		path: '/demoToken',
-		headers: { referer: 'https://example.com/demo' },
-		ip: '127.0.0.1'
-	}
-	const res = makeMockRes()
-
-	await app.routes['/demoToken'].post(req, res)
-	const decoded: any = jsonwebtoken.decode(res.sentData.fakeTokensByRole.user)
-	test.deepEqual(
-		decoded.clientAuthResult.userTab,
-		{ intro: 'intro', role: 'user' },
-		'should include the role from the demoJwtInput key in the token'
-	)
-	test.equal(
-		(demoJwtInput.user.clientAuthResult.userTab as any).role,
-		undefined,
-		'should not change the dataset demoJwtInput'
-	)
 	test.end()
 })
 

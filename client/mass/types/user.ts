@@ -21,6 +21,8 @@ export type MassUserDom = {
 	sessionDiv: Div
 	/** Holds the session option buttons */
 	optionsDiv: Div
+	/** Shows how many days are left before the server removes the session, if opened from a `mass-session-id` URL */
+	daysLeftDiv: Div
 	/** Where the selected session option renders. Replaces the popup menu of the former session button */
 	contentDiv: Div
 	/** Confirmation tip for the copied session link */

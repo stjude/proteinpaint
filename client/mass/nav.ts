@@ -5,7 +5,7 @@ import { groupsInit } from './groups'
 import { aboutInit } from './about.ts'
 import { chatInit } from './chat.ts'
 import { userInit } from './user'
-import { Menu, icons as icon_functions, escapeHtml } from '#dom'
+import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
 import type { NavTab, NavTabCell } from './types/nav'
 
@@ -54,7 +54,6 @@ class TdbNav {
 	samplecounts: Record<string, any>
 	searching: boolean
 	massSessionDuration: any
-	sessionDaysLeft: any
 	pkgver: any
 	opts: any
 	app: any
@@ -71,7 +70,6 @@ class TdbNav {
 		this.samplecounts = {} // tracks sample count by .activeCohort value and stringified filter json
 		this.searching = false
 		this.massSessionDuration = opts.massSessionDuration
-		this.sessionDaysLeft = opts.app.opts.sessionDaysLeft || null
 		this.pkgver = opts.pkgver || null //Release version
 		setInteractivity(this)
 		setRenderers(this)
@@ -133,11 +131,10 @@ class TdbNav {
 				app: this.app,
 				subheader: this.dom.subheader.user,
 				massSessionDuration: this.opts.massSessionDuration,
-				sessionDaysLeft: this.app.opts.sessionDaysLeft || null,
+				sessionDaysLeft: this.app.opts.sessionDaysLeft ?? null,
 				sessionId: this.app.opts.sessionId || null
 			})
 		})
-		this.mayShowMessage_sessionDaysLeft()
 		// } catch (e) {
 		// 	throw e
 		// }
@@ -215,8 +212,8 @@ function setRenderers(self: any): void {
 		// Note that if the user did not login the public token was used. So only if the user did login and the token passed was invalid this error is shown
 		if (!verifiedToken && invalidTokenErrorHandling?.affectedCharts?.includes('*'))
 			throw new Error(appState.termdbConfig.invalidTokenErrorHandling.errorMessage)
-		// a flex row, so that the tabs stretch to the height of the controls, which may be taller than the tabs
-		// when the session message wraps. the active tab then reaches the border at the bottom of the header
+		// a flex row, so that the tabs stretch to the height of the controls, which may be taller than the tabs.
+		// the active tab then reaches the border at the bottom of the header
 		const header = self.opts.holder
 			.append('div')
 			.style('white-space', 'nowrap')
@@ -237,7 +234,7 @@ function setRenderers(self: any): void {
 			.append('div')
 			.style('order', '1') // right of the tabs, left of the title
 			.style('margin', '10px 10px 10px auto')
-			// the icons are at the right edge, beside the title, even when the wrapped message is wider
+			// the icons are at the right edge, beside the title
 			.style('text-align', 'right')
 
 		if (self.opts.header_mode === 'only_buttons') {
@@ -266,16 +263,6 @@ function setRenderers(self: any): void {
 				.style('vertical-align', 'middle'),
 
 			helpDiv: controlsDiv.append('div').style('display', 'none'),
-			// stays in the floated controlsDiv, under the buttons. the message wraps at a width relative to the window
-			// instead of widening the controls, which would drop them below the tabs
-			sessionElapsedMessageDiv: controlsDiv
-				.append('div')
-				.style('display', 'none')
-				.style('font-size', '0.8em')
-				.style('line-height', '1.2')
-				.style('text-align', 'left')
-				.style('max-width', '30vw')
-				.style('white-space', 'normal'),
 			subheaderDiv: self.opts.holder.append('div').style('display', 'block').style('border-bottom', '1px solid #000'),
 			messageDiv: self.opts.holder.append('div').style('margin', '30px').style('display', 'none'),
 			titleDiv,
@@ -468,25 +455,6 @@ function setRenderers(self: any): void {
 		for (const plot of state.plots) subactions.push({ type: 'plot_delete', id: plot.id })
 
 		self.app.dispatch({ type: 'app_refresh', subactions })
-	}
-
-	self.mayShowMessage_sessionDaysLeft = () => {
-		if (!Number.isFinite(self.sessionDaysLeft)) {
-			// info not available, do not show msg
-			return
-		}
-		self.dom.sessionElapsedMessageDiv.style('display', 'block')
-		// the Save option is in the user tab, which is labeled SESSION or USER
-		const tabName = (self.tabs.find((t: NavTab) => t.subheader === 'user')?.top || 'session').toLowerCase()
-		self.dom.remainingDaysMessage = self.dom.sessionElapsedMessageDiv
-			.append('div')
-			.style('display', 'block')
-			.style('opacity', '0.65')
-			.html(
-				`<u>${self.sessionDaysLeft} days</u> left until this session is removed. Open the ${escapeHtml(
-					tabName
-				)} tab and select the "Save" option to create a new one.`
-			)
 	}
 
 	self.updateUI = async () => {

@@ -2643,7 +2643,8 @@ type MassNav = {
 		filter?: MassNavTabEntry
 		/** shown as CHAT when the ds has queries.chat, otherwise as SEARCH */
 		chat?: MassNavTabEntry
-		user?: MassNavTabEntry
+		/** shown as USER when the ds requires authorization, otherwise as SESSION */
+		user?: MassNavUserTabEntry
 	}
 	/** customize background color of active navigation tab */
 	activeColor?: string
@@ -2662,6 +2663,25 @@ type MassNavTabEntry = {
 	btm?: string
 	/** if true, does not show the tab */
 	hide?: boolean
+}
+
+type MassNavUserTabEntry = MassNavTabEntry & {
+	/** optional. computes the message shown in the user tab, under the sign-in status, from the auth of the user.
+	 * termdb/config sends the returned text to the client as termdbConfig.userTab.msg. text, not html */
+	getMsg?: (q: UserTabHookArg) => string | undefined
+	/** optional. returns true if the signed-in user has only public access, such as a public role, so that the
+	 * user tab reads 'Public access' instead of 'Signed in'. sent as termdbConfig.userTab.isPublic */
+	isPublic?: (q: UserTabHookArg) => boolean
+}
+
+/** The auth of the user, as passed to the massNav.tabs.user hooks */
+type UserTabHookArg = {
+	/** the clientAuthResult of the user's jwt payload, {} when the user has not signed in */
+	clientAuthResult: any
+	/** the dataset names in the login jwt of the user's active session, [] if none */
+	datasets: readonly string[]
+	/** true if the user has an active session for a termdb credential of the dataset */
+	isUserLoggedIn: boolean
 }
 
 type MassNavAboutTabEntry = MassNavTabEntry & {

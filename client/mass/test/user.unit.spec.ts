@@ -11,8 +11,10 @@ import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from
  *  - MassUser constructor
  *  - MassUser setRequiredAuth()
  *  - MassUser renderAuthInfo()
- *  - MassUser renderAuthInfo() role info
+ *  - MassUser renderAuthInfo() userTab
+ *  - MassUser renderDaysLeft()
  *  - MassUser renderSessionOptions()
+ *  - MassUser spacing under what an option renders
  *  - MassUser init() with sessions saved in the browser
  *  - MassUser init() with an optional lookup of the sessions on the server
  *  - MassUser setServerCachedSessions(): only successful results are kept
@@ -93,13 +95,15 @@ function getUser(
 /** The labels of the buttons that select a session option, in rendered order */
 function getOptionLabels(holder: any): string[] {
 	return holder
-		.selectAll('[data-testid^="sjpp-session-btn-"]')
+		.selectAll('[data-testid^="sjpp-massnav-user-session-btn-"]')
 		.nodes()
 		.map((n: HTMLElement) => n.textContent)
 }
 
 function getOptionBtn(holder: any, label: string): HTMLElement {
-	return holder.select(`[data-testid="sjpp-session-btn-${label.toLowerCase().replace(/\s/g, '-')}"]`).node()
+	return holder
+		.select(`[data-testid="sjpp-massnav-user-session-btn-${label.toLowerCase().replace(/\s/g, '-')}"]`)
+		.node()
 }
 
 /** Runs fn with localStorage[savedMassSessions] set to value, then restores the previous value */
@@ -157,14 +161,15 @@ tape('getDeletionBatches()', test => {
 
 tape('getAuthStatus()', test => {
 	test.equal(getAuthStatus(false), 'Requires sign-in', 'should require sign-in when not signed in')
-	test.equal(getAuthStatus(false, 'user'), 'Requires sign-in', 'should not use the role when not signed in')
-	test.equal(getAuthStatus(true), 'Signed in', 'should read Signed in without a role')
-	test.equal(getAuthStatus(true, ''), 'Signed in', 'should read Signed in for an empty role')
-	test.equal(getAuthStatus(true, 'user'), 'User signed in', 'should capitalize the role')
-	test.equal(getAuthStatus(true, 'Admin'), 'Admin signed in', 'should keep a capitalized role')
-	test.equal(getAuthStatus(true, 'public'), 'Public access', 'should read Public access for the public role')
-	test.equal(getAuthStatus(true, 'Public'), 'Public access', 'should ignore the case of the public role')
-	test.equal(getAuthStatus(true, 7 as any), 'Signed in', 'should ignore a role that is not a string')
+	test.equal(
+		getAuthStatus(false, true),
+		'Requires sign-in',
+		'should require sign-in for public access when not signed in'
+	)
+	test.equal(getAuthStatus(true), 'Signed in', 'should read Signed in')
+	test.equal(getAuthStatus(true, false), 'Signed in', 'should read Signed in when the access is not public')
+	test.equal(getAuthStatus(true, true), 'Public access', 'should read Public access for a user with only public access')
+	test.equal(getAuthStatus(true, 'true' as any), 'Signed in', 'should only accept true for public access')
 	test.end()
 })
 
@@ -173,15 +178,26 @@ tape('MassUser constructor', test => {
 	test.equal(user.type, 'user', 'should set the component type')
 	test.equal(MassUser.type, 'user', 'should have static type=user')
 	test.equal(user.route, 'termdb', 'should check the termdb route')
-	test.equal(holder.select('[data-testid="sjpp-user-auth"]').size(), 1, 'should create the auth div')
-	test.equal(holder.select('[data-testid="sjpp-user-session"]').size(), 1, 'should create the session div')
+	test.equal(holder.select('[data-testid="sjpp-massnav-user-auth"]').size(), 1, 'should create the auth div')
+	test.equal(holder.select('[data-testid="sjpp-massnav-user-session"]').size(), 1, 'should create the session div')
+	const sessionDiv = holder.select('[data-testid="sjpp-massnav-user-session"]').node() as HTMLElement
 	test.equal(
-		holder.select('[data-testid="sjpp-user-session"] [data-testid="sjpp-user-session-options"]').size(),
+		(sessionDiv.firstElementChild as HTMLElement).getAttribute('data-testid'),
+		'sjpp-massnav-user-session-label',
+		'should show the label before the options'
+	)
+	test.equal(
+		holder.select('[data-testid="sjpp-massnav-user-session-label"]').text(),
+		'SESSION',
+		'should label the options'
+	)
+	test.equal(
+		holder.select('[data-testid="sjpp-massnav-user-session"] [data-testid="sjpp-massnav-user-session-options"]').size(),
 		1,
 		'should create the options div inside the session div'
 	)
 	test.equal(
-		holder.select('[data-testid="sjpp-user-session"] [data-testid="sjpp-user-session-content"]').size(),
+		holder.select('[data-testid="sjpp-massnav-user-session"] [data-testid="sjpp-massnav-user-session-content"]').size(),
 		1,
 		'should create the content div inside the session div'
 	)
@@ -221,8 +237,12 @@ tape('MassUser renderAuthInfo()', test => {
 	{
 		const { user, holder } = getUser()
 		user.renderAuthInfo()
-		test.equal(holder.select('[data-testid="sjpp-user-auth"]').style('display'), 'none', 'should hide auth info')
-		test.equal(holder.select('[data-testid="sjpp-user-auth-status"]').size(), 0, 'should not render a status')
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth"]').style('display'),
+			'none',
+			'should hide auth info'
+		)
+		test.equal(holder.select('[data-testid="sjpp-massnav-user-auth-status"]').size(), 0, 'should not render a status')
 		holder.remove()
 	}
 
@@ -230,9 +250,13 @@ tape('MassUser renderAuthInfo()', test => {
 	{
 		const { user, holder } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: false })
 		user.renderAuthInfo()
-		test.equal(holder.select('[data-testid="sjpp-user-auth"]').style('display'), 'block', 'should show auth info')
 		test.equal(
-			holder.select('[data-testid="sjpp-user-auth-status"]').text(),
+			holder.select('[data-testid="sjpp-massnav-user-auth"]').style('display'),
+			'block',
+			'should show auth info'
+		)
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
 			'Requires sign-in',
 			'should prompt to sign in when there is no verified token'
 		)
@@ -248,7 +272,7 @@ tape('MassUser renderAuthInfo()', test => {
 		})
 		user.renderAuthInfo()
 		test.true(
-			holder.select('[data-testid="sjpp-user-auth"]').text().includes('token expired'),
+			holder.select('[data-testid="sjpp-massnav-user-auth"]').text().includes('token expired'),
 			'should show the reason'
 		)
 		holder.remove()
@@ -262,9 +286,13 @@ tape('MassUser renderAuthInfo()', test => {
 			tokenMessage: 'stale message'
 		})
 		user.renderAuthInfo()
-		test.equal(holder.select('[data-testid="sjpp-user-auth-status"]').text(), 'Signed in', 'should show signed in')
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+			'Signed in',
+			'should show signed in'
+		)
 		test.false(
-			holder.select('[data-testid="sjpp-user-auth"]').text().includes('stale message'),
+			holder.select('[data-testid="sjpp-massnav-user-auth"]').text().includes('stale message'),
 			'should not show a sign-in failure reason when signed in'
 		)
 		holder.remove()
@@ -275,110 +303,154 @@ tape('MassUser renderAuthInfo()', test => {
 		const { user, holder } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
 		user.renderAuthInfo()
 		user.renderAuthInfo()
-		test.equal(holder.selectAll('[data-testid="sjpp-user-auth-status"]').size(), 1, 'should render the status once')
+		test.equal(
+			holder.selectAll('[data-testid="sjpp-massnav-user-auth-status"]').size(),
+			1,
+			'should render the status once'
+		)
 		holder.remove()
 	}
 	test.end()
 })
 
-tape('MassUser renderAuthInfo() role info', test => {
-	const infoTestId = '[data-testid="sjpp-user-auth-info"]'
+tape('MassUser renderAuthInfo() userTab', test => {
+	const infoTestId = '[data-testid="sjpp-massnav-user-auth-info"]'
 
-	// the status names the role, and the text is under it
-	for (const [role, status] of [
-		['user', 'User signed in'],
-		['public', 'Public access']
-	]) {
-		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.clientAuthResult = { userTab: { role, intro: `intro for ${role}` } }
+	// the message is under the status
+	for (const verified of [true, false]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified })
+		state.termdbConfig.userTab = { msg: 'msg' }
 		user.renderAuthInfo()
 		const children = Array.from(
-			(holder.select('[data-testid="sjpp-user-auth"]').node() as HTMLElement).children
+			(holder.select('[data-testid="sjpp-massnav-user-auth"]').node() as HTMLElement).children
 		) as HTMLElement[]
 		test.equal(
 			children[0].getAttribute('data-testid'),
-			'sjpp-user-auth-status',
-			`should show the status first, ${role}`
+			'sjpp-massnav-user-auth-status',
+			`should show the status first, verified=${verified}`
 		)
-		test.equal(children[0].textContent, status, `should show '${status}'`)
-		test.equal(children[1].getAttribute('data-testid'), 'sjpp-user-auth-info', `should show the text under it, ${role}`)
-		test.equal(children[1].textContent, `intro for ${role}`, `should show the text of the ${role} role`)
-		holder.remove()
-	}
-
-	// text without a role
-	{
-		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.clientAuthResult = { userTab: { intro: 'intro' } }
-		user.renderAuthInfo()
-		test.equal(holder.select('[data-testid="sjpp-user-auth-status"]').text(), 'Signed in', 'should read Signed in')
-		test.equal(holder.select(infoTestId).text(), 'intro', 'should still show the text')
-		holder.remove()
-	}
-
-	// role without text, and not signed in
-	{
-		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.clientAuthResult = { userTab: { role: 'user' } }
-		user.renderAuthInfo()
-		test.equal(holder.select('[data-testid="sjpp-user-auth-status"]').text(), 'User signed in', 'should show the role')
-		test.equal(holder.select(infoTestId).size(), 0, 'should not show text when there is none')
-		holder.remove()
-	}
-	{
-		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: false })
-		state.termdbConfig.clientAuthResult = { userTab: { role: 'user', intro: 'intro' } }
-		user.renderAuthInfo()
 		test.equal(
-			holder.select('[data-testid="sjpp-user-auth-status"]').text(),
-			'Requires sign-in',
-			'should not show the role when not signed in'
+			children[0].textContent,
+			verified ? 'Signed in' : 'Requires sign-in',
+			`should show the status, verified=${verified}`
 		)
+		test.equal(
+			children[1].getAttribute('data-testid'),
+			'sjpp-massnav-user-auth-info',
+			`should show the message under it, verified=${verified}`
+		)
+		test.equal(children[1].textContent, 'msg', `should show the message, verified=${verified}`)
 		holder.remove()
 	}
 
 	// text is not interpreted as html
 	{
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.clientAuthResult = { userTab: { intro: '<b>bold</b>' } }
+		state.termdbConfig.userTab = { msg: '<b>bold</b>' }
 		user.renderAuthInfo()
 		test.equal(holder.select(infoTestId).text(), '<b>bold</b>', 'should show the text as it is')
 		test.equal(holder.select(`${infoTestId} b`).size(), 0, 'should not render html from the text')
 		holder.remove()
 	}
 
-	// no info
-	for (const clientAuthResult of [undefined, {}, { userTab: {} }, { userTab: { intro: '' } }]) {
+	// no message
+	for (const userTab of [undefined, {}, { msg: '' }, { isPublic: true }]) {
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.clientAuthResult = clientAuthResult
+		state.termdbConfig.userTab = userTab
 		user.renderAuthInfo()
-		test.equal(
-			holder.select(infoTestId).size(),
-			0,
-			`should not show info for clientAuthResult=${JSON.stringify(clientAuthResult)}`
-		)
-		test.equal(holder.select('[data-testid="sjpp-user-auth-status"]').size(), 1, 'should still show the status')
+		test.equal(holder.select(infoTestId).size(), 0, `should not show a message for userTab=${JSON.stringify(userTab)}`)
+		test.equal(holder.select('[data-testid="sjpp-massnav-user-auth-status"]').size(), 1, 'should still show the status')
 		holder.remove()
 	}
 
-	// replaced on re-render, for a different role
+	// replaced on re-render
 	{
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.clientAuthResult = { userTab: { intro: 'public' } }
+		state.termdbConfig.userTab = { msg: 'first' }
 		user.renderAuthInfo()
-		state.termdbConfig.clientAuthResult = { userTab: { intro: 'user' } }
+		state.termdbConfig.userTab = { msg: 'second' }
 		user.renderAuthInfo()
-		test.equal(holder.selectAll(infoTestId).size(), 1, 'should render the info once')
-		test.equal(holder.select(infoTestId).text(), 'user', 'should show the latest info')
+		test.equal(holder.selectAll(infoTestId).size(), 1, 'should render the message once')
+		test.equal(holder.select(infoTestId).text(), 'second', 'should show the latest message')
 		holder.remove()
 	}
 
-	// a public dataset has no auth info, even if the payload has info
+	// a public dataset has no auth info, even if there is a message
 	{
 		const { user, holder, state } = getUser()
-		state.termdbConfig.clientAuthResult = { userTab: { intro: 'x' } }
+		state.termdbConfig.userTab = { msg: 'x', isPublic: true }
 		user.renderAuthInfo()
-		test.equal(holder.select(infoTestId).size(), 0, 'should not show info when authorization is not required')
+		test.equal(holder.select(infoTestId).size(), 0, 'should not show a message when authorization is not required')
+		holder.remove()
+	}
+
+	// the status for a user with only public access
+	for (const [verified, isPublic, status] of [
+		[true, true, 'Public access'],
+		[true, false, 'Signed in'],
+		[true, undefined, 'Signed in'],
+		[false, true, 'Requires sign-in']
+	] as [boolean, boolean | undefined, string][]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified })
+		state.termdbConfig.userTab = { msg: 'msg', isPublic }
+		user.renderAuthInfo()
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+			status,
+			`should show '${status}' for verified=${verified} and isPublic=${isPublic}`
+		)
+		test.equal(holder.select(infoTestId).text(), 'msg', 'should still show the message')
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('MassUser renderDaysLeft()', test => {
+	const testid = '[data-testid="sjpp-massnav-user-session-days-left"]'
+	for (const [days, text] of [
+		[12, '12 days'],
+		[1, '1 day'],
+		[0, '0 days']
+	] as [number, string][]) {
+		const { user, holder } = getUser({ sessionDaysLeft: days, sessionId: 'abc' })
+		user.renderDaysLeft()
+		const div = holder.select(testid)
+		test.equal(div.style('display'), 'block', `should show the message for ${days} days left`)
+		test.equal(div.select('u').text(), text, `should underline '${text}'`)
+		test.equal(
+			div.text(),
+			`${text} left until this session is removed. Select "Save" to create a new one.`,
+			`should show the message for ${days} days left`
+		)
+		holder.remove()
+	}
+
+	// the message is under the row of options, and under where an option renders
+	{
+		const { user, holder } = getUser({ sessionDaysLeft: 12, sessionId: 'abc' })
+		user.renderDaysLeft()
+		const ids = Array.from(
+			(holder.select('[data-testid="sjpp-massnav-user-session"]').node() as HTMLElement).children
+		).map(c => c.getAttribute('data-testid'))
+		test.deepEqual(
+			ids,
+			[
+				'sjpp-massnav-user-session-label',
+				'sjpp-massnav-user-session-options',
+				'sjpp-massnav-user-session-content',
+				'sjpp-massnav-user-session-days-left'
+			],
+			'should show the message under the options and what an option renders'
+		)
+		holder.remove()
+	}
+
+	for (const days of [null, undefined, NaN, '12' as any]) {
+		const { user, holder } = getUser({ sessionDaysLeft: days, sessionId: 'abc' })
+		user.renderDaysLeft()
+		const div = holder.select(testid)
+		test.equal(div.style('display'), 'none', `should not show the message for sessionDaysLeft=${days}`)
+		test.equal(div.text(), '', `should be empty for sessionDaysLeft=${days}`)
 		holder.remove()
 	}
 	test.end()
@@ -444,7 +516,7 @@ tape('MassUser renderSessionOptions()', test => {
 		user.savedSessions = { a: {} }
 		user.renderSessionOptions()
 		test.equal(
-			holder.selectAll('[data-testid="sjpp-session-btn-open"]').size(),
+			holder.selectAll('[data-testid="sjpp-massnav-user-session-btn-open"]').size(),
 			1,
 			'should replace, and not append to, the buttons on re-render'
 		)
@@ -454,6 +526,33 @@ tape('MassUser renderSessionOptions()', test => {
 		test.false(getOptionLabels(holder).includes('Delete'), 'should hide Delete after all sessions are removed')
 		holder.remove()
 	}
+	test.end()
+})
+
+tape('MassUser spacing under what an option renders', async test => {
+	const { user, holder } = getUser()
+	user.sessionOptions = [
+		{ label: 'Render', title: 'render', callback: () => user.dom.contentDiv.append('div').text('x') },
+		{ label: 'Nothing', title: 'nothing', callback: () => {} }
+	]
+	user.renderSessionOptions()
+	// the inline style, since the computed style is never empty
+	const content = user.dom.contentDiv.node() as HTMLElement
+	test.equal(content.style.paddingBottom, '', 'should not have spacing before an option is selected')
+
+	getOptionBtn(holder, 'Render').click()
+	await new Promise(r => setTimeout(r, 0))
+	test.equal(content.style.paddingBottom, '10px', 'should add spacing under what an option rendered')
+
+	getOptionBtn(holder, 'Nothing').click()
+	await new Promise(r => setTimeout(r, 0))
+	test.equal(content.style.paddingBottom, '', 'should remove the spacing when an option renders nothing')
+
+	getOptionBtn(holder, 'Render').click()
+	await new Promise(r => setTimeout(r, 0))
+	user.clearContent()
+	test.equal(content.style.paddingBottom, '', 'should remove the spacing when the content is cleared')
+	holder.remove()
 	test.end()
 })
 
@@ -582,7 +681,7 @@ tape('MassUser init() with an optional lookup of the sessions on the server', as
 		user.renderSessionOptions()
 		getOptionBtn(holder, 'Open').click()
 		await new Promise(resolve => setTimeout(resolve, 100))
-		const text = holder.select('[data-testid="sjpp-user-session-content"]').text()
+		const text = holder.select('[data-testid="sjpp-massnav-user-session-content"]').text()
 		test.true(text.includes('server1'), 'should list the server session once the lookup works')
 		restore()
 		holder.remove()
@@ -603,13 +702,13 @@ tape('MassUser init() with an optional lookup of the sessions on the server', as
 		getOptionBtn(holder, 'Open').click()
 		await new Promise(resolve => setTimeout(resolve, 50))
 		test.true(
-			holder.select('[data-testid="sjpp-user-session-content"]').text().includes('local1'),
+			holder.select('[data-testid="sjpp-massnav-user-session-content"]').text().includes('local1'),
 			'should still list the sessions of the browser in Open'
 		)
 		getOptionBtn(holder, 'Save').click()
 		await new Promise(resolve => setTimeout(resolve, 50))
 		test.equal(
-			holder.selectAll('[data-testid="sjpp-user-session-content"] button').size(),
+			holder.selectAll('[data-testid="sjpp-massnav-user-session-content"] button').size(),
 			3,
 			'should still show the Save options'
 		)
@@ -1036,16 +1135,16 @@ tape('MassUser getState()', test => {
 		vocab: { dslabel: 'x' },
 		plots: [{ id: 'p1' }],
 		nav: { activeTab: 3 },
-		termdbConfig: { ...big, requiredAuth: [jwtAuth], clientAuthResult: { userTab: { intro: 'hi' } } }
+		termdbConfig: { ...big, requiredAuth: [jwtAuth], clientAuthResult: { datasets: ['a'] }, userTab: { msg: 'hi' } }
 	}
 	test.deepEqual(
 		user.getState(appState),
-		{ termdbConfig: { requiredAuth: [jwtAuth], clientAuthResult: { userTab: { intro: 'hi' } } } },
-		'should only have the requiredAuth and clientAuthResult that the component renders from'
+		{ termdbConfig: { requiredAuth: [jwtAuth], userTab: { msg: 'hi' } } },
+		'should only have the requiredAuth and userTab that the component renders from'
 	)
 	test.deepEqual(
 		user.getState({ vocab: {}, nav: {} }),
-		{ termdbConfig: { requiredAuth: undefined, clientAuthResult: undefined } },
+		{ termdbConfig: { requiredAuth: undefined, userTab: undefined } },
 		'should handle a missing termdbConfig'
 	)
 
@@ -1062,11 +1161,15 @@ tape('MassUser getState()', test => {
 	// and what the component renders is rendered from this state
 	const { user: user2, holder: holder2 } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
 	user2.state = user2.getState({
-		termdbConfig: { ...big, requiredAuth: [jwtAuth], clientAuthResult: { userTab: { role: 'user', intro: 'hi' } } }
+		termdbConfig: { ...big, requiredAuth: [jwtAuth], userTab: { msg: 'hi', isPublic: true } }
 	})
 	user2.renderAuthInfo()
-	test.equal(holder2.select('[data-testid="sjpp-user-auth-status"]').text(), 'User signed in', 'should render the role')
-	test.equal(holder2.select('[data-testid="sjpp-user-auth-info"]').text(), 'hi', 'should render the intro')
+	test.equal(
+		holder2.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+		'Public access',
+		'should render the status'
+	)
+	test.equal(holder2.select('[data-testid="sjpp-massnav-user-auth-info"]').text(), 'hi', 'should render the message')
 	holder.remove()
 	holder2.remove()
 	test.end()
@@ -1113,7 +1216,7 @@ tape('MassUser File save', async test => {
 		state.plots = [{ id: 'p1', chartType: 'summary' }]
 		const stub = stubDownloads()
 		user.renderSessionOptions()
-		const content = holder.select('[data-testid="sjpp-user-session-content"]')
+		const content = holder.select('[data-testid="sjpp-massnav-user-session-content"]')
 		// the options to save are shown again after each save, which shows a confirmation instead
 		const clickFile = async (name: string) => {
 			getOptionBtn(holder, 'Save').click()
@@ -1137,7 +1240,7 @@ tape('MassUser File save', async test => {
 		test.deepEqual(Object.keys(user.savedSessions), ['existing'], 'should not keep the session of a file in memory')
 		test.equal(localStorage.getItem(storageKey), null, 'should not save the session of a file in the browser storage')
 		test.false(
-			holder.select('[data-testid="sjpp-user-session-content"]').text().includes('Cache Location'),
+			holder.select('[data-testid="sjpp-massnav-user-session-content"]').text().includes('Cache Location'),
 			'should not list the session of a file as a session of the browser'
 		)
 		stub.restore()
@@ -1180,7 +1283,7 @@ tape('MassUser ids in urls', async test => {
 		user.renderSessionOptions()
 		getOptionBtn(holder, 'Open').click()
 		await new Promise(resolve => setTimeout(resolve, 100))
-		const content = holder.select('[data-testid="sjpp-user-session-content"]')
+		const content = holder.select('[data-testid="sjpp-massnav-user-session-content"]')
 		// the option to open in a new tab is not shown, the current tab is its default
 		content.select('input[value="new"]').property('checked', true)
 		const row = content
@@ -1211,7 +1314,7 @@ tape('MassUser ids in urls', async test => {
 		user.renderSessionOptions()
 		getOptionBtn(holder, 'Share').click()
 		await new Promise(resolve => setTimeout(resolve, 100))
-		const link = holder.select('[data-testid="sjpp-user-session-content"] a')
+		const link = holder.select('[data-testid="sjpp-massnav-user-session-content"] a')
 		test.true(
 			link.attr('href').includes(`mass-session-id=${encoded}&noheader=1`),
 			'should encode the id of a shared session'
@@ -1237,7 +1340,7 @@ tape('MassUser Server save', async test => {
 		user.renderSessionOptions()
 		getOptionBtn(holder, 'Save').click()
 		await new Promise(resolve => setTimeout(resolve, 50))
-		const content = holder.select('[data-testid="sjpp-user-session-content"]')
+		const content = holder.select('[data-testid="sjpp-massnav-user-session-content"]')
 		content.select('input[type="text"]').property('value', 'on-server')
 		const buttons = Array.from((content.node() as HTMLElement).querySelectorAll('button'))
 		const serverBtn = buttons.find((b: HTMLButtonElement) => b.textContent == 'Server') as HTMLButtonElement
@@ -1280,7 +1383,7 @@ tape('MassUser refuses()', test => {
 
 tape('MassUser clearContent() and confirmAction()', test => {
 	const { user, holder } = getUser()
-	const content = holder.select('[data-testid="sjpp-user-session-content"]')
+	const content = holder.select('[data-testid="sjpp-massnav-user-session-content"]')
 	user.confirmAction(`Cached 'mysession' in browser`)
 	test.equal(content.text(), `Cached 'mysession' in browser`, 'should show the confirmation message')
 	test.equal(content.select('div').selectAll('*').size(), 0, 'should keep the message as text')
@@ -1322,7 +1425,7 @@ tape('Literal display values', async test => {
 	await user.save()
 	const content = user.dom.contentDiv
 	content.select('input[type="text"]').property('value', 'example').dispatch('input')
-	const option = content.select('[data-testid="sjpp-save-session-option"]')
+	const option = content.select('[data-testid="sjpp-massnav-user-session-save-option"]')
 	test.equal(option.text(), name, 'should display the suggested value verbatim')
 	test.equal(option.selectAll('*').size(), 0, 'should keep the suggested value as text')
 	option.dispatch('click')
@@ -1338,7 +1441,7 @@ tape('MassUser open()', async test => {
 	// the click handler is async, wait for the table to render
 	await new Promise(resolve => setTimeout(resolve, 50))
 
-	const content = holder.select('[data-testid="sjpp-user-session-content"]')
+	const content = holder.select('[data-testid="sjpp-massnav-user-session-content"]')
 	test.equal(content.selectAll('table').size(), 1, 'should list the sessions in a table')
 	test.equal(content.select('thead th').text(), 'Open from', 'should label the first column')
 	const rows = content.selectAll('tbody tr').nodes() as HTMLElement[]
@@ -1373,7 +1476,7 @@ tape('MassUser open() a session in the browser', async test => {
 	await new Promise(resolve => setTimeout(resolve, 50))
 
 	const row = holder
-		.selectAll('[data-testid="sjpp-user-session-content"] tbody tr')
+		.selectAll('[data-testid="sjpp-massnav-user-session-content"] tbody tr')
 		.filter((_: any, i: number, nodes: any) => nodes[i].textContent.includes('local1'))
 		.node() as HTMLElement
 	row.click()
@@ -1385,7 +1488,7 @@ tape('MassUser open() a session in the browser', async test => {
 	test.notEqual(calls.dispatched[0].state, state, 'should dispatch a copy, so the saved session is not modified')
 	test.equal(user.sessionName, 'local1', 'should remember the session name')
 	test.equal(
-		holder.selectAll('[data-testid="sjpp-user-session-content"] table').size(),
+		holder.selectAll('[data-testid="sjpp-massnav-user-session-content"] table').size(),
 		0,
 		'should clear the session list after opening'
 	)
@@ -1401,7 +1504,7 @@ tape('MassUser open() a session that is refused', async test => {
 	await new Promise(resolve => setTimeout(resolve, 50))
 
 	const row = holder
-		.selectAll('[data-testid="sjpp-user-session-content"] tbody tr')
+		.selectAll('[data-testid="sjpp-massnav-user-session-content"] tbody tr')
 		.filter((_: any, i: number, nodes: any) => nodes[i].textContent.includes('old1'))
 		.node() as HTMLElement
 	row.click()
@@ -1421,7 +1524,7 @@ tape('MassUser save() for a public dataset', async test => {
 		getOptionBtn(holder, 'Save').click()
 		await new Promise(resolve => setTimeout(resolve, 50))
 
-		const content = holder.select('[data-testid="sjpp-user-session-content"]')
+		const content = holder.select('[data-testid="sjpp-massnav-user-session-content"]')
 		const btnLabels = content
 			.selectAll('button')
 			.nodes()
@@ -1432,7 +1535,7 @@ tape('MassUser save() for a public dataset', async test => {
 
 		// typing a name shows matching saved names
 		input.property('value', 'exi').dispatch('input')
-		const options = content.selectAll('[data-testid="sjpp-save-session-option"]').nodes() as HTMLElement[]
+		const options = content.selectAll('[data-testid="sjpp-massnav-user-session-save-option"]').nodes() as HTMLElement[]
 		test.deepEqual(
 			options.map(o => o.textContent),
 			['existing'],
@@ -1463,7 +1566,9 @@ tape('MassUser save() for a dataset that requires a jwt', async test => {
 		user.renderSessionOptions()
 		getOptionBtn(holder, 'Save').click()
 		await new Promise(resolve => setTimeout(resolve, 50))
-		const btns = holder.selectAll('[data-testid="sjpp-user-session-content"] button').nodes() as HTMLButtonElement[]
+		const btns = holder
+			.selectAll('[data-testid="sjpp-massnav-user-session-content"] button')
+			.nodes() as HTMLButtonElement[]
 		test.deepEqual(
 			btns.map(b => b.textContent),
 			['Browser', 'File', 'Server'],
@@ -1481,7 +1586,9 @@ tape('MassUser save() for a dataset that requires a jwt', async test => {
 		user.renderSessionOptions()
 		getOptionBtn(holder, 'Save').click()
 		await new Promise(resolve => setTimeout(resolve, 50))
-		const btns = holder.selectAll('[data-testid="sjpp-user-session-content"] button').nodes() as HTMLButtonElement[]
+		const btns = holder
+			.selectAll('[data-testid="sjpp-massnav-user-session-content"] button')
+			.nodes() as HTMLButtonElement[]
 		test.false(btns[2].disabled, 'should enable saving on the server when signed in')
 		test.false(btns[2].title.startsWith('Requires sign-in'), 'should not say that sign-in is required')
 		holder.remove()
@@ -1494,7 +1601,7 @@ tape('MassUser save() for a dataset that requires a jwt', async test => {
 		getOptionBtn(holder, 'Save').click()
 		await new Promise(resolve => setTimeout(resolve, 50))
 		const labels = holder
-			.selectAll('[data-testid="sjpp-user-session-content"] button')
+			.selectAll('[data-testid="sjpp-massnav-user-session-content"] button')
 			.nodes()
 			.map((n: any) => n.textContent)
 		test.deepEqual(labels, ['Browser', 'File'], 'should not offer to save on the server for a basic credential')
@@ -1510,7 +1617,7 @@ tape('MassUser delete()', async test => {
 		getOptionBtn(holder, 'Delete').click()
 		await new Promise(resolve => setTimeout(resolve, 50))
 
-		const content = holder.select('[data-testid="sjpp-user-session-content"]')
+		const content = holder.select('[data-testid="sjpp-massnav-user-session-content"]')
 		const submit = content.selectAll('button').filter(function (this: any) {
 			return this.textContent == 'Delete selected sessions'
 		})

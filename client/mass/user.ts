@@ -27,14 +27,12 @@ export function datasetRequiresAuth(termdbConfig: any): boolean {
 
 /**
  * The sign-in status line.
- * role: clientAuthResult.userTab.role, the role of the user as named by the dataset. 'public' is a
- * login without a user, which reads 'Public access'.
+ * isPublic: termdbConfig.userTab.isPublic, from the optional ds hook massNav.tabs.user.isPublic(), true if the
+ * signed-in user has only public access, such as a public role
  */
-export function getAuthStatus(signedIn: boolean, role?: string): string {
+export function getAuthStatus(signedIn: boolean, isPublic?: boolean): string {
 	if (!signedIn) return 'Requires sign-in'
-	if (!role || typeof role != 'string') return 'Signed in'
-	if (role.toLowerCase() == 'public') return 'Public access'
-	return `${role.charAt(0).toUpperCase()}${role.slice(1)} signed in`
+	return isPublic === true ? 'Public access' : 'Signed in'
 }
 
 export class MassUser implements RxComponent {
@@ -73,16 +71,40 @@ export class MassUser implements RxComponent {
 		this.opts = opts
 		this.app = opts.app
 		this.subheader = opts.subheader
-		const sessionDiv = this.subheader.append('div').attr('data-testid', 'sjpp-user-session').style('margin', '10px')
+		// no margin, so that the option buttons have the same spacing as the chart buttons in the charts tab,
+		// which are appended directly to that subheader
+		const sessionDiv = this.subheader.append('div').attr('data-testid', 'sjpp-massnav-user-session')
+		// states the purpose of the option buttons, on the same row. the left margin is the same as the buttons
+		sessionDiv
+			.append('span')
+			.attr('data-testid', 'sjpp-massnav-user-session-label')
+			.style('margin-left', '10px')
+			.style('font-weight', 'bold')
+			.style('opacity', 0.65)
+			.text('SESSION')
 		this.dom = {
-			authDiv: this.subheader.append('div').attr('data-testid', 'sjpp-user-auth').style('margin', '10px'),
+			authDiv: this.subheader.append('div').attr('data-testid', 'sjpp-massnav-user-auth').style('margin', '10px'),
 			sessionDiv,
-			optionsDiv: sessionDiv.append('div').attr('data-testid', 'sjpp-user-session-options'),
+			// inline-block, to be on the same row as the label
+			optionsDiv: sessionDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-massnav-user-session-options')
+				.style('display', 'inline-block'),
+			// aligned with the edge of the option buttons, which have a 10px margin
 			contentDiv: sessionDiv
 				.append('div')
-				.attr('id', 'sjpp-session-menu')
-				.attr('data-testid', 'sjpp-user-session-content')
-				.style('margin-top', '10px'),
+				.attr('id', 'sjpp-massnav-user-session-menu')
+				.attr('data-testid', 'sjpp-massnav-user-session-content')
+				.style('margin', '0 10px'),
+			// how long the server keeps a session that was opened from a `mass-session-id` URL, under the options
+			// and what an option renders
+			daysLeftDiv: sessionDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-massnav-user-session-days-left')
+				.style('display', 'none')
+				.style('margin', '0 10px 10px 10px')
+				.style('font-size', '0.9em')
+				.style('opacity', 0.65),
 			copytip: new Menu({ padding: '5px' })
 		}
 		this.sessionOptions = [
@@ -113,7 +135,7 @@ export class MassUser implements RxComponent {
 		return {
 			termdbConfig: {
 				requiredAuth: appState.termdbConfig?.requiredAuth,
-				clientAuthResult: appState.termdbConfig?.clientAuthResult
+				userTab: appState.termdbConfig?.userTab
 			}
 		}
 	}
@@ -124,6 +146,7 @@ export class MassUser implements RxComponent {
 		this.savedSessions = JSON.parse(localStorage.getItem('savedMassSessions') || `{}`)
 		this.setRequiredAuth(appState.termdbConfig)
 		this.initSessionOptions()
+		this.renderDaysLeft()
 	}
 
 	async main() {
@@ -161,26 +184,36 @@ export class MassUser implements RxComponent {
 		div.style('display', 'block')
 		const vocabApi: any = this.app.vocabApi
 		const signedIn = vocabApi.hasVerifiedToken()
-		// clientAuthResult.userTab is set by the dataset, from the jwt payload of the role
-		const userTab = this.state.termdbConfig.clientAuthResult?.userTab
+		// computed by the optional ds hooks in massNav.tabs.user, from the auth of the user
+		const userTab = this.state.termdbConfig.userTab
 		div
 			.append('div')
-			.attr('data-testid', 'sjpp-user-auth-status')
+			.attr('data-testid', 'sjpp-massnav-user-auth-status')
 			.style('font-weight', 'bold')
 			.style('font-size', '1.2em')
-			.text(getAuthStatus(signedIn, userTab?.role))
+			.text(getAuthStatus(signedIn, userTab?.isPublic))
 		// reason for a failed sign-in, if any
 		const msg = vocabApi.tokenVerificationMessage
 		if (!signedIn && msg) div.append('div').style('opacity', 0.65).text(msg)
-		// the introduction for the role, under the status. text, not html
-		if (userTab?.intro)
+		// the message from massNav.tabs.user.getMsg(), under the status. text, not html
+		if (userTab?.msg)
 			div
 				.append('div')
-				.attr('data-testid', 'sjpp-user-auth-info')
+				.attr('data-testid', 'sjpp-massnav-user-auth-info')
 				.style('margin', '5px 0 0 8px')
 				.style('font-size', '0.95em')
 				.style('opacity', 0.75)
-				.text(userTab.intro)
+				.text(userTab.msg)
+	}
+
+	/** For a session opened from a `mass-session-id` URL, the number of days before the server removes it */
+	renderDaysLeft() {
+		const days = this.opts.sessionDaysLeft
+		// info not available, do not show the message
+		if (typeof days != 'number' || !Number.isFinite(days)) return
+		const div = this.dom.daysLeftDiv.style('display', 'block')
+		div.append('u').text(`${days} ${days == 1 ? 'day' : 'days'}`)
+		div.append('span').text(' left until this session is removed. Select "Save" to create a new one.')
 	}
 
 	/**
@@ -221,7 +254,10 @@ export class MassUser implements RxComponent {
 			.style('padding', '10px 15px')
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
-			.attr('data-testid', (d: SessionOption) => `sjpp-session-btn-${d.label.toLowerCase().replace(/\s/g, '-')}`)
+			.attr(
+				'data-testid',
+				(d: SessionOption) => `sjpp-massnav-user-session-btn-${d.label.toLowerCase().replace(/\s/g, '-')}`
+			)
 			.attr('aria-label', (d: SessionOption) => d.title)
 			.attr('title', (d: SessionOption) => d.title)
 			.text((d: SessionOption) => d.label)
@@ -229,6 +265,9 @@ export class MassUser implements RxComponent {
 				event.stopPropagation()
 				this.clearContent()
 				await d.callback()
+				// space what the option rendered from what is under it. not when nothing was rendered, so that the
+				// days left message stays right under the options. the component may be destroyed during the callback
+				if (this.dom?.contentDiv?.node()?.hasChildNodes()) this.dom.contentDiv.style('padding-bottom', '10px')
 			})
 	}
 
@@ -248,7 +287,7 @@ export class MassUser implements RxComponent {
 		this.confirmationTimer = undefined
 		this.dom.contentDiv.interrupt()
 		this.dom.contentDiv.selectAll('*').remove()
-		this.dom.contentDiv.style('opacity', 1)
+		this.dom.contentDiv.style('opacity', 1).style('padding-bottom', null)
 	}
 
 	/**
@@ -262,7 +301,7 @@ export class MassUser implements RxComponent {
 	}
 
 	async open() {
-		const radioName = `sjpp-session-open-radio-` + Math.random().toString().slice(-6)
+		const radioName = `sjpp-massnav-user-session-open-radio-` + Math.random().toString().slice(-6)
 		const div = this.dom.contentDiv
 		// always open in the current tab for now, to avoid the tricky part of the code
 		// that involves parent-child window messaging
@@ -517,7 +556,7 @@ export class MassUser implements RxComponent {
 					.enter()
 					.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-save-session-option`)
+					.attr('data-testid', `sjpp-massnav-user-session-save-option`)
 					.text((d: string) => d)
 					.on('click', (_: MouseEvent, d: string) => {
 						input.property('value', d)

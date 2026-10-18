@@ -11,7 +11,6 @@ import { dofetch, dofetch3, clearServerDataCache } from '#common/dofetch'
  *  - user tab for a dataset that requires authorization
  *  - launch when the lookup of the sessions on the server fails
  *  - user tab when no cohort is selected
- *  - days left message names the tab
  *  - Export Session and days left message for a session opened from a url
  */
 
@@ -46,12 +45,12 @@ function getUser(nav: any) {
 async function detectOptionBtn(nav: any, label: string): Promise<HTMLElement> {
 	return (await detectOne({
 		elem: nav.Inner.dom.subheader.user.node(),
-		selector: `[data-testid="sjpp-session-btn-${label.toLowerCase().replace(/\s/g, '-')}"]`
+		selector: `[data-testid="sjpp-massnav-user-session-btn-${label.toLowerCase().replace(/\s/g, '-')}"]`
 	})) as HTMLElement
 }
 
 function getContent(nav: any) {
-	return nav.Inner.dom.subheader.user.select('[data-testid="sjpp-user-session-content"]')
+	return nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-content"]')
 }
 
 /** Clicks the tab cell of the user tab, as a user would */
@@ -150,7 +149,7 @@ tape('user tab for a public dataset', test => {
 		const user = getUser(nav)
 		test.equal(user.requiredAuth, undefined, 'should not require authorization')
 		test.equal(
-			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-user-auth"]').style('display'),
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-auth"]').style('display'),
 			'none',
 			'should hide the authorization info'
 		)
@@ -160,7 +159,7 @@ tape('user tab for a public dataset', test => {
 			test.equal(btn.textContent, label, `should show the ${label} button`)
 		}
 		test.equal(
-			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-session-btn-export-session"]').size(),
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-btn-export-session"]').size(),
 			0,
 			'should not show Export Session for a session that was not opened from a url'
 		)
@@ -235,7 +234,7 @@ tape('Save to the browser, Open, and Delete a session', test => {
 		nav.on('postRender.test', null)
 		const user = getUser(nav)
 		test.false(
-			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-session-btn-delete"]').node(),
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-btn-delete"]').node(),
 			'should not show Delete before there are any sessions'
 		)
 
@@ -258,7 +257,7 @@ tape('Save to the browser, Open, and Delete a session', test => {
 		test.false('termdbConfig' in stored['integration-test-session'], 'should not save the dataset config')
 		test.equal(user.sessionName, 'integration-test-session', 'should remember the session name')
 		test.true(
-			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-session-btn-delete"]').node(),
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-btn-delete"]').node(),
 			'should show Delete after saving a session'
 		)
 
@@ -295,7 +294,7 @@ tape('Save to the browser, Open, and Delete a session', test => {
 			'should delete the session from the browser'
 		)
 		test.false(
-			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-session-btn-delete"]').node(),
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-btn-delete"]').node(),
 			'should hide Delete when there are no sessions'
 		)
 
@@ -383,10 +382,10 @@ tape('user tab for a dataset that requires authorization', test => {
 		const user = getUser(nav)
 		test.deepEqual(user.requiredAuth, jwtAuth, 'should find the jwt credential from the termdb config')
 
-		const authDiv = nav.Inner.dom.subheader.user.select('[data-testid="sjpp-user-auth"]')
+		const authDiv = nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-auth"]')
 		test.equal(authDiv.style('display'), 'block', 'should show the authorization info')
 		test.equal(
-			authDiv.select('[data-testid="sjpp-user-auth-status"]').text(),
+			authDiv.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
 			'Requires sign-in',
 			'should prompt to sign in when there is no token'
 		)
@@ -396,7 +395,7 @@ tape('user tab for a dataset that requires authorization', test => {
 		test.equal(sessionIdRequests, 0, 'should not request the sessions on the server when not signed in')
 		const openBtn = await detectOptionBtn(nav, 'Open')
 		test.equal(
-			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-session-btn-delete"]').size(),
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-btn-delete"]').size(),
 			0,
 			'should not show Delete, since there are no sessions to delete'
 		)
@@ -447,7 +446,7 @@ tape('launch when the lookup of the sessions on the server fails', test => {
 			test.true(await detectOptionBtn(nav, label), `should show the ${label} button`)
 		}
 		test.equal(
-			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-user-auth-status"]').text(),
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
 			'Signed in',
 			'should show that the user is signed in'
 		)
@@ -472,7 +471,7 @@ tape('sessions on the server for a signed in user', test => {
 	async function runTests(nav: any) {
 		nav.on('postRender.test', null)
 		test.equal(
-			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-user-auth-status"]').text(),
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
 			'Signed in',
 			'should show that the user is signed in'
 		)
@@ -567,57 +566,6 @@ tape('user tab when no cohort is selected', test => {
 	}
 })
 
-tape('days left message names the tab', test => {
-	test.timeoutAfter(10000)
-	const sentence = (tab: string) =>
-		`left until this session is removed. Open the ${tab} tab and select the "Save" option to create a new one.`
-
-	// a public dataset has a SESSION tab
-	runpp({
-		sessionDaysLeft: 12,
-		sessionId: 'test-session-id',
-		nav: {
-			callbacks: {
-				'postRender.test': testPublic
-			}
-		}
-	})
-
-	async function testPublic(nav: any) {
-		nav.on('postRender.test', null)
-		test.true(getTabLabels(nav).includes('SESSION'), 'should label the tab SESSION for a public dataset')
-		test.true(
-			nav.Inner.dom.sessionElapsedMessageDiv.text().includes(sentence('session')),
-			'should tell the user to open the session tab for a public dataset'
-		)
-		if ((test as any)._ok) nav.Inner.app.destroy()
-
-		// a dataset that requires authorization has a USER tab
-		const restoreFetch = mockRequiredAuth()
-		runpp({
-			sessionDaysLeft: 12,
-			sessionId: 'test-session-id',
-			nav: {
-				callbacks: {
-					'postRender.test': testAuth
-				}
-			}
-		})
-
-		function testAuth(nav: any) {
-			nav.on('postRender.test', null)
-			restoreFetch()
-			test.true(getTabLabels(nav).includes('USER'), 'should label the tab USER when authorization is required')
-			test.true(
-				nav.Inner.dom.sessionElapsedMessageDiv.text().includes(sentence('user')),
-				'should tell the user to open the user tab when authorization is required'
-			)
-			if ((test as any)._ok) nav.Inner.app.destroy()
-			test.end()
-		}
-	}
-})
-
 tape('Export Session and days left message for a session opened from a url', test => {
 	test.timeoutAfter(5000)
 	runpp({
@@ -640,18 +588,17 @@ tape('Export Session and days left message for a session opened from a url', tes
 			'should not show Export Session in the nav controls'
 		)
 
-		const msg = nav.Inner.dom.sessionElapsedMessageDiv
-		test.notEqual(msg.style('display'), 'none', 'should show the days left message')
-		test.true(msg.text().includes('12 days'), 'should show the number of days left')
-		test.true(msg.text().includes('session tab'), 'should tell the user to save in the session tab')
-		test.true(
-			parseFloat(msg.style('font-size')) < parseFloat(nav.Inner.dom.controlsDiv.style('font-size')),
-			'should show the message in a smaller font than the controls'
+		const msg = nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-days-left"]')
+		test.notEqual(msg.style('display'), 'none', 'should show the days left message in the user tab')
+		test.equal(
+			msg.text(),
+			'12 days left until this session is removed. Select "Save" to create a new one.',
+			'should show the number of days left'
 		)
 		test.equal(
-			nav.Inner.dom.controlsDiv.node().contains(msg.node()),
-			true,
-			'should keep the message in the controls, beside the other nav controls'
+			nav.Inner.dom.controlsDiv.text().includes('left until this session is removed'),
+			false,
+			'should not show the message in the nav controls'
 		)
 
 		if ((test as any)._ok) nav.Inner.app.destroy()

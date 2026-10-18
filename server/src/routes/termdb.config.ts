@@ -164,6 +164,8 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	const info: any = authApi.getNonsensitiveInfo(req) // type any to avoid tsc err
 	c.clientAuthResult = info?.clientAuthResult || {}
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds(c.clientAuthResult)
+	const userTab = getUserTab(ds, c.clientAuthResult, req.query.__protected__)
+	if (userTab) c.userTab = userTab
 	// app.middleware.js would have used authApi.mayAdjustFilter() to create an auth-related filter,
 	// note this may be undefined if there is no ds.cohort.termdb.getAdditionalFilter
 	c.authFilter = req.query.filter
@@ -669,6 +671,39 @@ export function getLoneTermByType(req, ds, loneTermByType) {
 		if (Object.keys(visible).length) visibleByCohort[cohort] = visible
 	}
 	return Object.keys(visibleByCohort).length ? visibleByCohort : undefined
+}
+
+/*
+what the mass nav user tab shows about the auth of the user, as computed by the optional ds hooks in
+massNav.tabs.user: getMsg() for the message, and isPublic() for whether the user has only public access.
+clientAuthResult is from authApi.getNonsensitiveInfo(), {} when the user has no session.
+__protected__ is req.query.__protected__ as set by the auth middleware, which may be missing or partial, such as
+when the server has no auth. only the parts that the hooks may need are passed, with defaults.
+returns undefined when there are no hooks or no result. a hook that fails or returns an invalid value is
+ignored, since what the tab shows is optional
+*/
+export function getUserTab(ds, clientAuthResult, __protected__): { msg?: string; isPublic?: boolean } | undefined {
+	const hooks = ds.cohort.massNav?.tabs?.user
+	if (!hooks) return
+	const q = Object.freeze({
+		clientAuthResult,
+		datasets: Array.isArray(__protected__?.datasets) ? __protected__.datasets : [],
+		isUserLoggedIn: __protected__?.isUserLoggedIn === true
+	})
+	const userTab: { msg?: string; isPublic?: boolean } = {}
+	const msg = mayCallHook(hooks.getMsg, q)
+	if (msg && typeof msg == 'string') userTab.msg = msg
+	if (mayCallHook(hooks.isPublic, q) === true) userTab.isPublic = true
+	return Object.keys(userTab).length ? userTab : undefined
+}
+
+function mayCallHook(hook, q) {
+	if (typeof hook != 'function') return
+	try {
+		return hook(q)
+	} catch (e: any) {
+		console.log(e?.stack || e)
+	}
 }
 
 function getSelectCohort(ds, req) {
