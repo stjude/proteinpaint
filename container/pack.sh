@@ -142,16 +142,39 @@ cd ../container
 
 cd ../rust
 
+# The local rust build, such as for the host platform in a dev environment, and package.json are restored after the
+# pack, also when it fails. The backup dir is under target/, so that moving target/release is a rename on the same
+# filesystem; npm pack includes only target/release/*.
+RUSTDIR=$(pwd)
+RUSTBACKUP=""
+RUSTRELEASE_REPLACED=""
+restoreRustDir() {
+  if [[ "$RUSTBACKUP" == "" ]]; then
+    return
+  fi
+  if [[ "$RUSTRELEASE_REPLACED" != "" ]]; then
+    rm -rf "$RUSTDIR/target/release"
+    if [[ -d "$RUSTBACKUP/release" ]]; then
+      mv "$RUSTBACKUP/release" "$RUSTDIR/target/"
+    fi
+  fi
+  cp "$RUSTBACKUP/package.json" "$RUSTDIR/package.json"
+  rm -rf "$RUSTBACKUP"
+  RUSTBACKUP=""
+}
+
 # Only copy binaries if RUST_BINARIES_DIR exists
-RUSTRELEASE_BACKUP=""
 if [[ -d "$RUST_BINARIES_DIR" ]]; then
   echo "RUST_BINARIES_DIR found at $RUST_BINARIES_DIR"
-  # the binaries of a local build, such as for the host platform in a dev environment, are restored after the pack
+  mkdir -p target
+  RUSTBACKUP=$(mktemp -d "$RUSTDIR/target/.pack-backup.XXXXXX")
+  cp package.json "$RUSTBACKUP/"
+  trap restoreRustDir EXIT
   if [[ -d target/release ]]; then
-    RUSTRELEASE_BACKUP=$(mktemp -d)
-    echo "Moving the local rust build to $RUSTRELEASE_BACKUP, to restore it after the pack..."
-    mv target/release "$RUSTRELEASE_BACKUP/"
+    echo "Moving the local rust build to $RUSTBACKUP, to restore it after the pack..."
+    mv target/release "$RUSTBACKUP/"
   fi
+  RUSTRELEASE_REPLACED=1
   mkdir -p target/release
 
   echo "Copying compiled rust binaries to target/release ..."
@@ -184,15 +207,8 @@ RUSTPKGVER=$(node -p "require('./package.json').version")
 
 mv "$RUSTTGZ" ../container/tmppack/
 
-if [[ -d "$RUST_BINARIES_DIR" ]]; then
-  rm -rf target/release
-  if [[ "$RUSTRELEASE_BACKUP" != "" ]]; then
-    mv "$RUSTRELEASE_BACKUP/release" target/
-    rmdir "$RUSTRELEASE_BACKUP"
-  fi
-  # the files entry that is added above
-  git restore package.json
-fi
+restoreRustDir
+trap - EXIT
 
 cd ../server
 RUSTDEPNAME="@sjcrh/proteinpaint-rust"

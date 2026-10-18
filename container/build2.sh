@@ -17,7 +17,7 @@ USAGE="Usage:
 			 trixie-pp<subdir>:arm64 deps image unless -i is set; the published deps images are linux/amd64.
 			 Implies -z, and always packs new tarballs, with the linux/arm64 rust binaries from the -v volume,
 			 since the image build can neither download nor compile them. Afterwards, also when the build fails,
-			 removes tmppack and restores server/package.json and full/package.json, which must have no other changes
+			 removes tmppack and restores server/package.json and full/package.json to their content before the pack
 	-v RUST_VOLUME: the docker volume with the linux/arm64 rust binaries in release/, for -a; defaults to
 			 sjpp-dev_rust-target, which the sjpp dev container builds
 	-i BASE_IMAGE: the deps image to build on, instead of the published ghcr.io/stjude/pp<subdir> image of
@@ -144,17 +144,18 @@ if [[ ! -d ./tmppack ]]; then
 fi
 
 if [[ "$ARM64" != "" ]]; then
-	# pack.sh changes these files, which are restored below, so that no change other than a tarball path that an earlier
-	# pack set may be lost
-	if git diff -U0 -- server/package.json full/package.json | grep '^+[^+]' | grep -qv "$PKGPATH/"; then
-		echo "ERROR: -a restores server/package.json and full/package.json after the build, commit or restore their changes first"
-		exit 1
-	fi
-	RUSTBINDIR=$(mktemp -d)
+	# pack.sh sets the tarball paths in these files, which are restored from the copies below, so that any local change
+	# to them is kept
+	ARM64TMP=$(mktemp -d)
+	RUSTBINDIR="$ARM64TMP/rust"
+	mkdir "$RUSTBINDIR" "$ARM64TMP/server" "$ARM64TMP/full"
+	cp server/package.json "$ARM64TMP/server/"
+	cp full/package.json "$ARM64TMP/full/"
 	# also when the build fails; tmppack is removed, so that a later linux/amd64 build cannot reuse its arm64 rust tarball
 	cleanupArm64() {
-		git restore server/package.json full/package.json
-		rm -rf "$RUSTBINDIR" ./tmppack
+		cp "$ARM64TMP/server/package.json" server/package.json
+		cp "$ARM64TMP/full/package.json" full/package.json
+		rm -rf "$ARM64TMP" ./tmppack
 	}
 	trap cleanupArm64 EXIT
 
