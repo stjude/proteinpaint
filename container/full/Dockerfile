@@ -74,6 +74,9 @@ RUN if find . ! -type l \( ! -user 0 -o -perm /022 \) | grep .; then \
 # same owner and mode on the host.
 RUN chown root:0 /home/root/pp/cache && chmod 1733 /home/root/pp/cache
 
+# remove the files that the app does not use, see removeTools.sh; after npm install and the checks above
+RUN --mount=type=bind,source=removeTools.sh,target=/tmp/removeTools.sh sh /tmp/removeTools.sh
+
 # numeric ids, the same as in the base image
 USER 1000:1000
 
