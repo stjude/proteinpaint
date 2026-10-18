@@ -141,10 +141,15 @@ cd ../container
 cd ../rust
 
 # Only copy binaries if RUST_BINARIES_DIR exists
+RUSTRELEASE_BACKUP=""
 if [[ -d "$RUST_BINARIES_DIR" ]]; then
   echo "RUST_BINARIES_DIR found at $RUST_BINARIES_DIR"
-  echo "Cleaning previous rust build..."
-  rm -rf target/release
+  # the binaries of a local build, such as for the host platform in a dev environment, are restored after the pack
+  if [[ -d target/release ]]; then
+    RUSTRELEASE_BACKUP=$(mktemp -d)
+    echo "Moving the local rust build to $RUSTRELEASE_BACKUP, to restore it after the pack..."
+    mv target/release "$RUSTRELEASE_BACKUP/"
+  fi
   mkdir -p target/release
 
   echo "Copying compiled rust binaries to target/release ..."
@@ -176,6 +181,16 @@ RUSTTGZ=$(npm pack --loglevel error)
 RUSTPKGVER=$(node -p "require('./package.json').version")
 
 mv "$RUSTTGZ" ../container/tmppack/
+
+if [[ -d "$RUST_BINARIES_DIR" ]]; then
+  rm -rf target/release
+  if [[ "$RUSTRELEASE_BACKUP" != "" ]]; then
+    mv "$RUSTRELEASE_BACKUP/release" target/
+    rmdir "$RUSTRELEASE_BACKUP"
+  fi
+  # the files entry that is added above
+  git restore package.json
+fi
 
 cd ../server
 RUSTDEPNAME="@sjcrh/proteinpaint-rust"

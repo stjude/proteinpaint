@@ -7,11 +7,16 @@ set -euo pipefail
 ###############
 
 USAGE="Usage:
-	./build2.sh [-z] [-k] [-r] [-b] [-c] [subdir]
+	./build2.sh [-z] [-a] [-i] [-r] [-b] [-c] [subdir]
 	
 	subdir: 'server' | 'full', the subdirectory to build
 
 	-z USETGZ: use local tarballs for the server and full packages
+	-a ARM64: build a linux/arm64 image for local testing, tagged only as <image name>:arm64, on the local
+			 trixie-pp<subdir>:arm64 deps image unless -i is set; the published deps images are linux/amd64.
+			 The rust tarball in tmppack must have linux/arm64 binaries, see pack.sh RUST_BINARIES_DIR
+	-i BASE_IMAGE: the deps image to build on, instead of the published ghcr.io/stjude/pp<subdir> image of
+			 ARG VERSION in the Dockerfile
 	-r PREFIX: prefix for the image name, defaults to an empty string ""
 			 - 'pkg' is reserved to indicate a package build, outside of the repo or dev environment
 	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted in the built image
@@ -26,13 +31,21 @@ SERVERTGZFILE=""
 SERVERTGZ=""
 FRONTTGZ=""
 PKGPATH=""
+ARM64=""
+BASE_IMAGE=""
 
 #################
 # PROCESSED ARGS
 #################
 
-while getopts "zr:b:c:h" opt; do
+while getopts "zai:r:b:c:h" opt; do
 	case "${opt}" in
+	a)
+		ARM64=1
+		;;
+	i)
+		BASE_IMAGE=${OPTARG}
+		;;
 	z)
     # install proteinpaint-* builds from tarballs, not published packages
 		PKGPATH=/home/root/pp/tmppack
@@ -72,8 +85,12 @@ fi
 # which can be too noisy
 set -x
 
+if [[ "$ARM64" != "" && "$BASE_IMAGE" == "" ]]; then
+	BASE_IMAGE="trixie-pp$SUBDIR:arm64"
+fi
+
 # fail early if the base deps image still runs as root
-./check_base_user.sh $SUBDIR
+./check_base_user.sh $SUBDIR $BASE_IMAGE
 
 IMGVER="$(node -p "require('./$SUBDIR/package.json').version")"
 # assumes that the branch head is currently checked out
@@ -97,7 +114,9 @@ fi
 
 PLATFORM=""
 ARCH=$( uname -m )
-if [[ ${ARCH} == "arm64" ]]; then 
+if [[ "$ARM64" != "" ]]; then
+	PLATFORM="--platform=linux/arm64"
+elif [[ ${ARCH} == "arm64" ]]; then 
 	ARCH="x86-64";
   PLATFORM="--platform=linux/amd64"
 # Enable this if you want to build for arm64
@@ -124,18 +143,45 @@ if [[ "$PKGPATH" != "" ]]; then
 	fi
 fi
 
+if [[ "$ARM64" != "" ]]; then
+	# fail before the build, which would otherwise fail on the missing binaries after the npm install: the rust
+	# postinstall downloads only linux x64 binaries, and the arm64 deps image cannot compile them
+	RUSTTGZ=$(find ./tmppack -name "sjcrh-proteinpaint-rust-*.tgz" | head -1)
+	# the e_machine bytes of the ELF header, b7 00 for aarch64
+	RUSTMACHINE=""
+	if [[ "$RUSTTGZ" != "" ]]; then
+		RUSTMACHINE=$(tar -xzOf "$RUSTTGZ" package/target/release/fisher 2>/dev/null | head -c 20 | tail -c 2 | od -An -tx1 | tr -d ' \n' || true)
+	fi
+	if [[ "$RUSTMACHINE" != "b700" ]]; then
+		echo "ERROR: -a requires linux/arm64 rust binaries in the rust tarball of ./tmppack, which has '${RUSTTGZ:-none}'."
+		echo "Copy the binaries to ../rust-binaries, such as from a linux/arm64 cargo build, and repack:"
+		echo "  rm -rf tmppack && ./build2.sh -z -a $SUBDIR"
+		exit 1
+	fi
+fi
+
 ###############
 # Docker build
 ###############
 
 IMGNAME="${PREFIX}pp$SUBDIR"
 
+if [[ "$ARM64" != "" ]]; then
+	# a local test image, which must not replace the latest or version tag of a linux/amd64 build
+	TAGS=(--tag "$IMGNAME:arm64")
+else
+	TAGS=(--tag "$IMGNAME:$IMGVER-$HASH" --tag "$IMGNAME:latest")
+fi
+BASEARG=()
+if [[ "$BASE_IMAGE" != "" ]]; then
+	BASEARG=(--build-arg "BASE_IMAGE=$BASE_IMAGE")
+fi
+
 echo "building $IMGNAME image"
 
 docker buildx build . \
 	--file ./$SUBDIR/Dockerfile \
-	--tag "$IMGNAME:$IMGVER-$HASH" \
-	--tag "$IMGNAME:latest" $PLATFORM \
+	"${TAGS[@]}" ${BASEARG[@]+"${BASEARG[@]}"} $PLATFORM \
 	--build-arg IMGVER=$IMGVER \
 	--build-arg IMGREV=$IMGREV \
 	--build-arg CROSSENV="$CROSSENV" $BUILDARGS \
