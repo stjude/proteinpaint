@@ -89,6 +89,40 @@ RUN apt-get update && apt-get install -y \
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
+#################
+# Runtime OS libs
+#################
+
+# The base of the ppruntime stage, for the ppserver and ppfull images: the shared libraries that R, the R and python
+# packages, htslib/samtools/bcftools, h5dump, the node native addons and the rust binaries load at runtime, without
+# the build toolchain and -dev packages of the os stage, which ppbase and the dev container image still have. The
+# recommended packages are not installed, which for r-base-core include r-base-dev and the compilers. The ppruntime,
+# ppserver and ppfull stages check that every binary and module resolves its shared libraries.
+FROM ${registry}/${DEBIAN_IMAGE} AS osruntime
+
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    fontconfig \
+    fonts-dejavu-core \
+    fonts-texgyre \
+    hdf5-tools \
+    # the same HDF5 soname that the rust binaries link, see the os stage
+    libhdf5-310 \
+    # for bcftools, which is built with --enable-libgsl
+    libgsl28 \
+    libgslcblas0 \
+    python3 \
+    # loaded by some of the python packages in /opt/venv
+    libpython3.13 \
+    r-base-core \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
+
 #############################
 # Independently cached deps
 #############################
@@ -229,6 +263,70 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
+############
+# ppruntime
+############
+
+# The base of the ppserver and ppfull images, which is not published: the osruntime libraries, and the same R,
+# python, node, htslib/samtools/bcftools and tool files as ppbase, without npm, the node headers, and the htslib
+# headers and static library. The app is installed in the ppserverdeps and ppfulldeps stages, on ppbase.
+FROM osruntime AS ppruntime
+
+ARG ARCH='x86_64'
+ENV ARCH=$ARCH
+
+COPY --from=hts /staging/usr/local/bin/ /usr/local/bin/
+COPY --from=hts /staging/usr/local/lib/ /usr/local/lib/
+COPY --from=hts /staging/usr/local/libexec/ /usr/local/libexec/
+COPY --from=rlib /usr/lib/R/library/ /usr/lib/R/library/
+COPY --from=rlib /usr/local/lib/R/site-library/ /usr/local/lib/R/site-library/
+COPY --from=tools /home/root/pp/tools/ /home/root/pp/tools/
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+RUN rm -rf /usr/local/lib/libhts.a /usr/local/lib/pkgconfig && \
+    ldconfig && \
+    node -v
+COPY --from=py /opt/venv/ /opt/venv/
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN mkdir -p /home/root/pp/app /home/root/pp/tp /home/root/pp/cache
+
+# the same app user, HOME, and cache dir owner and mode as in ppbase
+RUN groupadd -g 1000 app && \
+    useradd -m -u 1000 -g app -d /home/app -s /bin/bash app && \
+    chown root:0 /home/root/pp/cache && \
+    chmod 1733 /home/root/pp/cache && \
+    chgrp -R 0 /home/app && \
+    chmod -R g=u /home/app
+
+# the Debian security updates since the pinned base image, as in ppbase
+ARG OS_UPDATES=""
+RUN echo "OS_UPDATES=$OS_UPDATES" && \
+    apt-get update && apt-get upgrade -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# the R packages, and every binary and module, must load against the libraries in this image, after the updates above
+COPY ./R/utils ./R/utils
+RUN Rscript R/utils/validate.pkgs.R
+RUN --mount=type=bind,source=checkSharedLibs.sh,target=/tmp/checkSharedLibs.sh sh /tmp/checkSharedLibs.sh \
+    /usr/local/bin /usr/local/lib /usr/local/libexec /usr/lib/R /usr/local/lib/R /opt/venv /home/root/pp/tools \
+    /usr/bin/h5dump && \
+    python3 -c 'import h5py, numpy, scipy.linalg, scipy.special'
+
+# the interpreter and tool dirs are installed by root and are only read by the app user
+USER app
+RUN for d in /opt/venv /opt/venv/lib/python3*/site-packages /usr/local/lib/R/site-library /usr/lib/R/site-library \
+        /usr/lib/R/library /usr/local/bin /home/root/pp/tools; do \
+        if [ -e "$d" ] && [ -w "$d" ]; then echo "ERROR: $d is writable by the app user"; exit 1; fi; \
+    done
+USER root
+
+ARG IMGREV=""
+ARG IMGVER=""
+LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
+    org.opencontainers.image.revision="$IMGREV" \
+    org.opencontainers.image.version="$IMGVER"
+
 #####################
 # Server-only install
 ######################
@@ -254,35 +352,6 @@ RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz 
 RUN find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
     find . ! -type l -perm /022 -exec chmod go-w {} +
 
-# The rust binaries are compiled in a different image (container/rust/Dockerfile, Debian trixie) and
-# arrive here inside the npm package, so this is the first point where they meet the libraries they
-# will actually run against. Both images are now on trixie, but they are built and pinned separately,
-# and a build once shipped binaries that could not load and 502'd every wilcoxon DE request, when this
-# image was on a base that tracked Debian sid. An unloadable binary must not reach a published image,
-# so fail the build here rather than at request time.
-#
-# Note the equivalent check in rust/extract_binaries.sh only proves the BUILDER is self-consistent;
-# this is the check that catches a drift between the builder and this image.
-RUN bindir=node_modules/@sjcrh/proteinpaint-rust/target/release; \
-    if [ ! -d "$bindir" ]; then \
-      echo "WARNING: $bindir not found, skipping shared library check" >&2; \
-    else \
-      unresolved=0; \
-      for bin in "$bindir"/*; do \
-        [ -f "$bin" ] && [ -x "$bin" ] || continue; \
-        if ldd "$bin" 2>/dev/null | grep -q "not found"; then \
-          echo "ERROR: $bin cannot resolve:" >&2; \
-          ldd "$bin" 2>/dev/null | grep "not found" >&2; \
-          unresolved=1; \
-        fi; \
-      done; \
-      if [ "$unresolved" -ne 0 ]; then \
-        echo "unloadable rust binaries: this image lacks a shared library they were linked against" >&2; \
-        exit 1; \
-      fi; \
-      echo "all rust binaries resolve their shared libraries"; \
-    fi
-
 # enable ssh into this stage, for troubleshooting
 CMD ["sh", "-c", "node app-server.mjs"]
 
@@ -291,7 +360,7 @@ CMD ["sh", "-c", "node app-server.mjs"]
 ######################
 
 # target for the backend-only SJ server app
-FROM ppbase AS ppserver
+FROM ppruntime AS ppserver
 
 ARG IMGREV=""
 ARG IMGVER=""
@@ -306,17 +375,25 @@ COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 WORKDIR /home/root/pp/app/active
 # the build script/cmd must be called from the proteinpaint/container dir
 COPY ./app-server.mjs ./
+# The rust binaries are compiled in a different image (container/rust/Dockerfile, Debian trixie) and arrive here inside
+# the npm package, so this is the first point where they meet the libraries they will actually run against; a build
+# once shipped binaries that could not load and 502'd every wilcoxon DE request. The node native addons are also
+# checked, since they were installed on ppbase. An unloadable binary must not reach a published image, so fail the
+# build here rather than at request time. The check in rust/extract_binaries.sh only proves that the builder is
+# self-consistent; this one catches a drift between the builder and this image.
+RUN --mount=type=bind,source=checkSharedLibs.sh,target=/tmp/checkSharedLibs.sh sh /tmp/checkSharedLibs.sh node_modules
+RUN --mount=type=bind,source=removeTools.sh,target=/tmp/removeTools.sh sh /tmp/removeTools.sh
 # Nothing under the app dir is written at runtime: fail the build for an app file that the app user, or another UID
 # with group 0, can write. A mount under this dir, such as for dataset/, is set by the container runtime.
 RUN if find . ! -type l \( ! -user 0 -o -perm /022 \) | grep .; then \
       echo "ERROR: the app files above are not owned by root, or are writable by group or others"; exit 1; \
-    fi; \
-    if su -s /bin/sh app -c "find /home/root/pp/app/active -writable" | grep .; then \
-      echo "ERROR: the app files above are writable by the app user"; exit 1; \
     fi
 # the HOME of another UID, which has no account in the image
 ENV HOME=/home/app
 USER app
+RUN if find /home/root/pp/app/active -writable | grep .; then \
+      echo "ERROR: the app files above are writable by the app user"; exit 1; \
+    fi
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-server.mjs && @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]
@@ -354,7 +431,7 @@ CMD ["sleep", "3600"]
 ############
 
 # target for the full (backend + frontend) SJ app
-FROM ppbase AS ppfull
+FROM ppruntime AS ppfull
 
 ARG IMGREV=""
 ARG IMGVER=""
@@ -377,18 +454,26 @@ RUN node node_modules/@sjcrh/proteinpaint-front/init.js && \
     test -f bin/.pp-bundle-ready && \
     find bin public \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
     find bin public ! -type l -perm /022 -exec chmod go-w {} +
+# The rust binaries are compiled in a different image (container/rust/Dockerfile, Debian trixie) and arrive here inside
+# the npm package, so this is the first point where they meet the libraries they will actually run against; a build
+# once shipped binaries that could not load and 502'd every wilcoxon DE request. The node native addons are also
+# checked, since they were installed on ppbase. An unloadable binary must not reach a published image, so fail the
+# build here rather than at request time. The check in rust/extract_binaries.sh only proves that the builder is
+# self-consistent; this one catches a drift between the builder and this image.
+RUN --mount=type=bind,source=checkSharedLibs.sh,target=/tmp/checkSharedLibs.sh sh /tmp/checkSharedLibs.sh node_modules
+RUN --mount=type=bind,source=removeTools.sh,target=/tmp/removeTools.sh sh /tmp/removeTools.sh
 # Nothing under the app dir is written at runtime: fail the build for an app file that the app user, or another UID
 # with group 0, can write. A mount under this dir, such as for dataset/ or public/, is set by the container runtime;
 # front/init.js may then add the missing index.html and cards to a mounted public/ at startup.
 RUN if find . ! -type l \( ! -user 0 -o -perm /022 \) | grep .; then \
       echo "ERROR: the app files above are not owned by root, or are writable by group or others"; exit 1; \
-    fi; \
-    if su -s /bin/sh app -c "find /home/root/pp/app/active -writable" | grep .; then \
-      echo "ERROR: the app files above are writable by the app user"; exit 1; \
     fi
 # the HOME of another UID, which has no account in the image
 ENV HOME=/home/app
 USER app
+RUN if find /home/root/pp/app/active -writable | grep .; then \
+      echo "ERROR: the app files above are writable by the app user"; exit 1; \
+    fi
 EXPOSE 3000
 CMD ["sh", "-c", "node --enable-source-maps app-full.mjs && @sjcrh/proteinpaint-server"]
 # CMD ["sleep", "3600"]

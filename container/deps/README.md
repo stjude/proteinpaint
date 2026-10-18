@@ -5,9 +5,13 @@ of ProteinPaint, which the release images in `container/server` and `container/f
 
 | Target (image) | Contents |
 |---|---|
-| `ppbase` | the OS (Debian trixie), R, Python, Node, htslib/bcftools, and tools such as `straw` and `gfClient` |
-| `ppserver` | `ppbase` + the `@sjcrh/proteinpaint-server` package and `app-server.mjs` |
+| `ppbase` | the OS (Debian trixie), the build toolchain, R, Python, Node and npm, htslib/samtools/bcftools, and tools such as `straw` and `gfClient` |
+| `ppserver` | the runtime libraries and the same R, Python, Node, htslib and tool files as `ppbase` (the `ppruntime` stage) + the `@sjcrh/proteinpaint-server` package and `app-server.mjs` |
 | `ppfull` | `ppserver` + the `@sjcrh/proteinpaint-front` package, `app-full.mjs`, and `container/public` |
+
+`ppserver` and `ppfull` have no build toolchain, `-dev` packages, or npm: the app is installed on `ppbase`, in the
+`ppserverdeps` and `ppfulldeps` stages, and copied into them. The `server` and `full` Dockerfiles likewise install
+the app with npm in a stage on the official `node` image. `ppbase` keeps the toolchain, for the sjpp dev container.
 
 `ppserver` and `ppfull` run as the unprivileged `app` user (UID/GID 1000), while `ppbase` runs as root.
 The app files under `/home/root/pp/app/active`, including `node_modules` and, in `ppfull`, the client bundle in
@@ -123,8 +127,10 @@ The `Dockerfile` stages are ordered and split so that the slow steps are rebuilt
 | `py` | the python venv | `python/requirements.txt` changes |
 | `tools` | `straw` and `gfClient` | the download list changes |
 | `ppbase` | copies the above, the node install from the official `node` image, and applies the Debian security updates | every day, which is a fast step |
+| `osruntime` | the apt runtime libraries, R, python3, and `h5dump`, without the toolchain and `-dev` packages | the pinned base image or its apt package list changes |
+| `ppruntime` | copies the same files as `ppbase` onto `osruntime`, applies the Debian security updates, and checks that every binary and module resolves its shared libraries (`checkSharedLibs.sh`) | every day, which is a fast step |
 
-The `hts`, `rlib`, `py`, and `tools` stages only depend on `os`, so they are built in parallel. In CI, the cache
+The `hts`, `rlib`, `py`, and `tools` stages only depend on `os`, and `osruntime` on the base image, so they are built in parallel. In CI, the cache
 of every stage is saved to `ghcr.io/stjude/ppbase:buildcache` (`PPDEPS_CACHE_REF` in `deps/build.sh`), so that
 a runner without a local cache reuses the last build's layers.
 
@@ -148,8 +154,9 @@ release must also update `container/rust/Dockerfile`, so that the rust binaries 
 - **Python**: not pinned, since Debian stable keeps python3 at 3.13 for the life of trixie, and a version pin
   would fail the build at each security update. The python packages are pinned in `python/requirements.txt`.
 - **HDF5** (`libhdf5-310`): must match the HDF5 soname that the rust binaries link against, which are
-  compiled in `container/rust/Dockerfile`. The `ppserverdeps` stage fails the build when a rust binary
-  cannot load its shared libraries.
+  compiled in `container/rust/Dockerfile`. The `ppserver` and `ppfull` stages fail the build when a rust
+  binary cannot load its shared libraries. A library that a new R or python package needs at runtime must also be
+  added to the `osruntime` apt list, which the `ppruntime` check reports by file name.
 - **R packages**: listed in `R/utils/cran.pkgs.txt` and `R/utils/bioconductor.pkgs.txt`, and installed
   by `R/utils/install.pkgs.R`. To use another CRAN mirror, such as a dated P3M snapshot for a reproducible
   build, set the `CRAN_REPO` build arg, for example `-b "--build-arg CRAN_REPO=https://p3m.dev/cran/__linux__/trixie/2026-10-01"`.

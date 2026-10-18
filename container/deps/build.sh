@@ -107,6 +107,7 @@ function stageContext {
 	cp -R "$REPODIR/R/utils" "$CTX/R/"
 	cp "$REPODIR/python/requirements.txt" "$CTX/python/"
 	cp "$CONTAINERDIR/full/app-full.mjs" "$CONTAINERDIR/server/app-server.mjs" "$CTX/"
+	cp "$CONTAINERDIR/removeTools.sh" "$DEPSDIR/checkSharedLibs.sh" "$CTX/"
 	stagePublicDir
 	stageTarballs
 }

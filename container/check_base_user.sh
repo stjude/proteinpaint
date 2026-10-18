@@ -47,12 +47,12 @@ function check_base_user {
 	echo "the base image $baseimg runs as user='$baseuser'"
 }
 
-# resolves the FROM image of a Dockerfile, the default of ARG BASE_IMAGE if it is used, with the ARG VERSION value
-# filled in
+# resolves the FROM image of the last stage of a Dockerfile, the default of ARG BASE_IMAGE if it is used, with the
+# ARG VERSION value filled in; an earlier stage, such as one that installs the app, is not the base image
 function getBaseImage {
 	local version fromimg
 	version=$(awk -F= '/^ARG VERSION=/{print $2; exit}' "$1")
-	fromimg=$(awk '$1=="FROM"{print $2; exit}' "$1")
+	fromimg=$(awk '$1=="FROM"{img=$2} END{print img}' "$1")
 	if [[ "$fromimg" == '$BASE_IMAGE' || "$fromimg" == '${BASE_IMAGE}' ]]; then
 		fromimg=$(awk -F= '/^ARG BASE_IMAGE=/{print $2; exit}' "$1")
 	fi
