@@ -102,6 +102,13 @@ export const specs: Readonly<Record<string, ToolSpec>> = deepFreeze(
 		versionSpecs
 	])
 )
+/*
+The patterns that the string fields are checked with: a copy of each spec pattern, made when the specs are checked
+below, which no other module can reach. Freezing a RegExp does not keep RegExp.prototype.compile() from changing its
+pattern, which a spec pattern, such as from an import of a spec file, could otherwise be changed with.
+*/
+const patterns = new WeakMap<object, RegExp>()
+
 for (const [op, spec] of Object.entries(specs)) checkSpec(op, spec)
 
 /** op: a key of specs, such as 'hicstraw.query'; input: the field values of the op */
@@ -205,7 +212,7 @@ function checkField(field: Field, v: unknown, msg: string): string {
 			return String(v)
 		case 'string':
 			// the whole value must match, since an anchored pattern with an alternation, such as /^a|b$/, matches part of xb
-			if (typeof v != 'string' || v.length > field.maxLength || v.match(field.pattern)?.[0] !== v) throw msg
+			if (typeof v != 'string' || v.length > field.maxLength || v.match(getPattern(field))?.[0] !== v) throw msg
 			return v
 		case 'file':
 			if (field.debugmodeAnyRoot && serverconfig.debugmode) return checkAbsoluteFile(v, msg)
@@ -329,7 +336,8 @@ export function checkSpec(op: string, spec: ToolSpec) {
 /** throws if the type options of a field that is not a list are malformed */
 function checkField_spec(op: string, name: string, field: Field) {
 	if (field.type == 'string') {
-		const { source, flags } = field.pattern
+		if (!(field.pattern instanceof RegExp)) throw `tool spec ${op}: pattern of ${name} must be a RegExp`
+		const { source, flags } = getPattern(field)
 		// an unanchored pattern would accept any string that contains a match; a g or y flag makes test() stateful
 		if (source[0] != '^' || !source.endsWith('$')) throw `tool spec ${op}: pattern of ${name} must be anchored`
 		if (/[gy]/.test(flags)) throw `tool spec ${op}: pattern of ${name} must not have the g or y flag`
@@ -364,8 +372,18 @@ export function mergeSpecs(lst: Record<string, ToolSpec>[]): Record<string, Tool
 	return all
 }
 
+/** the copy of the pattern of a string field, which is made the first time, see patterns */
+function getPattern(field: Extract<Field, { type: 'string' }>): RegExp {
+	let re = patterns.get(field)
+	if (!re) {
+		re = new RegExp(field.pattern.source, field.pattern.flags)
+		patterns.set(field, re)
+	}
+	return re
+}
+
 function deepFreeze<T>(o: T): T {
-	// a RegExp is frozen too, so that RegExp.prototype.compile() cannot change its pattern
+	// a RegExp is frozen too, but its pattern may still be changed by RegExp.prototype.compile(), see patterns
 	if (o && typeof o == 'object' && !Object.isFrozen(o)) {
 		Object.freeze(o)
 		for (const v of Object.values(o)) deepFreeze(v)

@@ -21,7 +21,7 @@ runToolOutput(): resolves with the exit code and output
 getCall(): the working dir, list slots, and prefixed slots
 checkSpec(): rejects malformed specs
 mergeSpecs(): rejects an op that is in more than one spec file
-specs are frozen
+specs are frozen, and a recompiled pattern does not change the checks
 */
 
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-tools-'))
@@ -725,11 +725,27 @@ tape('mergeSpecs(): rejects an op that is in more than one spec file', test => {
 	test.end()
 })
 
-tape('specs are frozen', test => {
+tape('specs are frozen, and a recompiled pattern does not change the checks', test => {
 	test.ok(Object.isFrozen(specs) && Object.isFrozen(spec) && Object.isFrozen(spec.fields), 'should freeze each spec')
 	test.ok(Object.isFrozen(spec.argv), 'should freeze argv')
+	// RegExp.prototype.compile() changes the pattern of a frozen RegExp before it throws, so the checks use a copy
 	const pos1 = spec.fields.pos1 as { pattern: RegExp }
-	test.throws(() => pos1.pattern.compile('.*'), TypeError, 'should not allow a pattern to be recompiled')
+	const { source, flags } = pos1.pattern
+	try {
+		test.throws(() => pos1.pattern.compile('.*'), TypeError, 'should throw when a pattern is recompiled')
+		test.equal(pos1.pattern.source, '.*', 'should have changed the spec pattern, which the checks do not use')
+		for (const pos of ['-o', 'chr1;ls', 'chr1:1']) {
+			test.throws(() => getArgv(op, spec, { ...valid(), pos1: pos }), /invalid pos1/, `should still reject pos1=${pos}`)
+		}
+		test.equal(getArgv(op, spec, valid())[3], 'chr1:0:1000000', 'should still accept a valid pos1')
+	} finally {
+		try {
+			pos1.pattern.compile(source, flags)
+		} catch (_) {
+			// throws after the pattern is restored, as above
+		}
+	}
+	test.equal(pos1.pattern.source, source, 'should have restored the spec pattern')
 	fs.rmSync(tmpdir, { recursive: true, force: true })
 	test.end()
 })
