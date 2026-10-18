@@ -90,6 +90,8 @@ const badValues: Record<string, unknown[]> = {
 		'chr1:1:2;ls',
 		'c'.repeat(101),
 		'chr1:' + '1'.repeat(13) + ':2',
+		'chr1:1.' + '1'.repeat(25) + ':2',
+		'chr1:5e-7:1',
 		'',
 		5,
 		['chr1']
@@ -120,6 +122,13 @@ tape('hicstraw.query: argv of valid inputs', test => {
 		'chr1:12.5:2000.25',
 		'should accept fractional coordinates'
 	)
+	for (const pos of [
+		'chr1:142.85714285714286:10000',
+		`chr1:${String(1 / 3)}:${String(2 ** 0.5)}`,
+		'chr1:0.0000012345678901234567:1'
+	]) {
+		test.equal(getArgv(op, spec, { ...valid(), pos1: pos })[3], pos, `should accept a javascript number string, ${pos}`)
+	}
 	withRemoteFile(true, () => {
 		test.equal(
 			getArgv(op, spec, { ...valid(), file: 'https://a.org/x.hic' })[2],
