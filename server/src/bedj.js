@@ -1050,8 +1050,9 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 				items.push(j)
 			}
 		} else {
-			await utils.get_lines_bigfile({
-				args: [tkfile, flag_gm.chr + ':' + flag_gm.start + '-' + flag_gm.stop],
+			await utils.readTabixLines({
+				file: tkfile,
+				regions: [{ chr: flag_gm.chr, start: flag_gm.start, stop: flag_gm.stop }],
 				dir,
 				callback: line => {
 					const l = line.split('\t')
@@ -1118,8 +1119,9 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 				itemofthisregion.push(j)
 			}
 		} else {
-			await utils.get_lines_bigfile({
-				args: [tkfile, r.chr + ':' + r.start + '-' + r.stop],
+			await utils.readTabixLines({
+				file: tkfile,
+				regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
 				dir,
 				callback: line => {
 					const l = line.split('\t')

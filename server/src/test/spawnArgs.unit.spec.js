@@ -9,6 +9,7 @@ import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
 import { api as ntseqApi } from '../routes/ntseq.ts'
 import { setRoutes } from '../app.unorg.js'
+import { setMovedRoutes } from './movedRoutes.js'
 import { init as onesampletkInit } from '../j2/onesampletk.ts'
 
 /*
@@ -26,7 +27,7 @@ test sections:
 - child_process usage
 - /ntseq coord
 - url and indexURL of the routes that run samtools, tabix, bcftools or bigBedInfo
-- get_lines_bigfile() args
+- readTabixLines() and readTabixHeader() args
 */
 
 const srcDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -161,7 +162,9 @@ tape('\n', async function (test) {
 	routes = {}
 	const record = (p, h) => (routes[p] = h)
 	const genomes = { hg38: getGenome() }
-	setRoutes({ get: record, post: record, all: record, put: record, delete: record, use: () => {} }, genomes, {})
+	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
+	setRoutes(app, genomes, {})
+	setMovedRoutes(app, genomes)
 	routes.onesampletk = onesampletkInit({ genomes })
 	test.end()
 })
@@ -257,17 +260,16 @@ tape('url and indexURL of the routes that run samtools, tabix, bcftools or bigBe
 	test.end()
 })
 
-tape('get_lines_bigfile() args', async test => {
+tape('readTabixLines() and readTabixHeader() args', async test => {
 	const file = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest/TermdbTest_ITD.gz')
+	const region = { chr: 'chr1', start: 1, stop: 2 }
 	for (const p of specialValues()) {
-		for (const args of [
-			[file, `chr1:1-2${p}`],
-			[file + p, 'chr1:1-2'],
-			['-H', file, p]
-		]) {
-			// the tool may fail or return no lines, but must not create a marker file
-			await utils.get_lines_bigfile({ args, callback: () => {} }).catch(() => {})
-		}
+		// the value may be rejected, or the tool may fail or return no lines, but no marker file may be created
+		const callback = () => {}
+		await utils.readTabixLines({ file, regions: [{ ...region, chr: 'chr1' + p }], callback }).catch(() => {})
+		await utils.readTabixLines({ file, regions: [{ ...region, stop: '2' + p }], callback }).catch(() => {})
+		await utils.readTabixLines({ file: file + p, regions: [region], callback }).catch(() => {})
+		await utils.readTabixHeader(file + p).catch(() => {})
 	}
 	test.deepEqual(createdMarkers(), [], 'should not create any marker file')
 	test.end()

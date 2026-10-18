@@ -3,7 +3,6 @@ import readline from 'readline'
 import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import { validate_variant2samples } from './mds3.variant2samples.js'
@@ -56,6 +55,7 @@ import { dtTermTypes, getGvQueryRegion, getGvQueryKey, matchesGvQueryEntry } fro
 import { TermTypes } from '#types'
 import { isNumeric } from '#shared/helpers.js'
 import { validate_query_junction } from './j2/validate.ts'
+import { runToolOutput } from './tools/index.ts'
 
 /*
 init
@@ -610,10 +610,8 @@ export async function validate_cumburden(ds) {
 			throw `'..' path segment is not allowed in ds.cohort.cumburden.files.${name}`
 		const f = path.join(serverconfig.tpmasterdir, dir, fname)
 		if (!fs.existsSync(f)) throw `ds.cohort.burden.files.${name}='${fname}' not found`
-		const out = spawnSync(serverconfig.Rscript, ['--vanilla', '-e', `load('${f}')`], {
-			encoding: 'utf-8'
-		})
-		if (out?.status || out?.stderr) {
+		const out = await runToolOutput('Rscript.loadRData', { file: f })
+		if (out.code || out.stderr) {
 			console.log(out)
 			throw `validation error, R loading of ds.cohort.cumburden.files.${name}`
 		}
@@ -1163,17 +1161,18 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 		let mafpath = q._tk.maffile
 		let sampleIdx = q._tk.sampleIdx
 		let formatIdx = q._tk.formatIdx
-		const mafArgs = [
-			mafpath,
-			param.rglst
-				.map(r => (r.chr.startsWith('chr') ? r.chr : 'chr' + r.chr) + ':' + r.start + '-' + (r.stop + 1))
-				.join(',')
-		]
+		// each region is a separate argument of tabix, not joined by commas into one
+		const mafRegions = param.rglst.map(r => ({
+			chr: r.chr.startsWith('chr') ? r.chr : 'chr' + r.chr,
+			start: r.start,
+			stop: r.stop + 1
+		}))
 
 		const variantSamples = {} // { ssm_id: [ {sample_id} ]} for adding samples to the variants
 
-		await utils.get_lines_bigfile({
-			args: mafArgs,
+		await utils.readTabixLines({
+			file: mafpath,
+			regions: mafRegions,
 			dir: q._tk.dir,
 			callback: line => {
 				const l = line.split('\t')
@@ -1773,15 +1772,16 @@ async function validate_query_cnv(ds, genome) {
 		const cnvs = [] // list of cnv events to be returned
 		let cnvMsg // optional server generated message (e.g. exceeding limit) to be shown on client alongside cnvs
 		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+			await utils.readTabixLines({
+				file: q.file || q.url,
+				regions: [{ chr: q.nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, stop: r.stop }],
 				dir: q.dir,
-				callback: (line, ps) => {
+				callback: (line, stopRead) => {
 					if (cnvs.length > ds.queries.cnv.maxReturnCutoff) {
 						/* exceeds max allowed limit. do not accept new data anymore
 						do this before parsing new cnv and inserting to array
 						*/
-						ps.kill()
+						stopRead()
 						cnvMsg = 'Maximum CNV segment limit reached. Some CNV data may be omitted.'
 						return
 						// lacks a way to message downstream
@@ -1936,9 +1936,10 @@ async function validate_query_itd(ds, genome) {
 		}
 		const itds = [] // list of itd events to be returned
 		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				callback: (line, ps) => {
+			await utils.readTabixLines({
+				file: q.file,
+				regions: [{ chr: q.nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, stop: r.stop }],
+				callback: line => {
 					const l = line.split('\t')
 					const start = Number(l[1]) // must always be numbers
 					const stop = Number(l[2])
@@ -2932,8 +2933,9 @@ async function svfusionByRangeGetter_file(ds, genome) {
 		*/
 
 		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+			await utils.readTabixLines({
+				file: q.file || q.url,
+				regions: [{ chr: q.nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, stop: r.stop }],
 				dir: q.dir,
 				callback: line => {
 					const l = line.split('\t')

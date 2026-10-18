@@ -2,12 +2,10 @@ import fs from 'fs'
 import path from 'path'
 import * as utils from './utils.js'
 import serverconfig from './serverconfig.js'
-import { spawn } from 'child_process'
+import { runTool } from './tools/index.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
-
-const fimo = serverconfig.fimo || 'fimo'
 
 export function handle_closure(genomes) {
 	return async (req, res) => {
@@ -210,17 +208,18 @@ async function run_fimo(q, gn, fasta) {
 	await utils.write_file(fastafile, fasta)
 
 	return new Promise((resolve, reject) => {
-		const lst = ['--parse-genomic-coord', '--verbosity', 1, '--text']
-
-		if (q.fimo_thresh) {
-			lst.push('--thresh')
-			lst.push(q.fimo_thresh)
+		let ps
+		try {
+			ps = runTool('fimo.scan', {
+				// 1e-4 is the fimo default; a request value may be a string from the client input
+				thresh: q.fimo_thresh ? Number(q.fimo_thresh) : 1e-4,
+				motifDb: gn.fimo_motif.db,
+				fasta: fastafile
+			})
+		} catch (e) {
+			fs.unlink(fastafile, () => {})
+			return reject(e)
 		}
-
-		lst.push(gn.fimo_motif.db)
-		lst.push(fastafile)
-
-		const ps = spawn(fimo, lst)
 		const out = []
 		ps.stdout.on('data', i => out.push(i))
 		ps.on('error', e => reject('cannot run fimo'))

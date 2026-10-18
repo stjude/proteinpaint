@@ -3,6 +3,7 @@ import serverconfig from '../serverconfig.js'
 import * as common from '#shared/common.js'
 import * as utils from '../utils.js'
 import { setRoutes } from '../app.unorg.js'
+import { setMovedRoutes } from './movedRoutes.js'
 
 /*
 Specs for the custom track file paths of the mds routes.
@@ -111,7 +112,9 @@ tape('\n', function (test) {
 			datasets: { FakeMds: { isMds: true } }
 		}
 	}
-	setRoutes({ get: record, post: record, all: record, put: record, delete: record, use: () => {} }, genomes, {})
+	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
+	setRoutes(app, genomes, {})
+	setMovedRoutes(app, genomes)
 	test.end()
 })
 

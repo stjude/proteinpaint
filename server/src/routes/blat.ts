@@ -1,10 +1,10 @@
 import fs from 'fs'
 import path from 'path'
-import { spawn } from 'child_process'
 import type { BlatRequest, BlatResponse, RouteApi, RoutePayload } from '#types'
 import { read_file, write_tmpfile } from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { genomes } from '#src/initGenomesDs.js'
+import { runTool } from '#src/tools/index.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -118,18 +118,14 @@ async function run_blat(genome, seq): Promise<string> {
 
 function run_gfClient(genome, infile, outfile): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const ps = spawn(serverconfig.gfClient, [
-			genome.blat.host,
-			genome.blat.port,
-			genome.blat.seqDir,
-			infile,
-			outfile,
-			'-q=dna',
-			'-nohead',
-			'-minScore=20',
-			'-minIdentity=0',
-			'-out=psl'
-		])
+		// throws on an invalid input, which rejects this promise
+		const ps = runTool('gfClient.align', {
+			host: genome.blat.host,
+			port: Number(genome.blat.port), // may be a string in the genome config
+			seqDir: genome.blat.seqDir,
+			queryFile: infile,
+			outFile: outfile
+		})
 		const out2: string[] = []
 		ps.stderr.on('data', i => out2.push(i))
 		ps.on('close', () => {

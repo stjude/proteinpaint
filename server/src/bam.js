@@ -13,6 +13,7 @@ import { match_complexvariant_rust } from './bam.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
 import { gdcCheckPermission } from './bam.gdc.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
+import { runToolOutput } from './tools/index.ts'
 
 /*
 XXX quick fix to be removed/disabled later
@@ -3736,9 +3737,7 @@ async function samtoolsQuickcheck(file) {
 
 async function index_bam(file) {
 	// only work for gdc bam slices, file is absolute path in cache dir
-	await utils.get_lines_bigfile({
-		isbam: true,
-		args: ['index', file],
-		callback: () => {}
-	})
+	const { code, stderr } = await runToolOutput('samtools.index', { file })
+	// get_lines_bigfile(), which this replaced, rejected on any stderr output
+	if (code !== 0 || stderr.trim()) throw stderr.trim() || `samtools index exited with code ${code}`
 }

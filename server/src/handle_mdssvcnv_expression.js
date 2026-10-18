@@ -1,7 +1,6 @@
-import { tabixnoterror, cache_index, spawnTool } from './utils.js'
+import { cache_index, readTabixLines } from './utils.js'
 import serverconfig from './serverconfig.js'
 import path from 'path'
-import readline from 'readline'
 
 export function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 	if (req.query.singlesample) {
@@ -58,60 +57,48 @@ export function handle_mdssvcnv_expression(ds, dsquery, req, data_cnv) {
 			for (const r of req.query.rglst) {
 				const task = new Promise((resolve, reject) => {
 					const data = []
-					const ps = spawnTool(
-						serverconfig.tabix,
-						[
-							expressionquery.file ? path.join(serverconfig.tpmasterdir, expressionquery.file) : expressionquery.url,
-							r.chr + ':' + r.start + '-' + r.stop
-						],
-						{ cwd: dir }
-					)
-					const rl = readline.createInterface({
-						input: ps.stdout
-					})
-					rl.on('line', line => {
-						const l = line.split('\t')
-						let j
-						try {
-							j = JSON.parse(l[3])
-						} catch (e) {
-							// invalid json
-							return
-						}
-						if (!j.gene) return
-						if (!j.sample) return
-						if (!Number.isFinite(j.value)) return
+					readTabixLines({
+						file: expressionquery.file
+							? path.join(serverconfig.tpmasterdir, expressionquery.file)
+							: expressionquery.url,
+						regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
+						dir: dir,
+						callback: line => {
+							const l = line.split('\t')
+							let j
+							try {
+								j = JSON.parse(l[3])
+							} catch (e) {
+								// invalid json
+								return
+							}
+							if (!j.gene) return
+							if (!j.sample) return
+							if (!Number.isFinite(j.value)) return
 
-						/* hiddenmattr hiddensampleattr are not applied here
+							/* hiddenmattr hiddensampleattr are not applied here
 					cnv/vcf data from those samples will be dropped, so their expression won't show
 					but their expression will still be used in calculating rank of visible samples
 					*/
 
-						if (!gene2sample2obj.has(j.gene)) {
-							gene2sample2obj.set(j.gene, {
-								chr: l[0],
-								start: Number.parseInt(l[1]),
-								stop: Number.parseInt(l[2]),
-								samples: new Map()
+							if (!gene2sample2obj.has(j.gene)) {
+								gene2sample2obj.set(j.gene, {
+									chr: l[0],
+									start: Number.parseInt(l[1]),
+									stop: Number.parseInt(l[2]),
+									samples: new Map()
+								})
+							}
+							gene2sample2obj.get(j.gene).samples.set(j.sample, {
+								value: j.value,
+								ase: j.ase
+								// XXX OHE is temporarily disabled!!!
+								//outlier: j.outlier
 							})
 						}
-						gene2sample2obj.get(j.gene).samples.set(j.sample, {
-							value: j.value,
-							ase: j.ase
-							// XXX OHE is temporarily disabled!!!
-							//outlier: j.outlier
-						})
-					})
-					const errout = []
-					ps.stderr.on('data', i => errout.push(i))
-					ps.on('close', code => {
-						const e = errout.join('')
-						if (e && !tabixnoterror(e)) {
-							reject(e)
-							return
-						}
+					}).then(() => {
 						resolve()
-					})
+					}, reject)
 				})
 				tasks.push(task)
 			}

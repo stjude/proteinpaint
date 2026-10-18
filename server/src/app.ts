@@ -7,7 +7,6 @@ import os from 'os'
 import path from 'path'
 import http from 'http'
 import https from 'https'
-import { spawn } from 'child_process'
 import * as augen from '@sjcrh/augen'
 import serverconfig, { lockServerconfig } from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
@@ -98,7 +97,7 @@ shared/types/src/routes and not when modified.
 		app.use(jsonErrorHandler)
 
 		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
-		// a serverconfig.preListenScript may rely on detecting this exact pre-listen() message
+		// container/verify.sh and the dataset run scripts detect this exact pre-listen() message
 		console.log(`\nValidation succeeded.\n`)
 
 		// may exit early depending on command-line options
@@ -181,23 +180,6 @@ async function handle_argv(argv: string[]): Promise<{ message?: string; error?: 
 }
 
 async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
-	if (serverconfig.preListenScript) {
-		const { cmd, args } = serverconfig.preListenScript
-		// not spawnSync(), which would block a termination signal handler, such as in a container launcher
-		const ps = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-			// stdin is ignored, like the empty stdin of spawnSync(), so that a script that reads it does not wait
-			const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] })
-			let stdout = ''
-			let stderr = ''
-			child.stdout.setEncoding('utf-8').on('data', data => (stdout += data))
-			child.stderr.setEncoding('utf-8').on('data', data => (stderr += data))
-			child.on('error', reject)
-			child.on('close', () => resolve({ stdout, stderr }))
-		})
-		if (ps.stderr.trim()) throw ps.stderr.trim()
-		console.log(ps.stdout)
-	}
-
 	// serverconfig.appEnable is an array of strings that are
 	// valid arguments to http://expressjs.com/en/4x/api.html#app.enabled
 	// For example, when the server sits behind a trusted reverse proxy,
@@ -206,7 +188,7 @@ async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 
 	const port = serverconfig.port
 	// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
-	// a serverconfig.preListenScript may rely on detecting this exact post-listen() message
+	// container/verify.sh, the dataset run scripts, and test/testServer.ts detect this exact post-listen() message
 	const message = `STANDBY AT PORT ${port}`
 	if (serverconfig.ssl) {
 		const options = {

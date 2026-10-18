@@ -49,8 +49,9 @@ async function do_query(req, res, genomes) {
 	for (const r of req.query.rglst) {
 		r.items = []
 		let errlinecount = 0
-		await utils.get_lines_bigfile({
-			args: [tkfile, r.chr + ':' + r.start + '-' + r.stop],
+		await utils.readTabixLines({
+			file: tkfile,
+			regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
 			dir,
 			callback: line => {
 				const l = line.split('\t')

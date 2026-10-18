@@ -30,19 +30,8 @@ const allowed = new Map([
 	['python/index.js', 'python for run_python()'],
 	['rust/index.js', 'rust binaries for run_rust()'],
 	['server/genome/copyDataFilesFromRepo2Tp.js', 'test genome data setup'],
-	['server/src/app.ts', 'preListenScript'],
-	['server/src/checkDependenciesAndVersions.js', 'samtools and bcftools version checks'],
-	['server/src/fimo.js', 'fimo'],
-	['server/src/grin2/memory.ts', 'vm_stat on macOS'],
-	['server/src/initLegacyDataset.js', 'tabix at dataset init'],
-	['server/src/mds.init.js', 'tabix at dataset init'],
-	['server/src/mds3.init.js', 'Rscript to check an RData file at dataset init'],
-	['server/src/routes/blat.ts', 'gfClient'],
-	['server/src/routes/hicdata.ts', 'hicstraw'],
-	['server/src/routes/hicgenome.ts', 'hicstraw'],
-	['server/src/utils.js', 'samtools, tabix, bcftools, bigBed tools, Rscript'],
-	['server/src/utils/bedjCache.ts', 'bgzip and tabix for the bedj cache'],
-	['server/src/utils/h5samples.ts', 'h5dump']
+	['server/src/tools/index.ts', 'the tools of the specs in server/src/tools, see runTool()'],
+	['server/src/utils.js', 'samtools and bcftools reads, see spawnTool() and get_lines_bigfile()']
 ])
 
 tape('child_process imports', test => {

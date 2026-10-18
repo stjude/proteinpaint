@@ -1,9 +1,8 @@
 import type { RoutePayload } from '#types'
 import type { HicGenomeRequest, HicGenomeResponse, XYZCoord, RouteApi } from '#types'
 import { fileurl } from '#src/utils.js'
-import { spawn } from 'child_process'
 import readline from 'readline'
-import serverconfig from '#src/serverconfig.js'
+import { runTool } from '#src/tools/index.ts'
 import { mapConcurrent } from '#src/utils/concurrencyLimiter.ts'
 import { getStrawArgs, validChrlst, validHicChr, STRAW_CONCURRENCY } from '#src/utils/hicStraw.ts'
 
@@ -57,9 +56,16 @@ function init() {
 
 		const runStraw = ({ lead, follow, items }: (typeof pairs)[number]) =>
 			new Promise<void>((resolve, reject): void => {
-				const par = [strawMatrixType, nmeth, file, strawChr.get(lead)!, strawChr.get(follow)!, 'BP', resolution]
-
-				const ps = spawn(serverconfig.hicstraw, par)
+				// throws on an invalid input, which rejects this promise
+				const ps = runTool('hicstraw.query', {
+					matrixType: strawMatrixType,
+					normalization: nmeth,
+					file,
+					pos1: strawChr.get(lead)!,
+					pos2: strawChr.get(follow)!,
+					unit: 'BP',
+					resolution: Number(resolution)
+				})
 				const rl = readline.createInterface({ input: ps.stdout })
 
 				let linenot3fields = 0

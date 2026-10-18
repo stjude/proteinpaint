@@ -337,11 +337,9 @@ tk is from ds.queries{}
 	const loss = new Set()
 	const mutsamples = new Set() // use if has other types in addition to cnv
 
-	await utils.get_lines_bigfile({
-		args: [
-			tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
-			(tk.nochr ? st.chr.replace('chr', '') : st.chr) + ':' + st.start + '-' + (st.stop + 1)
-		],
+	await utils.readTabixLines({
+		file: tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
+		regions: [{ chr: tk.nochr ? st.chr.replace('chr', '') : st.chr, start: st.start, stop: st.stop + 1 }],
 		dir,
 		callback: line => {
 			const l = line.split('\t')
@@ -421,11 +419,9 @@ only return the set of mutated sample names
 
 	const dir = tk.url ? await utils.cache_index(tk.url, tk.indexURL) : null
 
-	await utils.get_lines_bigfile({
-		args: [
-			tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
-			(tk.nochr ? st.chr.replace('chr', '') : st.chr) + ':' + st.start + '-' + (st.stop + 1)
-		],
+	await utils.readTabixLines({
+		file: tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
+		regions: [{ chr: tk.nochr ? st.chr.replace('chr', '') : st.chr, start: st.start, stop: st.stop + 1 }],
 		dir,
 		callback: line => {
 			if (tk.type == common.mdsvcftype.vcf) {
@@ -571,11 +567,9 @@ async function get_genevalue(samples, q, ds) {
 	const st = q.samplerule.set
 
 	const sample2genevalue = new Map()
-	await utils.get_lines_bigfile({
-		args: [
-			genenumquery.file ? path.join(serverconfig.tpmasterdir, genenumquery.file) : genenumquery.url,
-			st.chr + ':' + st.start + '-' + st.stop
-		],
+	await utils.readTabixLines({
+		file: genenumquery.file ? path.join(serverconfig.tpmasterdir, genenumquery.file) : genenumquery.url,
+		regions: [{ chr: st.chr, start: st.start, stop: st.stop }],
 		dir,
 		callback: line => {
 			const j = JSON.parse(line.split('\t')[3])

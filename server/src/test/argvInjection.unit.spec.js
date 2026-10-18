@@ -13,6 +13,7 @@ import { mdsjunction_request_closure } from '../mds.junction.js'
 import { handle_mdssurvivalplot } from '../km.js'
 import { handle_request_closure as termdbClosure } from '../termdb.js'
 import { setRoutes } from '../app.unorg.js'
+import { setMovedRoutes } from './movedRoutes.js'
 
 /*
 Regression specs for argument injection (CWE-88) into samtools/tabix argv.
@@ -34,6 +35,7 @@ test sections:
 - /termdb?getLDdata
 - spawnTool() central guard
 - /mdsgeneboxplot and /isoformbycoord, via the real route table
+- /svmr, via the real route table
 */
 
 const hasSamtools = spawnSync(serverconfig.samtools, ['--version']).status === 0
@@ -89,6 +91,10 @@ tape('get_fasta() defense in depth with "--"', async test => {
 	const fa = path.join(tmpdir, 'ref.fa')
 	fs.writeFileSync(fa, '>chr1\nACGTACGTAC\n')
 	const g = getGenome(fa)
+	// a genome fasta must be under tpmasterdir, see the samtools.faidx spec of server/src/tools
+	const tp = serverconfig.tpmasterdir
+	serverconfig.tpmasterdir = tmpdir
+	test.teardown(() => (serverconfig.tpmasterdir = tp))
 	test.equal(await utils.get_fasta(g, 'chr1:2-5'), '>chr1:2-5\nCGTA', 'should return sequence from a real fasta')
 
 	// even if a genome declared a chr that looks like an option, '--' keeps samtools from parsing it as one
@@ -285,14 +291,14 @@ tape('spawnTool() central guard', async test => {
 		test.doesNotThrow(() => utils.spawnTool('true', args).kill(), `should allow ${JSON.stringify(args)}`)
 	}
 
-	// get_lines_bigfile() goes through the guard, so a route that forgot to validate its chr is still covered
+	// readTabixLines() checks each region by the tabix.query spec, so a route that forgot to validate its chr is still covered
 	const file = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest/TermdbTest_ITD.gz')
 	const tbiHash = sha(file + '.tbi')
 	try {
-		await utils.get_lines_bigfile({ args: [file, '-fc:1-2'], callback: () => {} })
-		test.fail('get_lines_bigfile should reject a region-shaped option')
+		await utils.readTabixLines({ file, regions: [{ chr: '-fc', start: 1, stop: 2 }], callback: () => {} })
+		test.fail('readTabixLines should reject a region-shaped option')
 	} catch (e) {
-		test.equal(e, 'invalid region argument', 'get_lines_bigfile should reject a region-shaped option')
+		test.equal(e, 'tabix.query: invalid regions', 'readTabixLines should reject a region-shaped option')
 	}
 	test.equal(sha(file + '.tbi'), tbiHash, 'should not rebuild the track .tbi')
 	test.end()
@@ -304,11 +310,9 @@ tape('/mdsgeneboxplot and /isoformbycoord, via the real route table', async test
 	const genome = getGenome()
 	// legacy mds routes are only mounted when there is at least one mds dataset
 	genome.datasets.FakeMds = { isMds: true }
-	setRoutes(
-		{ get: record, post: record, all: record, put: record, delete: record, use: () => {} },
-		{ hg38: genome },
-		{}
-	)
+	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
+	setRoutes(app, { hg38: genome }, {})
+	setMovedRoutes(app, { hg38: genome })
 	for (const chr of chrAttacks) {
 		const box = await send(routes['/mdsgeneboxplot'], {
 			genome: 'hg38',
@@ -322,6 +326,30 @@ tape('/mdsgeneboxplot and /isoformbycoord, via the real route table', async test
 		test.equal(box?.error, 'q.rglst[].chr invalid chr name', `/mdsgeneboxplot should reject chr=${chr}`)
 		const iso = await send(routes['/isoformbycoord'], { genome: 'hg38', chr, pos: 1 })
 		test.equal(iso?.error, 'invalid chr/pos', `/isoformbycoord should reject chr=${chr}`)
+	}
+	test.end()
+})
+
+tape('/svmr, via the real route table', async test => {
+	const routes = {}
+	const record = (p, h) => (routes[p] = h)
+	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
+	setRoutes(app, { hg38: getGenome() }, {})
+	// the handler sends from a file read callback
+	const svmr = query =>
+		new Promise(resolve => {
+			const res = { send: resolve, status: () => res, header: () => {}, set: () => {} }
+			routes['/svmr']({ query, get: () => undefined }, res)
+		})
+	const file = 'files/hg38/TermdbTest/trackLst/facet.json'
+	test.equal(
+		(await svmr({ file })).raw,
+		fs.readFileSync(path.join(serverconfig.tpmasterdir, file), 'utf8'),
+		'should send a file under tp'
+	)
+	for (const query of [{ url: 'https://a.org/x.txt' }, { file: '../x.txt' }, { file: leakFile }]) {
+		const r = await svmr(query)
+		test.ok(r.error && !r.raw, `should not read ${JSON.stringify(query)}`)
 	}
 	test.end()
 })

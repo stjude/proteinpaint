@@ -1,5 +1,5 @@
-import child_process from 'child_process'
 import { run_R } from '@sjcrh/proteinpaint-r'
+import { runToolOutput } from './tools/index.ts'
 
 export async function checkDependenciesAndVersions(serverconfig) {
 	if (serverconfig.features.skip_checkDependenciesAndVersions) {
@@ -13,10 +13,7 @@ export async function checkDependenciesAndVersions(serverconfig) {
 	// samtools and bcftools usually have similar installed versions
 	const htslibMinorVer = 10
 	{
-		const lines = child_process
-			.execSync(serverconfig.samtools + ' --version', { encoding: 'utf8' })
-			.trim()
-			.split('\n')
+		const lines = (await getVersionOutput('samtools.version')).split('\n')
 		// first line should be "samtools 1.14"
 		const [name, v] = lines[0].split(' ')
 		if (name != 'samtools' || !v) throw 'cannot run "samtools version"'
@@ -26,10 +23,7 @@ export async function checkDependenciesAndVersions(serverconfig) {
 		if (i < htslibMinorVer) throw `samtools not >= 1.${htslibMinorVer}`
 	}
 	{
-		const lines = child_process
-			.execSync(serverconfig.bcftools + ' -v', { encoding: 'utf8' })
-			.trim()
-			.split('\n')
+		const lines = (await getVersionOutput('bcftools.version')).split('\n')
 		// first line should be "bcftools 1.14"
 		const [name, v] = lines[0].split(' ')
 		if (name != 'bcftools' || !v) throw 'cannot run "bcftools version"'
@@ -38,4 +32,11 @@ export async function checkDependenciesAndVersions(serverconfig) {
 		const i = Number(minor)
 		if (i < htslibMinorVer) throw `bcftools not >= 1.${htslibMinorVer}`
 	}
+}
+
+// returns the trimmed stdout of a version check; throws if the tool exits with an error, like execSync() did
+async function getVersionOutput(op) {
+	const { code, stdout, stderr } = await runToolOutput(op, {})
+	if (code !== 0) throw `${op} exited with code ${code}: ${stderr.trim()}`
+	return stdout.trim()
 }

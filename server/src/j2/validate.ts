@@ -76,8 +76,9 @@ export async function validate_query_junction(ds: any, genome: any) {
 		const junctions: Junction[] = [] // list of junctions to be returned
 		let maxReadCount = 0
 		for (const r of param.rglst || []) {
-			await utils.get_lines_bigfile({
-				args: [q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+			await utils.readTabixLines({
+				file: q.file,
+				regions: [{ chr: q.nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, stop: r.stop }],
 				callback: (line: string) => {
 					const l = line.split('\t')
 					const start = Number(l[1])
@@ -186,8 +187,8 @@ export async function validate_query_junction(ds: any, genome: any) {
 			return {} // todo
 		}
 		const s2r = new Map() // k: sample id, v: read count of query junction
-		await utils.get_lines_bigfile({
-			args: [q.file, (q.nochr ? j.chr.replace('chr', '') : j.chr) + ':' + j.start + '-' + j.stop],
+		await utils.readTabixLines({
+			file: q.file, regions: [{ chr: (q.nochr ? j.chr.replace('chr', '') : j.chr), start: j.start, stop: j.stop }],
 			callback: (line: string) => {
 				const l = line.split('\t')
 				const start = Number(l[1]) // must always be numbers

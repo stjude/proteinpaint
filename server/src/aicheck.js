@@ -74,8 +74,9 @@ async function do_query(req, genomes) {
 
 	for (const r of req.query.rglst) {
 		const xsf = r.width / (r.stop - r.start) // pixel per bp
-		await utils.get_lines_bigfile({
-			args: [file, r.chr + ':' + r.start + '-' + r.stop],
+		await utils.readTabixLines({
+			file: file,
+			regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
 			dir,
 			callback: line => {
 				const l = line.split('\t')
