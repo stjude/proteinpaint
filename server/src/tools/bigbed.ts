@@ -6,8 +6,8 @@ import { chrPattern } from './regions.ts'
 Spec of the bigBed tools of ucsc. See index.ts for how a spec is checked and used.
 */
 
-/** a bigBed file under tp or cachedir, or a url */
-const file: FieldSpec = { type: 'fileOrUrl', roots: ['tp', 'cache'] }
+/** a bigBed file under tp, or a url; no server code writes a bigBed file to cachedir */
+const file: FieldSpec = { type: 'fileOrUrl', roots: ['tp'] }
 /** a 0-based coordinate */
 const coord: FieldSpec = { type: 'int', min: 0, max: 999_999_999_999 }
 

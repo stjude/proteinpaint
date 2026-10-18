@@ -314,17 +314,22 @@ const otherOps: Record<string, { input: Record<string, unknown>; argv: string[];
 	'bigBed.query': {
 		input: { chr: 'chr1', start: 0, end: 1000, file: 'anno/a.bb' },
 		argv: ['-chrom=chr1', '-start=0', '-end=1000', path.join(tp, 'anno/a.bb'), 'stdout'],
-		bad: { chr: ['-o', 'chr1 ', 'chr1;ls'], start: [-1, '0', 1.5], end: ['1000', 1e15], file: ['/etc/passwd', '-o'] }
+		bad: {
+			chr: ['-o', 'chr1 ', 'chr1;ls'],
+			start: [-1, '0', 1.5],
+			end: ['1000', 1e15],
+			file: ['/etc/passwd', '-o', path.join(cache, 'a.bb')]
+		}
 	},
 	'bigBed.byName': {
 		input: { file: 'anno/a.bb', name: 'rs123' },
 		argv: [path.join(tp, 'anno/a.bb'), 'rs123', 'stdout'],
-		bad: { file: ['/etc/passwd'], name: ['-o', 'rs1 rs2', 'rs1;ls', ''] }
+		bad: { file: ['/etc/passwd', path.join(cache, 'a.bb')], name: ['-o', 'rs1 rs2', 'rs1;ls', ''] }
 	},
 	'bigBed.info': {
 		input: { file: 'anno/a.bb' },
 		argv: [path.join(tp, 'anno/a.bb')],
-		bad: { file: ['/etc/passwd', '-o'] }
+		bad: { file: ['/etc/passwd', '-o', path.join(cache, 'a.bb')] }
 	}
 }
 
