@@ -2,7 +2,7 @@ import { getRCommand } from '@sjcrh/proteinpaint-r'
 import { getPythonCommand } from '@sjcrh/proteinpaint-python'
 import { getRustCommand } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '../serverconfig.js'
-import { specs, getCall, checkFilePath } from '../tools/index.ts'
+import { specs, getCall, checkCacheDir } from '../tools/index.ts'
 
 /*
 The requests to start a process, and the command that each one starts. A request names what to run, such as a tool
@@ -111,5 +111,5 @@ function getHtsCommand(r: Extract<ToolRequest, { kind: 'hts' }>): Command {
 	}
 	if (r.cwd === null) return { file, args: [...args] }
 	// the cache dir of a url file, where the tool keeps the index that it downloads
-	return { file, args: [...args], cwd: checkFilePath(r.cwd, ['cache'], `${r.tool}: invalid cwd`) }
+	return { file, args: [...args], cwd: checkCacheDir(r.cwd, `${r.tool}: invalid cwd`) }
 }

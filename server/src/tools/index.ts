@@ -223,12 +223,7 @@ function checkField(field: Field, v: unknown, msg: string): string {
 	}
 }
 
-/** returns the absolute path of a file under one of the roots, where a relative path is resolved under the first root,
- * or throws msg */
-export function checkFilePath(v: unknown, roots: readonly FileRoot[], msg: string): string {
-	return checkFile(v, roots, msg)
-}
-
+/** returns the absolute path of a file under one of the roots, where a relative path is resolved under the first root */
 function checkFile(v: unknown, roots: readonly FileRoot[], msg: string): string {
 	if (!isFilePath(v)) throw msg
 	// a ".." segment could leave the root

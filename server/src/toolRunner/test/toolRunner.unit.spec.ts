@@ -202,6 +202,13 @@ tape('getCommand(): hts requests', test => {
 		{ file: serverconfig.bcftools, args: ['query', 'a.bcf'], cwd: dir },
 		'should run bcftools in a cache dir'
 	)
+	// the cache dir of a url keeps the url body
+	const urlDir = path.join(cache, 'https/a.org:8443/x%20y/t.bcf?token=1&v=2')
+	test.equal(
+		getCommand({ kind: 'hts', tool: 'bcftools', args: ['query', 'a.bcf'], cwd: urlDir }).cwd,
+		urlDir,
+		'should allow url characters in the cache dir'
+	)
 	// the output format of a bcftools query, as in mds3.init.js and termdb.snp.js
 	const query = ['query', 'a.bcf', '-r', 'chr1:1-2', '-f', '%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO[\t%TGT]\n']
 	test.deepEqual(
