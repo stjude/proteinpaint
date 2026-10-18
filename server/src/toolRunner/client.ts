@@ -15,7 +15,8 @@ Starts every process of the server, from a request, see requests.ts:
 - with a tool runner, which process.env.PP_TOOL_RUNNER_SOCKET names, the request is sent to the runner, which
   checks it again and starts the process, see runner.ts; the server process then does not need the permission to
   start a child process, and container/envHelpers.mjs starts it without that permission
-- otherwise, the server process starts the command of the request itself
+- otherwise, the server process starts the command of the request itself; container/envHelpers.mjs always starts a
+  runner, so this is for a server or test that is not started with it, such as the unit tests
 
 startProcess() returns a ToolProcess, which has the stdin, stdout, stderr, kill() and the spawn, error, exit and
 close events of a child process, so that a caller handles either one the same way.
@@ -71,7 +72,8 @@ export function setToolRunnerSocket(p: string | undefined) {
 
 /*
 Opens the control connection to the tool runner, and resolves when the runner is ready. The server process exits
-when the control connection closes, such as when the runner exits, since no process could be started after that.
+when the control connection closes, such as when the runner exits, or when another server process connects to the
+same runner, since no process could be started after that.
 
 Without a runner, throws if this process may not start a child process, such as under the Node.js permission
 model without --allow-child-process, which would otherwise only fail when a tool is first used.

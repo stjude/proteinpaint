@@ -184,7 +184,8 @@ test('credentials: a file under an allowed read path fails closed, before any fi
 })
 
 test('router: the permission flags or config file flag are inserted where node or tsx parses them as options', t => {
-	const flags = permissionFlags(getNodeConfig(fakeContext()))
+	// a node command runs without the child process permission, since the tool runner starts its processes
+	const flags = permissionFlags(getNodeConfig(fakeContext())).filter(f => f != '--allow-child-process')
 	for (const [args, expected] of [
 		[
 			['node', 'app.mjs'],
@@ -244,7 +245,8 @@ test('the allowed paths are logged to stderr', t => {
 		error.mock.calls.map(c => c.arguments[0]),
 		[
 			`envHelpers.mjs: allow-fs-read ${nodeOptions['allow-fs-read'].join(' ')}`,
-			`envHelpers.mjs: allow-fs-write ${nodeOptions['allow-fs-write'].join(' ')}`
+			`envHelpers.mjs: allow-fs-write ${nodeOptions['allow-fs-write'].join(' ')}`,
+			'envHelpers.mjs: started the tool runner'
 		]
 	)
 })
@@ -300,6 +302,7 @@ test('writes node.config.json, and a node command replaces this process with cre
 	assert.deepEqual(ctx.execved[0].env, {
 		PP_CREDS_FILE: '/secrets/pp.json',
 		PP_MODE: 'container-prod',
+		PP_TOOL_RUNNER_SOCKET: '/tmp/user/pp-runner-XXXXXX/tools.sock',
 		PP_CREDS_HANDOFF_FILE: handoff
 	})
 	assert.equal(ctx.spawned.length, 0)
@@ -359,10 +362,9 @@ test('without process.execve(), a node command runs as a child process with a wa
 	assert.equal(ctx.spawned[0].opts.env.PP_CREDS, '{"a":1}')
 })
 
-test('PP_TOOL_RUNNER=1: the runner gets the child process permission and no credentials, and the server neither', t => {
+test('tool runner: a node command runs without the child process permission, and the runner has no credentials', t => {
 	const ctx = fakeContext({
 		env: {
-			PP_TOOL_RUNNER: '1',
 			PP_CREDS: '{"a":1}',
 			PP_CACHEID_CREDS: 'k',
 			PP_CREDS_HANDOFF_FILE: '/tmp/other.json',
@@ -377,8 +379,9 @@ test('PP_TOOL_RUNNER=1: the runner gets the child process permission and no cred
 	assert.ok(flags.includes('--allow-child-process'))
 	const socketPath = '/tmp/user/pp-runner-XXXXXX/tools.sock'
 
-	assert.equal(ctx.spawned.length, 1, 'only the runner is spawned')
-	const runner = ctx.spawned[0]
+	assert.equal(ctx.runners.length, 1)
+	assert.equal(ctx.spawned.length, 0)
+	const runner = ctx.runners[0]
 	assert.equal(runner.cmd, '/node/v24/bin/node')
 	assert.deepEqual(runner.args, [
 		...flags,
@@ -387,9 +390,9 @@ test('PP_TOOL_RUNNER=1: the runner gets the child process permission and no cred
 	])
 	assert.deepEqual(runner.opts.stdio, ['ignore', 'inherit', 'inherit'])
 	assert.deepEqual(runner.opts.env, {
-		PP_TOOL_RUNNER: '1',
 		PP_MODE: 'container-prod',
 		PP_TOOL_RUNNER_SOCKET: socketPath,
+		PP_TOOL_RUNNER_PARENT_PID: '4321',
 		// merged, and the runner checks a cache file under the configured cachedir
 		PP_SERVERCONFIG_OVERRIDES: '{"backend_only":true,"hideCachedir":false}'
 	})
@@ -405,32 +408,47 @@ test('PP_TOOL_RUNNER=1: the runner gets the child process permission and no cred
 	assert.equal(server.env.PP_TOOL_RUNNER_SOCKET, socketPath)
 	assert.equal(server.env.PP_SERVERCONFIG_OVERRIDES, '{"backend_only":true}')
 	assert.equal(server.env.PP_CREDS, undefined)
-	assert.match(errors.join('\n'), /started the tool runner, the command runs without --allow-child-process/)
+	assert.match(errors.join('\n'), /started the tool runner/)
 })
 
-test('PP_TOOL_RUNNER: other commands and values are rejected before anything is started', t => {
-	for (const [env, args, re] of [
-		[{ PP_TOOL_RUNNER: '1' }, ['tsx', 'watch', 'server.ts'], /only supported for a node command without --watch/],
-		[{ PP_TOOL_RUNNER: '1' }, ['node', '--watch', 'app.mjs'], /only supported for a node command without --watch/],
-		[{ PP_TOOL_RUNNER: 'true' }, ['node', 'app.mjs'], /invalid PP_TOOL_RUNNER='true'/]
-	]) {
-		const ctx = fakeContext({ env })
-		t.mock.method(console, 'error', () => {})
-		assert.throws(() => runInProcess(t, args, ctx), re, args.join(' '))
-		assert.equal(ctx.spawned.length + ctx.execved.length, 0, args.join(' '))
-	}
-	const ctx = fakeContext({ env: { PP_TOOL_RUNNER: '1' }, execve: null })
-	assert.throws(() => runInProcess(t, ['node', 'app.mjs'], ctx), /with process.execve\(\)/)
-	assert.equal(ctx.spawned.length, 0)
-})
-
-test('without PP_TOOL_RUNNER, a node command has the child process permission and no runner', t => {
-	const ctx = fakeContext({ files: { '/app/.env': 'PP_TOOL_RUNNER=' } })
+test('tool runner: a tsx command keeps the child process permission, and the runner runs the source with tsx', t => {
+	const ctx = fakeContext({
+		env: { PP_CREDS: '{"a":1}', PP_NODE_CONFIG_DIR: '/run/pp' }
+	})
 	t.mock.method(console, 'error', () => {})
-	runInProcess(t, ['node', 'app.mjs'], ctx)
-	assert.equal(ctx.spawned.length, 0)
-	assert.ok(ctx.execved[0].args.includes('--allow-child-process'))
-	assert.equal('PP_TOOL_RUNNER_SOCKET' in ctx.execved[0].env, false)
+	runInProcess(
+		t,
+		['tsx', 'watch', '--conditions=sjpp/dev', '-C', 'other', '--env-file-if-exists=.env', 'server.ts'],
+		ctx
+	)
+	const config = JSON.parse(ctx.written['/run/pp/node.config.json'])
+	assert.equal(config.nodeOptions['allow-child-process'], true, 'tsx starts esbuild in the server process')
+	const runner = ctx.runners[0]
+	// not in watch mode, and without the .env file, which may have credentials
+	assert.deepEqual(
+		[runner.cmd, ...runner.args],
+		[
+			'tsx',
+			'--experimental-config-file=/run/pp/node.config.json',
+			'--conditions=sjpp/dev',
+			'--conditions=other',
+			'/app/node_modules/@sjcrh/proteinpaint-server/src/toolRunner.ts'
+		]
+	)
+	assert.equal(runner.opts.env.PP_CREDS, undefined)
+	const server = ctx.spawned[0]
+	assert.equal(server.opts.env.PP_TOOL_RUNNER_SOCKET, '/tmp/user/pp-runner-XXXXXX/tools.sock')
+	assert.equal(runner.opts.env.PP_TOOL_RUNNER_SOCKET, server.opts.env.PP_TOOL_RUNNER_SOCKET)
+	assert.equal(server.opts.env.PP_CREDS, '{"a":1}')
+})
+
+test('tool runner: a node command in watch mode keeps the child process permission', t => {
+	const ctx = fakeContext()
+	t.mock.method(console, 'error', () => {})
+	runInProcess(t, ['node', '--watch', 'app.mjs'], ctx)
+	assert.ok(ctx.spawned[0].args.includes('--allow-child-process'), 'the watch mode starts the server')
+	assert.ok(ctx.runners[0].args.includes('--allow-child-process'))
+	assert.equal(ctx.spawned[0].opts.env.PP_TOOL_RUNNER_SOCKET, '/tmp/user/pp-runner-XXXXXX/tools.sock')
 })
 
 test('smoke: the command replaces this process, with the permission model and credentials, and its exit code propagates', () => {
@@ -442,6 +460,7 @@ test('smoke: the command replaces this process, with the permission model and cr
 	try {
 		fs.mkdirSync(tmpdir)
 		fs.writeFileSync(credsFile, '{"a":1}')
+		writeToolRunnerStub(dir)
 		// reads and removes the handoff file like server/src/serverconfig.js
 		const child = `
 			const fs = require('fs')
@@ -451,7 +470,9 @@ test('smoke: the command replaces this process, with the permission model and cr
 			const handoff = JSON.parse(fs.readFileSync(file, 'utf8'))
 			fs.rmSync(require('path').dirname(file), { recursive: true })
 			const envCreds = Object.keys(process.env).filter(k => k.endsWith('_CREDS'))
-			console.log(JSON.stringify({ permission: !!process.permission, handoff, envCreds, canReadCredsFile, pid: process.pid }))
+			const childProcess = process.permission.has('child')
+			const socket = !!process.env.PP_TOOL_RUNNER_SOCKET
+			console.log(JSON.stringify({ permission: !!process.permission, childProcess, socket, handoff, envCreds, canReadCredsFile, pid: process.pid }))
 			process.exit(3)`
 		const ps = spawnSync(process.execPath, [SCRIPT, 'node', '-e', child], {
 			cwd: dir,
@@ -461,6 +482,9 @@ test('smoke: the command replaces this process, with the permission model and cr
 		assert.equal(ps.status, 3, ps.stderr)
 		assert.deepEqual(JSON.parse(ps.stdout), {
 			permission: true,
+			// the tool runner starts the processes
+			childProcess: false,
+			socket: true,
 			handoff: { PP_ZZTEST_CREDS: 'z', PP_CREDS: '{"a":1}' },
 			envCreds: [],
 			canReadCredsFile: false,
@@ -470,7 +494,12 @@ test('smoke: the command replaces this process, with the permission model and cr
 		// a node command gets the permission model from flags, so no config file is written
 		assert.equal(fs.existsSync(path.join(dir, 'node.config.json')), false)
 		assert.match(ps.stderr, /envHelpers\.mjs: allow-fs-read /)
-		assert.deepEqual(fs.readdirSync(tmpdir), [], 'the command should be able to remove the handoff dir')
+		assert.deepEqual(
+			JSON.parse(ps.stderr.match(/^tool runner stub: (.*)$/m)?.[1] || 'null'),
+			{ childProcess: true, socket: true, envCreds: [] },
+			'the runner may start a child process, and has no credentials'
+		)
+		assert.deepEqual(fs.readdirSync(tmpdir), [], 'the command and runner should be able to remove their dirs')
 	} finally {
 		fs.rmSync(dir, { recursive: true })
 		fs.rmSync(credsFile, { force: true })
@@ -487,6 +516,7 @@ test('smoke: node --watch restarts the command with the credentials', async () =
 	let touch
 	try {
 		fs.mkdirSync(tmpdir)
+		writeToolRunnerStub(dir)
 		fs.writeFileSync(
 			script,
 			`const fs = require('fs')
@@ -557,12 +587,38 @@ test('smoke: a flag in the envHelpers.mjs arguments is rejected with a non-zero 
 	}
 })
 
+// a tool runner where envHelpers.mjs resolves it from the cwd, which logs its permission and env to stderr, and exits
+// when the PP_TOOL_RUNNER_PARENT_PID process exits, like server/src/toolRunner.ts, after it removes its socket dir
+function writeToolRunnerStub(cwd) {
+	const dir = path.join(cwd, 'node_modules/@sjcrh/proteinpaint-server')
+	fs.mkdirSync(path.join(dir, 'src'), { recursive: true })
+	fs.writeFileSync(path.join(dir, 'package.json'), '{"name":"@sjcrh/proteinpaint-server","type":"module"}')
+	fs.writeFileSync(
+		path.join(dir, 'src/toolRunner.js'),
+		`import fs from 'fs'
+		import path from 'path'
+		const socket = process.env.PP_TOOL_RUNNER_SOCKET
+		const envCreds = Object.keys(process.env).filter(k => k.endsWith('_CREDS'))
+		console.error('tool runner stub: ' + JSON.stringify({ childProcess: process.permission.has('child'), socket: !!socket, envCreds }))
+		const pid = Number(process.env.PP_TOOL_RUNNER_PARENT_PID)
+		setInterval(() => {
+			try {
+				return process.kill(pid, 0)
+			} catch {}
+			fs.rmSync(path.dirname(socket), { recursive: true, force: true })
+			process.exit(0)
+		}, 50)`
+	)
+}
+
 // a context from a fake fs and spawn that FAIL CLOSED: reading an unmodeled file throws ENOENT,
 // and only <cwd>/node.config.json may be written; ctx.deps is for calling envHelpers(args, deps)
 function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = '/app', execve, posture } = {}) {
 	const written = {}
 	const postureCalls = []
 	const spawned = []
+	// the tool runner, which is spawned before every command
+	const runners = []
 	const execved = []
 	const removed = []
 	const fakeFs = {
@@ -589,7 +645,7 @@ function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = 
 		rmSync: (p, opts) => removed.push({ p, opts })
 	}
 	const fakeSpawn = (cmd, args, opts) => {
-		spawned.push({ cmd, args, opts })
+		;(args.at(-1)?.includes('/src/toolRunner.') ? runners : spawned).push({ cmd, args, opts })
 		return Object.assign(new EventEmitter(), { kill: () => {} })
 	}
 	const fakeExecve = (file, args, env) => execved.push({ file, args, env })
@@ -602,15 +658,16 @@ function fakeContext({ env = {}, files = {}, exists = [], realpaths = {}, cwd = 
 		execPath: '/node/v24/bin/node',
 		tmpdir: '/tmp/user',
 		homedir: '/home/dev',
+		pid: 4321,
 		hasPermissionModel: false,
-		resolveToolRunner: () => '/app/node_modules/@sjcrh/proteinpaint-server/src/toolRunner.js',
+		resolveToolRunner: ext => `/app/node_modules/@sjcrh/proteinpaint-server/src/toolRunner.${ext}`,
 		checkPosture: opts => {
 			postureCalls.push(opts)
 			if (posture instanceof Error) throw posture
 			return posture || { findings: [], unchecked: [] }
 		}
 	}
-	return Object.assign(createContext(deps), { deps, written, spawned, execved, removed, postureCalls })
+	return Object.assign(createContext(deps), { deps, written, spawned, runners, execved, removed, postureCalls })
 }
 
 test('container: the runtime settings are checked with the allowed write dirs that exist, and warnings are logged', t => {

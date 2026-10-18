@@ -17,21 +17,19 @@ answered with a failed frame, and nothing is started.
 A process connection carries one request and the stdin, output, and exit of its process, see protocol.ts. When the
 connection closes before the process exits, such as when the server stops waiting for it, the process is killed.
 
-The control connection is the first connection that sends a hello frame. When it closes, the server is assumed to
-have exited, and onControlClose() is called.
+The control connection is a connection that sends a hello frame, which the server opens when it starts and keeps
+open, so that it can tell when the runner exits. A hello frame replaces the earlier control connection, which is
+closed, such as when a watch mode restarts the server. The runner itself exits when the process that started it
+exits, see toolRunner.ts.
 */
 
-export type RunnerOptions = {
-	socketPath: string
-	/** by default, exits the runner process */
-	onControlClose?: () => void
-}
+export type RunnerOptions = { socketPath: string }
 
-type RunnerState = { control?: net.Socket; onControlClose: () => void }
+type RunnerState = { control?: net.Socket }
 
 /** resolves with the listening server, whose socket file only this user may connect to */
-export function listenToolRunner({ socketPath, onControlClose = () => process.exit(0) }: RunnerOptions) {
-	const state: RunnerState = { onControlClose }
+export function listenToolRunner({ socketPath }: RunnerOptions) {
+	const state: RunnerState = {}
 	const server = net.createServer(socket => handleConnection(socket, state))
 	return new Promise<net.Server>((resolve, reject) => {
 		server.once('error', reject)
@@ -92,12 +90,14 @@ function handleConnection(socket: net.Socket, state: RunnerState) {
 	// such as EPIPE when the server closes the connection, which is handled on close
 	socket.on('error', () => {})
 	socket.on('close', () => {
-		if (mode == 'control') state.onControlClose()
-		else if (child && !exited) child.kill()
+		if (mode == 'control') {
+			if (state.control === socket) delete state.control
+		} else if (child && !exited) child.kill()
 	})
 
 	function startControl() {
-		if (state.control) throw 'a control connection is already open'
+		// such as of a server that a watch mode restarted, which may be closed after the new one connects
+		state.control?.destroy()
 		mode = 'control'
 		state.control = socket
 		writeFrames(socket, FrameType.ready)

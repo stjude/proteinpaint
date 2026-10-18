@@ -120,7 +120,7 @@ async function waitFor(check: () => boolean, ms = 5000) {
 
 tape('\n', async test => {
 	test.comment('-***- tool runner specs -***-')
-	runner = await listenToolRunner({ socketPath, onControlClose: () => {} })
+	runner = await listenToolRunner({ socketPath })
 	test.end()
 })
 
@@ -435,29 +435,24 @@ tape('control connection', async test => {
 	process.env.PP_TOOL_RUNNER_SOCKET = p
 	// the runner is started after the server tries to connect, which is retried
 	const connected = connectToolRunner(() => closed++)
-	const server = await listenToolRunner({ socketPath: p, onControlClose: () => {} })
-	// added before the connection retry, which is a timer
-	const sockets: net.Socket[] = []
-	server.on('connection', s => sockets.push(s))
+	const server = await listenToolRunner({ socketPath: p })
 	await connected
 	test.equal(process.env.PP_TOOL_RUNNER_SOCKET, undefined, 'should remove the socket path from the env')
 	test.ok(usesToolRunner(), 'should use the runner once it is ready')
 	test.equal((fs.statSync(p).mode & 0o777).toString(8), '600', 'should only allow this user to connect')
 
-	const second = await new Promise<number[]>(resolve => {
-		const types: number[] = []
-		const socket = net.connect(p)
-		const reader = new FrameReader(type => types.push(type))
-		socket.on('data', (d: Buffer) => reader.push(d))
-		socket.on('close', () => resolve(types))
-		writeFrames(socket, FrameType.hello)
-	})
-	test.deepEqual(second, [], 'should close a second control connection')
+	// such as a server that a watch mode restarted
+	const second = net.connect(p)
+	const types: number[] = []
+	const reader = new FrameReader(type => types.push(type))
+	second.on('data', (d: Buffer) => reader.push(d))
+	writeFrames(second, FrameType.hello)
+	test.ok(await waitFor(() => types.length > 0), 'should answer a new control connection')
+	test.deepEqual(types, [FrameType.ready], 'should be ready for the new control connection')
+	test.ok(await waitFor(() => closed == 1), 'should close the earlier control connection, whose server then exits')
 
-	// closes the control connection from the runner side
+	second.destroy()
 	server.close()
-	for (const s of sockets) s.destroy()
-	test.ok(await waitFor(() => closed == 1), 'should call onClose when the control connection closes')
 	setToolRunnerSocket(undefined)
 	fs.rmSync(dir, { recursive: true, force: true })
 	test.end()

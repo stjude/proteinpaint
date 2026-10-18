@@ -14,15 +14,19 @@ It reads the same serverconfig.json as the server, for the tool paths and the tp
 of the server is derived from a key that this process does not have, so a cache file is checked to be under the
 configured cachedir instead, see hideCachedir in serverconfig.js, which envHelpers.mjs turns off for this process.
 
-Exits when the server closes its control connection, or when the process that started it exits, and then removes
-the socket dir.
+Exits when the process of process.env.PP_TOOL_RUNNER_PARENT_PID exits, which is envHelpers.mjs, or the server that
+replaced it by process.execve(), and then removes the socket dir. With a tsx watch mode, each restarted server connects
+to this runner. The pid is used instead of the parent pid, since the parent of this process is tsx when tsx runs it.
 
-usage: PP_TOOL_RUNNER_SOCKET=<path> node src/toolRunner.js
+usage: PP_TOOL_RUNNER_SOCKET=<path> node src/toolRunner.js, or tsx src/toolRunner.ts
 */
 
 const socketPath = process.env.PP_TOOL_RUNNER_SOCKET
+const parentPid = Number(process.env.PP_TOOL_RUNNER_PARENT_PID || process.ppid)
 delete process.env.PP_TOOL_RUNNER_SOCKET
+delete process.env.PP_TOOL_RUNNER_PARENT_PID
 if (!socketPath) throw 'process.env.PP_TOOL_RUNNER_SOCKET is not set'
+if (!Number.isSafeInteger(parentPid) || parentPid < 1) throw 'invalid process.env.PP_TOOL_RUNNER_PARENT_PID'
 
 if (serverconfig.python) setPythonBinPath(serverconfig.python)
 
@@ -47,11 +51,14 @@ function removeSocketDir(p: string) {
 	fs.rmSync(dir, { recursive: true, force: true })
 }
 
-/** such as when the server exits before it connects; the parent pid is unchanged when the parent replaces itself
- * with the server by process.execve() */
+/** the pid is unchanged when envHelpers.mjs replaces itself with the server by process.execve() */
 function exitWithParent() {
-	const ppid = process.ppid
 	setInterval(() => {
-		if (process.ppid != ppid) process.exit(0)
+		try {
+			// signal 0 only checks that the process exists
+			process.kill(parentPid, 0)
+		} catch (e: any) {
+			if (e.code == 'ESRCH') process.exit(0)
+		}
 	}, 1000).unref()
 }

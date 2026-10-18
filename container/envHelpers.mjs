@@ -33,12 +33,14 @@
 	   With PP_RUNTIME_CHECK=strict, a missing setting in runtimePosture.mjs STRICT_CHECKS, or a check that
 	   cannot be done, is an error instead, and this script exits before it starts the server.
 
-	5. with PP_TOOL_RUNNER=1, does not have the permission to start a child process. A tool runner process, which
-	   has that permission, is started first and starts the processes that the server requests, such as tabix, R,
-	   python and rust, see server/src/toolRunner.ts. The runner gets the same --allow-fs-* flags, an env without
-	   any credentials, and a socket path in a new dir that only this user may list, as PP_TOOL_RUNNER_SOCKET, which
-	   the server also gets. Only for a node command that replaces this process, without a watch mode, since a
-	   restarted server could not reconnect to the runner; the runner exits when the server exits.
+	5. starts its processes, such as tabix, R, python and rust, through a tool runner process, which is started
+	   first, see server/src/toolRunner.ts. The runner gets the same permission model paths, the permission to
+	   start a child process, an env without any credentials, and a socket path in a new dir that only this user
+	   may list, as PP_TOOL_RUNNER_SOCKET, which the server also gets. A node command without a watch mode then runs
+	   without --allow-child-process. A tsx command, or a node command in watch mode, keeps that permission, since
+	   tsx starts esbuild in the server process and a watch mode starts the server as a child process; each
+	   restarted server connects to the same runner. The runner exits when this process exits, or the server that
+	   replaced it by process.execve().
 
 	usage: node envHelpers.mjs <node | tsx> [args...]
 	examples:
@@ -87,12 +89,11 @@ export function envHelpers(args, deps = {}) {
 	for (const conflict of findPrefixConflicts(config)) console.warn(`envHelpers.mjs: WARNING ${conflict}`)
 	const credsFiles = getCredsFiles(ctx)
 	assertCredsFilesNotAllowed(credsFiles, config, ctx)
-	const useRunner = usesToolRunner(args, ctx)
-	const command = routeCommand(args, useRunner ? withoutChildProcess(config) : config, ctx)
+	const command = routeCommand(args, getServerConfig(args, config), ctx)
 	logAllowedPaths(config)
 	const creds = { ...getEnvCreds(ctx), ...readCreds(credsFiles, ctx) }
 	mayCheckRuntimePosture(config, ctx)
-	const env = useRunner ? { PP_TOOL_RUNNER_SOCKET: startToolRunner(config, ctx) } : {}
+	const env = { PP_TOOL_RUNNER_SOCKET: startToolRunner(args, config, ctx) }
 	return runCommand(command, creds, ctx, env)
 }
 
@@ -106,10 +107,12 @@ export function createContext({
 	execPath = process.execPath,
 	tmpdir = os.tmpdir(),
 	homedir = os.homedir(),
+	pid = process.pid,
 	checkPosture = runtimePosture?.checkRuntimePosture,
-	// the tool runner script of the installed server package
-	resolveToolRunner = () =>
-		createRequire(path.join(cwd, 'package.json')).resolve('@sjcrh/proteinpaint-server/src/toolRunner.js')
+	// the tool runner script of the installed server package: ext is js for the bundled script, or ts for the source,
+	// such as in a dev environment
+	resolveToolRunner = ext =>
+		createRequire(path.join(cwd, 'package.json')).resolve(`@sjcrh/proteinpaint-server/src/toolRunner.${ext}`)
 } = {}) {
 	const dotenvFile = path.join(cwd, '.env')
 	const dotenv = _fs.existsSync(dotenvFile) ? parseEnv(_fs.readFileSync(dotenvFile, 'utf8')) : {}
@@ -123,6 +126,7 @@ export function createContext({
 		execPath,
 		tmpdir,
 		homedir,
+		pid,
 		checkPosture,
 		resolveToolRunner
 	}
@@ -151,46 +155,53 @@ export function permissionFlags(config) {
 	return flags
 }
 
-// true for PP_TOOL_RUNNER=1, which is only supported for a node command that replaces this process; throws for an
-// unknown value, such as a typo, which must not silently start the server with the child process permission
-function usesToolRunner(args, ctx) {
-	const value = getEnvValue('PP_TOOL_RUNNER', ctx)
-	if (value == '') return false
-	if (value != '1') throw `invalid PP_TOOL_RUNNER='${value}', must be '1' or empty`
-	if (path.basename(args[0] || '') != 'node' || isNodeWatchMode(args) || typeof ctx.execve != 'function')
-		throw 'PP_TOOL_RUNNER=1 is only supported for a node command without --watch, with process.execve()'
-	return true
-}
-
-function withoutChildProcess(config) {
+// router: the tool runner starts the processes of a node command, which then does not get the child process
+// permission; tsx and a node watch mode start processes themselves, so these keep it
+function getServerConfig(args, config) {
+	if (path.basename(args[0] || '') != 'node' || isNodeWatchMode(args)) return config
 	const nodeOptions = { ...config.nodeOptions }
 	delete nodeOptions['allow-child-process']
 	return { ...config, nodeOptions }
 }
 
-// starts the tool runner with the same permission flags as the server, and the permission to start a child
+// starts the tool runner with the same permission model paths as the server, and the permission to start a child
 // process; returns its socket path
-function startToolRunner(config, ctx) {
-	const script = ctx.resolveToolRunner()
+function startToolRunner(args, config, ctx) {
 	// the socket is in a new dir that only this user may list, with a mode of 0700 from mkdtempSync()
 	const socketPath = path.join(ctx.fs.mkdtempSync(path.join(ctx.tmpdir, 'pp-runner-')), 'tools.sock')
 	const env = { ...ctx.env }
 	for (const name of getEnvCredsNames(env)) delete env[name]
 	delete env.PP_CREDS_HANDOFF_FILE
 	env.PP_TOOL_RUNNER_SOCKET = socketPath
+	// the runner exits when this process, or the server that replaces it by process.execve(), exits
+	env.PP_TOOL_RUNNER_PARENT_PID = String(ctx.pid)
 	// the runner checks a cache file under the configured cachedir, since the cache subdir name of the server is
 	// derived from a credential, see hideCachedir in server/src/serverconfig.js
 	env.PP_SERVERCONFIG_OVERRIDES = JSON.stringify({
 		...parseOverrides(env.PP_SERVERCONFIG_OVERRIDES),
 		hideCachedir: false
 	})
-	const args = [...permissionFlags(config), '--enable-source-maps', script]
+	const [cmd, ...cmdArgs] = getToolRunnerCommand(args, config, ctx)
 	// not detached, and it inherits stdout and stderr, which the server also writes to after process.execve()
-	const child = ctx.spawn(ctx.execPath, args, { stdio: ['ignore', 'inherit', 'inherit'], env })
-	// such as when the node binary cannot be run; otherwise the server fails to connect to the runner
+	const child = ctx.spawn(cmd, cmdArgs, { stdio: ['ignore', 'inherit', 'inherit'], env })
+	// such as when the runner command cannot be run; otherwise the server fails to connect to the runner
 	child.on('error', e => console.error(`envHelpers.mjs: unable to start the tool runner: ${e.message}`))
-	console.error(`envHelpers.mjs: started the tool runner, the command runs without --allow-child-process`)
+	console.error(`envHelpers.mjs: started the tool runner`)
 	return socketPath
+}
+
+// router: the bundled script with node, or the source with the same tsx and --conditions as a tsx command, and the
+// config file that routeCommand() wrote; not a tsx watch mode, and not --env-file, which may have credentials
+function getToolRunnerCommand(args, config, ctx) {
+	if (path.basename(args[0] || '') == 'node')
+		return [ctx.execPath, ...permissionFlags(config), '--enable-source-maps', ctx.resolveToolRunner('js')]
+	const conditions = []
+	for (const [i, a] of args.entries()) {
+		if (a.startsWith('--conditions=')) conditions.push(a)
+		else if ((a == '--conditions' || a == '-C') && args[i + 1]) conditions.push(`--conditions=${args[i + 1]}`)
+	}
+	const configFlag = `--experimental-config-file=${getConfigFile(ctx)}`
+	return [args[0], configFlag, ...conditions, ctx.resolveToolRunner('ts')]
 }
 
 function parseOverrides(value) {
@@ -203,10 +214,16 @@ function parseOverrides(value) {
 
 // returns the node flag that applies the written config file
 function writeConfigFile(config, ctx) {
-	const dir = getEnvValue('PP_NODE_CONFIG_DIR', ctx)
-	const file = path.join(dir ? resolvePath(dir, ctx) : ctx.cwd, 'node.config.json')
+	const file = getConfigFile(ctx)
 	ctx.fs.writeFileSync(file, JSON.stringify(config, null, '\t') + '\n')
-	return dir ? `--experimental-config-file=${file}` : '--experimental-default-config-file'
+	return getEnvValue('PP_NODE_CONFIG_DIR', ctx)
+		? `--experimental-config-file=${file}`
+		: '--experimental-default-config-file'
+}
+
+function getConfigFile(ctx) {
+	const dir = getEnvValue('PP_NODE_CONFIG_DIR', ctx)
+	return path.join(dir ? resolvePath(dir, ctx) : ctx.cwd, 'node.config.json')
 }
 
 // to stderr, so that the stdout of the command, such as the startup messages that container/verify.sh detects, is unchanged
@@ -258,8 +275,8 @@ export function getNodeConfig(ctx) {
 			permission: true,
 			'allow-fs-read': removeCoveredPaths(read),
 			'allow-fs-write': removeCoveredPaths(write),
-			// needed for tsx, esbuild, rust/python/R and other tools, but these are not restricted by the permission model;
-			// not given to a node command with PP_TOOL_RUNNER=1, where the tool runner starts them
+			// needed for tsx, esbuild, and the tool runner, which starts rust/python/R and other tools, but these are not
+			// restricted by the permission model; not given to a node command without a watch mode, see getServerConfig()
 			'allow-child-process': true,
 			'allow-worker': true,
 			// needed for native modules such as sqlite, which are also not restricted by the permission model
@@ -379,13 +396,14 @@ function getEnvCreds(ctx) {
 // router: a node command replaces this process, and a tsx command or node watch mode runs as a child process;
 // extraEnv is added to the env of the command
 function runCommand(command, creds, ctx, extraEnv = {}) {
-	if (path.basename(command[0]) != 'node' || isNodeWatchMode(command)) return spawnCommand(command, creds, ctx)
+	if (path.basename(command[0]) != 'node' || isNodeWatchMode(command))
+		return spawnCommand(command, creds, ctx, extraEnv)
 	if (typeof ctx.execve != 'function') {
 		console.warn(
 			`envHelpers.mjs: WARNING process.execve() is not supported, so the command runs as a child process, ` +
 				`with the credentials in its initial env`
 		)
-		return spawnCommand(command, creds, ctx)
+		return spawnCommand(command, creds, ctx, extraEnv)
 	}
 	execCommand(command, creds, ctx, extraEnv)
 }
@@ -421,8 +439,8 @@ function execCommand([cmd, ...cmdArgs], creds, ctx, extraEnv) {
 	}
 }
 
-function spawnCommand([cmd, ...cmdArgs], creds, ctx) {
-	const child = ctx.spawn(cmd, cmdArgs, { stdio: 'inherit', env: { ...ctx.env, ...creds } })
+function spawnCommand([cmd, ...cmdArgs], creds, ctx, extraEnv = {}) {
+	const child = ctx.spawn(cmd, cmdArgs, { stdio: 'inherit', env: { ...ctx.env, ...extraEnv, ...creds } })
 	child.on('error', e => {
 		console.error(`envHelpers.mjs: unable to run '${cmd}': ${e.message}`)
 		process.exit(1)
