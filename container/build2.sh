@@ -7,14 +7,19 @@ set -euo pipefail
 ###############
 
 USAGE="Usage:
-	./build2.sh [-z] [-a] [-i] [-r] [-b] [-c] [subdir]
+	./build2.sh [-z] [-a] [-v] [-i] [-r] [-b] [-c] [subdir]
 	
 	subdir: 'server' | 'full', the subdirectory to build
 
-	-z USETGZ: use local tarballs for the server and full packages
+	-z USETGZ: use local tarballs for the server and full packages; the tarballs in tmppack are reused, unless
+			 server/package.json no longer points to them, such as after a git restore
 	-a ARM64: build a linux/arm64 image for local testing, tagged only as <image name>:arm64, on the local
 			 trixie-pp<subdir>:arm64 deps image unless -i is set; the published deps images are linux/amd64.
-			 The rust tarball in tmppack must have linux/arm64 binaries, see pack.sh RUST_BINARIES_DIR
+			 Implies -z, and always packs new tarballs, with the linux/arm64 rust binaries from the -v volume,
+			 since the image build can neither download nor compile them. Afterwards, also when the build fails,
+			 removes tmppack and restores server/package.json and full/package.json, which must have no other changes
+	-v RUST_VOLUME: the docker volume with the linux/arm64 rust binaries in release/, for -a; defaults to
+			 sjpp-dev_rust-target, which the sjpp dev container builds
 	-i BASE_IMAGE: the deps image to build on, instead of the published ghcr.io/stjude/pp<subdir> image of
 			 ARG VERSION in the Dockerfile
 	-r PREFIX: prefix for the image name, defaults to an empty string ""
@@ -33,15 +38,20 @@ FRONTTGZ=""
 PKGPATH=""
 ARM64=""
 BASE_IMAGE=""
+RUST_VOLUME=sjpp-dev_rust-target
 
 #################
 # PROCESSED ARGS
 #################
 
-while getopts "zai:r:b:c:h" opt; do
+while getopts "zav:i:r:b:c:h" opt; do
 	case "${opt}" in
 	a)
 		ARM64=1
+		PKGPATH=/home/root/pp/tmppack
+		;;
+	v)
+		RUST_VOLUME=${OPTARG}
 		;;
 	i)
 		BASE_IMAGE=${OPTARG}
@@ -133,30 +143,62 @@ if [[ ! -d ./tmppack ]]; then
 	mkdir tmppack
 fi
 
-if [[ "$PKGPATH" != "" ]]; then
-  if [[ "$(find ./tmppack -type f -iname "sjcrh*.tgz")" == "" ]] ; then
-		echo "packing tarballs ..."
-		./pack.sh $PKGPATH
-	else
-		# option to reuse tarballs in dev, if certain updated tarballs are not needed
-		echo "reusing tmppack: to avoid reuse, run 'rm -rf tmppack'"
-	fi
-fi
-
 if [[ "$ARM64" != "" ]]; then
-	# fail before the build, which would otherwise fail on the missing binaries after the npm install: the rust
-	# postinstall downloads only linux x64 binaries, and the arm64 deps image cannot compile them
+	# pack.sh changes these files, which are restored below, so that no change other than a tarball path that an earlier
+	# pack set may be lost
+	if git diff -U0 -- server/package.json full/package.json | grep '^+[^+]' | grep -qv "$PKGPATH/"; then
+		echo "ERROR: -a restores server/package.json and full/package.json after the build, commit or restore their changes first"
+		exit 1
+	fi
+	RUSTBINDIR=$(mktemp -d)
+	# also when the build fails; tmppack is removed, so that a later linux/amd64 build cannot reuse its arm64 rust tarball
+	cleanupArm64() {
+		git restore server/package.json full/package.json
+		rm -rf "$RUSTBINDIR" ./tmppack
+	}
+	trap cleanupArm64 EXIT
+
+	if ! docker volume inspect "$RUST_VOLUME" >/dev/null 2>&1; then
+		echo "ERROR: no docker volume '$RUST_VOLUME' with the linux/arm64 rust binaries, set it with -v"
+		exit 1
+	fi
+	echo "copying the rust binaries from the $RUST_VOLUME volume ..."
+	docker run --rm --platform=linux/arm64 --user "$(id -u):$(id -g)" \
+		-v "$RUST_VOLUME":/t:ro -v "$RUSTBINDIR":/out --entrypoint sh "$BASE_IMAGE" \
+		-c 'find /t/release -maxdepth 1 -type f -perm -u+x ! -name "*.d" -exec cp {} /out/ \;'
+	if [[ -z "$(ls "$RUSTBINDIR")" ]]; then
+		echo "ERROR: no rust binaries in the release/ dir of the $RUST_VOLUME volume"
+		exit 1
+	fi
+
+	rm -rf ./tmppack
+	mkdir tmppack
+	echo "packing tarballs, with the linux/arm64 rust binaries ..."
+	./pack.sh $PKGPATH $PKGPATH "$RUSTBINDIR"
+
+	# the e_machine bytes of the ELF header, b7 00 for aarch64; the build would otherwise fail after the npm install
 	RUSTTGZ=$(find ./tmppack -name "sjcrh-proteinpaint-rust-*.tgz" | head -1)
-	# the e_machine bytes of the ELF header, b7 00 for aarch64
 	RUSTMACHINE=""
 	if [[ "$RUSTTGZ" != "" ]]; then
 		RUSTMACHINE=$(tar -xzOf "$RUSTTGZ" package/target/release/fisher 2>/dev/null | head -c 20 | tail -c 2 | od -An -tx1 | tr -d ' \n' || true)
 	fi
 	if [[ "$RUSTMACHINE" != "b700" ]]; then
-		echo "ERROR: -a requires linux/arm64 rust binaries in the rust tarball of ./tmppack, which has '${RUSTTGZ:-none}'."
-		echo "Copy the binaries to ../rust-binaries, such as from a linux/arm64 cargo build, and repack:"
-		echo "  rm -rf tmppack && ./build2.sh -z -a $SUBDIR"
+		echo "ERROR: the rust binaries in the $RUST_VOLUME volume are not linux/arm64 binaries, or have no fisher binary"
 		exit 1
+	fi
+elif [[ "$PKGPATH" != "" ]]; then
+	if [[ "$(find ./tmppack -type f -iname "sjcrh*.tgz")" == "" ]]; then
+		echo "packing tarballs ..."
+		./pack.sh $PKGPATH
+	elif ! grep -q "$PKGPATH" server/package.json; then
+		# the reused tarballs would not be installed, since npm would look up the package versions in the registry
+		echo "server/package.json does not point to the tarballs in tmppack, packing new tarballs ..."
+		rm -rf ./tmppack
+		mkdir tmppack
+		./pack.sh $PKGPATH
+	else
+		# option to reuse tarballs in dev, if certain updated tarballs are not needed
+		echo "reusing tmppack: to avoid reuse, run 'rm -rf tmppack'"
 	fi
 fi
 
