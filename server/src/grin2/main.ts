@@ -8,7 +8,7 @@ import { get_samples } from '../termdb.sql.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dtitd, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
 import { mapConcurrent } from '../utils/concurrencyLimiter.ts'
-import { getMaxLesions } from './memory.ts'
+import { getAvailableMemoryMB } from '../utils/memory.ts'
 import { processSampleMlst, buildLesionTypeMap } from './lesions.ts'
 import type { CnvType, Grin2CacheResult, Grin2Processing, Lesion } from './types.ts'
 import { maySetMapParent2Children } from '../termdb.matrix.js'
@@ -16,6 +16,13 @@ import { maySetMapParent2Children } from '../termdb.matrix.js'
 utils/regionMask.ts once DMR analysis needed the same selector -- one copy, two consumers. */
 export { resolveExcludeBeds } from '../utils/regionMask.ts'
 import { resolveExcludeBeds } from '../utils/regionMask.ts'
+
+// Constants for memory-aware lesion cap calculations
+const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
+const GRIN2_MEMORY_BUDGET_MB = 950
+const MEMORY_BASE_MB = 260
+const MEMORY_PER_1K_LESIONS = 2.4
+const MIN_LESIONS = 50000
 
 /**
  * General GRIN2 analysis route
@@ -537,6 +544,22 @@ async function runGrin2Fresh(
 }
 
 // ─── helpers ─── //
+
+async function getMaxLesions(): Promise<number> {
+	const availableMemoryMB = await getAvailableMemoryMB()
+	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
+
+	// If server is under heavy load, reduce lesion cap. Our calculation assumes each 1,000 lesions use ~2.4MB of memory plus a base overhead (i.e. a linear relationship).
+	if (availableMemoryMB < GRIN2_MEMORY_BUDGET_MB * 2) {
+		const reducedBudget = availableMemoryMB * 0.4
+		mayLog(`[GRIN2] Reducing lesion cap due to memory constraints. New budget: ${reducedBudget.toFixed(2)} MB`)
+		const calculated = Math.floor((reducedBudget - MEMORY_BASE_MB) / MEMORY_PER_1K_LESIONS) * 1000
+		mayLog(`[GRIN2] Calculated lesion cap based on memory: ${calculated.toLocaleString()}`)
+		return Math.max(MIN_LESIONS, Math.min(MAX_LESIONS, calculated))
+	}
+
+	return MAX_LESIONS
+}
 
 /**
  * Process sample data by reading per-sample JSON files and converting to lesion format

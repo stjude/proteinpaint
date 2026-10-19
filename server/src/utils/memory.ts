@@ -1,22 +1,13 @@
-/** Memory-aware lesion cap for GRIN2. Reads available memory and derives how many lesions a run
- * may hold, so a busy server scales the cap down instead of OOMing. Split out of main.ts as a self-contained
- * concern; processSampleData calls getMaxLesions(). */
+/** Memory calculation utilities for determining available
+ *  system memory and returning it in megabytes */
 
-import serverconfig from '../serverconfig.js'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { mayLog } from '../helpers.ts'
 import { runToolOutput } from '../tools/index.ts'
 
-// Constants
-const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
-const GRIN2_MEMORY_BUDGET_MB = 950
-const MEMORY_BASE_MB = 260
-const MEMORY_PER_1K_LESIONS = 2.4
-const MIN_LESIONS = 50000
-
-async function getAvailableMemoryMB(): Promise<number> {
+export async function getAvailableMemoryMB(): Promise<number> {
 	if (process.platform === 'darwin') {
 		// macOS keeps few pages free and fills the rest with reclaimable cache, which process.availableMemory()
 		// and os.freemem() count as used, so free + inactive pages are read from vm_stat
@@ -36,7 +27,7 @@ async function getAvailableMemoryMB(): Promise<number> {
 			// Available ≈ free + inactive
 			return ((freePages + inactivePages) * pageSize) / (1024 * 1024)
 		} catch (e) {
-			mayLog(`[GRIN2] Memory check failed, using fallback: ${e}`)
+			mayLog(`Memory check failed, using fallback: ${e}`)
 			return os.freemem() / (1024 * 1024)
 		}
 	}
@@ -68,20 +59,4 @@ export function getCgroupInactiveFileBytes(readFile = (file: string) => fs.readF
 	} catch {
 		return 0
 	}
-}
-
-export async function getMaxLesions(): Promise<number> {
-	const availableMemoryMB = await getAvailableMemoryMB()
-	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
-
-	// If server is under heavy load, reduce lesion cap. Our calculation assumes each 1,000 lesions use ~2.4MB of memory plus a base overhead (i.e. a linear relationship).
-	if (availableMemoryMB < GRIN2_MEMORY_BUDGET_MB * 2) {
-		const reducedBudget = availableMemoryMB * 0.4
-		mayLog(`[GRIN2] Reducing lesion cap due to memory constraints. New budget: ${reducedBudget.toFixed(2)} MB`)
-		const calculated = Math.floor((reducedBudget - MEMORY_BASE_MB) / MEMORY_PER_1K_LESIONS) * 1000
-		mayLog(`[GRIN2] Calculated lesion cap based on memory: ${calculated.toLocaleString()}`)
-		return Math.max(MIN_LESIONS, Math.min(MAX_LESIONS, calculated))
-	}
-
-	return MAX_LESIONS
 }

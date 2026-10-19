@@ -172,7 +172,7 @@ tape('\n', async function (test) {
 tape('child_process usage', test => {
 	// these files only pass exec() and execSync() fixed commands, or ones built from serverconfig at
 	// startup, not from a request
-	const execAllowed = new Set(['checkDependenciesAndVersions.js', 'grin2/memory.ts'])
+	const execAllowed = new Set(['checkDependenciesAndVersions.js'])
 	const withShellOption = [],
 		withExec = []
 	const walk = dir => {
