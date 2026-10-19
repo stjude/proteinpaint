@@ -101,26 +101,43 @@ if (!serverconfig.URL) serverconfig.URL = process.env.URL || serverconfig.url ||
 // No URL is passed to bundle generation: webpack's output.publicPath is 'auto', so the client derives
 // its /bin/ base path at runtime from the <script> tag it was loaded from (see front/webpack.config.js
 // and front/init.js). This container therefore serves the same bundle regardless of the mount URL.
-console.log(`generating the client bundle (bin/)`)
 const publicBinOnly = process.argv.includes('--publicBinOnly')
-// not spawnSync(), which would block the termination signal handlers above until the bundle is generated
-const status = await new Promise(resolve => {
-	const child = spawn('npx', ['proteinpaint-front', ...(publicBinOnly ? ['--publicBinOnly'] : [])], {
-		stdio: 'inherit'
-	})
-	child.on('error', e => {
-		console.error(`unable to generate the client bundle: ${e.message}`)
-		resolve(null)
-	})
-	child.on('close', resolve)
-})
-if (status !== 0) {
-	console.error(`Process exited with non-zero status code: ${status}`)
+// The image build generates the client bundle and marks it ready (see full/Dockerfile), so it is reused without
+// running proteinpaint-front, which this process may not start: envHelpers.mjs runs a node command without the
+// permission to start a child process, since a tool runner starts the server's processes. When the public/ dir is a
+// mount without index.html or cards, the server serves the copies in the proteinpaint-front package instead.
+if (fs.existsSync('./bin/.pp-bundle-ready')) {
+	console.log(`reusing the client bundle (bin/) of the image`)
+} else if (process.permission && !process.permission.has('child')) {
+	console.error(
+		`missing the client bundle (bin/), which the image build generates, and this process may not generate it`
+	)
 	process.exit(1)
+} else {
+	await generateBundle()
 }
-// the npx command above (proteinpaint-front) generates the client bundle into ./bin (this container's
-// own bin, served at /bin; see front/init.js), owned by the container user that also runs the server
 
 console.log('starting the server ...')
 const { launch } = await import('@sjcrh/proteinpaint-server')
 launch()
+
+async function generateBundle() {
+	console.log(`generating the client bundle (bin/)`)
+	// not spawnSync(), which would block the termination signal handlers above until the bundle is generated
+	const status = await new Promise(resolve => {
+		const child = spawn('npx', ['proteinpaint-front', ...(publicBinOnly ? ['--publicBinOnly'] : [])], {
+			stdio: 'inherit'
+		})
+		child.on('error', e => {
+			console.error(`unable to generate the client bundle: ${e.message}`)
+			resolve(null)
+		})
+		child.on('close', resolve)
+	})
+	if (status !== 0) {
+		console.error(`Process exited with non-zero status code: ${status}`)
+		process.exit(1)
+	}
+	// the npx command above (proteinpaint-front) generates the client bundle into ./bin (this container's
+	// own bin, served at /bin; see front/init.js), owned by the container user that also runs the server
+}

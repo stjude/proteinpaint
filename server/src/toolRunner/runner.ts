@@ -1,5 +1,6 @@
 import net from 'net'
 import fs from 'fs'
+import { randomBytes } from 'crypto'
 import type { Readable } from 'stream'
 import { getCommand } from './requests.ts'
 import { spawnCommand } from './spawnCommand.ts'
@@ -17,6 +18,9 @@ answered with a failed frame, and nothing is started.
 A process connection carries one request and the stdin, output, and exit of its process, see protocol.ts. When the
 connection closes before the process exits, such as when the server stops waiting for it, the process is killed.
 
+A process may also be killed from a new connection with a signal frame, which names the process by the token that
+the started frame gave it, since a process connection is not read while the process does not read its stdin.
+
 The control connection is a connection that sends a hello frame, which the server opens when it starts and keeps
 open, so that it can tell when the runner exits. A hello frame replaces the earlier control connection, which is
 closed, such as when a watch mode restarts the server. The runner itself exits when the process that started it
@@ -25,11 +29,11 @@ exits, see toolRunner.ts.
 
 export type RunnerOptions = { socketPath: string }
 
-type RunnerState = { control?: net.Socket }
+type RunnerState = { control?: net.Socket; processes: Map<string, ReturnType<typeof spawnCommand>> }
 
 /** resolves with the listening server, whose socket file only this user may connect to */
 export function listenToolRunner({ socketPath }: RunnerOptions) {
-	const state: RunnerState = {}
+	const state: RunnerState = { processes: new Map() }
 	const server = net.createServer(socket => handleConnection(socket, state))
 	return new Promise<net.Server>((resolve, reject) => {
 		server.once('error', reject)
@@ -60,11 +64,12 @@ function handleConnection(socket: net.Socket, state: RunnerState) {
 		if (mode == 'pending') {
 			if (type == FrameType.hello) return startControl()
 			if (type == FrameType.request) return startRequest(payload)
+			if (type == FrameType.signal) return signalByToken(payload)
 			throw 'unexpected first frame'
 		}
 		if (mode == 'control') throw 'unexpected frame on the control connection'
-		// after a rejected request, which has no process, the connection is already ending
-		if (!child) return
+		// after a rejected request, which has no process, or after the process exited, the connection is already ending
+		if (!child || exited) return
 		if (type == FrameType.stdin) {
 			// the socket is paused until the process reads its stdin, so that the stdin data is not buffered here
 			if (!child.stdin.write(payload)) {
@@ -95,6 +100,14 @@ function handleConnection(socket: net.Socket, state: RunnerState) {
 		} else if (child && !exited) child.kill()
 	})
 
+	function signalByToken(payload: Buffer) {
+		mode = 'process'
+		const { token, signal } = (parseJson(payload) || {}) as { token?: unknown; signal?: unknown }
+		if (typeof signal != 'string' || !killSignals.includes(signal)) throw 'invalid kill signal'
+		if (typeof token == 'string') state.processes.get(token)?.kill(signal as NodeJS.Signals)
+		socket.end()
+	}
+
 	function startControl() {
 		// such as of a server that a watch mode restarted, which may be closed after the new one connects
 		state.control?.destroy()
@@ -117,7 +130,9 @@ function handleConnection(socket: net.Socket, state: RunnerState) {
 		}
 		const ps = spawnCommand(cmd)
 		child = ps
-		ps.on('spawn', () => writeFrames(socket, FrameType.started))
+		const token = randomBytes(16).toString('hex')
+		state.processes.set(token, ps)
+		ps.on('spawn', () => writeJson(socket, FrameType.started, { token }))
 		forward(ps.stdout, FrameType.stdout)
 		forward(ps.stderr, FrameType.stderr)
 		ps.stdin.on('error', (e: NodeJS.ErrnoException) => {
@@ -129,8 +144,11 @@ function handleConnection(socket: net.Socket, state: RunnerState) {
 		// after the stdout and stderr of the process are closed, so that all its output is sent before the exit
 		ps.on('close', (code, signal) => {
 			exited = true
+			state.processes.delete(token)
 			writeJson(socket, FrameType.exit, { code, signal })
 			socket.end()
+			// a socket that was paused for the stdin of the process reads and ignores the rest, so that it can close
+			socket.resume()
 		})
 	}
 

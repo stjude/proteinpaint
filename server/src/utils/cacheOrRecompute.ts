@@ -5,6 +5,7 @@ import { mayLog } from '#src/helpers.ts'
 import { fileSize, formatElapsedTime } from '#shared'
 import type { CacheOrRecomputeOpts, CacheOrRecomputeResult } from '#src/utils/types.ts'
 import { cacheRegistry, type CacheSubdir } from '#src/CacheManager.ts'
+import { startSharedWork, type SharedWork } from '#src/requestContext.ts'
 
 // in serverconfig.js, which also uses the key; re-exported here for the existing importers
 export { generateHash }
@@ -52,8 +53,10 @@ function shortLabel(filePath: string): string {
  * miss the map and both start work.
  *
  * Subsequent attached callers resolve to the same result. Entry is cleared
- * once the promise settles so later, genuinely new requests start fresh. */
-const pending = new Map<string, Promise<CacheOrRecomputeResult<any>>>()
+ * once the promise settles so later, genuinely new requests start fresh.
+ * The work is shared, see startSharedWork(): a process that it starts is stopped
+ * only when the responses of all the requests that wait for it are closed. */
+const pending = new Map<string, SharedWork<CacheOrRecomputeResult<any>>>()
 
 /** Count of in-flight DISTINCT cacheIds per subdir. A X1st same-key
  * caller attaches to the existing `pending` entry and does NOT increment
@@ -82,7 +85,10 @@ export async function cacheOrRecompute<TArgs, TResult>(
 	const dedupKey = `${cacheSubdir}:${cacheId}`
 
 	const inFlight = pending.get(dedupKey)
-	if (inFlight) return inFlight as Promise<CacheOrRecomputeResult<TResult>>
+	if (inFlight) {
+		inFlight.join()
+		return inFlight.promise as Promise<CacheOrRecomputeResult<TResult>>
+	}
 
 	/** `maxAge`, `skipMs`, `maxSize` for each subdir are already
 	 deployer-overrideable via `serverconfig.features.cacheMonitor.subdirs`
@@ -103,16 +109,16 @@ export async function cacheOrRecompute<TArgs, TResult>(
 	const inUse = pendingCount.get(cacheSubdir) ?? 0
 	if (inUse >= cap) throw makeBusyError()
 
-	const work = (async (): Promise<CacheOrRecomputeResult<TResult>> => {
+	const work = startSharedWork(async (): Promise<CacheOrRecomputeResult<TResult>> => {
 		const cached = await tryReadJson<TResult>(file)
 		if (cached !== null) return { result: cached, cacheId, cacheFilePath: file }
 		const fresh = await computeFresh({ cacheId })
 		await writeJsonCache(file, fresh)
 		return { result: fresh, cacheId, cacheFilePath: file }
-	})()
+	})
 	pending.set(dedupKey, work)
 	pendingCount.set(cacheSubdir, inUse + 1)
-	return work.finally(() => {
+	return work.promise.finally(() => {
 		pending.delete(dedupKey)
 		pendingCount.set(cacheSubdir, (pendingCount.get(cacheSubdir) ?? 1) - 1)
 	}) as Promise<CacheOrRecomputeResult<TResult>>

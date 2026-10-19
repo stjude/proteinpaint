@@ -46,7 +46,11 @@ const htsSubcommands: Readonly<Record<HtsTool, readonly string[]>> = Object.free
 
 /** the upper limits of the number and length of the arguments of an hts request */
 const maxHtsArgs = 1000
-const maxArgLength = 4096
+/* an argument may be a joined list, such as the regions after -r or the sample names after -s of a bcftools query,
+so the limit is the one of Linux for an argument of a new process, MAX_ARG_STRLEN with its terminating NUL, which
+would otherwise fail when the tool is started; the total keeps the request within one frame, see maxPayload */
+const maxArgLength = 128 * 1024 - 1
+const maxArgsLength = 768 * 1024
 // eslint-disable-next-line no-control-regex
 const anyControlChar = /[\x00-\x1f\x7f]/
 /** a control character other than a tab or newline */
@@ -101,6 +105,8 @@ function getHtsCommand(r: Extract<ToolRequest, { kind: 'hts' }>): Command {
 	const { args } = r
 	if (!Array.isArray(args) || args.length == 0 || args.length > maxHtsArgs) throw `${r.tool}: invalid args`
 	if (!htsSubcommands[r.tool].includes(args[0])) throw `${r.tool}: unsupported subcommand`
+	if (args.reduce((n, a) => n + (typeof a == 'string' ? a.length : 0), 0) > maxArgsLength)
+		throw `${r.tool}: invalid args`
 	for (const [i, a] of args.entries()) {
 		// the bcftools output format, such as '%POS\t%ID\n', is the only argument with a tab or newline
 		const controlChars = r.tool == 'bcftools' && args[i - 1] == '-f' ? formatControlChars : anyControlChar

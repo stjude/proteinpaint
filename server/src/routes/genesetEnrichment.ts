@@ -15,6 +15,7 @@ import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import { validGeneSetGroup, validNumPermutations } from '#src/utils/genesetGroups.ts'
 import { get_ds_tdb } from '#src/termdb.js'
 import type { GseaCacheResult } from '../../routes/types.ts'
+import { startSharedWork, type SharedWork } from '#src/requestContext.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -202,8 +203,9 @@ async function computeGseaInitial({
 /** In-flight detail-image requests keyed by cacheId + geneset_name. The
  * image itself is per-geneset and ephemeral (sent + deleted), so it
  * isn't cached on disk — but concurrent callers asking for the same
- * detail plot on the same cache result should still dedup to one Python run. */
-const pendingImageRequests = new Map<string, Promise<string>>()
+ * detail plot on the same cache result should still dedup to one Python run,
+ * which is stopped only when all their responses are closed, see startSharedWork(). */
+const pendingImageRequests = new Map<string, SharedWork<string>>()
 
 /** Detail-image GSEA request (`geneset_name` set): pulls the pickled
  * gsea result out of the cache result and hands it to Python to render
@@ -220,19 +222,24 @@ async function computeGseaImage({
 
 	const dedupKey = `${cacheId}:${q.geneset_name}`
 	const inFlight = pendingImageRequests.get(dedupKey)
-	if (inFlight) return inFlight
+	if (inFlight) {
+		inFlight.join()
+		return inFlight.promise
+	}
 
-	const work: Promise<string | { error: string }> = runGseaPythonForImage({
-		q,
-		genomes,
-		pickleB64: result.pickleB64
-	}).finally(() => pendingImageRequests.delete(dedupKey))
-	// Coerce: pendingImageRequests stores Promise<string> for happy-path dedup.
+	const work = startSharedWork(() =>
+		runGseaPythonForImage({
+			q,
+			genomes,
+			pickleB64: result.pickleB64
+		}).finally(() => pendingImageRequests.delete(dedupKey))
+	)
+	// Coerce: pendingImageRequests stores SharedWork<string> for happy-path dedup.
 	// Errors propagate via the same promise; the caller-facing return type
 	// widens to include the `{ error }` object that runGseaPythonForImage
 	// may surface.
-	pendingImageRequests.set(dedupKey, work as Promise<string>)
-	return work
+	pendingImageRequests.set(dedupKey, work as SharedWork<string>)
+	return work.promise
 }
 
 async function runGseaPythonForTable({

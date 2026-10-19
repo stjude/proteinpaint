@@ -12,9 +12,12 @@ server -> runner, on a process connection:
 	kill: the JSON signal name, from the kill() of the process
 server -> runner, on the control connection:
 	hello: the first frame, which marks the connection that the runner and the server each exit without
+server -> runner, on a new connection:
+	signal: JSON {token, signal}, the first and only frame, to kill the process of the token; sent besides the kill
+		frame, since the runner stops reading a process connection while the process does not read its stdin
 
 runner -> server:
-	started: the process is started
+	started: JSON {token} when the process is started, where the token names the process for a signal frame
 	stdout, stderr: the output data of the process
 	stdinError: JSON {message, code} of an error when writing the stdin of the process, such as EPIPE
 	exit: JSON {code, signal} when the process has exited and its output has been sent
@@ -28,6 +31,7 @@ export const FrameType = Object.freeze({
 	stdinEnd: 3,
 	kill: 4,
 	hello: 5,
+	signal: 6,
 	started: 10,
 	stdout: 11,
 	stderr: 12,

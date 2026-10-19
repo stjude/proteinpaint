@@ -13,7 +13,9 @@ import { FrameType, FrameReader, writeJson, writeFrames, maxPayload } from '#src
 import { runTool, runToolOutput, getArgv, specs } from '#src/tools/index.ts'
 import * as utils from '#src/utils.js'
 import { StandIns } from '#src/tools/test/standIns.ts'
-import { setRequestContext } from '#src/requestContext.ts'
+import { setRequestContext, runWithRequestContext, startSharedWork } from '#src/requestContext.ts'
+import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { spawnSync } from 'child_process'
 import express from 'express'
 import type { Server } from 'http'
 
@@ -32,9 +34,12 @@ runner: kill()
 runner: a closed connection kills the process
 runner: a rejected request starts nothing
 runner: a tool that cannot be started
+runner: kill() while the process does not read its stdin
+runner: an early stop of a read with more output than the stream buffers
 runner: a bcftools query
 runner: tabix reads and a rust binary
 request context: a process is stopped when the response is closed
+request context: shared work is stopped when the responses of all its requests are closed
 control connection
 */
 
@@ -216,6 +221,14 @@ tape('getCommand(): hts requests', test => {
 		query,
 		'should allow a tab and newline in a bcftools output format'
 	)
+	// a joined list of regions or sample names, as in mds3.init.js, may be longer than other arguments
+	const samples = Array.from({ length: 5000 }, (_, i) => `sample_${i}`).join(',')
+	test.ok(samples.length > 4096, 'should have a long sample list')
+	test.deepEqual(
+		getCommand({ kind: 'hts', tool: 'bcftools', args: ['query', 'a.bcf', '-s', samples], cwd: null }).args,
+		['query', 'a.bcf', '-s', samples],
+		'should allow a long joined list argument'
+	)
 	const hts = (tool: unknown, args: unknown, cwd: unknown = null) => ({ kind: 'hts', tool, args, cwd })
 	for (const [req, re] of [
 		[hts('tabix', ['view']), /invalid hts tool/],
@@ -232,7 +245,8 @@ tape('getCommand(): hts requests', test => {
 		[hts('bcftools', ['query', 'a.bcf', '-f', '%ID\r\n']), /invalid argument/],
 		[hts('bcftools', ['query', 'a.bcf', '-f', '%ID\x00']), /invalid argument/],
 		[hts('samtools', ['view', '-f', '4\n']), /invalid argument/],
-		[hts('samtools', ['view', 'x'.repeat(4097)]), /invalid argument/],
+		[hts('samtools', ['view', 'x'.repeat(128 * 1024)]), /invalid argument/],
+		[hts('bcftools', ['query', 'a.bcf', ...Array(7).fill('x'.repeat(120 * 1024))]), /invalid args/],
 		[hts('samtools', ['view', 'a.bam', '-o/tmp/x:1-2']), /invalid region argument/],
 		[hts('samtools', ['view', 'a.bam'], '/tmp'), /invalid cwd/],
 		[hts('samtools', ['view', 'a.bam'], path.join(cache, '../x')), /invalid cwd/],
@@ -388,7 +402,56 @@ tape('runner: a tool that cannot be started', async test => {
 	test.end()
 })
 
-tape('runner: a bcftools query', async test => {
+tape('runner: kill() while the process does not read its stdin', async test => {
+	await withStraw(`exec sleep 30`, async () => {
+		await withRunner(async () => {
+			const ps = runTool('hicstraw.query', hicInput())
+			const result = collect(ps)
+			await new Promise(r => ps.once('spawn', r))
+			// more than the pipe and socket buffers, so that the runner stops reading the connection
+			ps.stdin.on('error', () => {})
+			ps.stdin.write(Buffer.alloc(8 * maxPayload, 'x'))
+			await new Promise(r => setTimeout(r, 300))
+			ps.kill()
+			const { signal } = await Promise.race([
+				result,
+				new Promise<any>(r => setTimeout(() => r({ signal: 'timeout' }), 5000))
+			])
+			test.equal(signal, 'SIGTERM', 'should kill the process')
+		})
+	})
+	test.end()
+})
+
+tape('runner: an early stop of a read with more output than the stream buffers', async test => {
+	// a tool that writes until it is killed, so that the output that is not read fills the buffers
+	const tabix = standIns.add('tabix', `exec yes ${'a'.repeat(100)}`)
+	const prev = serverconfig.tabix
+	serverconfig.tabix = tabix
+	try {
+		await withRunner(async () => {
+			const read = utils.readTabixLines({
+				file: 'files/x.gz',
+				regions: [{ chr: 'chr1', start: 1, stop: 2 }],
+				callback: (line, stop) => stop()
+			})
+			const settled = await Promise.race([
+				read.then(() => 'resolved'),
+				new Promise(r => setTimeout(() => r('timeout'), 8000))
+			])
+			test.equal(settled, 'resolved', 'should resolve the stopped read')
+		})
+	} finally {
+		serverconfig.tabix = prev
+		standIns.reset()
+	}
+	test.end()
+})
+
+// the real tool, which a test environment may not have
+const hasBcftools = spawnSync(serverconfig.bcftools, ['--version']).status === 0
+
+tape('runner: a bcftools query', { skip: !hasBcftools }, async test => {
 	// the real tool, with the output format of mds3.init.js, which has a tab and newline
 	const file = path.join(tp, 'files/hg38/TermdbTest/TermdbTest.bcf.gz')
 	// a chromosome with variants in the test file
@@ -540,6 +603,76 @@ tape('request context: a process is stopped when the response is closed', async 
 		errors.some(e => /^stopping hicstraw.query, which still runs after the response of \/early is closed$/.test(e)),
 		'should log the stopped tool and the request path'
 	)
+	test.end()
+})
+
+tape('request context: shared work is stopped when the responses of all its requests are closed', async test => {
+	const pidFile = path.join(socketDir, 'shared.pid')
+	const context = () => {
+		const ctrl = new AbortController()
+		return { ctrl, context: { signal: ctrl.signal, path: '/shared' } }
+	}
+	const consoleError = console.error
+	console.error = () => {}
+	try {
+		await withStraw(`echo $$ > ${pidFile}; exec sleep 30`, async () => {
+			await withRunner(async () => {
+				// two requests wait for the same work
+				fs.rmSync(pidFile, { force: true })
+				const a = context()
+				const b = context()
+				const work = runWithRequestContext(a.context, () =>
+					startSharedWork(() => runToolOutput('hicstraw.query', hicInput()))
+				)
+				runWithRequestContext(b.context, () => work.join())
+				const pid = await readPid(pidFile)
+				a.ctrl.abort()
+				await new Promise(r => setTimeout(r, 300))
+				test.ok(isRunning(pid), 'should keep the work running while another request waits for it')
+				b.ctrl.abort()
+				test.ok(await waitFor(() => !isRunning(pid)), 'should stop the work when no request waits for it')
+				await work.promise.catch(() => {})
+
+				// a caller without a request, such as the dataset init, keeps the work running
+				fs.rmSync(pidFile, { force: true })
+				const c = context()
+				const unbound = runWithRequestContext(c.context, () =>
+					startSharedWork(() => runToolOutput('hicstraw.query', hicInput()))
+				)
+				unbound.join()
+				const pid2 = await readPid(pidFile)
+				c.ctrl.abort()
+				await new Promise(r => setTimeout(r, 300))
+				test.ok(isRunning(pid2), 'should keep the work running for a caller without a request')
+				process.kill(pid2)
+				await unbound.promise.catch(() => {})
+
+				// cacheOrRecompute shares the work of concurrent calls with the same inputs
+				fs.rmSync(pidFile, { force: true })
+				const d = context()
+				const e = context()
+				const computeArgument = { test: 'shared work', time: Date.now() }
+				const compute = () =>
+					cacheOrRecompute({
+						cacheSubdir: 'samplelst',
+						computeArgument,
+						computeFresh: async () => (await runToolOutput('hicstraw.query', hicInput())).code
+					})
+				const first = runWithRequestContext(d.context, compute)
+				const pid3 = await readPid(pidFile)
+				const second = runWithRequestContext(e.context, compute)
+				d.ctrl.abort()
+				await new Promise(r => setTimeout(r, 300))
+				test.ok(isRunning(pid3), 'should keep a shared cacheOrRecompute computation running for the second call')
+				process.kill(pid3, 'SIGKILL')
+				const [r1, r2] = await Promise.all([first, second])
+				test.equal(r1.cacheId, r2.cacheId, 'should give both calls the same result')
+				fs.rmSync(r1.cacheFilePath, { force: true })
+			})
+		})
+	} finally {
+		console.error = consoleError
+	}
 	test.end()
 })
 

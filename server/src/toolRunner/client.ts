@@ -181,6 +181,9 @@ class RunnerProcess extends EventEmitter implements ToolProcess {
 	killed = false
 	exitCode: number | null = null
 	#socket: net.Socket
+	#path: string
+	/** from the started frame, to kill the process from a new connection */
+	#token: string | undefined
 	#closed = false
 	#exited = false
 
@@ -188,6 +191,7 @@ class RunnerProcess extends EventEmitter implements ToolProcess {
 		super()
 		const socket = net.connect(p)
 		this.#socket = socket
+		this.#path = p
 		this.stdin = new Writable({
 			write: (chunk: Buffer, _enc, cb) => this.#writeStdin(chunk, cb),
 			final: cb => {
@@ -215,7 +219,19 @@ class RunnerProcess extends EventEmitter implements ToolProcess {
 		const name = typeof signal == 'number' ? 'SIGTERM' : signal
 		if (!killSignals.includes(name) || this.#exited || this.#socket.destroyed) return false
 		writeJson(this.#socket, FrameType.kill, name)
+		// also from a new connection, since the runner does not read this one while the process does not read its stdin
+		if (this.#token) {
+			const s = net.connect(this.#path)
+			s.on('error', () => {})
+			writeJson(s, FrameType.signal, { token: this.#token, signal: name })
+			s.end()
+		}
 		this.killed = true
+		// output that no code reads any more is discarded, see #push(), also the output that already paused the socket
+		for (const s of [this.stdout, this.stderr]) {
+			if (!s.listenerCount('data') && !s.listenerCount('readable')) s.resume()
+		}
+		this.#socket.resume()
 		return true
 	}
 
@@ -226,8 +242,11 @@ class RunnerProcess extends EventEmitter implements ToolProcess {
 	}
 
 	#onFrame(type: number, payload: Buffer) {
-		if (type == FrameType.started) this.emit('spawn')
-		else if (type == FrameType.stdout) this.#push(this.stdout, payload)
+		if (type == FrameType.started) {
+			const { token } = (parseJson(payload) || {}) as { token?: unknown }
+			if (typeof token == 'string') this.#token = token
+			this.emit('spawn')
+		} else if (type == FrameType.stdout) this.#push(this.stdout, payload)
 		else if (type == FrameType.stderr) this.#push(this.stderr, payload)
 		// like the stdin of a child process, which is destroyed with the error, such as EPIPE when the process exits
 		// before it reads all its input
@@ -240,6 +259,9 @@ class RunnerProcess extends EventEmitter implements ToolProcess {
 	}
 
 	#push(stream: PassThrough, payload: Buffer) {
+		// the output of a killed process that no code reads, such as after readline.close() and kill() when a read is
+		// stopped early, is discarded, since its buffer would otherwise fill and pause the socket before the exit frame
+		if (this.killed && !stream.listenerCount('data') && !stream.listenerCount('readable')) return
 		// a copy, since the payload may be a view of a larger buffer of the reader
 		const ok = stream.write(Buffer.from(payload))
 		// only stdout pauses the socket when its buffer is full, since a caller that does not read the stderr, which

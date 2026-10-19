@@ -32,6 +32,7 @@ const W2_SLIDE_EXT = /\.(svs|ome\.tiff?)$/i
 import { createHash } from 'crypto' // sha1 for cache file names
 import path from 'path' // all slide/cache path resolution
 import serverconfig from '#src/serverconfig.js' // tpmasterdir, cachedir, feature gates
+import { startSharedWork, type SharedWork } from '#src/requestContext.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -150,7 +151,9 @@ function boundariesCachePath(h5ad: string, mtime: number, kind: string): string 
 	const key = createHash('sha1').update(`${h5ad}:${mtime}`).digest('hex') // stable id per h5ad version
 	return path.join(cachedir, 'wsitiles', `${key}_bnd_${kind}.csv`) // one file per polygon set
 }
-const boundariesInflight = new Map<string, Promise<void>>() // cacheFile -> pending generation (resolves once the cache file itself is ready to stream)
+// cacheFile -> pending generation (resolves once the cache file itself is ready to stream), which is stopped only when
+// the responses of all the requests that wait for it are closed, see startSharedWork()
+const boundariesInflight = new Map<string, SharedWork<void>>()
 
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
@@ -257,8 +260,9 @@ function init({ genomes }) {
 					const cacheFile = boundariesCachePath(full, (await stat(full)).mtimeMs, kind)
 					if (!(await exists(cacheFile))) {
 						let pending = boundariesInflight.get(cacheFile) // another request already generating?
-						if (!pending) {
-							pending = (async () => {
+						if (pending) pending.join()
+						else {
+							pending = startSharedWork(async () => {
 								// python regenerates the CSV into a temp file (same
 								// print-a-path contract as tile jobs)
 								const tmp = (
@@ -272,11 +276,11 @@ function init({ genomes }) {
 								} finally {
 									await unlink(tmp).catch(() => {}) // python's temp file is no longer needed
 								}
-							})()
+							})
 							boundariesInflight.set(cacheFile, pending) // let concurrent misses share it
-							pending.finally(() => boundariesInflight.delete(cacheFile)).catch(() => {}) // settled = no longer in flight
+							pending.promise.finally(() => boundariesInflight.delete(cacheFile)).catch(() => {}) // settled = no longer in flight
 						}
-						await pending // propagates a generation failure to the catch below
+						await pending.promise // propagates a generation failure to the catch below
 					}
 					// streamed from disk, never read into one JS string first: a large
 					// sample's boundary CSV (hundreds of thousands of cells x ~25

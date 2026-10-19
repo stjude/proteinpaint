@@ -29,6 +29,43 @@ export function getRequestContext(): RequestContext | undefined {
 	return storage.getStore()
 }
 
+export type SharedWork<T> = { promise: Promise<T>; join: () => void }
+
+/*
+Runs fn, whose result more than one request may wait for, such as a computation that concurrent requests with the
+same inputs share, in a context of its own: its signal is aborted only when the responses of all the requests that
+wait for it are closed, so that one closed response does not stop the processes of work that another request still
+waits for. The request that calls this waits for it, and join() adds the request of a later caller. A caller that
+does not run for a request, such as the dataset init, keeps the work running until it is done.
+*/
+export function startSharedWork<T>(fn: () => Promise<T>): SharedWork<T> {
+	const ctrl = new AbortController()
+	const first = storage.getStore()
+	let waiting = 0
+	let unbound = false
+	const join = () => {
+		const context = storage.getStore()
+		if (!context) {
+			unbound = true
+			return
+		}
+		// a request whose response is already closed does not wait
+		if (context.signal.aborted) return
+		waiting++
+		context.signal.addEventListener(
+			'abort',
+			() => {
+				if (--waiting == 0 && !unbound) ctrl.abort()
+			},
+			{ once: true }
+		)
+	}
+	join()
+	if (waiting == 0 && !unbound) ctrl.abort()
+	const promise = storage.run({ signal: ctrl.signal, path: first?.path || 'shared work' }, fn)
+	return { promise, join }
+}
+
 /** runs fn in the context, such as for a test */
 export function runWithRequestContext<T>(context: RequestContext, fn: () => T): T {
 	return storage.run(context, fn)
