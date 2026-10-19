@@ -422,6 +422,7 @@ function setRenderers(self: any): void {
 			.enter()
 			.append('td')
 			.attr('class', d => `sjpp-nav-tab-col-${d.colNum}`)
+			.attr('data-testid', d => `sjpp-nav-tab-col-${d.label}`)
 			// hide the about (e.g. cohort tab) until there is termdbConfig.selectCohort or termdbCongfig.massNav.tabs.about
 			.style('display', 'none') // d => (d.colNum === 0 || self.activeCohort !== -1 ? '' : 'none'))
 			.style('width', '100px')
