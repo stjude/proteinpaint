@@ -13,7 +13,9 @@ import { markSavedState, getSavedStateRefusal } from './sessionForm.ts'
 
 /*
 "user" tab will display following contents inside this.subheader:
-- the user authorization information, if the dataset requires authorization
+- the user authorization information, if the dataset requires authorization: the status, and termdbConfig.userTab
+  msg, list, and contact, as computed by the optional ds hooks in massNav.tabs.user. userTab.status, if any,
+  replaces the default status
 - the session open/save/share/delete functionality, moved from the former session button. The options are always
   shown as buttons, and the selected option renders into dom.contentDiv
 
@@ -203,30 +205,43 @@ export class MassUser implements RxComponent {
 		const signedIn = vocabApi.hasVerifiedToken()
 		// computed by the optional ds hooks in massNav.tabs.user, from the auth of the user
 		const userTab = this.state.termdbConfig.userTab
-		// same label style as SESSION, with the status on the same row
-		const row = div.append('div')
-		row
-			.append('span')
-			.attr('data-testid', 'sjpp-massnav-user-auth-label')
-			.style('font-weight', 'bold')
-			.style('opacity', 0.65)
-			.text('ACCESS')
-		row
+		div
 			.append('span')
 			.attr('data-testid', 'sjpp-massnav-user-auth-status')
-			.style('margin-left', '10px')
-			.text(getAuthStatus(signedIn, userTab?.isPublic))
+			.style('font-weight', 'bold')
+			.style('font-size', '1.2em')
+			.text(userTab?.status || getAuthStatus(signedIn, userTab?.isPublic))
 		// reason for a failed sign-in, if any
 		const msg = vocabApi.tokenVerificationMessage
-		if (!signedIn && msg) row.append('span').style('margin-left', '5px').style('opacity', 0.65).text(msg)
-		// the message from massNav.tabs.user.getMsg(), after the status. text, not html
-		if (userTab?.msg)
-			row
-				.append('span')
+		if (!signedIn && msg) div.append('div').style('opacity', 0.65).text(msg)
+		// the message from massNav.tabs.user.getMsg(), under the status, followed in the same paragraph by the static
+		// massNav.tabs.user.contact, as '<text> <email>.' with the email as a mailto link. text, not html
+		if (userTab?.msg || userTab?.contact) {
+			const infoDiv = div
+				.append('div')
 				.attr('data-testid', 'sjpp-massnav-user-auth-info')
-				.style('margin-left', '5px')
+				.style('margin', '5px 0 0 8px')
+				.style('font-size', '0.95em')
 				.style('opacity', 0.75)
-				.text(userTab.msg)
+			if (userTab.msg) infoDiv.append('span').text(userTab.msg)
+			if (userTab.contact) {
+				const contactSpan = infoDiv.append('span').attr('data-testid', 'sjpp-massnav-user-auth-contact')
+				contactSpan.append('span').text(`${userTab.msg ? ' ' : ''}${userTab.contact.text} `)
+				contactSpan.append('a').attr('href', `mailto:${userTab.contact.email}`).text(userTab.contact.email)
+				contactSpan.append('span').text('.')
+			}
+		}
+		// the list from massNav.tabs.user.getList(), such as the sites of the user
+		if (userTab?.list) {
+			const listDiv = div
+				.append('div')
+				.attr('data-testid', 'sjpp-massnav-user-auth-list')
+				.style('margin', '5px 0 0 8px')
+				.style('font-size', '0.95em')
+			listDiv.append('div').style('font-weight', 'bold').text(userTab.list.label)
+			const ul = listDiv.append('ul').style('margin', '3px 0')
+			for (const item of userTab.list.items) ul.append('li').text(item)
+		}
 	}
 
 	/**

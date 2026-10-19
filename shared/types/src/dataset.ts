@@ -2665,13 +2665,23 @@ type MassNavTabEntry = {
 	hide?: boolean
 }
 
+/* the hooks get the ds as the 2nd argument, to read data that is built at init, such as ds.cohort.termdb.geomap.sites */
 type MassNavUserTabEntry = MassNavTabEntry & {
+	/** optional. computes the heading of the user tab from the auth of the user, in place of the default sign-in
+	 * status such as 'Signed in'. termdb/config sends it to the client as termdbConfig.userTab.status. text, not html */
+	getStatus?: (q: UserTabHookArg, ds: any) => string | undefined
 	/** optional. computes the message shown in the user tab, under the sign-in status, from the auth of the user.
 	 * termdb/config sends the returned text to the client as termdbConfig.userTab.msg. text, not html */
-	getMsg?: (q: UserTabHookArg) => string | undefined
+	getMsg?: (q: UserTabHookArg, ds: any) => string | undefined
+	/** optional. computes a list shown under the message, such as the sites that the user has access to.
+	 * sent as termdbConfig.userTab.list, without the empty items. text, not html */
+	getList?: (q: UserTabHookArg, ds: any) => { label: string; items: string[] } | undefined
 	/** optional. returns true if the signed-in user has only public access, such as a public role, so that the
 	 * user tab reads 'Public access' instead of 'Signed in'. sent as termdbConfig.userTab.isPublic */
-	isPublic?: (q: UserTabHookArg) => boolean
+	isPublic?: (q: UserTabHookArg, ds: any) => boolean
+	/** optional. a contact sentence shown for every user at the end of the message, as '<text> <email>.' with the
+	 * email as a mailto link. sent as termdbConfig.userTab.contact */
+	contact?: { text: string; email: string }
 }
 
 /** The auth of the user, as passed to the massNav.tabs.user hooks */

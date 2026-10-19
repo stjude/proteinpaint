@@ -103,7 +103,284 @@ tape('MassUser setRequiredAuth()', test => {
 	test.end()
 })
 
+tape('MassUser renderAuthInfo()', test => {
+	// public dataset
+	{
+		const { user, holder } = getUser()
+		user.renderAuthInfo()
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth"]').style('display'),
+			'none',
+			'should hide auth info'
+		)
+		test.equal(holder.select('[data-testid="sjpp-massnav-user-auth-status"]').size(), 0, 'should not render a status')
+		holder.remove()
+	}
+
+	// requires auth, not signed in
+	{
+		const { user, holder } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: false })
+		user.renderAuthInfo()
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth"]').style('display'),
+			'block',
+			'should show auth info'
+		)
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+			'Requires sign-in',
+			'should prompt to sign in when there is no verified token'
+		)
+		holder.remove()
+	}
+
+	// requires auth, failed sign-in with a reason
+	{
+		const { user, holder } = getUser({
+			termdbConfig: { requiredAuth: [jwtAuth] },
+			verified: false,
+			tokenMessage: 'token expired'
+		})
+		user.renderAuthInfo()
+		test.true(
+			holder.select('[data-testid="sjpp-massnav-user-auth"]').text().includes('token expired'),
+			'should show the reason'
+		)
+		holder.remove()
+	}
+
+	// requires auth, signed in
+	{
+		const { user, holder } = getUser({
+			termdbConfig: { requiredAuth: [jwtAuth] },
+			verified: true,
+			tokenMessage: 'stale message'
+		})
+		user.renderAuthInfo()
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+			'You are signed in.',
+			'should show signed in'
+		)
+		test.false(
+			holder.select('[data-testid="sjpp-massnav-user-auth"]').text().includes('stale message'),
+			'should not show a sign-in failure reason when signed in'
+		)
+		holder.remove()
+	}
+
+	// re-rendering replaces, and does not append to, the previous content
+	{
+		const { user, holder } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		user.renderAuthInfo()
+		user.renderAuthInfo()
+		test.equal(
+			holder.selectAll('[data-testid="sjpp-massnav-user-auth-status"]').size(),
+			1,
+			'should render the status once'
+		)
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('MassUser renderAuthInfo() userTab', test => {
+	const infoTestId = '[data-testid="sjpp-massnav-user-auth-info"]'
+
+	// the message is under the status
+	for (const verified of [true, false]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified })
+		state.termdbConfig.userTab = { msg: 'msg' }
+		user.renderAuthInfo()
+		const children = Array.from(
+			(holder.select('[data-testid="sjpp-massnav-user-auth"]').node() as HTMLElement).children
+		) as HTMLElement[]
+		test.equal(
+			children[0].getAttribute('data-testid'),
+			'sjpp-massnav-user-auth-status',
+			`should show the status first, verified=${verified}`
+		)
+		test.equal(
+			children[0].textContent,
+			verified ? 'You are signed in.' : 'Requires sign-in',
+			`should show the status, verified=${verified}`
+		)
+		test.equal(
+			children[1].getAttribute('data-testid'),
+			'sjpp-massnav-user-auth-info',
+			`should show the message under it, verified=${verified}`
+		)
+		test.equal(children[1].textContent, 'msg', `should show the message, verified=${verified}`)
+		holder.remove()
+	}
+
+	// text is not interpreted as html
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = { msg: '<b>bold</b>' }
+		user.renderAuthInfo()
+		test.equal(holder.select(infoTestId).text(), '<b>bold</b>', 'should show the text as it is')
+		test.equal(holder.select(`${infoTestId} b`).size(), 0, 'should not render html from the text')
+		holder.remove()
+	}
+
+	// no message
+	for (const userTab of [undefined, {}, { msg: '' }, { isPublic: true }]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = userTab
+		user.renderAuthInfo()
+		test.equal(holder.select(infoTestId).size(), 0, `should not show a message for userTab=${JSON.stringify(userTab)}`)
+		test.equal(holder.select('[data-testid="sjpp-massnav-user-auth-status"]').size(), 1, 'should still show the status')
+		holder.remove()
+	}
+
+	// replaced on re-render
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = { msg: 'first' }
+		user.renderAuthInfo()
+		state.termdbConfig.userTab = { msg: 'second' }
+		user.renderAuthInfo()
+		test.equal(holder.selectAll(infoTestId).size(), 1, 'should render the message once')
+		test.equal(holder.select(infoTestId).text(), 'second', 'should show the latest message')
+		holder.remove()
+	}
+
+	// a public dataset has no auth info, even if there is a message
+	{
+		const { user, holder, state } = getUser()
+		state.termdbConfig.userTab = { msg: 'x', isPublic: true }
+		user.renderAuthInfo()
+		test.equal(holder.select(infoTestId).size(), 0, 'should not show a message when authorization is not required')
+		holder.remove()
+	}
+
+	// the status for a user with only public access
+	for (const [verified, isPublic, status] of [
+		[true, true, 'Public access'],
+		[true, false, 'You are signed in.'],
+		[true, undefined, 'You are signed in.'],
+		[false, true, 'Requires sign-in']
+	] as [boolean, boolean | undefined, string][]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified })
+		state.termdbConfig.userTab = { msg: 'msg', isPublic }
+		user.renderAuthInfo()
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+			status,
+			`should show '${status}' for verified=${verified} and isPublic=${isPublic}`
+		)
+		test.equal(holder.select(infoTestId).text(), 'msg', 'should still show the message')
+		holder.remove()
+	}
+
+	// the status from the ds replaces the default status
+	for (const [verified, isPublic] of [
+		[true, true],
+		[true, undefined],
+		[false, undefined]
+	] as [boolean, boolean | undefined][]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified })
+		state.termdbConfig.userTab = { status: 'Public Access', isPublic }
+		user.renderAuthInfo()
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+			'Public Access',
+			`should show the status from the ds for verified=${verified} and isPublic=${isPublic}`
+		)
+		holder.remove()
+	}
+
+	// the contact ends the message paragraph, and the list is after it
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = {
+			msg: 'msg',
+			list: { label: 'Sites', items: ['A (India)', 'B (Nepal)'] },
+			contact: { text: 'Please contact', email: 'a@b.org' }
+		}
+		user.renderAuthInfo()
+		const testids = Array.from(
+			(holder.select('[data-testid="sjpp-massnav-user-auth"]').node() as HTMLElement).children
+		).map(c => c.getAttribute('data-testid'))
+		test.deepEqual(
+			testids,
+			['sjpp-massnav-user-auth-status', 'sjpp-massnav-user-auth-info', 'sjpp-massnav-user-auth-list'],
+			'should show the status, message, and list in this order'
+		)
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-info"]').text(),
+			'msg Please contact a@b.org.',
+			'should end the message with the contact sentence'
+		)
+		const list = holder.select('[data-testid="sjpp-massnav-user-auth-list"]')
+		test.equal(list.select('div').text(), 'Sites', 'should show the list label')
+		test.deepEqual(
+			list
+				.selectAll('li')
+				.nodes()
+				.map((n: any) => n.textContent),
+			['A (India)', 'B (Nepal)'],
+			'should show the list items'
+		)
+		const contact = holder.select('[data-testid="sjpp-massnav-user-auth-contact"]')
+		test.equal(contact.text(), ' Please contact a@b.org.', 'should show the contact text and email')
+		test.equal(contact.select('a').attr('href'), 'mailto:a@b.org', 'should link the email')
+		holder.remove()
+	}
+
+	// a contact without a message
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = { contact: { text: 'Please contact', email: 'a@b.org' } }
+		user.renderAuthInfo()
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-info"]').text(),
+			'Please contact a@b.org.',
+			'should show the contact sentence alone, without a leading space'
+		)
+		holder.remove()
+	}
+
+	// the text of the status, list, and contact is not interpreted as html
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = {
+			status: '<b>s</b>',
+			list: { label: '<b>l</b>', items: ['<b>i</b>'] },
+			contact: { text: '<b>c</b>', email: '<b>e</b>' }
+		}
+		user.renderAuthInfo()
+		const auth = holder.select('[data-testid="sjpp-massnav-user-auth"]')
+		test.equal(auth.selectAll('b').size(), 0, 'should not render html from the text')
+		test.equal(
+			auth.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+			'<b>s</b>',
+			'should show the status as it is'
+		)
+		test.equal(auth.select('li').text(), '<b>i</b>', 'should show a list item as it is')
+		holder.remove()
+	}
+
+	// no list or contact
+	for (const userTab of [undefined, {}, { msg: 'msg' }]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = userTab
+		user.renderAuthInfo()
+		for (const id of ['list', 'contact'])
+			test.equal(
+				holder.select(`[data-testid="sjpp-massnav-user-auth-${id}"]`).size(),
+				0,
+				`should not show a ${id} for userTab=${JSON.stringify(userTab)}`
+			)
+		holder.remove()
+	}
+	test.end()
+})
+
 tape('getDaysLeft()', test => {
+	const testid = '[data-testid="sjpp-massnav-user-session-days-left"]'
+
 	for (const [days, text] of [
 		[12, '12 days left'],
 		[1, '1 day left'],

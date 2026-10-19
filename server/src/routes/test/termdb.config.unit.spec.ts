@@ -521,3 +521,78 @@ tape('getUserTab() - returns undefined or leaves out a result without a usable v
 	}
 	test.end()
 })
+
+tape(
+	'getUserTab() - computes the status and list, copies the contact, and passes the ds to the hooks',
+	function (test) {
+		const received: any[] = []
+		const contact = { text: 'Please contact', email: 'a@b.org', other: 1 }
+		const ds = getDs({
+			getStatus: (q, ds) => {
+				received.push(ds)
+				return q.clientAuthResult.role == 'admin' ? 'Administrator' : 'Public'
+			},
+			getMsg: (q, ds) => {
+				received.push(ds)
+				return 'msg'
+			},
+			getList: (q, ds) => {
+				received.push(ds)
+				return { label: 'Sites', items: ['a', '', 7, 'b'] }
+			},
+			isPublic: (q, ds) => {
+				received.push(ds)
+				return false
+			},
+			contact
+		})
+		const userTab: any = getUserTab(ds, { role: 'admin' }, {})
+		test.deepEqual(
+			userTab,
+			{
+				status: 'Administrator',
+				msg: 'msg',
+				list: { label: 'Sites', items: ['a', 'b'] },
+				contact: { text: 'Please contact', email: 'a@b.org' }
+			},
+			'Should return the status, message, list without the empty or invalid items, and contact'
+		)
+		test.notEqual(userTab.contact, contact, 'Should copy the contact, not send the cached ds object')
+		test.equal(received.length, 4, 'Should call every hook')
+		test.true(
+			received.every(d => d === ds),
+			'Should pass the ds to every hook'
+		)
+		test.end()
+	}
+)
+
+tape('getUserTab() - leaves out a status, list, or contact without a usable value', function (test) {
+	for (const getStatus of ['x', () => undefined, () => '', () => 7]) {
+		test.equal(getUserTab(getDs({ getStatus }), {}, {}), undefined, `Should ignore getStatus=${getStatus.toString()}`)
+	}
+	for (const getList of [
+		{ label: 'x', items: ['a'] },
+		() => undefined,
+		() => 'a',
+		() => ({ items: ['a'] }),
+		() => ({ label: '', items: ['a'] }),
+		() => ({ label: 'x' }),
+		() => ({ label: 'x', items: 'a' }),
+		() => ({ label: 'x', items: [] }),
+		() => ({ label: 'x', items: ['', null, 7] })
+	]) {
+		test.equal(getUserTab(getDs({ getList }), {}, {}), undefined, `Should ignore getList=${getList.toString()}`)
+	}
+	for (const contact of [
+		'a@b.org',
+		{},
+		{ text: 'x' },
+		{ email: 'a@b.org' },
+		{ text: '', email: 'a@b.org' },
+		{ text: 'x', email: 7 }
+	]) {
+		test.equal(getUserTab(getDs({ contact }), {}, {}), undefined, `Should ignore contact=${JSON.stringify(contact)}`)
+	}
+	test.end()
+})
