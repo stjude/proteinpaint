@@ -55,7 +55,7 @@ COPY ./server/app-server.mjs ./envHelpers.mjs ./runtimePosture.mjs ./
 
 # the rust binaries and the node native addons must load against the libraries and the node version of the base image
 RUN --mount=type=bind,source=deps/checkSharedLibs.sh,target=/tmp/checkSharedLibs.sh sh /tmp/checkSharedLibs.sh node_modules && \
-    node -e "require('better-sqlite3'); require('canvas'); require('skia-canvas')"
+    node -e "new (require('better-sqlite3'))(':memory:').close(); require('canvas'); require('skia-canvas')"
 
 # The cache dir is owned by root with mode 1733, the same as in deps/Dockerfile, so that the app user may create and use
 # a subdir with a known name but may not list the entries, see hideCachedir in server/src/serverconfig.js. Also set
