@@ -105,9 +105,9 @@ console.log(`generating the client bundle (bin/)`)
 const publicBinOnly = process.argv.includes('--publicBinOnly')
 // not spawnSync(), which would block the termination signal handlers above until the bundle is generated
 const status = await new Promise(resolve => {
-	const child = spawn('npx', ['proteinpaint-front', ...(publicBinOnly ? ['--publicBinOnly'] : [])], {
-		stdio: 'inherit'
-	})
+	// node runs the proteinpaint-front bin directly, since npx is removed from the image, see removeTools.sh
+	const args = ['node_modules/@sjcrh/proteinpaint-front/init.js', ...(publicBinOnly ? ['--publicBinOnly'] : [])]
+	const child = spawn(process.execPath, args, { stdio: 'inherit' })
 	child.on('error', e => {
 		console.error(`unable to generate the client bundle: ${e.message}`)
 		resolve(null)
@@ -118,7 +118,7 @@ if (status !== 0) {
 	console.error(`Process exited with non-zero status code: ${status}`)
 	process.exit(1)
 }
-// the npx command above (proteinpaint-front) generates the client bundle into ./bin (this container's
+// the proteinpaint-front command above generates the client bundle into ./bin (this container's
 // own bin, served at /bin; see front/init.js), owned by the container user that also runs the server
 
 console.log('starting the server ...')
