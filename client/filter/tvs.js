@@ -272,6 +272,11 @@ function setRenderers(self) {
 			showLines: false,
 			selectedRows: selectedIdxs,
 			noAutoScroll: true,
+			afterRender: () => {
+				tableDiv.selectAll('tbody input[type="checkbox"]').attr('data-testid', function () {
+					return `sjpp-tvs-value-checkbox-${values[Number(this.value)].key}`
+				})
+			},
 			selectedRowStyle: {
 				'text-decoration': tvs.isnot ? 'line-through' : ''
 			}
