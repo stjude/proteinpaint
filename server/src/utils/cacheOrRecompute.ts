@@ -107,7 +107,7 @@ export async function cacheOrRecompute<TArgs, TResult>(
 		const cached = await tryReadJson<TResult>(file)
 		if (cached !== null) return { result: cached, cacheId, cacheFilePath: file }
 		const fresh = await computeFresh({ cacheId })
-		await writeJsonCache(file, fresh)
+		if (opts.shouldPersist?.(fresh) !== false) await writeJsonCache(file, fresh)
 		return { result: fresh, cacheId, cacheFilePath: file }
 	})()
 	pending.set(dedupKey, work)

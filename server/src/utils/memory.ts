@@ -1,5 +1,5 @@
-/** Memory calculation utilities for determining available
- *  system memory and returning it in megabytes */
+/** Memory utilities for heavy processes such as GRIN2: read the available system memory in megabytes, size a run to
+ * fit in a share of it with a linear cost, and refuse a run that cannot fit. */
 
 import fs from 'fs'
 import os from 'os'
@@ -59,4 +59,27 @@ export function getCgroupInactiveFileBytes(readFile = (file: string) => fs.readF
 	} catch {
 		return 0
 	}
+}
+
+/** Peak memory of one run of a heavy process, as a line: baseMB plus perUnitMB for each unit the run holds (a lesion,
+ * a matrix row, a sample×gene cell). Fit it to measured runs, and pick values at or above every run. */
+export type MemoryCost = { baseMB: number; perUnitMB: number }
+
+/** Share of the available memory that one run may plan for. The rest is headroom for runs that start at the same time
+ * and read the same available memory, for the rest of the server, and for error in the cost. */
+export const RUN_MEMORY_FRACTION = 0.4
+
+/** The most units of `cost` that fit in `fraction` of `availableMB`; 0 when even the base does not fit. Callers decide
+ * what to do with the count: cap the run at it, or refuse a run that needs more. */
+export function maxUnitsThatFit(availableMB: number, cost: MemoryCost, fraction = RUN_MEMORY_FRACTION): number {
+	return Math.max(0, Math.floor((availableMB * fraction - cost.baseMB) / cost.perUnitMB))
+}
+
+/** The error for a run refused because memory is low: status 503 and code LOW_MEMORY, with a message that tells the
+ * user what to change */
+export function lowMemoryError(message: string): Error {
+	const e: any = new Error(message)
+	e.status = 503
+	e.code = 'LOW_MEMORY'
+	return e
 }

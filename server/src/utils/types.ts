@@ -22,6 +22,11 @@ export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	 * logging/debug; the file path is intentionally not exposed so
 	 * callers can't write to it out-of-band. */
 	computeFresh: (ctx: { cacheId: string }) => Promise<TResult>
+
+	/** Optional, false keeps a fresh result out of the cache: it is returned but not written, so the next call
+	 * recomputes. For a result that is not the full answer to computeArgument, e.g. one cut short because memory
+	 * was low when it ran. Omitted, every fresh result is written. */
+	shouldPersist?: (result: TResult) => boolean
 }
 
 export type CacheOrRecomputeResult<TResult> = {
