@@ -3,6 +3,8 @@ import {
 	getRequestOrigin,
 	isAllowedEmbedder,
 	isCredEmbedder,
+	isNullOriginAllowed,
+	setCorsHeaders,
 	getCacheControl,
 	jsonErrorHandler,
 	getFrontPublicFallback
@@ -127,6 +129,85 @@ tape('isCredEmbedder()', test => {
 		'should match a hostname for an origin with a port'
 	)
 	test.equal(isCredEmbedder(undefined, '*.example.org'), false, 'should not match a glob pattern without an origin')
+	test.end()
+})
+
+tape('isNullOriginAllowed()', test => {
+	test.equal(
+		isNullOriginAllowed(getReq({ origin: 'null' }), ['*']),
+		true,
+		`should allow a 'null' origin with a '*' embedder`
+	)
+	test.equal(
+		isNullOriginAllowed(getReq({ origin: 'null' }), ['trusted.org', '*']),
+		true,
+		`should allow a 'null' origin when any allowed embedder is '*'`
+	)
+	test.equal(
+		isNullOriginAllowed(getReq({ origin: 'null' }), ['trusted.org']),
+		false,
+		`should not allow a 'null' origin without a '*' embedder`
+	)
+	test.equal(
+		isNullOriginAllowed(getReq({ origin: 'null' }), []),
+		false,
+		`should not allow a 'null' origin with no embedders`
+	)
+	test.equal(
+		isNullOriginAllowed(getReq({ origin: 'https://trusted.org' }), ['*']),
+		false,
+		`should not apply to a non-null origin`
+	)
+	test.equal(isNullOriginAllowed(getReq({}), ['*']), false, 'should not apply to a missing origin')
+	test.end()
+})
+
+function getCorsHeaders(origin: string, allowedEmbedders: string[], credEmbedders: string[] = [], debugtest = false) {
+	const headers: { [key: string]: any } = {}
+	const res = { header: (key: string, value: any) => (headers[key] = value) }
+	setCorsHeaders(getReq({ origin }), res, allowedEmbedders, credEmbedders, debugtest)
+	return headers
+}
+
+tape(`setCorsHeaders() for a 'null' origin`, test => {
+	const headers = getCorsHeaders('null', ['*'])
+	test.equal(headers['Access-Control-Allow-Origin'], '*', `should set a wildcard, not echo the 'null' origin`)
+	test.ok(headers['Access-Control-Allow-Headers'], 'should set Access-Control-Allow-Headers')
+	test.equal(headers['Access-Control-Allow-Credentials'], undefined, 'should not set Access-Control-Allow-Credentials')
+
+	for (const [label, h] of [
+		['a wildcard dsCredentials embedder', getCorsHeaders('null', ['*'], ['*'])],
+		['debugtest', getCorsHeaders('null', ['*'], [], true)]
+	] as [string, any][]) {
+		test.equal(h['Access-Control-Allow-Origin'], '*', `should set a wildcard origin with ${label}`)
+		test.equal(
+			h['Access-Control-Allow-Credentials'],
+			undefined,
+			`should not set Access-Control-Allow-Credentials with ${label}`
+		)
+	}
+
+	const restricted = getCorsHeaders('null', ['trusted.org'])
+	test.deepEqual(restricted, {}, `should not set CORS headers without a '*' allowed embedder`)
+	test.end()
+})
+
+tape('setCorsHeaders() for a non-null origin', test => {
+	const allowed = getCorsHeaders('https://trusted.org', ['trusted.org'])
+	test.equal(allowed['Access-Control-Allow-Origin'], 'https://trusted.org', 'should echo an allowed embedder origin')
+	test.equal(
+		allowed['Access-Control-Allow-Credentials'],
+		undefined,
+		'should not allow credentials for a non-credentialed embedder'
+	)
+	const cred = getCorsHeaders('https://trusted.org', [], ['trusted.org'])
+	test.equal(cred['Access-Control-Allow-Origin'], 'https://trusted.org', 'should echo a credentialed embedder origin')
+	test.equal(cred['Access-Control-Allow-Credentials'], true, 'should allow credentials for a credentialed embedder')
+	test.deepEqual(
+		getCorsHeaders('https://other.org', ['trusted.org']),
+		{},
+		'should not set CORS headers for other origins'
+	)
 	test.end()
 })
 

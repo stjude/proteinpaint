@@ -301,6 +301,56 @@ export function isAllowedEmbedder(origin, host) {
 	return host == '*' || (!!origin && (host == origin.hostname || host == origin.host))
 }
 
+// embedder sites may use HTTP 2.0 which requires lowercased header key names
+// must support mixed casing and all lowercased for compatibility
+const corsAllowedHeaders =
+	'Origin, X-Requested-With, Content-Type, Accept, Authorization' +
+	', origin, x-requested-with, content-type, accept, authorization' +
+	', X-Auth-Token, X-Ds-Access-Token, X-SjPPDs-Sessionid' +
+	', x-auth-token, x-ds-access-token, x-sjppds-sessionid'
+
+// a 'null' request origin is only allowed when any embedder is allowed
+export function isNullOriginAllowed(req, allowedEmbedders) {
+	return req.get('origin') === 'null' && allowedEmbedders.includes('*')
+}
+
+/*
+	allowedEmbedders: serverconfig.allowedEmbedders[]
+	credEmbedders: embedder host patterns from serverconfig.dsCredentials
+	debugtest: true to allow any valid request origin
+*/
+export function setCorsHeaders(req, res, allowedEmbedders, credEmbedders, debugtest) {
+	const origin = getRequestOrigin(req)
+	// detect if the request origin has a matching entry in serverconfig.dsCredentials
+	const credEmbedder = credEmbedders.find(pattern => isCredEmbedder(origin, pattern))
+	// detect if the request origin is allowed as an embedders
+	const matchedHost = allowedEmbedders.find(host => isAllowedEmbedder(origin, host))
+
+	// only set CORS-related headers for a valid request origin that is a credentialed or allowed embedder,
+	// otherwise a missing or 'null' origin could be echoed back along with Access-Control-Allow-Credentials
+	const isAllowedOrigin = origin && (credEmbedder || matchedHost || debugtest)
+	if (isAllowedOrigin) {
+		// the origin is only echoed after it has been parsed and matched above
+		res.header('Access-Control-Allow-Origin', origin.origin)
+		res.header('Access-Control-Allow-Headers', corsAllowedHeaders)
+	} else if (isNullOriginAllowed(req, allowedEmbedders)) {
+		// a standalone html file that is opened from the local file system, and not served by a web server,
+		// has a 'null' origin, which getRequestOrigin() does not parse into an origin, so isAllowedOrigin
+		// is false here and Access-Control-Allow-Credentials is not set below; with a wildcard origin
+		// instead of an echoed 'null', a browser will also not send or expose cookies for these requests,
+		// so that only non-credentialed data is accessible
+		res.header('Access-Control-Allow-Origin', '*')
+		res.header('Access-Control-Allow-Headers', corsAllowedHeaders)
+	}
+
+	if (isAllowedOrigin && (credEmbedder || debugtest)) {
+		// allow credentialed embedders to submit authorization header;
+		// TODO: require a wildcard dsCredentials embedder key to be a domain-limited glob,
+		// such as '*.<domain>.<tld>', instead of a bare '*'
+		res.header('Access-Control-Allow-Credentials', true)
+	}
+}
+
 function setHeaders(req, res, next) {
 	// indicates that caching should be unique to each request origin, i.e., include the origin when computing the cache key
 	res.header('Vary', 'Origin')
@@ -310,36 +360,8 @@ function setHeaders(req, res, next) {
 
 	const debugtest =
 		serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test' || serverconfig.features?.loosenCORS
-	const origin = getRequestOrigin(req)
-	// detect if the request origin has a matching entry in serverconfig.dsCredentials
-	const credEmbedder = authApi.credEmbedders.find(pattern => isCredEmbedder(origin, pattern))
-	// detect if the request origin is allowed as an embedders
 	// note that serverconfig.js sets [*] as default serverconfig.allowedEmbedders, if not present
-	const matchedHost = serverconfig.allowedEmbedders.find(host => isAllowedEmbedder(origin, host))
-
-	// only set CORS-related headers for a valid request origin that is a credentialed or allowed embedder,
-	// otherwise a missing or 'null' origin could be echoed back along with Access-Control-Allow-Credentials
-	const isAllowedOrigin = origin && (credEmbedder || matchedHost || debugtest)
-	if (isAllowedOrigin) {
-		// the origin is only echoed after it has been parsed and matched above
-		res.header('Access-Control-Allow-Origin', origin.origin)
-		// embedder sites may use HTTP 2.0 which requires lowercased header key names
-		// must support mixed casing and all lowercased for compatibility
-		res.header(
-			'Access-Control-Allow-Headers',
-			'Origin, X-Requested-With, Content-Type, Accept, Authorization' +
-				', origin, x-requested-with, content-type, accept, authorization' +
-				', X-Auth-Token, X-Ds-Access-Token, X-SjPPDs-Sessionid' +
-				', x-auth-token, x-ds-access-token, x-sjppds-sessionid'
-		)
-	}
-
-	if (isAllowedOrigin && (credEmbedder || debugtest)) {
-		// allow credentialed embedders to submit authorization header;
-		// TODO: require a wildcard dsCredentials embedder key to be a domain-limited glob,
-		// such as '*.<domain>.<tld>', instead of a bare '*'
-		res.header('Access-Control-Allow-Credentials', true)
-	}
+	setCorsHeaders(req, res, serverconfig.allowedEmbedders, authApi.credEmbedders, debugtest)
 
 	if (debugtest) {
 		// may allow a browser to execute js code that samples performance; used by Chrome devtools, maybe puppeteer
