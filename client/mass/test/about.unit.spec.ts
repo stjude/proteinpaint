@@ -11,6 +11,10 @@ import { MassAbout } from '../about'
 	.initActiveItems()
 	.initDisclaimer()
 	.initGeomap()
+	.initSunburst()
+	.main() - sunburst update
+	.initSunburst() - placement and heading
+	.initActiveItems() - placement and heading
 
 TODO:
     - initCohort
@@ -283,5 +287,153 @@ tape('.initGeomap()', async test => {
 		if (test['_ok']) holder.remove()
 	}
 
+	test.end()
+})
+
+tape('.initSunburst()', async test => {
+	test.timeoutAfter(5000)
+
+	const sel = 'sjpp-about-sunburst'
+	const termdbConfig = { sunburst: { twLst: [{ id: 'diaggrp' }] } }
+
+	// enabled + default rings -> renders the sunburst holder
+	{
+		const holder = getHolder() as any
+		const mockAbout = getAbout({ holder, aboutOverrides: { showSunburst: true } })
+		mockAbout.initSunburst({ termdbConfig })
+		const sunburst = await mockAbout.sunburst
+		test.ok(sunburst?.update, 'Should load the About tab sunburst when showSunburst is true')
+		test.true(
+			mockAbout.subheader.select(`[data-testid="${sel}"]`).node(),
+			'Should render the sunburst holder when showSunburst is true and there are default rings'
+		)
+		// the chart's tooltip menu is outside the holder
+		if (test['_ok']) (await mockAbout.sunburst)?.chart.destroy()
+		if (test['_ok']) holder.remove()
+	}
+
+	// disabled, or no default rings -> no holder
+	for (const [aboutOverrides, config, note] of [
+		[{}, termdbConfig, 'showSunburst is disabled'],
+		[{ showSunburst: true }, {}, 'the dataset has no sunburst rings']
+	] as any) {
+		const holder = getHolder() as any
+		const mockAbout = getAbout({ holder, aboutOverrides })
+		mockAbout.initSunburst({ termdbConfig: config })
+		test.equal(mockAbout.sunburst, undefined, `Should not load the sunburst when ${note}`)
+		test.notOk(mockAbout.subheader.select(`[data-testid="${sel}"]`).node(), `Should not render a holder when ${note}`)
+		if (test['_ok']) holder.remove()
+	}
+
+	test.end()
+})
+
+tape('.main() - sunburst update', async test => {
+	const holder = getHolder() as any
+	const mockAbout = getAbout({ holder, aboutOverrides: {} })
+	const states: any[] = []
+	mockAbout.sunburst = Promise.resolve({ update: async state => states.push(state) })
+
+	mockAbout.state = { nav: { activeTab: 1 } }
+	await mockAbout.main()
+	test.equal(states.length, 0, 'Should not update the sunburst while another tab is active')
+
+	mockAbout.state = { nav: { activeTab: 0 } }
+	await mockAbout.main()
+	test.deepEqual(states, [mockAbout.state], 'Should update the sunburst with the app state on the About tab')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('.initSunburst() - placement and heading', async test => {
+	test.timeoutAfter(5000)
+	const termdbConfig = { sunburst: { twLst: [{ id: 'diaggrp' }] } }
+
+	// showSunburst.holderSelector places the sunburst in that element of the custom html
+	{
+		const holder = getHolder() as any
+		const html = '<p id="intro">intro</p><div class="sb"></div><p id="links">links</p>'
+		const mockAbout = getAbout({
+			holder,
+			aboutOverrides: { html, showSunburst: { holderSelector: '.sb', title: 'Explore', description: 'Wedges' } }
+		})
+		mockAbout.initCustomHtml()
+		mockAbout.initSunburst({ termdbConfig })
+		await mockAbout.sunburst
+		const slot = holder.select('.sb')
+		test.ok(slot.select('[data-testid="sjpp-about-sunburst"]').node(), 'Should render the sunburst in the html slot')
+		test.equal(slot.select('[data-testid="sjpp-about-section-title"]').text(), 'Explore', 'Should render its heading')
+		test.equal(
+			holder.selectAll('[data-testid="sjpp-about-sunburst"]').size(),
+			1,
+			'Should render one sunburst, in the slot only'
+		)
+		// the chart's tooltip menu is outside the holder
+		if (test['_ok']) (await mockAbout.sunburst)?.chart.destroy()
+		if (test['_ok']) holder.remove()
+	}
+
+	// no holder (showSunburst: true) -> appended, without a heading
+	{
+		const holder = getHolder() as any
+		const mockAbout = getAbout({ holder, aboutOverrides: { html: '<p>intro</p>', showSunburst: true } })
+		mockAbout.initCustomHtml()
+		mockAbout.initSunburst({ termdbConfig })
+		await mockAbout.sunburst
+		const last = holder.node().lastElementChild
+		test.ok(last.querySelector('[data-testid="sjpp-about-sunburst"]'), 'Should append the sunburst after the html')
+		test.notOk(holder.select('[data-testid="sjpp-about-section-title"]').node(), 'Should not render a heading')
+		// the chart's tooltip menu is outside the holder
+		if (test['_ok']) (await mockAbout.sunburst)?.chart.destroy()
+		if (test['_ok']) holder.remove()
+	}
+	test.end()
+})
+
+tape('.initActiveItems() - placement and heading', test => {
+	const items = [{ title: 'UMAP', plot: {} }]
+	const btnSel = '[data-testid="sjpp-custom-active-item-btn"]'
+	const titleSel = '[data-testid="sjpp-about-section-title"]'
+
+	// activeItems.holderSelector places the heading and buttons in that element of the custom html
+	{
+		const holder = getHolder() as any
+		const html = '<div class="ex"></div><p id="links">links</p>'
+		const mockAbout = getAbout({
+			holder,
+			aboutOverrides: { html, activeItems: { holderSelector: '.ex', title: 'Examples', items } }
+		})
+		mockAbout.initCustomHtml()
+		mockAbout.initActiveItems()
+		const slot = holder.select('.ex')
+		test.equal(slot.select(titleSel).text(), 'Examples', 'Should render the heading in the html slot')
+		test.equal(slot.selectAll(btnSel).size(), 1, 'Should render the buttons in the html slot')
+		test.equal(holder.selectAll(btnSel).size(), 1, 'Should render the buttons in the slot only')
+		if (test['_ok']) holder.remove()
+	}
+
+	// a holderSelector that selects nothing -> appended
+	{
+		const holder = getHolder() as any
+		const mockAbout = getAbout({
+			holder,
+			aboutOverrides: { html: '<p>x</p>', activeItems: { holderSelector: '.none', items } }
+		})
+		mockAbout.initCustomHtml()
+		mockAbout.initActiveItems()
+		test.equal(holder.selectAll(btnSel).size(), 1, 'Should append the buttons when the holderSelector selects nothing')
+		if (test['_ok']) holder.remove()
+	}
+
+	// no holder, no title -> appended, without a heading
+	{
+		const holder = getHolder() as any
+		const mockAbout = getAbout({ holder, aboutOverrides: { activeItems: { items: [{ title: 'A', plot: {} }] } } })
+		mockAbout.initActiveItems()
+		test.equal(holder.selectAll(btnSel).size(), 1, 'Should append the buttons')
+		test.notOk(holder.select(titleSel).node(), 'Should not render a heading without a title')
+		if (test['_ok']) holder.remove()
+	}
 	test.end()
 })

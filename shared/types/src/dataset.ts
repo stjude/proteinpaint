@@ -2705,11 +2705,21 @@ type MassNavAboutTabEntry = MassNavTabEntry & {
 		/** how to render the items. 'buttons' (default) = compact inline buttons.
 		 * 'cards' = large square tiles that lift on hover */
 		layout?: 'buttons' | 'cards'
+		/** css selector of the element of .html to render the heading and items in, e.g. '.examples';
+		 * else they follow the other contents */
+		holderSelector?: string
+		/** optional heading and text above the items */
+		title?: string
+		description?: string
 		items: ActiveItem[]
 		// can add holderStyle to customize
 	}
 	/** when true, render the world map from termdbConfig.geomap directly on the landing (about) tab */
 	showGeomap?: boolean
+	/** render the sunburst of cohort.termdb.sunburst.twLst on the landing (about) tab. an object gives it a
+	 * heading and text, and a holderSelector: css selector of the element of .html to render it in; else it
+	 * follows the other contents, before active items that have no holderSelector */
+	showSunburst?: boolean | { holderSelector?: string; title?: string; description?: string }
 	/** disclaimer text. can expand with rendering customizations */
 	disclaimer?: {
 		text?: string
