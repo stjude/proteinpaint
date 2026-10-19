@@ -8,7 +8,8 @@ import {
 	buildLesionTypeMap,
 	getCnvLesionType
 } from '../lesions.ts'
-import { grin2KeyInputs, normalizeExcludeOptions, resolveExcludeBeds } from '../main.ts'
+import { grin2KeyInputs, normalizeExcludeOptions, resolveExcludeBeds, getMaxLesions } from '../main.ts'
+import serverconfig from '../../serverconfig.js'
 import {
 	dtsnvindel,
 	dtcnv,
@@ -38,6 +39,7 @@ buildLesionTypeMap
 getCnvLesionType
 grin2KeyInputs + normalizeExcludeOptions
 resolveExcludeBeds
+getMaxLesions
 */
 
 // Small TermdbTest-style fixtures. CNV objects mirror the dt:4 mlst entries that
@@ -611,5 +613,30 @@ tape('resolveExcludeBeds', test => {
 	test.deepEqual(resolveExcludeBeds(g, ['segdup']), ['/tp/anno/segdup.bed'], 'named subset')
 	test.deepEqual(resolveExcludeBeds(g, ['segdup', 'unknown']), ['/tp/anno/segdup.bed'], 'unknown names ignored')
 	test.deepEqual(resolveExcludeBeds({}, undefined), [], 'genome without blacklists => []')
+	test.end()
+})
+
+tape('getMaxLesions', async test => {
+	// the configured max, under the 745,000 ceiling (a 2 GB budget)
+	const max = Math.min(serverconfig.features.grin2maxLesions || 250000, 745000)
+	const freeMB = (mb: number) => async () => mb
+	// cap = floor((free MB × 0.4 − 260) / 2.4) × 1000, then no higher than max
+	test.equal(await getMaxLesions(freeMB(16000)), max, 'plentiful memory => the configured max')
+	test.equal(await getMaxLesions(freeMB(1500)), Math.min(max, 141000), '1500 MB => 141,000')
+	test.equal(await getMaxLesions(freeMB(800)), Math.min(max, 25000), '800 MB => 25,000, not raised to a floor')
+	test.equal(
+		await getMaxLesions(freeMB(656)),
+		Math.min(max, 1000),
+		'656 MB => 1,000, the smallest cap that is not refused'
+	)
+	for (const mb of [655, 0]) {
+		try {
+			await getMaxLesions(freeMB(mb))
+			test.fail(`${mb} MB => should throw`)
+		} catch (e: any) {
+			test.equal(e.code, 'GRIN2_LOW_MEMORY', `${mb} MB => refused, since the base overhead does not fit`)
+			test.equal(e.status, 503, `${mb} MB => status 503`)
+		}
+	}
 	test.end()
 })

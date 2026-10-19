@@ -18,11 +18,17 @@ export { resolveExcludeBeds } from '../utils/regionMask.ts'
 import { resolveExcludeBeds } from '../utils/regionMask.ts'
 
 // Constants for memory-aware lesion cap calculations
-const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
-const GRIN2_MEMORY_BUDGET_MB = 950
 const MEMORY_BASE_MB = 260
 const MEMORY_PER_1K_LESIONS = 2.4
-const MIN_LESIONS = 50000
+const MIN_LESIONS = 50000 // smallest run worth doing; when memory cannot fit this many, the run is refused
+// Hard ceiling on the memory one run plans for, whatever the config or free memory: 2 GB ≈ 745,000 lesions
+const CEILING_LESIONS = lesionsForBudget(2048)
+// Maximum total number of lesions to process to avoid overwhelming the production server
+const MAX_LESIONS = Math.min(serverconfig.features.grin2maxLesions || 250000, CEILING_LESIONS)
+if (serverconfig.features.grin2maxLesions > CEILING_LESIONS)
+	console.warn(
+		`[GRIN2] grin2maxLesions is above the ${CEILING_LESIONS.toLocaleString()} ceiling, so the ceiling is used`
+	)
 
 /**
  * General GRIN2 analysis route
@@ -199,9 +205,12 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 	const cap = processing.lesionCap?.toLocaleString()
 	const expectedToProcess = processing.totalSamples! - processing.failedSamples!
 	if (processing.processedSamples! < expectedToProcess) {
+		// a lower bound: totalLesions counts only the samples that were read, not the ones skipped after the cap
+		const droppedLesions = processing.totalLesions! - processing.processedLesions!
 		note(
 			`Lesion cap of ${cap} was reached before all samples could be processed. ` +
-				`Analysis ran on ${processing.processedSamples!.toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
+				`Analysis ran on ${processing.processedSamples!.toLocaleString()} of ${expectedToProcess.toLocaleString()} samples` +
+				(droppedLesions > 0 ? `, and at least ${droppedLesions.toLocaleString()} lesions were not used.` : '.')
 		)
 	} else if (processing.ssmCapReached) {
 		// The batched SNV/indel fetch hit the cap and skipped some samples' mutations, but the per-sample
@@ -216,6 +225,13 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		note(
 			`Lesion cap of ${cap} was reached while loading CNV segments. CNV data was not loaded for ` +
 				`${(processing.cnvSamplesDropped ?? 0).toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
+		)
+	}
+	// Explain a cap note above when the cap was below the configured one because memory was low
+	if (capWarningRows.length && processing.lesionCap! < processing.lesionCapConfigured!) {
+		note(
+			`The lesion cap was lowered from ${processing.lesionCapConfigured!.toLocaleString()} to ${cap} because ` +
+				`server memory was low. Select a smaller cohort to analyze all samples.`
 		)
 	}
 
@@ -545,20 +561,33 @@ async function runGrin2Fresh(
 
 // ─── helpers ─── //
 
-async function getMaxLesions(): Promise<number> {
-	const availableMemoryMB = await getAvailableMemoryMB()
+/** getAvailable: the free-memory reader, replaced by a fixed value in the unit spec */
+export async function getMaxLesions(getAvailable = getAvailableMemoryMB): Promise<number> {
+	const availableMemoryMB = await getAvailable()
 	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
 
-	// If server is under heavy load, reduce lesion cap. Our calculation assumes each 1,000 lesions use ~2.4MB of memory plus a base overhead (i.e. a linear relationship).
-	if (availableMemoryMB < GRIN2_MEMORY_BUDGET_MB * 2) {
-		const reducedBudget = availableMemoryMB * 0.4
-		mayLog(`[GRIN2] Reducing lesion cap due to memory constraints. New budget: ${reducedBudget.toFixed(2)} MB`)
-		const calculated = Math.floor((reducedBudget - MEMORY_BASE_MB) / MEMORY_PER_1K_LESIONS) * 1000
-		mayLog(`[GRIN2] Calculated lesion cap based on memory: ${calculated.toLocaleString()}`)
-		return Math.max(MIN_LESIONS, Math.min(MAX_LESIONS, calculated))
-	}
+	// Budget 40% of available memory, even when memory is plentiful, so a configured MAX_LESIONS that would not fit
+	// is still reduced
+	const cap = Math.min(MAX_LESIONS, lesionsForBudget(availableMemoryMB * 0.4))
+	// Refused before any fetch: the budget cannot cover the base overhead, and the GDC batch fetch reads a cap of 0 as no cap
+	if (cap <= 0) throw lowMemoryError()
+	if (cap < MAX_LESIONS) mayLog(`[GRIN2] Reduced lesion cap to ${cap.toLocaleString()} for low memory`)
+	return cap
+}
 
-	return MAX_LESIONS
+/** Lesions that fit in a memory budget in MB. Our calculation assumes each 1,000 lesions use ~2.4MB of memory plus a
+ * base overhead (i.e. a linear relationship). */
+function lesionsForBudget(budgetMB: number): number {
+	return Math.floor((budgetMB - MEMORY_BASE_MB) / MEMORY_PER_1K_LESIONS) * 1000
+}
+
+function lowMemoryError(): Error {
+	const e: any = new Error(
+		'Server memory is too low to run GRIN2 on this cohort right now. Try again later or select a smaller cohort.'
+	)
+	e.status = 503
+	e.code = 'GRIN2_LOW_MEMORY'
+	return e
 }
 
 /**
@@ -758,6 +787,16 @@ async function processSampleData(
 
 	processing.processedLesions = lesions.length
 	processing.lesionCap = maxLesions
+	processing.lesionCapConfigured = MAX_LESIONS
+
+	// A cohort that fits under a low cap runs in full. One that hit a cap below the smallest run worth doing is refused,
+	// rather than analyzed on too few lesions. A configured max below MIN_LESIONS is that server's smallest run.
+	const capHit =
+		processing.unprocessedSamples > 0 ||
+		processing.totalLesions > processing.processedLesions ||
+		processing.ssmCapReached ||
+		processing.cnvCapReached
+	if (capHit && maxLesions < Math.min(MIN_LESIONS, MAX_LESIONS)) throw lowMemoryError()
 
 	// Build lesion counts for summary
 	const lesionCounts: any = {

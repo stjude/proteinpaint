@@ -48,6 +48,8 @@ export interface Grin2Processing {
 	ssmSamplesHypermutated?: number
 	cnvSamplesHypermutated?: number
 	lesionCap?: number
+	// the configured lesion cap; lesionCap is lower when getMaxLesions() reduced it for low memory
+	lesionCapConfigured?: number
 	lesionCounts?: {
 		total: number
 		byType: Record<string, { count: number; samples: number }>
