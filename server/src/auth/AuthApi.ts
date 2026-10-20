@@ -1,7 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import { type AuthInterface, type ProtectedRouteMiddlewares } from '../auth.ts'
-import { Auth, patternMatches, assertStringOrUndefined, getSessionEntry, getStringArray } from './Auth.ts'
+import { Auth, assertStringOrUndefined, getSessionEntry, getStringArray } from './Auth.ts'
 import { setAuthMiddleware, getProtectedRouteMiddlewares, getSampleLogin } from './AuthMiddleWare.ts'
 import { setAuthRoutes } from './AuthRoutes.ts'
 import { sleep } from '../utils.js'
@@ -87,7 +87,10 @@ export class AuthApi implements AuthInterface {
 				// throws and is discarded, leaving only the session cookie to prove
 				// insession — a cookie some browsers (webkit) won't send over plain
 				// http since it is flagged Secure
-				const id = this.#auth.getSessionId({ query, headers: req.headers, cookies: req.cookies, path: req.path }, cred)
+				// a cred without a secret, such as type 'forbidden', cannot have a session
+				const id = cred.secret
+					? this.#auth.getSessionId({ query, headers: req.headers, cookies: req.cookies, path: req.path }, cred)
+					: undefined
 				const activeSession = getSessionEntry(this.#auth.sessions, dslabel, id)
 				const sessionStart = activeSession?.time || 0
 				// support a dataset-specific override to maxSessionAge
@@ -141,14 +144,17 @@ export class AuthApi implements AuthInterface {
 		const routeKeys = this.#auth.getMatchedRouteKeys(req.query.dslabel)
 		// no checks for this ds, is open access
 		if (!routeKeys.length) return { forbiddenRoutes, clientAuthResult: {} }
+		// the session is looked up with the last matched cred that has a secret, since a cred without
+		// a secret, such as type 'forbidden', cannot have a session, and an open route has no cred
 		let cred
 		for (const k of routeKeys) {
-			cred = this.#auth.getRouteCred(req.query.dslabel, [k], req.query.embedder)
-			if (cred?.type == 'forbidden') {
+			const routeCred = this.#auth.getRouteCred(req.query.dslabel, [k], req.query.embedder)
+			if (routeCred?.type == 'forbidden') {
 				forbiddenRoutes.push(k)
 			}
+			if (routeCred?.secret) cred = routeCred
 		}
-		const id = this.#auth.getSessionId(req, cred)
+		const id = cred && this.#auth.getSessionId(req, cred)
 		const activeSession = id && getSessionEntry(this.#auth.sessions, req.query.dslabel, id)
 		return {
 			forbiddenRoutes,
@@ -163,21 +169,11 @@ export class AuthApi implements AuthInterface {
 		assertStringOrUndefined(embedder, 'embedder')
 
 		const requiredCred: any[] = []
-		for (const dslabelPattern in this.#auth.creds) {
-			if (!patternMatches(dslabel, dslabelPattern)) continue
-			for (const routePattern in this.#auth.creds[dslabelPattern]) {
-				for (const embedderHostPattern in this.#auth.creds[dslabelPattern][routePattern]) {
-					if (!patternMatches(embedder, embedderHostPattern)) continue
-					const cred = this.#auth.creds[dslabelPattern][routePattern][embedderHostPattern]
-					// an open cred does not require a login
-					if (cred.type == 'open') continue
-					requiredCred.push({
-						route: routePattern,
-						type: cred.type,
-						headerKey: cred.headerKey
-					})
-				}
-			}
+		// use the same resolver as request handling, so that only the matched cred of each route is listed;
+		// getRouteCred() returns undefined for an open cred, which does not require a login
+		for (const route of this.#auth.getMatchedRouteKeys(dslabel)) {
+			const cred = this.#auth.getRouteCred(dslabel, [route], embedder)
+			if (cred) requiredCred.push({ route, type: cred.type, headerKey: cred.headerKey })
 		}
 		return requiredCred.length ? requiredCred : undefined
 	}
