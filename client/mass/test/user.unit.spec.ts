@@ -379,8 +379,6 @@ tape('MassUser renderAuthInfo() userTab', test => {
 })
 
 tape('getDaysLeft()', test => {
-	const testid = '[data-testid="sjpp-massnav-user-session-days-left"]'
-
 	for (const [days, text] of [
 		[12, '12 days left'],
 		[1, '1 day left'],
