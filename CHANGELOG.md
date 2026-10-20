@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- Removed the unused bedgraphdot track type, with its bedgraphdotfile url parameter and /tkbedgraphdot route
+
+Features:
+- The server reads bgzipped, tabix-indexed files, the header of bcf files, and the genome fasta in process, with @gmod/tabix and @gmod/indexedfasta, instead of running tabix, bcftools view -h, and samtools faidx, so the tabix tool is no longer needed
+
 Fixes:
 - GRIN2 sizes its lesion cap from the memory limit of the container it runs in, instead of the host memory
 
