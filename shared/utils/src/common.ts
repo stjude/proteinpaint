@@ -702,7 +702,6 @@ export const tkt = {
 	expressionrank: 'expressionrank',
 	aicheck: 'aicheck',
 	mds3: 'mds3', //
-	bedgraphdot: 'bedgraphdot',
 	bam: 'bam',
 	ld: 'ld',
 	j2: 'j2' // mds3 cohort junction

@@ -1,5 +1,5 @@
 import serverconfig from '../serverconfig.js'
-import type { ToolSpec, FieldSpec } from './index.ts'
+import type { ToolSpec, Field } from './index.ts'
 import { chrPattern } from './regions.ts'
 
 /*
@@ -7,9 +7,9 @@ Spec of the bigBed tools of ucsc. See index.ts for how a spec is checked and use
 */
 
 /** a bigBed file under tp, or a url; no server code writes a bigBed file to cachedir */
-const file: FieldSpec = { type: 'fileOrUrl', roots: ['tp'] }
+const file: Field = { type: 'fileOrUrl', roots: ['tp'] }
 /** a 0-based coordinate */
-const coord: FieldSpec = { type: 'int', min: 0, max: 999_999_999_999 }
+const coord: Field = { type: 'int', min: 0, max: 999_999_999_999 }
 
 export const specs: Record<string, ToolSpec> = {
 	'bigBed.query': {

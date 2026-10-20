@@ -40,7 +40,6 @@ import * as termdb from './termdb.js'
 import bw_request_closure from './bw.js'
 import { handle_tkld } from './ld.js'
 import * as termdbbarsql from './termdb.barchart.js'
-import bedgraphdot_request_closure from './bedgraphdot.js'
 import bam_request_closure from './bam.js'
 import { mdsjunction_request_closure } from './mds.junction.js'
 import { gdc_bam_request } from './bam.gdc.js'
@@ -82,7 +81,6 @@ export function setRoutes(app, _genomes, serverconfig) {
 	// has to set optional routes before app.get() or app.post()
 	// otherwise next() may not be called for a middleware in the optional routes
 	app.post(basepath + '/tkbedj', bedj_request_closure(genomes))
-	app.post(basepath + '/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 	app.all(basepath + '/tkbam', bam_request_closure(genomes))
 	app.get(basepath + '/gdcbam', gdc_bam_request(genomes))
 	app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))

@@ -3,7 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import { runTool, runToolOutput, getArgv, getCall, checkSpec, mergeSpecs, specs } from '#src/tools/index.ts'
+import { runTool, runToolOutput, getArgv, checkSpec, mergeSpecs, specs } from '#src/tools/index.ts'
 import type { Field, ToolSpec } from '#src/tools/index.ts'
 
 /*
@@ -18,7 +18,7 @@ file fields: roots and debugmodeAnyRoot
 runTool(): does not start the tool for a rejected input
 runTool(): passes the argv of a valid input
 runToolOutput(): resolves with the exit code and output
-getCall(): the working dir, list slots, and prefixed slots
+getArgv(): list slots and prefixed slots
 checkSpec(): rejects malformed specs
 mergeSpecs(): rejects an op that is in more than one spec file
 specs are frozen, and a recompiled pattern does not change the checks
@@ -263,43 +263,10 @@ const otherOps: Record<string, { input: Record<string, unknown>; argv: string[];
 	vm_stat: { input: {}, argv: [], bad: {} },
 	'samtools.version': { input: {}, argv: ['--version'], bad: {} },
 	'bcftools.version': { input: {}, argv: ['-v'], bad: {} },
-	'tabix.query': {
-		input: { file: 'files/a.gz', regions: ['chr1:0-100', 'chr2:5-6'], dir: path.join(cache, 'https/a.org') },
-		argv: [path.join(tp, 'files/a.gz'), 'chr1:0-100', 'chr2:5-6'],
-		bad: {
-			file: ['/etc/passwd', '../a.gz', 'a/-o.gz'],
-			regions: [
-				[],
-				['chr1'],
-				['chr1:1-2;ls'],
-				['-o:1-2'],
-				['chr1:-1-2'],
-				['chr1:1-2,chr2:3-4'],
-				Array(1001).fill('chr1:1-2'),
-				'chr1:1-2'
-			],
-			dir: [tp, '/tmp', path.join(cache, '../x'), path.join(cache, 'a\tb'), 'https/a.org']
-		}
-	},
-	'tabix.header': {
-		input: { file: path.join(cache, 'bedj/a.gz'), dir: null },
-		argv: ['-H', path.join(cache, 'bedj/a.gz')],
-		bad: { file: ['-o', '/etc/passwd'], dir: ['/tmp', tp] }
-	},
-	'tabix.listChrs': {
-		input: { file: 'files/a.gz', dir: null },
-		argv: ['-l', path.join(tp, 'files/a.gz')],
-		bad: { file: ['-o', '/etc/passwd'], dir: ['/tmp', tp] }
-	},
 	'samtools.index': {
 		input: { file: path.join(cache, 'gdcbam/a.bam') },
 		argv: ['index', path.join(cache, 'gdcbam/a.bam')],
 		bad: { file: [path.join(tp, 'a.bam'), '-o'] }
-	},
-	'samtools.faidx': {
-		input: { fasta: 'genomes/hg38.gz', region: 'chr1:100-200' },
-		argv: ['faidx', path.join(tp, 'genomes/hg38.gz'), '--', 'chr1:100-200'],
-		bad: { fasta: [path.join(cache, 'a.fa'), '-o'], region: ['chr1', '-o:1-2', 'chr1:1-2 chr2:3-4', 'chr1:1-'] }
 	},
 	'bigBed.query': {
 		input: { chr: 'chr1', start: 0, end: 1000, file: 'anno/a.bb' },
@@ -438,8 +405,6 @@ tape('every field rejects the hostile values of its type', test => {
 				for (const [name, field] of Object.entries(spec.fields)) {
 					let missed = 0
 					for (const v of hostileValues(field)) {
-						// an optional field, which is only the working dir, may be undefined or null
-						if (field.optional && (v === undefined || v === null)) continue
 						try {
 							getArgv(o, spec, { ...allOps[o].input, [name]: v })
 							missed++
@@ -595,61 +560,34 @@ tape('runToolOutput(): resolves with the exit code and output', async test => {
 	test.end()
 })
 
-tape('getCall(): the working dir, list slots, and prefixed slots', test => {
-	const q = specs['tabix.query']
-	const input = otherOps['tabix.query'].input
-	test.equal(getCall('tabix.query', q, input).cwd, path.join(cache, 'https/a.org'), 'should return the working dir')
-	for (const dir of [null, undefined]) {
-		test.equal(getCall('tabix.query', q, { ...input, dir }).cwd, undefined, `should have no working dir for dir=${dir}`)
+tape('getArgv(): list slots and prefixed slots', test => {
+	// no op has a list field, so a list slot is tested with this spec
+	const l: ToolSpec = {
+		bin: () => 'x',
+		fields: {
+			regions: { type: 'list', item: { type: 'string', pattern: /^chr\d+:\d+-\d+$/, maxLength: 20 }, maxItems: 3 }
+		},
+		argv: ['-r', '...$regions']
 	}
-	// the cache dir of a url keeps the url body
-	const urlDir = path.join(cache, 'https/a.org:8443/x%20y/t.gz?token=1&v=2')
-	test.equal(getCall('tabix.query', q, { ...input, dir: urlDir }).cwd, urlDir, 'should allow url characters in the dir')
-	for (const dir of ['https/a.org', path.join(cache, 'a/../../x'), path.join(cache, 'a\nb'), cache, '/tmp']) {
-		test.throws(
-			() => getCall('tabix.query', q, { ...input, dir }),
-			/invalid dir/,
-			`should reject a dir that is relative, outside of the cache dir, or has a control character: ${JSON.stringify(
-				dir
-			)}`
-		)
-	}
-	const noDir = { ...input }
-	delete noDir.dir
-	test.equal(getCall('tabix.query', q, noDir).cwd, undefined, 'should allow the optional dir to be left out')
+	checkSpec('t.list', l)
 	test.deepEqual(
-		getArgv('tabix.query', q, { ...input, regions: ['chr1:1-2'] }),
-		[path.join(tp, 'files/a.gz'), 'chr1:1-2'],
+		getArgv('t.list', l, { regions: ['chr1:1-2', 'chr2:3-4'] }),
+		['-r', 'chr1:1-2', 'chr2:3-4'],
 		'should put each list item in its own argv slot'
 	)
+	for (const regions of [[], ['chr1:1-2', 'chr1:1-2', 'chr1:1-2', 'chr1:1-2'], ['-o:1-2'], 'chr1:1-2']) {
+		test.throws(
+			() => getArgv('t.list', l, { regions }),
+			/invalid regions/,
+			`should reject regions=${JSON.stringify(regions)}`
+		)
+	}
 	const b = specs['bigBed.query']
 	test.deepEqual(
 		getArgv('bigBed.query', b, otherOps['bigBed.query'].input).slice(0, 3),
 		['-chrom=chr1', '-start=0', '-end=1000'],
 		'should put a value after the literal prefix of its slot'
 	)
-	test.end()
-})
-
-tape('runTool(): starts the tool in the working dir', async test => {
-	const bin = path.join(tmpdir, 'pwd.sh')
-	fs.writeFileSync(bin, '#!/bin/sh\npwd -P\n', { mode: 0o755 })
-	const dir = fs.mkdtempSync(path.join(cache, 'pp-tools-cwd-'))
-	const prev = serverconfig.tabix
-	serverconfig.tabix = bin
-	try {
-		const out = await runToolOutput('tabix.header', { file: 'files/a.gz', dir })
-		test.equal(out.stdout.trim(), fs.realpathSync(dir), 'should run the tool in the given dir')
-		const noDir = await runToolOutput('tabix.header', { file: 'files/a.gz', dir: null })
-		test.equal(
-			noDir.stdout.trim(),
-			fs.realpathSync(process.cwd()),
-			'should run the tool in the server dir without a dir'
-		)
-	} finally {
-		serverconfig.tabix = prev
-		fs.rmSync(dir, { recursive: true, force: true })
-	}
 	test.end()
 })
 
@@ -676,7 +614,6 @@ tape('checkSpec(): rejects malformed specs', test => {
 		['a non-finite number max', s => (s.fields.a = { type: 'number', min: 0, max: Infinity }), /0 <= min <= max/],
 		['a file field with no roots', s => (s.fields.a = { type: 'file', roots: [] }), /roots of a/],
 		['a file field with an unknown root', s => (s.fields.a = { type: 'file', roots: ['/'] }), /roots of a/],
-		['an optional field in argv', s => (s.fields.a.optional = true), /must not be optional/],
 		[
 			'a list field in a single slot',
 			s => (s.fields.a = { type: 'list', item: s.fields.a, maxItems: 2 }),
@@ -698,17 +635,7 @@ tape('checkSpec(): rejects malformed specs', test => {
 			s => ((s.fields.a = { type: 'list', item: s.fields.a, maxItems: 1e6 }), (s.argv = ['...$a'])),
 			/maxItems/
 		],
-		['a literal with $ that is not a slot', s => s.argv.push('a$b c'), /must be a literal without \$/],
-		[
-			'a cwd that is not under cachedir',
-			s => ((s.fields.d = { type: 'file', roots: ['tp'], optional: true }), (s.cwd = '$d')),
-			/cwd must be a file field/
-		],
-		[
-			'a cwd field that is also in argv',
-			s => ((s.fields.a = { type: 'file', roots: ['cache'] }), (s.cwd = '$a')),
-			/more than once/
-		]
+		['a literal with $ that is not a slot', s => s.argv.push('a$b c'), /must be a literal without \$/]
 	]
 	for (const [label, change, re] of cases) {
 		const s = base()
