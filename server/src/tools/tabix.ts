@@ -3,10 +3,10 @@ import type { ToolSpec, FieldSpec } from './index.ts'
 import { regionPattern } from './regions.ts'
 
 /*
-Spec of the tabix and bgzip operations. See index.ts for how a spec is checked and used.
+Spec of the tabix operations. See index.ts for how a spec is checked and used.
 
 A read of a url file runs in the cache dir of the url, where tabix keeps the index that it downloads, see
-cache_index in utils.js. The server writes the files that it compresses and indexes in cachedir.
+cache_index in utils.js.
 */
 
 /** a bgzipped, tabix-indexed file under tp or cachedir, or a url */
@@ -37,15 +37,5 @@ export const specs: Record<string, ToolSpec> = {
 		fields: { file, dir },
 		argv: ['-l', '$file'],
 		cwd: '$dir'
-	},
-	'tabix.indexBed': {
-		bin: () => serverconfig.tabix,
-		fields: { file: { type: 'file', roots: ['cache'] } },
-		argv: ['-f', '-p', 'bed', '$file']
-	},
-	'bgzip.compress': {
-		bin: () => serverconfig.bgzip,
-		fields: { file: { type: 'file', roots: ['cache'] } },
-		argv: ['-f', '$file']
 	}
 }

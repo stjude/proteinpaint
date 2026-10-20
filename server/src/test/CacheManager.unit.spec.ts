@@ -142,7 +142,7 @@ tape('defaults', function (test) {
 							maxAge: 2592000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb']),
+							fileExtensions: new Set(['.txt', '.gz', '.tbi', '.csi', '.bb']),
 							absPath: `${m.cachedir}/bedj`,
 							skipUntil: 0
 						},
@@ -449,7 +449,7 @@ tape('subdir overrides', test => {
 			maxAge: 2592000000,
 			maxSize: 1,
 			skipMs: 43200000,
-			fileExtensions: new Set(['.gz', '.tbi', '.csi', '.bb']),
+			fileExtensions: new Set(['.txt', '.gz', '.tbi', '.csi', '.bb']),
 			absPath: `${cachedir}/bedj`,
 			skipUntil: 0
 		},

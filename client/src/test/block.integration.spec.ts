@@ -46,7 +46,8 @@ tape('basic bedj & bw test, could be expanded', test => {
 					maxv: 34,
 					src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAyAAAAAxCAIAAACtcFqcAAAA+klEQVR4nO3WwQkAIBDAMHXyG90lCoIkE/TZPTMLAIDOeR0AAPAbgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAEDNYAAAxgwUAELtGdwHiiEfG0gAAAABJRU5ErkJggg=='
 				}
-			}
+			},
+			{ type: 'bedj', name: 'bad bed gz', file: 'files/hg38/TermdbTest/trackLst/bed.gz' }
 		]
 	})
 	function onloadalltk_always(bb) {
@@ -66,15 +67,12 @@ tape('basic bedj & bw test, could be expanded', test => {
 			test.ok(b.width > 500 && b.height == 12, 'good bed <image> width>500 & height=12')
 		}
 		{
-			// invalid bedj
+			// missing bedj file, read as a plain text file since it is not named .gz
 			const t = bb.tklst[2]
 			test.equal(t.name, 'bad bed', 'tk named bad bed exists')
 			const b = t.img.node().getBBox()
 			test.ok(b.width == 0 && b.height == 0, 'bad bed <image> width=height=0')
-			test.ok(
-				t.gerror && t.gerror.text().startsWith('[E::hts_open_format] Failed to open file'),
-				'gerror text begins with "[E::hts_open_format] Failed to open file"'
-			)
+			test.equal(t.gerror?.text(), 'file not found', 'gerror text is "file not found"')
 		}
 		{
 			// bw file as custom tk
@@ -118,6 +116,17 @@ tape('basic bedj & bw test, could be expanded', test => {
 			test.equal(leftAxisTickLabels.length, 2, 'there are two <text> in left axis')
 			test.equal(leftAxisTickLabels[1].innerHTML, '34', 'left axis top tick value is 34')
 			test.equal(leftAxisTickLabels[0].innerHTML, '−12', 'left axis bottom tick value is -12')
+		}
+		{
+			// missing bedj file, read with tabix since it is named .gz
+			const t = bb.tklst[7]
+			test.equal(t.name, 'bad bed gz', 'tk named bad bed gz exists')
+			const b = t.img.node().getBBox()
+			test.ok(b.width == 0 && b.height == 0, 'bad bed gz <image> width=height=0')
+			test.ok(
+				t.gerror?.text().startsWith('[E::hts_open_format] Failed to open file'),
+				'gerror text begins with "[E::hts_open_format] Failed to open file"'
+			)
 		}
 		if (test['_ok']) holder.remove()
 		test.end()

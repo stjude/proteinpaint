@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import readline from 'readline'
 import { createCanvas } from 'canvas'
 import * as utils from './utils.js'
 import serverconfig from './serverconfig.js'
@@ -18,7 +19,9 @@ should guard against file content error e.g. two tabs separating columns
 .name: str
 	not used
 .file:
-	tp file path
+	tp file path, or a file name under the "bedj" cache subdir when .isCache is true
+	a bigBed file, a bgzipped and tabix-indexed file, or a plain text file that is not named .gz;
+	a plain text file has no index, so it must be sorted by chr and start, see readTextLines()
 .rglst: []
 	{chr, start, stop, width, reverse}
 	start is 0-based
@@ -902,10 +905,15 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 		if (e) throw e
 	}
 
-	// append new boolean flag to req.query{}
-	req.query.fileIsBigbed = await utils.testIfFileIsBigbed(tkfile)
+	// append the file type to req.query{}, see query_file()
+	req.query.fileType = 'tabix'
+	if (await utils.testIfFileIsBigbed(tkfile)) req.query.fileType = 'bigbed'
+	// a url is not checked by its name, which may end in a query string
+	else if (!isurl && !tkfile.endsWith('.gz')) req.query.fileType = 'txt'
+	// else the read error would show the full path of the file
+	if (req.query.fileType == 'txt' && (await utils.file_not_exist(tkfile))) throw 'file not found'
 	let dir
-	if (!req.query.fileIsBigbed && isurl) {
+	if (req.query.fileType == 'tabix' && isurl) {
 		dir = await utils.cache_index(tkfile, req.query.indexURL)
 	}
 
@@ -1005,7 +1013,8 @@ function getItemColor(item, q, result) {
 input:
 
 q={}
-	.fileIsBigbed=boolean
+	.fileType=str
+		"tabix" for a bgzipped and tabix-indexed file, "bigbed", or "txt" for a plain text file
 tkfile=full path
 dir=
 flag_gm={ chr, start, stop }
@@ -1025,7 +1034,7 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 		// query over the gene region, just one region
 		const items = []
 
-		if (q.fileIsBigbed) {
+		if (q.fileType == 'bigbed') {
 			const lines = await utils.query_bigbed_by_coord(tkfile, flag_gm.chr, flag_gm.start, flag_gm.stop)
 			for (const line of lines) {
 				const l = line.split('\t')
@@ -1050,7 +1059,8 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 				items.push(j)
 			}
 		} else {
-			await utils.readTabixLines({
+			await readBedLines({
+				fileType: q.fileType,
 				file: tkfile,
 				regions: [{ chr: flag_gm.chr, start: flag_gm.start, stop: flag_gm.stop }],
 				dir,
@@ -1102,7 +1112,7 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 	for (const [idx, r] of q.rglst.entries()) {
 		const itemofthisregion = []
 
-		if (q.fileIsBigbed) {
+		if (q.fileType == 'bigbed') {
 			const lines = await utils.query_bigbed_by_coord(tkfile, r.chr, r.start, r.stop)
 			for (const line of lines) {
 				const l = line.split('\t')
@@ -1119,7 +1129,8 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 				itemofthisregion.push(j)
 			}
 		} else {
-			await utils.readTabixLines({
+			await readBedLines({
+				fileType: q.fileType,
 				file: tkfile,
 				regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
 				dir,
@@ -1154,6 +1165,42 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 	if (invalidJsonLine) throw 'Line with invalid JSON: ' + invalidJsonLine
 
 	return regions
+}
+
+/* reads the lines of a tabix-indexed file, or of a plain text file if fileType is "txt", see utils.readTabixLines() */
+async function readBedLines({ fileType, ...arg }) {
+	if (fileType != 'txt') return await utils.readTabixLines(arg)
+	for (const r of arg.regions) await readTextLines(arg.file, r, arg.callback)
+}
+
+/*
+Reads the lines of a plain text bed file that overlap region r, like a tabix query of the region. The file has no
+index, so it must be sorted by chr and start: the lines of a chr are together, by ascending start, in any order of
+chrs. The read stops at the first line that starts past the region, or that leaves the chr of the region.
+*/
+async function readTextLines(file, r, callback) {
+	// the same overlap as a tabix query of the region, see tabixRegion() in utils.js
+	const start = Math.max(0, Math.floor(Number(r.start))),
+		stop = Math.max(0, Math.ceil(Number(r.stop)))
+	let inChr = false
+	const input = fs.createReadStream(file)
+	try {
+		for await (const line of readline.createInterface({ input, crlfDelay: Infinity })) {
+			if (!line || line[0] == '#') continue
+			const l = line.split('\t', 3)
+			if (l[0] != r.chr) {
+				// past the lines of the chr
+				if (inChr) break
+				continue
+			}
+			inChr = true
+			// assumes that the lines are sorted by start, so no later line overlaps the region
+			if (Number(l[1]) >= stop) break
+			if (Number(l[2]) >= start) callback(line)
+		}
+	} finally {
+		input.destroy()
+	}
 }
 
 function strokearrow(ctx, strand, x, y, w, h) {
