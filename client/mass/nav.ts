@@ -441,8 +441,8 @@ function setRenderers(self: any): void {
 			.on('mouseover', (event, d) => {
 				self.mouseover(event, d)
 			})
-			.on('mouseout', () => {
-				self.mouseout()
+			.on('mouseout', (event, d) => {
+				self.mouseout(d)
 			})
 
 		self.dom.trs = table.selectAll('tr')
@@ -579,7 +579,7 @@ function setInteractivity(self: any): void {
 
 	self.mouseover = (event: any, d: NavTabCell): void => {
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
-		if (d.subheader == 'user' && d.key == 'btm') self.components.user.showDaysLeftTip(event.currentTarget)
+		if (d.subheader == 'user' && d.key == 'btm') self.components.user?.showDaysLeftTip(event.currentTarget)
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
 			if (t.colNum === d.colNum)
@@ -590,8 +590,8 @@ function setInteractivity(self: any): void {
 		})
 	}
 
-	self.mouseout = () => {
-		self.components.user?.hideDaysLeftTip()
+	self.mouseout = (d: NavTabCell): void => {
+		if (d.subheader == 'user' && d.key == 'btm') self.components.user?.hideDaysLeftTip()
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? defaultActiveColor : 'transparent'))
 	}
