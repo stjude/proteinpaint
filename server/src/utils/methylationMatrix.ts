@@ -2,6 +2,8 @@ import { resolveElementQuery } from '../../routes/termdb.diffMeth.ts'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { buildGroupValues, isFilterGroup } from '#src/utils/sampleGroups.ts'
 import serverconfig from '#src/serverconfig.js'
+import { getAvailableMemoryMB, admitRun, type MemoryCost } from '#src/utils/memory.ts'
+import { getH5shape } from '#src/utils/h5samples.ts'
 
 /* Which methylation matrix a region (DMR) request runs on, and which samples are eligible for it.
 Shared by the single-region and batch routes so the two cannot drift: if they disagreed about the
@@ -251,4 +253,39 @@ export async function resolveGroupNames(
 		buildGroupValues(group2, eligible, ds, null, null, null, null, __protected__)
 	])
 	return { group1: g1.names, group2: g2.names }
+}
+
+/** Peak memory of one rust dmrcate run (the DMR scan, termdb/dmr, geneBodyMeth), by the rows of the matrix file it
+ * fits. dmrcate streams the values in 1,000-row chunks, so neither the samples in the file nor those selected count:
+ * its memory is the file's per-row metadata and results. Measured on the MMRF CpG shards (220,433 to 1,304,718 rows x
+ * 415 samples; 20, 100 and 400 selected; a whole-chromosome scan and a 5 Mb region, which also fits the whole shard),
+ * 2026-10-20, as the process's peak footprint and max RSS, and set at or above every run. The Node server rose ~1 MB
+ * during a genome-wide scan. */
+export const DMRCATE_MEMORY: MemoryCost = { baseMB: 30, perUnitMB: { rows: 0.0004 } }
+
+/** Rows of a methylation matrix file, from the header of its beta/values, read once per file: the files do not
+ * change while the server runs */
+const fileRows = new Map<string, Promise<number>>()
+export function matrixRows(file: string): Promise<number> {
+	if (!fileRows.has(file)) {
+		const rows = getH5shape(file, 'beta/values').then(shape => shape[0])
+		// a failed read is not kept, so the next request tries again
+		rows.catch(() => fileRows.delete(file))
+		fileRows.set(file, rows)
+	}
+	return fileRows.get(file)!
+}
+
+/** Admits dmrcate jobs over these matrix files, `concurrency` at a time (see admitRun): reserves the memory of the
+ * largest jobs that can run together, for the whole run, and returns the release to call in a finally once every
+ * job ends. A scan is refused up front, not after some of its chromosomes have run. */
+export async function admitDmrcateJobs(
+	label: string,
+	files: string[],
+	concurrency: number,
+	refusal: string
+): Promise<() => void> {
+	const largest = (await Promise.all([...new Set(files)].map(matrixRows))).sort((a, b) => b - a).slice(0, concurrency)
+	const cost = { baseMB: DMRCATE_MEMORY.baseMB * largest.length, perUnitMB: DMRCATE_MEMORY.perUnitMB }
+	return admitRun(label, cost, { rows: largest.reduce((sum, r) => sum + r, 0) }, await getAvailableMemoryMB(), refusal)
 }

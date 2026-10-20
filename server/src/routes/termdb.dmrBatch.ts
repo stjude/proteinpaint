@@ -10,7 +10,8 @@ import {
 	requireCpgShards,
 	resolveGroupNames,
 	eligibleMethylationSamples,
-	validateChromosomes
+	validateChromosomes,
+	admitDmrcateJobs
 } from '#src/utils/methylationMatrix.ts'
 import {
 	resolveExcludeBeds,
@@ -370,145 +371,158 @@ export async function runDmrBatch(
 			)
 			const results: { chr: string; windows: ChrEntry[1]; result: any; useElement: boolean }[] = []
 			let next = 0
-			await Promise.all(
-				Array.from({ length: Math.min(CONCURRENCY, jobList.length) }, async () => {
-					while (true) {
-						const i = next++
-						if (i >= jobList.length) return
-						const job = jobList[i]
-						const jobChrs = job.map(e => e[0])
-						const { matrixFile, mvalues, useElement } = resolved.get(jobChrs[0])!
-						/* An element matrix's rows sit ~10 kb apart against a CpG's ~100 bp, so the CpG-scale
-						kernel would smooth nothing there: the element-scale default is the client's 50 kb
-						(client/plots/dmr/settings/defaults.ts), applied when the caller set none. */
-						const lambda = q.lambda ?? (useElement ? ELEMENT_SCALE_LAMBDA : undefined)
-						const input = {
-							probe_h5_file: matrixFile,
-							mvalues,
-							cachedir,
-							genome: q.genome,
-							chr: jobChrs[0],
-							start: 0,
-							stop: 0,
-							regions: job.flatMap(([chr, windows]) => windows.map(w => ({ chr, start: w.start, stop: w.stop }))),
-							case: group2.join(','),
-							control: group1.join(','),
-							fdr_cutoff: q.fdr_cutoff,
-							lambda,
-							C: q.C,
-							bin_bp: q.binMethylation ? METHYLATION_BIN_BP : 0,
-							/* An element matrix holds M-values, not counts, so it cannot be weighted and
-							the binary refuses the pair; a mixed run weights the CpG chromosomes and
-							leaves the fallback ones alone. */
-							weights: mvalues || useElement ? undefined : weights == 'none' ? undefined : weights
-						}
-						const jobResult = JSON.parse(await run_rust('dmrcate', JSON.stringify(input)))
-						if (jobResult.error) throw new Error(`${jobChrs.join(',')}: ${jobResult.error}`)
-						account(jobChrs.join(','), jobResult.diagnostic)
-						/* Per chromosome from here: the job's regions come back in input order, so each
-						chromosome's slice is the result it would have had from its own invocation. */
-						const perChr: { chr: string; windows: ChrEntry[1]; result: any; called: any[] }[] = []
-						let offset = 0
-						for (const [chr, windows] of job) {
-							const result = { ...jobResult, regions: (jobResult.regions || []).slice(offset, offset + windows.length) }
-							offset += windows.length
-							/* Masked here rather than in the assembly loop below so each chromosome's BED
-							query runs inside its own worker slot, alongside the fit it belongs to, instead
-							of serially after every fit has finished. */
-							if (maskFiles.length) {
-								const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
-								if (chrLen) {
-									const mask = await loadMaskIntervals(maskFiles, chr, chrLen)
-									if (mask.length) {
-										for (const r of result.regions || []) {
-											if (!r?.dmrs?.length) continue
-											const kept = r.dmrs.filter((d: any) => maskedFraction(mask, d.start, d.stop) < overlapFrac)
-											dmrsDropped += r.dmrs.length - kept.length
-											r.dmrs = kept
-										}
-									}
-								}
-							}
-							/* Name the regions. A scan returns coordinates; the element volcano returns "XIST",
-							and that word is the difference between a row a reader can act on and one they
-							have to look up. Done here, inside the worker slot, so it is spread across the
-							pool rather than serialised after every fit. */
-							if (geneIdx) {
-								for (const r of result.regions || []) {
-									for (const d of r?.dmrs || []) {
-										const g = genesAt(geneIdx, chr, d.start, d.stop)
-										/* Body overlap is tracked separately from gene membership: promoter and
-										gene-body methylation relate to transcription in opposite directions, so a
-										downstream test about gene bodies must be able to exclude a region that only
-										clips a promoter -- on MMRF that would enlarge the set by 17%. */
-										const body = genesInBody(geneIdx, chr, d.start, d.stop)
-										if (body.length) {
-											d.inGeneBody = true
-											/* Uncapped and body-specific: the gene-body loss set is built from this, not
-											from `genes`, which also holds promoter-only neighbours and is capped. */
-											d.bodyGenes = body
-										}
-										if (!g.length) continue
-										d.genes = g.slice(0, MAX_GENES_PER_DMR)
-										if (g.length > MAX_GENES_PER_DMR) d.genesTruncated = g.length
-									}
-								}
-							}
-							perChr.push({ chr, windows, result, called: (result.regions || []).flatMap((r: any) => r?.dmrs || []) })
-						}
-						/* Matched intergenic background, sampled per chromosome and scored per chromosome,
-						but fitted ONCE per job for the same reason as above. Requires a second rust
-						invocation because the window list has to be built from the DMRs the first one
-						called -- the widths are matched to them. Each chromosome's windows are scored
-						against its own draw, so pooling the invocation changes no number. */
-						if (q.backgroundCorrection) {
-							const draws: { chr: string; called: any[]; windows: any[] }[] = []
-							for (const { chr, called } of perChr) {
-								const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
-								const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
-								if (!excl || !chrLen || !called.length) continue
-								const windows = sampleBackground(
-									chr,
-									chrLen,
-									excl,
-									called.map((d: any) => d.stop - d.start),
-									BG_WINDOWS_PER_CHR,
-									// seeded from the chromosome name so the draw is reproducible and cacheable
-									chrSeed(chr)
-								)
-								if (windows.length) draws.push({ chr, called, windows })
-							}
-							if (draws.length) {
-								const bgRes = JSON.parse(
-									await run_rust(
-										'dmrcate',
-										JSON.stringify({ ...input, regions: [], background_regions: draws.flatMap(d => d.windows) })
-									)
-								)
-								account(`${draws.map(d => d.chr).join(',')} background`, bgRes.diagnostic)
-								let bgOffset = 0
-								for (const { called, windows } of draws) {
-									const background = (bgRes.background || []).slice(bgOffset, bgOffset + windows.length)
-									bgOffset += windows.length
-									const { scored, unscored } = scoreAgainstBackground(called, background)
-									called.forEach((d: any, i: number) => {
-										const sc = scored[i]
-										if (!sc) return
-										d.excess = Math.round(sc.excess * 100000) / 100000
-										d.bgP = sc.p
-									})
-									bgTotals.windows += background.length
-									bgTotals.scored += scored.filter(Boolean).length
-									bgTotals.unscored += unscored
-									bgTotals.significant += scored.filter(s2 => s2 && s2.p < 0.05).length
-								}
-							}
-						}
-						if (jobResult.bin_methylation?.length) binRows.push(...jobResult.bin_methylation)
-						for (const { chr, windows, result } of perChr) results.push({ chr, windows, result, useElement })
-					}
-				})
+			const releaseMemory = await admitDmrcateJobs(
+				'DMR scan',
+				[...jobs.keys()],
+				CONCURRENCY,
+				'Server memory is too low to run this DMR scan right now. Try again later, or scan one chromosome.'
 			)
+			try {
+				await Promise.all(
+					Array.from({ length: Math.min(CONCURRENCY, jobList.length) }, async () => {
+						while (true) {
+							const i = next++
+							if (i >= jobList.length) return
+							const job = jobList[i]
+							const jobChrs = job.map(e => e[0])
+							const { matrixFile, mvalues, useElement } = resolved.get(jobChrs[0])!
+							/* An element matrix's rows sit ~10 kb apart against a CpG's ~100 bp, so the CpG-scale
+							kernel would smooth nothing there: the element-scale default is the client's 50 kb
+							(client/plots/dmr/settings/defaults.ts), applied when the caller set none. */
+							const lambda = q.lambda ?? (useElement ? ELEMENT_SCALE_LAMBDA : undefined)
+							const input = {
+								probe_h5_file: matrixFile,
+								mvalues,
+								cachedir,
+								genome: q.genome,
+								chr: jobChrs[0],
+								start: 0,
+								stop: 0,
+								regions: job.flatMap(([chr, windows]) => windows.map(w => ({ chr, start: w.start, stop: w.stop }))),
+								case: group2.join(','),
+								control: group1.join(','),
+								fdr_cutoff: q.fdr_cutoff,
+								lambda,
+								C: q.C,
+								bin_bp: q.binMethylation ? METHYLATION_BIN_BP : 0,
+								/* An element matrix holds M-values, not counts, so it cannot be weighted and
+								the binary refuses the pair; a mixed run weights the CpG chromosomes and
+								leaves the fallback ones alone. */
+								weights: mvalues || useElement ? undefined : weights == 'none' ? undefined : weights
+							}
+							const jobResult = JSON.parse(await run_rust('dmrcate', JSON.stringify(input)))
+							if (jobResult.error) throw new Error(`${jobChrs.join(',')}: ${jobResult.error}`)
+							account(jobChrs.join(','), jobResult.diagnostic)
+							/* Per chromosome from here: the job's regions come back in input order, so each
+							chromosome's slice is the result it would have had from its own invocation. */
+							const perChr: { chr: string; windows: ChrEntry[1]; result: any; called: any[] }[] = []
+							let offset = 0
+							for (const [chr, windows] of job) {
+								const result = {
+									...jobResult,
+									regions: (jobResult.regions || []).slice(offset, offset + windows.length)
+								}
+								offset += windows.length
+								/* Masked here rather than in the assembly loop below so each chromosome's BED
+								query runs inside its own worker slot, alongside the fit it belongs to, instead
+								of serially after every fit has finished. */
+								if (maskFiles.length) {
+									const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
+									if (chrLen) {
+										const mask = await loadMaskIntervals(maskFiles, chr, chrLen)
+										if (mask.length) {
+											for (const r of result.regions || []) {
+												if (!r?.dmrs?.length) continue
+												const kept = r.dmrs.filter((d: any) => maskedFraction(mask, d.start, d.stop) < overlapFrac)
+												dmrsDropped += r.dmrs.length - kept.length
+												r.dmrs = kept
+											}
+										}
+									}
+								}
+								/* Name the regions. A scan returns coordinates; the element volcano returns "XIST",
+								and that word is the difference between a row a reader can act on and one they
+								have to look up. Done here, inside the worker slot, so it is spread across the
+								pool rather than serialised after every fit. */
+								if (geneIdx) {
+									for (const r of result.regions || []) {
+										for (const d of r?.dmrs || []) {
+											const g = genesAt(geneIdx, chr, d.start, d.stop)
+											/* Body overlap is tracked separately from gene membership: promoter and
+											gene-body methylation relate to transcription in opposite directions, so a
+											downstream test about gene bodies must be able to exclude a region that only
+											clips a promoter -- on MMRF that would enlarge the set by 17%. */
+											const body = genesInBody(geneIdx, chr, d.start, d.stop)
+											if (body.length) {
+												d.inGeneBody = true
+												/* Uncapped and body-specific: the gene-body loss set is built from this, not
+												from `genes`, which also holds promoter-only neighbours and is capped. */
+												d.bodyGenes = body
+											}
+											if (!g.length) continue
+											d.genes = g.slice(0, MAX_GENES_PER_DMR)
+											if (g.length > MAX_GENES_PER_DMR) d.genesTruncated = g.length
+										}
+									}
+								}
+								perChr.push({ chr, windows, result, called: (result.regions || []).flatMap((r: any) => r?.dmrs || []) })
+							}
+							/* Matched intergenic background, sampled per chromosome and scored per chromosome,
+							but fitted ONCE per job for the same reason as above. Requires a second rust
+							invocation because the window list has to be built from the DMRs the first one
+							called -- the widths are matched to them. Each chromosome's windows are scored
+							against its own draw, so pooling the invocation changes no number. */
+							if (q.backgroundCorrection) {
+								const draws: { chr: string; called: any[]; windows: any[] }[] = []
+								for (const { chr, called } of perChr) {
+									const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
+									const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
+									if (!excl || !chrLen || !called.length) continue
+									const windows = sampleBackground(
+										chr,
+										chrLen,
+										excl,
+										called.map((d: any) => d.stop - d.start),
+										BG_WINDOWS_PER_CHR,
+										// seeded from the chromosome name so the draw is reproducible and cacheable
+										chrSeed(chr)
+									)
+									if (windows.length) draws.push({ chr, called, windows })
+								}
+								if (draws.length) {
+									const bgRes = JSON.parse(
+										await run_rust(
+											'dmrcate',
+											JSON.stringify({ ...input, regions: [], background_regions: draws.flatMap(d => d.windows) })
+										)
+									)
+									account(`${draws.map(d => d.chr).join(',')} background`, bgRes.diagnostic)
+									let bgOffset = 0
+									for (const { called, windows } of draws) {
+										const background = (bgRes.background || []).slice(bgOffset, bgOffset + windows.length)
+										bgOffset += windows.length
+										const { scored, unscored } = scoreAgainstBackground(called, background)
+										called.forEach((d: any, i: number) => {
+											const sc = scored[i]
+											if (!sc) return
+											d.excess = Math.round(sc.excess * 100000) / 100000
+											d.bgP = sc.p
+										})
+										bgTotals.windows += background.length
+										bgTotals.scored += scored.filter(Boolean).length
+										bgTotals.unscored += unscored
+										bgTotals.significant += scored.filter(s2 => s2 && s2.p < 0.05).length
+									}
+								}
+							}
+							if (jobResult.bin_methylation?.length) binRows.push(...jobResult.bin_methylation)
+							for (const { chr, windows, result } of perChr) results.push({ chr, windows, result, useElement })
+						}
+					})
+				)
+			} finally {
+				releaseMemory()
+			}
 			const seenDiag = new Set<any>()
 			for (const { chr, windows, result, useElement } of results) {
 				// a job's diagnostic is shared by every chromosome it fitted; count it once

@@ -9,7 +9,8 @@ import {
 	resolveGroupNames,
 	matchedSamplelst,
 	eligibleMethylationSamples,
-	validateChromosomes
+	validateChromosomes,
+	admitDmrcateJobs
 } from '#src/utils/methylationMatrix.ts'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { median, chrSeed } from '#src/utils/dmrStats.ts'
@@ -279,89 +280,99 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 	}
 	const jobList = [...jobs.values()]
 	let next = 0
-	await Promise.all(
-		Array.from({ length: Math.min(CONCURRENCY, jobList.length) }, async () => {
-			while (true) {
-				const i = next++
-				if (i >= jobList.length) return
-				const jobChrs = jobList[i]
-				const { matrixFile, mvalues } = resolveMethylationMatrix(ds, jobChrs[0], q.element_type)
-				/* Corrected: intergenic windows width-matched to the gene bodies ride along in the same
-				rust call, after each chromosome's bodies, so one fit serves both. Same sampler and seed rule
-				as the scan, so the two corrections are the same correction. */
-				const parts: {
-					chr: string
-					bodies: { name: string; start: number; stop: number }[]
-					windows: { chr: string; start: number; stop: number }[]
-				}[] = []
-				for (const chr of jobChrs) {
-					const bodies = byChr.get(chr)!
-					let windows: { chr: string; start: number; stop: number }[] = []
-					if (q.corrected) {
-						const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
-						const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
-						if (!excl) throw new Error('This genome cannot supply an intergenic background (no cCRE track).')
-						windows = sampleBackground(
-							chr,
-							chrLen,
-							excl,
-							bodies.map(b => b.stop - b.start),
-							BG_WINDOWS_PER_CHR,
-							chrSeed(chr)
-						)
-					}
-					parts.push({ chr, bodies, windows })
-				}
-				const out = JSON.parse(
-					await run_rust(
-						'dmrcate',
-						JSON.stringify({
-							probe_h5_file: matrixFile,
-							mvalues,
-							cachedir,
-							genome: q.genome,
-							chr: jobChrs[0],
-							start: 0,
-							stop: 0,
-							regions: [],
-							background_regions: parts.flatMap(p => [
-								...p.bodies.map(b => ({ chr: p.chr, start: b.start, stop: b.stop })),
-								...p.windows
-							]),
-							case: group2.join(','),
-							control: group1.join(',')
-						})
-					)
-				)
-				if (out.error) throw new Error(`${jobChrs.join(',')}: ${out.error}`)
-				const bg: any[] = out.background || []
-				let offset = 0
-				for (const { bodies, windows } of parts) {
-					const bodyRes = bg.slice(offset, offset + bodies.length)
-					const chrWindows = bg.slice(offset + bodies.length, offset + bodies.length + windows.length)
-					offset += bodies.length + windows.length
-					if (!q.corrected) {
-						bodyRes.forEach((b: any, j: number) => {
-							/* A gene body with too few probes has an unstable mean; 5 matches the scan's own
-							minimum CpG count so the two analyses agree on what is measurable. */
-							if (b.delta != null && b.n_probes >= 5) deltaOf[bodies[j].name] = b.delta
-						})
-					} else {
-						const measured = bodyRes
-							.map((b: any, j: number) => ({ j, b }))
-							.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
-						const { scored } = scoreAgainstBackground(
-							measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, meandiff: b.delta })),
-							chrWindows
-						)
-						measured.forEach(({ j }, k) => {
-							const sc = scored[k]
-							if (sc) deltaOf[bodies[j].name] = Math.round(sc.excess * 100000) / 100000
-						})
-					}
-				}
-			}
-		})
+	const releaseMemory = await admitDmrcateJobs(
+		'gene-body methylation',
+		[...jobs.keys()],
+		CONCURRENCY,
+		'Server memory is too low to compare gene-body methylation right now. Try again later.'
 	)
+	try {
+		await Promise.all(
+			Array.from({ length: Math.min(CONCURRENCY, jobList.length) }, async () => {
+				while (true) {
+					const i = next++
+					if (i >= jobList.length) return
+					const jobChrs = jobList[i]
+					const { matrixFile, mvalues } = resolveMethylationMatrix(ds, jobChrs[0], q.element_type)
+					/* Corrected: intergenic windows width-matched to the gene bodies ride along in the same
+					rust call, after each chromosome's bodies, so one fit serves both. Same sampler and seed rule
+					as the scan, so the two corrections are the same correction. */
+					const parts: {
+						chr: string
+						bodies: { name: string; start: number; stop: number }[]
+						windows: { chr: string; start: number; stop: number }[]
+					}[] = []
+					for (const chr of jobChrs) {
+						const bodies = byChr.get(chr)!
+						let windows: { chr: string; start: number; stop: number }[] = []
+						if (q.corrected) {
+							const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
+							const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
+							if (!excl) throw new Error('This genome cannot supply an intergenic background (no cCRE track).')
+							windows = sampleBackground(
+								chr,
+								chrLen,
+								excl,
+								bodies.map(b => b.stop - b.start),
+								BG_WINDOWS_PER_CHR,
+								chrSeed(chr)
+							)
+						}
+						parts.push({ chr, bodies, windows })
+					}
+					const out = JSON.parse(
+						await run_rust(
+							'dmrcate',
+							JSON.stringify({
+								probe_h5_file: matrixFile,
+								mvalues,
+								cachedir,
+								genome: q.genome,
+								chr: jobChrs[0],
+								start: 0,
+								stop: 0,
+								regions: [],
+								background_regions: parts.flatMap(p => [
+									...p.bodies.map(b => ({ chr: p.chr, start: b.start, stop: b.stop })),
+									...p.windows
+								]),
+								case: group2.join(','),
+								control: group1.join(',')
+							})
+						)
+					)
+					if (out.error) throw new Error(`${jobChrs.join(',')}: ${out.error}`)
+					const bg: any[] = out.background || []
+					let offset = 0
+					for (const { bodies, windows } of parts) {
+						const bodyRes = bg.slice(offset, offset + bodies.length)
+						const chrWindows = bg.slice(offset + bodies.length, offset + bodies.length + windows.length)
+						offset += bodies.length + windows.length
+						if (!q.corrected) {
+							bodyRes.forEach((b: any, j: number) => {
+								/* A gene body with too few probes has an unstable mean; 5 matches the scan's own
+								minimum CpG count so the two analyses agree on what is measurable. */
+								if (b.delta != null && b.n_probes >= 5) deltaOf[bodies[j].name] = b.delta
+							})
+						} else {
+							const measured = bodyRes
+								.map((b: any, j: number) => ({ j, b }))
+								.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
+							const { scored } = scoreAgainstBackground(
+								measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, meandiff: b.delta })),
+								chrWindows
+							)
+							measured.forEach(({ j }, k) => {
+								const sc = scored[k]
+								if (sc) deltaOf[bodies[j].name] = Math.round(sc.excess * 100000) / 100000
+							})
+						}
+					}
+				}
+			})
+		)
+	} finally {
+		releaseMemory()
+	}
 	return deltaOf
 }

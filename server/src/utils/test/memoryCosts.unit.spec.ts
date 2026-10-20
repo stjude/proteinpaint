@@ -4,6 +4,7 @@ import { GRIN2_MEMORY } from '#src/grin2/main.ts'
 import { DE_MEMORY } from '#src/routes/termdb.DE.ts'
 import { TOPVE_MEMORY } from '#src/routes/termdb.topVariablyExpressedGenes.ts'
 import { DM_MEMORY } from '../../../routes/termdb.diffMeth.ts'
+import { DMRCATE_MEMORY } from '#src/utils/methylationMatrix.ts'
 
 /*
 Every memory cost must be at or above the peak of each real run it was measured on, so that a cost changed later
@@ -16,6 +17,7 @@ GRIN2
 DE
 topVE
 DM
+DM routes (dmrcate)
 memory.ts @example outputs
 */
 
@@ -121,6 +123,42 @@ tape('DM', test => {
 			estimatePeakMB(DM_MEMORY, { fileCells: rows * fileSamples, cells: rows * selected }),
 			peak
 		)
+	test.end()
+})
+
+tape('DM routes (dmrcate)', test => {
+	// one dmrcate run on an MMRF CpG shard: [rows, peak MB], the larger of time's footprint and max RSS and rust's own
+	for (const [rows, peak] of [
+		[220433, 109] /* chr21 scan 20 selected */,
+		[220433, 101] /* chr21 region 20 selected */,
+		[220433, 104] /* chr21 scan 100 selected */,
+		[220433, 94] /* chr21 region 100 selected */,
+		[220433, 107] /* chr21 scan 400 selected */,
+		[220433, 94] /* chr21 region 400 selected */,
+		[415660, 189] /* chr13 scan 20 selected */,
+		[415660, 154] /* chr13 region 20 selected */,
+		[415660, 184] /* chr13 scan 100 selected */,
+		[415660, 154] /* chr13 region 100 selected */,
+		[415660, 186] /* chr13 scan 400 selected */,
+		[415660, 159] /* chr13 region 400 selected */,
+		[769648, 317] /* chr12 scan 20 selected */,
+		[769648, 258] /* chr12 region 20 selected */,
+		[769648, 315] /* chr12 scan 100 selected */,
+		[769648, 264] /* chr12 region 100 selected */,
+		[769648, 322] /* chr12 scan 400 selected */,
+		[769648, 255] /* chr12 region 400 selected */,
+		[1304718, 507] /* chr1 scan 20 selected */,
+		[1304718, 430] /* chr1 region 20 selected */,
+		[1304718, 524] /* chr1 scan 100 selected */,
+		[1304718, 425] /* chr1 region 100 selected */,
+		[1304718, 533] /* chr1 scan 400 selected */,
+		[1304718, 411] /* chr1 region 400 selected */
+	])
+		covers(test, `${rows} rows`, estimatePeakMB(DMRCATE_MEMORY, { rows }), peak)
+	// a genome-wide scan through the server, two jobs at once: admitted as the two largest shards (chr2 + chr1)
+	const twoJobs = { baseMB: 2 * DMRCATE_MEMORY.baseMB, perUnitMB: DMRCATE_MEMORY.perUnitMB }
+	for (const peak of [791, 749, 739])
+		covers(test, 'scan, 2 jobs at once', estimatePeakMB(twoJobs, { rows: 1377009 + 1304718 }), peak)
 	test.end()
 })
 

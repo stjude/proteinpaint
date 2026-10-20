@@ -17,5 +17,18 @@ export const specs: Record<string, ToolSpec> = {
 			file: { type: 'file', roots: ['tp'] }
 		},
 		argv: ['-d', '$dataset', '$file']
+	},
+	// the header of a dataset only, which gives its dimensions without reading its values
+	'h5dump.shape': {
+		bin: () => 'h5dump',
+		fields: {
+			dataset: {
+				type: 'string',
+				pattern: /^\/?[A-Za-z0-9_][A-Za-z0-9_.]*(\/[A-Za-z0-9_][A-Za-z0-9_.]*)*$/,
+				maxLength: 256
+			},
+			file: { type: 'file', roots: ['tp'] }
+		},
+		argv: ['-H', '-d', '$dataset', '$file']
 	}
 }
