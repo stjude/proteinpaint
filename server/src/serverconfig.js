@@ -75,7 +75,6 @@ if (process.env.PP_SERVERCONFIG_OVERRIDES) {
 // this default port may be overwritten when using a Docker container
 if (!serverconfig.port) serverconfig.port = process.env.PP_PORT || 3000
 // default binary cmd paths
-if (!serverconfig.tabix) serverconfig.tabix = 'tabix'
 if (!serverconfig.samtools) serverconfig.samtools = 'samtools'
 if (!serverconfig.bcftools) serverconfig.bcftools = 'bcftools'
 if (!serverconfig.hicstraw) serverconfig.hicstraw = 'straw'

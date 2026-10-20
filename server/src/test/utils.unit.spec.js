@@ -550,19 +550,8 @@ tape('spawn helpers reject when the process cannot be spawned', async test => {
 	const helpers = {
 		get_lines_bigfile: () =>
 			utils.get_lines_bigfile({ args: ['view', '-h', 'x.bcf'], isbcf: true, dir, callback: () => {} }),
-		// a cwd must be under cachedir, so a dir that does not exist there is used
-		readTabixLines: () =>
-			utils.readTabixLines({
-				file: x_gz,
-				dir: cacheDir,
-				regions: [{ chr: 'chr1', start: 1, stop: 2 }],
-				callback: () => {}
-			}),
-		readTabixHeader: () => utils.readTabixHeader(x_gz, cacheDir),
-		listTabixChrs: () => utils.listTabixChrs(x_gz, cacheDir),
 		get_lines_txtfile: () => utils.get_lines_txtfile({ args: ['x.txt'], dir, callback: () => {} }),
 		get_header_txt: () => utils.get_header_txt('x.txt', dir),
-		get_header_bcf: () => utils.get_header_bcf('x.bcf', dir),
 		bam_ifnochr: () => utils.bam_ifnochr('x.bam', {}, dir)
 	}
 	for (const [name, fn] of Object.entries(helpers)) {

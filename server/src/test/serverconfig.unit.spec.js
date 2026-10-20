@@ -331,15 +331,15 @@ tape('serverconfig: a polluted Object.prototype is not read as a top-level setti
 })
 
 tape('serverconfig: the prototype is removed before any setting is read or defaulted', async test => {
-	// tabix is defaulted by serverconfig.js when not set, and is the executable path for spawned tabix processes
-	Object.prototype.tabix = '/zz-polluted'
+	// samtools is defaulted by serverconfig.js when not set, and is the executable path for spawned samtools processes
+	Object.prototype.samtools = '/zz-polluted'
 	try {
 		const { default: config } = await import('../serverconfig.js?pollution=before-import')
 		test.equal(Object.getPrototypeOf(config), null, 'should have a null prototype')
-		test.equal(Object.hasOwn(config, 'tabix'), true, 'should apply the default instead of using an inherited value')
-		test.notEqual(config.tabix, '/zz-polluted', 'should not use the polluted tabix')
+		test.equal(Object.hasOwn(config, 'samtools'), true, 'should apply the default instead of using an inherited value')
+		test.notEqual(config.samtools, '/zz-polluted', 'should not use the polluted samtools')
 	} finally {
-		delete Object.prototype.tabix
+		delete Object.prototype.samtools
 	}
 	test.end()
 })

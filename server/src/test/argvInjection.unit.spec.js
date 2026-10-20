@@ -22,11 +22,12 @@ A request value that lands in a samtools/tabix argv and starts with "-" is parse
 coord="-cr/etc/passwd" made `samtools faidx` read and echo a server file, a region chr="-o/path" made
 `samtools view` write to an arbitrary path, and chr="-fc" made tabix rebuild a track index.
 Each route below is driven with those payloads; the request must be rejected before any tool runs.
-When samtools/tabix are installed, the specs also assert on the filesystem that nothing was read,
-written or re-indexed; those assertions are skipped when the binaries are absent.
+When samtools is installed, the specs also assert on the filesystem that nothing was read or written;
+those assertions are skipped when it is absent. A tabix file is read in process, see tabix.ts, and the specs
+assert that its index is not changed.
 
 test sections:
-- get_fasta() defense in depth with '--'
+- get_fasta() with a chr that looks like an option
 - /ntseq
 - /tkbam
 - /mdsjunction
@@ -39,7 +40,6 @@ test sections:
 */
 
 const hasSamtools = spawnSync(serverconfig.samtools, ['--version']).status === 0
-const hasTabix = spawnSync(serverconfig.tabix, ['--version']).status === 0
 
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-argv-'))
 const leakMarker = 'LEAK_MARKER_' + crypto.randomUUID()
@@ -83,21 +83,18 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('get_fasta() defense in depth with "--"', async test => {
-	if (!hasSamtools) {
-		test.comment('samtools not found, skipped')
-		return test.end()
-	}
+tape('get_fasta() with a chr that looks like an option', async test => {
 	const fa = path.join(tmpdir, 'ref.fa')
 	fs.writeFileSync(fa, '>chr1\nACGTACGTAC\n')
+	fs.writeFileSync(fa + '.fai', 'chr1\t10\t6\t10\t11\n')
 	const g = getGenome(fa)
-	// a genome fasta must be under tpmasterdir, see the samtools.faidx spec of server/src/tools
+	// a genome fasta must be under tpmasterdir, see fasta.ts
 	const tp = serverconfig.tpmasterdir
 	serverconfig.tpmasterdir = tmpdir
 	test.teardown(() => (serverconfig.tpmasterdir = tp))
 	test.equal(await utils.get_fasta(g, 'chr1:2-5'), '>chr1:2-5\nCGTA', 'should return sequence from a real fasta')
 
-	// even if a genome declared a chr that looks like an option, '--' keeps samtools from parsing it as one
+	// even if a genome declared a chr that looks like an option, the fasta is read in process, where it is only a name
 	const evil = `-cr${leakFile}`
 	g.chrlookup[evil.toUpperCase()] = { name: evil, len: 10 }
 	// check the outcome whether get_fasta() resolves or rejects, so a leak on stdout cannot pass silently
@@ -117,17 +114,14 @@ tape('/ntseq', async test => {
 		test.deepEqual(r, { error: 'cannot get sequence' }, `should reject coord=${JSON.stringify(coord)}`)
 	}
 
-	if (hasSamtools) {
-		const fa = path.join(tmpdir, 'ntseq.fa')
-		fs.writeFileSync(fa, '>chr1\nACGTACGTAC\n')
-		const realHandler = ntseqApi.methods.get.init({ genomes: { hg38: getGenome(fa) } })
-		const leak = await send(realHandler, { genome: 'hg38', coord: `-cr${leakFile}` })
-		test.notOk(JSON.stringify(leak).includes(leakMarker), 'should not leak file contents through the error message')
-		await send(realHandler, { genome: 'hg38', coord: `--fai-idx=${tmpdir}/pwn.fai` })
-		test.notOk(fs.existsSync(`${tmpdir}/pwn.fai`), 'should not write an index to a requested path')
-	} else {
-		test.comment('samtools not found, skipped the filesystem assertions')
-	}
+	const fa = path.join(tmpdir, 'ntseq.fa')
+	fs.writeFileSync(fa, '>chr1\nACGTACGTAC\n')
+	fs.writeFileSync(fa + '.fai', 'chr1\t10\t6\t10\t11\n')
+	const realHandler = ntseqApi.methods.get.init({ genomes: { hg38: getGenome(fa) } })
+	const leak = await send(realHandler, { genome: 'hg38', coord: `-cr${leakFile}` })
+	test.notOk(JSON.stringify(leak).includes(leakMarker), 'should not leak file contents through the error message')
+	await send(realHandler, { genome: 'hg38', coord: `--fai-idx=${tmpdir}/pwn.fai` })
+	test.notOk(fs.existsSync(`${tmpdir}/pwn.fai`), 'should not write an index to a requested path')
 	test.end()
 })
 
@@ -208,10 +202,8 @@ tape('/mdsjunction', async test => {
 	})
 	test.match(String(urlAttack?.error), /url must not start with "-"/, 'should reject a url starting with "-"')
 
-	if (hasTabix) {
-		test.equal(sha(tbi), tbiHash, 'should not rebuild the track .tbi')
-		test.notOk(fs.existsSync(csi), 'should not drop a .csi beside the track')
-	}
+	test.equal(sha(tbi), tbiHash, 'should not rebuild the track .tbi')
+	test.notOk(fs.existsSync(csi), 'should not drop a .csi beside the track')
 	test.end()
 })
 
@@ -291,15 +283,13 @@ tape('spawnTool() central guard', async test => {
 		test.doesNotThrow(() => utils.spawnTool('true', args).kill(), `should allow ${JSON.stringify(args)}`)
 	}
 
-	// readTabixLines() checks each region by the tabix.query spec, so a route that forgot to validate its chr is still covered
+	// readTabixLines() reads in process, where a chr is only the name of a chromosome to read, so a route that
+	// forgot to validate its chr is still covered
 	const file = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest/TermdbTest_ITD.gz')
 	const tbiHash = sha(file + '.tbi')
-	try {
-		await utils.readTabixLines({ file, regions: [{ chr: '-fc', start: 1, stop: 2 }], callback: () => {} })
-		test.fail('readTabixLines should reject a region-shaped option')
-	} catch (e) {
-		test.equal(e, 'tabix.query: invalid regions', 'readTabixLines should reject a region-shaped option')
-	}
+	const lines = []
+	await utils.readTabixLines({ file, regions: [{ chr: '-fc', start: 1, stop: 2 }], callback: l => lines.push(l) })
+	test.deepEqual(lines, [], 'readTabixLines should read no lines of a chr that starts with "-"')
 	test.equal(sha(file + '.tbi'), tbiHash, 'should not rebuild the track .tbi')
 	test.end()
 })

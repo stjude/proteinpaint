@@ -118,15 +118,12 @@ tape('basic bedj & bw test, could be expanded', test => {
 			test.equal(leftAxisTickLabels[0].innerHTML, '−12', 'left axis bottom tick value is -12')
 		}
 		{
-			// missing bedj file, read with tabix since it is named .gz
+			// missing bedj file, read as a tabix file since it is named .gz, see server/src/tabix.ts
 			const t = bb.tklst[7]
 			test.equal(t.name, 'bad bed gz', 'tk named bad bed gz exists')
 			const b = t.img.node().getBBox()
 			test.ok(b.width == 0 && b.height == 0, 'bad bed gz <image> width=height=0')
-			test.ok(
-				t.gerror?.text().startsWith('[E::hts_open_format] Failed to open file'),
-				'gerror text begins with "[E::hts_open_format] Failed to open file"'
-			)
+			test.equal(t.gerror?.text(), 'cannot open the tabix file', 'gerror text is "cannot open the tabix file"')
 		}
 		if (test['_ok']) holder.remove()
 		test.end()

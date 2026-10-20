@@ -52,7 +52,7 @@ function getBaseConfig() {
 		],
 		features: {
 			// the R packages, samtools, and bcftools that this startup check requires are not needed by
-			// request tests; the TermdbTest dataset still requires tabix and h5dump to load
+			// request tests; the TermdbTest dataset still requires h5dump to load
 			skip_checkDependenciesAndVersions: true
 		},
 		// debugmode would otherwise allow PP_URL, PP_BASEPATH, and other env values to override this config

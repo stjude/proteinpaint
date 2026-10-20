@@ -298,6 +298,9 @@ function samplematrixQuery(flag, url, indexURL) {
 
 // callers whose url and indexURL come from a dataset config, not a request; they still go through utils.cache_index()
 const configCallers = ['km.js', 'mds3.init.js']
+// callers of a url that another caller gives them, which has its own case; tabix.ts gets the cache dir of a url
+// that is given without one, see the url file section of tabix.unit.spec.ts
+const libraryCallers = ['tabix.ts']
 
 tape('\n', async function (test) {
 	test.comment('-***- cache_index() caller specs -***-')
@@ -347,10 +350,11 @@ tape('every cache_index() call uses utils.cache_index()', test => {
 	walk(srcDir)
 	test.deepEqual(ownDefinition, [], 'only utils.js should define cache_index()')
 	test.deepEqual(notImported, [], 'a bare cache_index() call should be the import from utils.js')
-	// a new caller needs a case in routeCases[], or in configCallers[] if its url only comes from dataset config
+	// a new caller needs a case in routeCases[], or in configCallers[] if its url only comes from dataset config,
+	// or in libraryCallers[] if its url comes from another caller
 	test.deepEqual(
 		[...callers].sort(),
-		[...new Set([...routeCases.map(c => c.file), ...configCallers])].sort(),
+		[...new Set([...routeCases.map(c => c.file), ...configCallers, ...libraryCallers])].sort(),
 		'every caller should have a case'
 	)
 	test.end()

@@ -11,13 +11,17 @@ import { cacheUrlProtocols } from './CacheManager.ts'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import { minimatch } from 'minimatch'
-import { runTool, runToolOutput } from './tools/index.ts'
+import { runTool } from './tools/index.ts'
+import { readFastaRegion } from './fasta.ts'
+import { readTabixLines, readTabixHeader, listTabixChrs } from './tabix.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
 export * from './cachedFetch.js'
 export * from './xfetch.js'
 export { connect_db } from './sql.ts'
+// the reads of a bgzipped, tabix-indexed file, see tabix.ts
+export { readTabixLines, readTabixHeader, listTabixChrs }
 
 const { samtools, bcftools, bigBedInfo } = serverconfig
 
@@ -243,7 +247,7 @@ export function illegalPathSegment(s) {
 // allow the protocols that are declared as 'url' subdirs in cacheRegistry: any other name could be a
 // feature dir under cachedir (e.g. massSession, bam), and a ".." segment in the body would walk out of cachedir
 
-function test_url(u) {
+export function test_url(u) {
 	const tmp = u.split('://')
 	if (tmp.length != 2) return ['improper url']
 	if (u[0] == '-') return ['url must not start with "-"'] // would be parsed as a samtools/tabix option
@@ -361,8 +365,12 @@ function isUnderDir(file, dir) {
 }
 // redirects of an index url that are followed by download_index(), see there
 const MAX_INDEX_REDIRECTS = 5
+// the upper limit of the size of a downloaded index, in bytes; an index is parsed in memory, and a large bam or
+// tabix index is about 10MB
+const MAX_INDEX_BYTES = 64 * 2 ** 20
+const indexTooLarge = 'index file is too large'
 
-async function download_index(url, tofile) {
+export async function download_index(url, tofile) {
 	/* try to download the index file
 
 	must detect following:
@@ -371,6 +379,7 @@ async function download_index(url, tofile) {
 	- a redirect to a url whose host is not allowed, see illegalUrlHost(): fetch would otherwise
 	  follow a redirect from an allowed url to an internal host such as 169.254.169.254, so redirects
 	  are followed here and the destination of each is checked
+	- a file larger than MAX_INDEX_BYTES, by its content-length or by the bytes that are read
 
 	if any is true, the index file is not saved
 	*/
@@ -393,21 +402,31 @@ async function download_index(url, tofile) {
 		const hostErr = illegalUrlHost(url)
 		if (hostErr) throw 'index url redirect error: ' + hostErr
 	}
+	if (res.status != 200 || Number(res.headers.get('content-length')) > MAX_INDEX_BYTES) {
+		await res.body?.cancel()
+		throw res.status != 200 ? 'cannot download from url' : indexTooLarge
+	}
 	try {
-		if (res.status != 200) {
-			throw 'index file not accessible from url with status code ' + res.status
-		}
-		await stream2file(Readable.fromWeb(res.body), tofile)
+		await stream2file(Readable.fromWeb(res.body), tofile, MAX_INDEX_BYTES)
 	} catch (e) {
-		throw 'cannot download from url'
+		throw e === indexTooLarge ? e : 'cannot download from url'
 	}
 }
-async function stream2file(from, file) {
+async function stream2file(from, file, maxBytes) {
 	// write to a unique temp sibling and rename only after the download succeeds: rename is atomic, so a concurrent
 	// cache_index() or tabix never sees a partial index, and a failed download leaves nothing behind
 	const tmp = `${file}.${process.pid}.${Math.random().toString().slice(2)}.tmp`
+	// a response without a content-length, or with a wrong one, is stopped once it has more than maxBytes
+	let bytes = 0
+	const limit = async function* (source) {
+		for await (const chunk of source) {
+			bytes += chunk.length
+			if (bytes > maxBytes) throw indexTooLarge
+			yield chunk
+		}
+	}
 	try {
-		await pipeline(from, fs.createWriteStream(tmp))
+		await pipeline(from, limit, fs.createWriteStream(tmp))
 		await fs.promises.rename(tmp, file)
 	} finally {
 		await fs.promises.rm(tmp, { force: true }) // no-op after a successful rename
@@ -588,17 +607,9 @@ export async function get_header_txt(file, dir) {
 	for await (const line of readLines(file, dir)) return line.trim() // the loop closes the file on return
 	return ''
 }
-export function get_header_bcf(file, dir) {
-	// file is full path or url
-	return new Promise((resolve, reject) => {
-		const ps = spawnTool(bcftools, ['view', '-h', file], { cwd: dir })
-		const out = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.on('error', reject)
-		ps.on('close', () => {
-			resolve(vcf.vcfparsemeta(out.join('').trim().split('\n')))
-		})
-	})
+export async function get_header_bcf(file, dir) {
+	// file is full path or url; the header of a bcf file is read as vcf, see readTabixHeader()
+	return vcf.vcfparsemeta(await readTabixHeader(file, dir))
 }
 export async function get_header_vcf(file, dir) {
 	return vcf.vcfparsemeta(await get_header_tabix(file, dir))
@@ -646,93 +657,6 @@ export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, i
 			if (e && !tabixnoterror(e)) {
 				reject(e)
 			}
-			resolve()
-		})
-	})
-}
-
-/*
-The reads of a bgzipped, tabix-indexed file, without the caller knowing which tool or library reads it.
-
-file: the full path of a local file, or a url
-dir: the cache dir of a url file, from cache_index(), where its index is kept; none for a local file
-regions: [{chr, start, stop}], with the coordinates that tabix reads, where a start before 0 is read as 0
-callback(line, stop): called with each line; stop() ends the read early, such as when too many lines are read
-	A callback that throws rejects the read.
-
-The read rejects with the tool's error output, unless it is a known warning, see tabixnoterror().
-*/
-/**
- * @param {{ file: string, dir?: string | null, regions: { chr: string, start: number | string, stop: number | string }[],
- * 	callback: (line: string, stop: () => void) => void }} arg
- */
-export async function readTabixLines({ file, dir = null, regions, callback }) {
-	if (!Array.isArray(regions) || !regions.length) throw 'regions[] missing'
-	if (typeof callback != 'function') throw 'callback() not a function'
-	await readToolLines('tabix.query', { file, regions: regions.map(tabixRegion), dir: dir || null }, callback)
-}
-
-/** returns the header lines of a tabix file */
-export async function readTabixHeader(file, dir) {
-	const lines = []
-	await readToolLines('tabix.header', { file, dir: dir || null }, line => lines.push(line))
-	return lines
-}
-
-/** returns the chromosome names of a tabix file, which also works for a bcf file */
-export async function listTabixChrs(file, dir) {
-	const lines = []
-	await readToolLines('tabix.listChrs', { file, dir: dir || null }, line => lines.push(line))
-	return lines
-}
-
-/** returns chr:start-stop of a region; a coordinate may be a numeric string, or fractional when computed from a view */
-function tabixRegion(r) {
-	const coord = v => {
-		if (typeof v == 'string' && /^-?\d+(\.\d+)?$/.test(v)) v = Number(v)
-		if (typeof v != 'number' || !Number.isFinite(v)) throw 'invalid region coordinate'
-		return v
-	}
-	if (!r || typeof r.chr != 'string') throw 'invalid region chr'
-	return `${r.chr}:${Math.max(0, Math.floor(coord(r.start)))}-${Math.max(0, Math.ceil(coord(r.stop)))}`
-}
-
-/** reads the stdout lines of a tool op, see readTabixLines() for the callback and the rejections */
-function readToolLines(op, input, callback) {
-	return new Promise((resolve, reject) => {
-		// throws on an invalid input, which rejects this promise
-		const ps = runTool(op, input)
-		const rl = readline.createInterface({ input: ps.stdout })
-		const em = []
-		let stopped = false,
-			failed = false,
-			failure
-		const stop = () => {
-			stopped = true
-			rl.close()
-			ps.kill()
-		}
-		rl.on('line', line => {
-			if (stopped) return
-			try {
-				callback(line, stop)
-			} catch (e) {
-				failed = true
-				failure = e
-				stop()
-			}
-		})
-		ps.stderr.on('data', d => em.push(d))
-		// e.g. a missing cwd; without a listener, the 'error' event would crash the process
-		ps.on('error', reject)
-		ps.on('close', (code, signal) => {
-			if (failed) return reject(failure)
-			// a stopped read is killed, so its exit and error output, if any, are not about the lines that were read
-			if (stopped) return resolve()
-			const e = em.join('').trim()
-			// such as a file that cannot be opened; the lines that were read may be incomplete
-			if (code !== 0 || signal) return reject(e || `${op} exited with ${signal ? `signal ${signal}` : `code ${code}`}`)
-			if (e && !tabixnoterror(e)) return reject(e)
 			resolve()
 		})
 	})
@@ -804,13 +728,8 @@ export async function get_fasta(gn, coord) {
 		return `>${pos}\n${'N'.repeat(p.stop - p.start + 1)}` // must include fasta header line
 	}
 
-	// chr:start-stop, positions are 1-based
-	const { code, stdout, stderr } = await runToolOutput('samtools.faidx', { fasta: gn.genomefile, region: pos })
-	// get_lines_bigfile(), which this replaced, rejected on stderr output that is not a known warning
-	const e = stderr.trim()
-	if (e && !tabixnoterror(e)) throw e
-	if (code !== 0) throw `samtools faidx exited with code ${code}`
-	return stdout.trim()
+	// positions are 1-based
+	return await readFastaRegion(gn.genomefile, p.chr, p.start, p.stop)
 }
 
 export const genotype_type_set = new Set(['Homozygous reference', 'Homozygous alternative', 'Heterozygous'])

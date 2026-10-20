@@ -11,7 +11,6 @@ import { specs as hicstrawSpecs } from './hicstraw.ts'
 import { specs as rscriptSpecs } from './rscript.ts'
 import { specs as samtoolsSpecs } from './samtools.ts'
 import { specs as systemSpecs } from './system.ts'
-import { specs as tabixSpecs } from './tabix.ts'
 import { specs as versionSpecs } from './versions.ts'
 
 /*
@@ -26,10 +25,6 @@ Each operation has a spec, in a file of this dir, with its input fields and an a
 - checks every value slot again: a non-empty string of bounded length, with no control character, that does
   not start with "-"
 - throws before the tool is started if any check fails
-
-A spec may also give the working dir of the tool, as a file field under cachedir, such as the dir where tabix keeps the
-index that it downloads for a url. That is the only field that may be optional. It is not an argument, and is checked
-as an absolute path under cachedir, which may have the characters of a url, see checkCacheDir().
 
 runToolOutput() does the same and resolves with the exit code and output of the tool.
 
@@ -58,18 +53,13 @@ export type Field =
 	/** an array of 1 to maxItems values of the item field, which fill consecutive argv slots */
 	| { type: 'list'; item: Field; maxItems: number }
 
-/** optional: the field may be undefined or null, which is only allowed for the cwd field */
-export type FieldSpec = Field & { optional?: boolean }
-
 export type ToolSpec = {
 	/** the binary, from serverconfig, which is read when the tool is started */
 	bin: () => string
-	fields: Readonly<Record<string, FieldSpec>>
+	fields: Readonly<Record<string, Field>>
 	/** each item is a literal argument; "$name" for the value of the field name, after an optional literal prefix such
 	 * as -chrom=; or "...$name" for the values of the list field name */
 	argv: readonly string[]
-	/** "$name" of a file field under cachedir that is the working dir of the tool */
-	cwd?: string
 }
 
 /** an argv item that is a field slot */
@@ -98,7 +88,6 @@ export const specs: Readonly<Record<string, ToolSpec>> = deepFreeze(
 		rscriptSpecs,
 		samtoolsSpecs,
 		systemSpecs,
-		tabixSpecs,
 		versionSpecs
 	])
 )
@@ -115,11 +104,11 @@ for (const [op, spec] of Object.entries(specs)) checkSpec(op, spec)
 export function runTool(op: string, input: Record<string, unknown>): ChildProcessWithoutNullStreams {
 	const spec = Object.hasOwn(specs, op) ? specs[op] : undefined
 	if (!spec) throw `unknown tool operation: ${op}`
-	const { argv, cwd } = getCall(op, spec, input)
+	const argv = getArgv(op, spec, input)
 	const bin = spec.bin()
 	if (typeof bin != 'string' || !bin) throw `${op}: tool binary is not configured`
 	// no shell option, so that the default of no shell is used and each argument reaches the tool as one literal string
-	return cwd ? spawn(bin, argv, { cwd }) : spawn(bin, argv)
+	return spawn(bin, argv)
 }
 
 /** same as runTool(), and resolves with the exit code and output; rejects with the error if the tool cannot be started */
@@ -140,31 +129,17 @@ export function runToolOutput(op: string, input: Record<string, unknown>): Promi
 
 /** returns the argv of an op from its input, or throws */
 export function getArgv(op: string, spec: ToolSpec, input: Record<string, unknown>): string[] {
-	return getCall(op, spec, input).argv
-}
-
-/** returns the argv and working dir of an op from its input, or throws */
-export function getCall(op: string, spec: ToolSpec, input: Record<string, unknown>): { argv: string[]; cwd?: string } {
 	if (!input || typeof input != 'object' || Object.getPrototypeOf(input) !== Object.prototype)
 		throw `${op}: input must be a plain object`
 	for (const k of Object.keys(input)) {
 		if (!Object.hasOwn(spec.fields, k)) throw `${op}: unexpected input field ${k}`
 	}
-	const cwdName = spec.cwd ? parseSlot(spec.cwd)!.name : undefined
 	const values = new Map<string, string | string[]>()
 	for (const [name, field] of Object.entries(spec.fields)) {
 		const msg = `${op}: invalid ${name}`
-		if (field.optional && (input[name] === undefined || input[name] === null)) continue
 		if (!Object.hasOwn(input, name)) throw `${op}: missing input field ${name}`
 		const v = input[name]
-		values.set(
-			name,
-			name === cwdName
-				? checkCacheDir(v, msg)
-				: field.type == 'list'
-				? checkList(field, v, msg)
-				: checkField(field, v, msg)
-		)
+		values.set(name, field.type == 'list' ? checkList(field, v, msg) : checkField(field, v, msg))
 	}
 	const argv: string[] = []
 	for (const a of spec.argv) {
@@ -180,9 +155,7 @@ export function getCall(op: string, spec: ToolSpec, input: Record<string, unknow
 			argv.push(slot.prefix + s)
 		}
 	}
-	const cwd = cwdName ? (values.get(cwdName) as string | undefined) : undefined
-	if (cwd !== undefined && !isSafeValueArg(cwd)) throw `${op}: invalid ${cwdName}`
-	return { argv, cwd }
+	return argv
 }
 
 /** returns the argument strings of a list field value, or throws msg */
@@ -238,21 +211,6 @@ function checkFile(v: unknown, roots: readonly FileRoot[], msg: string): string 
 		if (file.startsWith(root + path.sep)) return file
 	}
 	throw msg
-}
-
-/*
-returns the absolute path of a working dir under cachedir, or throws msg. The dir is not an argument, so its characters
-are not limited like a file path: the cache dir of a url, from cache_index in utils.js, keeps the url body, which may have a port,
-percent-encoded characters, or a query string. It must not have a ".." segment or a control character.
-*/
-export function checkCacheDir(v: unknown, msg: string): string {
-	// eslint-disable-next-line no-control-regex
-	if (typeof v != 'string' || v.length > maxArgLength || /[\x00-\x1f\x7f]/.test(v)) throw msg
-	if (!path.isAbsolute(v) || v.split('/').includes('..')) throw msg
-	const root = path.resolve(cachedir)
-	const dir = path.resolve(v)
-	if (!dir.startsWith(root + path.sep)) throw msg
-	return dir
 }
 
 function checkAbsoluteFile(v: unknown, msg: string): string {
@@ -312,15 +270,6 @@ export function checkSpec(op: string, spec: ToolSpec) {
 		if (slot.spread != (field.type == 'list'))
 			throw `tool spec ${op}: only a list field is used as ...$name, and always so`
 		if (slot.spread && slot.prefix) throw `tool spec ${op}: argv ${a} must not have a prefix`
-		if (field.optional) throw `tool spec ${op}: field ${slot.name} in argv must not be optional`
-	}
-	if (spec.cwd !== undefined) {
-		const slot = parseSlot(spec.cwd)
-		if (!slot || slot.prefix || slot.spread) throw `tool spec ${op}: cwd must be $name`
-		use(slot.name, `cwd ${spec.cwd}`)
-		const field = spec.fields[slot.name]
-		if (field.type != 'file' || field.roots.join() != 'cache' || field.debugmodeAnyRoot)
-			throw `tool spec ${op}: cwd must be a file field with only the cache root`
 	}
 	for (const [name, field] of Object.entries(spec.fields)) {
 		if (!used.has(name)) throw `tool spec ${op}: field ${name} is not used in argv`

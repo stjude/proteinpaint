@@ -10,7 +10,6 @@ import { getH5samples } from '#src/utils/h5samples.ts'
 import { validate_cumburden } from '#src/mds3.init.js'
 import { getMaxLesions } from '#src/grin2/memory.ts'
 import { checkDependenciesAndVersions } from '#src/checkDependenciesAndVersions.js'
-import fs from 'fs'
 import * as utils from '#src/utils.js'
 import { StandIns } from './standIns.ts'
 
@@ -32,10 +31,6 @@ getH5samples()
 validate_cumburden()
 getMaxLesions()
 checkDependenciesAndVersions()
-readTabixLines(), readTabixHeader(), listTabixChrs()
-readTabixHeader(): the cache dir of a url, and an ftp url
-readTabixLines(): an exit that is not normal rejects, unless the read is stopped
-get_fasta()
 query_bigbed_by_coord(), query_bigbed_by_name(), testIfFileIsBigbed()
 */
 
@@ -368,181 +363,6 @@ tape('checkDependenciesAndVersions()', async test => {
 		standIns.restorePath()
 		if (skip !== undefined) features.skip_checkDependenciesAndVersions = skip
 	}
-	standIns.reset()
-	test.end()
-})
-
-tape('readTabixLines(), readTabixHeader(), listTabixChrs()', async test => {
-	// the real tool, with a test file that has 2 lines on chr17
-	const file = path.join(tp, 'files/hg38/TermdbTest/TermdbTest_ITD.gz')
-	const region = { chr: 'chr17', start: 1, stop: 100000000 }
-	const lines: string[] = []
-	await utils.readTabixLines({ file, regions: [region], callback: line => lines.push(line) })
-	test.equal(lines.length, 2, 'should read the lines of a region')
-	test.deepEqual(await utils.listTabixChrs(file), ['chr17'], 'should list the chromosomes')
-	test.ok((await utils.readTabixHeader(file))[0]?.startsWith('#sample'), 'should read the header lines')
-	const first: string[] = []
-	await utils.readTabixLines({ file, regions: [region], callback: (line, stop) => (first.push(line), stop()) })
-	test.equal(first.length, 1, 'should stop reading when the callback calls stop()')
-	try {
-		await utils.readTabixLines({
-			file,
-			regions: [region],
-			callback: () => {
-				throw 'bad line'
-			}
-		})
-		test.fail('should reject when the callback throws')
-	} catch (e) {
-		test.equal(e, 'bad line', 'should reject with the error of the callback')
-	}
-
-	// a stand-in, to check the argv and the working dir
-	const tabix = standIns.add('tabix', 'pwd -P')
-	const dir = fs.mkdtempSync(path.join(cache, 'pp-callsites-'))
-	await withConfig('tabix', tabix, async () => {
-		const out: string[] = []
-		await utils.readTabixLines({
-			file: 'files/x.gz',
-			dir,
-			regions: [
-				{ chr: 'chr1', start: -5, stop: '10.5' },
-				{ chr: 'chr2', start: 1.5, stop: 2 }
-			],
-			callback: line => out.push(line)
-		})
-		test.deepEqual(
-			standIns.calls('tabix'),
-			[[path.join(tp, 'files/x.gz'), 'chr1:0-11', 'chr2:1-2']],
-			'should pass each region as an argument, with integer coordinates from 0'
-		)
-		test.deepEqual(out, [fs.realpathSync(dir)], 'should run tabix in the cache dir of a url file')
-		standIns.reset()
-		await utils.readTabixHeader('files/x.gz')
-		await utils.listTabixChrs('files/x.gz')
-		test.deepEqual(
-			standIns.calls('tabix'),
-			[
-				['-H', path.join(tp, 'files/x.gz')],
-				['-l', path.join(tp, 'files/x.gz')]
-			],
-			'should pass -H and -l'
-		)
-		standIns.reset()
-		for (const [label, input] of [
-			['a chr that is an option', { regions: [{ chr: '-o', start: 1, stop: 2 }] }],
-			['a chr with shell syntax', { regions: [{ chr: 'chr1;ls', start: 1, stop: 2 }] }],
-			['a coordinate that is not a number', { regions: [{ chr: 'chr1', start: '1;ls', stop: 2 }] }],
-			['no region', { regions: [] }],
-			['a file outside tp', { file: '/etc/passwd' }],
-			['a dir outside cachedir', { dir: '/tmp' }]
-		] as const) {
-			try {
-				const base = { file: 'files/x.gz', regions: [{ chr: 'chr1', start: 1, stop: 2 }], callback: () => {} }
-				await utils.readTabixLines(Object.assign(base, input) as any)
-				test.fail(`should reject ${label}`)
-			} catch (_) {
-				test.pass(`should reject ${label}`)
-			}
-		}
-		test.deepEqual(standIns.calls('tabix'), [], 'should not start tabix for a rejected call')
-	})
-	fs.rmSync(dir, { recursive: true, force: true })
-	standIns.reset()
-	test.end()
-})
-
-tape('readTabixHeader(): the cache dir of a url, and an ftp url', async test => {
-	const tabix = standIns.add('tabix', 'pwd -P')
-	const features = serverconfig.features
-	const allow = features.ALLOW_remotefilefromurl
-	features.ALLOW_remotefilefromurl = true
-	// the cache dir keeps the url body, with its port, percent-encoded characters, and query string
-	const url = 'https://a.org:8443/x%20y/t.gz?token=1&v=2'
-	const dir = await utils.cache_index(url, undefined)
-	try {
-		await withConfig('tabix', tabix, async () => {
-			test.ok(/[:%?&]/.test(path.relative(cache, dir)), 'should have url characters in the cache dir name')
-			test.deepEqual(
-				await utils.readTabixHeader(url, dir),
-				[fs.realpathSync(dir)],
-				'should run tabix in the cache dir of the url'
-			)
-			standIns.reset()
-			const ftp = 'ftp://a.org/x/t.gz'
-			await utils.readTabixHeader(ftp, await utils.cache_index(ftp, undefined))
-			test.deepEqual(standIns.calls('tabix'), [['-H', ftp]], 'should pass an ftp url, as fileurl() allows it')
-		})
-	} finally {
-		if (allow === undefined) delete features.ALLOW_remotefilefromurl
-		else features.ALLOW_remotefilefromurl = allow
-		fs.rmSync(path.join(cache, 'https/a.org:8443'), { recursive: true, force: true })
-		fs.rmSync(path.join(cache, 'ftp/a.org'), { recursive: true, force: true })
-		standIns.reset()
-	}
-	test.end()
-})
-
-tape('readTabixLines(): an exit that is not normal rejects, unless the read is stopped', async test => {
-	const file = 'files/x.gz'
-	const regions = [{ chr: 'chr1', start: 1, stop: 2 }]
-	for (const [label, script, re] of [
-		['a nonzero exit without error output', 'echo line; exit 3', /tabix.query exited with code 3/],
-		['a nonzero exit with error output', 'echo line; echo cannot open >&2; exit 1', /cannot open/],
-		['a signal', 'echo line; kill -TERM $$', /tabix.query exited with signal SIGTERM/]
-	] as const) {
-		const tabix = standIns.add('tabix', script)
-		await withConfig('tabix', tabix, async () => {
-			const lines: string[] = []
-			try {
-				await utils.readTabixLines({ file, regions, callback: line => lines.push(line) })
-				test.fail(`should reject ${label}`)
-			} catch (e) {
-				test.match(String(e), re, `should reject ${label}`)
-			}
-		})
-	}
-	// a stopped read is killed, which is not an error
-	const tabix = standIns.add('tabix', 'echo a; echo b; exec sleep 30')
-	await withConfig('tabix', tabix, async () => {
-		const lines: string[] = []
-		await utils.readTabixLines({ file, regions, callback: (line, stop) => (lines.push(line), stop()) })
-		test.deepEqual(lines, ['a'], 'should resolve a read that the callback stops')
-	})
-	standIns.reset()
-	test.end()
-})
-
-tape('get_fasta()', async test => {
-	const samtools = standIns.add('samtools', `printf '>chr1:100-200\\nACGT\\n'`)
-	const gn = { genomefile: path.join(tp, 'genomes/x.fa.gz'), chrlookup: genome.chrlookup }
-	await withConfig('samtools', samtools, async () => {
-		test.equal(
-			await utils.get_fasta(gn, 'chr1:100-200'),
-			'>chr1:100-200\nACGT',
-			'should return the fasta of the region'
-		)
-		test.deepEqual(
-			standIns.calls('samtools'),
-			[['faidx', gn.genomefile, '--', 'chr1:100-200']],
-			'should pass the region after --'
-		)
-		standIns.reset()
-		for (const [label, g, coord] of [
-			['a coordinate that is an option, which only get_fasta() checks', gn, '-o'],
-			['a chromosome without a range, which only get_fasta() checks', gn, 'chr1'],
-			['a coordinate outside the chromosome, which only get_fasta() checks', gn, 'chr1:100-99999999'],
-			['a genome fasta outside tp', { ...gn, genomefile: '/etc/passwd' }, 'chr1:100-200']
-		] as const) {
-			try {
-				await utils.get_fasta(g, coord)
-				test.fail(`should reject ${label}`)
-			} catch (_) {
-				test.pass(`should reject ${label}`)
-			}
-		}
-		test.deepEqual(standIns.calls('samtools'), [], 'should not start samtools for a rejected call')
-	})
 	standIns.reset()
 	test.end()
 })

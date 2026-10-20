@@ -13,7 +13,8 @@ import { setMovedRoutes } from './movedRoutes.js'
 import { init as onesampletkInit } from '../j2/onesampletk.ts'
 
 /*
-Specs for the request values that are passed as arguments to samtools, tabix and other tools.
+Specs for the request values that are passed as arguments to samtools and other tools, or to the reads of
+tabix files, which are in process, see tabix.ts.
 
 The server starts these tools with spawn() and an argument array, so each request value reaches a tool
 as one literal argument. The test values below have special characters, such as $(...), backticks, ";",

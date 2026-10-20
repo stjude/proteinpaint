@@ -29,6 +29,7 @@ test sections:
 - /tkbedj, /tabixheader via the real route table
 - cache_index() index download is atomic
 - cache_index() checks the host of each index url redirect
+- cache_index() limits the size of a downloaded index
 */
 
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-cacheidx-'))
@@ -53,6 +54,23 @@ function startServer() {
 				} else if (req.url.startsWith('/broken/')) {
 					res.write('PART1-')
 					setTimeout(() => res.socket.destroy(), 100)
+				} else if (req.url.startsWith('/large-length/')) {
+					// a content-length over the limit, of which only the first bytes are sent
+					res.writeHead(200, { 'content-length': String(65 * 2 ** 20) })
+					res.write('PART1-')
+					setTimeout(() => res.socket?.destroy(), 2000)
+				} else if (req.url.startsWith('/large-stream/')) {
+					// over the limit, without a content-length
+					const chunk = Buffer.alloc(2 ** 20)
+					let sent = 0
+					const write = () => {
+						while (sent < 65 && !res.destroyed) {
+							sent++
+							if (!res.write(chunk)) return res.once('drain', write)
+						}
+						res.end()
+					}
+					write()
 				} else res.end('ATTACKER_BYTES ' + req.url)
 			})
 			.listen(0, '127.0.0.1', () => {
@@ -323,6 +341,27 @@ tape('cache_index() checks the host of each index url redirect', async test => {
 		'should stop following a redirect loop'
 	)
 
+	fs.rmSync(path.join(serverconfig.cachedir, 'http', H), { recursive: true, force: true })
+	test.end()
+})
+
+tape('cache_index() limits the size of a downloaded index', async test => {
+	const tmpFiles = dir => fs.readdirSync(dir).filter(f => f.endsWith('.tmp'))
+	for (const [name, label] of [
+		['large-length', 'by its content-length'],
+		['large-stream', 'by the bytes that are read, without a content-length']
+	]) {
+		const url = `http://${H}/${name}/t.gz`
+		const dir = path.join(serverconfig.cachedir, 'http', H, name, 't.gz')
+		await rejects(
+			test,
+			() => utils.cache_index(url, `http://${H}/${name}/t.gz.tbi`),
+			/index file is too large/,
+			`should reject an index that is too large, ${label}`
+		)
+		test.notOk(fs.existsSync(path.join(dir, 't.gz.tbi')), `should not save an index that is too large, ${label}`)
+		test.deepEqual(tmpFiles(dir), [], `should leave no temp file, ${label}`)
+	}
 	fs.rmSync(path.join(serverconfig.cachedir, 'http', H), { recursive: true, force: true })
 	test.end()
 })
