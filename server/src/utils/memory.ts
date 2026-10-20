@@ -1,5 +1,6 @@
-/** Memory utilities for heavy processes such as GRIN2: read the available system memory in megabytes, size a run to
- * fit in a share of it with a linear cost, and refuse a run that cannot fit. */
+/** Memory utilities for heavy processes (GRIN2, DE, DM, top variably expressed genes): read the available system memory
+ * in megabytes, estimate a run's peak from a cost measured on real runs, and either refuse a run that does not fit or
+ * cap the size that may be trimmed. */
 
 import fs from 'fs'
 import os from 'os'
@@ -61,18 +62,51 @@ export function getCgroupInactiveFileBytes(readFile = (file: string) => fs.readF
 	}
 }
 
-/** Peak memory of one run of a heavy process, as a line: baseMB plus perUnitMB for each unit the run holds (a lesion,
- * a matrix row, a sample×gene cell). Fit it to measured runs, and pick values at or above every run. */
-export type MemoryCost = { baseMB: number; perUnitMB: number }
+/** Peak memory of one run of a heavy process, as a line in the sizes that drive it: baseMB, plus perUnitMB[size] for
+ * each unit of that size the run holds. A size is anything the run grows with: lesions for GRIN2, samples x genes
+ * cells for DE, the rows x samples a methylation file holds, samples for top variably expressed genes. Fit it to
+ * measured runs, and pick values at or above every run. */
+export type MemoryCost = { baseMB: number; perUnitMB: Record<string, number> }
+
+/** The size of one run in each of the units of a MemoryCost */
+export type MemoryUnits = Record<string, number>
 
 /** Share of the available memory that one run may plan for. The rest is headroom for runs that start at the same time
  * and read the same available memory, for the rest of the server, and for error in the cost. */
 export const RUN_MEMORY_FRACTION = 0.4
 
-/** The most units of `cost` that fit in `fraction` of `availableMB`; 0 when even the base does not fit. Callers decide
- * what to do with the count: cap the run at it, or refuse a run that needs more. */
-export function maxUnitsThatFit(availableMB: number, cost: MemoryCost, fraction = RUN_MEMORY_FRACTION): number {
-	return Math.max(0, Math.floor((availableMB * fraction - cost.baseMB) / cost.perUnitMB))
+/** The MB that a run of these sizes needs by `cost`. Every size of the cost must be given, so a caller cannot leave one
+ * out and get a low estimate. */
+export function memoryNeededMB(cost: MemoryCost, units: MemoryUnits): number {
+	let mb = cost.baseMB
+	for (const [size, perUnit] of Object.entries(cost.perUnitMB)) {
+		if (!Number.isFinite(units[size])) throw new Error(`memory cost needs the run's ${size}`)
+		mb += perUnit * units[size]
+	}
+	return mb
+}
+
+/** Whether a run of these sizes fits in `fraction` of `availableMB`. Callers that must not trim a run refuse one that
+ * does not fit, e.g. `if (!fitsInMemory(...)) throw lowMemoryError(...)`. */
+export function fitsInMemory(
+	cost: MemoryCost,
+	units: MemoryUnits,
+	availableMB: number,
+	fraction = RUN_MEMORY_FRACTION
+): boolean {
+	return memoryNeededMB(cost, units) <= availableMB * fraction
+}
+
+/** The most units of `size` that fit in `fraction` of `availableMB`; 0 when even the base does not fit. Callers that may
+ * trim a run cap it at this count. The cost must have no other size (memoryNeededMB throws if it does). */
+export function maxUnitsThatFit(
+	availableMB: number,
+	cost: MemoryCost,
+	size: string,
+	fraction = RUN_MEMORY_FRACTION
+): number {
+	const base = memoryNeededMB(cost, { [size]: 0 })
+	return Math.max(0, Math.floor((availableMB * fraction - base) / cost.perUnitMB[size]))
 }
 
 /** The error for a run refused because memory is low: status 503 and code LOW_MEMORY, with a message that tells the

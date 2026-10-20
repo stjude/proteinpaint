@@ -1,9 +1,10 @@
 import tape from 'tape'
-import { pickDeEngine } from '#src/routes/termdb.DE.ts'
+import { pickDeEngine, checkDeMemory } from '#src/routes/termdb.DE.ts'
 
 /** Tests
  * - pickDeEngine() engine selection
  * - pickDeEngine() DE_method sent to R
+ * - checkDeMemory() refusal and the wilcoxon suggestion
  */
 
 /**************
@@ -62,5 +63,54 @@ tape('DE_method handed to R', function (test) {
 			)
 		}
 	}
+	test.end()
+})
+
+tape('checkDeMemory', function (test) {
+	const genes = 17928 // ASH, where the costs were measured
+	// the error message, or '' when the run fits
+	const check = (
+		method: 'edgeR' | 'limma' | 'wilcoxon',
+		n1: number,
+		n2: number,
+		freeMB: number,
+		opts: { runDE_methods?: string[]; confounded?: boolean } = {}
+	) => {
+		try {
+			checkDeMemory({ method, n1, n2, genes, availableMB: freeMB, ...opts })
+			return ''
+		} catch (e: any) {
+			test.equal(e.code, 'LOW_MEMORY', `${method} ${n1}v${n2} at ${freeMB} MB => code LOW_MEMORY`)
+			test.equal(e.status, 503, `${method} ${n1}v${n2} at ${freeMB} MB => status 503`)
+			return e.message
+		}
+	}
+	const smaller = 'Select a smaller cohort.'
+	const orWilcoxon = 'Select a smaller cohort, or use the Wilcoxon method, which needs less memory.'
+
+	test.equal(check('edgeR', 300, 700, 16000), '', 'edgeR on 1,000 samples fits in 16 GB')
+	test.ok(
+		check('edgeR', 1508, 2930, 12000).endsWith(orWilcoxon),
+		'edgeR on 4,438 samples at 12 GB => suggests wilcoxon, which fits'
+	)
+	test.ok(check('limma', 1000, 2000, 12000).endsWith(orWilcoxon), 'limma on 3,000 samples => suggests wilcoxon')
+	test.ok(
+		check('limma', 1508, 2930, 12000).includes('on 4,438 samples'),
+		'the message says how many samples were selected'
+	)
+	test.ok(
+		check('edgeR', 1508, 2930, 12000, { runDE_methods: ['edgeR', 'Limma'] }).endsWith(smaller),
+		'wilcoxon not offered by this server => only a smaller cohort'
+	)
+	test.ok(check('limma', 1508, 2930, 4000).endsWith(smaller), 'wilcoxon would not fit either => only a smaller cohort')
+	test.ok(
+		check('edgeR', 1508, 2930, 12000, { confounded: true }).endsWith(smaller),
+		'a run with confounders => no wilcoxon, which would drop the adjustment'
+	)
+	test.ok(
+		check('edgeR', 6, 6, 1000).endsWith(smaller),
+		'groups of 8 or fewer => no wilcoxon, which would fall back to edgeR'
+	)
+	test.ok(check('wilcoxon', 1508, 2930, 4000).endsWith(smaller), 'wilcoxon itself too big => only a smaller cohort')
 	test.end()
 })

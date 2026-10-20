@@ -7,6 +7,8 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { getAvailableMemoryMB, fitsInMemory, lowMemoryError, type MemoryCost } from '#src/utils/memory.ts'
+import { getH5samples } from '#src/utils/h5samples.ts'
 import {
 	buildGroupValues,
 	canonicalizeSamplelst,
@@ -277,6 +279,18 @@ async function runDeFresh(
 	// must be decided before expression_input is built; see pickDeEngine
 	const { engine, DE_method } = pickDeEngine(param.method, groups.group1names.length, groups.group2names.length)
 
+	// Refused before R or rust starts when the run would not fit in memory. Dropping genes or samples to make it fit
+	// would change the statistics, so the user is asked for a smaller cohort instead.
+	const genes = (await getH5samples(input_file!, 'item')).length
+	checkDeMemory({
+		method: DE_method,
+		n1: groups.group1names.length,
+		n2: groups.group2names.length,
+		genes,
+		availableMB: await getAvailableMemoryMB(),
+		confounded: Boolean(param.tw || param.tw2)
+	})
+
 	const expression_input = {
 		case: groups.group2names.join(','),
 		control: groups.group1names.join(','),
@@ -348,6 +362,48 @@ async function runDeFresh(
 }
 
 // ─── helpers ─── //
+
+/** Peak memory of one DE run by engine, per cell of the samples x genes counts matrix it reads. Measured on ASH (17,928
+ * genes, 102 to 4,438 samples, 2026-10-19) as the R or rust child's peak footprint plus the Node server's rise, and
+ * set at or above every run. The real curves are not straight: edgeR levels off and limma keeps climbing, so a large
+ * edgeR run is overestimated by up to ~3 GB. Only ASH was measured, so the cost per cell on another dataset is unverified. */
+export const DE_MEMORY: Record<'edgeR' | 'limma' | 'wilcoxon', MemoryCost> = {
+	edgeR: { baseMB: 950, perUnitMB: { cells: 1.8 / 17928 } },
+	limma: { baseMB: 1100, perUnitMB: { cells: 2.1 / 17928 } },
+	wilcoxon: { baseMB: 250, perUnitMB: { cells: 0.45 / 17928 } }
+}
+
+/** Throws LOW_MEMORY when a DE run of n1 + n2 samples and `genes` genes does not fit in the available memory. The
+ * message suggests wilcoxon too when this run is edgeR or limma without confounders (wilcoxon adjusts for none),
+ * wilcoxon would fit, the groups are large enough that wilcoxon would not fall back to edgeR, and this server offers
+ * it (features.runDE_methods lists the offered methods). */
+export function checkDeMemory(opts: {
+	method: 'edgeR' | 'limma' | 'wilcoxon'
+	n1: number
+	n2: number
+	genes: number
+	availableMB: number
+	/** the run adjusts for a confounder (tw or tw2) */
+	confounded?: boolean
+	runDE_methods?: string[]
+}): void {
+	const { method, n1, n2, genes, availableMB, confounded } = opts
+	const runDE_methods = 'runDE_methods' in opts ? opts.runDE_methods : serverconfig.features?.runDE_methods
+	const cells = (n1 + n2) * genes
+	if (fitsInMemory(DE_MEMORY[method], { cells }, availableMB)) return
+	const tryWilcoxon =
+		method != 'wilcoxon' &&
+		!confounded &&
+		(!runDE_methods || runDE_methods.includes('Wilcoxon')) &&
+		pickDeEngine('wilcoxon', n1, n2).engine == 'wilcoxon' &&
+		fitsInMemory(DE_MEMORY.wilcoxon, { cells }, availableMB)
+	throw lowMemoryError(
+		`Server memory is too low to run this differential expression analysis on ${(n1 + n2).toLocaleString()} samples. ` +
+			(tryWilcoxon
+				? 'Select a smaller cohort, or use the Wilcoxon method, which needs less memory.'
+				: 'Select a smaller cohort.')
+	)
+}
 
 /** Decide which pipeline runs, and the DE_method label handed to R.
  *
