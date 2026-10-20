@@ -1,6 +1,7 @@
 import tape from 'tape'
 import jsonwebtoken from 'jsonwebtoken'
 import { AuthApi } from '#src/auth/AuthApi.ts'
+import { validateDsCredentials } from '#src/auth/auth.dsCredentials.ts'
 
 /*************************
  reusable constants and helper functions
@@ -886,6 +887,88 @@ tape('AuthApi: an open wildcard embedder entry does not require a login', functi
 		'should not include an open entry in dsAuth'
 	)
 	test.equal(authApi.isUserLoggedIn(req, { label: dslabel }, true), true, 'should not require a session')
+	test.end()
+})
+
+tape('AuthApi.getRequiredCredForDsEmbedder: only lists the matched cred of each route', async function (test) {
+	test.timeoutAfter(500)
+
+	const genomes = { hg38: { datasets: { [dslabel]: {} } } }
+	const getAuthApi = async (creds: any) => {
+		await validateDsCredentials(creds, genomes)
+		return new AuthApi(creds, makeMockApp(), genomes, { port: 3000, cachedir: '/tmp' })
+	}
+
+	// the generated forbidden '*' entry
+	const authApi0 = await getAuthApi({ [dslabel]: { termdb: { 'portal.example.org': { type: 'open' } } } })
+	test.equal(
+		authApi0.getRequiredCredForDsEmbedder(dslabel, 'portal.example.org'),
+		undefined,
+		'should not list a generated forbidden entry for an embedder with an open entry'
+	)
+	test.deepEqual(
+		authApi0.getRequiredCredForDsEmbedder(dslabel, 'other.example.org')?.map(c => `${c.route}=${c.type}`),
+		['termdb=forbidden'],
+		'should list the generated forbidden entry for an unlisted embedder'
+	)
+
+	// an explicit jwt '*' entry
+	const authApi1 = await getAuthApi({
+		[dslabel]: { termdb: { 'portal.example.org': { type: 'open' }, '*': { type: 'jwt', secret } } }
+	})
+	test.equal(
+		authApi1.getRequiredCredForDsEmbedder(dslabel, 'portal.example.org'),
+		undefined,
+		`should not list an explicit '*' entry for an embedder with an open entry`
+	)
+	test.deepEqual(
+		authApi1.getRequiredCredForDsEmbedder(dslabel, 'other.example.org')?.map(c => `${c.route}=${c.type}`),
+		['termdb=jwt'],
+		`should list the explicit '*' entry for an unlisted embedder`
+	)
+	test.end()
+})
+
+tape('AuthApi: session lookup with an authorization header skips a cred without a secret', async function (test) {
+	test.timeoutAfter(500)
+
+	const genomes = { hg38: { datasets: { [dslabel]: {} } } }
+	const creds: any = {
+		[dslabel]: {
+			termdb: { 'portal.example.org': { type: 'jwt', secret } },
+			burden: { '*': { type: 'open' } }
+		}
+	}
+	await validateDsCredentials(creds, genomes)
+	const authApi = new AuthApi(creds, makeMockApp(), genomes, { port: 3000, cachedir: '/tmp' })
+	const req: any = {
+		query: { dslabel, embedder: 'other.example.org' },
+		path: '/genomes',
+		headers: { authorization: `Bearer ${Buffer.from('a.b.c').toString('base64')}` },
+		cookies: {},
+		get: () => 'other.example.org'
+	}
+
+	try {
+		const dsAuth = authApi.getDsAuth(req)
+		test.deepEqual(
+			dsAuth.map(a => `${a.route}=${a.type}:${a.insession}`),
+			['termdb=forbidden:false'],
+			'should report a forbidden route as not in session'
+		)
+	} catch (e) {
+		test.fail(`getDsAuth() should not throw: ${JSON.stringify(e)}`)
+	}
+
+	try {
+		test.deepEqual(
+			authApi.getNonsensitiveInfo(req),
+			{ forbiddenRoutes: ['termdb'], clientAuthResult: {} },
+			'should return empty session metadata when no matched cred has a secret'
+		)
+	} catch (e) {
+		test.fail(`getNonsensitiveInfo() should not throw: ${e}`)
+	}
 	test.end()
 })
 
