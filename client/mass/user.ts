@@ -35,6 +35,18 @@ export function getAuthStatus(signedIn: boolean, isPublic?: boolean): string {
 	return isPublic === true ? 'Public access' : 'You are signed in.'
 }
 
+/**
+ * For a session opened from a `mass-session-id` URL, the days before the server removes it. The nav shows text in the
+ * bottom row of the user tab, and tip as its tooltip. undefined if the number of days is not available
+ */
+export function getDaysLeft(days: unknown): { text: string; tip: string } | undefined {
+	if (typeof days != 'number' || !Number.isFinite(days)) return
+	return {
+		text: `${days} ${days == 1 ? 'day' : 'days'} left`,
+		tip: 'The server keeps a session opened from a link for a limited time, and removes it when the days run out. To keep your work, select "Save" in this tab to create a new session, then use "Share" to get its link.'
+	}
+}
+
 export class MassUser implements RxComponent {
 	static type = 'user'
 
@@ -71,10 +83,7 @@ export class MassUser implements RxComponent {
 		this.opts = opts
 		this.app = opts.app
 		this.subheader = opts.subheader
-		// no margin, so that the option buttons have the same spacing as the chart buttons in the charts tab,
-		// which are appended directly to that subheader
 		const sessionDiv = this.subheader.append('div').attr('data-testid', 'sjpp-massnav-user-session')
-		// states the purpose of the option buttons, on the same row. the side margins are the same as the gap between the buttons
 		sessionDiv
 			.append('span')
 			.attr('data-testid', 'sjpp-massnav-user-session-label')
@@ -98,15 +107,6 @@ export class MassUser implements RxComponent {
 				.attr('id', 'sjpp-massnav-user-session-menu')
 				.attr('data-testid', 'sjpp-massnav-user-session-content')
 				.style('margin', '0 10px'),
-			// how long the server keeps a session that was opened from a `mass-session-id` URL, under the options
-			// and what an option renders
-			daysLeftDiv: sessionDiv
-				.append('div')
-				.attr('data-testid', 'sjpp-massnav-user-session-days-left')
-				.style('display', 'none')
-				.style('margin', '0 10px 10px 10px')
-				.style('font-size', '0.9em')
-				.style('opacity', 0.65),
 			copytip: new Menu({ padding: '5px' })
 		}
 		this.sessionOptions = [
@@ -147,13 +147,20 @@ export class MassUser implements RxComponent {
 		}
 	}
 
-	/** Render static contents once on launching mass ui */
+	/** Adds the methods that nav.ts calls on the api, since only the api is available outside the component */
+	preApiFreeze(api: any) {
+		api.showDaysLeftTip = (e: HTMLElement) => {
+			const tip = getDaysLeft(this.opts.sessionDaysLeft)?.tip
+			if (tip) this.dom.copytip.clear().showunder(e).d.append('div').style('max-width', '300px').text(tip)
+		}
+		api.hideDaysLeftTip = () => this.dom?.copytip?.hide()
+	}
+
 	async init(appState: any) {
 		this.dslabel = appState.vocab.dslabel
 		this.savedSessions = JSON.parse(localStorage.getItem('savedMassSessions') || `{}`)
 		this.setRequiredAuth(appState.termdbConfig)
 		this.initSessionOptions()
-		this.renderDaysLeft()
 	}
 
 	async main() {
@@ -217,16 +224,6 @@ export class MassUser implements RxComponent {
 				.style('margin-left', '5px')
 				.style('opacity', 0.75)
 				.text(userTab.msg)
-	}
-
-	/** For a session opened from a `mass-session-id` URL, the number of days before the server removes it */
-	renderDaysLeft() {
-		const days = this.opts.sessionDaysLeft
-		// info not available, do not show the message
-		if (typeof days != 'number' || !Number.isFinite(days)) return
-		const div = this.dom.daysLeftDiv.style('display', 'block')
-		div.append('u').text(`${days} ${days == 1 ? 'day' : 'days'}`)
-		div.append('span').text(' left until this session is removed. Select "Save" to create a new one.')
 	}
 
 	/**

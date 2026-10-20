@@ -4,7 +4,7 @@ import { chartsInit } from './charts'
 import { groupsInit } from './groups'
 import { aboutInit } from './about.ts'
 import { chatInit } from './chat.ts'
-import { userInit } from './user'
+import { userInit, getDaysLeft } from './user'
 import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
 import type { NavTab, NavTabCell } from './types/nav'
@@ -526,6 +526,8 @@ function setRenderers(self: any): void {
 						const n = self.samplecounts[self.filterJSON] != undefined ? '' + self.samplecounts[self.filterJSON] : ''
 						return d.key === 'mid' ? filter.lst.length : n
 					}
+				} else if (d.subheader === 'user' && d.key == 'btm') {
+					return getDaysLeft(self.app.opts.sessionDaysLeft)?.text || '&nbsp;'
 				} else {
 					return d.key === 'mid' ? this.innerHTML : '&nbsp;'
 				}
@@ -577,6 +579,7 @@ function setInteractivity(self: any): void {
 
 	self.mouseover = (event: any, d: NavTabCell): void => {
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
+		if (d.subheader == 'user' && d.key == 'btm') self.components.user.showDaysLeftTip(event.currentTarget)
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
 			if (t.colNum === d.colNum)
@@ -588,6 +591,7 @@ function setInteractivity(self: any): void {
 	}
 
 	self.mouseout = () => {
+		self.components.user?.hideDaysLeftTip()
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? defaultActiveColor : 'transparent'))
 	}

@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { clearServerDataCache } from '#common/dofetch'
-import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from '../user.ts'
+import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus, getDaysLeft } from '../user.ts'
 
 /**
  * Tests
@@ -12,7 +12,7 @@ import { MassUser, datasetRequiresAuth, getDeletionBatches, getAuthStatus } from
  *  - MassUser setRequiredAuth()
  *  - MassUser renderAuthInfo()
  *  - MassUser renderAuthInfo() userTab
- *  - MassUser renderDaysLeft()
+ *  - getDaysLeft()
  *  - MassUser renderSessionOptions()
  *  - MassUser spacing under what an option renders
  *  - MassUser init() with sessions saved in the browser
@@ -409,53 +409,18 @@ tape('MassUser renderAuthInfo() userTab', test => {
 	test.end()
 })
 
-tape('MassUser renderDaysLeft()', test => {
-	const testid = '[data-testid="sjpp-massnav-user-session-days-left"]'
+tape('getDaysLeft()', test => {
 	for (const [days, text] of [
-		[12, '12 days'],
-		[1, '1 day'],
-		[0, '0 days']
+		[12, '12 days left'],
+		[1, '1 day left'],
+		[0, '0 days left']
 	] as [number, string][]) {
-		const { user, holder } = getUser({ sessionDaysLeft: days, sessionId: 'abc' })
-		user.renderDaysLeft()
-		const div = holder.select(testid)
-		test.equal(div.style('display'), 'block', `should show the message for ${days} days left`)
-		test.equal(div.select('u').text(), text, `should underline '${text}'`)
-		test.equal(
-			div.text(),
-			`${text} left until this session is removed. Select "Save" to create a new one.`,
-			`should show the message for ${days} days left`
-		)
-		holder.remove()
+		const res = getDaysLeft(days)!
+		test.equal(res.text, text, `should show '${text}'`)
+		test.true(res.tip.includes('"Save"'), `should explain how to save a new session for ${days} days left`)
 	}
-
-	// the message is under the row of options, and under where an option renders
-	{
-		const { user, holder } = getUser({ sessionDaysLeft: 12, sessionId: 'abc' })
-		user.renderDaysLeft()
-		const ids = Array.from(
-			(holder.select('[data-testid="sjpp-massnav-user-session"]').node() as HTMLElement).children
-		).map(c => c.getAttribute('data-testid'))
-		test.deepEqual(
-			ids,
-			[
-				'sjpp-massnav-user-session-label',
-				'sjpp-massnav-user-session-options',
-				'sjpp-massnav-user-session-content',
-				'sjpp-massnav-user-session-days-left'
-			],
-			'should show the message under the options and what an option renders'
-		)
-		holder.remove()
-	}
-
 	for (const days of [null, undefined, NaN, '12' as any]) {
-		const { user, holder } = getUser({ sessionDaysLeft: days, sessionId: 'abc' })
-		user.renderDaysLeft()
-		const div = holder.select(testid)
-		test.equal(div.style('display'), 'none', `should not show the message for sessionDaysLeft=${days}`)
-		test.equal(div.text(), '', `should be empty for sessionDaysLeft=${days}`)
-		holder.remove()
+		test.equal(getDaysLeft(days), undefined, `should not show days left for ${days}`)
 	}
 	test.end()
 })
@@ -536,8 +501,15 @@ tape('MassUser renderSessionOptions()', test => {
 tape('MassUser spacing under what an option renders', async test => {
 	const { user, holder } = getUser()
 	user.sessionOptions = [
-		{ label: 'Render', title: 'render', callback: () => user.dom.contentDiv.append('div').text('x') },
-		{ label: 'Nothing', title: 'nothing', callback: () => {} }
+		{
+			label: 'Render',
+			icon: '',
+			title: 'render',
+			callback: () => {
+				user.dom.contentDiv.append('div').text('x')
+			}
+		},
+		{ label: 'Nothing', icon: '', title: 'nothing', callback: () => {} }
 	]
 	user.renderSessionOptions()
 	// the inline style, since the computed style is never empty

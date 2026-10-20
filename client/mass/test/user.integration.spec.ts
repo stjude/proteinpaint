@@ -11,7 +11,7 @@ import { dofetch, dofetch3, clearServerDataCache } from '#common/dofetch'
  *  - user tab for a dataset that requires authorization
  *  - launch when the lookup of the sessions on the server fails
  *  - user tab when no cohort is selected
- *  - Export Session and days left message for a session opened from a url
+ *  - Export Session and days left tab text for a session opened from a url
  */
 
 /*************************
@@ -566,7 +566,7 @@ tape('user tab when no cohort is selected', test => {
 	}
 })
 
-tape('Export Session and days left message for a session opened from a url', test => {
+tape('Export Session and days left tab text for a session opened from a url', test => {
 	test.timeoutAfter(5000)
 	runpp({
 		sessionDaysLeft: 12,
@@ -588,17 +588,18 @@ tape('Export Session and days left message for a session opened from a url', tes
 			'should not show Export Session in the nav controls'
 		)
 
-		const msg = nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-days-left"]')
-		test.notEqual(msg.style('display'), 'none', 'should show the days left message in the user tab')
-		test.equal(
-			msg.text(),
-			'12 days left until this session is removed. Select "Save" to create a new one.',
-			'should show the number of days left'
+		const tab = nav.Inner.dom.tds.filter((d: any) => d.subheader == 'user' && d.key == 'btm').node()
+		test.equal(tab.textContent, '12 days left', 'should show the number of days left in the user tab')
+		tab.dispatchEvent(new MouseEvent('mouseover'))
+		test.true(
+			document.querySelector('.sja_menu_div')!.textContent!.includes('"Save"'),
+			'should explain how to save a new session in the tooltip'
 		)
+		tab.dispatchEvent(new MouseEvent('mouseout'))
 		test.equal(
-			nav.Inner.dom.controlsDiv.text().includes('left until this session is removed'),
-			false,
-			'should not show the message in the nav controls'
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-days-left"]').size(),
+			0,
+			'should not show the days left message in the subheader'
 		)
 
 		if ((test as any)._ok) nav.Inner.app.destroy()
