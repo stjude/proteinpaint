@@ -43,6 +43,10 @@ object, so that other code that imports serverconfig cannot read them.
 ```
 
 - `dslabelPattern`, `embedderPattern`: an exact value or a glob pattern; list the catch-all `'*'` last.
+  A loaded dataset must match only one `dslabelPattern` key, including a `'*'` key, otherwise the server
+  will not start.
+  An embedder that does not match any `embedderPattern` key of a route is forbidden, so a catch-all
+  `'*': { type: 'forbidden' }` entry is not required. To allow other embedders, add `'*': { type: 'open' }`.
   A key that starts with `#` is treated as a comment and ignored.
 - `routePattern`: `'termdb'` allows a public view of aggregated data, `'*'` or `'/**'` protects all routes,
   `'burden'` is for the cumulative burden app.

@@ -1,5 +1,6 @@
 import { addDemoTokenCred } from './auth.demoToken.ts'
 import pm from 'picomatch'
+import { patternMatches } from './Auth.ts'
 
 const { isMatch } = pm
 
@@ -25,6 +26,9 @@ export type ServerConfigDsCredentials = {
       'burden': specific to the personalized cumulative burden app
 
       todo: may support other route patterns as needed
+
+      An embedder that does not match any embedderPattern key of a route is forbidden,
+      unless there is a catch-all '*' key, such as {'*': {type: 'open'}}.
 		*/
 		[routePattern: string]: {
 			[embedderPattern: string]: BasicCredEntry | JwtCredEntry
@@ -113,6 +117,20 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 		return loadedDs
 	}, [])
 
+	// a loaded dataset must match only one dslabel key, so that its credentials are in a single entry,
+	// instead of depending on the precedence of exact, glob, and '*' keys (see Auth.getMatchedDsEntries())
+	if (genomes) {
+		for (const dslabel of new Set(loadedDslabels)) {
+			const keys = Object.keys(creds).filter(
+				key => key[0] != '#' && !key.startsWith('__') && patternMatches(dslabel, key)
+			)
+			if (keys.length > 1)
+				throw `dataset '${dslabel}' matches more than one dsCredentials key: ${keys.join(
+					', '
+				)}, use only one matching key`
+		}
+	}
+
 	// dslabel may be exact or a pattern
 	for (const [dslabel, _ds] of Object.entries(creds)) {
 		if (dslabel[0] == '#') {
@@ -139,6 +157,12 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 
 		for (const serverRoute of Object.keys(ds)) {
 			const route = ds[serverRoute]
+			// an embedder that does not match any listed embedder key is forbidden, so that a catch-all
+			// {'*': {type: 'forbidden'}} entry is not required; use {'*': {type: 'open'}} to allow other embedders
+			if (route && typeof route == 'object' && Object.keys(route).length && !Object.hasOwn(route, '*')) {
+				route['*'] = { type: 'forbidden' }
+				console.log(`dsCredentials[${dslabel}][${serverRoute}]: unlisted embedders are forbidden`)
+			}
 			for (const embedderHost in route) {
 				credEmbedders.add(embedderHost)
 
