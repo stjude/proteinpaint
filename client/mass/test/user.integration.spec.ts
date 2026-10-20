@@ -2,6 +2,7 @@ import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
 import { detectOne, sleep } from '../../test/test.helpers.js'
 import { dofetch, dofetch3, clearServerDataCache } from '#common/dofetch'
+import { stubDownloads } from './user.helpers.ts'
 
 /**
  * Tests
@@ -11,7 +12,7 @@ import { dofetch, dofetch3, clearServerDataCache } from '#common/dofetch'
  *  - user tab for a dataset that requires authorization
  *  - launch when the lookup of the sessions on the server fails
  *  - user tab when no cohort is selected
- *  - Export Session and days left message for a session opened from a url
+ *  - Download and days left tab text for a session opened from a url
  */
 
 /*************************
@@ -144,7 +145,6 @@ tape('user tab for a public dataset', test => {
 		nav.on('postRender.test', null)
 		const labels = getTabLabels(nav)
 		test.true(labels.includes('SESSION'), 'should label the tab SESSION')
-		test.false(labels.includes('USER'), 'should not label the tab USER')
 
 		const user = getUser(nav)
 		test.equal(user.requiredAuth, undefined, 'should not require authorization')
@@ -156,12 +156,12 @@ tape('user tab for a public dataset', test => {
 
 		for (const label of ['Open', 'Save', 'Share']) {
 			const btn = await detectOptionBtn(nav, label)
-			test.equal(btn.textContent, label, `should show the ${label} button`)
+			test.equal((btn as any).__data__.label, label, `should show the ${label} button`)
 		}
 		test.equal(
-			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-btn-export-session"]').size(),
+			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-btn-download"]').size(),
 			0,
-			'should not show Export Session for a session that was not opened from a url'
+			'should not show Download for a session that was not opened from a url'
 		)
 
 		// the tab is shown on click, and the other subheaders are hidden
@@ -376,8 +376,7 @@ tape('user tab for a dataset that requires authorization', test => {
 	async function runTests(nav: any) {
 		nav.on('postRender.test', null)
 		const labels = getTabLabels(nav)
-		test.true(labels.includes('USER'), 'should label the tab USER')
-		test.false(labels.includes('SESSION'), 'should not label the tab SESSION')
+		test.true(labels.includes('SESSION'), 'should label the tab SESSION when authorization is required')
 
 		const user = getUser(nav)
 		test.deepEqual(user.requiredAuth, jwtAuth, 'should find the jwt credential from the termdb config')
@@ -388,6 +387,16 @@ tape('user tab for a dataset that requires authorization', test => {
 			authDiv.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
 			'Requires sign-in',
 			'should prompt to sign in when there is no token'
+		)
+		test.equal(
+			authDiv.select('[data-testid="sjpp-massnav-user-auth-label"]').text(),
+			'ACCESS',
+			'should label the authorization info ACCESS'
+		)
+		test.equal(
+			authDiv.select('[data-testid="sjpp-massnav-user-auth-label"]').node().parentNode,
+			authDiv.select('[data-testid="sjpp-massnav-user-auth-status"]').node().parentNode,
+			'should show the label and the status on the same row'
 		)
 
 		// the sessions on the server are not looked up before the user is signed in, the request would be rejected
@@ -441,13 +450,13 @@ tape('launch when the lookup of the sessions on the server fails', test => {
 		console.warn = warn
 		restoreFetch()
 		test.true(nav.Inner.dom.subheader.user, 'should launch the nav, since the sessions on the server are optional')
-		test.true(getTabLabels(nav).includes('USER'), 'should show the user tab')
+		test.true(getTabLabels(nav).includes('SESSION'), 'should show the user tab')
 		for (const label of ['Open', 'Save', 'Share']) {
 			test.true(await detectOptionBtn(nav, label), `should show the ${label} button`)
 		}
 		test.equal(
 			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
-			'Signed in',
+			'You are signed in.',
 			'should show that the user is signed in'
 		)
 		test.equal(sessionIdRequests, 1, 'should have tried the lookup of the sessions on the server')
@@ -472,7 +481,7 @@ tape('sessions on the server for a signed in user', test => {
 		nav.on('postRender.test', null)
 		test.equal(
 			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
-			'Signed in',
+			'You are signed in.',
 			'should show that the user is signed in'
 		)
 		// Delete is added when the lookup is done
@@ -566,11 +575,11 @@ tape('user tab when no cohort is selected', test => {
 	}
 })
 
-tape('Export Session and days left message for a session opened from a url', test => {
+tape('Download and days left tab text for a session opened from a url', test => {
 	test.timeoutAfter(5000)
 	runpp({
 		sessionDaysLeft: 12,
-		sessionId: 'test-session-id',
+		sessionId: 'test/session id',
 		nav: {
 			callbacks: {
 				'postRender.test': runTests
@@ -580,26 +589,36 @@ tape('Export Session and days left message for a session opened from a url', tes
 
 	async function runTests(nav: any) {
 		nav.on('postRender.test', null)
-		const exportBtn = await detectOptionBtn(nav, 'Export Session')
-		test.equal(exportBtn.textContent, 'Export Session', 'should show Export Session in the user tab')
+		const downloadBtn = await detectOptionBtn(nav, 'Download')
+		test.equal((downloadBtn as any).__data__.label, 'Download', 'should show Download in the user tab')
+		test.equal(downloadBtn.getAttribute('title'), 'Download this session as a file', 'should set the button title')
+		test.equal(downloadBtn.getAttribute('aria-label'), 'Download this session as a file', 'should set the aria-label')
 		test.equal(
 			nav.Inner.dom.controlsDiv.selectAll('[data-testid="sjpp-nav-file-btn"]').size(),
 			0,
-			'should not show Export Session in the nav controls'
+			'should not show Download in the nav controls'
 		)
 
-		const msg = nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-days-left"]')
-		test.notEqual(msg.style('display'), 'none', 'should show the days left message in the user tab')
-		test.equal(
-			msg.text(),
-			'12 days left until this session is removed. Select "Save" to create a new one.',
-			'should show the number of days left'
+		// clicking Download saves the current session, in a file named with the normalized session id
+		const stub = stubDownloads()
+		downloadBtn.click()
+		stub.restore()
+		test.equal(stub.downloads.length, 1, 'should download one file')
+		test.equal(stub.downloads[0]?.filename, 'test_session_id.txt', 'should replace special characters in the filename')
+		test.deepEqual(
+			JSON.parse(stub.downloads[0]?.text || 'null'),
+			JSON.parse(JSON.stringify(getUser(nav).getState(nav.Inner.app.getState(), true))),
+			'should download the current state of the session'
 		)
-		test.equal(
-			nav.Inner.dom.controlsDiv.text().includes('left until this session is removed'),
-			false,
-			'should not show the message in the nav controls'
+
+		const tab = nav.Inner.dom.tds.filter((d: any) => d.subheader == 'user' && d.key == 'btm').node()
+		test.equal(tab.textContent, '12 days left', 'should show the number of days left in the user tab')
+		tab.dispatchEvent(new MouseEvent('mouseover'))
+		test.true(
+			Array.from(document.querySelectorAll('.sja_menu_div')).some(d => d.textContent!.includes('"Save"')),
+			'should explain how to save a new session in the tooltip'
 		)
+		tab.dispatchEvent(new MouseEvent('mouseout'))
 
 		if ((test as any)._ok) nav.Inner.app.destroy()
 		test.end()

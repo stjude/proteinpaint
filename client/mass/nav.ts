@@ -4,7 +4,7 @@ import { chartsInit } from './charts'
 import { groupsInit } from './groups'
 import { aboutInit } from './about.ts'
 import { chatInit } from './chat.ts'
-import { userInit } from './user'
+import { userInit, getDaysLeft } from './user'
 import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
 import type { NavTab, NavTabCell } from './types/nav'
@@ -38,7 +38,13 @@ const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
 // const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
-const userTab = { top: 'USER', mid: '', btm: '', subheader: 'user' }
+const userTab = { top: 'SESSION', mid: '', btm: '', subheader: 'user' }
+
+/** The role of the user, for the middle row of the user tab. Only for a dataset that requires authorization */
+export function getUserTabMid(termdbConfig: any): string {
+	const role = termdbConfig?.clientAuthResult?.role
+	return termdbConfig?.requiredAuth?.length && typeof role === 'string' ? role.toUpperCase() : ''
+}
 
 export function getId(): string {
 	return idPrefix + '_' + id++
@@ -383,10 +389,7 @@ function setRenderers(self: any): void {
 		if (!massNav.tabs?.user?.hide) {
 			//User tab is not hidden
 			const override = Object.assign({}, massNav.tabs?.user)
-			if (!appState.termdbConfig?.requiredAuth?.length) {
-				if (!override.top) override.top = 'SESSION'
-			}
-			// a copy, since userTab is shared by all nav instances
+			if (!override.mid) override.mid = getUserTabMid(appState.termdbConfig)
 			self.tabs.push(Object.assign({}, userTab, override))
 		}
 
@@ -441,8 +444,8 @@ function setRenderers(self: any): void {
 			.on('mouseover', (event, d) => {
 				self.mouseover(event, d)
 			})
-			.on('mouseout', () => {
-				self.mouseout()
+			.on('mouseout', (event, d) => {
+				self.mouseout(d)
 			})
 
 		self.dom.trs = table.selectAll('tr')
@@ -526,6 +529,8 @@ function setRenderers(self: any): void {
 						const n = self.samplecounts[self.filterJSON] != undefined ? '' + self.samplecounts[self.filterJSON] : ''
 						return d.key === 'mid' ? filter.lst.length : n
 					}
+				} else if (d.subheader === 'user' && d.key == 'btm') {
+					return getDaysLeft(self.app.opts.sessionDaysLeft)?.text || '&nbsp;'
 				} else {
 					return d.key === 'mid' ? this.innerHTML : '&nbsp;'
 				}
@@ -577,6 +582,7 @@ function setInteractivity(self: any): void {
 
 	self.mouseover = (event: any, d: NavTabCell): void => {
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
+		if (d.subheader == 'user' && d.key == 'btm') self.components.user?.showDaysLeftTip(event.currentTarget)
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
 			if (t.colNum === d.colNum)
@@ -587,7 +593,8 @@ function setInteractivity(self: any): void {
 		})
 	}
 
-	self.mouseout = () => {
+	self.mouseout = (d: NavTabCell): void => {
+		if (d.subheader == 'user' && d.key == 'btm') self.components.user?.hideDaysLeftTip()
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? defaultActiveColor : 'transparent'))
 	}

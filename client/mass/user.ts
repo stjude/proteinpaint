@@ -17,7 +17,7 @@ import { markSavedState, getSavedStateRefusal } from './sessionForm.ts'
 - the session open/save/share/delete functionality, moved from the former session button. The options are always
   shown as buttons, and the selected option renders into dom.contentDiv
 
-The nav tab label is 'USER' if the dataset requires authorization, otherwise 'SESSION'. nav.ts sets it.
+The nav tab label is always 'SESSION'. nav.ts sets it.
 */
 
 /** A dataset requires authorization if the server sent a non-empty termdbConfig.requiredAuth[] */
@@ -32,7 +32,19 @@ export function datasetRequiresAuth(termdbConfig: any): boolean {
  */
 export function getAuthStatus(signedIn: boolean, isPublic?: boolean): string {
 	if (!signedIn) return 'Requires sign-in'
-	return isPublic === true ? 'Public access' : 'Signed in'
+	return isPublic === true ? 'Public access' : 'You are signed in.'
+}
+
+/**
+ * For a session opened from a `mass-session-id` URL, the days before the server removes it. The nav shows text in the
+ * bottom row of the user tab, and tip as its tooltip. undefined if the number of days is not available
+ */
+export function getDaysLeft(days: unknown): { text: string; tip: string } | undefined {
+	if (typeof days != 'number' || !Number.isFinite(days)) return
+	return {
+		text: `${days} ${days == 1 ? 'day' : 'days'} left`,
+		tip: 'The server keeps a session opened from a link for a limited time, and removes it when the days run out. To keep your work, select "Save" in this tab to create a new session, then use "Share" to get its link.'
+	}
 }
 
 export class MassUser implements RxComponent {
@@ -71,46 +83,41 @@ export class MassUser implements RxComponent {
 		this.opts = opts
 		this.app = opts.app
 		this.subheader = opts.subheader
-		// no margin, so that the option buttons have the same spacing as the chart buttons in the charts tab,
-		// which are appended directly to that subheader
 		const sessionDiv = this.subheader.append('div').attr('data-testid', 'sjpp-massnav-user-session')
-		// states the purpose of the option buttons, on the same row. the left margin is the same as the buttons
 		sessionDiv
 			.append('span')
 			.attr('data-testid', 'sjpp-massnav-user-session-label')
-			.style('margin-left', '10px')
+			.style('margin', '0 10px')
 			.style('font-weight', 'bold')
 			.style('opacity', 0.65)
 			.text('SESSION')
 		this.dom = {
 			authDiv: this.subheader.append('div').attr('data-testid', 'sjpp-massnav-user-auth').style('margin', '10px'),
 			sessionDiv,
-			// inline-block, to be on the same row as the label
+			// inline-flex, to be on the same row as the label, with the same gap between the buttons
 			optionsDiv: sessionDiv
 				.append('div')
 				.attr('data-testid', 'sjpp-massnav-user-session-options')
-				.style('display', 'inline-block'),
+				.style('display', 'inline-flex')
+				.style('vertical-align', 'middle')
+				.style('gap', '10px'),
 			// aligned with the edge of the option buttons, which have a 10px margin
 			contentDiv: sessionDiv
 				.append('div')
 				.attr('id', 'sjpp-massnav-user-session-menu')
 				.attr('data-testid', 'sjpp-massnav-user-session-content')
 				.style('margin', '0 10px'),
-			// how long the server keeps a session that was opened from a `mass-session-id` URL, under the options
-			// and what an option renders
-			daysLeftDiv: sessionDiv
-				.append('div')
-				.attr('data-testid', 'sjpp-massnav-user-session-days-left')
-				.style('display', 'none')
-				.style('margin', '0 10px 10px 10px')
-				.style('font-size', '0.9em')
-				.style('opacity', 0.65),
 			copytip: new Menu({ padding: '5px' })
 		}
 		this.sessionOptions = [
-			{ label: `Open`, title: 'Recover a saved session', callback: () => this.open() },
-			{ label: `Save`, title: 'Save the current view', callback: () => this.save() },
-			{ label: `Share`, title: 'Share the current view', callback: () => this.getSessionUrl() }
+			{ label: `Open`, icon: '&#x23CF;&#xFE0E;', title: 'Recover a saved session', callback: () => this.open() },
+			{ label: `Save`, icon: '&#x2B07;&#xFE0E;', title: 'Save the current view', callback: () => this.save() },
+			{
+				label: `Share`,
+				icon: '&#x26D3;&#xFE0E;',
+				title: 'Share the current view',
+				callback: () => this.getSessionUrl()
+			}
 		]
 		this.embedderOrigin = window.location.origin
 		this.hostURL = sessionStorage.getItem('hostURL') || this.embedderOrigin
@@ -140,13 +147,23 @@ export class MassUser implements RxComponent {
 		}
 	}
 
-	/** Render static contents once on launching mass ui */
+	/** Adds the methods that nav.ts calls on the api, since only the api is available outside the component */
+	preApiFreeze(api: any) {
+		api.showDaysLeftTip = (e: HTMLElement) => {
+			const tip = getDaysLeft(this.opts.sessionDaysLeft)?.tip
+			if (!tip) return
+			this.dom.copytip.clear().d.append('div').style('max-width', '300px').text(tip)
+			const p = e.getBoundingClientRect()
+			this.dom.copytip.show2(p.left, p.bottom + 5)
+		}
+		api.hideDaysLeftTip = () => this.dom?.copytip?.hide()
+	}
+
 	async init(appState: any) {
 		this.dslabel = appState.vocab.dslabel
 		this.savedSessions = JSON.parse(localStorage.getItem('savedMassSessions') || `{}`)
 		this.setRequiredAuth(appState.termdbConfig)
 		this.initSessionOptions()
-		this.renderDaysLeft()
 	}
 
 	async main() {
@@ -186,34 +203,30 @@ export class MassUser implements RxComponent {
 		const signedIn = vocabApi.hasVerifiedToken()
 		// computed by the optional ds hooks in massNav.tabs.user, from the auth of the user
 		const userTab = this.state.termdbConfig.userTab
-		div
-			.append('div')
-			.attr('data-testid', 'sjpp-massnav-user-auth-status')
+		// same label style as SESSION, with the status on the same row
+		const row = div.append('div')
+		row
+			.append('span')
+			.attr('data-testid', 'sjpp-massnav-user-auth-label')
 			.style('font-weight', 'bold')
-			.style('font-size', '1.2em')
+			.style('opacity', 0.65)
+			.text('ACCESS')
+		row
+			.append('span')
+			.attr('data-testid', 'sjpp-massnav-user-auth-status')
+			.style('margin-left', '10px')
 			.text(getAuthStatus(signedIn, userTab?.isPublic))
 		// reason for a failed sign-in, if any
 		const msg = vocabApi.tokenVerificationMessage
-		if (!signedIn && msg) div.append('div').style('opacity', 0.65).text(msg)
-		// the message from massNav.tabs.user.getMsg(), under the status. text, not html
+		if (!signedIn && msg) row.append('span').style('margin-left', '5px').style('opacity', 0.65).text(msg)
+		// the message from massNav.tabs.user.getMsg(), after the status. text, not html
 		if (userTab?.msg)
-			div
-				.append('div')
+			row
+				.append('span')
 				.attr('data-testid', 'sjpp-massnav-user-auth-info')
-				.style('margin', '5px 0 0 8px')
-				.style('font-size', '0.95em')
+				.style('margin-left', '5px')
 				.style('opacity', 0.75)
 				.text(userTab.msg)
-	}
-
-	/** For a session opened from a `mass-session-id` URL, the number of days before the server removes it */
-	renderDaysLeft() {
-		const days = this.opts.sessionDaysLeft
-		// info not available, do not show the message
-		if (typeof days != 'number' || !Number.isFinite(days)) return
-		const div = this.dom.daysLeftDiv.style('display', 'block')
-		div.append('u').text(`${days} ${days == 1 ? 'day' : 'days'}`)
-		div.append('span').text(' left until this session is removed. Select "Save" to create a new one.')
 	}
 
 	/**
@@ -227,22 +240,35 @@ export class MassUser implements RxComponent {
 		if (!this.serverCachedSessions) this.setServerCachedSessions()
 	}
 
-	/** Render the Open, Save, Share, and Delete buttons. Delete is only available if there is something to delete */
-	renderSessionOptions() {
-		// a lookup of the sessions on the server may finish after the component is destroyed, which removes this.dom
-		if (!this.dom?.optionsDiv) return
+	/** The Open, Save, Share, Delete, and Download options. Delete is only available if there is something to delete */
+	getSessionOptions(): SessionOption[] {
 		const options = this.sessionOptions.slice()
 		if (Object.keys(this.savedSessions).length || this.serverCachedSessions?.length) {
-			options.push({ label: `Delete`, title: 'Delete a saved session', callback: () => this.delete() })
+			options.push({
+				label: `Delete`,
+				icon: '&#x2715;',
+				title: 'Delete a saved session',
+				callback: () => this.delete()
+			})
 		}
 		// only for a session opened from a `mass-session-id` URL
 		if (this.opts.sessionDaysLeft != null && this.opts.sessionId) {
 			options.push({
-				label: `Export Session`,
+				label: `Download`,
+				icon: '&#x2913;',
 				title: 'Download this session as a file',
-				callback: () => this.exportSession()
+				callback: () =>
+					this.download(this.opts.sessionId!.replace(/[^\w-]/g, '_'), this.getState(this.app.getState(), true))
 			})
 		}
+		return options
+	}
+
+	/** Render the buttons of the session options */
+	renderSessionOptions() {
+		// a lookup of the sessions on the server may finish after the component is destroyed, which removes this.dom
+		if (!this.dom?.optionsDiv) return
+		const options = this.getSessionOptions()
 		this.dom.optionsDiv.selectAll('*').remove()
 		this.dom.optionsDiv
 			.selectAll('button')
@@ -250,7 +276,7 @@ export class MassUser implements RxComponent {
 			.enter()
 			.append('button')
 			// same style as the chart buttons in charts.ts
-			.style('margin', '10px')
+			.style('margin', '10px 0')
 			.style('padding', '10px 15px')
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
@@ -260,7 +286,7 @@ export class MassUser implements RxComponent {
 			)
 			.attr('aria-label', (d: SessionOption) => d.title)
 			.attr('title', (d: SessionOption) => d.title)
-			.text((d: SessionOption) => d.label)
+			.html((d: SessionOption) => `${d.icon} ${d.label}`)
 			.on('click', async (event: MouseEvent, d: SessionOption) => {
 				event.stopPropagation()
 				this.clearContent()
@@ -269,17 +295,6 @@ export class MassUser implements RxComponent {
 				// days left message stays right under the options. the component may be destroyed during the callback
 				if (this.dom?.contentDiv?.node()?.hasChildNodes()) this.dom.contentDiv.style('padding-bottom', '10px')
 			})
-	}
-
-	/** Download the opened `mass-session-id` session as a json file */
-	async exportSession() {
-		const res = await dofetch3(`/massSession?id=${encodeURIComponent(this.opts.sessionId!)}`)
-		const a = document.createElement('a')
-		const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(res.state))
-		a.setAttribute('href', dataStr)
-		a.download = `${this.opts.sessionId}.json`
-		a.click()
-		a.remove()
 	}
 
 	clearContent() {
@@ -679,7 +694,6 @@ export class MassUser implements RxComponent {
 		}
 		const url = `${this.hostURL}/?mass-session-id=${encodeURIComponent(res.id)}&noheader=1`
 		const linkDiv = div.append('div').style('margin', '10px')
-		linkDiv.append('div').style('display', 'flex').style('margin-bottom', '12px').text(`Open or copy the session link.`)
 
 		const a = linkDiv.append('a').style('display', 'none').attr('href', url).attr('target', '_blank').text(res.id)
 
