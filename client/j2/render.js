@@ -8,6 +8,7 @@ import { getParameter } from './tk'
 import { dofetch3 } from '#common/dofetch'
 import { TermTypes } from '#types'
 import { makeJunctionCustomTerm } from '#termdb/handlers/junction.customTerm'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 /*
  */
@@ -28,13 +29,32 @@ const hardcode_infoValue_canonical = 'canonical'
 export function renderTk(data, tk, block) {
 	if (data) {
 		// server returned fresh data
+		/* y of junctions: median read count for junctions from the server
+		for custom junctions, -log10 p or median read count when every junction has it, otherwise none and all are at the bottom
+		set before returning on no junctions, as the config menu uses it
+		*/
+		tk.sections.jug.yAxisKey =
+			tk.custom_data && data.junctions.every(j => Number.isFinite(j.negLog10p))
+				? 'negLog10p'
+				: !tk.custom_data || Number.isFinite(data.maxReadCount)
+				? 'medianReadCount'
+				: undefined
 		if (data.junctions?.length == 0) {
 			tk.data = []
 			tk.leftlabels?.doms?.jug?.text('0 junctions')
 			return
 		}
-		if (!Number.isFinite(data.maxReadCount)) throw new Error('data.maxReadCount is not number')
-		rawdata2track(data.junctions, tk, block)
+		if (tk.sections.jug.yAxisKey == 'medianReadCount' && !Number.isFinite(data.maxReadCount))
+			throw new Error('data.maxReadCount is not number')
+		// kept for redraws without data, e.g. changing track height or log scale in the config menu
+		tk.maxReadCount = data.maxReadCount
+		if (rawdata2track(data.junctions, tk, block)) {
+			// none in view range, e.g. custom junctions after navigating away from them
+			tk.data = []
+			data.junctions = [] // for tk._finish() to show "No splice junctions"
+			tk.leftlabels.doms.jug.text('0 junctions')
+			return
+		}
 		// tk.data[] set
 	} else {
 		// this is called from config menu. server data is already parsed at tk.data[]
@@ -62,8 +82,9 @@ export function renderTk(data, tk, block) {
 	TODO may show piechart for sample stratification
 	so need to slightly increase disc radius to fit these
 */
-	const maxsamplecount = tk.data.reduce((max, j) => Math.max(max, j.sampleCount), 0)
 	{
+		// a custom junction may have no sample count
+		const maxsamplecount = tk.data.reduce((max, j) => Math.max(max, j.sampleCount ?? 1), 0)
 		const radius = 5
 		let mrd = 0 // max radius
 		const w = Math.pow(radius, 2) * Math.PI // unit area
@@ -88,7 +109,7 @@ export function renderTk(data, tk, block) {
 			.range([w, w + (mrd - w) * 0.8, w + (mrd - w) * 0.85, w + (mrd - w) * 0.9, w + (mrd - w) * 0.95, mrd])
 		let maxradius = 0
 		for (const j of tk.data) {
-			j.radius = Math.sqrt(sf_discradius(j.sampleCount) / Math.PI)
+			j.radius = Math.sqrt(sf_discradius(j.sampleCount ?? 1) / Math.PI)
 			if (j.sampleCount > 1) {
 				// more than 1 sample, to show #sample in disc, so to adjust disc radius
 				mg.append('text')
@@ -113,18 +134,24 @@ export function renderTk(data, tk, block) {
 	const maxmedian = tk.data.reduce((c, j) => Math.max(c, j.medianReadCount), 0)
 
 	/*
-	essential to use data.maxReadCount as yscale max
+	essential to use tk.maxReadCount as yscale max
 	this may leave some white space above the disks (median positioned)
 	but will allow the hover boxplot to fully show
 	*/
-	tk.sections.jug.yscale = (tk.yscaleUseLog ? scaleLog() : scaleLinear())
-		.domain([tk.readcountCutoff || 1, data.maxReadCount])
-		.range([tk.sections.jug.axisheight, 0])
+	tk.sections.jug.yscale =
+		tk.sections.jug.yAxisKey == 'medianReadCount'
+			? (tk.yscaleUseLog ? scaleLog() : scaleLinear())
+					.domain([tk.readcountCutoff || 1, tk.maxReadCount])
+					.range([tk.sections.jug.axisheight, 0])
+			: scaleLinear()
+					.domain([0, Math.max(1, ...tk.data.map(j => yValue(j, tk)))])
+					.nice()
+					.range([tk.sections.jug.axisheight, 0])
 
 	// fill axis-y for those junction without previous axisy
 	for (const j of tk.data) {
 		if (j.axisy == undefined) {
-			j.axisy = tk.sections.jug.axisheight - tk.sections.jug.yscale(j.medianReadCount)
+			j.axisy = tk.sections.jug.axisheight - tk.sections.jug.yscale(yValue(j, tk))
 		}
 	}
 
@@ -156,7 +183,7 @@ export function renderTk(data, tk, block) {
 			.attr('stroke-opacity', 0.2)
 			.attr('shape-rendering', 'crispEdges')
 		let v = 10
-		while (v <= data.maxReadCount) {
+		while (tk.sections.jug.yAxisKey == 'medianReadCount' && v <= tk.maxReadCount) {
 			// order of magnitude line
 			mg.append('line')
 				.attr('x1', 0)
@@ -323,7 +350,10 @@ jug2.filter(function(d){return d.rimwidth>0})
 			axis: tk.sections.jug.axis.transition().call(
 				axisRight()
 					.scale(tk.sections.jug.yscale)
-					.ticks(Math.floor(tk.sections.jug.axisheight / 20), '.0f')
+					.ticks(
+						tk.sections.jug.yAxisKey ? Math.floor(tk.sections.jug.axisheight / 20) : 0,
+						tk.sections.jug.yAxisKey == 'medianReadCount' ? '.0f' : undefined
+					)
 			),
 			color: 'black',
 			showline: true
@@ -448,12 +478,26 @@ function j2block(j, block, viewpxwidth) {
 	return false
 }
 
+/* y of a junction, see tk.sections.jug.yAxisKey in renderTk() */
+function yValue(j, tk) {
+	return tk.sections.jug.yAxisKey ? j[tk.sections.jug.yAxisKey] : 0
+}
+
 function setColor(tk) {
 	for (const j of tk.data) {
 		// remove prior color, as color may be reassigned by switching infoFilter and then calling renderTk()
 		delete j.color
-		j.color = JTypes[j.types[0]]?.color
-		if (j.color == undefined) throw new Error('unknown j.type')
+		// with tk.deltaPsiGroups, a junction with PSI of both groups is colored by the group with higher PSI
+		const d = tk.deltaPsiGroups && j.psi_case != null && j.psi_control != null ? j.psi_case - j.psi_control : 0
+		j.higherPsiIn = d > 0 ? 'case' : d < 0 ? 'control' : undefined
+		if (j.higherPsiIn) {
+			j.color = tk.deltaPsiGroups[j.higherPsiIn].color
+		} else if (tk.deltaPsiGroups || (tk.custom_data && !j.types.length)) {
+			j.color = '#858585'
+		} else {
+			j.color = JTypes[j.types[0]]?.color
+			if (j.color == undefined) throw new Error('unknown j.type')
+		}
 	}
 }
 
@@ -476,7 +520,7 @@ function set_jug2(d, tk) {
 function set_all(tk) {
 	// must update axisy to current value
 	const mg = tk.sections.jug
-	tk.data.forEach(j => (j.axisy = mg.axisheight - mg.yscale(j.medianReadCount)))
+	tk.data.forEach(j => (j.axisy = mg.axisheight - mg.yscale(yValue(j, tk))))
 
 	const dur = 500
 	mg.g
@@ -532,7 +576,7 @@ function doForceLayout(tk, block, viewpxwidth) {
 			junction: j,
 			tox: tox,
 			x: tox,
-			y: tk.sections.jug.axisheight - tk.sections.jug.yscale(j.medianReadCount)
+			y: tk.sections.jug.axisheight - tk.sections.jug.yscale(yValue(j, tk))
 		})
 		sumdiscwidth += j.radius2 * 2
 	})
@@ -550,7 +594,7 @@ function doForceLayout(tk, block, viewpxwidth) {
 				'y',
 				d3force
 					.forceY(d => {
-						return tk.sections.jug.axisheight - tk.sections.jug.yscale(d.junction.medianReadCount)
+						return tk.sections.jug.axisheight - tk.sections.jug.yscale(yValue(d.junction, tk))
 					})
 					.strength(1)
 			)
@@ -705,12 +749,14 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 		}
 		// print all types in 2nd row
 		const d2 = t2.append('div')
-		d2.append('span') // strand
-			.attr('class', 'sja_mcdot')
-			.style('padding', '1px 5px')
-			.style('background-color', '#555')
-			.style('margin-right', '5px')
-			.text(j.strand)
+		if (j.strand) {
+			d2.append('span') // strand
+				.attr('class', 'sja_mcdot')
+				.style('padding', '1px 5px')
+				.style('background-color', '#555')
+				.style('margin-right', '5px')
+				.text(j.strand)
+		}
 		if (j.info.site) {
 			d2.append('span') // strand
 				.style('font-size', '.7em')
@@ -726,16 +772,26 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 				.text(JTypes[t]?.name || '?')
 		}
 	}
-	const [t1, t2] = table.addRow()
-	if (j.sampleCount == 1) {
-		t1.text('Sample')
-		const sndiv = t2.append('div')
-		sndiv.text(j.sampleName || 'single sample')
-		t2.append('div').html(j.medianReadCount + ' <span style="font-size:.7em">read count</span>')
-	} else {
-		t1.text('Samples')
-		t2.append('div').html(`${j.sampleCount} <span style="font-size:.7em">samples</span>
+	// optional fields of a custom junction
+	if (Number.isFinite(j.p)) table.addRow('p-value', roundValueAuto(j.p))
+	if ('psi_control' in j || 'psi_case' in j) {
+		const psi = v => (v == null ? 'NA' : roundValueAuto(v))
+		table.addRow(`PSI, ${tk.deltaPsiGroups?.control.name || 'control'}`, psi(j.psi_control))
+		table.addRow(`PSI, ${tk.deltaPsiGroups?.case.name || 'case'}`, psi(j.psi_case))
+		if (j.psi_control != null && j.psi_case != null) table.addRow('ΔPSI', roundValueAuto(j.psi_case - j.psi_control))
+	}
+	if (Number.isFinite(j.medianReadCount)) {
+		const [t1, t2] = table.addRow()
+		if (!(j.sampleCount > 1)) {
+			t1.text('Sample')
+			const sndiv = t2.append('div')
+			sndiv.text(j.sampleName || 'single sample')
+			t2.append('div').html(j.medianReadCount + ' <span style="font-size:.7em">read count</span>')
+		} else {
+			t1.text('Samples')
+			t2.append('div').html(`${j.sampleCount} <span style="font-size:.7em">samples</span>
 			<br>${j.medianReadCount} <span style="font-size:.7em">median read count</span>`)
+		}
 	}
 
 	if (isClickMenu && tk.massApp) {
@@ -774,7 +830,7 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 		listAllEvents(elst, table, j, tk, block, isClickMenu)
 	}
 
-	if (type2elst.size == 0) {
+	if (type2elst.size == 0 && Object.keys(j.info).length) {
 		// no events. it's either canonical or not annotated, show free diagram
 		const [t1, t2] = table.addRow()
 		t1.text('Diagram')

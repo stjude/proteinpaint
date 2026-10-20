@@ -12,7 +12,7 @@ export function initLegend(tk, block) {
 	if (!tk.legend) tk.legend = {}
 	tk.legend.tip = new Menu({ padding: '0px' })
 
-	const [tr, td, td0] = legend_newrow(block, tk.dslabel)
+	const [tr, td, td0] = legend_newrow(block, tk.custom_data ? tk.name : tk.dslabel)
 	tk.legend.headTd = td0 // for updating tk name in legend when filterObj updates
 
 	tk.tr_legend = tr // to be compatible with block.tk_remove()
@@ -47,12 +47,12 @@ function create_type(tk, block) {
 		.attr('data-testid', 'sjpp-j2-legend-row-type')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
-		.text('Type')
+		.text(tk.deltaPsiGroups ? 'PSI' : 'Type')
 
 	tk.legend.type.holder = tk.legend.type.row.append('td')
 }
 function update_type(tk) {
-	if (tk.hardcodeCnvOnly) return // legend is permanently hidden, no need to update
+	if (tk.deltaPsiGroups) return update_deltaPsi(tk)
 	const type2count = new Map() // k: type, v: count
 	for (const j of tk.data) {
 		for (const t of j.types) {
@@ -133,5 +133,30 @@ function update_type(tk) {
 				event.target.innerHTML = 'Updating...'
 				await tk.load()
 			})
+	}
+}
+
+/* with tk.deltaPsiGroups, custom junctions are colored by the group with higher PSI, see setColor() in render.js
+each category reads as "PSI: A > B"; grey junctions lack the PSI of a group or have equal PSI
+*/
+function update_deltaPsi(tk) {
+	tk.legend.type.holder.selectAll('*').remove()
+	const { case: _case, control } = tk.deltaPsiGroups
+	const categories = [
+		{ key: 'case', label: `${_case.name} > ${control.name}`, color: _case.color },
+		{ key: 'control', label: `${control.name} > ${_case.name}`, color: control.color },
+		{ key: undefined, label: 'Equal or missing', color: '#858585' }
+	]
+	for (const c of categories) {
+		const count = tk.data.filter(j => j.higherPsiIn == c.key).length
+		if (!count && !c.key) continue // only show grey when present
+		printCategory({
+			holder: tk.legend.type.holder,
+			key: c.key || 'none',
+			label: c.label,
+			color: c.color,
+			count,
+			testid: 'sjpp-j2-legend-row-type-item'
+		})
 	}
 }
