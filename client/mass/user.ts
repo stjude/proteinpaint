@@ -151,7 +151,10 @@ export class MassUser implements RxComponent {
 	preApiFreeze(api: any) {
 		api.showDaysLeftTip = (e: HTMLElement) => {
 			const tip = getDaysLeft(this.opts.sessionDaysLeft)?.tip
-			if (tip) this.dom.copytip.clear().showunder(e).d.append('div').style('max-width', '300px').text(tip)
+			if (!tip) return
+			this.dom.copytip.clear().d.append('div').style('max-width', '300px').text(tip)
+			const p = e.getBoundingClientRect()
+			this.dom.copytip.show2(p.left, p.bottom + 5)
 		}
 		api.hideDaysLeftTip = () => this.dom?.copytip?.hide()
 	}
