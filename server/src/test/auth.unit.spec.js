@@ -325,7 +325,9 @@ tape('legacy reshape', async test => {
 						route: 'termdb',
 						authRoute: '/jwt-status',
 						cookieId: 'x-ds-token'
-					}
+					},
+					// added by validateDsCredentials(), since there is no '*' embedder key
+					'*': { type: 'forbidden', dslabel: 'ds0', route: 'termdb', cookieId: 'ds0-termdb-*-Id' }
 				}
 			},
 			ds1: {
@@ -415,6 +417,14 @@ tape(`auth methods`, async test => {
 		[
 			{
 				dslabel: 'ds100',
+				route: 'termdb',
+				type: 'forbidden',
+				headerKey: undefined,
+				insession: false,
+				demoTokenRoles: undefined
+			},
+			{
+				dslabel: 'ds100',
 				route: 'burden',
 				type: 'forbidden',
 				headerKey: undefined,
@@ -426,8 +436,8 @@ tape(`auth methods`, async test => {
 	)
 	test.deepEqual(
 		authApi.getNonsensitiveInfo(req1),
-		{ forbiddenRoutes: ['burden'], clientAuthResult: {} },
-		`should return the expected forbidden routes for a wildcard embedder with cred.type='forbidden'`
+		{ forbiddenRoutes: ['termdb', 'burden'], clientAuthResult: {} },
+		`should return the expected forbidden routes for an unlisted embedder`
 	)
 
 	const req2 = {
@@ -437,8 +447,8 @@ tape(`auth methods`, async test => {
 	}
 	test.deepEqual(
 		authApi.getNonsensitiveInfo(req2),
-		{ forbiddenRoutes: [], clientAuthResult: {} },
-		`should return the expected forbidden routes for a non-wildcard embedder`
+		{ forbiddenRoutes: ['termdb'], clientAuthResult: {} },
+		`should only forbid the routes that do not list the embedder`
 	)
 	test.deepEqual(
 		authApi.isUserLoggedIn({ query: { embedder: 'localhost' }, headers: {} }, { label: 'ds100' }),
@@ -579,8 +589,8 @@ tape(`sample-level access without a session, glob credential keys`, async test =
 			label: 'realDs1',
 			cohort: { termdb: { displaySampleIds } }
 		}),
-		true,
-		`should not require a session when the embedder does not match the glob credential key`
+		false,
+		`should not display sample ids when the embedder does not match the glob credential key`
 	)
 	test.equal(
 		authApi.canDisplaySampleIds(getReq({ dslabel: 'openDs', embedder: 'portal.example.org' }), {
@@ -625,8 +635,8 @@ tape(`sample-level access without a session, all-routes credential with a glob e
 	)
 	test.equal(
 		authApi.canDisplaySampleIds(getReq('other.org'), ds),
-		true,
-		`should not require a session when the embedder does not match the all-routes glob embedder key`
+		false,
+		`should not display sample ids when the embedder does not match the all-routes glob embedder key`
 	)
 	test.end()
 })

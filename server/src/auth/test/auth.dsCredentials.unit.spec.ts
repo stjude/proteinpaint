@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { validateDsCredentials, getCorsCredEmbedders } from '#src/auth/auth.dsCredentials.ts'
+import { getMatchedEntry } from '#src/auth/Auth.ts'
 
 /*************************
  reusable constants and helper functions
@@ -124,6 +125,93 @@ tape('validateDsCredentials: jwt type gets expected defaults', async function (t
 	test.equal(cred.dslabel, 'jwtDs', 'should set dslabel on cred')
 	test.equal(cred.route, 'termdb', 'should set route on cred')
 	test.ok(credEmbedders.has('jwt.example.com'), 'should include the embedder host in credEmbedders')
+	test.end()
+})
+
+tape('validateDsCredentials: unlisted embedders are forbidden by default', async function (test) {
+	test.timeoutAfter(500)
+
+	const creds: any = {
+		testDs: {
+			termdb: { 'viz.example.org': { type: 'jwt', secret } },
+			burden: { '{,sub.}pp.example.org': { type: 'basic', secret } },
+			open: { 'pp.example.org': { type: 'basic', secret }, '*': { type: 'open' } },
+			empty: {}
+		}
+	}
+	await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
+	const ds = creds.testDs
+	test.equal(
+		ds.termdb['*']?.type,
+		'forbidden',
+		`should add a forbidden '*' entry to a route with only an exact embedder key`
+	)
+	test.equal(ds.burden['*']?.type, 'forbidden', `should add a forbidden '*' entry to a route with a glob embedder key`)
+	test.equal(ds.burden['*'].dslabel, 'testDs', `should set dslabel on the added '*' entry`)
+	test.equal(ds.burden['*'].route, 'burden', `should set route on the added '*' entry`)
+	test.equal(ds.open['*'].type, 'open', `should keep an explicit '*' entry`)
+	test.deepEqual(ds.empty, {}, 'should not add an entry to a route without embedder keys')
+
+	test.equal(getMatchedEntry(ds.termdb, 'viz.example.org')?.type, 'jwt', 'should match a listed exact embedder')
+	test.equal(getMatchedEntry(ds.burden, 'sub.pp.example.org')?.type, 'basic', 'should match a listed glob embedder')
+	for (const embedder of ['other.example.org', 'ash.pp.example.org', '', undefined]) {
+		test.equal(getMatchedEntry(ds.burden, embedder)?.type, 'forbidden', `should forbid embedder=${embedder}`)
+	}
+	test.equal(
+		getMatchedEntry(ds.open, 'other.example.org')?.type,
+		'open',
+		`should allow an unlisted embedder with '*': open`
+	)
+	test.deepEqual(
+		[...getCorsCredEmbedders(creds)].sort(),
+		['*', 'pp.example.org', 'viz.example.org', '{,sub.}pp.example.org'].sort(),
+		`should not add the forbidden '*' entries as credentialed CORS embedders`
+	)
+	test.end()
+})
+
+tape('validateDsCredentials: rejects a dataset that matches more than one dslabel key', async function (test) {
+	test.timeoutAfter(500)
+
+	const route = () => ({ termdb: { 'viz.example.org': { type: 'jwt', secret } } })
+	const genomes = { hg38: { datasets: { realDs1: {}, otherDs: {} } } }
+	for (const [label, keys] of [
+		[`an exact and a '*' key`, ['realDs1', '*']],
+		['an exact and a glob key', ['realDs1', 'realD*']],
+		['two glob keys', ['real*', '*Ds1']],
+		['exact keys that differ only by case', ['realDs1', 'REALDS1']]
+	] as [string, string[]][]) {
+		const creds: any = Object.fromEntries(keys.map(k => [k, route()]))
+		try {
+			await validateDsCredentials(creds, genomes)
+			test.fail(`should throw for ${label}`)
+		} catch (e) {
+			test.ok(String(e).includes('matches more than one dsCredentials key'), `should throw for ${label}`)
+		}
+	}
+	test.end()
+})
+
+tape('validateDsCredentials: allows dslabel keys that each match different datasets', async function (test) {
+	test.timeoutAfter(500)
+
+	const route = () => ({ termdb: { 'viz.example.org': { type: 'jwt', secret } } })
+	const genomes = { hg38: { datasets: { realDs1: {}, otherDs: {} } } }
+	for (const [label, keys, g] of [
+		['an exact and a glob key', ['realDs1', 'other*'], genomes],
+		[`only a '*' key`, ['*'], genomes],
+		['a key that matches no loaded dataset', ['realDs1', 'realD*'], { hg38: { datasets: { otherDs: {} } } }],
+		['a comment key', ['realDs1', '#realDs1'], genomes],
+		['no genomes argument', ['realDs1', '*'], undefined]
+	] as [string, string[], any][]) {
+		const creds: any = Object.fromEntries(keys.map(k => [k, route()]))
+		try {
+			await validateDsCredentials(creds, g)
+			test.pass(`should not throw for ${label}`)
+		} catch (e) {
+			test.fail(`should not throw for ${label}: ${e}`)
+		}
+	}
 	test.end()
 })
 
