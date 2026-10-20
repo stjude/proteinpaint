@@ -36,6 +36,30 @@ tape('processFormData', async test => {
 	test.end()
 })
 
+tape('mayAdjustCredentials()', test => {
+	{
+		const init = { credentials: 'include' }
+		df.mayAdjustCredentials(init, 'null')
+		test.equal(init.credentials, 'same-origin', `should not include credentials for a 'null' page origin`)
+	}
+	{
+		const init = { credentials: 'include' }
+		df.mayAdjustCredentials(init, 'https://trusted.org')
+		test.equal(init.credentials, 'include', 'should keep credentials for a page with an http(s) origin')
+	}
+	{
+		const init = { credentials: 'omit' }
+		df.mayAdjustCredentials(init, 'null')
+		test.equal(init.credentials, 'omit', `should not change a credentials mode other than 'include'`)
+	}
+	{
+		const init = {}
+		df.mayAdjustCredentials(init, 'null')
+		test.equal(init.credentials, undefined, 'should not set a missing credentials mode')
+	}
+	test.end()
+})
+
 tape('dofetch3() init.signal behavior', async test => {
 	const mockSignal = new AbortController().signal
 

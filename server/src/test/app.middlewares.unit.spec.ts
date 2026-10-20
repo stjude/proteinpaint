@@ -203,6 +203,17 @@ tape('setCorsHeaders() for a non-null origin', test => {
 	const cred = getCorsHeaders('https://trusted.org', [], ['trusted.org'])
 	test.equal(cred['Access-Control-Allow-Origin'], 'https://trusted.org', 'should echo a credentialed embedder origin')
 	test.equal(cred['Access-Control-Allow-Credentials'], true, 'should allow credentials for a credentialed embedder')
+	const wildcardCred = getCorsHeaders('https://trusted.org', ['*'], ['*'])
+	test.equal(
+		wildcardCred['Access-Control-Allow-Origin'],
+		'https://trusted.org',
+		`should echo the origin with a '*' credentialed embedder`
+	)
+	test.equal(
+		wildcardCred['Access-Control-Allow-Credentials'],
+		true,
+		`should allow credentials with a '*' credentialed embedder`
+	)
 	test.deepEqual(
 		getCorsHeaders('https://other.org', ['trusted.org']),
 		{},

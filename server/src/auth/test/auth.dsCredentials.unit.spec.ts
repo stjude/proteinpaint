@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { validateDsCredentials } from '#src/auth/auth.dsCredentials.ts'
+import { validateDsCredentials, getCorsCredEmbedders } from '#src/auth/auth.dsCredentials.ts'
 
 /*************************
  reusable constants and helper functions
@@ -124,6 +124,58 @@ tape('validateDsCredentials: jwt type gets expected defaults', async function (t
 	test.equal(cred.dslabel, 'jwtDs', 'should set dslabel on cred')
 	test.equal(cred.route, 'termdb', 'should set route on cred')
 	test.ok(credEmbedders.has('jwt.example.com'), 'should include the embedder host in credEmbedders')
+	test.end()
+})
+
+tape('getCorsCredEmbedders: excludes forbidden-only embedders', async function (test) {
+	test.timeoutAfter(500)
+
+	const creds: any = {
+		testDs: {
+			termdb: {
+				'viz.example.org': { type: 'jwt', secret },
+				'*': { type: 'forbidden' }
+			},
+			burden: {
+				'pp.example.org': { type: 'basic', secret },
+				'*': { type: 'forbidden' }
+			}
+		}
+	}
+	const credEmbedders = await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
+	test.ok(credEmbedders.has('*'), `should still include a forbidden '*' embedder in the validateDsCredentials() result`)
+	test.deepEqual(
+		[...getCorsCredEmbedders(creds)].sort(),
+		['pp.example.org', 'viz.example.org'],
+		'should only include the embedders that are not forbidden'
+	)
+	test.end()
+})
+
+tape('getCorsCredEmbedders: keeps an embedder that is not forbidden for every route', async function (test) {
+	test.timeoutAfter(500)
+
+	const creds: any = {
+		testDs: {
+			termdb: { '*': { type: 'open' } },
+			burden: { '*': { type: 'forbidden' } }
+		},
+		otherDs: {
+			termdb: { 'viz.example.org': { type: 'forbidden' } }
+		}
+	}
+	await validateDsCredentials(creds, { hg38: { datasets: { testDs: {}, otherDs: {} } } })
+	test.deepEqual([...getCorsCredEmbedders(creds)], ['*'], `should keep '*' when one of its entries is not forbidden`)
+	test.end()
+})
+
+tape('getCorsCredEmbedders: all forbidden', async function (test) {
+	test.timeoutAfter(500)
+
+	const creds: any = { testDs: { '*': { '*': { type: 'forbidden' } } } }
+	const credEmbedders = await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
+	test.equal(credEmbedders.size, 1, 'should still count a forbidden-only config, so that auth checks are set up')
+	test.equal(getCorsCredEmbedders(creds).size, 0, 'should not have credentialed CORS embedders')
 	test.end()
 })
 
