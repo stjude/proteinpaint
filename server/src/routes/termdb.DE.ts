@@ -7,7 +7,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import { getAvailableMemoryMB, fitsInMemory, lowMemoryError, type MemoryCost } from '#src/utils/memory.ts'
+import { getAvailableMemoryMB, runFitsInMemory, lowMemoryError, type MemoryCost } from '#src/utils/memory.ts'
 import { getH5samples } from '#src/utils/h5samples.ts'
 import {
 	buildGroupValues,
@@ -390,13 +390,13 @@ export function checkDeMemory(opts: {
 	const { method, n1, n2, genes, availableMB, confounded } = opts
 	const runDE_methods = 'runDE_methods' in opts ? opts.runDE_methods : serverconfig.features?.runDE_methods
 	const cells = (n1 + n2) * genes
-	if (fitsInMemory(DE_MEMORY[method], { cells }, availableMB)) return
+	if (runFitsInMemory(DE_MEMORY[method], { cells }, availableMB)) return
 	const tryWilcoxon =
 		method != 'wilcoxon' &&
 		!confounded &&
 		(!runDE_methods || runDE_methods.includes('Wilcoxon')) &&
 		pickDeEngine('wilcoxon', n1, n2).engine == 'wilcoxon' &&
-		fitsInMemory(DE_MEMORY.wilcoxon, { cells }, availableMB)
+		runFitsInMemory(DE_MEMORY.wilcoxon, { cells }, availableMB)
 	throw lowMemoryError(
 		`Server memory is too low to run this differential expression analysis on ${(n1 + n2).toLocaleString()} samples. ` +
 			(tryWilcoxon

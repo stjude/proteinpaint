@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { memoryNeededMB } from '../memory.ts'
+import { estimatePeakMB } from '../memory.ts'
 import { GRIN2_MEMORY } from '#src/grin2/main.ts'
 import { DE_MEMORY } from '#src/routes/termdb.DE.ts'
 import { TOPVE_MEMORY } from '#src/routes/termdb.topVariablyExpressedGenes.ts'
@@ -39,7 +39,7 @@ tape('GRIN2', test => {
 		[250000, 1000],
 		[250000, 986]
 	])
-		covers(test, `${lesions} lesions`, memoryNeededMB(GRIN2_MEMORY, { lesions }), peak)
+		covers(test, `${lesions} lesions`, estimatePeakMB(GRIN2_MEMORY, { lesions }), peak)
 	test.end()
 })
 
@@ -71,7 +71,7 @@ tape('DE', test => {
 	}
 	for (const [method, lst] of Object.entries(runs))
 		for (const [samples, peak] of lst)
-			covers(test, `${method} ${samples} samples`, memoryNeededMB(DE_MEMORY[method], { cells: samples * genes }), peak)
+			covers(test, `${method} ${samples} samples`, estimatePeakMB(DE_MEMORY[method], { cells: samples * genes }), peak)
 	test.end()
 })
 
@@ -84,7 +84,7 @@ tape('topVE', test => {
 		[2930, 125],
 		[4873, 122]
 	])
-		covers(test, `${samples} samples`, memoryNeededMB(TOPVE_MEMORY, { samples }), peak)
+		covers(test, `${samples} samples`, estimatePeakMB(TOPVE_MEMORY, { samples }), peak)
 	test.end()
 })
 
@@ -110,7 +110,7 @@ tape('DM', test => {
 		covers(
 			test,
 			`${rows} x ${fileSamples} file, ${selected} selected`,
-			memoryNeededMB(DM_MEMORY, { fileCells: rows * fileSamples, cells: rows * selected }),
+			estimatePeakMB(DM_MEMORY, { fileCells: rows * fileSamples, cells: rows * selected }),
 			peak
 		)
 	test.end()

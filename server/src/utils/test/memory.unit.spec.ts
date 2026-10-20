@@ -1,9 +1,9 @@
 import tape from 'tape'
 import {
 	getCgroupInactiveFileBytes,
-	memoryNeededMB,
-	fitsInMemory,
-	maxUnitsThatFit,
+	estimatePeakMB,
+	runFitsInMemory,
+	largestSizeThatFits,
 	lowMemoryError,
 	RUN_MEMORY_FRACTION
 } from '../memory.ts'
@@ -33,30 +33,34 @@ tape('getCgroupInactiveFileBytes', test => {
 	test.end()
 })
 
-tape('memoryNeededMB, fitsInMemory', test => {
+tape('estimatePeakMB, runFitsInMemory', test => {
 	const cost = { baseMB: 100, perUnitMB: { rows: 2, pairs: 0.5 } }
-	test.equal(memoryNeededMB(cost, { rows: 10, pairs: 40 }), 140, 'base + 2 × 10 rows + 0.5 × 40 pairs')
-	test.throws(() => memoryNeededMB(cost, { rows: 10 }), /needs the run's pairs/, 'a size left out => throws')
-	test.equal(fitsInMemory(cost, { rows: 10, pairs: 40 }, 350), true, '140 MB in 40% of 350 MB (140) => fits')
-	test.equal(fitsInMemory(cost, { rows: 10, pairs: 42 }, 350), false, '141 MB in 140 MB => does not fit')
-	test.equal(fitsInMemory(cost, { rows: 10, pairs: 42 }, 350, 1), true, 'the whole 350 MB => fits')
+	test.equal(estimatePeakMB(cost, { rows: 10, pairs: 40 }), 140, 'base + 2 × 10 rows + 0.5 × 40 pairs')
+	test.throws(() => estimatePeakMB(cost, { rows: 10 }), /needs the run's pairs/, 'a size left out => throws')
+	test.equal(runFitsInMemory(cost, { rows: 10, pairs: 40 }, 350), true, '140 MB in 40% of 350 MB (140) => fits')
+	test.equal(runFitsInMemory(cost, { rows: 10, pairs: 42 }, 350), false, '141 MB in 140 MB => does not fit')
+	test.equal(runFitsInMemory(cost, { rows: 10, pairs: 42 }, 350, 1), true, 'the whole 350 MB => fits')
 	test.end()
 })
 
-tape('maxUnitsThatFit', test => {
+tape('largestSizeThatFits', test => {
 	const cost = { baseMB: 100, perUnitMB: { units: 1 } }
-	test.equal(maxUnitsThatFit(1000, cost, 'units', 0.5), 400, 'budget 500 MB - base 100 MB => 400 units')
-	test.equal(maxUnitsThatFit(200, cost, 'units', 0.5), 0, 'budget equal to the base => 0 units')
-	test.equal(maxUnitsThatFit(100, cost, 'units', 0.5), 0, 'budget below the base => 0, not negative')
+	test.equal(largestSizeThatFits(1000, cost, 'units', 0.5), 400, 'budget 500 MB - base 100 MB => 400 units')
+	test.equal(largestSizeThatFits(200, cost, 'units', 0.5), 0, 'budget equal to the base => 0 units')
+	test.equal(largestSizeThatFits(100, cost, 'units', 0.5), 0, 'budget below the base => 0, not negative')
 	test.equal(
-		maxUnitsThatFit(1000, { baseMB: 100, perUnitMB: { units: 0.3 } }, 'units', 0.5),
+		largestSizeThatFits(1000, { baseMB: 100, perUnitMB: { units: 0.3 } }, 'units', 0.5),
 		1333,
 		'a fraction of a unit is dropped'
 	)
 	test.equal(RUN_MEMORY_FRACTION, 0.4, 'default share of the available memory')
-	test.equal(maxUnitsThatFit(1000, cost, 'units'), 300, 'the default share => budget 400 MB - base 100 MB => 300 units')
+	test.equal(
+		largestSizeThatFits(1000, cost, 'units'),
+		300,
+		'the default share => budget 400 MB - base 100 MB => 300 units'
+	)
 	test.throws(
-		() => maxUnitsThatFit(1000, { baseMB: 100, perUnitMB: { genes: 2, pairs: 1 } }, 'genes'),
+		() => largestSizeThatFits(1000, { baseMB: 100, perUnitMB: { genes: 2, pairs: 1 } }, 'genes'),
 		/needs the run's pairs/,
 		'a cost with a second size => throws rather than leaving it out'
 	)

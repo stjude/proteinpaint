@@ -8,7 +8,7 @@ import { get_samples } from '../termdb.sql.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dtitd, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
 import { mapConcurrent } from '../utils/concurrencyLimiter.ts'
-import { getAvailableMemoryMB, maxUnitsThatFit, lowMemoryError, type MemoryCost } from '../utils/memory.ts'
+import { getAvailableMemoryMB, largestSizeThatFits, lowMemoryError, type MemoryCost } from '../utils/memory.ts'
 import { processSampleMlst, buildLesionTypeMap } from './lesions.ts'
 import type { CnvType, Grin2CacheResult, Grin2Processing, Lesion } from './types.ts'
 import { maySetMapParent2Children } from '../termdb.matrix.js'
@@ -24,7 +24,7 @@ import { resolveExcludeBeds } from '../utils/regionMask.ts'
 export const GRIN2_MEMORY: MemoryCost = { baseMB: 380, perUnitMB: { lesions: 0.0026 } }
 const MIN_LESIONS = 50000 // smallest run worth doing; when memory cannot fit this many, the run is refused
 // Hard ceiling on the memory one run plans for, whatever the config or free memory: 2 GB ≈ 641,538 lesions
-const CEILING_LESIONS = maxUnitsThatFit(2048, GRIN2_MEMORY, 'lesions', 1)
+const CEILING_LESIONS = largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1)
 const LOW_MEMORY_MESSAGE =
 	'Server memory is too low to run GRIN2 on this cohort right now. Try again later or select a smaller cohort.'
 // Maximum total number of lesions to process to avoid overwhelming the production server
@@ -589,7 +589,7 @@ export async function getMaxLesions(getAvailable = getAvailableMemoryMB): Promis
 	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
 
 	// Run even when memory is plentiful, so a configured MAX_LESIONS that would not fit is still reduced
-	const cap = Math.min(MAX_LESIONS, maxUnitsThatFit(availableMemoryMB, GRIN2_MEMORY, 'lesions'))
+	const cap = Math.min(MAX_LESIONS, largestSizeThatFits(availableMemoryMB, GRIN2_MEMORY, 'lesions'))
 	// Refused before any fetch: the budget cannot cover the base overhead, and the GDC batch fetch reads a cap of 0 as no cap
 	if (cap <= 0) throw lowMemoryError(LOW_MEMORY_MESSAGE)
 	if (cap < MAX_LESIONS) mayLog(`[GRIN2] Reduced lesion cap to ${cap.toLocaleString()} for low memory`)
