@@ -4,6 +4,7 @@ import { buildGroupValues, isFilterGroup } from '#src/utils/sampleGroups.ts'
 import serverconfig from '#src/serverconfig.js'
 import { getAvailableMemoryMB, admitRun, type MemoryCost } from '#src/utils/memory.ts'
 import { getH5shape } from '#src/utils/h5samples.ts'
+import { mapConcurrent } from '#src/utils/concurrencyLimiter.ts'
 
 /* Which methylation matrix a region (DMR) request runs on, and which samples are eligible for it.
 Shared by the single-region and batch routes so the two cannot drift: if they disagreed about the
@@ -288,4 +289,26 @@ export async function admitDmrcateJobs(
 	const largest = (await Promise.all([...new Set(files)].map(matrixRows))).sort((a, b) => b - a).slice(0, concurrency)
 	const cost = { baseMB: DMRCATE_MEMORY.baseMB * largest.length, perUnitMB: DMRCATE_MEMORY.perUnitMB }
 	return admitRun(label, cost, { rows: largest.reduce((sum, r) => sum + r, 0) }, await getAvailableMemoryMB(), refusal)
+}
+
+/** Runs `run` on each job, `concurrency` at a time (mapConcurrent), and settles only once every job it started has
+ * ended. After a job fails no further job starts, and the first failure is rethrown when the rest have ended, so a
+ * caller's finally that releases the jobs' reserved memory never runs while a job is still holding it. */
+export async function runJobPool<T>(jobs: T[], concurrency: number, run: (job: T) => Promise<void>): Promise<void> {
+	let failed = false
+	const results = await mapConcurrent(
+		jobs,
+		concurrency,
+		async job => {
+			try {
+				await run(job)
+			} catch (e) {
+				failed = true
+				throw e
+			}
+		},
+		{ stopWhen: () => failed }
+	)
+	const failure = results.find(r => r?.status == 'rejected')
+	if (failure) throw (failure as PromiseRejectedResult).reason
 }
