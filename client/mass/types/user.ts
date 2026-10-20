@@ -34,6 +34,8 @@ export type SessionLocation = 'browser' | 'server'
 
 export type SessionOption = {
 	label: string
+	/** A unicode character shown before the label, rendered as html */
+	icon: string
 	title: string
 	callback: () => void | Promise<any>
 }

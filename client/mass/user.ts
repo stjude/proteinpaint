@@ -74,22 +74,24 @@ export class MassUser implements RxComponent {
 		// no margin, so that the option buttons have the same spacing as the chart buttons in the charts tab,
 		// which are appended directly to that subheader
 		const sessionDiv = this.subheader.append('div').attr('data-testid', 'sjpp-massnav-user-session')
-		// states the purpose of the option buttons, on the same row. the left margin is the same as the buttons
+		// states the purpose of the option buttons, on the same row. the side margins are the same as the gap between the buttons
 		sessionDiv
 			.append('span')
 			.attr('data-testid', 'sjpp-massnav-user-session-label')
-			.style('margin-left', '10px')
+			.style('margin', '0 10px')
 			.style('font-weight', 'bold')
 			.style('opacity', 0.65)
 			.text('SESSION')
 		this.dom = {
 			authDiv: this.subheader.append('div').attr('data-testid', 'sjpp-massnav-user-auth').style('margin', '10px'),
 			sessionDiv,
-			// inline-block, to be on the same row as the label
+			// inline-flex, to be on the same row as the label, with the same gap between the buttons
 			optionsDiv: sessionDiv
 				.append('div')
 				.attr('data-testid', 'sjpp-massnav-user-session-options')
-				.style('display', 'inline-block'),
+				.style('display', 'inline-flex')
+				.style('vertical-align', 'middle')
+				.style('gap', '10px'),
 			// aligned with the edge of the option buttons, which have a 10px margin
 			contentDiv: sessionDiv
 				.append('div')
@@ -108,9 +110,14 @@ export class MassUser implements RxComponent {
 			copytip: new Menu({ padding: '5px' })
 		}
 		this.sessionOptions = [
-			{ label: `Open`, title: 'Recover a saved session', callback: () => this.open() },
-			{ label: `Save`, title: 'Save the current view', callback: () => this.save() },
-			{ label: `Share`, title: 'Share the current view', callback: () => this.getSessionUrl() }
+			{ label: `Open`, icon: '&#x23CF;&#xFE0E;', title: 'Recover a saved session', callback: () => this.open() },
+			{ label: `Save`, icon: '&#x2B07;&#xFE0E;', title: 'Save the current view', callback: () => this.save() },
+			{
+				label: `Share`,
+				icon: '&#x26D3;&#xFE0E;',
+				title: 'Share the current view',
+				callback: () => this.getSessionUrl()
+			}
 		]
 		this.embedderOrigin = window.location.origin
 		this.hostURL = sessionStorage.getItem('hostURL') || this.embedderOrigin
@@ -239,12 +246,18 @@ export class MassUser implements RxComponent {
 		if (!this.dom?.optionsDiv) return
 		const options = this.sessionOptions.slice()
 		if (Object.keys(this.savedSessions).length || this.serverCachedSessions?.length) {
-			options.push({ label: `Delete`, title: 'Delete a saved session', callback: () => this.delete() })
+			options.push({
+				label: `Delete`,
+				icon: '&#x2715;',
+				title: 'Delete a saved session',
+				callback: () => this.delete()
+			})
 		}
 		// only for a session opened from a `mass-session-id` URL
 		if (this.opts.sessionDaysLeft != null && this.opts.sessionId) {
 			options.push({
 				label: `Export Session`,
+				icon: '&#x2913;',
 				title: 'Download this session as a file',
 				callback: () => this.exportSession()
 			})
@@ -256,7 +269,7 @@ export class MassUser implements RxComponent {
 			.enter()
 			.append('button')
 			// same style as the chart buttons in charts.ts
-			.style('margin', '10px')
+			.style('margin', '10px 0')
 			.style('padding', '10px 15px')
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
@@ -266,7 +279,7 @@ export class MassUser implements RxComponent {
 			)
 			.attr('aria-label', (d: SessionOption) => d.title)
 			.attr('title', (d: SessionOption) => d.title)
-			.text((d: SessionOption) => d.label)
+			.html((d: SessionOption) => `${d.icon} ${d.label}`)
 			.on('click', async (event: MouseEvent, d: SessionOption) => {
 				event.stopPropagation()
 				this.clearContent()

@@ -97,7 +97,7 @@ function getOptionLabels(holder: any): string[] {
 	return holder
 		.selectAll('[data-testid^="sjpp-massnav-user-session-btn-"]')
 		.nodes()
-		.map((n: HTMLElement) => n.textContent)
+		.map((n: any) => n.__data__.label)
 }
 
 function getOptionBtn(holder: any, label: string): HTMLElement {

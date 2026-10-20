@@ -156,7 +156,7 @@ tape('user tab for a public dataset', test => {
 
 		for (const label of ['Open', 'Save', 'Share']) {
 			const btn = await detectOptionBtn(nav, label)
-			test.equal(btn.textContent, label, `should show the ${label} button`)
+			test.equal((btn as any).__data__.label, label, `should show the ${label} button`)
 		}
 		test.equal(
 			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-session-btn-export-session"]').size(),
@@ -581,7 +581,7 @@ tape('Export Session and days left message for a session opened from a url', tes
 	async function runTests(nav: any) {
 		nav.on('postRender.test', null)
 		const exportBtn = await detectOptionBtn(nav, 'Export Session')
-		test.equal(exportBtn.textContent, 'Export Session', 'should show Export Session in the user tab')
+		test.equal((exportBtn as any).__data__.label, 'Export Session', 'should show Export Session in the user tab')
 		test.equal(
 			nav.Inner.dom.controlsDiv.selectAll('[data-testid="sjpp-nav-file-btn"]').size(),
 			0,
