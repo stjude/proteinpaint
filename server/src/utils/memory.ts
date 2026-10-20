@@ -81,7 +81,9 @@ export function getCgroupInactiveFileBytes(readFile = (file: string) => fs.readF
  * @example
  * estimatePeakMB(GRIN2_MEMORY, { lesions: 250_000 }) // 1030: 380 + 0.0026 × 250,000
  * estimatePeakMB(DE_MEMORY.edgeR, { cells: 4438 * 17928 }) // ≈ 8938: all ASH, 17,928 genes
- * estimatePeakMB(DE_MEMORY.wilcoxon, { cells: 4438 * 17928 }) // ≈ 2247
+ * estimatePeakMB(DE_MEMORY.wilcoxon, { cells: 4438 * 17928, spanCells: 4438 * 17928 }) // ≈ 2551
+ * // wilcoxon reads every column between the first and last selected sample: 20 samples over 10,000 columns
+ * estimatePeakMB(DE_MEMORY.wilcoxon, { cells: 20 * 60660, spanCells: 10000 * 60660 }) // ≈ 2594
  * estimatePeakMB(TOPVE_MEMORY, { samples: 4873 }) // ≈ 145
  * // DM, MMRF allccre: 267,531 rows x 415 samples in the file, 400 of them selected
  * estimatePeakMB(DM_MEMORY, { fileCells: 267531 * 415, cells: 267531 * 400 }) // ≈ 6134 (measured peak 5,057)
@@ -100,7 +102,7 @@ export function estimatePeakMB(cost: MemoryCost, units: MemoryUnits): number {
  * does not fit, e.g. `if (!runFitsInMemory(...)) throw lowMemoryError(...)`. The default budget is 40% of availableMB.
  * @example
  * runFitsInMemory(DE_MEMORY.edgeR, { cells: 4438 * 17928 }, 12000) // false: ≈ 8938 MB > 4800 budget
- * runFitsInMemory(DE_MEMORY.wilcoxon, { cells: 4438 * 17928 }, 12000) // true: ≈ 2247 MB, so the refusal suggests it
+ * runFitsInMemory(DE_MEMORY.wilcoxon, { cells: 4438 * 17928, spanCells: 4438 * 17928 }, 12000) // true: ≈ 2551 MB
  * runFitsInMemory(DM_MEMORY, { fileCells: 267531 * 415, cells: 267531 * 400 }, 16000) // true: ≈ 6134 <= 6400
  * runFitsInMemory(DM_MEMORY, { fileCells: 267531 * 415, cells: 267531 * 400 }, 12000) // false: ≈ 6134 > 4800
  * runFitsInMemory(TOPVE_MEMORY, { samples: 4873 }, 200) // false: ≈ 145 > 80

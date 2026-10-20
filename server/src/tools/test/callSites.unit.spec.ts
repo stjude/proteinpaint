@@ -324,7 +324,7 @@ tape('getAvailableMemoryMB()', async test => {
 		else {
 			const totalMB = os.totalmem() / 1024 / 1024
 			test.ok(
-				Number.isFinite(availableMem && availableMem > 0 && availableMem <= totalMB),
+				Number.isFinite(availableMem) && availableMem > 0 && availableMem <= totalMB,
 				'should return a memory cap in MB, between 0 and less than or equal to total memory'
 			)
 		}

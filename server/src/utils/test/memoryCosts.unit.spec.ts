@@ -71,9 +71,15 @@ tape('DE', test => {
 			[4438, 2017]
 		]
 	}
+	// spanCells at its least, the selected samples side by side, so the check cannot pass on a wide span
 	for (const [method, lst] of Object.entries(runs))
 		for (const [samples, peak] of lst)
-			covers(test, `${method} ${samples} samples`, estimatePeakMB(DE_MEMORY[method], { cells: samples * genes }), peak)
+			covers(
+				test,
+				`${method} ${samples} samples`,
+				estimatePeakMB(DE_MEMORY[method], { cells: samples * genes, spanCells: samples * genes }),
+				peak
+			)
 	test.end()
 })
 
@@ -119,13 +125,20 @@ tape('DM', test => {
 })
 
 tape('memory.ts @example outputs', test => {
-	const allAsh = { cells: 4438 * 17928 }
+	const allAsh = { cells: 4438 * 17928, spanCells: 4438 * 17928 }
+	// 20 samples spread over 10,000 columns of a 60,660-gene file
+	const wideSpan = { cells: 20 * 60660, spanCells: 10000 * 60660 }
 	const mmrfAllccre = { fileCells: 267531 * 415, cells: 267531 * 400 }
 	const r = (mb: number) => Math.round(mb)
 
 	test.equal(estimatePeakMB(GRIN2_MEMORY, { lesions: 250_000 }), 1030, 'GRIN2 250,000 lesions => 1030 MB')
 	test.equal(r(estimatePeakMB(DE_MEMORY.edgeR, allAsh)), 8938, 'edgeR on all ASH => ≈ 8938 MB')
-	test.equal(r(estimatePeakMB(DE_MEMORY.wilcoxon, allAsh)), 2247, 'wilcoxon on all ASH => ≈ 2247 MB')
+	test.equal(r(estimatePeakMB(DE_MEMORY.wilcoxon, allAsh)), 2551, 'wilcoxon on all ASH => ≈ 2551 MB')
+	test.equal(
+		r(estimatePeakMB(DE_MEMORY.wilcoxon, wideSpan)),
+		2594,
+		'wilcoxon on 20 samples over 10,000 columns => ≈ 2594 MB'
+	)
 	test.equal(r(estimatePeakMB(TOPVE_MEMORY, { samples: 4873 })), 145, 'topVE on 4,873 samples => ≈ 145 MB')
 	test.equal(r(estimatePeakMB(DM_MEMORY, mmrfAllccre)), 6134, 'DM MMRF allccre, 400 selected => ≈ 6134 MB')
 	test.throws(
@@ -136,6 +149,11 @@ tape('memory.ts @example outputs', test => {
 
 	test.equal(runFitsInMemory(DE_MEMORY.edgeR, allAsh, 12000), false, 'edgeR on all ASH at 12 GB => does not fit')
 	test.equal(runFitsInMemory(DE_MEMORY.wilcoxon, allAsh, 12000), true, 'wilcoxon on all ASH at 12 GB => fits')
+	test.equal(
+		runFitsInMemory(DE_MEMORY.wilcoxon, wideSpan, 1000),
+		false,
+		'wilcoxon on 20 samples over a wide span at 1 GB => does not fit'
+	)
 	test.equal(runFitsInMemory(DM_MEMORY, mmrfAllccre, 16000), true, 'DM MMRF allccre at 16 GB => fits')
 	test.equal(runFitsInMemory(DM_MEMORY, mmrfAllccre, 12000), false, 'DM MMRF allccre at 12 GB => does not fit')
 	test.equal(runFitsInMemory(TOPVE_MEMORY, { samples: 4873 }, 200), false, 'topVE at 200 MB => does not fit')

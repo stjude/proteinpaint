@@ -1,10 +1,12 @@
 import tape from 'tape'
-import { pickDeEngine, checkDeMemory } from '#src/routes/termdb.DE.ts'
+import { pickDeEngine, checkDeMemory, selectedColumnSpan } from '#src/routes/termdb.DE.ts'
 
 /** Tests
  * - pickDeEngine() engine selection
  * - pickDeEngine() DE_method sent to R
  * - checkDeMemory() refusal and the wilcoxon suggestion
+ * - checkDeMemory() counts the columns wilcoxon reads
+ * - selectedColumnSpan()
  */
 
 /**************
@@ -112,5 +114,26 @@ tape('checkDeMemory', function (test) {
 		'groups of 8 or fewer => no wilcoxon, which would fall back to edgeR'
 	)
 	test.ok(check('wilcoxon', 1508, 2930, 4000).endsWith(smaller), 'wilcoxon itself too big => only a smaller cohort')
+	test.end()
+})
+
+tape('checkDeMemory counts the columns wilcoxon reads', function (test) {
+	// 20 samples spread over 10,000 columns of a 60,660-gene file: rust reads the whole span, ~2.3 GB as f32
+	const run = { method: 'wilcoxon' as const, n1: 10, n2: 10, genes: 60660, availableMB: 1000 }
+	test.doesNotThrow(() => checkDeMemory(run), 'adjacent samples at 1 GB => fits')
+	test.throws(
+		() => checkDeMemory({ ...run, spanSamples: 10000 }),
+		/too low/,
+		'the same samples over 10,000 columns => refused'
+	)
+	test.end()
+})
+
+tape('selectedColumnSpan', function (test) {
+	const file = ['a', 'b', 'c', 'd', 'e', 'f']
+	test.equal(selectedColumnSpan(file, ['b', 'c']), 2, 'adjacent => 2')
+	test.equal(selectedColumnSpan(file, ['e', 'a']), 5, 'a to e, in any order => 5')
+	test.equal(selectedColumnSpan(file, ['b', 'x', 'd']), 3, 'a sample not in the file is skipped')
+	test.equal(selectedColumnSpan(file, ['x', 'y']), 2, 'none in the file => the number selected')
 	test.end()
 })

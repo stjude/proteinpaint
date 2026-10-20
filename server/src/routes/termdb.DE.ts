@@ -201,13 +201,17 @@ export async function getDeCacheResult(
 	return { result, cacheId }
 }
 
+/** a counts file built on demand: its path, its samples in file order, and its gene count, without which the memory
+ * check is skipped */
+type BuiltCounts = { file: string; samples: string[]; genes?: number }
+
 /* the pseudobulk branch below fills in only the first two, so the rest are optional. named
 because the two returns have different shapes and the union would otherwise hide the
 builder-only fields from callers */
 type ResolvedDE = {
 	countsFile?: string
 	allSampleSet: Set<string>
-	buildCountsFile?: (samples: string[], q: any) => Promise<{ file: string; samples: string[] }>
+	buildCountsFile?: (samples: string[], q: any) => Promise<BuiltCounts>
 	previewCountsFiles?: (samples: string[], q: any) => Promise<CountsFilePreview>
 	maxSamples?: number
 }
@@ -250,12 +254,13 @@ async function runDeFresh(
 	ds: any,
 	term_results: any,
 	term_results2: any,
-	buildCountsFile?: (samples: string[], q: any) => Promise<{ file: string; samples: string[] }>
+	buildCountsFile?: (samples: string[], q: any) => Promise<BuiltCounts>
 ): Promise<DeCacheResult> {
 	const groups = await resolveSampleGroups(param, allSampleSet, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 
 	let input_file = countsFile
+	let built: BuiltCounts | undefined
 	if (!input_file) {
 		/* the ds has no static counts file and assembles one for exactly the samples being compared,
 		so this has to run after resolveSampleGroups -- and after the alerts throw above, so a request
@@ -265,7 +270,7 @@ async function runDeFresh(
 		so they would need the same drop-filtering applied below; add a dropMissing() helper in
 		sampleGroups.ts when a build-on-demand ds needs tw. */
 		if (param.tw || param.tw2) throw new Error('confounding variables are not supported for this dataset')
-		const built = await buildCountsFile!([...groups.group1names, ...groups.group2names], param)
+		built = await buildCountsFile!([...groups.group1names, ...groups.group2names], param)
 		input_file = built.file
 		// edge_newh5.R fails hard when a requested case/control is absent from the h5 'samples', so
 		// drop the samples whose counts file could not be fetched
@@ -279,17 +284,27 @@ async function runDeFresh(
 	// must be decided before expression_input is built; see pickDeEngine
 	const { engine, DE_method } = pickDeEngine(param.method, groups.group1names.length, groups.group2names.length)
 
-	// Refused before R or rust starts when the run would not fit in memory. Dropping genes or samples to make it fit
-	// would change the statistics, so the user is asked for a smaller cohort instead.
-	const genes = (await getH5samples(input_file!, 'item')).length
-	checkDeMemory({
-		method: DE_method,
-		n1: groups.group1names.length,
-		n2: groups.group2names.length,
-		genes,
-		availableMB: await getAvailableMemoryMB(),
-		confounded: Boolean(param.tw || param.tw2)
-	})
+	/* Refused before R or rust starts when the run would not fit in memory. Dropping genes or samples to make it fit
+	would change the statistics, so the user is asked for a smaller cohort instead. A built file is in cachedir, which
+	the h5dump tool does not read, so its builder reports the gene count; one that does not is left unchecked.
+	ponytail: a built file is checked after it is built, so a refused run has already downloaded its counts files;
+	check before building, with the gene axis, if that wasted download matters. */
+	const genes = built ? built.genes : (await getH5samples(countsFile!, 'item')).length
+	if (genes) {
+		checkDeMemory({
+			method: DE_method,
+			n1: groups.group1names.length,
+			n2: groups.group2names.length,
+			genes,
+			// a built file's samples are in file order, as are a static file's in allSampleSet, read at startup
+			spanSamples: selectedColumnSpan(built ? built.samples : [...allSampleSet], [
+				...groups.group1names,
+				...groups.group2names
+			]),
+			availableMB: await getAvailableMemoryMB(),
+			confounded: Boolean(param.tw || param.tw2)
+		})
+	}
 
 	const expression_input = {
 		case: groups.group2names.join(','),
@@ -370,7 +385,25 @@ async function runDeFresh(
 export const DE_MEMORY: Record<'edgeR' | 'limma' | 'wilcoxon', MemoryCost> = {
 	edgeR: { baseMB: 950, perUnitMB: { cells: 1.8 / 17928 } },
 	limma: { baseMB: 1100, perUnitMB: { cells: 2.1 / 17928 } },
-	wilcoxon: { baseMB: 250, perUnitMB: { cells: 0.45 / 17928 } }
+	/* plus spanCells (genes x the columns from the first to the last selected sample) at 4 bytes each: DEanalysis.rs
+	reads that whole span as f32 in one call, so 20 samples spread over 10,000 columns cost 10,000 columns. The runs
+	above were measured as selected cells only, so this term only raises the estimate. */
+	wilcoxon: { baseMB: 250, perUnitMB: { cells: 0.45 / 17928, spanCells: 4 / 1024 ** 2 } }
+}
+
+/** Columns of the counts file from the first selected sample to the last, in file order, which DEanalysis.rs reads
+ * in full; `fileSamples` is the file's 'samples' dataset in order */
+export function selectedColumnSpan(fileSamples: string[], selected: string[]): number {
+	const column = new Map(fileSamples.map((s, i) => [s, i]))
+	let first = Infinity,
+		last = -Infinity
+	for (const s of selected) {
+		const i = column.get(s)
+		if (i === undefined) continue
+		first = Math.min(first, i)
+		last = Math.max(last, i)
+	}
+	return last >= first ? last - first + 1 : selected.length
 }
 
 /** Throws LOW_MEMORY when a DE run of n1 + n2 samples and `genes` genes does not fit in the available memory. The
@@ -382,6 +415,8 @@ export function checkDeMemory(opts: {
 	n1: number
 	n2: number
 	genes: number
+	/** the columns wilcoxon reads, from selectedColumnSpan(); n1 + n2 when the selected samples are adjacent */
+	spanSamples?: number
 	availableMB: number
 	/** the run adjusts for a confounder (tw or tw2) */
 	confounded?: boolean
@@ -390,13 +425,14 @@ export function checkDeMemory(opts: {
 	const { method, n1, n2, genes, availableMB, confounded } = opts
 	const runDE_methods = 'runDE_methods' in opts ? opts.runDE_methods : serverconfig.features?.runDE_methods
 	const cells = (n1 + n2) * genes
-	if (runFitsInMemory(DE_MEMORY[method], { cells }, availableMB)) return
+	const units = { cells, spanCells: Math.max(n1 + n2, opts.spanSamples ?? 0) * genes }
+	if (runFitsInMemory(DE_MEMORY[method], units, availableMB)) return
 	const tryWilcoxon =
 		method != 'wilcoxon' &&
 		!confounded &&
 		(!runDE_methods || runDE_methods.includes('Wilcoxon')) &&
 		pickDeEngine('wilcoxon', n1, n2).engine == 'wilcoxon' &&
-		runFitsInMemory(DE_MEMORY.wilcoxon, { cells }, availableMB)
+		runFitsInMemory(DE_MEMORY.wilcoxon, units, availableMB)
 	throw lowMemoryError(
 		`Server memory is too low to run this differential expression analysis on ${(n1 + n2).toLocaleString()} samples. ` +
 			(tryWilcoxon

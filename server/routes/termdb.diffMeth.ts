@@ -476,12 +476,13 @@ type DiffMethInput = {
 export const DM_MEMORY: MemoryCost = { baseMB: 880, perUnitMB: { fileCells: 0.0000107, cells: 0.000038 } }
 
 /** Rows and samples of a methylation matrix file, read once per file: a 375,525-row file takes one h5dump of its row
- * labels, and the files do not change while the server runs */
+ * labels, and the files do not change while the server runs. Rows are counted from meta/gene_names, which diffMeth.R
+ * requires in every layout; meta/chr is optional there, replaced by a chrom_lengths attribute in some files. */
 const fileShapes = new Map<string, Promise<{ rows: number; samples: number }>>()
 function methylationFileShape(file: string): Promise<{ rows: number; samples: number }> {
 	if (!fileShapes.has(file)) {
-		const shape = Promise.all([getH5samples(file, 'meta/chr'), getH5samples(file, 'meta/samples/names')]).then(
-			([chr, samples]) => ({ rows: chr.length, samples: samples.length })
+		const shape = Promise.all([getH5samples(file, 'meta/gene_names'), getH5samples(file, 'meta/samples/names')]).then(
+			([rows, samples]) => ({ rows: rows.length, samples: samples.length })
 		)
 		// a failed read is not kept, so the next request tries again
 		shape.catch(() => fileShapes.delete(file))

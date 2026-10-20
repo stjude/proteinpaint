@@ -865,11 +865,12 @@ type RnaseqGeneCount = {
 	/** ds-supplied on-demand builder, for datasets with no static counts file (gdc assembles one
 	 * from open-access STAR-Counts files). called by the DE route only after the sample groups are
 	 * resolved, since the matrix is built for exactly the samples in the two groups. returns the
-	 * h5 path plus the samples that actually landed in it, which may be fewer than requested. */
+	 * h5 path plus the samples that actually landed in it, which may be fewer than requested, and the
+	 * number of genes in it, which the DE route needs to check the run fits in memory (unchecked without). */
 	buildCountsFile?: (
 		samples: string[],
 		q: any
-	) => Promise<{ file: string; samples: string[]; countsFiles?: CountsFilePreview }>
+	) => Promise<{ file: string; samples: string[]; genes?: number; countsFiles?: CountsFilePreview }>
 	/** describe the counts files behind a run without building it, so preAnalysis can tell the user
 	 * which files back the cohort and how much of the fetch is already cached. costs one metadata
 	 * query and no downloads. only for datasets with buildCountsFile; may throw, and the DE route
