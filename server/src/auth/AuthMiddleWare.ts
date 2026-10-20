@@ -185,6 +185,13 @@ function checkSession(auth, req, res, next, cred) {
 	const q = req.query
 	let code
 
+	// a forbidden cred does not allow a login, so an existing session for the dataset does not apply
+	if (cred.type == 'forbidden') {
+		res.status(403)
+		res.send({ error: 'no credentials set up for this embedder' })
+		return
+	}
+
 	// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
 	if (auth.sessionTracking == 'jwt-only') {
 		console.log('!!! --- CLEARING ALL SESSION DATA TO simulate stateless service --- !!!')
