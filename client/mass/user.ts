@@ -17,7 +17,7 @@ import { markSavedState, getSavedStateRefusal } from './sessionForm.ts'
 - the session open/save/share/delete functionality, moved from the former session button. The options are always
   shown as buttons, and the selected option renders into dom.contentDiv
 
-The nav tab label is 'USER' if the dataset requires authorization, otherwise 'SESSION'. nav.ts sets it.
+The nav tab label is always 'SESSION'. nav.ts sets it.
 */
 
 /** A dataset requires authorization if the server sent a non-empty termdbConfig.requiredAuth[] */
@@ -237,10 +237,8 @@ export class MassUser implements RxComponent {
 		if (!this.serverCachedSessions) this.setServerCachedSessions()
 	}
 
-	/** Render the Open, Save, Share, and Delete buttons. Delete is only available if there is something to delete */
-	renderSessionOptions() {
-		// a lookup of the sessions on the server may finish after the component is destroyed, which removes this.dom
-		if (!this.dom?.optionsDiv) return
+	/** The Open, Save, Share, Delete, and Download options. Delete is only available if there is something to delete */
+	getSessionOptions(): SessionOption[] {
 		const options = this.sessionOptions.slice()
 		if (Object.keys(this.savedSessions).length || this.serverCachedSessions?.length) {
 			options.push({
@@ -253,12 +251,20 @@ export class MassUser implements RxComponent {
 		// only for a session opened from a `mass-session-id` URL
 		if (this.opts.sessionDaysLeft != null && this.opts.sessionId) {
 			options.push({
-				label: `Export Session`,
+				label: `Download`,
 				icon: '&#x2913;',
 				title: 'Download this session as a file',
-				callback: () => this.exportSession()
+				callback: () => this.download(this.opts.sessionId!, this.getState(this.app.getState(), true))
 			})
 		}
+		return options
+	}
+
+	/** Render the buttons of the session options */
+	renderSessionOptions() {
+		// a lookup of the sessions on the server may finish after the component is destroyed, which removes this.dom
+		if (!this.dom?.optionsDiv) return
+		const options = this.getSessionOptions()
 		this.dom.optionsDiv.selectAll('*').remove()
 		this.dom.optionsDiv
 			.selectAll('button')
@@ -285,17 +291,6 @@ export class MassUser implements RxComponent {
 				// days left message stays right under the options. the component may be destroyed during the callback
 				if (this.dom?.contentDiv?.node()?.hasChildNodes()) this.dom.contentDiv.style('padding-bottom', '10px')
 			})
-	}
-
-	/** Download the opened `mass-session-id` session as a json file */
-	async exportSession() {
-		const res = await dofetch3(`/massSession?id=${encodeURIComponent(this.opts.sessionId!)}`)
-		const a = document.createElement('a')
-		const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(res.state))
-		a.setAttribute('href', dataStr)
-		a.download = `${this.opts.sessionId}.json`
-		a.click()
-		a.remove()
 	}
 
 	clearContent() {
@@ -695,7 +690,6 @@ export class MassUser implements RxComponent {
 		}
 		const url = `${this.hostURL}/?mass-session-id=${encodeURIComponent(res.id)}&noheader=1`
 		const linkDiv = div.append('div').style('margin', '10px')
-		linkDiv.append('div').style('display', 'flex').style('margin-bottom', '12px').text(`Open or copy the session link.`)
 
 		const a = linkDiv.append('a').style('display', 'none').attr('href', url).attr('target', '_blank').text(res.id)
 
