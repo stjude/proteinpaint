@@ -37,5 +37,41 @@ tape('getUserTabMid()', test => {
 		'',
 		'should not pick a role from a nested cohort entry'
 	)
+
+	// a role per cohort
+	const selectCohort = { values: [{ keys: ['abbrev'] }, { keys: ['full'] }] }
+	const clientAuthResult = { abbrev: { role: 'user' }, full: { role: 'admin' } }
+	test.equal(
+		getUserTabMid({ requiredAuth, selectCohort, clientAuthResult }, 0),
+		'USER',
+		'should show the role of the first active cohort'
+	)
+	test.equal(
+		getUserTabMid({ requiredAuth, selectCohort, clientAuthResult }, 1),
+		'ADMIN',
+		'should show the role of the second active cohort'
+	)
+	for (const activeCohort of [-1, 2, undefined]) {
+		test.equal(
+			getUserTabMid({ requiredAuth, selectCohort, clientAuthResult }, activeCohort),
+			'',
+			`should be empty for activeCohort=${activeCohort}`
+		)
+	}
+	test.equal(
+		getUserTabMid({ requiredAuth, selectCohort, clientAuthResult: { full: { role: 'admin' } } }, 0),
+		'',
+		'should be empty without a role for the active cohort'
+	)
+	test.equal(
+		getUserTabMid({ selectCohort, clientAuthResult }, 1),
+		'',
+		'should not show a cohort role without requiredAuth'
+	)
+	test.equal(
+		getUserTabMid({ requiredAuth, selectCohort, clientAuthResult: { ...clientAuthResult, role: 'public' } }, 1),
+		'PUBLIC',
+		'should prefer the role for the dataset'
+	)
 	test.end()
 })

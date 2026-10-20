@@ -14,7 +14,7 @@ import { markSavedState, getSavedStateRefusal } from './sessionForm.ts'
 /*
 "user" tab will display following contents inside this.subheader:
 - the user authorization information, if the dataset requires authorization: the status, and termdbConfig.userTab
-  msg and list, as computed by the optional ds hooks in massNav.tabs.user. userTab.status, if any,
+  msg and list, as computed by the optional ds hook massNav.tabs.user.getContent(). userTab.status, if any,
   replaces the default status
 - the session open/save/share/delete functionality, moved from the former session button. The options are always
   shown as buttons, and the selected option renders into dom.contentDiv
@@ -29,7 +29,7 @@ export function datasetRequiresAuth(termdbConfig: any): boolean {
 
 /**
  * The sign-in status line.
- * isPublic: termdbConfig.userTab.isPublic, from the optional ds hook massNav.tabs.user.isPublic(), true if the
+ * isPublic: termdbConfig.userTab.isPublic, from the optional ds hook massNav.tabs.user.getContent(), true if the
  * signed-in user has only public access, such as a public role
  */
 export function getAuthStatus(signedIn: boolean, isPublic?: boolean): string {
@@ -203,32 +203,38 @@ export class MassUser implements RxComponent {
 		div.style('display', 'block')
 		const vocabApi: any = this.app.vocabApi
 		const signedIn = vocabApi.hasVerifiedToken()
-		// computed by the optional ds hooks in massNav.tabs.user, from the auth of the user
+		// computed by the optional ds hook massNav.tabs.user.getContent(), from the auth of the user
 		const userTab = this.state.termdbConfig.userTab
-		div
+		// same label style as SESSION, with the status on the same row
+		const row = div.append('div')
+		row
+			.append('span')
+			.attr('data-testid', 'sjpp-massnav-user-auth-label')
+			.style('font-weight', 'bold')
+			.style('opacity', 0.65)
+			.text('ACCESS')
+		row
 			.append('span')
 			.attr('data-testid', 'sjpp-massnav-user-auth-status')
-			.style('font-weight', 'bold')
-			.style('font-size', '1.2em')
+			.style('margin-left', '10px')
 			.text(userTab?.status || getAuthStatus(signedIn, userTab?.isPublic))
 		// reason for a failed sign-in, if any
 		const msg = vocabApi.tokenVerificationMessage
-		if (!signedIn && msg) div.append('div').style('opacity', 0.65).text(msg)
-		// the message from massNav.tabs.user.getMsg(), under the status. text, not html, with each email address as a
-		// mailto link. split() with a capture group puts the emails at the odd indexes
+		if (!signedIn && msg) row.append('span').style('margin-left', '5px').style('opacity', 0.65).text(msg)
+		// the message, after the status. text, not html, with each email address as a mailto link.
+		// split() with a capture group puts the emails at the odd indexes
 		if (userTab?.msg) {
-			const infoDiv = div
-				.append('div')
+			const infoSpan = row
+				.append('span')
 				.attr('data-testid', 'sjpp-massnav-user-auth-info')
-				.style('margin', '5px 0 0 8px')
-				.style('font-size', '0.95em')
+				.style('margin-left', '5px')
 				.style('opacity', 0.75)
 			userTab.msg.split(/([\w.+-]+@[\w-]+(?:\.[\w-]+)+)/).forEach((part, i) => {
-				if (i % 2) infoDiv.append('a').attr('href', `mailto:${part}`).text(part)
-				else if (part) infoDiv.append('span').text(part)
+				if (i % 2) infoSpan.append('a').attr('href', `mailto:${part}`).text(part)
+				else if (part) infoSpan.append('span').text(part)
 			})
 		}
-		// the list from massNav.tabs.user.getList(), such as the sites of the user
+		// the list under the row, such as the sites of the user
 		if (userTab?.list) {
 			const listDiv = div
 				.append('div')

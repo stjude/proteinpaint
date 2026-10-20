@@ -674,15 +674,15 @@ export function getLoneTermByType(req, ds, loneTermByType) {
 }
 
 /*
-what the mass nav user tab shows about the auth of the user, as computed by the optional ds hooks in
-massNav.tabs.user: getStatus() for the heading, getMsg() for the message, getList() for a list such as the
-sites of the user, and isPublic() for whether the user has only public access.
-the hooks get q and the ds.
+what the mass nav user tab shows about the auth of the user, as returned by the optional ds hook
+massNav.tabs.user.getContent(): status for the heading, msg for the message, list for a list such as the
+sites of the user, and isPublic for whether the user has only public access.
+the hook gets q and the ds.
 clientAuthResult is from authApi.getNonsensitiveInfo(), {} when the user has no session.
 __protected__ is req.query.__protected__ as set by the auth middleware, which may be missing or partial, such as
-when the server has no auth. only the parts that the hooks may need are passed, with defaults.
-returns undefined when there are no hooks or no result. a hook that fails or returns an invalid value is
-ignored, since what the tab shows is optional
+when the server has no auth. only the parts that the hook may need are passed, with defaults.
+returns undefined when there is no hook or no result. a hook that fails is ignored, and so is a field with an
+invalid value, since what the tab shows is optional
 */
 type UserTab = {
 	status?: string
@@ -692,38 +692,35 @@ type UserTab = {
 }
 
 export function getUserTab(ds, clientAuthResult, __protected__): UserTab | undefined {
-	const hooks = ds.cohort.massNav?.tabs?.user
-	if (!hooks) return
+	const getContent = ds.cohort.massNav?.tabs?.user?.getContent
+	if (typeof getContent != 'function') return
 	const q = Object.freeze({
 		clientAuthResult,
 		datasets: Array.isArray(__protected__?.datasets) ? __protected__.datasets : [],
 		isUserLoggedIn: __protected__?.isUserLoggedIn === true
 	})
+	let content
+	try {
+		content = getContent(q, ds)
+	} catch (e: any) {
+		console.log(e?.stack || e)
+		return
+	}
+	if (!content || typeof content != 'object') return
 	const userTab: UserTab = {}
-	const status = mayCallHook(hooks.getStatus, q, ds)
+	const { status, msg, list } = content
 	if (isNonEmptyString(status)) userTab.status = status
-	const msg = mayCallHook(hooks.getMsg, q, ds)
 	if (isNonEmptyString(msg)) userTab.msg = msg
-	const list = mayCallHook(hooks.getList, q, ds)
 	if (isNonEmptyString(list?.label) && Array.isArray(list.items)) {
 		const items = list.items.filter(isNonEmptyString)
 		if (items.length) userTab.list = { label: list.label, items }
 	}
-	if (mayCallHook(hooks.isPublic, q, ds) === true) userTab.isPublic = true
+	if (content.isPublic === true) userTab.isPublic = true
 	return Object.keys(userTab).length ? userTab : undefined
 }
 
 function isNonEmptyString(v): v is string {
 	return typeof v == 'string' && v.length > 0
-}
-
-function mayCallHook(hook, q, ds) {
-	if (typeof hook != 'function') return
-	try {
-		return hook(q, ds)
-	} catch (e: any) {
-		console.log(e?.stack || e)
-	}
 }
 
 function getSelectCohort(ds, req) {

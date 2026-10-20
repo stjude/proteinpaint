@@ -419,13 +419,12 @@ tape('\n', function (test) {
 	test.end()
 })
 
-const getDs = (user: any): any => ({ cohort: { massNav: { tabs: { user } } } })
+const getDs = (getContent: any): any => ({ cohort: { massNav: { tabs: { user: { getContent } } } } })
 
-tape('getUserTab() - computes the message and public access from clientAuthResult', function (test) {
-	const ds = getDs({
-		getMsg: q => (q.clientAuthResult.datasets?.length ? 'authorized' : 'public only'),
-		isPublic: q => !q.clientAuthResult.datasets?.length
-	})
+tape('getUserTab() - computes the content from clientAuthResult', function (test) {
+	const ds = getDs(q =>
+		q.clientAuthResult.datasets?.length ? { msg: 'authorized' } : { msg: 'public only', isPublic: true }
+	)
 	test.deepEqual(
 		getUserTab(ds, { datasets: ['a'] }, {}),
 		{ msg: 'authorized' },
@@ -439,143 +438,142 @@ tape('getUserTab() - computes the message and public access from clientAuthResul
 	test.end()
 })
 
-tape('getUserTab() - passes the login status and datasets from __protected__ to both hooks', function (test) {
-	const received: any[] = []
-	const ds = getDs({
-		getMsg: q => {
-			received.push(q)
-			return 'msg'
-		},
-		isPublic: q => {
-			received.push(q)
-			return false
-		}
-	})
-	const datasets = Object.freeze(['sjlife', 'ccss'])
-	const __protected__ = Object.freeze({
-		clientAuthResult: { x: 1 },
-		datasets,
-		isUserLoggedIn: true,
-		sessionid: 'abc',
-		ignoredTermIds: []
-	})
-	test.deepEqual(getUserTab(ds, { y: 2 }, __protected__), { msg: 'msg' }, 'Should leave out isPublic when it is false')
-	test.equal(received.length, 2, 'Should call both hooks')
-	test.deepEqual(
-		received[0],
-		{ clientAuthResult: { y: 2 }, datasets: ['sjlife', 'ccss'], isUserLoggedIn: true },
-		'Should pass only clientAuthResult, datasets, and isUserLoggedIn'
-	)
-	test.equal(received[1], received[0], 'Should pass the same argument to both hooks')
-	test.true(Object.isFrozen(received[0]), 'Should pass a frozen argument')
-	test.equal(received[0].datasets, datasets, 'Should pass the frozen datasets of __protected__ as they are')
-
-	// missing or partial __protected__, such as when the server has no auth
-	for (const p of [undefined, {}, { sessionid: 'abc' }, { datasets: 'sjlife', isUserLoggedIn: 'true' }]) {
-		received.length = 0
-		getUserTab(ds, {}, p)
+tape(
+	'getUserTab() - passes the login status and datasets from __protected__, and the ds, to the hook',
+	function (test) {
+		const received: any[] = []
+		const ds = getDs((q, ds) => {
+			received.push({ q, ds })
+			return { msg: 'msg', isPublic: false }
+		})
+		const datasets = Object.freeze(['sjlife', 'ccss'])
+		const __protected__ = Object.freeze({
+			clientAuthResult: { x: 1 },
+			datasets,
+			isUserLoggedIn: true,
+			sessionid: 'abc',
+			ignoredTermIds: []
+		})
 		test.deepEqual(
-			received[0],
-			{ clientAuthResult: {}, datasets: [], isUserLoggedIn: false },
-			`Should default to no datasets and not logged in for __protected__=${JSON.stringify(p)}`
+			getUserTab(ds, { y: 2 }, __protected__),
+			{ msg: 'msg' },
+			'Should leave out isPublic when it is false'
 		)
+		test.equal(received.length, 1, 'Should call the hook once')
+		test.deepEqual(
+			received[0].q,
+			{ clientAuthResult: { y: 2 }, datasets: ['sjlife', 'ccss'], isUserLoggedIn: true },
+			'Should pass only clientAuthResult, datasets, and isUserLoggedIn'
+		)
+		test.true(Object.isFrozen(received[0].q), 'Should pass a frozen argument')
+		test.equal(received[0].q.datasets, datasets, 'Should pass the frozen datasets of __protected__ as they are')
+		test.equal(received[0].ds, ds, 'Should pass the ds')
+
+		// missing or partial __protected__, such as when the server has no auth
+		for (const p of [undefined, {}, { sessionid: 'abc' }, { datasets: 'sjlife', isUserLoggedIn: 'true' }]) {
+			received.length = 0
+			getUserTab(ds, {}, p)
+			test.deepEqual(
+				received[0].q,
+				{ clientAuthResult: {}, datasets: [], isUserLoggedIn: false },
+				`Should default to no datasets and not logged in for __protected__=${JSON.stringify(p)}`
+			)
+		}
+		test.end()
 	}
+)
+
+tape('getUserTab() - returns the status, message, and list without the empty or invalid items', function (test) {
+	const ds = getDs(() => ({
+		status: 'Administrator',
+		msg: 'msg',
+		list: { label: 'Sites', items: ['a', '', 7, 'b'] },
+		other: 1
+	}))
+	test.deepEqual(
+		getUserTab(ds, {}, {}),
+		{ status: 'Administrator', msg: 'msg', list: { label: 'Sites', items: ['a', 'b'] } },
+		'Should return only the known fields, and the list without the empty or invalid items'
+	)
 	test.end()
 })
 
-tape('getUserTab() - returns undefined or leaves out a result without a usable value', function (test) {
-	for (const massNav of [undefined, {}, { tabs: {} }, { tabs: { user: {} } }, { tabs: { user: { top: 'USER' } } }]) {
+tape('getUserTab() - returns undefined or leaves out a field without a usable value', function (test) {
+	for (const massNav of [
+		undefined,
+		{},
+		{ tabs: {} },
+		{ tabs: { user: {} } },
+		{ tabs: { user: { top: 'USER' } } },
+		{ tabs: { user: { getContent: { msg: 'x' } } } }
+	]) {
 		const ds: any = { cohort: { massNav } }
 		test.equal(getUserTab(ds, {}, {}), undefined, `Should return undefined for massNav=${JSON.stringify(massNav)}`)
 	}
-	for (const getMsg of ['x', () => undefined, () => '', () => 7, () => ({ text: 'x' })]) {
-		test.equal(getUserTab(getDs({ getMsg }), {}, {}), undefined, `Should ignore getMsg=${getMsg.toString()}`)
+	for (const content of [undefined, null, 'x', 7, {}]) {
+		test.equal(
+			getUserTab(
+				getDs(() => content),
+				{},
+				{}
+			),
+			undefined,
+			`Should ignore content=${JSON.stringify(content)}`
+		)
 	}
-	for (const isPublic of [true, () => false, () => 'true', () => 1, () => undefined]) {
-		test.equal(getUserTab(getDs({ isPublic }), {}, {}), undefined, `Should ignore isPublic=${isPublic.toString()}`)
+	const fields = {
+		status: ['', 7, { text: 'x' }],
+		msg: ['', 7, { text: 'x' }],
+		isPublic: ['true', 1, false],
+		list: [
+			'a',
+			{ items: ['a'] },
+			{ label: '', items: ['a'] },
+			{ label: 'x' },
+			{ label: 'x', items: 'a' },
+			{ label: 'x', items: [] },
+			{ label: 'x', items: ['', null, 7] }
+		]
+	}
+	for (const [field, values] of Object.entries(fields)) {
+		for (const value of values) {
+			test.deepEqual(
+				getUserTab(
+					getDs(() => ({ [field]: value, msg: field == 'msg' ? value : 'm' })),
+					{},
+					{}
+				),
+				field == 'msg' ? undefined : { msg: 'm' },
+				`Should leave out ${field}=${JSON.stringify(value)}`
+			)
+		}
 	}
 	test.deepEqual(
-		getUserTab(getDs({ isPublic: () => true }), {}, {}),
+		getUserTab(
+			getDs(() => ({ isPublic: true })),
+			{},
+			{}
+		),
 		{ isPublic: true },
-		'Should return isPublic without a message'
+		'Should return isPublic alone'
 	)
 
 	const log = console.log
 	console.log = () => {}
-	const fail = () => {
-		throw 'hook error'
-	}
 	try {
 		test.equal(
-			getUserTab(getDs({ getMsg: fail, isPublic: fail }), {}, {}),
+			getUserTab(
+				getDs(() => {
+					throw 'hook error'
+				}),
+				{},
+				{}
+			),
 			undefined,
-			'Should not throw when the hooks throw'
-		)
-		test.deepEqual(
-			getUserTab(getDs({ getMsg: fail, isPublic: () => true }), {}, {}),
-			{ isPublic: true },
-			'Should keep the result of a hook when the other one throws'
+			'Should not throw when the hook throws'
 		)
 	} finally {
 		console.log = log
-	}
-	test.end()
-})
-
-tape('getUserTab() - computes the status and list, and passes the ds to the hooks', function (test) {
-	const received: any[] = []
-	const ds = getDs({
-		getStatus: (q, ds) => {
-			received.push(ds)
-			return q.clientAuthResult.role == 'admin' ? 'Administrator' : 'Public'
-		},
-		getMsg: (q, ds) => {
-			received.push(ds)
-			return 'msg'
-		},
-		getList: (q, ds) => {
-			received.push(ds)
-			return { label: 'Sites', items: ['a', '', 7, 'b'] }
-		},
-		isPublic: (q, ds) => {
-			received.push(ds)
-			return false
-		}
-	})
-	const userTab: any = getUserTab(ds, { role: 'admin' }, {})
-	test.deepEqual(
-		userTab,
-		{
-			status: 'Administrator',
-			msg: 'msg',
-			list: { label: 'Sites', items: ['a', 'b'] }
-		},
-		'Should return the status, message, and list without the empty or invalid items'
-	)
-	test.equal(received.length, 4, 'Should call every hook')
-	test.true(
-		received.every(d => d === ds),
-		'Should pass the ds to every hook'
-	)
-	test.end()
-})
-
-tape('getUserTab() - leaves out a status or list without a usable value', function (test) {
-	for (const getStatus of ['x', () => undefined, () => '', () => 7]) {
-		test.equal(getUserTab(getDs({ getStatus }), {}, {}), undefined, `Should ignore getStatus=${getStatus.toString()}`)
-	}
-	for (const getList of [
-		{ label: 'x', items: ['a'] },
-		() => undefined,
-		() => 'a',
-		() => ({ items: ['a'] }),
-		() => ({ label: '', items: ['a'] }),
-		() => ({ label: 'x' }),
-		() => ({ label: 'x', items: 'a' }),
-		() => ({ label: 'x', items: [] }),
-		() => ({ label: 'x', items: ['', null, 7] })
-	]) {
-		test.equal(getUserTab(getDs({ getList }), {}, {}), undefined, `Should ignore getList=${getList.toString()}`)
 	}
 	test.end()
 })

@@ -230,6 +230,113 @@ tape('MassUser renderAuthInfo() userTab', test => {
 		test.equal(holder.select(infoTestId).text(), 'msg', 'should still show the message')
 		holder.remove()
 	}
+
+	// the status from the ds replaces the default status
+	for (const [verified, isPublic] of [
+		[true, true],
+		[true, undefined],
+		[false, undefined]
+	] as [boolean, boolean | undefined][]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified })
+		state.termdbConfig.userTab = { status: 'Public Access', isPublic }
+		user.renderAuthInfo()
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+			'Public Access',
+			`should show the status from the ds for verified=${verified} and isPublic=${isPublic}`
+		)
+		holder.remove()
+	}
+
+	// the list is under the row of the status and message
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = {
+			msg: 'msg',
+			list: { label: 'Sites', items: ['A (India)', 'B (Nepal)'] }
+		}
+		user.renderAuthInfo()
+		const [row, listDiv] = Array.from(
+			(holder.select('[data-testid="sjpp-massnav-user-auth"]').node() as HTMLElement).children
+		)
+		test.deepEqual(
+			Array.from(row.children).map(c => c.getAttribute('data-testid')),
+			['sjpp-massnav-user-auth-label', 'sjpp-massnav-user-auth-status', 'sjpp-massnav-user-auth-info'],
+			'should show the label, status, and message on the same row'
+		)
+		test.equal(
+			listDiv?.getAttribute('data-testid'),
+			'sjpp-massnav-user-auth-list',
+			'should show the list under the row'
+		)
+		test.equal(holder.select('[data-testid="sjpp-massnav-user-auth-info"]').text(), 'msg', 'should show the message')
+		test.equal(holder.select('[data-testid="sjpp-massnav-user-auth-info"] a').size(), 0, 'should not add a link')
+		const list = holder.select('[data-testid="sjpp-massnav-user-auth-list"]')
+		test.equal(list.select('div').text(), 'Sites', 'should show the list label')
+		test.deepEqual(
+			list
+				.selectAll('li')
+				.nodes()
+				.map((n: any) => n.textContent),
+			['A (India)', 'B (Nepal)'],
+			'should show the list items'
+		)
+		holder.remove()
+	}
+
+	// an email address in the message is a mailto link
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = { msg: 'Please contact A.b@c.org. Or x+y@d.e.org' }
+		user.renderAuthInfo()
+		const info = holder.select('[data-testid="sjpp-massnav-user-auth-info"]')
+		test.equal(info.text(), 'Please contact A.b@c.org. Or x+y@d.e.org', 'should show the whole message')
+		test.deepEqual(
+			info
+				.selectAll('a')
+				.nodes()
+				.map((n: any) => [n.getAttribute('href'), n.textContent]),
+			[
+				['mailto:A.b@c.org', 'A.b@c.org'],
+				['mailto:x+y@d.e.org', 'x+y@d.e.org']
+			],
+			'should link each email, without the sentence-ending period'
+		)
+		holder.remove()
+	}
+
+	// the text of the status, message, and list is not interpreted as html
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = {
+			status: '<b>s</b>',
+			msg: '<b>m</b>',
+			list: { label: '<b>l</b>', items: ['<b>i</b>'] }
+		}
+		user.renderAuthInfo()
+		const auth = holder.select('[data-testid="sjpp-massnav-user-auth"]')
+		test.equal(auth.selectAll('b').size(), 0, 'should not render html from the text')
+		test.equal(
+			auth.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+			'<b>s</b>',
+			'should show the status as it is'
+		)
+		test.equal(auth.select('li').text(), '<b>i</b>', 'should show a list item as it is')
+		holder.remove()
+	}
+
+	// no list
+	for (const userTab of [undefined, {}, { msg: 'msg' }]) {
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		state.termdbConfig.userTab = userTab
+		user.renderAuthInfo()
+		test.equal(
+			holder.select('[data-testid="sjpp-massnav-user-auth-list"]').size(),
+			0,
+			`should not show a list for userTab=${JSON.stringify(userTab)}`
+		)
+		holder.remove()
+	}
 	test.end()
 })
 

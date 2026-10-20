@@ -2665,24 +2665,27 @@ type MassNavTabEntry = {
 	hide?: boolean
 }
 
-/* the hooks get the ds as the 2nd argument, to read data that is built at init, such as ds.cohort.termdb.geomap.sites */
 type MassNavUserTabEntry = MassNavTabEntry & {
-	/** optional. computes the heading of the user tab from the auth of the user, in place of the default sign-in
-	 * status such as 'Signed in'. termdb/config sends it to the client as termdbConfig.userTab.status. text, not html */
-	getStatus?: (q: UserTabHookArg, ds: any) => string | undefined
-	/** optional. computes the message shown in the user tab, under the sign-in status, from the auth of the user.
-	 * termdb/config sends the returned text to the client as termdbConfig.userTab.msg. text, not html, except that
-	 * the client shows an email address in it as a mailto link */
-	getMsg?: (q: UserTabHookArg, ds: any) => string | undefined
-	/** optional. computes a list shown under the message, such as the sites that the user has access to.
-	 * sent as termdbConfig.userTab.list, without the empty items. text, not html */
-	getList?: (q: UserTabHookArg, ds: any) => { label: string; items: string[] } | undefined
-	/** optional. returns true if the signed-in user has only public access, such as a public role, so that the
-	 * user tab reads 'Public access' instead of 'Signed in'. sent as termdbConfig.userTab.isPublic */
-	isPublic?: (q: UserTabHookArg, ds: any) => boolean
+	/** optional. computes what the user tab shows from the auth of the user. termdb/config sends it to the client
+	 * as termdbConfig.userTab, leaving out a field with an invalid value. the hook gets the ds as the 2nd argument,
+	 * to read data that is built at init, such as ds.cohort.termdb.geomap.sites */
+	getContent?: (q: UserTabHookArg, ds: any) => UserTabContent | undefined
 }
 
-/** The auth of the user, as passed to the massNav.tabs.user hooks */
+/** What the mass nav user tab shows, as returned by massNav.tabs.user.getContent(). text, not html */
+type UserTabContent = {
+	/** the heading, in place of the default sign-in status such as 'Signed in' */
+	status?: string
+	/** the message under the heading. the client shows an email address in it as a mailto link */
+	msg?: string
+	/** a list under the message, such as the sites that the user has access to. the empty items are left out */
+	list?: { label: string; items: string[] }
+	/** true if the signed-in user has only public access, such as a public role, so that the default heading
+	 * reads 'Public access' instead of 'Signed in' */
+	isPublic?: boolean
+}
+
+/** The auth of the user, as passed to massNav.tabs.user.getContent() */
 type UserTabHookArg = {
 	/** the clientAuthResult of the user's jwt payload, {} when the user has not signed in */
 	clientAuthResult: any

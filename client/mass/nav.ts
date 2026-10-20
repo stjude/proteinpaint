@@ -40,10 +40,17 @@ const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
 // const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
 const userTab = { top: 'SESSION', mid: '', btm: '', subheader: 'user' }
 
-/** The role of the user, for the middle row of the user tab. Only for a dataset that requires authorization */
-export function getUserTabMid(termdbConfig: any): string {
-	const role = termdbConfig?.clientAuthResult?.role
-	return termdbConfig?.requiredAuth?.length && typeof role === 'string' ? role.toUpperCase() : ''
+/**
+ * The role of the user, for the middle row of the user tab. Only for a dataset that requires authorization.
+ * Without a role for the dataset, the role is for the active cohort, keyed by a key of the cohort in
+ * selectCohort.values[].keys, such as clientAuthResult.a.role for a cohort with keys ['a']
+ */
+export function getUserTabMid(termdbConfig: any, activeCohort = -1): string {
+	if (!termdbConfig?.requiredAuth?.length) return ''
+	const auth = termdbConfig.clientAuthResult
+	const keys: string[] = termdbConfig.selectCohort?.values?.[activeCohort]?.keys || []
+	const role = [auth?.role, ...keys.map(k => auth?.[k]?.role)].find(r => typeof r === 'string' && r)
+	return role ? role.toUpperCase() : ''
 }
 
 export function getId(): string {
@@ -389,7 +396,7 @@ function setRenderers(self: any): void {
 		if (!massNav.tabs?.user?.hide) {
 			//User tab is not hidden
 			const override = Object.assign({}, massNav.tabs?.user)
-			if (!override.mid) override.mid = getUserTabMid(appState.termdbConfig)
+			if (!override.mid) override.mid = getUserTabMid(appState.termdbConfig, appState.activeCohort)
 			self.tabs.push(Object.assign({}, userTab, override))
 		}
 
@@ -531,6 +538,9 @@ function setRenderers(self: any): void {
 					}
 				} else if (d.subheader === 'user' && d.key == 'btm') {
 					return getDaysLeft(self.app.opts.sessionDaysLeft)?.text || '&nbsp;'
+				} else if (d.subheader === 'user' && d.key == 'mid' && !massNav?.tabs?.user?.mid) {
+					// the role can differ by cohort, so it follows the active cohort
+					return getUserTabMid(self.state.termdbConfig, self.activeCohort)
 				} else {
 					return d.key === 'mid' ? this.innerHTML : '&nbsp;'
 				}
