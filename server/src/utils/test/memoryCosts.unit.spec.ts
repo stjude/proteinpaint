@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { estimatePeakMB } from '../memory.ts'
+import { estimatePeakMB, runFitsInMemory, largestSizeThatFits } from '../memory.ts'
 import { GRIN2_MEMORY } from '#src/grin2/main.ts'
 import { DE_MEMORY } from '#src/routes/termdb.DE.ts'
 import { TOPVE_MEMORY } from '#src/routes/termdb.topVariablyExpressedGenes.ts'
@@ -9,12 +9,14 @@ import { DM_MEMORY } from '../../../routes/termdb.diffMeth.ts'
 Every memory cost must be at or above the peak of each real run it was measured on, so that a cost changed later
 cannot fall below the data without failing here. Peaks are MB: the Node server's rise plus the peak footprints of its
 R, python and rust children, on ASH unless noted, measured 2026-10-19/20 with a fresh server and an empty cache per run.
+The last section pins the @example outputs in memory.ts, so a changed cost fails here until those comments are updated.
 
 test sections:
 GRIN2
 DE
 topVE
 DM
+memory.ts @example outputs
 */
 
 function covers(test, label: string, needed: number, measured: number) {
@@ -113,5 +115,33 @@ tape('DM', test => {
 			estimatePeakMB(DM_MEMORY, { fileCells: rows * fileSamples, cells: rows * selected }),
 			peak
 		)
+	test.end()
+})
+
+tape('memory.ts @example outputs', test => {
+	const allAsh = { cells: 4438 * 17928 }
+	const mmrfAllccre = { fileCells: 267531 * 415, cells: 267531 * 400 }
+	const r = (mb: number) => Math.round(mb)
+
+	test.equal(estimatePeakMB(GRIN2_MEMORY, { lesions: 250_000 }), 1030, 'GRIN2 250,000 lesions => 1030 MB')
+	test.equal(r(estimatePeakMB(DE_MEMORY.edgeR, allAsh)), 8938, 'edgeR on all ASH => ≈ 8938 MB')
+	test.equal(r(estimatePeakMB(DE_MEMORY.wilcoxon, allAsh)), 2247, 'wilcoxon on all ASH => ≈ 2247 MB')
+	test.equal(r(estimatePeakMB(TOPVE_MEMORY, { samples: 4873 })), 145, 'topVE on 4,873 samples => ≈ 145 MB')
+	test.equal(r(estimatePeakMB(DM_MEMORY, mmrfAllccre)), 6134, 'DM MMRF allccre, 400 selected => ≈ 6134 MB')
+	test.throws(
+		() => estimatePeakMB(DM_MEMORY, { cells: mmrfAllccre.cells }),
+		/needs the run's fileCells/,
+		'DM without fileCells => throws'
+	)
+
+	test.equal(runFitsInMemory(DE_MEMORY.edgeR, allAsh, 12000), false, 'edgeR on all ASH at 12 GB => does not fit')
+	test.equal(runFitsInMemory(DE_MEMORY.wilcoxon, allAsh, 12000), true, 'wilcoxon on all ASH at 12 GB => fits')
+	test.equal(runFitsInMemory(DM_MEMORY, mmrfAllccre, 16000), true, 'DM MMRF allccre at 16 GB => fits')
+	test.equal(runFitsInMemory(DM_MEMORY, mmrfAllccre, 12000), false, 'DM MMRF allccre at 12 GB => does not fit')
+	test.equal(runFitsInMemory(TOPVE_MEMORY, { samples: 4873 }, 200), false, 'topVE at 200 MB => does not fit')
+
+	test.equal(largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions'), 84615, 'GRIN2 at 1,500 MB => 84,615 lesions')
+	test.equal(largestSizeThatFits(900, GRIN2_MEMORY, 'lesions'), 0, 'GRIN2 at 900 MB => 0, refused')
+	test.equal(largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1), 641538, 'GRIN2 ceiling, all of 2 GB => 641,538')
 	test.end()
 })

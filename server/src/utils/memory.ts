@@ -76,7 +76,17 @@ export function getCgroupInactiveFileBytes(readFile = (file: string) => fs.readF
 }
 
 /** The estimated peak MB of a run of these sizes by `cost`. Every size of the cost must be given, so a caller cannot
- * leave one out and get a low estimate. */
+ * leave one out and get a low estimate. The @example outputs here and below are asserted in
+ * test/memoryCosts.unit.spec.ts, so update both together.
+ * @example
+ * estimatePeakMB(GRIN2_MEMORY, { lesions: 250_000 }) // 1030: 380 + 0.0026 × 250,000
+ * estimatePeakMB(DE_MEMORY.edgeR, { cells: 4438 * 17928 }) // ≈ 8938: all ASH, 17,928 genes
+ * estimatePeakMB(DE_MEMORY.wilcoxon, { cells: 4438 * 17928 }) // ≈ 2247
+ * estimatePeakMB(TOPVE_MEMORY, { samples: 4873 }) // ≈ 145
+ * // DM, MMRF allccre: 267,531 rows x 415 samples in the file, 400 of them selected
+ * estimatePeakMB(DM_MEMORY, { fileCells: 267531 * 415, cells: 267531 * 400 }) // ≈ 6134 (measured peak 5,057)
+ * estimatePeakMB(DM_MEMORY, { cells: 267531 * 400 }) // throws "memory cost needs the run's fileCells"
+ */
 export function estimatePeakMB(cost: MemoryCost, units: MemoryUnits): number {
 	let mb = cost.baseMB
 	for (const [size, perUnit] of Object.entries(cost.perUnitMB)) {
@@ -87,7 +97,14 @@ export function estimatePeakMB(cost: MemoryCost, units: MemoryUnits): number {
 }
 
 /** Whether a run of these sizes fits in `fraction` of `availableMB`. Callers that must not trim a run refuse one that
- * does not fit, e.g. `if (!runFitsInMemory(...)) throw lowMemoryError(...)`. */
+ * does not fit, e.g. `if (!runFitsInMemory(...)) throw lowMemoryError(...)`. The default budget is 40% of availableMB.
+ * @example
+ * runFitsInMemory(DE_MEMORY.edgeR, { cells: 4438 * 17928 }, 12000) // false: ≈ 8938 MB > 4800 budget
+ * runFitsInMemory(DE_MEMORY.wilcoxon, { cells: 4438 * 17928 }, 12000) // true: ≈ 2247 MB, so the refusal suggests it
+ * runFitsInMemory(DM_MEMORY, { fileCells: 267531 * 415, cells: 267531 * 400 }, 16000) // true: ≈ 6134 <= 6400
+ * runFitsInMemory(DM_MEMORY, { fileCells: 267531 * 415, cells: 267531 * 400 }, 12000) // false: ≈ 6134 > 4800
+ * runFitsInMemory(TOPVE_MEMORY, { samples: 4873 }, 200) // false: ≈ 145 > 80
+ */
 export function runFitsInMemory(
 	cost: MemoryCost,
 	units: MemoryUnits,
@@ -99,7 +116,12 @@ export function runFitsInMemory(
 
 /** The largest `size` (e.g. lesions) whose run fits in `fraction` of `availableMB`; 0 when even the base does not fit.
  * For a run that may be trimmed rather than refused: the caller caps the size at this, as GRIN2 caps its lesions. The
- * cost must have no other size (estimatePeakMB throws if it does). */
+ * cost must have no other size (estimatePeakMB throws if it does).
+ * @example
+ * largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions') // 84615: (600 budget - 380 base) / 0.0026
+ * largestSizeThatFits(900, GRIN2_MEMORY, 'lesions') // 0: 360 budget < 380 base, so GRIN2 refuses the run
+ * largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1) // 641538: GRIN2's hard ceiling, the whole 2 GB as budget
+ */
 export function largestSizeThatFits(
 	availableMB: number,
 	cost: MemoryCost,
