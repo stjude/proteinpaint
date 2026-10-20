@@ -269,6 +269,31 @@ tape('getRequiredCred: checks lower-precedence dslabel entries for a route', fun
 	test.end()
 })
 
+tape('getRouteCred: an open entry is treated as no credential', function (test) {
+	test.timeoutAfter(500)
+
+	const listedCred = makeCred()
+	const creds = {
+		[dslabel]: {
+			termdb: { [embedder]: listedCred, '*': { type: 'open' } },
+			burden: { '*': { type: 'open' } }
+		}
+	}
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	test.equal(auth.getRouteCred(dslabel, ['termdb'], embedder), listedCred, 'should return a listed cred')
+	test.equal(
+		auth.getRouteCred(dslabel, ['termdb'], 'other.org'),
+		undefined,
+		'should return undefined for an open entry'
+	)
+	test.equal(
+		auth.getRequiredCred({ dslabel, embedder: 'other.org' }, '/burden'),
+		undefined,
+		'should not require a cred for a route with an open entry'
+	)
+	test.end()
+})
+
 tape('getMatchedEntry: exact, then glob, then wildcard key precedence', function (test) {
 	test.timeoutAfter(500)
 

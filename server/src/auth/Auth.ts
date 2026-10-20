@@ -171,6 +171,12 @@ export function getMatchedEntryForEither(obj, value1, value2) {
 	}
 }
 
+// a matched cred with type 'open' does not require a login, the same as having no matched cred,
+// so return undefined for it to let the callers treat the request as open access
+function getRequiredCredOrOpen(cred) {
+	return cred.type == 'open' ? undefined : cred
+}
+
 // This is the "inner" private auth that's wrapped by AuthApi.
 // It hides and protect implementation details from being accidentally
 // viewed or mutated by consumer code.
@@ -238,7 +244,7 @@ export class Auth {
 				const routePattern = ds[routeName].routePattern || routeName
 				if (!isMatchNoCase(path, routePattern)) continue
 				const cred = getMatchedEntry(ds[routeName], q.embedder)
-				if (cred) return cred
+				if (cred) return getRequiredCredOrOpen(cred)
 			}
 		}
 	}
@@ -286,7 +292,7 @@ export class Auth {
 			for (const ds of dsEntries) {
 				if (!Object.hasOwn(ds, routeKey)) continue
 				const cred = getMatchedEntry(ds[routeKey], embedder)
-				if (cred) return cred
+				if (cred) return getRequiredCredOrOpen(cred)
 			}
 		}
 	}
