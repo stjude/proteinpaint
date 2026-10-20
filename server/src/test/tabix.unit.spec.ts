@@ -77,6 +77,14 @@ tape('readTabixLines(), readTabixHeader(), listTabixChrs(): a local file', async
 		'should read a relative path under tp'
 	)
 	test.deepEqual(await listTabixChrs(itd), ['chr17'], 'should list the chromosomes')
+	// a caller of a local file may give an empty dir, such as mds.svcnv.js and handle_mdssvcnv_expression.js
+	test.deepEqual(
+		await read(itd, [{ chr: 'chr17', start: 1, stop: 100000000 }], ''),
+		lines,
+		'should read the lines of a local file with an empty dir'
+	)
+	test.deepEqual(await readTabixHeader(itd, ''), await readTabixHeader(itd), 'should read the header with an empty dir')
+	test.deepEqual(await listTabixChrs(itd, ''), ['chr17'], 'should list the chromosomes with an empty dir')
 	test.ok((await readTabixHeader(itd))[0]?.startsWith('#sample'), 'should read the header lines')
 	test.deepEqual(await readTabixHeader(refGene), [], 'should read no header lines of a file without a header')
 	test.deepEqual(await listTabixChrs(path.join(tp, 'anno/gencode.v41.hg38.test.gz')), [

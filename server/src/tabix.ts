@@ -160,10 +160,10 @@ function getRange(r: Region): Range | null {
 
 /** returns the open file of a file, which is opened again if its index or data file has changed */
 async function openTabixFile(file: unknown, dir: unknown): Promise<OpenFile> {
-	const isUrl = typeof file == 'string' && file.includes('://')
-	const location = isUrl ? checkUrl(file as string) : checkFile(file)
-	const cacheDir = dir === undefined || dir === null ? null : checkCacheDir(dir)
-	const index = isUrl ? await getUrlIndex(location, cacheDir) : await getLocalIndex(location)
+	// a url and a local file are checked and located by separate functions, so that a url never reaches the reads of
+	// a local file
+	const { location, index, open } =
+		typeof file == 'string' && file.includes('://') ? await locateUrlFile(file, dir) : await locateLocalFile(file, dir)
 	const key = location + '\t' + index.path
 	const cached = openFiles.get(key)
 	// a map keeps the order of insertion, so a file is moved to the end on each use
@@ -173,7 +173,7 @@ async function openTabixFile(file: unknown, dir: unknown): Promise<OpenFile> {
 		return cached
 	}
 	if (cached) closeFile(cached)
-	const fh = isUrl ? new RemoteFile(location, { fetch: checkedFetch }) : new LocalFile(location)
+	const fh = open()
 	const ih = new LocalFile(index.path)
 	const f: OpenFile = {
 		stamp: index.stamp,
@@ -202,6 +202,26 @@ function closeFile(f: OpenFile) {
 }
 
 type Index = { path: string; isCsi: boolean; stamp: string }
+/** a checked file, with its index and the function that opens a handle of the file */
+type Located = { location: string; index: Index; open: () => GenericFilehandle }
+
+/** returns a local file under tp or cachedir, with its index; a dir is not used for a local file, but is checked */
+async function locateLocalFile(file: unknown, dir: unknown): Promise<Located> {
+	const location = checkFile(file)
+	optionalCacheDir(dir)
+	return { location, index: await getLocalIndex(location), open: () => new LocalFile(location) }
+}
+
+/** returns a url file, with its index in the cache dir of the url */
+async function locateUrlFile(file: string, dir: unknown): Promise<Located> {
+	const location = checkUrl(file)
+	const cacheDir = optionalCacheDir(dir)
+	return {
+		location,
+		index: await getUrlIndex(location, cacheDir),
+		open: () => new RemoteFile(location, { fetch: checkedFetch })
+	}
+}
 
 /** returns the index of a local file, file.tbi or else file.csi, as tabix finds it */
 async function getLocalIndex(file: string): Promise<Index> {
@@ -297,6 +317,12 @@ function checkUrl(url: string): string {
 	if (e) throw 'invalid file'
 	if (illegalUrlHost(url)) throw 'invalid file'
 	return url
+}
+
+/** returns the cache dir of a dir argument, or null for none: a caller of a local file may give an empty string, such
+ * as mds.svcnv.js, so that any value that is not true is none, as the reads did before they were in process */
+function optionalCacheDir(dir: unknown): string | null {
+	return dir ? checkCacheDir(dir) : null
 }
 
 /** returns the absolute path of a cache dir under cachedir, or throws, as checkCacheDir() of tools/index.ts */
