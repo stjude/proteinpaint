@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { dmrScanToRows, summarizeProfile, coarsenProfile } from '#src/utils/dmrScanRows.ts'
+import { dmrScanToRows, summarizeProfile, coarsenProfile, dmrBedjLines } from '#src/utils/dmrScanRows.ts'
 
 /*
 test sections:
@@ -8,6 +8,7 @@ uncorrected: CpG floor, one p per row, direction split, widths, gene-body loss s
 corrected: unscored DMRs leave the rows but stay counted; the correction adds a p gate to the set
 summarizeProfile: quantiles and moved-fraction of the genome-wide binned profile
 coarsenProfile: probe-weighted re-binning for display
+dmrBedjLines: the plain text bedj file of the kept DMRs
 */
 
 /** The scan reaches the volcano only through this mapping, so a mistake here is a wrong figure
@@ -217,5 +218,37 @@ tape('coarsenProfile averages bins for display, weighted by the probes under the
 	t.equal(coarsenProfile(bm, NaN), bm, 'and a nonsense one')
 	// bounded, so a hostile width cannot ask for one dot per genome
 	t.equal(coarsenProfile(bm, 1e12).binBp, 100_000 * 100, 'the factor is capped at 100x the native width')
+	t.end()
+})
+
+tape('dmrBedjLines', t => {
+	const p: any = {
+		regions: [
+			{
+				chr: 'chr1',
+				dmrs: [
+					dmr({ start: 2000, stop: 2500, meandiff: 0.21, no_cpgs: 8, genes: ['AAA'] }),
+					// out of order on purpose: bedj.js stops reading a plain text file past the region in view
+					dmr({ start: 900, stop: 1000, meandiff: -0.3, no_cpgs: 6, direction: 'hypo' }),
+					// under the floor
+					dmr({ start: 3000, stop: 3100, meandiff: 0.5, no_cpgs: 2 })
+				]
+			},
+			{ chr: 'chr2', dmrs: [dmr({ chr: 'chr2', start: 10, stop: 99, meandiff: 0.1, no_cpgs: 5 })] }
+		]
+	}
+	const lines = dmrBedjLines(p, 5).trim().split('\n')
+	t.equal(lines.length, 3, 'the 2-CpG call is dropped by the floor of 5')
+	t.deepEqual(
+		lines.filter(l => l.startsWith('chr1\t')).map(l => Number(l.split('\t')[1])),
+		[900, 2000],
+		'lines are sorted by start, not lexically'
+	)
+	t.deepEqual(
+		JSON.parse(lines[1].split('\t')[3]),
+		{ name: 'Δβ +0.210, 8 CpGs, AAA', category: 'hyper' },
+		'column 4 is the bedj item: hover label and the category the legend counts'
+	)
+	t.equal(dmrBedjLines({ regions: [] } as any, 5), '', 'a scan with no calls makes an empty file, not a stray newline')
 	t.end()
 })

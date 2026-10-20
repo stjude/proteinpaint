@@ -1,8 +1,11 @@
+import path from 'path'
+import fs from 'fs'
+import { randomUUID } from 'crypto'
+import serverconfig from '#src/serverconfig.js'
 import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, DmrScanSummary } from '#types'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
 import { dmrScanToRows, summarizeProfile, coarsenProfile, dmrBedjLines } from '#src/utils/dmrScanRows.ts'
-import { writeBedjFile } from '#src/utils/bedjCache.ts'
 import {
 	resolveGroupNames,
 	matchedSamplelst,
@@ -26,6 +29,9 @@ import {
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
 import type { DmCacheResult } from './types.ts'
+
+// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
+const cachedir = serverconfig.cachedir
 
 /*
  * Cache flow (uniform across the four cacheOrRecompute consumers):
@@ -291,12 +297,10 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	)
 	scan.cacheId = cacheId
 	/* The DMRs as a track file, so a genome browser opened on the scan is a plain bedj tk. The
-	track is optional -- the browser opens without it -- so a failed write (no bgzip, unwritable
-	cachedir, full disk) is logged and dropped rather than failing the whole analysis. */
+	track is optional -- the browser opens without it -- so a failed write (unwritable cachedir,
+	full disk) is logged and dropped rather than failing the whole analysis. */
 	try {
-		scan.bedjFile = await writeBedjFile(`dmr-${cacheId}-${scan.minCpgs}.gz`, {
-			text: dmrBedjLines(payload, scan.minCpgs)
-		})
+		scan.bedjFile = await writeDmrBedjFile(`dmr-${cacheId}-${scan.minCpgs}.txt`, dmrBedjLines(payload, scan.minCpgs))
 	} catch (e: any) {
 		console.error('DMR scan: bedj cache write failed, browser track unavailable:', e?.message || e)
 	}
@@ -512,6 +516,28 @@ async function runDmFresh(
 }
 
 // ─── helpers ─── //
+
+/** Writes the DMRs as a plain text bedj file in the "bedj" cache subdir, made by CacheManager on startup, which a
+ * block track reads with isCache:true, and returns the file name. The name keys the content, so an existing file is
+ * reused. */
+export async function writeDmrBedjFile(name: string, text: string): Promise<string> {
+	const file = path.join(cachedir, 'bedj', name)
+	if (fs.existsSync(file)) {
+		// the subdir is swept by mtime, so touch on reuse: a result that is still in use is not swept
+		const now = new Date()
+		await fs.promises.utimes(file, now, now).catch(() => {})
+		return name
+	}
+	// written under a unique name and renamed into place, so a concurrent read never sees a partial file
+	const tmp = path.join(path.dirname(file), `.tmp-${randomUUID()}-${name}`)
+	try {
+		await fs.promises.writeFile(tmp, text)
+		await fs.promises.rename(tmp, file)
+	} finally {
+		await fs.promises.rm(tmp, { force: true })
+	}
+	return name
+}
 
 /** Resolve the two sample groups + any confounder value arrays for DM.
  * Wraps the shared `buildGroupValues` with DM-specific dataset query

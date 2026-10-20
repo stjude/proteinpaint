@@ -291,16 +291,6 @@ const otherOps: Record<string, { input: Record<string, unknown>; argv: string[];
 		argv: ['-l', path.join(tp, 'files/a.gz')],
 		bad: { file: ['-o', '/etc/passwd'], dir: ['/tmp', tp] }
 	},
-	'tabix.indexBed': {
-		input: { file: path.join(cache, 'bedj/.tmp-1-a.gz') },
-		argv: ['-f', '-p', 'bed', path.join(cache, 'bedj/.tmp-1-a.gz')],
-		bad: { file: [path.join(tp, 'a.gz'), path.join(cache, 'bedj/-o.gz')] }
-	},
-	'bgzip.compress': {
-		input: { file: path.join(cache, 'bedj/.tmp-1-a') },
-		argv: ['-f', path.join(cache, 'bedj/.tmp-1-a')],
-		bad: { file: [path.join(tp, 'a'), '/etc/passwd'] }
-	},
 	'samtools.index': {
 		input: { file: path.join(cache, 'gdcbam/a.bam') },
 		argv: ['index', path.join(cache, 'gdcbam/a.bam')],

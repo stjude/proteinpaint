@@ -94,11 +94,13 @@ FROM os AS hts
 
 ARG htsversion=1.24
 WORKDIR /tmp/hts
-# installed into / for the samtools and bcftools builds, and into /staging for ppbase to copy
+# installed into / for the samtools and bcftools builds, and into /staging for ppbase to copy;
+# bgzip is not copied, since the server only reads bgzipped files, with tabix
 RUN curl -fL https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
     cd htslib-${htsversion} && \
     ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && \
     make -j"$(nproc)" && make install && make install DESTDIR=/staging && \
+    rm /staging/usr/local/bin/bgzip /staging/usr/local/share/man/man1/bgzip.1 && \
     ldconfig
 RUN curl -fL https://github.com/samtools/samtools/releases/download/${htsversion}/samtools-${htsversion}.tar.bz2 | tar xj && \
     cd samtools-${htsversion} && \

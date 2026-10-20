@@ -182,10 +182,11 @@ export function summarizeProfile(bm: NonNullable<DmrScanSummary['binMethylation'
 	}
 }
 
-/** The kept DMRs as the body of a bedj track file, for writeBedjFile(). One file per (scan, CpG
- * floor), since the floor is a display knob applied after the scan. */
+/** The kept DMRs as the body of a plain text bedj track file, for writeDmrBedjFile(). One file per
+ * (scan, CpG floor), since the floor is a display knob applied after the scan. */
 export function dmrBedjLines(payload: TermdbDmrBatchSuccessResponse, minCpgs: number): string {
-	// tabix needs each chromosome's lines contiguous and ascending by start; any chr order will do
+	// bedj.js reads a plain text file only up to the region in view, so it needs each chromosome's
+	// lines contiguous and ascending by start; any chr order will do
 	const dmrs = (payload.regions || []).flatMap(r => r.dmrs || []).filter(d => d.no_cpgs >= minCpgs)
 	dmrs.sort((a, b) => (a.chr == b.chr ? a.start - b.start : a.chr < b.chr ? -1 : 1))
 	// 4th column is the bedj item as JSON; category drives both the fill and the block legend
