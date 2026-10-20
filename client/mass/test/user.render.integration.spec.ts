@@ -593,16 +593,6 @@ tape('MassUser ids in urls', async test => {
 	const id = 'a&b=c #d%e'
 	const encoded = 'a%26b%3Dc%20%23d%25e'
 
-	// Download names the file with the id
-	{
-		const { user, holder } = getUser({ sessionDaysLeft: 12, sessionId: id })
-		const stub = stubDownloads()
-		user.download(id, { plots: [] })
-		test.equal(stub.downloads[0]?.filename, `${id}.txt`, 'should name the file with the id')
-		stub.restore()
-		holder.remove()
-	}
-
 	// opening a session of the browser in a new tab, and a session on the server in a new tab
 	for (const loc of ['browser', 'server']) {
 		const { user, holder } = getUser({

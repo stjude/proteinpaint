@@ -2,6 +2,7 @@ import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
 import { detectOne, sleep } from '../../test/test.helpers.js'
 import { dofetch, dofetch3, clearServerDataCache } from '#common/dofetch'
+import { stubDownloads } from './user.helpers.ts'
 
 /**
  * Tests
@@ -578,7 +579,7 @@ tape('Download and days left tab text for a session opened from a url', test => 
 	test.timeoutAfter(5000)
 	runpp({
 		sessionDaysLeft: 12,
-		sessionId: 'test-session-id',
+		sessionId: 'test/session id',
 		nav: {
 			callbacks: {
 				'postRender.test': runTests
@@ -596,6 +597,18 @@ tape('Download and days left tab text for a session opened from a url', test => 
 			nav.Inner.dom.controlsDiv.selectAll('[data-testid="sjpp-nav-file-btn"]').size(),
 			0,
 			'should not show Download in the nav controls'
+		)
+
+		// clicking Download saves the current session, in a file named with the normalized session id
+		const stub = stubDownloads()
+		downloadBtn.click()
+		stub.restore()
+		test.equal(stub.downloads.length, 1, 'should download one file')
+		test.equal(stub.downloads[0]?.filename, 'test_session_id.txt', 'should replace special characters in the filename')
+		test.deepEqual(
+			JSON.parse(stub.downloads[0]?.text || 'null'),
+			JSON.parse(JSON.stringify(getUser(nav).getState(nav.Inner.app.getState(), true))),
+			'should download the current state of the session'
 		)
 
 		const tab = nav.Inner.dom.tds.filter((d: any) => d.subheader == 'user' && d.key == 'btm').node()
