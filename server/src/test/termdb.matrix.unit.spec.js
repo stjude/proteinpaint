@@ -1208,13 +1208,7 @@ tape('mayMapChildren2Root: moves sample annotations onto root samples', t => {
 			term: { id: 'site', type: 'categorical', values: { blood: { label: 'Blood' }, bone: { label: 'Bone' } } },
 			q: {}
 		},
-		{ $id: 'exp', term: { id: 'exp', type: 'float' }, q: {} },
-		{ $id: 'agebin', term: { id: 'agebin', type: 'float' }, q: { mode: 'discrete' } },
 		{ $id: 'tp53', term: { type: 'geneVariant', name: 'TP53' }, q: {} }
-	]
-	const bins = [
-		{ startunbounded: true, stop: 10, label: '<10' },
-		{ start: 10, stopunbounded: true, label: '>=10' }
 	]
 	const data = {
 		samples: {
@@ -1222,8 +1216,6 @@ tape('mayMapChildren2Root: moves sample annotations onto root samples', t => {
 				sample: 11,
 				sex: { key: 'M', value: 'M' },
 				site: { key: 'bone', value: 'bone' },
-				exp: { key: 2, value: 2 },
-				agebin: { key: '<10', value: 8 },
 				tp53: {
 					key: 'TP53',
 					values: [
@@ -1236,8 +1228,6 @@ tape('mayMapChildren2Root: moves sample annotations onto root samples', t => {
 				sample: 12,
 				sex: { key: 'M', value: 'M' },
 				site: { key: 'blood', value: 'blood' },
-				exp: { key: 4, value: 4 },
-				agebin: { key: '>=10', value: 14 },
 				tp53: {
 					key: 'TP53',
 					values: [
@@ -1248,7 +1238,7 @@ tape('mayMapChildren2Root: moves sample annotations onto root samples', t => {
 			},
 			21: { sample: 21, sex: { key: 'F', value: 'F' } }
 		},
-		refs: { byTermId: { agebin: { bins } }, bySampleId: {} }
+		refs: { byTermId: {}, bySampleId: {} }
 	}
 
 	mayMapChildren2Root(data, { terms: tws, mapChildren2Root: true }, ds)
@@ -1261,8 +1251,6 @@ tape('mayMapChildren2Root: moves sample annotations onto root samples', t => {
 		{ key: 'Blood, Bone', value: 'Blood, Bone' },
 		'distinct categorical values are combined into one key of their labels, in the order of term.values'
 	)
-	t.deepEqual(p.exp, { key: 3, value: 3 }, 'numeric values are averaged')
-	t.deepEqual(p.agebin, { key: '>=10', value: 11 }, 'the mean of a binned term is assigned to its bin')
 	t.deepEqual(
 		p.tp53.values.map(v => `${v.dt}:${v.class}`).sort(),
 		['1:M', '4:CNV_amp'],
@@ -1447,7 +1435,7 @@ tape('getData: mapChildren2Root returns one entry per root sample', async t => {
 	const termjson = id => structuredClone(tdb.ds.cohort.termdb.q.termjsonByOneid(id))
 	const terms = () => [
 		{ $id: 'sex', term: termjson('sex'), q: { type: 'values' } },
-		{ $id: 'agedx', term: termjson('agedx'), q: { mode: 'continuous' } }
+		{ $id: 'diaggrp', term: termjson('diaggrp'), q: { type: 'values' } }
 	]
 	const bySample = await getData({ terms: terms() }, tdb.ds)
 	// record the ids that refs are made for
@@ -1478,12 +1466,9 @@ tape('getData: mapChildren2Root returns one entry per root sample', async t => {
 		[...rootIds].sort(),
 		'no refs are made for the child samples, which would be replaced'
 	)
-	const childAges = Object.keys(bySample.samples)
-		.filter(id => id2root(id) == 102)
-		.map(id => bySample.samples[id].agedx.value)
-	t.ok(childAges.length > 1, 'the tested root has several children')
-	const mean = childAges.reduce((a, b) => a + b) / childAges.length
-	t.equal(byRoot.samples[102].agedx.value, mean, 'a numeric value is the mean of the children values')
+	const children = Object.keys(bySample.samples).filter(id => id2root(id) == 102)
+	t.ok(children.length > 1, 'the tested root has several children')
+	t.equal(byRoot.samples[102].sex.key, bySample.samples[children[0]].sex.key, 'the root keeps the sex of its children')
 	t.equal(byRoot.sampleType.name, 'patient', 'the sample type is the root type')
 
 	const scTw = { $id: 'sc', term: { type: 'singleCellGeneExpression', gene: 'TP53' }, q: {} }
@@ -1492,6 +1477,13 @@ tape('getData: mapChildren2Root returns one entry per root sample', async t => {
 		sc.error,
 		'patient level is not supported with single cell data',
 		'a patient level request with a single cell term fails at argument validation, before any data is queried'
+	)
+	const ageTw = { $id: 'agedx', term: termjson('agedx'), q: { mode: 'continuous' } }
+	const age = await getData({ terms: [...terms(), ageTw], mapChildren2Root: true }, tdb.ds)
+	t.equal(
+		age.error,
+		'patient level is not supported with numeric data',
+		'a patient level request with a numeric term fails at argument validation, before any data is queried'
 	)
 	const snpTw = { $id: 'snps', term: { type: 'snplst', snps: [] }, q: {} }
 	const snp = await getData({ terms: [...terms(), snpTw], mapChildren2Root: true }, tdb.ds)
@@ -1509,7 +1501,7 @@ tape('getData: mapChildren2Root finds the values of a hidden term that annotates
 	server_init_db_queries(tdb.ds)
 	const termdb = tdb.ds.cohort.termdb
 	const termjson = id => structuredClone(termdb.q.termjsonByOneid(id))
-	const terms = () => [{ $id: 'agedx', term: termjson('agedx'), q: { mode: 'continuous' } }]
+	const terms = () => [{ $id: 'wgs_curated', term: termjson('wgs_curated'), q: { type: 'values' } }]
 	// in the test db, diaggrp annotates child samples and sex annotates patients
 	const childValues = new Set(
 		tdb.ds.cohort.db.connection
@@ -1542,81 +1534,21 @@ tape('getData: mapChildren2Root finds the values of a hidden term that annotates
 	t.end()
 })
 
-tape('mayMapChildren2Root: keeps one object of member values for a numeric termCollection', t => {
-	// samples 11 and 12 are children of root 1, sample 21 of root 2
-	const root = { 11: 1, 12: 1, 21: 2 }
-	const ds = {
-		cohort: {
-			termdb: {
-				hasSampleAncestry: true,
-				sampleTypes: {
-					1: { name: 'patient', plural_name: 'patients', parent_id: null },
-					2: { name: 'sample', plural_name: 'samples', parent_id: 1 }
-				},
-				q: { id2rootSampleId: id => root[id] ?? Number(id), id2sampleRefs: id => ({ label: 'p' + id }) }
-			}
-		}
-	}
-	const term = { id: 'sigs', type: 'termCollection', memberType: 'numeric' }
-	const tws = [
-		{ $id: 'cont', type: 'TermCollectionTWCont', term, q: { mode: 'continuous' } },
-		{ $id: 'frac', type: 'TermCollectionTWFraction', term, q: { mode: 'continuous' } }
-	]
-	const data = {
-		samples: {
-			11: { sample: 11, cont: { key: 11, value: { A: 1, B: 2, C: null } }, frac: { key: 0.2, value: 0.2 } },
-			12: { sample: 12, cont: { key: 12, value: { A: 3 } }, frac: { key: 0.4, value: 0.4 } },
-			21: { sample: 21, cont: { key: 21, value: { A: 5 } } }
-		},
-		refs: { byTermId: {}, bySampleId: {} }
-	}
-	mayMapChildren2Root(data, { terms: tws, mapChildren2Root: true }, ds)
-	t.deepEqual(
-		{ ...data.samples[1].cont, value: { ...data.samples[1].cont.value } },
-		{ key: 1, value: { A: 2, B: 2 } },
-		'each member is the mean over the children that have a value for it, a null value is left out'
-	)
-	t.equal(data.samples[2].cont.key, 2, 'a root with one child is keyed by the root id')
-	t.deepEqual({ ...data.samples[2].cont.value }, { A: 5 }, 'a root with one child keeps its member values')
-	t.ok(Math.abs(data.samples[1].frac.value - 0.3) < 1e-9, 'a fraction mode collection is averaged as a number')
-	t.end()
-})
-
-tape('getData: mapChildren2Root averages each member of a custom numeric termCollection', async t => {
+tape('getData: mapChildren2Root rejects a numeric termCollection', async t => {
 	await ensureOpenAuth()
 	const tdb = await init('termdb.test.ts')
 	server_init_db_queries(tdb.ds)
-	// samples 10 and 14 are the children of root 102
-	const values = { ISO1: { 10: 1, 14: 3 }, ISO2: { 10: 4 } }
-	const origQueries = tdb.ds.queries
-	tdb.ds.queries = {
-		...origQueries,
-		isoformExpression: {
-			// a custom collection is queried as one expanded member term at a time, keyed by its $id
-			get: async args => ({ term2sample2value: new Map([[args.terms[0].$id, values[args.terms[0].term.id]]]) })
-		}
+	const term = {
+		type: 'termCollection',
+		name: 'custom',
+		memberType: 'numeric',
+		isCustom: true,
+		termlst: ['ISO1', 'ISO2'].map(id => ({ id, name: id, type: 'isoformExpression', isoform: id }))
 	}
-	const tw = {
-		$id: 'customTc',
-		type: 'TermCollectionTWCont',
-		term: {
-			type: 'termCollection',
-			name: 'custom',
-			memberType: 'numeric',
-			isCustom: true,
-			termlst: ['ISO1', 'ISO2'].map(id => ({ id, name: id, type: 'isoformExpression', isoform: id }))
-		},
-		q: { mode: 'continuous', type: 'values', lst: [] }
-	}
-	try {
+	for (const type of ['TermCollectionTWCont', 'TermCollectionTWFraction']) {
+		const tw = { $id: 'customTc', type, term, q: { mode: 'continuous', type: 'values', lst: [] } }
 		const data = await getData({ terms: [tw], mapChildren2Root: true }, tdb.ds)
-		t.notOk(data.error, 'no error')
-		t.deepEqual(Object.keys(data.samples), ['102'], 'the children are mapped onto their root')
-		const d = data.samples[102].customTc
-		t.equal(d.key, 102, 'the key is the root id')
-		t.deepEqual({ ...d.value }, { ISO1: 2, ISO2: 4 }, 'each member is the mean over the children that have a value')
-	} finally {
-		tdb.ds.queries = origQueries
+		t.equal(data.error, 'patient level is not supported with numeric data', `a ${type} term is rejected`)
 	}
 	t.end()
 })
@@ -1632,9 +1564,9 @@ tape('mayMapChildren2Root: rejects rows that are not samples', t => {
 			}
 		}
 	}
-	const tw = { $id: 'age', term: { id: 'age', type: 'float' }, q: {} }
+	const tw = { $id: 'sex', term: { id: 'sex', type: 'categorical' }, q: {} }
 	const unknown = {
-		samples: { 11: { sample: 11, age: { key: 1, value: 1 } }, 99: { sample: 99, age: { key: 2, value: 2 } } },
+		samples: { 11: { sample: 11, sex: { key: 'M', value: 'M' } }, 99: { sample: 99, sex: { key: 'F', value: 'F' } } },
 		refs: { byTermId: {} }
 	}
 	t.throws(
