@@ -166,10 +166,14 @@ tape('getAuthStatus()', test => {
 		'Requires sign-in',
 		'should require sign-in for public access when not signed in'
 	)
-	test.equal(getAuthStatus(true), 'Signed in', 'should read Signed in')
-	test.equal(getAuthStatus(true, false), 'Signed in', 'should read Signed in when the access is not public')
+	test.equal(getAuthStatus(true), 'You are signed in.', 'should read You are signed in.')
+	test.equal(
+		getAuthStatus(true, false),
+		'You are signed in.',
+		'should read You are signed in. when the access is not public'
+	)
 	test.equal(getAuthStatus(true, true), 'Public access', 'should read Public access for a user with only public access')
-	test.equal(getAuthStatus(true, 'true' as any), 'Signed in', 'should only accept true for public access')
+	test.equal(getAuthStatus(true, 'true' as any), 'You are signed in.', 'should only accept true for public access')
 	test.end()
 })
 
@@ -288,7 +292,7 @@ tape('MassUser renderAuthInfo()', test => {
 		user.renderAuthInfo()
 		test.equal(
 			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
-			'Signed in',
+			'You are signed in.',
 			'should show signed in'
 		)
 		test.false(
@@ -331,7 +335,7 @@ tape('MassUser renderAuthInfo() userTab', test => {
 		)
 		test.equal(
 			children[0].textContent,
-			verified ? 'Signed in' : 'Requires sign-in',
+			verified ? 'You are signed in.' : 'Requires sign-in',
 			`should show the status, verified=${verified}`
 		)
 		test.equal(
@@ -387,8 +391,8 @@ tape('MassUser renderAuthInfo() userTab', test => {
 	// the status for a user with only public access
 	for (const [verified, isPublic, status] of [
 		[true, true, 'Public access'],
-		[true, false, 'Signed in'],
-		[true, undefined, 'Signed in'],
+		[true, false, 'You are signed in.'],
+		[true, undefined, 'You are signed in.'],
 		[false, true, 'Requires sign-in']
 	] as [boolean, boolean | undefined, string][]) {
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified })

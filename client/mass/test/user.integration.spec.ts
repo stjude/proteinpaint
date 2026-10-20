@@ -447,7 +447,7 @@ tape('launch when the lookup of the sessions on the server fails', test => {
 		}
 		test.equal(
 			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
-			'Signed in',
+			'You are signed in.',
 			'should show that the user is signed in'
 		)
 		test.equal(sessionIdRequests, 1, 'should have tried the lookup of the sessions on the server')
@@ -472,7 +472,7 @@ tape('sessions on the server for a signed in user', test => {
 		nav.on('postRender.test', null)
 		test.equal(
 			nav.Inner.dom.subheader.user.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
-			'Signed in',
+			'You are signed in.',
 			'should show that the user is signed in'
 		)
 		// Delete is added when the lookup is done

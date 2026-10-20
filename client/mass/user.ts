@@ -32,7 +32,7 @@ export function datasetRequiresAuth(termdbConfig: any): boolean {
  */
 export function getAuthStatus(signedIn: boolean, isPublic?: boolean): string {
 	if (!signedIn) return 'Requires sign-in'
-	return isPublic === true ? 'Public access' : 'Signed in'
+	return isPublic === true ? 'Public access' : 'You are signed in.'
 }
 
 export class MassUser implements RxComponent {
@@ -186,22 +186,28 @@ export class MassUser implements RxComponent {
 		const signedIn = vocabApi.hasVerifiedToken()
 		// computed by the optional ds hooks in massNav.tabs.user, from the auth of the user
 		const userTab = this.state.termdbConfig.userTab
-		div
-			.append('div')
-			.attr('data-testid', 'sjpp-massnav-user-auth-status')
+		// same label style as SESSION, with the status on the same row
+		const row = div.append('div')
+		row
+			.append('span')
+			.attr('data-testid', 'sjpp-massnav-user-auth-label')
 			.style('font-weight', 'bold')
-			.style('font-size', '1.2em')
+			.style('opacity', 0.65)
+			.text('ACCESS')
+		row
+			.append('span')
+			.attr('data-testid', 'sjpp-massnav-user-auth-status')
+			.style('margin-left', '10px')
 			.text(getAuthStatus(signedIn, userTab?.isPublic))
 		// reason for a failed sign-in, if any
 		const msg = vocabApi.tokenVerificationMessage
-		if (!signedIn && msg) div.append('div').style('opacity', 0.65).text(msg)
-		// the message from massNav.tabs.user.getMsg(), under the status. text, not html
+		if (!signedIn && msg) row.append('span').style('margin-left', '5px').style('opacity', 0.65).text(msg)
+		// the message from massNav.tabs.user.getMsg(), after the status. text, not html
 		if (userTab?.msg)
-			div
-				.append('div')
+			row
+				.append('span')
 				.attr('data-testid', 'sjpp-massnav-user-auth-info')
-				.style('margin', '5px 0 0 8px')
-				.style('font-size', '0.95em')
+				.style('margin-left', '5px')
 				.style('opacity', 0.75)
 				.text(userTab.msg)
 	}
