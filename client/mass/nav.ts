@@ -40,6 +40,12 @@ const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
 // const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
 const userTab = { top: 'SESSION', mid: '', btm: '', subheader: 'user' }
 
+/** The role of the user, for the middle row of the user tab. Only for a dataset that requires authorization */
+export function getUserTabMid(termdbConfig: any): string {
+	const role = termdbConfig?.clientAuthResult?.role
+	return termdbConfig?.requiredAuth?.length && typeof role === 'string' ? role.toUpperCase() : ''
+}
+
 export function getId(): string {
 	return idPrefix + '_' + id++
 }
@@ -383,11 +389,7 @@ function setRenderers(self: any): void {
 		if (!massNav.tabs?.user?.hide) {
 			//User tab is not hidden
 			const override = Object.assign({}, massNav.tabs?.user)
-			if (!override.mid) {
-				const authResult: any = appState.termdbConfig?.clientAuthResult || {}
-				const role = authResult.role || (Object.values(authResult) as any[]).find(auth => auth?.role)?.role
-				override.mid = appState.termdbConfig?.requiredAuth?.length && typeof role === 'string' ? role.toUpperCase() : ''
-			}
+			if (!override.mid) override.mid = getUserTabMid(appState.termdbConfig)
 			self.tabs.push(Object.assign({}, userTab, override))
 		}
 
