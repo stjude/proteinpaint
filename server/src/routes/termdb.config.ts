@@ -676,7 +676,7 @@ export function getLoneTermByType(req, ds, loneTermByType) {
 /*
 what the mass nav user tab shows about the auth of the user, as computed by the optional ds hooks in
 massNav.tabs.user: getStatus() for the heading, getMsg() for the message, getList() for a list such as the
-sites of the user, and isPublic() for whether the user has only public access. the static contact is copied.
+sites of the user, and isPublic() for whether the user has only public access.
 the hooks get q and the ds.
 clientAuthResult is from authApi.getNonsensitiveInfo(), {} when the user has no session.
 __protected__ is req.query.__protected__ as set by the auth middleware, which may be missing or partial, such as
@@ -688,7 +688,6 @@ type UserTab = {
 	status?: string
 	msg?: string
 	list?: { label: string; items: string[] }
-	contact?: { text: string; email: string }
 	isPublic?: boolean
 }
 
@@ -710,9 +709,6 @@ export function getUserTab(ds, clientAuthResult, __protected__): UserTab | undef
 		const items = list.items.filter(isNonEmptyString)
 		if (items.length) userTab.list = { label: list.label, items }
 	}
-	const contact = hooks.contact
-	if (isNonEmptyString(contact?.text) && isNonEmptyString(contact.email))
-		userTab.contact = { text: contact.text, email: contact.email }
 	if (mayCallHook(hooks.isPublic, q, ds) === true) userTab.isPublic = true
 	return Object.keys(userTab).length ? userTab : undefined
 }

@@ -14,7 +14,7 @@ import { markSavedState, getSavedStateRefusal } from './sessionForm.ts'
 /*
 "user" tab will display following contents inside this.subheader:
 - the user authorization information, if the dataset requires authorization: the status, and termdbConfig.userTab
-  msg, list, and contact, as computed by the optional ds hooks in massNav.tabs.user. userTab.status, if any,
+  msg and list, as computed by the optional ds hooks in massNav.tabs.user. userTab.status, if any,
   replaces the default status
 - the session open/save/share/delete functionality, moved from the former session button. The options are always
   shown as buttons, and the selected option renders into dom.contentDiv
@@ -214,22 +214,19 @@ export class MassUser implements RxComponent {
 		// reason for a failed sign-in, if any
 		const msg = vocabApi.tokenVerificationMessage
 		if (!signedIn && msg) div.append('div').style('opacity', 0.65).text(msg)
-		// the message from massNav.tabs.user.getMsg(), under the status, followed in the same paragraph by the static
-		// massNav.tabs.user.contact, as '<text> <email>.' with the email as a mailto link. text, not html
-		if (userTab?.msg || userTab?.contact) {
+		// the message from massNav.tabs.user.getMsg(), under the status. text, not html, with each email address as a
+		// mailto link. split() with a capture group puts the emails at the odd indexes
+		if (userTab?.msg) {
 			const infoDiv = div
 				.append('div')
 				.attr('data-testid', 'sjpp-massnav-user-auth-info')
 				.style('margin', '5px 0 0 8px')
 				.style('font-size', '0.95em')
 				.style('opacity', 0.75)
-			if (userTab.msg) infoDiv.append('span').text(userTab.msg)
-			if (userTab.contact) {
-				const contactSpan = infoDiv.append('span').attr('data-testid', 'sjpp-massnav-user-auth-contact')
-				contactSpan.append('span').text(`${userTab.msg ? ' ' : ''}${userTab.contact.text} `)
-				contactSpan.append('a').attr('href', `mailto:${userTab.contact.email}`).text(userTab.contact.email)
-				contactSpan.append('span').text('.')
-			}
+			userTab.msg.split(/([\w.+-]+@[\w-]+(?:\.[\w-]+)+)/).forEach((part, i) => {
+				if (i % 2) infoDiv.append('a').attr('href', `mailto:${part}`).text(part)
+				else if (part) infoDiv.append('span').text(part)
+			})
 		}
 		// the list from massNav.tabs.user.getList(), such as the sites of the user
 		if (userTab?.list) {
