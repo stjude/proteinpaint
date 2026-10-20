@@ -1,8 +1,5 @@
 import { addDemoTokenCred } from './auth.demoToken.ts'
-import pm from 'picomatch'
 import { patternMatches } from './Auth.ts'
-
-const { isMatch } = pm
 
 // NOTES:
 // 1. list keys in the desired matching order, for example, the catch-all '*' pattern should be entered last
@@ -143,7 +140,8 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 		// - that dslabel pattern is not detected as being loaded.
 		// Preserve the catch-all '*' entry, but prune any other unmatched pattern to prevent
 		// the /healthcheck route handler from processing credential test/checks for non-existent datasets.
-		if (genomes && dslabel != '*' && !loadedDslabels.find(ds => ds === dslabel || isMatch(ds, dslabel))) {
+		// use the same case-insensitive matching as Auth.getMatchedDsEntries()
+		if (genomes && dslabel != '*' && !loadedDslabels.find(ds => patternMatches(ds, dslabel))) {
 			delete creds[dslabel]
 			continue
 		}

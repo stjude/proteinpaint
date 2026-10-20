@@ -79,6 +79,20 @@ tape('validateDsCredentials: removes entries for dslabel patterns that were not 
 	test.end()
 })
 
+tape(
+	'validateDsCredentials: keeps a dslabel key that matches a loaded dataset with a different case',
+	async function (test) {
+		test.timeoutAfter(500)
+
+		for (const key of ['testds', 'TESTDS', 'test*']) {
+			const creds: any = { [key]: { burden: { 'pp.example.org': { type: 'basic', secret } } } }
+			await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
+			test.ok(Object.hasOwn(creds, key), `should keep the '${key}' key for the loaded 'testDs' dataset`)
+		}
+		test.end()
+	}
+)
+
 tape('validateDsCredentials: basic type gets expected defaults', async function (test) {
 	test.timeoutAfter(500)
 	test.plan(6)

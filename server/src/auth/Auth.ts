@@ -2,8 +2,6 @@ import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import pm from 'picomatch'
 
-const { isMatch: pmIsMatch } = pm
-
 // The auth session store is a two-level Map keyed by [dslabel][sessionId]. Both keys are
 // request-controlled (dslabel from req.query/JWT payloads, sessionId from getSessionId()'s
 // cookie/header/query resolution), so a Map -- rather than a plain object -- is used deliberately:
@@ -53,21 +51,22 @@ export function stripBasepath(path: string, basepath = '') {
 	return p
 }
 
-function isMatch(path: string, pattern: string) {
-	return pmIsMatch(path, pattern, { nocase: true })
+function isMatchNoCase(path: string, pattern: string) {
+	return pm.isMatch(path, pattern, { nocase: true })
 }
 
 // returns true if a client-supplied value matches a single dsCredentials key: the '*' wildcard
-// or an identical key always matches, any other key is tried as a glob pattern. Note that a glob '*'
-// alone does not match values with a '/', such as embedder='a/b', so the wildcard must be checked
-// explicitly to avoid treating a protected dataset as open access.
+// or an identical key always matches, any other key is tried as a case-insensitive glob pattern
+// (see isMatchNoCase()), so that an exact key that differs only by case also matches. Note that
+// a glob '*' alone does not match values with a '/', such as embedder='a/b', so the wildcard must
+// be checked explicitly to avoid treating a protected dataset as open access.
 //
 // This only decides whether one key matches. When more than one key matches, see getMatchedEntry()
 // and Auth.getMatchedDsEntries() for which key takes precedence.
 export function patternMatches(value, pattern) {
 	if (pattern === '*' || value === pattern) return true
 	if (typeof value != 'string' || !value || !pattern) return false
-	return isMatch(value, pattern)
+	return isMatchNoCase(value, pattern)
 }
 
 // returns the parsed URL of the request origin, or undefined if it is missing or malformed
@@ -228,7 +227,7 @@ export class Auth {
 		} else if (path.startsWith('/termdb')) {
 			const cred = this.getRouteCred(q.dslabel, ['termdb'], q.embedder)
 			// a dsCredentials entry may list additional termdb route patterns to protect
-			if (cred?.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
+			if (cred?.protectedRoutes?.find(pattern => isMatchNoCase(path, pattern))) return cred
 		} else if (path.startsWith('/burden')) {
 			const cred = this.getRouteCred(q.dslabel, ['burden'], q.embedder)
 			if (cred) return cred
@@ -237,7 +236,7 @@ export class Auth {
 		for (const ds of dsEntries) {
 			for (const routeName in ds) {
 				const routePattern = ds[routeName].routePattern || routeName
-				if (!isMatch(path, routePattern)) continue
+				if (!isMatchNoCase(path, routePattern)) continue
 				const cred = getMatchedEntry(ds[routeName], q.embedder)
 				if (cred) return cred
 			}
@@ -557,7 +556,7 @@ export class Auth {
 			// signed payload route must match the requested data route
 			if (
 				cred.route === '*' ||
-				isMatch(path, cred.route) ||
+				isMatchNoCase(path, cred.route) ||
 				path == 'authorizedactions' ||
 				path == 'dslogout' ||
 				path.startsWith(cred.route.toLowerCase() + '/')
