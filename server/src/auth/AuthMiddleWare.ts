@@ -1,4 +1,4 @@
-import { normalizeReqPath, getNonStringAuthParam, getSessionEntry, getStringArray } from './Auth.ts'
+import { normalizeReqPath, getNonStringAuthParam, getCredSessionEntry, getStringArray } from './Auth.ts'
 
 // these server routes should not be protected by default,
 // since a user that is not logged should be able to have a way to login,
@@ -200,7 +200,7 @@ function checkSession(auth, req, res, next, cred) {
 
 	try {
 		const id = auth.getSessionId(req, cred, auth.sessions)
-		const session = id && getSessionEntry(auth.sessions, q.dslabel, id)
+		const session = id && getCredSessionEntry(auth.sessions, q.dslabel, id, cred)
 		if (!session) {
 			code = 401
 			throw `unestablished or expired browser session`

@@ -4,6 +4,7 @@ import {
 	Auth,
 	getMatchedEntry,
 	getNonStringAuthParam,
+	getCredSessionEntry,
 	getOriginFromHeaders,
 	getSessionEntry,
 	normalizeReqPath,
@@ -18,6 +19,8 @@ const secret = 'auth-class-test-secret' // pragma: allowlist secret
 const time = Math.floor(Date.now() / 1000)
 const dslabel = 'testDs'
 const embedder = 'localhost'
+// the cookie name that getSessionId() also checks for any cred
+const headerKeyCookie = 'x-ds-access-token'
 
 function makeCred(overrides: any = {}) {
 	return {
@@ -290,6 +293,43 @@ tape('getRouteCred: an open entry is treated as no credential', function (test) 
 		auth.getRequiredCred({ dslabel, embedder: 'other.org' }, '/burden'),
 		undefined,
 		'should not require a cred for a route with an open entry'
+	)
+	test.end()
+})
+
+tape('getCredSessionEntry: a session applies only to the route of the cred that established it', function (test) {
+	test.timeoutAfter(500)
+
+	const termdbCred = makeCred()
+	const burdenCred = makeCred({ type: 'basic', route: 'burden', secret: 'other-route-secret' })
+	const creds = { [dslabel]: { termdb: { [embedder]: termdbCred }, burden: { [embedder]: burdenCred } } }
+	const auth = new Auth(creds, {}, {}, { port: 3000 })
+	const token = jsonwebtoken.sign({ datasets: [dslabel], iat: time, exp: time + 3600 }, secret)
+	const headers = { authorization: 'Bearer ' + Buffer.from(token).toString('base64') }
+	const query = { dslabel, embedder }
+
+	const id = auth.getSessionId({ query, headers, cookies: {}, path: '/termdb' }, termdbCred)
+	test.ok(id && getCredSessionEntry(auth.sessions, dslabel, id, termdbCred), 'should establish a termdb session')
+	test.equal(
+		getCredSessionEntry(auth.sessions, dslabel, id, burdenCred),
+		undefined,
+		'should not return the termdb session for the burden cred'
+	)
+
+	const burdenId = auth.getSessionId({ query, headers, cookies: {}, path: '/burden' }, burdenCred)
+	test.notOk(
+		burdenId && getCredSessionEntry(auth.sessions, dslabel, burdenId, burdenCred),
+		'should not resolve a burden session from the same bearer token'
+	)
+	const cookieId = auth.getSessionId(
+		{ query, headers: {}, cookies: { [headerKeyCookie]: id }, path: '/burden' },
+		burdenCred
+	)
+	test.equal(cookieId, id, 'should read the session id from the shared cookie')
+	test.equal(
+		getCredSessionEntry(auth.sessions, dslabel, cookieId, burdenCred),
+		undefined,
+		'should not return the termdb session for the burden cred from the shared cookie'
 	)
 	test.end()
 })

@@ -26,6 +26,13 @@ export function getSessionEntry(sessions: SessionsMap, dslabel: string, id: stri
 	return sessions.get(dslabel)?.get(id)
 }
 
+// Returns the session for [dslabel][id] only if it was established for the route of cred, since sessions
+// are tracked by dslabel, and a dataset may have credentials for more than one route
+export function getCredSessionEntry(sessions: SessionsMap, dslabel: string, id: string, cred) {
+	const session = getSessionEntry(sessions, dslabel, id)
+	return session && cred && session.route === cred.route ? session : undefined
+}
+
 // Express routes requests case-insensitively and ignores a trailing slash (non-strict routing),
 // so auth path checks must do the same, otherwise a request to `/TERMDB/MATRIX` or `/termdb/matrix/`
 // would not match a protected route pattern but would still be handled by the protected route
@@ -545,7 +552,7 @@ export class Auth {
 			// '__proto__' cannot resolve a fake payload that would skip jsonwebtoken.verify() below.
 			// requireFreshVerification skips this cache lookup entirely: a cache hit only proves that
 			// id matches an existing entry, not that this request's token is the one that produced it.
-			const cachedPayload = requireFreshVerification ? undefined : getSessionEntry(sessions, dslabel, id)
+			const cachedPayload = requireFreshVerification ? undefined : getCredSessionEntry(sessions, dslabel, id, cred)
 			const payload = cachedPayload || jsonwebtoken.verify(token, secret)
 			// signed payload dataset must match the requested dataset
 			if (payload.dslabel) {
