@@ -852,6 +852,43 @@ tape('AuthApi.getRequiredCredForDsEmbedder: matches wildcard embedder pattern', 
 	test.end()
 })
 
+tape('AuthApi: an open wildcard embedder entry does not require a login', function (test) {
+	test.timeoutAfter(500)
+
+	const creds: any = {
+		[dslabel]: {
+			termdb: {
+				[embedder]: makeShapedCred(),
+				'*': { type: 'open', dslabel, route: 'termdb' }
+			}
+		}
+	}
+	const genomes = { hg38: { datasets: { [dslabel]: {} } } }
+	const authApi = new AuthApi(creds, makeMockApp(), genomes, { port: 3000, cachedir: '/tmp' })
+	const req: any = { query: { dslabel, embedder: 'other-embedder' }, path: '/termdb', headers: {}, cookies: {} }
+
+	test.equal(
+		authApi.getRequiredCredForDsEmbedder(dslabel, 'other-embedder'),
+		undefined,
+		'should not return an open entry as a required credential'
+	)
+	test.equal(
+		authApi
+			.getRequiredCredForDsEmbedder(dslabel, embedder)
+			?.map(c => c.type)
+			.join(','),
+		'jwt',
+		'should only return the listed credential for a listed embedder'
+	)
+	test.deepEqual(
+		authApi.getDsAuth({ ...req, get: () => 'other-embedder' }),
+		[],
+		'should not include an open entry in dsAuth'
+	)
+	test.equal(authApi.isUserLoggedIn(req, { label: dslabel }, true), true, 'should not require a session')
+	test.end()
+})
+
 tape('AuthApi.isUserLoggedIn: returns true when no cred is required for the route', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)

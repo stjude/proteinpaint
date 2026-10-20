@@ -40,6 +40,8 @@ type Scenario = {
 	allRoutes?: boolean
 	/** an embedder that does not match any credential key, so the dataset is forbidden for it */
 	unlistedEmbedder?: string
+	/** an embedder that matches a '*': {type: 'open'} key, so the dataset is open access for it */
+	openEmbedder?: string
 	/** an embedder with a slash, which a glob '*' alone does not match */
 	slashEmbedder?: string
 }
@@ -65,6 +67,12 @@ const scenarios: Scenario[] = [
 		dsCredentials: { [dslabel]: { '*': { '*.example.org': jwtCred } } },
 		embedder: 'portal.example.org',
 		allRoutes: true
+	},
+	{
+		name: 'exact embedder key with an open wildcard embedder',
+		dsCredentials: { [dslabel]: { termdb: { 'portal.example.org': jwtCred, '*': { type: 'open' } } } },
+		embedder: 'portal.example.org',
+		openEmbedder: 'other.org'
 	}
 ]
 
@@ -186,6 +194,14 @@ function runScenario(sc: Scenario) {
 				list.body.filter?.(s => 'name' in s).length,
 				0,
 				`should not include sample names for embedder='${sc.unlistedEmbedder}' that does not match the glob embedder key`
+			)
+		}
+		if (sc.openEmbedder) {
+			// a '*': {type: 'open'} key does not require a login, so sample names are displayed without a session
+			const list = await get(server, '/termdb', sampleRequests(baseFor(sc.openEmbedder)).getsamplelist)
+			test.ok(
+				list.body.length && list.body.every(s => 'name' in s),
+				`should include sample names for embedder='${sc.openEmbedder}' that matches an open wildcard embedder key`
 			)
 		}
 		test.end()

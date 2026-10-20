@@ -169,6 +169,8 @@ export class AuthApi implements AuthInterface {
 				for (const embedderHostPattern in this.#auth.creds[dslabelPattern][routePattern]) {
 					if (!patternMatches(embedder, embedderHostPattern)) continue
 					const cred = this.#auth.creds[dslabelPattern][routePattern][embedderHostPattern]
+					// an open cred does not require a login
+					if (cred.type == 'open') continue
 					requiredCred.push({
 						route: routePattern,
 						type: cred.type,
