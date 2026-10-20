@@ -451,7 +451,7 @@ function enterRange(self, tr, brush, i) {
 			.append('button')
 			.style('margin-left', '10px')
 			.text('Apply')
-			.attr('data-testid', 'sjpp-range-apply')
+			.attr('data-testid', 'sjpp-tvsnumeric-range-apply')
 
 			.on('click', async () => {
 				try {
