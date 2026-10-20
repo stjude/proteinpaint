@@ -292,9 +292,9 @@ function samplematrixQuery(flag, url, indexURL) {
 
 // callers whose url and indexURL come from a dataset config, not a request; they still go through utils.cache_index()
 const configCallers = ['km.js', 'mds3.init.js']
-// callers of a url that another caller gives them, which has its own case; tabix.ts gets the cache dir of a url
+// callers of a url that another caller gives them, which has its own case; indexedFile.ts gets the cache dir of a url
 // that is given without one, see the url file section of tabix.unit.spec.ts
-const libraryCallers = ['tabix.ts']
+const libraryCallers = ['indexedFile.ts']
 
 tape('\n', async function (test) {
 	test.comment('-***- cache_index() caller specs -***-')

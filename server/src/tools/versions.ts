@@ -6,11 +6,6 @@ Spec of the version checks of the tools that the server requires. See index.ts f
 */
 
 export const specs: Record<string, ToolSpec> = {
-	'samtools.version': {
-		bin: () => serverconfig.samtools,
-		fields: {},
-		argv: ['--version']
-	},
 	'bcftools.version': {
 		bin: () => serverconfig.bcftools,
 		fields: {},

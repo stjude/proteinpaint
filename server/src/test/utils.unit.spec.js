@@ -551,8 +551,7 @@ tape('spawn helpers reject when the process cannot be spawned', async test => {
 		get_lines_bigfile: () =>
 			utils.get_lines_bigfile({ args: ['view', '-h', 'x.bcf'], isbcf: true, dir, callback: () => {} }),
 		get_lines_txtfile: () => utils.get_lines_txtfile({ args: ['x.txt'], dir, callback: () => {} }),
-		get_header_txt: () => utils.get_header_txt('x.txt', dir),
-		bam_ifnochr: () => utils.bam_ifnochr('x.bam', {}, dir)
+		get_header_txt: () => utils.get_header_txt('x.txt', dir)
 	}
 	for (const [name, fn] of Object.entries(helpers)) {
 		try {

@@ -94,8 +94,9 @@ FROM os AS hts
 
 ARG htsversion=1.24
 WORKDIR /tmp/hts
-# installed into / for the samtools and bcftools builds, and into /staging for ppbase to copy;
-# bgzip and tabix are not copied, since the server reads bgzipped, tabix-indexed files in process, see server/src/tabix.ts
+# installed into / for the bcftools build, and into /staging for ppbase to copy; samtools, bgzip, and tabix are
+# not installed, since the server reads bam and bgzipped, tabix-indexed files in process, see server/src/bamFile.ts
+# and server/src/tabix.ts
 RUN curl -fL https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
     cd htslib-${htsversion} && \
     ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && \
@@ -103,10 +104,6 @@ RUN curl -fL https://github.com/samtools/htslib/releases/download/${htsversion}/
     rm /staging/usr/local/bin/bgzip /staging/usr/local/share/man/man1/bgzip.1 \
         /staging/usr/local/bin/tabix /staging/usr/local/share/man/man1/tabix.1 && \
     ldconfig
-RUN curl -fL https://github.com/samtools/samtools/releases/download/${htsversion}/samtools-${htsversion}.tar.bz2 | tar xj && \
-    cd samtools-${htsversion} && \
-    ./configure --with-htslib=system && \
-    make -j"$(nproc)" && make install DESTDIR=/staging
 RUN curl -fL https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
     cd bcftools-${htsversion} && \
     ./configure --enable-libgsl --with-htslib=system && \

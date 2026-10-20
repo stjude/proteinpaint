@@ -64,7 +64,7 @@ async function withConfig(key: string, value: unknown, fn: () => Promise<void>) 
 	}
 }
 
-/** a genome with only what the routes below use; genomefile NA makes get_fasta() return Ns without samtools */
+/** a genome with only what the routes below use; genomefile NA makes get_fasta() return Ns without reading a file */
 const genome = {
 	genomefile: 'NA',
 	chrlookup: { CHR1: { name: 'chr1', len: 1000000 } },
@@ -381,27 +381,23 @@ tape('getAvailableMemoryMB()', async test => {
 tape('checkDependenciesAndVersions()', async test => {
 	// run_R() starts Rscript by name, to check the R packages
 	standIns.add('Rscript')
-	const samtools = standIns.add('samtools', `echo 'samtools 1.24'`)
 	const bcftools = standIns.add('bcftools', `echo 'bcftools 1.24'`)
-	const oldSamtools = standIns.add('samtools1.9', `echo 'samtools 1.9'`)
+	const oldBcftools = standIns.add('bcftools1.9', `echo 'bcftools 1.9'`)
 	const features = serverconfig.features
 	const skip = features.skip_checkDependenciesAndVersions
 	delete features.skip_checkDependenciesAndVersions
 	standIns.prependPath()
 	try {
-		await withConfig('samtools', samtools, async () => {
-			await withConfig('bcftools', bcftools, async () => {
-				await checkDependenciesAndVersions(serverconfig)
-				test.deepEqual(standIns.calls('samtools'), [['--version']], 'should run samtools --version')
-				test.deepEqual(standIns.calls('bcftools'), [['-v']], 'should run bcftools -v')
-			})
+		await withConfig('bcftools', bcftools, async () => {
+			await checkDependenciesAndVersions(serverconfig)
+			test.deepEqual(standIns.calls('bcftools'), [['-v']], 'should run bcftools -v')
 		})
-		await withConfig('samtools', oldSamtools, async () => {
+		await withConfig('bcftools', oldBcftools, async () => {
 			try {
 				await checkDependenciesAndVersions(serverconfig)
-				test.fail('should reject a samtools version that is too old')
+				test.fail('should reject a bcftools version that is too old')
 			} catch (e) {
-				test.match(String(e), /samtools not >= 1\.10/, 'should reject a samtools version that is too old')
+				test.match(String(e), /bcftools not >= 1\.10/, 'should reject a bcftools version that is too old')
 			}
 		})
 	} finally {
