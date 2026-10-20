@@ -1,7 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
 import { type AuthInterface, type ProtectedRouteMiddlewares } from '../auth.ts'
-import { Auth, assertStringOrUndefined, getSessionEntry, getStringArray } from './Auth.ts'
+import { Auth, assertStringOrUndefined, getCredSessionEntry, getStringArray } from './Auth.ts'
 import { setAuthMiddleware, getProtectedRouteMiddlewares, getSampleLogin } from './AuthMiddleWare.ts'
 import { setAuthRoutes } from './AuthRoutes.ts'
 import { sleep } from '../utils.js'
@@ -91,7 +91,7 @@ export class AuthApi implements AuthInterface {
 				const id = cred.secret
 					? this.#auth.getSessionId({ query, headers: req.headers, cookies: req.cookies, path: req.path }, cred)
 					: undefined
-				const activeSession = getSessionEntry(this.#auth.sessions, dslabel, id)
+				const activeSession = getCredSessionEntry(this.#auth.sessions, dslabel, id, cred)
 				const sessionStart = activeSession?.time || 0
 				// support a dataset-specific override to maxSessionAge
 				const maxAge = cred.maxSessionAge || this.#auth.maxSessionAge
@@ -144,18 +144,17 @@ export class AuthApi implements AuthInterface {
 		const routeKeys = this.#auth.getMatchedRouteKeys(req.query.dslabel)
 		// no checks for this ds, is open access
 		if (!routeKeys.length) return { forbiddenRoutes, clientAuthResult: {} }
-		// the session is looked up with the last matched cred that has a secret, since a cred without
-		// a secret, such as type 'forbidden', cannot have a session, and an open route has no cred
-		let cred
+		// a cred without a secret, such as type 'forbidden', cannot have a session, and an open route has no cred
+		let activeSession
 		for (const k of routeKeys) {
 			const routeCred = this.#auth.getRouteCred(req.query.dslabel, [k], req.query.embedder)
 			if (routeCred?.type == 'forbidden') {
 				forbiddenRoutes.push(k)
 			}
-			if (routeCred?.secret) cred = routeCred
+			if (activeSession || !routeCred?.secret) continue
+			const id = this.#auth.getSessionId(req, routeCred)
+			activeSession = id && getCredSessionEntry(this.#auth.sessions, req.query.dslabel, id, routeCred)
 		}
-		const id = cred && this.#auth.getSessionId(req, cred)
-		const activeSession = id && getSessionEntry(this.#auth.sessions, req.query.dslabel, id)
 		return {
 			forbiddenRoutes,
 			clientAuthResult: activeSession?.clientAuthResult || {}
@@ -210,7 +209,7 @@ export class AuthApi implements AuthInterface {
 		// NOTE: Basic (password) credentials are converted to session token upon log-in,
 		// so that a user does not have to login again for each runproteinpaint() call.
 		const id = this.#auth.getSessionId(req, cred)
-		const activeSession = getSessionEntry(this.#auth.sessions, ds.label, id)
+		const activeSession = getCredSessionEntry(this.#auth.sessions, ds.label, id, cred)
 		const sessionStart = activeSession?.time || 0
 		if (Date.now() - sessionStart < this.#auth.maxSessionAge) return activeSession
 	}

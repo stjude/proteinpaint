@@ -325,7 +325,10 @@ tape('middleware: clears sessions when sessionTracking is jwt-only', function (t
 
 	const auth = makeAuth({ protectedRoutes: ['/termdb/matrix'] }, { features: { sessionTracking: 'jwt-only' } })
 	// Pre-populate sessions
-	;(auth as any).sessions.set(dslabel, new Map([['fake-session-id', { time: Date.now(), ip: '127.0.0.1' }]]))
+	;(auth as any).sessions.set(
+		dslabel,
+		new Map([['fake-session-id', { time: Date.now(), ip: '127.0.0.1', route: 'termdb' }]])
+	)
 
 	const mockAuthApi = {
 		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
@@ -362,7 +365,7 @@ tape('middleware: valid session - calls next() and updates session time', async 
 	const sessionId = 'test-session-id-00'
 	;(auth as any).sessions.set(
 		dslabel,
-		new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]])
+		new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com', route: 'termdb' }]])
 	)
 
 	const mockAuthApi = {
@@ -406,7 +409,7 @@ tape('middleware: an inherited-name session id resolves to no session (401)', fu
 	// a real session exists for the dslabel, so the dslabel level of the map is populated
 	;(auth as any).sessions.set(
 		dslabel,
-		new Map([['real-session-id-00', { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com' }]])
+		new Map([['real-session-id-00', { time: Date.now(), ip: '127.0.0.1', email: 'user@test.com', route: 'termdb' }]])
 	)
 
 	const mockAuthApi = {
@@ -830,7 +833,7 @@ tape('protectedRoutes.termdb: calls next() with a valid session', function (test
 	test.timeoutAfter(500)
 	const auth = makeAuth()
 	const sessionId = 'test-session-id-01'
-	;(auth as any).sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+	;(auth as any).sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', route: 'termdb' }]]))
 	const { termdb } = makeRouteMiddlewares(auth)
 	const req: any = {
 		query: { dslabel, embedder },
@@ -847,11 +850,32 @@ tape('protectedRoutes.termdb: calls next() with a valid session', function (test
 	test.end()
 })
 
+tape('protectedRoutes.termdb: rejects a session that was established for another route', function (test) {
+	test.timeoutAfter(500)
+	const auth = makeAuth()
+	const sessionId = 'test-session-id-03'
+	;(auth as any).sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', route: 'burden' }]]))
+	const { termdb } = makeRouteMiddlewares(auth)
+	const req: any = {
+		query: { dslabel, embedder },
+		path: '/termdb/matrix',
+		cookies: { [headerKey]: sessionId },
+		headers: {},
+		ip: '127.0.0.1'
+	}
+	const res = makeMockRes()
+	let nextCalled = false
+	termdb(req, res, () => (nextCalled = true))
+	test.notOk(nextCalled, 'should not call next()')
+	test.equal(res.statusCode, 401, 'should set a 401 status')
+	test.end()
+})
+
 tape('protectedRoutes.termdb: rejects a forbidden cred even with an existing session', function (test) {
 	test.timeoutAfter(500)
 	const auth = makeAuth({ type: 'forbidden' })
 	const sessionId = 'test-session-id-02'
-	;(auth as any).sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+	;(auth as any).sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', route: 'termdb' }]]))
 	const { termdb } = makeRouteMiddlewares(auth)
 	const req: any = {
 		query: { dslabel, embedder },
@@ -884,7 +908,7 @@ tape('protectedRoutes.termdb: skips the session check that the app-level middlew
 	test.timeoutAfter(500)
 	const auth = makeAuth({ protectedRoutes: ['/termdb/matrix'] })
 	const sessionId = 'test-session-id-02'
-	;(auth as any).sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+	;(auth as any).sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1', route: 'termdb' }]]))
 	const mockAuthApi = {
 		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
 		mayAdjustFilter: () => {},
@@ -993,7 +1017,10 @@ tape('protectedRoutes.minSampleSize: sets a frozen __protected__.isUserLoggedIn'
 tape('protectedRoutes.termdb: an inherited-name session id resolves to no session (401)', function (test) {
 	test.timeoutAfter(1000)
 	const auth = makeAuth()
-	;(auth as any).sessions.set(dslabel, new Map([['real-session-id-01', { time: Date.now(), ip: '127.0.0.1' }]]))
+	;(auth as any).sessions.set(
+		dslabel,
+		new Map([['real-session-id-01', { time: Date.now(), ip: '127.0.0.1', route: 'termdb' }]])
+	)
 	const { termdb } = makeRouteMiddlewares(auth)
 	for (const id of ['__proto__', 'constructor', 'toString']) {
 		const req: any = {
