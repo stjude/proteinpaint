@@ -92,6 +92,8 @@ export function dofetch2(path, init = {}, opts = {}) {
 		}
 	}
 
+	mayAdjustCredentials(init)
+
 	// create a reference to be able to detect body params, easier than
 	// getting params once converted to a URL
 	const body = init.body || {}
@@ -266,6 +268,19 @@ const urlMaxLength = 2000 // if a GET url is longer than this, will be converted
 		may be optionally supplied in the "init" argument
 		see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
 */
+/*
+	A standalone html file that is opened from the local file system, and not served by a web server,
+	has a 'null' origin. The PP server responds to a 'null' origin with Access-Control-Allow-Origin: *,
+	which a browser rejects for a request with credentials: 'include', even when no cookies are sent.
+	Such a page cannot have cookies for the PP server, so 'same-origin' is used instead; explicit
+	authorization headers are still sent.
+
+	pageOrigin: optional, to override window.location.origin in tests
+*/
+export function mayAdjustCredentials(init, pageOrigin = window.location.origin) {
+	if (init.credentials == 'include' && pageOrigin == 'null') init.credentials = 'same-origin'
+}
+
 function mayAdjustRequest(url, init) {
 	const hostname = window.location.hostname
 	const method = (init.method && init.method.toUpperCase()) || 'GET'

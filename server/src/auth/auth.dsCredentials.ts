@@ -189,6 +189,29 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 	return credEmbedders
 }
 
+/*
+	Returns the embedder host patterns that should get Access-Control-Allow-Credentials in a CORS response,
+	from credentials that have been validated by validateDsCredentials(). An embedder key is excluded when
+	all of its entries have type 'forbidden', since a forbidden embedder is never authenticated, so that
+	a catch-all { '*': { type: 'forbidden' } } entry does not allow credentialed requests from any origin.
+
+	Note that the Set returned by validateDsCredentials() must still include forbidden embedders,
+	since its size decides whether auth checks are set up at all, see getAuthApi() in ../auth.ts.
+*/
+export function getCorsCredEmbedders(creds: ServerConfigDsCredentials) {
+	const embedders: Set<string> = new Set()
+	for (const ds of Object.values(creds || {})) {
+		if (!ds || typeof ds != 'object') continue
+		for (const route of Object.values(ds)) {
+			if (!route || typeof route != 'object') continue
+			for (const [embedderHost, cred] of Object.entries(route)) {
+				if ((cred as any)?.type != 'forbidden') embedders.add(embedderHost)
+			}
+		}
+	}
+	return embedders
+}
+
 type LegacyDsCredentials = {
 	[dslabel: string]:
 		| {

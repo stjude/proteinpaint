@@ -1,4 +1,8 @@
-import { validateDsCredentials, type ServerConfigDsCredentials } from './auth/auth.dsCredentials.ts'
+import {
+	validateDsCredentials,
+	getCorsCredEmbedders,
+	type ServerConfigDsCredentials
+} from './auth/auth.dsCredentials.ts'
 import { AuthApiOpen } from './auth/AuthApiOpen.ts'
 import { AuthApi } from './auth/AuthApi.ts'
 
@@ -79,7 +83,8 @@ export async function getAuthApi(
 	//console.log(44, credEmbedders, authApi === AuthApiProtected)
 	// AuthApiOpen is a shared singleton that is frozen by the first getAuthApi() call, and has no
 	// credEmbedders to add, so do not push into its frozen array when getAuthApi() is called again
-	if (credEmbedders.size) _authApi.credEmbedders.push(...credEmbedders)
+	// credentialed CORS responses are not needed for a forbidden embedder, see getCorsCredEmbedders()
+	if (credEmbedders.size) _authApi.credEmbedders.push(...getCorsCredEmbedders(creds))
 	if (!serverconfig.debugmode || !app.doNotFreezeAuthApi) {
 		Object.freeze(_authApi)
 		Object.freeze(_authApi.credEmbedders)

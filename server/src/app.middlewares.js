@@ -336,9 +336,11 @@ export function setCorsHeaders(req, res, allowedEmbedders, credEmbedders, debugt
 	} else if (isNullOriginAllowed(req, allowedEmbedders)) {
 		// a standalone html file that is opened from the local file system, and not served by a web server,
 		// has a 'null' origin, which getRequestOrigin() does not parse into an origin, so isAllowedOrigin
-		// is false here and Access-Control-Allow-Credentials is not set below; with a wildcard origin
-		// instead of an echoed 'null', a browser will also not send or expose cookies for these requests,
-		// so that only non-credentialed data is accessible
+		// is false here and Access-Control-Allow-Credentials is not set below. With a wildcard origin
+		// instead of an echoed 'null', a browser lets the page read a response to a request that uses
+		// credentials: 'omit' or 'same-origin', but not 'include' (see mayAdjustCredentials() in client/common/dofetch.js).
+		// Explicit authorization headers, such as a dataset access token, may still be sent and are
+		// verified as usual, so this does not bypass the server's dataset access checks
 		res.header('Access-Control-Allow-Origin', '*')
 		res.header('Access-Control-Allow-Headers', corsAllowedHeaders)
 	}
