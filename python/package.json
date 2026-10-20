@@ -1,5 +1,5 @@
 {
-  "version": "2.219.1",
+  "version": "2.220.0",
   "name": "@sjcrh/proteinpaint-python",
   "description": "Python-based utilities for proteinpaint",
   "main": "index.js",

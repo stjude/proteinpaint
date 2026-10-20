@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.220.0
 
 General:
 - Removed the unused bedgraphdot track type, with its bedgraphdotfile url parameter and /tkbedgraphdot route
