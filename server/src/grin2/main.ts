@@ -8,7 +8,14 @@ import { get_samples } from '../termdb.sql.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dtitd, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
 import { mapConcurrent } from '../utils/concurrencyLimiter.ts'
-import { getAvailableMemoryMB, largestSizeThatFits, lowMemoryError, type MemoryCost } from '../utils/memory.ts'
+import {
+	getAvailableMemoryMB,
+	estimatePeakMB,
+	largestSizeThatFits,
+	reserveMemoryMB,
+	lowMemoryError,
+	type MemoryCost
+} from '../utils/memory.ts'
 import { processSampleMlst, buildLesionTypeMap } from './lesions.ts'
 import type { CnvType, Grin2CacheResult, Grin2Processing, Lesion } from './types.ts'
 import { maySetMapParent2Children } from '../termdb.matrix.js'
@@ -24,7 +31,7 @@ import { resolveExcludeBeds } from '../utils/regionMask.ts'
 export const GRIN2_MEMORY: MemoryCost = { baseMB: 380, perUnitMB: { lesions: 0.0026 } }
 const MIN_LESIONS = 50000 // smallest run worth doing; when memory cannot fit this many, the run is refused
 // Hard ceiling on the memory one run plans for, whatever the config or free memory: 2 GB ≈ 641,538 lesions
-const CEILING_LESIONS = largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1)
+const CEILING_LESIONS = largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1, 0)
 const LOW_MEMORY_MESSAGE =
 	'Server memory is too low to run GRIN2 on this cohort right now. Try again later or select a smaller cohort.'
 // Maximum total number of lesions to process to avoid overwhelming the production server
@@ -512,79 +519,90 @@ async function runGrin2Fresh(
 		throw new Error('No samples found matching the provided filter criteria')
 	}
 
-	// Process sample data, convert to lesion format, and apply overall lesion cap. Time this separately
-	// from the cohort retrieval above so the two costs are reported as distinct stats — for API-backed
-	// datasets (GDC) the retrieval is a real network step, whereas for sqlite it's a fast local query.
-	const processStart = Date.now()
-	const { lesions, processing } = await processSampleData(samples, ds, request, signal)
+	// the memory for a run at this cap stays reserved until the python step ends
+	const { cap: maxLesions, releaseMemory } = await getMaxLesions()
+	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
+	try {
+		// Process sample data, convert to lesion format, and apply overall lesion cap. Time this separately
+		// from the cohort retrieval above so the two costs are reported as distinct stats — for API-backed
+		// datasets (GDC) the retrieval is a real network step, whereas for sqlite it's a fast local query.
+		const processStart = Date.now()
+		const { lesions, processing } = await processSampleData(samples, ds, request, maxLesions, signal)
 
-	// Guard against undefined processing summary so eslint doesn't complain
-	if (!processing) throw new Error('Processing summary is missing')
+		// Guard against undefined processing summary so eslint doesn't complain
+		if (!processing) throw new Error('Processing summary is missing')
 
-	const processingTime = Date.now() - processStart
-	mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
-	mayLog(
-		`[GRIN2] Processing summary: ${(processing?.processedSamples ?? 0).toLocaleString()}/${(
-			processing?.totalSamples ?? 0
-		).toLocaleString()} samples processed successfully`
-	)
+		const processingTime = Date.now() - processStart
+		mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
+		mayLog(
+			`[GRIN2] Processing summary: ${(processing?.processedSamples ?? 0).toLocaleString()}/${(
+				processing?.totalSamples ?? 0
+			).toLocaleString()} samples processed successfully`
+		)
 
-	if (processing?.failedSamples !== undefined && processing.failedSamples > 0) {
-		mayLog(`[GRIN2] Warning: ${processing.failedSamples} samples failed to process`)
-	}
-
-	if (lesions.length === 0) {
-		throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
-	}
-
-	// Step 3: Prepare input for Python script. Per-gene rows come back
-	// in the stdout JSON (geneHits) and get embedded in the cache result —
-	// Rust reads them straight from this JSON file, no sibling file.
-	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
-
-	// normalized once so pyInput matches the cache key (and never carries a non-finite overlapFrac)
-	const excludeOpts = normalizeExcludeOptions(request.excludeOptions)
-	const excludeBeds = resolveExcludeBeds(g, excludeOpts?.blacklists)
-	const excludeEnabled = excludeBeds.length > 0
-
-	const pyInput = {
-		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
-		chromosomelist,
-		lesion: JSON.stringify(lesions),
-		maxGenesToShow: request.maxGenesToShow,
-		lesionTypeMap: buildLesionTypeMap(availableDataTypes),
-		excludeEnabled,
-		excludeBeds,
-		excludeOverlapFrac: excludeOpts?.overlapFrac ?? 0.5
-	}
-
-	// Step 4: Run GRIN2 analysis via Python
-	const grin2AnalysisStart = Date.now()
-	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput), { signal })
-
-	if (pyResult.stderr?.trim()) {
-		mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
-		if (pyResult.stderr.includes('ERROR:')) {
-			throw new Error(`Python script error: ${pyResult.stderr}`)
+		if (processing?.failedSamples !== undefined && processing.failedSamples > 0) {
+			mayLog(`[GRIN2] Warning: ${processing.failedSamples} samples failed to process`)
 		}
+
+		if (lesions.length === 0) {
+			throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
+		}
+
+		// Step 3: Prepare input for Python script. Per-gene rows come back
+		// in the stdout JSON (geneHits) and get embedded in the cache result —
+		// Rust reads them straight from this JSON file, no sibling file.
+		const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
+
+		// normalized once so pyInput matches the cache key (and never carries a non-finite overlapFrac)
+		const excludeOpts = normalizeExcludeOptions(request.excludeOptions)
+		const excludeBeds = resolveExcludeBeds(g, excludeOpts?.blacklists)
+		const excludeEnabled = excludeBeds.length > 0
+
+		const pyInput = {
+			genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
+			chromosomelist,
+			lesion: JSON.stringify(lesions),
+			maxGenesToShow: request.maxGenesToShow,
+			lesionTypeMap: buildLesionTypeMap(availableDataTypes),
+			excludeEnabled,
+			excludeBeds,
+			excludeOverlapFrac: excludeOpts?.overlapFrac ?? 0.5
+		}
+
+		// Step 4: Run GRIN2 analysis via Python
+		const grin2AnalysisStart = Date.now()
+		const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput), { signal })
+
+		if (pyResult.stderr?.trim()) {
+			mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
+			if (pyResult.stderr.includes('ERROR:')) {
+				throw new Error(`Python script error: ${pyResult.stderr}`)
+			}
+		}
+
+		const grin2AnalysisTime = Date.now() - grin2AnalysisStart
+		mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
+
+		const resultData = JSON.parse(pyResult)
+
+		const cacheResult: Grin2CacheResult = {
+			resultData,
+			processing
+		}
+		return { cacheResult, cohortTime, processingTime, grin2AnalysisTime }
+	} finally {
+		releaseMemory()
 	}
-
-	const grin2AnalysisTime = Date.now() - grin2AnalysisStart
-	mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
-
-	const resultData = JSON.parse(pyResult)
-
-	const cacheResult: Grin2CacheResult = {
-		resultData,
-		processing
-	}
-	return { cacheResult, cohortTime, processingTime, grin2AnalysisTime }
 }
 
 // ─── helpers ─── //
 
-/** getAvailable: the free-memory reader, replaced by a fixed value in the unit spec */
-export async function getMaxLesions(getAvailable = getAvailableMemoryMB): Promise<number> {
+/** The lesion cap for one run, and the release of the memory reserved for a run of that many lesions, to call in a
+ * finally once the run ends. The cap leaves out memory that runs in progress have reserved. getAvailable: the
+ * free-memory reader, replaced by a fixed value in the unit spec */
+export async function getMaxLesions(
+	getAvailable = getAvailableMemoryMB
+): Promise<{ cap: number; releaseMemory: () => void }> {
 	const availableMemoryMB = await getAvailable()
 	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
 
@@ -593,7 +611,8 @@ export async function getMaxLesions(getAvailable = getAvailableMemoryMB): Promis
 	// Refused before any fetch: the budget cannot cover the base overhead, and the GDC batch fetch reads a cap of 0 as no cap
 	if (cap <= 0) throw lowMemoryError(LOW_MEMORY_MESSAGE)
 	if (cap < MAX_LESIONS) mayLog(`[GRIN2] Reduced lesion cap to ${cap.toLocaleString()} for low memory`)
-	return cap
+	// reserved in the same step as the cap, so no other run is admitted against the same reserved total
+	return { cap, releaseMemory: reserveMemoryMB(estimatePeakMB(GRIN2_MEMORY, { lesions: cap })) }
 }
 
 /** True when the lesion cap left some lesions out: samples skipped after it, the last sample cut short, or a batched
@@ -617,12 +636,10 @@ async function processSampleData(
 	samples: any[],
 	ds: any,
 	request: GRIN2Request,
+	maxLesions: number,
 	signal?: AbortSignal
 ): Promise<{ lesions: Lesion[]; processing: Grin2Processing }> {
 	const lesions: Lesion[] = []
-	const maxLesions = await getMaxLesions()
-	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
-
 	// How this ds quantifies cnv values; drives gain/loss classification. The ds-level default is used for
 	// file-based datasets; else 'log2ratio' (legacy default, diploid baseline 0). GDC's batched cnv records
 	// carry their own valueType:'category' per segment, so they classify correctly regardless of this default.

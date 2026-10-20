@@ -5,6 +5,8 @@ import {
 	runFitsInMemory,
 	largestSizeThatFits,
 	lowMemoryError,
+	reserveMemoryMB,
+	memoryReservedMB,
 	RUN_MEMORY_FRACTION
 } from '../memory.ts'
 
@@ -64,6 +66,24 @@ tape('largestSizeThatFits', test => {
 		/needs the run's pairs/,
 		'a cost with a second size => throws rather than leaving it out'
 	)
+	test.end()
+})
+
+tape('reserveMemoryMB', test => {
+	const cost = { baseMB: 100, perUnitMB: { rows: 1 } }
+	test.equal(memoryReservedMB(), 0, 'nothing reserved at the start')
+	// 1000 MB free => a 400 MB budget; a 300 MB run fits alone
+	test.equal(runFitsInMemory(cost, { rows: 200 }, 1000), true, 'one 300 MB run in a 400 MB budget => fits')
+	const release = reserveMemoryMB(300)
+	test.equal(memoryReservedMB(), 300, 'its 300 MB is reserved')
+	test.equal(runFitsInMemory(cost, { rows: 200 }, 1000), false, 'a second 300 MB run while the first runs => refused')
+	test.equal(runFitsInMemory(cost, { rows: 0 }, 1000), true, 'a 100 MB run still fits in the 100 MB left')
+	test.equal(largestSizeThatFits(1000, cost, 'rows'), 0, 'a trimmed run gets what is left after the base => 0 rows')
+	release()
+	release()
+	test.equal(memoryReservedMB(), 0, 'released, and a second release does not release twice')
+	test.equal(runFitsInMemory(cost, { rows: 200 }, 1000), true, 'after the release => fits again')
+	test.equal(runFitsInMemory(cost, { rows: 200 }, 1000, RUN_MEMORY_FRACTION, 300), false, 'reservedMB can be passed')
 	test.end()
 })
 

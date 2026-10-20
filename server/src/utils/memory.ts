@@ -17,9 +17,38 @@ export type MemoryCost = { baseMB: number; perUnitMB: Record<string, number> }
 /** The size of one run in each of the units of a MemoryCost */
 export type MemoryUnits = Record<string, number>
 
-/** Share of the available memory that one run may plan for. The rest is headroom for runs that start at the same time
- * and read the same available memory, for the rest of the server, and for error in the cost. */
+/** Share of the available memory that the heavy runs of this server may plan for together: each run's estimate comes
+ * out of it, less what runs in progress have reserved (reserveMemoryMB). The rest is headroom for the rest of the
+ * server and for error in the costs. */
 export const RUN_MEMORY_FRACTION = 0.4
+
+/** MB reserved by heavy runs in progress in this server process; see reserveMemoryMB() */
+let reservedMB = 0
+
+export function memoryReservedMB(): number {
+	return reservedMB
+}
+
+/** Reserves `mb` (a run's estimated peak) until the returned release is called, in a finally once the run's work
+ * ends. runFitsInMemory() and largestSizeThatFits() take what is reserved off the budget, so runs that each fit alone
+ * are not all admitted together and then allocate at once. Reserve in the same synchronous step as the check that
+ * admitted the run, with no await between, or a run admitted in between is not counted:
+ *
+ *   if (!runFitsInMemory(cost, units, await getAvailableMemoryMB())) throw lowMemoryError(...)
+ *   const releaseMemory = reserveMemoryMB(estimatePeakMB(cost, units))
+ *   try { await runTheEngine() } finally { releaseMemory() }
+ *
+ * A running child's memory also lowers the available memory read later, so it counts twice until the run ends: this
+ * errs toward refusing. ponytail: one process only; servers sharing a host each keep their own total. */
+export function reserveMemoryMB(mb: number): () => void {
+	reservedMB += mb
+	let released = false
+	return () => {
+		if (released) return
+		released = true
+		reservedMB -= mb
+	}
+}
 
 export async function getAvailableMemoryMB(): Promise<number> {
 	if (process.platform === 'darwin') {
@@ -98,8 +127,10 @@ export function estimatePeakMB(cost: MemoryCost, units: MemoryUnits): number {
 	return mb
 }
 
-/** Whether a run of these sizes fits in `fraction` of `availableMB`. Callers that must not trim a run refuse one that
- * does not fit, e.g. `if (!runFitsInMemory(...)) throw lowMemoryError(...)`. The default budget is 40% of availableMB.
+/** Whether a run of these sizes fits in `fraction` of `availableMB`, less `reservedMB`, the memory reserved by runs in
+ * progress. Callers that must not trim a run refuse one that does not fit, e.g.
+ * `if (!runFitsInMemory(...)) throw lowMemoryError(...)`, then reserve its memory (reserveMemoryMB). The default budget
+ * is 40% of availableMB. The examples assume nothing is reserved.
  * @example
  * runFitsInMemory(DE_MEMORY.edgeR, { cells: 4438 * 17928 }, 12000) // false: ≈ 8938 MB > 4800 budget
  * runFitsInMemory(DE_MEMORY.wilcoxon, { cells: 4438 * 17928, spanCells: 4438 * 17928 }, 12000) // true: ≈ 2551 MB
@@ -111,14 +142,16 @@ export function runFitsInMemory(
 	cost: MemoryCost,
 	units: MemoryUnits,
 	availableMB: number,
-	fraction = RUN_MEMORY_FRACTION
+	fraction = RUN_MEMORY_FRACTION,
+	reservedMB = memoryReservedMB()
 ): boolean {
-	return estimatePeakMB(cost, units) <= availableMB * fraction
+	return estimatePeakMB(cost, units) <= availableMB * fraction - reservedMB
 }
 
-/** The largest `size` (e.g. lesions) whose run fits in `fraction` of `availableMB`; 0 when even the base does not fit.
- * For a run that may be trimmed rather than refused: the caller caps the size at this, as GRIN2 caps its lesions. The
- * cost must have no other size (estimatePeakMB throws if it does).
+/** The largest `size` (e.g. lesions) whose run fits in `fraction` of `availableMB`, less `reservedMB`; 0 when even the
+ * base does not fit. For a run that may be trimmed rather than refused: the caller caps the size at this, as GRIN2 caps
+ * its lesions, and reserves the capped run's memory. The cost must have no other size (estimatePeakMB throws if it
+ * does). The examples assume nothing is reserved.
  * @example
  * largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions') // 84615: (600 budget - 380 base) / 0.0026
  * largestSizeThatFits(900, GRIN2_MEMORY, 'lesions') // 0: 360 budget < 380 base, so GRIN2 refuses the run
@@ -128,10 +161,11 @@ export function largestSizeThatFits(
 	availableMB: number,
 	cost: MemoryCost,
 	size: string,
-	fraction = RUN_MEMORY_FRACTION
+	fraction = RUN_MEMORY_FRACTION,
+	reservedMB = memoryReservedMB()
 ): number {
 	const base = estimatePeakMB(cost, { [size]: 0 })
-	return Math.max(0, Math.floor((availableMB * fraction - base) / cost.perUnitMB[size]))
+	return Math.max(0, Math.floor((availableMB * fraction - reservedMB - base) / cost.perUnitMB[size]))
 }
 
 /** The error for a run refused because memory is low: status 503 and code LOW_MEMORY, with a message that tells the

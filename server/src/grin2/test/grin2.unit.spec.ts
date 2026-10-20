@@ -621,24 +621,37 @@ tape('getMaxLesions', async test => {
 	// the configured max, under the 641,538 ceiling (a 2 GB budget)
 	const max = Math.min(serverconfig.features.grin2maxLesions || 250000, 641538)
 	const freeMB = (mb: number) => async () => mb
+	// the cap of one run at a time: its reservation is released before the next
+	const capAt = async (mb: number) => {
+		const { cap, releaseMemory } = await getMaxLesions(freeMB(mb))
+		releaseMemory()
+		return cap
+	}
 	// cap = floor((free MB × 0.4 − 380) / 0.0026), then no higher than max
-	test.equal(await getMaxLesions(freeMB(16000)), max, 'plentiful memory => the configured max')
-	test.equal(await getMaxLesions(freeMB(1500)), Math.min(max, 84615), '1500 MB => 84,615')
-	test.equal(await getMaxLesions(freeMB(1000)), Math.min(max, 7692), '1000 MB => 7,692, not raised to a floor')
-	test.equal(
-		await getMaxLesions(freeMB(951)),
-		Math.min(max, 153),
-		'951 MB => 153, the smallest cap that is not refused'
-	)
+	test.equal(await capAt(16000), max, 'plentiful memory => the configured max')
+	test.equal(await capAt(1500), Math.min(max, 84615), '1500 MB => 84,615')
+	test.equal(await capAt(1000), Math.min(max, 7692), '1000 MB => 7,692, not raised to a floor')
+	test.equal(await capAt(951), Math.min(max, 153), '951 MB => 153, the smallest cap that is not refused')
 	for (const mb of [950, 0]) {
 		try {
-			await getMaxLesions(freeMB(mb))
+			await capAt(mb)
 			test.fail(`${mb} MB => should throw`)
 		} catch (e: any) {
 			test.equal(e.code, 'LOW_MEMORY', `${mb} MB => refused, since the base overhead does not fit`)
 			test.equal(e.status, 503, `${mb} MB => status 503`)
 		}
 	}
+
+	// two runs at once: the first reserves its whole 600 MB budget at 1500 MB free, so the second does not fit
+	const first = await getMaxLesions(freeMB(1500))
+	try {
+		await getMaxLesions(freeMB(1500))
+		test.fail('a second run while the first holds the budget => should throw')
+	} catch (e: any) {
+		test.equal(e.code, 'LOW_MEMORY', 'a second run while the first holds the budget => refused')
+	}
+	first.releaseMemory()
+	test.equal(await capAt(1500), Math.min(max, 84615), 'after the first run releases => the full cap again')
 	test.end()
 })
 

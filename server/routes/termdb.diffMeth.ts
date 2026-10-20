@@ -19,7 +19,14 @@ import { renderVolcano } from '../src/renderVolcano.ts'
 import { renderManhattanPoints } from '../src/renderManhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import { getAvailableMemoryMB, runFitsInMemory, lowMemoryError, type MemoryCost } from '#src/utils/memory.ts'
+import {
+	getAvailableMemoryMB,
+	estimatePeakMB,
+	runFitsInMemory,
+	reserveMemoryMB,
+	lowMemoryError,
+	type MemoryCost
+} from '#src/utils/memory.ts'
 import { getH5samples } from '#src/utils/h5samples.ts'
 import {
 	buildGroupValues,
@@ -503,16 +510,6 @@ async function runDmFresh(
 
 	const { q } = resolveElementQuery(ds, param.element_type)
 
-	// Refused before R starts when the run would not fit in memory, rather than dropping rows or samples, which would
-	// change the statistics. diffMeth.R reads the whole matrix file, so the file's size counts as well as the cohort's.
-	const nSamples = groups.group1names.length + groups.group2names.length
-	const { rows, samples: fileSamples } = await methylationFileShape(q.file)
-	const units = { fileCells: rows * fileSamples, cells: rows * nSamples }
-	if (!runFitsInMemory(DM_MEMORY, units, await getAvailableMemoryMB()))
-		throw lowMemoryError(
-			`Server memory is too low to run this differential methylation analysis on ${nSamples.toLocaleString()} samples. Select a smaller cohort.`
-		)
-
 	const diffMethInput: DiffMethInput = {
 		// Group 1 is control, group 2 is case (same convention as DE).
 		case: groups.group2names.join(','),
@@ -539,8 +536,25 @@ async function runDmFresh(
 		if (new Set(diffMethInput.conf2).size === 1) throw new Error('Confounding variable 2 has only one value')
 	}
 
+	// Refused before R starts when the run would not fit in memory, rather than dropping rows or samples, which would
+	// change the statistics. diffMeth.R reads the whole matrix file, so the file's size counts as well as the cohort's.
+	const nSamples = groups.group1names.length + groups.group2names.length
+	const { rows, samples: fileSamples } = await methylationFileShape(q.file)
+	const units = { fileCells: rows * fileSamples, cells: rows * nSamples }
+	if (!runFitsInMemory(DM_MEMORY, units, await getAvailableMemoryMB()))
+		throw lowMemoryError(
+			`Server memory is too low to run this differential methylation analysis on ${nSamples.toLocaleString()} samples. Select a smaller cohort.`
+		)
+	// no await since the check, so no other run is admitted against the same reserved total
+	const releaseMemory = reserveMemoryMB(estimatePeakMB(DM_MEMORY, units))
+
 	const time1 = Date.now()
-	const result = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethInput)))
+	let result
+	try {
+		result = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethInput)))
+	} finally {
+		releaseMemory()
+	}
 	mayLog('Time taken to run diffMeth:', formatElapsedTime(Date.now() - time1))
 
 	const cacheResult: DmCacheResult = {

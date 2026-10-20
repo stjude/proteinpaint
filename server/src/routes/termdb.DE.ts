@@ -7,7 +7,14 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import { getAvailableMemoryMB, runFitsInMemory, lowMemoryError, type MemoryCost } from '#src/utils/memory.ts'
+import {
+	getAvailableMemoryMB,
+	estimatePeakMB,
+	runFitsInMemory,
+	reserveMemoryMB,
+	lowMemoryError,
+	type MemoryCost
+} from '#src/utils/memory.ts'
 import { getH5samples } from '#src/utils/h5samples.ts'
 import {
 	buildGroupValues,
@@ -284,28 +291,6 @@ async function runDeFresh(
 	// must be decided before expression_input is built; see pickDeEngine
 	const { engine, DE_method } = pickDeEngine(param.method, groups.group1names.length, groups.group2names.length)
 
-	/* Refused before R or rust starts when the run would not fit in memory. Dropping genes or samples to make it fit
-	would change the statistics, so the user is asked for a smaller cohort instead. A built file is in cachedir, which
-	the h5dump tool does not read, so its builder reports the gene count; one that does not is left unchecked.
-	ponytail: a built file is checked after it is built, so a refused run has already downloaded its counts files;
-	check before building, with the gene axis, if that wasted download matters. */
-	const genes = built ? built.genes : (await getH5samples(countsFile!, 'item')).length
-	if (genes) {
-		checkDeMemory({
-			method: DE_method,
-			n1: groups.group1names.length,
-			n2: groups.group2names.length,
-			genes,
-			// a built file's samples are in file order, as are a static file's in allSampleSet, read at startup
-			spanSamples: selectedColumnSpan(built ? built.samples : [...allSampleSet], [
-				...groups.group1names,
-				...groups.group2names
-			]),
-			availableMB: await getAvailableMemoryMB(),
-			confounded: Boolean(param.tw || param.tw2)
-		})
-	}
-
 	const expression_input = {
 		case: groups.group2names.join(','),
 		control: groups.group1names.join(','),
@@ -331,49 +316,78 @@ async function runDeFresh(
 		if (new Set(expression_input.conf2).size === 1) throw new Error('Confounding variable 2 has only one value')
 	}
 
-	if (engine === 'edgeR') {
-		const time1 = new Date().valueOf()
-		const result = JSON.parse(await run_R('edge_newh5.R', JSON.stringify(expression_input)))
-		mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
-		// edge_newh5.R reports per-stage elapsed seconds and peak MB in its JSON. Logged
-		// unconditionally (not mayLog) because the point is diagnosing slow runs on deployed
-		// servers, where debugmode is off. One line per DE run, and DE runs are rare. Absent from
-		// the log means the result came from the de/ cache and the R script never ran.
-		console.log(
-			`[DE] ${groups.group1names.length}v${groups.group2names.length} samples, stages(s):`,
-			JSON.stringify(result.timings),
-			'peakMB:',
-			JSON.stringify(result.memory_mb)
-		)
-		param.method = 'edgeR'
+	/* Refused before R or rust starts when the run would not fit in memory. Dropping genes or samples to make it fit
+	would change the statistics, so the user is asked for a smaller cohort instead. A built file is in cachedir, which
+	the h5dump tool does not read, so its builder reports the gene count; one that does not is left unchecked.
+	ponytail: a built file is checked after it is built, so a refused run has already downloaded its counts files;
+	check before building, with the gene axis, if that wasted download matters. */
+	const genes = built ? built.genes : (await getH5samples(countsFile!, 'item')).length
+	let releaseMemory = () => {}
+	if (genes) {
+		const neededMB = checkDeMemory({
+			method: DE_method,
+			n1: groups.group1names.length,
+			n2: groups.group2names.length,
+			genes,
+			// a built file's samples are in file order, as are a static file's in allSampleSet, read at startup
+			spanSamples: selectedColumnSpan(built ? built.samples : [...allSampleSet], [
+				...groups.group1names,
+				...groups.group2names
+			]),
+			availableMB: await getAvailableMemoryMB(),
+			confounded: Boolean(param.tw || param.tw2)
+		})
+		// no await since the check, so no other run is admitted against the same reserved total
+		releaseMemory = reserveMemoryMB(neededMB)
+	}
 
-		const qlImage = deImageFromB64(result.ql_image_b64, 'ql_image')
-		const mdsImage = deImageFromB64(result.mds_image_b64, 'mds_image')
+	try {
+		if (engine === 'edgeR') {
+			const time1 = new Date().valueOf()
+			const result = JSON.parse(await run_R('edge_newh5.R', JSON.stringify(expression_input)))
+			mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
+			// edge_newh5.R reports per-stage elapsed seconds and peak MB in its JSON. Logged
+			// unconditionally (not mayLog) because the point is diagnosing slow runs on deployed
+			// servers, where debugmode is off. One line per DE run, and DE runs are rare. Absent from
+			// the log means the result came from the de/ cache and the R script never ran.
+			console.log(
+				`[DE] ${groups.group1names.length}v${groups.group2names.length} samples, stages(s):`,
+				JSON.stringify(result.timings),
+				'peakMB:',
+				JSON.stringify(result.memory_mb)
+			)
+			param.method = 'edgeR'
+
+			const qlImage = deImageFromB64(result.ql_image_b64, 'ql_image')
+			const mdsImage = deImageFromB64(result.mds_image_b64, 'mds_image')
+
+			const cacheResult: DeCacheResult = {
+				geneRows: result.gene_data,
+				sample_size1: result.num_controls[0],
+				sample_size2: result.num_cases[0],
+				method: param.method,
+				bcv: result.bcv && result.bcv[0] != null ? result.bcv[0] : undefined,
+				...(qlImage ? { qlImage } : {}),
+				...(mdsImage ? { mdsImage } : {})
+			}
+			return cacheResult
+		}
+
+		const time1 = new Date().valueOf()
+		const result: GeneDEEntry[] = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
+		mayLog('Time taken to run Wilcoxon DE pipeline:', formatElapsedTime(Date.now() - time1))
+		param.method = 'wilcoxon'
 
 		const cacheResult: DeCacheResult = {
-			geneRows: result.gene_data,
-			sample_size1: result.num_controls[0],
-			sample_size2: result.num_cases[0],
-			method: param.method,
-			bcv: result.bcv && result.bcv[0] != null ? result.bcv[0] : undefined,
-			...(qlImage ? { qlImage } : {}),
-			...(mdsImage ? { mdsImage } : {})
+			geneRows: result,
+			sample_size1: groups.group1names.length,
+			sample_size2: groups.group2names.length,
+			method: param.method
 		}
 		return cacheResult
+	} finally {
+		releaseMemory()
 	}
-
-	const time1 = new Date().valueOf()
-	const result: GeneDEEntry[] = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
-	mayLog('Time taken to run Wilcoxon DE pipeline:', formatElapsedTime(Date.now() - time1))
-	param.method = 'wilcoxon'
-
-	const cacheResult: DeCacheResult = {
-		geneRows: result,
-		sample_size1: groups.group1names.length,
-		sample_size2: groups.group2names.length,
-		method: param.method
-	}
-	return cacheResult
 }
 
 // ─── helpers ─── //
@@ -409,7 +423,7 @@ export function selectedColumnSpan(fileSamples: string[], selected: string[]): n
 /** Throws LOW_MEMORY when a DE run of n1 + n2 samples and `genes` genes does not fit in the available memory. The
  * message suggests wilcoxon too when this run is edgeR or limma without confounders (wilcoxon adjusts for none),
  * wilcoxon would fit, the groups are large enough that wilcoxon would not fall back to edgeR, and this server offers
- * it (features.runDE_methods lists the offered methods). */
+ * it (features.runDE_methods lists the offered methods). Returns the run's estimated MB, for the caller to reserve. */
 export function checkDeMemory(opts: {
 	method: 'edgeR' | 'limma' | 'wilcoxon'
 	n1: number
@@ -421,12 +435,12 @@ export function checkDeMemory(opts: {
 	/** the run adjusts for a confounder (tw or tw2) */
 	confounded?: boolean
 	runDE_methods?: string[]
-}): void {
+}): number {
 	const { method, n1, n2, genes, availableMB, confounded } = opts
 	const runDE_methods = 'runDE_methods' in opts ? opts.runDE_methods : serverconfig.features?.runDE_methods
 	const cells = (n1 + n2) * genes
 	const units = { cells, spanCells: Math.max(n1 + n2, opts.spanSamples ?? 0) * genes }
-	if (runFitsInMemory(DE_MEMORY[method], units, availableMB)) return
+	if (runFitsInMemory(DE_MEMORY[method], units, availableMB)) return estimatePeakMB(DE_MEMORY[method], units)
 	const tryWilcoxon =
 		method != 'wilcoxon' &&
 		!confounded &&
