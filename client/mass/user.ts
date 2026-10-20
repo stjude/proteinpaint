@@ -254,7 +254,8 @@ export class MassUser implements RxComponent {
 				label: `Download`,
 				icon: '&#x2913;',
 				title: 'Download this session as a file',
-				callback: () => this.download(this.opts.sessionId!, this.getState(this.app.getState(), true))
+				callback: () =>
+					this.download(this.opts.sessionId!.replace(/[^\w-]/g, '_'), this.getState(this.app.getState(), true))
 			})
 		}
 		return options
