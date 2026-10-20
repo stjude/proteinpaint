@@ -451,6 +451,8 @@ function enterRange(self, tr, brush, i) {
 			.append('button')
 			.style('margin-left', '10px')
 			.text('Apply')
+			.attr('data-testid', 'sjpp-tvsnumeric-range-apply')
+
 			.on('click', async () => {
 				try {
 					// throws on unparsable text, or on a range that apply() rejects, since the input

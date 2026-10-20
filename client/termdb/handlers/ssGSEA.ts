@@ -28,6 +28,8 @@ export class SearchHandler {
 			}
 		})
 
+		opts.holder.select('input.tree_search').attr('data-testid', 'sjpp-ssgsea-search')
+
 		// TODO button to launch geneset edit ui to add geneset and compute custom term
 		// TODO register this custom term
 		// TODO show this custom term for selection

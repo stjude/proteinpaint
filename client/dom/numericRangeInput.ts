@@ -29,6 +29,7 @@ export class NumericRangeInput {
 		this.input = holder
 			.append('input')
 			.attr('name', 'rangeInput')
+			.attr('data-testid', 'sjpp-range-input')
 			.attr('aria-label', 'Leave blank for the allowed minimum value')
 			.style('width', opts?.width || '180px')
 			.style('margin', '3px 5px')
