@@ -267,6 +267,23 @@ function runScenario(sc: Scenario) {
 		const list = await get(server, '/termdb', reqs.getsamplelist, headers)
 		test.ok(list.body.length && list.body.every(s => 'name' in s), `should include sample names in getsamplelist=1`)
 
+		if (sc.unlistedEmbedder) {
+			// the same session does not apply to an embedder that is forbidden by default
+			const unlistedBase = baseFor(sc.unlistedEmbedder)
+			const matrix = await get(server, '/termdb/matrix', unlistedBase, headers)
+			test.equal(
+				matrix.status,
+				403,
+				`should reject a protected route for embedder='${sc.unlistedEmbedder}' with a session`
+			)
+			const unlistedList = await get(server, '/termdb', sampleRequests(unlistedBase).getsamplelist, headers)
+			test.equal(
+				unlistedList.body.filter?.(s => 'name' in s).length,
+				0,
+				`should not include sample names for embedder='${sc.unlistedEmbedder}' with a session`
+			)
+		}
+
 		// the TermdbTest dataset does not fully support these handlers, so only verify that the sign-in check passes
 		for (const label of ['getsamples', 'convertSampleId', 'singleSampleData']) {
 			const res = await get(server, '/termdb', reqs[label], headers)

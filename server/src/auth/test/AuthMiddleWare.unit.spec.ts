@@ -847,6 +847,27 @@ tape('protectedRoutes.termdb: calls next() with a valid session', function (test
 	test.end()
 })
 
+tape('protectedRoutes.termdb: rejects a forbidden cred even with an existing session', function (test) {
+	test.timeoutAfter(500)
+	const auth = makeAuth({ type: 'forbidden' })
+	const sessionId = 'test-session-id-02'
+	;(auth as any).sessions.set(dslabel, new Map([[sessionId, { time: Date.now(), ip: '127.0.0.1' }]]))
+	const { termdb } = makeRouteMiddlewares(auth)
+	const req: any = {
+		query: { dslabel, embedder },
+		path: '/termdb/matrix',
+		cookies: { [headerKey]: sessionId },
+		headers: {},
+		ip: '127.0.0.1'
+	}
+	const res = makeMockRes()
+	let nextCalled = false
+	termdb(req, res, () => (nextCalled = true))
+	test.notOk(nextCalled, 'should not call next()')
+	test.equal(res.statusCode, 403, 'should set a 403 status')
+	test.end()
+})
+
 tape('protectedRoutes.termdb: calls next() for an open-access dataset or embedder', function (test) {
 	test.timeoutAfter(500)
 	const { termdb } = makeRouteMiddlewares(makeAuth())

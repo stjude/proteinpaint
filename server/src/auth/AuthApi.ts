@@ -205,6 +205,8 @@ export class AuthApi implements AuthInterface {
 
 	// returns the tracked session for the request and dataset, if it has not exceeded the max session age
 	#getActiveSession(req, ds, cred) {
+		// a forbidden cred does not allow a login, so an existing session for the dataset does not apply
+		if (cred.type == 'forbidden') return
 		// NOTE: Basic (password) credentials are converted to session token upon log-in,
 		// so that a user does not have to login again for each runproteinpaint() call.
 		const id = this.#auth.getSessionId(req, cred)
