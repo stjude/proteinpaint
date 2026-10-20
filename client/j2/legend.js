@@ -52,7 +52,6 @@ function create_type(tk, block) {
 	tk.legend.type.holder = tk.legend.type.row.append('td')
 }
 function update_type(tk) {
-	if (tk.hardcodeCnvOnly) return // legend is permanently hidden, no need to update
 	if (tk.deltaPsiGroups) return update_deltaPsi(tk)
 	const type2count = new Map() // k: type, v: count
 	for (const j of tk.data) {

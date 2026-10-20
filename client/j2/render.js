@@ -29,21 +29,22 @@ const hardcode_infoValue_canonical = 'canonical'
 export function renderTk(data, tk, block) {
 	if (data) {
 		// server returned fresh data
-		if (data.junctions?.length == 0) {
-			tk.data = []
-			tk.leftlabels?.doms?.jug?.text('0 junctions')
-			return
-		}
 		/* y of junctions: median read count for junctions from the server
 		for custom junctions, -log10 p or median read count when every junction has it, otherwise none and all are at the bottom
+		set before returning on no junctions, as the config menu uses it
 		*/
-		tk.yKey =
+		tk.sections.jug.yAxisKey =
 			tk.custom_data && data.junctions.every(j => Number.isFinite(j.negLog10p))
 				? 'negLog10p'
 				: !tk.custom_data || Number.isFinite(data.maxReadCount)
 				? 'medianReadCount'
 				: undefined
-		if (tk.yKey == 'medianReadCount' && !Number.isFinite(data.maxReadCount))
+		if (data.junctions?.length == 0) {
+			tk.data = []
+			tk.leftlabels?.doms?.jug?.text('0 junctions')
+			return
+		}
+		if (tk.sections.jug.yAxisKey == 'medianReadCount' && !Number.isFinite(data.maxReadCount))
 			throw new Error('data.maxReadCount is not number')
 		// kept for redraws without data, e.g. changing track height or log scale in the config menu
 		tk.maxReadCount = data.maxReadCount
@@ -138,12 +139,12 @@ export function renderTk(data, tk, block) {
 	but will allow the hover boxplot to fully show
 	*/
 	tk.sections.jug.yscale =
-		tk.yKey == 'medianReadCount'
+		tk.sections.jug.yAxisKey == 'medianReadCount'
 			? (tk.yscaleUseLog ? scaleLog() : scaleLinear())
 					.domain([tk.readcountCutoff || 1, tk.maxReadCount])
 					.range([tk.sections.jug.axisheight, 0])
 			: scaleLinear()
-					.domain([0, tk.yKey ? Math.max(1, ...tk.data.map(j => j[tk.yKey])) : 1])
+					.domain([0, Math.max(1, ...tk.data.map(j => yValue(j, tk)))])
 					.nice()
 					.range([tk.sections.jug.axisheight, 0])
 
@@ -182,7 +183,7 @@ export function renderTk(data, tk, block) {
 			.attr('stroke-opacity', 0.2)
 			.attr('shape-rendering', 'crispEdges')
 		let v = 10
-		while (tk.yKey == 'medianReadCount' && v <= tk.maxReadCount) {
+		while (tk.sections.jug.yAxisKey == 'medianReadCount' && v <= tk.maxReadCount) {
 			// order of magnitude line
 			mg.append('line')
 				.attr('x1', 0)
@@ -350,8 +351,8 @@ jug2.filter(function(d){return d.rimwidth>0})
 				axisRight()
 					.scale(tk.sections.jug.yscale)
 					.ticks(
-						tk.yKey ? Math.floor(tk.sections.jug.axisheight / 20) : 0,
-						tk.yKey == 'medianReadCount' ? '.0f' : undefined
+						tk.sections.jug.yAxisKey ? Math.floor(tk.sections.jug.axisheight / 20) : 0,
+						tk.sections.jug.yAxisKey == 'medianReadCount' ? '.0f' : undefined
 					)
 			),
 			color: 'black',
@@ -477,9 +478,9 @@ function j2block(j, block, viewpxwidth) {
 	return false
 }
 
-/* y of a junction, see tk.yKey in renderTk() */
+/* y of a junction, see tk.sections.jug.yAxisKey in renderTk() */
 function yValue(j, tk) {
-	return tk.yKey ? j[tk.yKey] : 0
+	return tk.sections.jug.yAxisKey ? j[tk.sections.jug.yAxisKey] : 0
 }
 
 function setColor(tk) {

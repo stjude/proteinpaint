@@ -75,7 +75,8 @@ export async function makeTk(tk, block) {
 			jug: {
 				height: 0, // total height of the jug section
 				g: g.append('g'),
-				axis: g.append('g')
+				axis: g.append('g'),
+				yAxisKey: undefined // key of the junction attribute for y axis, set in renderTk()
 			}
 		}
 	}
@@ -289,7 +290,7 @@ function configPanel(tk, block) {
 	}
 
 	// log scale of read count
-	if (tk.yKey == 'medianReadCount') {
+	if (tk.sections.jug.yAxisKey == 'medianReadCount') {
 		const row = holder.append('div').style('margin-bottom', '1px')
 		const id = Math.random()
 		const input = row
