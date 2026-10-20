@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Mass UI now shows a `User` tab. Functions for saving, sharing, opening, and deleting sessions are now within the User tab. The tab also displays information about the accessible data per role.
+
 
 ## 2.220.0
 
