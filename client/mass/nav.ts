@@ -38,7 +38,7 @@ const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
 // const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
-const userTab = { top: 'USER', mid: '', btm: '', subheader: 'user' }
+const userTab = { top: 'SESSION', mid: '', btm: '', subheader: 'user' }
 
 export function getId(): string {
 	return idPrefix + '_' + id++
@@ -383,10 +383,11 @@ function setRenderers(self: any): void {
 		if (!massNav.tabs?.user?.hide) {
 			//User tab is not hidden
 			const override = Object.assign({}, massNav.tabs?.user)
-			if (!appState.termdbConfig?.requiredAuth?.length) {
-				if (!override.top) override.top = 'SESSION'
+			if (!override.mid) {
+				const authResult: any = appState.termdbConfig?.clientAuthResult || {}
+				const role = authResult.role || (Object.values(authResult) as any[]).find(auth => auth?.role)?.role
+				override.mid = appState.termdbConfig?.requiredAuth?.length && typeof role === 'string' ? role.toUpperCase() : ''
 			}
-			// a copy, since userTab is shared by all nav instances
 			self.tabs.push(Object.assign({}, userTab, override))
 		}
 
