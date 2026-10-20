@@ -169,12 +169,6 @@ const routeCases = [
 		query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() })
 	},
 	{
-		name: 'tkbedgraphdot',
-		route: '/tkbedgraphdot',
-		file: 'bedgraphdot.js',
-		query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() })
-	},
-	{
 		name: 'tabixheader',
 		route: '/tabixheader',
 		file: 'app.unorg.js',

@@ -146,7 +146,6 @@ const urlRoutes = [
 			devicePixelRatio: 1
 		})
 	},
-	{ route: '/tkbedgraphdot', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() }) },
 	{ route: '/mdsjunction', query: (url, indexURL) => ({ genome: 'hg38', iscustom: 1, url, indexURL, rglst: rglst() }) },
 	{ route: '/mdssvcnv', query: (url, indexURL) => ({ genome: 'hg38', iscustom: 1, url, indexURL, rglst: rglst() }) },
 	{ route: 'onesampletk', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() }) }

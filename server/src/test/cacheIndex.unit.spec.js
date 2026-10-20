@@ -178,7 +178,7 @@ tape('cache_index() rejects non-remote protocols', async test => {
 })
 
 tape('cache_index() rejects a primary url host that is not allowed', async test => {
-	// some routes, such as /bedgraphdot and a custom /junction track, call cache_index() with a request url
+	// some routes, such as a custom /junction track, call cache_index() with a request url
 	// without fileurl(), so cache_index() must also check the host of the primary url, not only the index url
 	for (const host of ['10.1.2.3', 'localhost', 'localhost.', '169.254.169.254']) {
 		await rejects(
