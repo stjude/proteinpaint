@@ -13,6 +13,7 @@ import {
 	estimatePeakMB,
 	largestSizeThatFits,
 	reserveMemoryMB,
+	logMemoryAdmission,
 	lowMemoryError,
 	type MemoryCost
 } from '../utils/memory.ts'
@@ -604,15 +605,16 @@ export async function getMaxLesions(
 	getAvailable = getAvailableMemoryMB
 ): Promise<{ cap: number; releaseMemory: () => void }> {
 	const availableMemoryMB = await getAvailable()
-	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
 
 	// Run even when memory is plentiful, so a configured MAX_LESIONS that would not fit is still reduced
 	const cap = Math.min(MAX_LESIONS, largestSizeThatFits(availableMemoryMB, GRIN2_MEMORY, 'lesions'))
+	const neededMB = estimatePeakMB(GRIN2_MEMORY, { lesions: Math.max(0, cap) })
+	logMemoryAdmission('GRIN2', cap > 0, neededMB, availableMemoryMB)
 	// Refused before any fetch: the budget cannot cover the base overhead, and the GDC batch fetch reads a cap of 0 as no cap
 	if (cap <= 0) throw lowMemoryError(LOW_MEMORY_MESSAGE)
 	if (cap < MAX_LESIONS) mayLog(`[GRIN2] Reduced lesion cap to ${cap.toLocaleString()} for low memory`)
 	// reserved in the same step as the cap, so no other run is admitted against the same reserved total
-	return { cap, releaseMemory: reserveMemoryMB(estimatePeakMB(GRIN2_MEMORY, { lesions: cap })) }
+	return { cap, releaseMemory: reserveMemoryMB(neededMB, 'GRIN2') }
 }
 
 /** True when the lesion cap left some lesions out: samples skipped after it, the last sample cut short, or a batched

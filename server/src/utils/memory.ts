@@ -32,22 +32,40 @@ export function memoryReservedMB(): number {
 /** Reserves `mb` (a run's estimated peak) until the returned release is called, in a finally once the run's work
  * ends. runFitsInMemory() and largestSizeThatFits() take what is reserved off the budget, so runs that each fit alone
  * are not all admitted together and then allocate at once. Reserve in the same synchronous step as the check that
- * admitted the run, with no await between, or a run admitted in between is not counted:
- *
- *   if (!runFitsInMemory(cost, units, await getAvailableMemoryMB())) throw lowMemoryError(...)
- *   const releaseMemory = reserveMemoryMB(estimatePeakMB(cost, units))
- *   try { await runTheEngine() } finally { releaseMemory() }
- *
+ * admitted the run, with no await between, or a run admitted in between is not counted; admitRun() does both.
  * A running child's memory also lowers the available memory read later, so it counts twice until the run ends: this
- * errs toward refusing. ponytail: one process only; servers sharing a host each keep their own total. */
-export function reserveMemoryMB(mb: number): () => void {
+ * errs toward refusing. ponytail: one process only; servers sharing a host each keep their own total.
+ * `label` names the run in the server log, e.g. 'DM'. */
+export function reserveMemoryMB(mb: number, label = 'a run'): () => void {
 	reservedMB += mb
 	let released = false
 	return () => {
 		if (released) return
 		released = true
 		reservedMB -= mb
+		mayLog(`[memory] ${label} released ${formatMB(mb)}, ${formatMB(reservedMB)} still reserved`)
 	}
+}
+
+/** Logs whether a heavy run was admitted, in one format for every route, e.g.
+ * `[memory] DM admitted: needs 6,134 MB of a 6,400 MB budget (40% of 16,000 MB free), 0 MB reserved by runs in progress`
+ * Called before the run's own memory is reserved, so the reserved figure is the other runs'. */
+export function logMemoryAdmission(
+	label: string,
+	admitted: boolean,
+	neededMB: number,
+	availableMB: number,
+	fraction = RUN_MEMORY_FRACTION
+): void {
+	mayLog(
+		`[memory] ${label} ${admitted ? 'admitted' : 'refused'}: needs ${formatMB(neededMB)} of a ` +
+			`${formatMB(availableMB * fraction)} budget (${fraction * 100}% of ${formatMB(availableMB)} free), ` +
+			`${formatMB(reservedMB)} reserved by runs in progress`
+	)
+}
+
+function formatMB(mb: number): string {
+	return `${Math.round(mb).toLocaleString()} MB`
 }
 
 export async function getAvailableMemoryMB(): Promise<number> {
@@ -129,7 +147,7 @@ export function estimatePeakMB(cost: MemoryCost, units: MemoryUnits): number {
 
 /** Whether a run of these sizes fits in `fraction` of `availableMB`, less `reservedMB`, the memory reserved by runs in
  * progress. Callers that must not trim a run refuse one that does not fit, e.g.
- * `if (!runFitsInMemory(...)) throw lowMemoryError(...)`, then reserve its memory (reserveMemoryMB). The default budget
+ * `if (!runFitsInMemory(...)) throw lowMemoryError(...)`, then reserve its memory; admitRun() does both. The default budget
  * is 40% of availableMB. The examples assume nothing is reserved.
  * @example
  * runFitsInMemory(DE_MEMORY.edgeR, { cells: 4438 * 17928 }, 12000) // false: ≈ 8938 MB > 4800 budget
@@ -166,6 +184,28 @@ export function largestSizeThatFits(
 ): number {
 	const base = estimatePeakMB(cost, { [size]: 0 })
 	return Math.max(0, Math.floor((availableMB * fraction - reservedMB - base) / cost.perUnitMB[size]))
+}
+
+/** Admits a heavy run that must not be trimmed, such as DE or DM: logs the decision, then throws lowMemoryError(refusal)
+ * when the run does not fit beside the runs in progress, or reserves its estimated peak and returns the release to call
+ * in a finally once its engine ends. Check and reservation are one synchronous step. `refusal` may be a function, for a
+ * message that is costly to build or only needed on refusal.
+ * @example
+ * const releaseMemory = admitRun('DM', DM_MEMORY, units, await getAvailableMemoryMB(), 'Select a smaller cohort.')
+ * try { await run_R(...) } finally { releaseMemory() }
+ */
+export function admitRun(
+	label: string,
+	cost: MemoryCost,
+	units: MemoryUnits,
+	availableMB: number,
+	refusal: string | (() => string)
+): () => void {
+	const neededMB = estimatePeakMB(cost, units)
+	const admitted = runFitsInMemory(cost, units, availableMB)
+	logMemoryAdmission(label, admitted, neededMB, availableMB)
+	if (!admitted) throw lowMemoryError(typeof refusal == 'function' ? refusal() : refusal)
+	return reserveMemoryMB(neededMB, label)
 }
 
 /** The error for a run refused because memory is low: status 503 and code LOW_MEMORY, with a message that tells the

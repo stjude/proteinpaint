@@ -1,11 +1,11 @@
 import tape from 'tape'
-import { pickDeEngine, checkDeMemory, selectedColumnSpan } from '#src/routes/termdb.DE.ts'
+import { pickDeEngine, admitDeRun, selectedColumnSpan } from '#src/routes/termdb.DE.ts'
 
 /** Tests
  * - pickDeEngine() engine selection
  * - pickDeEngine() DE_method sent to R
- * - checkDeMemory() refusal and the wilcoxon suggestion
- * - checkDeMemory() counts the columns wilcoxon reads
+ * - admitDeRun() refusal and the wilcoxon suggestion
+ * - admitDeRun() counts the columns wilcoxon reads
  * - selectedColumnSpan()
  */
 
@@ -68,9 +68,9 @@ tape('DE_method handed to R', function (test) {
 	test.end()
 })
 
-tape('checkDeMemory', function (test) {
+tape('admitDeRun', function (test) {
 	const genes = 17928 // ASH, where the costs were measured
-	// the error message, or '' when the run fits
+	// the error message, or '' when the run fits; an admitted run is released at once, so the next check starts clear
 	const check = (
 		method: 'edgeR' | 'limma' | 'wilcoxon',
 		n1: number,
@@ -79,7 +79,7 @@ tape('checkDeMemory', function (test) {
 		opts: { runDE_methods?: string[]; confounded?: boolean } = {}
 	) => {
 		try {
-			checkDeMemory({ method, n1, n2, genes, availableMB: freeMB, ...opts })
+			admitDeRun({ method, n1, n2, genes, availableMB: freeMB, ...opts })()
 			return ''
 		} catch (e: any) {
 			test.equal(e.code, 'LOW_MEMORY', `${method} ${n1}v${n2} at ${freeMB} MB => code LOW_MEMORY`)
@@ -117,12 +117,12 @@ tape('checkDeMemory', function (test) {
 	test.end()
 })
 
-tape('checkDeMemory counts the columns wilcoxon reads', function (test) {
+tape('admitDeRun counts the columns wilcoxon reads', function (test) {
 	// 20 samples spread over 10,000 columns of a 60,660-gene file: rust reads the whole span, ~2.3 GB as f32
 	const run = { method: 'wilcoxon' as const, n1: 10, n2: 10, genes: 60660, availableMB: 1000 }
-	test.doesNotThrow(() => checkDeMemory(run), 'adjacent samples at 1 GB => fits')
+	test.doesNotThrow(() => admitDeRun(run)(), 'adjacent samples at 1 GB => fits')
 	test.throws(
-		() => checkDeMemory({ ...run, spanSamples: 10000 }),
+		() => admitDeRun({ ...run, spanSamples: 10000 }),
 		/too low/,
 		'the same samples over 10,000 columns => refused'
 	)

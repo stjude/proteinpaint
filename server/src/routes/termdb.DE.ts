@@ -7,14 +7,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import {
-	getAvailableMemoryMB,
-	estimatePeakMB,
-	runFitsInMemory,
-	reserveMemoryMB,
-	lowMemoryError,
-	type MemoryCost
-} from '#src/utils/memory.ts'
+import { getAvailableMemoryMB, runFitsInMemory, admitRun, type MemoryCost } from '#src/utils/memory.ts'
 import { getH5samples } from '#src/utils/h5samples.ts'
 import {
 	buildGroupValues,
@@ -324,7 +317,7 @@ async function runDeFresh(
 	const genes = built ? built.genes : (await getH5samples(countsFile!, 'item')).length
 	let releaseMemory = () => {}
 	if (genes) {
-		const neededMB = checkDeMemory({
+		releaseMemory = admitDeRun({
 			method: DE_method,
 			n1: groups.group1names.length,
 			n2: groups.group2names.length,
@@ -337,8 +330,6 @@ async function runDeFresh(
 			availableMB: await getAvailableMemoryMB(),
 			confounded: Boolean(param.tw || param.tw2)
 		})
-		// no await since the check, so no other run is admitted against the same reserved total
-		releaseMemory = reserveMemoryMB(neededMB)
 	}
 
 	try {
@@ -346,14 +337,15 @@ async function runDeFresh(
 			const time1 = new Date().valueOf()
 			const result = JSON.parse(await run_R('edge_newh5.R', JSON.stringify(expression_input)))
 			mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
-			// edge_newh5.R reports per-stage elapsed seconds and peak MB in its JSON. Logged
+			// edge_newh5.R reports per-stage elapsed seconds and R's heap MB (gc(), several times below the process's
+			// real peak; the [memory] lines carry the estimate that admitted the run) in its JSON. Logged
 			// unconditionally (not mayLog) because the point is diagnosing slow runs on deployed
 			// servers, where debugmode is off. One line per DE run, and DE runs are rare. Absent from
 			// the log means the result came from the de/ cache and the R script never ran.
 			console.log(
 				`[DE] ${groups.group1names.length}v${groups.group2names.length} samples, stages(s):`,
 				JSON.stringify(result.timings),
-				'peakMB:',
+				'rHeapMB:',
 				JSON.stringify(result.memory_mb)
 			)
 			param.method = 'edgeR'
@@ -420,11 +412,12 @@ export function selectedColumnSpan(fileSamples: string[], selected: string[]): n
 	return last >= first ? last - first + 1 : selected.length
 }
 
-/** Throws LOW_MEMORY when a DE run of n1 + n2 samples and `genes` genes does not fit in the available memory. The
- * message suggests wilcoxon too when this run is edgeR or limma without confounders (wilcoxon adjusts for none),
+/** Admits a DE run of n1 + n2 samples and `genes` genes (see admitRun): throws LOW_MEMORY when it does not fit beside
+ * the runs in progress, or reserves its memory and returns the release, to call in a finally once the engine ends.
+ * The refusal suggests wilcoxon too when this run is edgeR or limma without confounders (wilcoxon adjusts for none),
  * wilcoxon would fit, the groups are large enough that wilcoxon would not fall back to edgeR, and this server offers
- * it (features.runDE_methods lists the offered methods). Returns the run's estimated MB, for the caller to reserve. */
-export function checkDeMemory(opts: {
+ * it (features.runDE_methods lists the offered methods). */
+export function admitDeRun(opts: {
 	method: 'edgeR' | 'limma' | 'wilcoxon'
 	n1: number
 	n2: number
@@ -435,24 +428,27 @@ export function checkDeMemory(opts: {
 	/** the run adjusts for a confounder (tw or tw2) */
 	confounded?: boolean
 	runDE_methods?: string[]
-}): number {
+}): () => void {
 	const { method, n1, n2, genes, availableMB, confounded } = opts
 	const runDE_methods = 'runDE_methods' in opts ? opts.runDE_methods : serverconfig.features?.runDE_methods
 	const cells = (n1 + n2) * genes
 	const units = { cells, spanCells: Math.max(n1 + n2, opts.spanSamples ?? 0) * genes }
-	if (runFitsInMemory(DE_MEMORY[method], units, availableMB)) return estimatePeakMB(DE_MEMORY[method], units)
-	const tryWilcoxon =
-		method != 'wilcoxon' &&
-		!confounded &&
-		(!runDE_methods || runDE_methods.includes('Wilcoxon')) &&
-		pickDeEngine('wilcoxon', n1, n2).engine == 'wilcoxon' &&
-		runFitsInMemory(DE_MEMORY.wilcoxon, units, availableMB)
-	throw lowMemoryError(
-		`Server memory is too low to run this differential expression analysis on ${(n1 + n2).toLocaleString()} samples. ` +
+	return admitRun(`DE ${method}`, DE_MEMORY[method], units, availableMB, () => {
+		const tryWilcoxon =
+			method != 'wilcoxon' &&
+			!confounded &&
+			(!runDE_methods || runDE_methods.includes('Wilcoxon')) &&
+			pickDeEngine('wilcoxon', n1, n2).engine == 'wilcoxon' &&
+			runFitsInMemory(DE_MEMORY.wilcoxon, units, availableMB)
+		return (
+			`Server memory is too low to run this differential expression analysis on ${(
+				n1 + n2
+			).toLocaleString()} samples. ` +
 			(tryWilcoxon
 				? 'Select a smaller cohort, or use the Wilcoxon method, which needs less memory.'
 				: 'Select a smaller cohort.')
-	)
+		)
+	})
 }
 
 /** Decide which pipeline runs, and the DE_method label handed to R.

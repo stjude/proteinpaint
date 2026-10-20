@@ -7,6 +7,7 @@ import {
 	lowMemoryError,
 	reserveMemoryMB,
 	memoryReservedMB,
+	admitRun,
 	RUN_MEMORY_FRACTION
 } from '../memory.ts'
 
@@ -84,6 +85,27 @@ tape('reserveMemoryMB', test => {
 	test.equal(memoryReservedMB(), 0, 'released, and a second release does not release twice')
 	test.equal(runFitsInMemory(cost, { rows: 200 }, 1000), true, 'after the release => fits again')
 	test.equal(runFitsInMemory(cost, { rows: 200 }, 1000, RUN_MEMORY_FRACTION, 300), false, 'reservedMB can be passed')
+	test.end()
+})
+
+tape('admitRun', test => {
+	const cost = { baseMB: 100, perUnitMB: { rows: 1 } }
+	let built = 0
+	const refusal = () => (built++, 'Select a smaller cohort.')
+	// 1000 MB free => a 400 MB budget
+	const release = admitRun('test', cost, { rows: 200 }, 1000, refusal)
+	test.equal(memoryReservedMB(), 300, 'admitted => its 300 MB estimate is reserved')
+	test.equal(built, 0, 'the refusal message is not built for an admitted run')
+	try {
+		admitRun('test', cost, { rows: 200 }, 1000, refusal)
+		test.fail('a second 300 MB run beside the first => should throw')
+	} catch (e: any) {
+		test.equal(e.code, 'LOW_MEMORY', 'a second 300 MB run beside the first => refused with LOW_MEMORY')
+		test.equal(e.message, 'Select a smaller cohort.', 'with the refusal message')
+	}
+	test.equal(memoryReservedMB(), 300, 'a refused run reserves nothing')
+	release()
+	test.equal(memoryReservedMB(), 0, 'released')
 	test.end()
 })
 

@@ -19,14 +19,7 @@ import { renderVolcano } from '../src/renderVolcano.ts'
 import { renderManhattanPoints } from '../src/renderManhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import {
-	getAvailableMemoryMB,
-	estimatePeakMB,
-	runFitsInMemory,
-	reserveMemoryMB,
-	lowMemoryError,
-	type MemoryCost
-} from '#src/utils/memory.ts'
+import { getAvailableMemoryMB, admitRun, type MemoryCost } from '#src/utils/memory.ts'
 import { getH5samples } from '#src/utils/h5samples.ts'
 import {
 	buildGroupValues,
@@ -541,12 +534,13 @@ async function runDmFresh(
 	const nSamples = groups.group1names.length + groups.group2names.length
 	const { rows, samples: fileSamples } = await methylationFileShape(q.file)
 	const units = { fileCells: rows * fileSamples, cells: rows * nSamples }
-	if (!runFitsInMemory(DM_MEMORY, units, await getAvailableMemoryMB()))
-		throw lowMemoryError(
-			`Server memory is too low to run this differential methylation analysis on ${nSamples.toLocaleString()} samples. Select a smaller cohort.`
-		)
-	// no await since the check, so no other run is admitted against the same reserved total
-	const releaseMemory = reserveMemoryMB(estimatePeakMB(DM_MEMORY, units))
+	const releaseMemory = admitRun(
+		'DM',
+		DM_MEMORY,
+		units,
+		await getAvailableMemoryMB(),
+		`Server memory is too low to run this differential methylation analysis on ${nSamples.toLocaleString()} samples. Select a smaller cohort.`
+	)
 
 	const time1 = Date.now()
 	let result

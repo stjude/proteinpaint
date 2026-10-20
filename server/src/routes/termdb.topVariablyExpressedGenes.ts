@@ -9,14 +9,7 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import {
-	getAvailableMemoryMB,
-	estimatePeakMB,
-	runFitsInMemory,
-	reserveMemoryMB,
-	lowMemoryError,
-	type MemoryCost
-} from '#src/utils/memory.ts'
+import { getAvailableMemoryMB, admitRun, type MemoryCost } from '#src/utils/memory.ts'
 import type { TopVeCacheResult } from '../../routes/types.ts'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { genomes } from '#src/initGenomesDs.js'
@@ -96,13 +89,13 @@ function nativeValidateQuery(ds: any) {
 			computeFresh: async () => {
 				const samples = await resolveNativeSamples(q, gE, ds)
 				// refused rather than run on fewer samples, which would rank different genes; not cached, so a retry runs
-				const units = { samples: samples.length }
-				if (!runFitsInMemory(TOPVE_MEMORY, units, await getAvailableMemoryMB()))
-					throw lowMemoryError(
-						'Server memory is too low to find the top variably expressed genes right now. Try again later.'
-					)
-				// no await since the check, so no other run is admitted against the same reserved total
-				const releaseMemory = reserveMemoryMB(estimatePeakMB(TOPVE_MEMORY, units))
+				const releaseMemory = admitRun(
+					'topVE',
+					TOPVE_MEMORY,
+					{ samples: samples.length },
+					await getAvailableMemoryMB(),
+					'Server memory is too low to find the top variably expressed genes right now. Try again later.'
+				)
 				try {
 					const genes = await computeGenes4nativeDs(q, gE, samples)
 					const cacheResult: TopVeCacheResult = { genes }
