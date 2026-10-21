@@ -378,7 +378,25 @@ async function mayCheckPermissionWithFileAndSession(bamdata, req, ds) {
 	}
 }
 
+const gdcFileUUIDpattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function validateGdcFileUUID(gdcFileUUID) {
+	if (typeof gdcFileUUID != 'string') throw 'gdcFileUUID not string'
+	if (!gdcFileUUIDpattern.test(gdcFileUUID)) throw 'gdcFileUUID not uuid'
+}
+
+/* returns the URL of a file uuid at a gdc api endpoint, e.g. "/data/"; the url is below the rest url of the host,
+and must have the same origin
+*/
+export function getGdcFileUrl(rest, endpoint, gdcFileUUID) {
+	validateGdcFileUUID(gdcFileUUID)
+	const url = new URL(rest.replace(/\/+$/, '') + endpoint + gdcFileUUID)
+	if (url.origin != new URL(rest).origin) throw 'gdc file url not at the rest host'
+	return url
+}
+
 export async function gdcCheckPermission(gdcFileUUID, ds, reqQuery) {
+	validateGdcFileUUID(gdcFileUUID)
 	const { host, headers } = ds.getHostHeaders(reqQuery)
 	// suggested by Phil on 4/19/2022
 	// use the download endpoint and specify a zero byte range
@@ -389,7 +407,7 @@ export async function gdcCheckPermission(gdcFileUUID, ds, reqQuery) {
 	// which may not be handled properly by the GDC API in qa-uat
 	// per Phil, should only be used as a temporary workaround
 	headers['Accept-Encoding'] = 'identity'
-	const url = host.rest + '/data/' + gdcFileUUID
+	const url = getGdcFileUrl(host.rest, '/data/', gdcFileUUID).href
 	try {
 		await xfetch(url, { headers })
 	} catch (e) {

@@ -11,7 +11,7 @@ import ky from 'ky'
 import { interpolateRgb } from 'd3-interpolate'
 import { match_complexvariant_rust } from './bam.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
-import { gdcCheckPermission } from './bam.gdc.js'
+import { gdcCheckPermission, getGdcFileUrl, validateGdcFileUUID } from './bam.gdc.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { depthExcludedFlags, isBamTruncated, RegionDepth, scanBamRecords, samLine } from './bamFile.ts'
 
@@ -279,7 +279,7 @@ export default function (genomes) {
 	return async (req, res) => {
 		try {
 			if (req.query.gdcFileUUID) {
-				if (typeof req.query.gdcFileUUID != 'string') throw 'gdcFileUUID not string'
+				validateGdcFileUUID(req.query.gdcFileUUID)
 				/****************************
 				!!! always make an api query to verify access to prevent unauthorized access !!!
 				****************************
@@ -3595,7 +3595,7 @@ async function streamGdcBam2response(req, res) {
 	const { host, headers } = getGdcDs(req.query.__genomes).getHostHeaders(req.query)
 	headers.compression = false // see comments in get_gdc_bam()
 
-	const url = path.join(host.rest, '/slicing/view/', req.query.gdcFileUUID + '?region=' + req.query.gdcFilePosition)
+	const url = getGdcSliceUrl(host.rest, req.query.gdcFileUUID, req.query.gdcFilePosition)
 	try {
 		const sourceStream = got.stream(url, { method: 'GET', headers }) // source of data, will be streamed into res
 
@@ -3638,6 +3638,15 @@ async function streamGdcBam2response(req, res) {
 // created by CacheManager at server launch
 const cachedir_bam = path.join(serverconfig.cachedir, 'bam')
 
+/* returns the url string of the gdc slicing api for a file uuid and a region "chr:start-stop", where any character of
+the region that is not allowed in a query string is percent-encoded
+*/
+export function getGdcSliceUrl(rest, gdcFileUUID, region) {
+	const url = getGdcFileUrl(rest, '/slicing/view/', gdcFileUUID)
+	url.search = 'region=' + region
+	return url.href
+}
+
 async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
 	// which may not be handled properly by the GDC API in qa-uat
@@ -3648,7 +3657,7 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 	const { host, headers } = getGdcDs(req.query.__genomes).getHostHeaders(req.query)
 	headers.compression = false
 	const fullpath = path.join(cachedir_bam, bamfilename)
-	const url = path.join(host.rest, '/slicing/view/', gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop)
+	const url = getGdcSliceUrl(host.rest, gdcFileUUID, encodeURIComponent(chr) + ':' + start + '-' + stop)
 
 	let timeTaken4streaming = 0
 
