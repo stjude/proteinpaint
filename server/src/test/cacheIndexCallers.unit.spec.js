@@ -32,7 +32,7 @@ const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-cacheidx-callers-'))
 const hasBigBedInfo = !spawnSync(serverconfig.bigBedInfo, []).error
 const up = '/..'.repeat(40) // more than enough to reach "/" from any cachedir
 // a new array for each request, since some handlers add properties to rglst[]
-const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100 }]
+const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100, x: 0 }]
 
 // request paths that the local server has received
 const hits = new Set()
@@ -89,7 +89,7 @@ const routeCases = [
 		name: 'tkbam',
 		route: '/tkbam',
 		file: 'bam.js',
-		query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, regions: rglst() })
+		query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() })
 	},
 	{
 		name: 'tkbam-getread',

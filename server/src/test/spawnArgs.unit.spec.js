@@ -122,11 +122,11 @@ function getGenome(genomefile = 'NA') {
 	}
 }
 
-const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100 }]
+const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100, x: 0 }]
 
 // routes that read the url and indexURL of a bam or tabix file, or pass them to bcftools or bigBedInfo
 const urlRoutes = [
-	{ route: '/tkbam', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, regions: rglst() }) },
+	{ route: '/tkbam', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() }) },
 	{ route: '/tabixheader', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL }) },
 	{ route: '/vcfheader', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL }) },
 	{ route: '/bcfheader', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL }) },

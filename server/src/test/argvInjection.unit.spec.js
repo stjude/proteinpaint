@@ -140,19 +140,19 @@ tape('/tkbam', async test => {
 	const urlAttack = await send(handler, {
 		genome: 'hg38',
 		url: `-o${outFile}://abcde`,
-		regions: [{ chr: 'chr1', start: 1, stop: 100, width: 100 }]
+		rglst: [{ chr: 'chr1', start: 1, stop: 100, width: 100, x: 0 }]
 	})
 	test.equal(urlAttack?.error, 'url must not start with "-"', 'should reject a url starting with "-"')
 
-	// regions[] are validated before the file is read
+	// rglst[] is validated before the file is read
 	for (const chr of chrAttacks) {
 		const r = await send(handler, {
 			genome: 'hg38',
 			file: 'files/hg38/TermdbTest/trackLst/bam.bam',
 			nochr: false,
-			regions: [{ chr, start: 1, stop: 100, width: 100 }]
+			rglst: [{ chr, start: 1, stop: 100, width: 100, x: 0 }]
 		})
-		test.equal(r?.error, 'q.rglst[].chr invalid chr name', `regions[] should reject chr=${chr}`)
+		test.equal(r?.error, 'q.rglst[].chr invalid chr name', `rglst[] should reject chr=${chr}`)
 	}
 	test.notOk(fs.existsSync(outFile), 'should not write to a requested path')
 	test.end()

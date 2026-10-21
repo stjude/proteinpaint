@@ -121,6 +121,8 @@ reads before them from 7669950, with two pairs, see bamFile.unit.spec.ts
 */
 const edgeQuery = () => ({ file: 'files/hg38/bam/edge.bam', dir: null, withoutIndex: false, nochr: false })
 const lineStart = (line: string) => Number(line.split('\t')[3])
+/** a region of edge.bam on chr17, with the sam lines that read_regions() keeps */
+const edgeRegion = (start: number, stop: number) => ({ chr: 'chr17', start, stop, lines: [] as string[] })
 
 /** read_regions() with read_limits changed to limits, which are restored after it */
 async function readWithLimits(limits: Partial<typeof read_limits>, regions: any[], withDepth = false) {
@@ -137,7 +139,7 @@ async function readWithLimits(limits: Partial<typeof read_limits>, regions: any[
 
 tape('bam.js - read_regions: the limits of the reads', async t => {
 	{
-		const r = { chr: 'chr17', start: 7680001, stop: 7700000 }
+		const r = edgeRegion(7680001, 7700000)
 		const q = await readWithLimits({}, [r])
 		t.equal(r.lines.length, 600, 'should keep all the reads under the limits')
 		t.notOk(q.read_stops, 'should not stop the reads under the limits')
@@ -145,7 +147,7 @@ tape('bam.js - read_regions: the limits of the reads', async t => {
 	}
 	{
 		// 100 reads of 100nt
-		const r = { chr: 'chr17', start: 7680001, stop: 7700000 }
+		const r = edgeRegion(7680001, 7700000)
 		const q = await readWithLimits({ maxscanbases: 100 * 100 }, [r], true)
 		t.equal(r.lines.length, 100, 'should read the reads up to maxscanbases')
 		t.deepEqual(
@@ -159,15 +161,15 @@ tape('bam.js - read_regions: the limits of the reads', async t => {
 		t.equal(last, 7680693 + 99, 'should have the depth of the reads that were read')
 	}
 	{
-		const a = { chr: 'chr17', start: 7680001, stop: 7682100 },
-			b = { chr: 'chr17', start: 7682101, stop: 7700000 }
+		const a = edgeRegion(7680001, 7682100),
+			b = edgeRegion(7682101, 7700000)
 		const q = await readWithLimits({ maxscanbases: 200 * 100 }, [a, b])
 		t.equal(a.lines.length, 100, 'should read half of maxscanbases in the first of two regions')
 		t.equal(b.lines.length, 100, 'should leave the other half of maxscanbases to the second region')
 		t.equal(q.read_stops?.length, 2, 'should have the stop of each region')
 	}
 	{
-		const r = { chr: 'chr17', start: 7680001, stop: 7700000 }
+		const r = edgeRegion(7680001, 7700000)
 		const q = await readWithLimits({ maxrenderbases: 100 * 100 }, [r])
 		t.equal(r.lines.length, 100, 'should downsample the reads to maxrenderbases')
 		t.equal(q.read_limit_reached, 600, 'should have the number of reads that were read')
@@ -179,14 +181,14 @@ tape('bam.js - read_regions: the limits of the reads', async t => {
 			'should keep the downsampled reads in the order of the file'
 		)
 		t.ok(starts.at(-1)! > 7683000, 'should downsample the reads across the region')
-		const again = { chr: 'chr17', start: 7680001, stop: 7700000 }
+		const again = edgeRegion(7680001, 7700000)
 		await readWithLimits({ maxrenderbases: 100 * 100 }, [again])
 		t.deepEqual(again.lines, r.lines, 'should keep the same reads for the same request')
 	}
 	{
 		// the reads of a pair have the same name
 		const names = (r: any) => r.lines.map((l: string) => l.split('\t')[0])
-		const all = { chr: 'chr17', start: 7669950, stop: 7680000 }
+		const all = edgeRegion(7669950, 7680000)
 		await readWithLimits({}, [all])
 		const count = new Map<string, number>()
 		for (const n of names(all)) count.set(n, (count.get(n) || 0) + 1)
@@ -194,7 +196,7 @@ tape('bam.js - read_regions: the limits of the reads', async t => {
 		t.equal(pairs.length, 2, 'should have two pairs in the region')
 		let split = 0
 		for (let n = 1; n < all.lines.length; n++) {
-			const r = { chr: 'chr17', start: 7669950, stop: 7680000 }
+			const r = edgeRegion(7669950, 7680000)
 			await readWithLimits({ maxrenderbases: n * 100 }, [r])
 			const kept = names(r)
 			for (const p of pairs) if (kept.filter((x: string) => x == p).length == 1) split++
