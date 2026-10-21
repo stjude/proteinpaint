@@ -13,7 +13,7 @@ import { match_complexvariant_rust } from './bam.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
 import { gdcCheckPermission } from './bam.gdc.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import { runToolOutput } from './tools/index.ts'
+import { depthExcludedFlags, isBamTruncated, RegionDepth, scanBamRecords, samLine } from './bamFile.ts'
 
 /*
 XXX quick fix to be removed/disabled later
@@ -48,7 +48,8 @@ when client zooms into one read group, server needs to know which group it is an
 .asPaired
 .stacksegspacing
 .canvaswidth
-.downsample{} // added by determine_downsampling
+.read_limit_reached // the number of reads that were read, if they were downsampled, see read_regions()
+.read_stops[] // {chr, position} of the first read that is not read, of each region whose reads were not all read
 .readcount_skipped
 .variant{}
 	.chr/pos/ref/alt
@@ -123,7 +124,6 @@ box {}
 streamGdcBam2response
 downloadGdcBam2cacheFile_withDenial // download gdc bam slice and write to cache file securely and deny unauthorized access
 	get_gdc_bam
-		index_bam
 get_q
 do_query
 	query_reads
@@ -156,7 +156,7 @@ do_query
 				mayClipArrowhead
 		plot_insertions
 	plot_pileup
-		run_samtools_depth
+		get_depth
 		collect_softclipmismatch2pileup
 route_getread
     query_oneread
@@ -237,8 +237,21 @@ const ntboxwidthincrement = 0.5
 const readspace_px = 2
 const readspace_bp = 5
 
-const maxreadcount = 7000 // maximum number of reads to load
+/*
+the limits of the reads of a request, by their bases, so that the memory and time of a request are about the same for
+any read length; a read is at least minreadbases, for the cost of a read apart from its bases, see read_bases(). A test
+may change them.
+- maxscanbases: the reads that are read from the file, about 30K reads of 150nt, or 45K of 100nt. The reads after it
+  are not read, and the client is told where the reads stop, see q.read_stops
+- maxrenderbases: the reads that are rendered, about 7K reads of 150nt. More than 110% of it are downsampled to it
+*/
+export const read_limits = { maxscanbases: 4.5e6, maxrenderbases: 1.05e6, minreadbases: 100 }
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
+// the limits of the request values that size a canvas: the width is of the regions of validateRglst() in utils.js, with
+// the space between them; a larger pixel ratio of the client is rendered at this one
+const maxcanvaswidth = 60000
+const maxpileupheight = 1000
+const maxdevicepixelratio = 4
 const max_returntemplatebox = 2000 // maximum number of reads per group, for which to return the "templatebox"
 const minstackheight_returntemplatebox = 7 // minimum stack height (number of pixels) for which to return templatebox
 const max_read_alignment = 200 // Max number of reads that can be aligned to reference sequence
@@ -458,7 +471,7 @@ async function plot_pileup(q, templates) {
 	let maxValue = 0 // max depth from all regions
 
 	for (const [ridx, r] of q.regions.entries()) {
-		bplst[ridx] = await run_samtools_depth(q, r)
+		bplst[ridx] = await get_depth(q, r)
 		// collect softclip/mismatch into bplst, will increase .total
 		collect_softclipmismatch2pileup(ridx, r, templates, bplst[ridx])
 		for (const b of bplst[ridx]) {
@@ -763,24 +776,37 @@ export function get_partstack(query) {
 }
 
 async function get_q(genome, req) {
-	// validate regions before any samtools process is launched (quickcheck below)
-	utils.validateRglst({ rglst: req.query.regions }, genome)
+	// validate regions before the file is read (bam_is_truncated() below); the middleware has parsed and validated
+	// req.query.rglst if it is present, and an array is required of it here
+	utils.validateRglst(req.query, genome)
+	if (!Array.isArray(req.query.rglst)) throw 'rglst[] not array'
+	const regions = req.query.rglst
+	for (const r of regions) {
+		if (!Number.isFinite(r.x) || r.x < 0) throw '.x of a region not number'
+		if (!Number.isFinite(r.width) || r.x + r.width > maxcanvaswidth) throw '.width of a region out of bound'
+	}
 
 	const [filefullpath, dir] = await getFilefullpathOrUrl(req)
 	const q = {
 		genome,
 		file: filefullpath,
-		fileIsTruncated: await samtoolsQuickcheck(filefullpath), // flag to record status and used repeatedly
+		// a gdc slice, which is not indexed, or a truncated file, is read whole; the truncated check is done on every request
+		withoutIndex: (await bam_is_truncated(filefullpath)) || Boolean(req.query.gdcFileUUID),
 		dir,
 		asPaired: req.query.asPaired,
 		getcolorscale: req.query.getcolorscale,
 		//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
+		devicePixelRatio: 1
+	}
+	if (req.query.devicePixelRatio) {
+		const ratio = Number(req.query.devicePixelRatio)
+		if (Number.isFinite(ratio)) q.devicePixelRatio = Math.min(maxdevicepixelratio, Math.max(1, ratio))
 	}
 
 	if (req.query.pileupheight) {
 		q.pileupheight = Number(req.query.pileupheight)
-		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
+		if (!Number.isFinite(q.pileupheight) || q.pileupheight <= 0 || q.pileupheight > maxpileupheight)
+			throw '.pileupheight out of bound'
 	}
 	if (req.query.drop_pcrduplicates) {
 		q.drop_pcrduplicates = true
@@ -791,6 +817,12 @@ async function get_q(genome, req) {
 
 	if (req.query.variant) {
 		q.diff_score_plotwidth = Number(req.query.diff_score_plotwidth)
+		if (
+			!Number.isFinite(q.diff_score_plotwidth) ||
+			q.diff_score_plotwidth < 0 ||
+			q.diff_score_plotwidth > maxcanvaswidth
+		)
+			throw '.diff_score_plotwidth out of bound'
 		if (req.query.max_diff_score) {
 			q.max_diff_score = Number(req.query.max_diff_score)
 			q.min_diff_score = Number(req.query.min_diff_score)
@@ -856,9 +888,9 @@ async function get_q(genome, req) {
 		q.nochr = typeof req.query.nochr == 'string' ? JSON.parse(req.query.nochr) : req.query.nochr // parse "true" into json true
 	} else {
 		// info not provided
-		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir, q.fileIsTruncated)
+		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir, q.withoutIndex)
 	}
-	q.regions = req.query.regions
+	q.regions = regions
 
 	let maxntwidth = 0
 	for (const r of q.regions) {
@@ -888,24 +920,25 @@ call this function to force download
 can delete this function when gdc containers share a cachedir
 */
 async function mayReSliceFile(req, cachefile) {
-	/* uncomment these two lines to test on local
+	/* uncomment this line to test on local
 	await fs.promises.unlink(cachefile)
-	await fs.promises.unlink(cachefile+'.bai')
 	*/
 	try {
-		if (!(await utils.file_not_exist(cachefile)) && !(await utils.file_not_exist(cachefile + '.bai'))) {
-			// bam and index files exist
+		if (!(await utils.file_not_exist(cachefile))) {
+			// bam file exists
 			return
 		}
 
-		// slice file not found, or its index is missing since cache eviction deletes .bam and .bai separately;
-		// force to download slice here. if the slice still exists, get_gdc_bam() only re-indexes it (unless truncated)
+		// slice file not found. force to download slice here
 
-		const bakRegions = req.query.regions
+		const bakRglst = req.query.rglst
 		const tmp = req.query.gdcFilePosition.split(/[.:-]/)
-		req.query.regions = [{ chr: tmp[0], start: Number(tmp[1]), stop: Number(tmp[2]) }]
-		await downloadGdcBam2cacheFile_withDenial(req)
-		req.query.regions = bakRegions
+		req.query.rglst = [{ chr: tmp[0], start: Number(tmp[1]), stop: Number(tmp[2]) }]
+		try {
+			await downloadGdcBam2cacheFile_withDenial(req)
+		} finally {
+			req.query.rglst = bakRglst
+		}
 	} catch (e) {
 		throw e
 	}
@@ -926,6 +959,10 @@ async function do_query(q) {
 	if (q.read_limit_reached) {
 		// When maximum read limit is reached
 		result.count.read_limit_reached = q.read_limit_reached
+	}
+	if (q.read_stops) {
+		// the reads after these positions were not read
+		result.count.read_stops = q.read_stops
 	}
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 	{
@@ -1330,8 +1367,8 @@ async function query_reads(q) {
 			start: left_edge - varlen,
 			stop: right_edge + varlen
 		}
-		await determine_downsampling(q, [r])
-		await query_region(r, q)
+		// the depth is of q.regions[0], see get_depth()
+		await read_regions(q, [r], false)
 		q.regions[0].lines = r.lines
 		return
 	}
@@ -1345,123 +1382,132 @@ async function query_reads(q) {
 	//	return
 	//}
 
-	// query reads for all regions in q.regions
-	await determine_downsampling(q, q.regions)
-
-	for (const r of q.regions) {
-		await query_region(r, q) // add r.lines[]
-	}
+	// query reads for all regions in q.regions, add r.lines[], and the depth of each region if the pileup is plotted
+	await read_regions(q, q.regions, !q.partstack)
 }
 
 /*
-get total number of reads from all regions
-determine downsampling ratio
+for each region, keep in r.lines[] the sam lines of the reads that are not dropped or downsampled, as samtools view
+prints them for chr:start-stop, and add the reads to the depth of each region if withDepth is true, see get_depth().
+The reads are scanned in batches, which are not kept, so that the reads of a wide or deep region are not all in
+memory, and the scan ends when the reads of the request reach read_limits.maxscanbases: the position of the first
+read that is not read is kept in q.read_stops, and the reads from it on are not read. Each region may read an equal
+part of what is left of the limit, so that a region does not leave none to the regions after it. If the sam lines are
+more than 110% of read_limits.maxrenderbases, they are downsampled to it, see downsample_lines().
 regions can be defined by variant/sv position
 */
-async function determine_downsampling(q, regions) {
-	let totalreads = 0 // total number of reads from all regions
-	for (const r of regions) {
-		const args = ['view', '-c', q.file]
-
-		if (q.fileIsTruncated) {
-			// is truncated gdc slice. do not supply region
-		} else {
-			args.push((q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop)
+export async function read_regions(q, regions, withDepth) {
+	const { maxscanbases, maxrenderbases } = read_limits
+	const kept = [] // {r, line, name, bases} of each read that is not dropped, in the order of the scan
+	let readcount = 0, // the reads that were read from all regions
+		readbases = 0,
+		keptbases = 0
+	for (const [i, r] of regions.entries()) {
+		r.lines = []
+		const depth = withDepth ? new RegionDepth(depth_region(q, r), depth_excluded_flags(q)) : null
+		if (depth) {
+			if (!q.regionDepths) q.regionDepths = new Map()
+			q.regionDepths.set(r, depth)
 		}
-
-		try {
-			await utils.get_lines_bigfile({
-				isbam: true,
-				args,
-				dir: q.dir,
-				callback: line => {
-					const c = Number(line)
-					if (!Number.isInteger(c)) throw 'total number of reads from a region not integer'
-					totalreads += c
+		const limit = readbases + (maxscanbases - readbases) / (regions.length - i)
+		await scan_region(q, r, (records, refNames) => {
+			for (const record of records) {
+				if (readbases >= limit) {
+					// the first read that is not read
+					if (!q.read_stops) q.read_stops = []
+					q.read_stops.push({ chr: r.chr, position: record.start + 1 })
+					return true
 				}
-			})
-		} catch (e) {
-			if (q.fileIsTruncated && e.includes(utils.SAMTOOLS_ERR_MSG.view)) {
-				// expected err with truncated file, ignore
-			} else {
-				// unexpected err
-				throw e
-			}
-		}
-	}
-	if (totalreads < maxreadcount * 1.1) {
-		// no downsampling
-		return
-	}
-	// more than 110% of max reads, will apply downsampling
-	// 10% of maxreadcount as a unit, corresponding to 1 out of ten reads to be dropped
-	const unitcount = (totalreads - maxreadcount) / (maxreadcount * 0.1)
-	// keep/(keep+skip) is the downsampling ratio
-	// pointer++ for every read so that for every #(keep+skip) reads, #skip reads are skipped
-	q.downsample = {
-		keep: 10,
-		skip: Math.floor(unitcount),
-		pointer: 0
-	}
-	q.read_limit_reached = totalreads // notify client
-}
-
-/*
-for each region, query its data
-if too many reads, kill the process and insert a message
-*/
-async function query_region(r, q) {
-	r.lines = []
-	const args = ['view', q.file]
-
-	if (q.fileIsTruncated) {
-		// file is truncated, which could be the case for gdc slice. read through all reads. do not supply query region to not to break samtools view
-	} else {
-		// normal file
-		args.push((q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop)
-	}
-
-	try {
-		await utils.get_lines_bigfile({
-			isbam: true,
-			args,
-			dir: q.dir,
-			callback: (line, ps) => {
-				// Show/Hide PCR optical duplicates
-				const flag = line.split('\t')[1]
-				if (flag & 0x400 && q.drop_pcrduplicates) {
-					return
+				const bases = read_bases(record)
+				readcount++
+				readbases += bases
+				depth?.add(record)
+				if (!is_dropped(q, record)) {
+					kept.push({ r, line: samLine(record, refNames), name: record.name, bases })
+					keptbases += bases
 				}
-				// Show/Hide secondary alignments
-				if (flag & 0x800 && q.drop_supplementary_alignments) {
-					return
-				}
-				if (q.downsample) {
-					// apply downsampling based on the ratio specified in .keep and .skip
-					const d = q.downsample
-					d.pointer++
-					if (d.pointer >= d.keep && d.pointer < d.keep + d.skip) {
-						return
-					}
-					if (d.pointer >= d.keep + d.skip) d.pointer = 0 // restart pointer
-				}
-
-				r.lines.push(line)
 			}
 		})
-	} catch (e) {
-		if (q.fileIsTruncated && e.includes(utils.SAMTOOLS_ERR_MSG.view)) {
-			// expected err with truncated file, ignore
-		} else {
-			// unexpected err
-			throw e
-		}
 	}
+	if (keptbases <= maxrenderbases * 1.1) {
+		// no downsampling
+		for (const k of kept) k.r.lines.push(k.line)
+		return
+	}
+	downsample_lines(kept)
+	q.read_limit_reached = readcount // notify client
+}
+
+/*
+keeps in r.lines[] the lines of the kept reads of read_regions() that have the lowest hash of their name, up to
+read_limits.maxrenderbases, in the order of the scan; the reads of a template, which have the same name, are kept or
+dropped together, and a request of the same reads keeps the same lines, such as of another part of the stacks
+*/
+function downsample_lines(kept) {
+	const hashes = kept.map(k => name_hash(k.name))
+	const order = kept.map((k, i) => i).sort((a, b) => hashes[a] - hashes[b] || a - b)
+	const isKept = new Uint8Array(kept.length)
+	let bases = 0,
+		lastHash
+	for (const i of order) {
+		// the reads of the same name, which are next to each other in the order, are kept together
+		if (bases >= read_limits.maxrenderbases && hashes[i] !== lastHash) break
+		isKept[i] = 1
+		bases += kept[i].bases
+		lastHash = hashes[i]
+	}
+	for (const [i, k] of kept.entries()) {
+		if (isKept[i]) k.r.lines.push(k.line)
+	}
+}
+
+// the 32-bit fnv-1a hash of a read name, mixed by the finalizer of murmur3, so that names that differ at the end
+// differ in all the bits
+function name_hash(name) {
+	let h = 0x811c9dc5
+	for (let i = 0; i < name.length; i++) h = Math.imul(h ^ name.charCodeAt(i), 0x01000193)
+	h = Math.imul(h ^ (h >>> 16), 0x85ebca6b)
+	h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35)
+	return (h ^ (h >>> 16)) >>> 0
+}
+
+// the bases of a read for the limits of read_limits
+function read_bases(record) {
+	return Math.max(read_limits.minreadbases, record.seq_length)
+}
+
+function is_dropped(q, record) {
+	const flag = record.flags
+	// Show/Hide PCR optical duplicates
+	if (flag & 0x400 && q.drop_pcrduplicates) return true
+	// Show/Hide secondary alignments
+	if (flag & 0x800 && q.drop_supplementary_alignments) return true
+	return false
+}
+
+// calls back with the batches of scanBamRecords() for a region, as samtools view reads chr:start-stop
+function scan_region(q, r, onRecords) {
+	const region = { chr: q.nochr ? r.chr.replace('chr', '') : r.chr, start: Math.max(0, r.start - 1), end: r.stop }
+	return scanBamRecords({ file: q.file, dir: q.dir, region, withoutIndex: q.withoutIndex }, onRecords)
+}
+
+// the positions of the depth of a region, which the reads may extend beyond
+function depth_region(q, r) {
+	return { chr: q.nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, end: r.stop }
+}
+
+// as samtools depth -g DUP, with -G 0x400 and -G 0x800 to drop the reads
+function depth_excluded_flags(q) {
+	let excludedFlags = depthExcludedFlags
+	// Show/Hide PCR optical duplicates
+	if (q.drop_pcrduplicates) excludedFlags |= 0x400
+	if (q.drop_supplementary_alignments) excludedFlags |= 0x800
+	return excludedFlags
 }
 
 /*
 
-'samtools depth' returns single base depth
+returns single base depth, as 'samtools depth' does
 results are collected in bplst[]
 when region resolution is high (>=1 pixels for each bp), bplst[] has one element per basepair;
 when region resolution is low with #bp per pixel is above a cutoff e.g. 3,
@@ -1469,7 +1515,7 @@ should summarize into bins, each bin for a pixel with .coverage for each pixel, 
 
 at r.ntwidth>=1:
 	get depth at each bp and plot one bar for each bp;
-	bplst[] is constructed directly according to the "samtools depth" output
+	bplst[] is constructed directly according to the depth of each position from RegionDepth
 	non-covered basepairs will not show up in bplst
 	thus the genomic positions in the array may be *discontinuous*
 	and must use coordinate direct match to find in bplst but not "bp seek"
@@ -1479,64 +1525,43 @@ at r.ntwidth<1:
 	will introduce undefined elements for uncovered regions!!
 	must test if bplst[?] is valid before using
 */
-async function run_samtools_depth(q, r) {
+async function get_depth(q, r) {
 	const bplst = []
-	const args = ['depth']
-
-	if (q.fileIsTruncated) {
+	// the depth from the scan of read_regions(), which is not kept after this
+	let regionDepth = q.regionDepths?.get(r)
+	if (regionDepth) {
+		q.regionDepths.delete(r)
 	} else {
-		args.push('-r')
-		args.push((q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop)
-	}
-	args.push('-g')
-	args.push('DUP')
-	args.push(q.file || q.url)
-
-	// Show/Hide PCR optical duplicates
-	if (q.drop_pcrduplicates) {
-		args.push('-G')
-		args.push('0x400')
-	}
-	if (q.drop_supplementary_alignments) {
-		args.push('-G')
-		args.push('0x800')
-	}
-
-	try {
-		await utils.get_lines_bigfile({
-			isbam: true,
-			args: args,
-			dir: q.dir,
-			callback: line => {
-				const l = line.split('\t')
-				const position = Number.parseInt(l[1]) - 1 // change to 0-based
-				const depth = Number.parseInt(l[2])
-				if (r.ntwidth >= 1) {
-					// zoomed in, one element per basepair
-					bplst.push({ position, total: depth })
-					return
-				}
-				// zoomed out, sum all basepairs covered by each pixel
-				const bpidx = Math.floor((position - r.start) * r.ntwidth) // array index of bplst
-				if (!bplst[bpidx]) {
-					bplst[bpidx] = {
-						position,
-						sum: 0, // temp
-						count: 0 // temp
-					}
-				}
-				bplst[bpidx].sum += depth
-				bplst[bpidx].count++
+		// such as a region of a variant, whose reads are of another region; the depth is of the reads up to
+		// read_limits.maxscanbases, as read_regions() reads them
+		regionDepth = new RegionDepth(depth_region(q, r), depth_excluded_flags(q))
+		let bases = 0
+		await scan_region(q, r, records => {
+			for (const record of records) {
+				regionDepth.add(record)
+				bases += read_bases(record)
+				if (bases >= read_limits.maxscanbases) return true
 			}
 		})
-	} catch (e) {
-		if (q.fileIsTruncated && e.includes(utils.SAMTOOLS_ERR_MSG.view)) {
-			// expected err with truncated file, ignore
-		} else {
-			// unexpected err
-			throw e
-		}
 	}
+	regionDepth.forEach((position, depth) => {
+		if (r.ntwidth >= 1) {
+			// zoomed in, one element per basepair
+			bplst.push({ position, total: depth })
+			return
+		}
+		// zoomed out, sum all basepairs covered by each pixel
+		const bpidx = Math.floor((position - r.start) * r.ntwidth) // array index of bplst
+		if (!bplst[bpidx]) {
+			bplst[bpidx] = {
+				position,
+				sum: 0, // temp
+				count: 0 // temp
+			}
+		}
+		bplst[bpidx].sum += depth
+		bplst[bpidx].count++
+	})
 
 	if (r.ntwidth < 1) {
 		// get average for each bin
@@ -3141,7 +3166,8 @@ async function route_getread(genome, req) {
 
 async function query_oneread(req, r) {
 	const [_file, dir] = await getFilefullpathOrUrl(req)
-	const fileIsTruncated = await samtoolsQuickcheck(_file)
+	// as withoutIndex of get_q()
+	const withoutIndex = (await bam_is_truncated(_file)) || Boolean(req.query.gdcFileUUID)
 	let firstseg, lastseg, readstart, readstop, lst // array of reads to be returned
 
 	if (req.query.unknownorder) {
@@ -3152,81 +3178,66 @@ async function query_oneread(req, r) {
 		readstop = req.query.readstop
 	}
 
-	const args = ['view', _file]
-	if (!fileIsTruncated)
-		args.push((req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop)
-
-	try {
-		await utils.get_lines_bigfile({
-			isbam: true,
-			args,
-			dir,
-			callback: (line, ps) => {
-				if (line.split('\t')[0] != req.query.qname) return
-				const s = parse_one_segment(
-					{ sam_info: line, keepallboxes: true, keepmatepos: true, keepunmappedread: true },
-					r
-				)
-				if (!s) return
-				if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
-				if (
-					(req.query.start != s.segstart_original || req.query.stop != s.segstop) &&
-					!req.query.paired &&
-					!req.query.show_unmapped
-				)
-					return
-				if (req.query.show_unmapped && req.query.getfirst) {
-					// In case first read is mapped and second unmapped
-					if (s.islast) {
-						ps.kill()
-						lst = [s]
-						return
-					}
-				} else if (req.query.show_unmapped && req.query.getlast) {
-					// In case first read is mapped and second unmapped
-					if (s.isfirst) {
-						ps.kill()
-						lst = [s]
-						return
-					}
-				} else if (req.query.getfirst) {
-					if (s.isfirst) {
-						ps.kill()
-						lst = [s]
-						return
-					}
-				} else if (req.query.getlast) {
-					if (s.islast) {
-						ps.kill()
-						lst = [s]
-						return
-					}
-				} else if (req.query.unknownorder) {
-					if (s.segstart == readstart && s.segstop == readstop) {
-						ps.kill()
-						lst = [s]
-						return
-					}
-				} else {
-					// get both
-					if (s.isfirst) firstseg = s
-					else if (s.islast) lastseg = s
-					if (firstseg && lastseg) {
-						ps.kill()
-						lst = [firstseg, lastseg]
-						return
-					}
+	const region = {
+		chr: req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr,
+		// as samtools view reads chr:start-stop
+		start: Math.max(0, Math.floor(r.start) - 1),
+		end: Math.ceil(r.stop)
+	}
+	// the reads are scanned in batches, which are not kept, until the read is found
+	await scanBamRecords({ file: _file, dir, region, withoutIndex }, (records, refNames) => {
+		for (const record of records) {
+			if (record.name != req.query.qname) continue
+			const s = parse_one_segment(
+				{ sam_info: samLine(record, refNames), keepallboxes: true, keepmatepos: true, keepunmappedread: true },
+				r
+			)
+			if (!s) continue
+			if (req.query.show_unmapped && s.discord_unmapped2) continue // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
+			if (
+				(req.query.start != s.segstart_original || req.query.stop != s.segstop) &&
+				!req.query.paired &&
+				!req.query.show_unmapped
+			)
+				continue
+			if (req.query.show_unmapped && req.query.getfirst) {
+				// In case first read is mapped and second unmapped
+				if (s.islast) {
+					lst = [s]
+					return true
+				}
+			} else if (req.query.show_unmapped && req.query.getlast) {
+				// In case first read is mapped and second unmapped
+				if (s.isfirst) {
+					lst = [s]
+					return true
+				}
+			} else if (req.query.getfirst) {
+				if (s.isfirst) {
+					lst = [s]
+					return true
+				}
+			} else if (req.query.getlast) {
+				if (s.islast) {
+					lst = [s]
+					return true
+				}
+			} else if (req.query.unknownorder) {
+				if (s.segstart == readstart && s.segstop == readstop) {
+					lst = [s]
+					return true
+				}
+			} else {
+				// get both
+				if (s.isfirst) firstseg = s
+				else if (s.islast) lastseg = s
+				if (firstseg && lastseg) {
+					lst = [firstseg, lastseg]
+					return true
 				}
 			}
-		})
-	} catch (e) {
-		if (fileIsTruncated && e.includes(utils.SAMTOOLS_ERR_MSG.view)) {
-			// expected err with truncated file, ignore
-		} else {
-			// unexpected err
-			throw e
 		}
-	}
+	})
 
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
@@ -3550,8 +3561,8 @@ function getGDCcacheFileName(req) {
 /*
 req.query{}
 	gdcFileUUID:str
-	gdcFilePosition:str // same as regions[0]
-	regions:[ {chr/start/stop}, ... ]
+	gdcFilePosition:str // same as rglst[0]
+	rglst:[ {chr/start/stop}, ... ]
 
 returns list of slice file sizes that's been cached
 
@@ -3564,9 +3575,12 @@ async function downloadGdcBam2cacheFile_withDenial(req) {
 	}
 
 	// query gdc bam slicing api using the uuid of one bam file
-	// download one bam slice for each region
-	const regions = req.query.regions
-	if (!Array.isArray(regions) || regions.length == 0) throw 'req.query.regions[] not non-empty array'
+	// download one bam slice for each region; the middleware has validated req.query.rglst of a request, against hg38,
+	// and it is validated again here, such as for the slice of gdcFilePosition of mayReSliceFile()
+	getGdcDs(req.query.__genomes)
+	utils.validateRglst(req.query, req.query.__genomes.hg38)
+	if (!Array.isArray(req.query.rglst)) throw 'rglst[] not array'
+	const regions = req.query.rglst
 	let fileStat
 	for (const r of regions) {
 		// FIXME NOTE FUTURE SOLUTION
@@ -3608,9 +3622,9 @@ async function streamGdcBam2response(req, res) {
 */
 
 /*
-	cached bam slices and their .bai files are evicted by CacheManager (see the "bam" subdir in CacheManager.ts and app.ts),
+	cached bam slices are evicted by CacheManager (see the "bam" subdir in CacheManager.ts and app.ts),
 	by last modified time, not access time (to avoid relatime issues). get_gdc_bam() uses utimes() to reset
-	the modified time of both files on every access. From
+	the modified time of a slice on every access. From
 	https://manpages.ubuntu.com/manpages/bionic/en/man8/mount.8.html:
     
     relatime (default mount used in GDC hosts for PP container)
@@ -3644,9 +3658,10 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 		let fileIsTruncated = false
 		/* set to true at:
 		1) when cache file doesn't exist, a new one is streamed from gdc api and terminated due to exceeding max size limit
-		2) when cache file exists, samtools quickcheck found EOF missing
+		2) when cache file exists, bam_is_truncated() found EOF missing
 
-		when set to true, do not throw and abort. do not index this bam and just read all its reads without supplying a coordinate.
+		when set to true, do not throw and abort. a slice is not indexed, whether or not it is truncated, and is read whole,
+		see withoutIndex of get_q()
 
 		per Zhenyu 5/8/2024, "samtools view" will work on a truncated bam:
 		"BAM are bgzip block compressed, so the last block will not be open if truncated, but previous blocks should be fine"
@@ -3689,26 +3704,8 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 			await fs.promises.utimes(fullpath, time, time)
 		}
 
-		fileIsTruncated = await samtoolsQuickcheck(fullpath)
+		fileIsTruncated = await bam_is_truncated(fullpath)
 		// false for normal file, true for truncated, throw if any other issue
-
-		if (fileIsTruncated) {
-			// cache file is truncated. do not index (will fail) and view as is
-		} else {
-			// cache file is whole. index it to allow faster query
-			const baiFilePath = fullpath + '.bai'
-			if (await utils.file_not_exist(baiFilePath)) {
-				// index file not found. do indexing
-				await index_bam(fullpath)
-				// index file is supposed to be produced
-				if (await utils.file_not_exist(baiFilePath)) {
-					throw 'index file is missing after indexing'
-				}
-			} else {
-				// change the modify times to prevent automated deletion with mayDeleteCacheFiles()
-				await fs.promises.utimes(baiFilePath, time, time)
-			}
-		}
 
 		const fileStat = { size: bplen((await fs.promises.stat(fullpath)).size, true) }
 		if (fileIsTruncated) fileStat.truncated = 1
@@ -3720,24 +3717,11 @@ async function get_gdc_bam(chr, start, stop, gdcFileUUID, bamfilename, req) {
 	}
 }
 
-async function samtoolsQuickcheck(file) {
+// true for a truncated file, false for a normal file, as samtools quickcheck; throws for any other issue
+async function bam_is_truncated(file) {
 	try {
-		await utils.get_lines_bigfile({
-			isbam: true,
-			args: ['quickcheck', file],
-			callback: line => {}
-		})
+		return await isBamTruncated(file)
 	} catch (e) {
-		// on any error, it outputs line(s) to standard error. catch such error and assess
-		if (e.trim().endsWith(utils.SAMTOOLS_ERR_MSG.quickcheck)) return true // file is truncated. return true
 		throw 'unhandled bam check error: ' + e
 	}
-	return false // no output. file is fine. return false
-}
-
-async function index_bam(file) {
-	// only work for gdc bam slices, file is absolute path in cache dir
-	const { code, stderr } = await runToolOutput('samtools.index', { file })
-	// get_lines_bigfile(), which this replaced, rejected on any stderr output
-	if (code !== 0 || stderr.trim()) throw stderr.trim() || `samtools index exited with code ${code}`
 }

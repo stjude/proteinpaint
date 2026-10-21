@@ -1,10 +1,11 @@
 /********************************************
-Unit Test for parse_align_output, get_partstack and may_trimstacks (server/src/bam.js)
+Unit Test for parse_align_output, get_partstack, may_trimstacks, read_regions and the request values of the
+rendering route (server/src/bam.js)
 Run with:  node server/src/test/bam.unit.spec.ts
 *********************************************/
 
 import tape from 'tape'
-import { parse_align_output, get_partstack, may_trimstacks } from '../bam.js'
+import bamRoute, { parse_align_output, get_partstack, may_trimstacks, read_limits, read_regions } from '../bam.js'
 
 tape('bam.js - parse_align_output', async t => {
 	const multiSeqClustal =
@@ -110,6 +111,161 @@ tape('bam.js - may_trimstacks', t => {
 		const lst = may_trimstacks(group, templates, {})
 		t.equal(group.stacks.length, 0, 'should have no stacks for a range after the last stack')
 		t.equal(lst.length, 0, 'should have no templates for a range after the last stack')
+	}
+	t.end()
+})
+
+/*
+files/hg38/bam/edge.bam has 600 unpaired reads of 100nt on chr17 from 7680001 to 7684194, one every 7 bases, and 20
+reads before them from 7669950, with two pairs, see bamFile.unit.spec.ts
+*/
+const edgeQuery = () => ({ file: 'files/hg38/bam/edge.bam', dir: null, withoutIndex: false, nochr: false })
+const lineStart = (line: string) => Number(line.split('\t')[3])
+/** a region of edge.bam on chr17, with the sam lines that read_regions() keeps */
+const edgeRegion = (start: number, stop: number) => ({ chr: 'chr17', start, stop, lines: [] as string[] })
+
+/** read_regions() with read_limits changed to limits, which are restored after it */
+async function readWithLimits(limits: Partial<typeof read_limits>, regions: any[], withDepth = false) {
+	const saved = { ...read_limits }
+	Object.assign(read_limits, limits)
+	try {
+		const q: any = edgeQuery()
+		await read_regions(q, regions, withDepth)
+		return q
+	} finally {
+		Object.assign(read_limits, saved)
+	}
+}
+
+tape('bam.js - read_regions: the limits of the reads', async t => {
+	{
+		const r = edgeRegion(7680001, 7700000)
+		const q = await readWithLimits({}, [r])
+		t.equal(r.lines.length, 600, 'should keep all the reads under the limits')
+		t.notOk(q.read_stops, 'should not stop the reads under the limits')
+		t.notOk(q.read_limit_reached, 'should not downsample the reads under the limits')
+	}
+	{
+		// 100 reads of 100nt
+		const r = edgeRegion(7680001, 7700000)
+		const q = await readWithLimits({ maxscanbases: 100 * 100 }, [r], true)
+		t.equal(r.lines.length, 100, 'should read the reads up to maxscanbases')
+		t.deepEqual(
+			r.lines.map(lineStart),
+			Array.from({ length: 100 }, (_, i) => 7680001 + 7 * i),
+			'should read the first reads of the region'
+		)
+		t.deepEqual(q.read_stops, [{ chr: 'chr17', position: 7680701 }], 'should have the start of the first read not read')
+		let last = 0
+		q.regionDepths.get(r).forEach((position: number) => (last = position))
+		t.equal(last, 7680693 + 99, 'should have the depth of the reads that were read')
+	}
+	{
+		const a = edgeRegion(7680001, 7682100),
+			b = edgeRegion(7682101, 7700000)
+		const q = await readWithLimits({ maxscanbases: 200 * 100 }, [a, b])
+		t.equal(a.lines.length, 100, 'should read half of maxscanbases in the first of two regions')
+		t.equal(b.lines.length, 100, 'should leave the other half of maxscanbases to the second region')
+		t.equal(q.read_stops?.length, 2, 'should have the stop of each region')
+	}
+	{
+		const r = edgeRegion(7680001, 7700000)
+		const q = await readWithLimits({ maxrenderbases: 100 * 100 }, [r])
+		t.equal(r.lines.length, 100, 'should downsample the reads to maxrenderbases')
+		t.equal(q.read_limit_reached, 600, 'should have the number of reads that were read')
+		t.notOk(q.read_stops, 'should not stop the reads that are downsampled under maxscanbases')
+		const starts = r.lines.map(lineStart)
+		t.deepEqual(
+			starts,
+			[...starts].sort((x, y) => x - y),
+			'should keep the downsampled reads in the order of the file'
+		)
+		t.ok(starts.at(-1)! > 7683000, 'should downsample the reads across the region')
+		const again = edgeRegion(7680001, 7700000)
+		await readWithLimits({ maxrenderbases: 100 * 100 }, [again])
+		t.deepEqual(again.lines, r.lines, 'should keep the same reads for the same request')
+	}
+	{
+		// the reads of a pair have the same name
+		const names = (r: any) => r.lines.map((l: string) => l.split('\t')[0])
+		const all = edgeRegion(7669950, 7680000)
+		await readWithLimits({}, [all])
+		const count = new Map<string, number>()
+		for (const n of names(all)) count.set(n, (count.get(n) || 0) + 1)
+		const pairs = [...count].filter(([, n]) => n == 2).map(([name]) => name)
+		t.equal(pairs.length, 2, 'should have two pairs in the region')
+		let split = 0
+		for (let n = 1; n < all.lines.length; n++) {
+			const r = edgeRegion(7669950, 7680000)
+			await readWithLimits({ maxrenderbases: n * 100 }, [r])
+			const kept = names(r)
+			for (const p of pairs) if (kept.filter((x: string) => x == p).length == 1) split++
+		}
+		t.equal(split, 0, 'should keep or drop the reads of a pair together')
+	}
+	t.end()
+})
+
+/** the response of the rendering route for a request of the reads of edge.bam, with changes to the request */
+async function renderEdge(change: Record<string, any>) {
+	// the reads from 7680001, at less than one pixel per base, so that the reference sequence is not read
+	const genomes = { hg38: { chrlookup: { CHR17: { name: 'chr17', len: 83257441 } } } }
+	const query = {
+		genome: 'hg38',
+		file: 'files/hg38/bam/edge.bam',
+		nochr: false,
+		pileupheight: 100,
+		rglst: [{ chr: 'chr17', start: 7680000, stop: 7685000, width: 500, x: 0 }],
+		...change
+	}
+	for (const [k, v] of Object.entries(query)) if (v === undefined) delete query[k]
+	let data: any
+	const req = { query, get: () => undefined, cookies: {} }
+	await bamRoute(genomes)(req, { send: (d: any) => (data = d) })
+	return data
+}
+
+/** the width of a png data url */
+const pngWidth = (src: string) => Buffer.from(src.split(',')[1], 'base64').readUInt32BE(16)
+
+tape('bam.js - the request values of the rendering route', async t => {
+	{
+		const data = await renderEdge({})
+		t.notOk(data.error, 'should render the reads of rglst')
+		t.equal(data.count?.r, 600, 'should render all the reads of rglst')
+	}
+	{
+		const data = await renderEdge({
+			rglst: JSON.stringify([{ chr: 'chr17', start: 7680000, stop: 7685000, width: 500, x: 0 }])
+		})
+		t.equal(data.count?.r, 600, 'should parse a JSON string of rglst')
+	}
+	{
+		const regions = [{ chr: 'chr17', start: 7680000, stop: 7685000, width: 500, x: 0 }]
+		const data = await renderEdge({ rglst: undefined, regions })
+		t.match(String(data.error), /rglst/, 'should reject a request of regions without rglst')
+	}
+	for (const rglst of ['[]x', '"chr17"', 'chr17']) {
+		const data = await renderEdge({ rglst })
+		t.match(String(data.error), /rglst/, `should reject rglst=${rglst}`)
+	}
+	{
+		const data = await renderEdge({ rglst: [{ chr: 'chr17', start: 7680000, stop: 7685000, width: 500 }] })
+		t.match(String(data.error), /\.x of a region/, 'should reject a region without x')
+	}
+	{
+		const data = await renderEdge({ rglst: [{ chr: 'chr17', start: 7680000, stop: 7685000, width: 500, x: 1e9 }] })
+		t.match(String(data.error), /out of bound/, 'should reject a region beyond the canvas width limit')
+	}
+	for (const pileupheight of [1e6, -1, 'x']) {
+		const data = await renderEdge({ pileupheight })
+		t.match(String(data.error), /pileupheight/, `should reject pileupheight=${pileupheight}`)
+	}
+	{
+		const data = await renderEdge({ devicePixelRatio: 1000 })
+		t.equal(pngWidth(data.groups[0].src), 500 * 4, 'should render a large pixel ratio at the limit')
+		const low = await renderEdge({ devicePixelRatio: 0.5 })
+		t.equal(pngWidth(low.groups[0].src), 500, 'should render a pixel ratio below 1 at 1')
 	}
 	t.end()
 })

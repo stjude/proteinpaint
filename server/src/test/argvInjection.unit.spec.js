@@ -3,7 +3,6 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import crypto from 'crypto'
-import { spawnSync } from 'child_process'
 import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
 import { api as ntseqApi } from '../routes/ntseq.ts'
@@ -22,9 +21,8 @@ A request value that lands in a samtools/tabix argv and starts with "-" is parse
 coord="-cr/etc/passwd" made `samtools faidx` read and echo a server file, a region chr="-o/path" made
 `samtools view` write to an arbitrary path, and chr="-fc" made tabix rebuild a track index.
 Each route below is driven with those payloads; the request must be rejected before any tool runs.
-When samtools is installed, the specs also assert on the filesystem that nothing was read or written;
-those assertions are skipped when it is absent. A tabix file is read in process, see tabix.ts, and the specs
-assert that its index is not changed.
+The specs also assert on the filesystem that nothing was read or written. A fasta, bam, or tabix file is read in
+process, see fasta.ts, bamFile.ts, and tabix.ts, and the specs assert that a tabix index is not changed.
 
 test sections:
 - get_fasta() with a chr that looks like an option
@@ -38,8 +36,6 @@ test sections:
 - /mdsgeneboxplot and /isoformbycoord, via the real route table
 - /svmr, via the real route table
 */
-
-const hasSamtools = spawnSync(serverconfig.samtools, ['--version']).status === 0
 
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-argv-'))
 const leakMarker = 'LEAK_MARKER_' + crypto.randomUUID()
@@ -144,21 +140,21 @@ tape('/tkbam', async test => {
 	const urlAttack = await send(handler, {
 		genome: 'hg38',
 		url: `-o${outFile}://abcde`,
-		regions: [{ chr: 'chr1', start: 1, stop: 100, width: 100 }]
+		rglst: [{ chr: 'chr1', start: 1, stop: 100, width: 100, x: 0 }]
 	})
 	test.equal(urlAttack?.error, 'url must not start with "-"', 'should reject a url starting with "-"')
 
-	// regions[] are validated before any samtools process starts, so these run without samtools too
+	// rglst[] is validated before the file is read
 	for (const chr of chrAttacks) {
 		const r = await send(handler, {
 			genome: 'hg38',
 			file: 'files/hg38/TermdbTest/trackLst/bam.bam',
 			nochr: false,
-			regions: [{ chr, start: 1, stop: 100, width: 100 }]
+			rglst: [{ chr, start: 1, stop: 100, width: 100, x: 0 }]
 		})
-		test.equal(r?.error, 'q.rglst[].chr invalid chr name', `regions[] should reject chr=${chr}`)
+		test.equal(r?.error, 'q.rglst[].chr invalid chr name', `rglst[] should reject chr=${chr}`)
 	}
-	if (hasSamtools) test.notOk(fs.existsSync(outFile), 'samtools view should not write to a requested path')
+	test.notOk(fs.existsSync(outFile), 'should not write to a requested path')
 	test.end()
 })
 

@@ -1,6 +1,6 @@
 #Unit test image for ProteinPaint (server+Python workspaces).
 
-# Pull the published base (whole environment: Node, /opt/venv Python, R, samtools) from GHCR
+# Pull the published base (whole environment: Node, /opt/venv Python, R, bcftools) from GHCR
 FROM ghcr.io/stjude/ppserver:latest
 
 # The ppserver image runs as the unprivileged app user (UID 1000), but this image installs packages

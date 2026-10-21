@@ -1034,7 +1034,7 @@ export async function bamsliceui(
 			} else {
 				body.gdcFilePosition = par.chr + ':' + par.start + '-' + par.stop
 				// SV_EXPAND
-				body.regions = [{ chr: par.chr, start: par.start, stop: par.stop }]
+				body.rglst = [{ chr: par.chr, start: par.start, stop: par.stop }]
 			}
 
 			if (stream2download) {

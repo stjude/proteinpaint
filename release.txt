@@ -1,1 +1,6 @@
+Features:
+- The server reads bam files in process, with @gmod/bam, instead of running samtools view, depth, and quickcheck; a gdc bam slice is read whole and is not indexed
+- The server and its Docker image do not need samtools; serverconfig.samtools is not used
 
+Fixes:
+- The reads and coverage of a truncated gdc bam slice are of the shown region, not of the whole slice

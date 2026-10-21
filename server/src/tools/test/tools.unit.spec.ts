@@ -269,13 +269,7 @@ const otherOps: Record<string, { input: Record<string, unknown>; argv: string[];
 		bad: { file: ["a'); system('ls'); ('", '/etc/passwd', path.join(tp, '../a.RData'), '-o'] }
 	},
 	vm_stat: { input: {}, argv: [], bad: {} },
-	'samtools.version': { input: {}, argv: ['--version'], bad: {} },
 	'bcftools.version': { input: {}, argv: ['-v'], bad: {} },
-	'samtools.index': {
-		input: { file: path.join(cache, 'gdcbam/a.bam') },
-		argv: ['index', path.join(cache, 'gdcbam/a.bam')],
-		bad: { file: [path.join(tp, 'a.bam'), '-o'] }
-	},
 	'bigBed.query': {
 		input: { chr: 'chr1', start: 0, end: 1000, file: 'anno/a.bb' },
 		argv: ['-chrom=chr1', '-start=0', '-end=1000', path.join(tp, 'anno/a.bb'), 'stdout'],

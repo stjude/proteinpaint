@@ -28,7 +28,7 @@ function init({ genomes }) {
 				seq: seq.split('\n').slice(1).join('')
 			} satisfies NtseqResponse)
 		} catch (e: any) {
-			// do not reflect samtools stderr, which can echo file contents
+			// do not send the error, which can have the contents of a file
 			console.log(e.stack || e)
 			res.send({ error: 'cannot get sequence' })
 		}

@@ -230,7 +230,7 @@ export async function loadTk(tk, block) {
 async function getData(tk, block, additional = {}) {
 	const body = {
 		genome: block.genome.name,
-		regions: tk.regions,
+		rglst: tk.regions,
 		nucleotide_length: block.exonsf,
 		pileupheight: tk.pileupheight,
 		...additional
@@ -341,15 +341,23 @@ or update existing groups, in which groupidx will be provided
 		tk.dom.pileup_img.attr('width', 0)
 	}
 
-	if (data.count.read_limit_reached) {
+	if (data.count.read_limit_reached || data.count.read_stops) {
 		// too many reads
 		tk.toomanyreads = true
-		tk.dom.read_limit_text
-			.text(
-				`Downsampled to ${data.groups.reduce((i, j) => i + j.count.r, 0)} from ${
-					data.count.read_limit_reached
-				} reads. Try zooming into a smaller region.`
+		const lst = []
+		if (data.count.read_stops) {
+			// the server stopped reading the reads of a region at the position, the reads after it are not shown
+			const stops = data.count.read_stops.map(s => `${s.chr}:${s.position.toLocaleString()}`).join(', ')
+			lst.push(`Too many reads, loaded up to ${stops}.`)
+		}
+		if (data.count.read_limit_reached) {
+			lst.push(
+				`Downsampled to ${data.groups.reduce((i, j) => i + j.count.r, 0)} from ${data.count.read_limit_reached} reads.`
 			)
+		}
+		lst.push('Try zooming into a smaller region.')
+		tk.dom.read_limit_text
+			.text(lst.join(' '))
 			.attr('x', data.pileup_data.width / 2)
 			.attr('transform', 'scale(1)')
 	} else {
@@ -1534,7 +1542,7 @@ async function align_reads_to_allele(tk, group, block) {
 	const body = {
 		alignOneGroup: group.data.type,
 		genome: block.genome.name,
-		regions: tk.regions,
+		rglst: tk.regions,
 		variant: tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.')
 	}
 	if (tk.file) body.file = tk.file

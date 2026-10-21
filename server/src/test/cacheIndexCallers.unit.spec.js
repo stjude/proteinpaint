@@ -32,7 +32,7 @@ const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-cacheidx-callers-'))
 const hasBigBedInfo = !spawnSync(serverconfig.bigBedInfo, []).error
 const up = '/..'.repeat(40) // more than enough to reach "/" from any cachedir
 // a new array for each request, since some handlers add properties to rglst[]
-const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100 }]
+const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100, x: 0 }]
 
 // request paths that the local server has received
 const hits = new Set()
@@ -89,7 +89,7 @@ const routeCases = [
 		name: 'tkbam',
 		route: '/tkbam',
 		file: 'bam.js',
-		query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, regions: rglst() })
+		query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() })
 	},
 	{
 		name: 'tkbam-getread',
@@ -292,9 +292,9 @@ function samplematrixQuery(flag, url, indexURL) {
 
 // callers whose url and indexURL come from a dataset config, not a request; they still go through utils.cache_index()
 const configCallers = ['km.js', 'mds3.init.js']
-// callers of a url that another caller gives them, which has its own case; tabix.ts gets the cache dir of a url
+// callers of a url that another caller gives them, which has its own case; indexedFile.ts gets the cache dir of a url
 // that is given without one, see the url file section of tabix.unit.spec.ts
-const libraryCallers = ['tabix.ts']
+const libraryCallers = ['indexedFile.ts']
 
 tape('\n', async function (test) {
 	test.comment('-***- cache_index() caller specs -***-')

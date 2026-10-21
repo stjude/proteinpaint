@@ -9,7 +9,6 @@ import { specs as gfClientSpecs } from './gfClient.ts'
 import { specs as h5dumpSpecs } from './h5dump.ts'
 import { specs as hicstrawSpecs } from './hicstraw.ts'
 import { specs as rscriptSpecs } from './rscript.ts'
-import { specs as samtoolsSpecs } from './samtools.ts'
 import { specs as systemSpecs } from './system.ts'
 import { specs as versionSpecs } from './versions.ts'
 
@@ -86,7 +85,6 @@ export const specs: Readonly<Record<string, ToolSpec>> = deepFreeze(
 		h5dumpSpecs,
 		hicstrawSpecs,
 		rscriptSpecs,
-		samtoolsSpecs,
 		systemSpecs,
 		versionSpecs
 	])

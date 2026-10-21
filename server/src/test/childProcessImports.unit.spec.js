@@ -31,7 +31,7 @@ const allowed = new Map([
 	['rust/index.js', 'rust binaries for run_rust()'],
 	['server/genome/copyDataFilesFromRepo2Tp.js', 'test genome data setup'],
 	['server/src/tools/index.ts', 'the tools of the specs in server/src/tools, see runTool()'],
-	['server/src/utils.js', 'samtools and bcftools reads, see spawnTool() and get_lines_bigfile()']
+	['server/src/utils.js', 'bcftools reads, see spawnTool() and get_lines_bigfile()']
 ])
 
 tape('child_process imports', test => {

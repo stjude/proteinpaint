@@ -14,6 +14,7 @@ import { minimatch } from 'minimatch'
 import { runTool } from './tools/index.ts'
 import { readFastaRegion } from './fasta.ts'
 import { readTabixLines, readTabixHeader, listTabixChrs } from './tabix.ts'
+import { listBamChrs } from './bamFile.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -23,7 +24,7 @@ export { connect_db } from './sql.ts'
 // the reads of a bgzipped, tabix-indexed file, see tabix.ts
 export { readTabixLines, readTabixHeader, listTabixChrs }
 
-const { samtools, bcftools, bigBedInfo } = serverconfig
+const { bcftools, bigBedInfo } = serverconfig
 
 /*********************** EXPORTED
 cache_index
@@ -82,7 +83,7 @@ export async function cache_index(gzurl, indexurl) {
 	const [e, protocol, body] = test_url(gzurl)
 	if (e) throw '.gz file URL error: ' + e
 	// some routes pass a request url to cache_index() without fileurl(), and the url is then fetched by
-	// spawned tools such as tabix and samtools, so its host is checked here as well
+	// spawned tools such as bcftools, so its host is checked here as well
 	const gzHostErr = illegalUrlHost(gzurl)
 	if (gzHostErr) throw '.gz file URL error: ' + gzHostErr
 	// build cache directory using gz file url and do not include index portion
@@ -163,7 +164,7 @@ export function fileurl(req, checkWhiteList = true) {
 		if (file.includes('"') || file.includes("'")) return ['url must not contain single or double quotes']
 		// the url is turned into a cache dir path by cache_index()
 		if (file.split('/').includes('..')) return ['url must not contain ".." path segment']
-		// url goes into samtools/tabix argv, where a leading '-' would be parsed as an option
+		// url goes into the argv of a spawned tool, such as bcftools, where a leading '-' would be parsed as an option
 		if (file[0] == '-') return ['url must not start with "-"']
 		// a url is passed to spawned tools, which the node permission model does not restrict, so
 		// a bare local path such as /etc/x.bb would be read from outside tpmasterdir and allow-fs-read
@@ -250,7 +251,7 @@ export function illegalPathSegment(s) {
 export function test_url(u) {
 	const tmp = u.split('://')
 	if (tmp.length != 2) return ['improper url']
-	if (u[0] == '-') return ['url must not start with "-"'] // would be parsed as a samtools/tabix option
+	if (u[0] == '-') return ['url must not start with "-"'] // would be parsed as an option of a spawned tool
 	const protocol = tmp[0].toLowerCase()
 	if (!cacheUrlProtocols.has(protocol)) return ['protocol must be http, https or ftp']
 	if (tmp[1].split(/[/\\]/).includes('..')) return ['must not contain ".." path segment']
@@ -310,7 +311,7 @@ for (const [ip, prefix] of [
 	  that resolves to a non-public ip address is not detected, so set serverconfig.urlHosts to fully
 	  prevent SSRF.
 	- an index url that is downloaded by download_index() has each redirect destination checked as well.
-	  A url that is fetched by a spawned tool, such as tabix, samtools, straw or bigBedToBed, may still
+	  A url that is fetched by a spawned tool, such as bcftools, straw or bigBedToBed, may still
 	  follow a redirect to a host that is not allowed, since these tools follow redirects internally;
 	  restrict the outbound network access of the server to fully prevent that.
 */
@@ -618,17 +619,14 @@ export async function get_header_vcf(file, dir) {
 /*
 .isbcf: true
 	big file is bcf file and will use the "bcftools" command
-.isbam: true
-	big file is bam and will use "samtools" command
 
-** one of isbcf or isbam must be true; a bgzip/tabix file is read with readTabixLines(), readTabixHeader(), or
-** listTabixChrs(), and listTabixChrs() also works on bcf files
+** isbcf must be true; a bgzip/tabix file is read with readTabixLines(), readTabixHeader(), or listTabixChrs(), and
+** listTabixChrs() also works on bcf files; a bam file is read with readBamRecords() of bamFile.ts
 
 .args: []
 	argument array for spawn, includes file path or url, and coordinate position
 	e.g.
 	- bcftools query
-	- samtools view -c (counts only)
 
 .dir: cache dir for custom file, undefined for native file
 
@@ -636,16 +634,16 @@ export async function get_header_vcf(file, dir) {
 	function to process the line
 	ps as the second arg so callback may choose to kill the process e.g. too many lines returned
 */
-export function get_lines_bigfile({ args, callback, dir = null, isbcf = false, isbam = false }) {
+export function get_lines_bigfile({ args, callback, dir = null, isbcf = false }) {
 	if (!args) throw 'args is missing'
 	if (!Array.isArray(args)) throw 'args[] is not array'
 	if (args.length == 0) throw 'args[] empty array'
 	if (!callback) throw 'callback is missing'
 	if (typeof callback != 'function') throw 'callback() not a function'
-	// a tabix file is read with readTabixLines(), readTabixHeader(), or listTabixChrs(), which check each argument
-	if (!isbcf && !isbam) throw 'get_lines_bigfile() is only for bcf and bam files'
+	// a tabix or bam file is read in process, see tabix.ts and bamFile.ts, which check each argument
+	if (!isbcf) throw 'get_lines_bigfile() is only for bcf files'
 	return new Promise((resolve, reject) => {
-		const ps = spawnTool(isbcf ? bcftools : samtools, args, { cwd: dir })
+		const ps = spawnTool(bcftools, args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
 		const em = []
 		rl.on('line', line => callback(line, ps))
@@ -717,7 +715,7 @@ export function read_file(file) {
 }
 
 export async function get_fasta(gn, coord) {
-	// coord may come from a request; rebuild it from validated parts so it can never be read as a samtools option
+	// coord may come from a request; rebuild it from validated parts so that only a validated region is read
 	// donotextend=true keeps the given range as is; a missing actualposition means only a chr name was given
 	const p = typeof coord == 'string' && gn.chrlookup ? common.string2pos(coord, gn, true) : null
 	if (!p?.actualposition) throw 'invalid coordinate'
@@ -786,42 +784,9 @@ export function stripJsScript(text) {
 	*/
 }
 
-// fileIsTruncated=true when the bam file is truncated, e.g. from gdc slicing
-export async function bam_ifnochr(file, genome, dir, fileIsTruncated) {
-	const lines = []
-
-	try {
-		await get_lines_bigfile({
-			isbam: true,
-			args: ['view', '-H', file],
-			dir,
-			callback: line => lines.push(line)
-		})
-	} catch (e) {
-		/*
-		if fileIsTruncated=true, samtools view -H will print one line to stderr while continue to output all header lines
-		in such case must ignore the err, for truncated gdc slice to work
-		*/
-		if (fileIsTruncated && typeof e == 'string' && e.endsWith(SAMTOOLS_ERR_MSG.view)) {
-			// expected. ignore this err and continue to parse header lines
-		} else {
-			// unexpected err
-			throw e
-		}
-	}
-
-	if (lines.length == 0) throw 'cannot list bam header lines'
-	const chrlst = []
-	for (const line of lines) {
-		if (!line.startsWith('@SQ')) continue
-		const tmp = line.split('\t')[1]
-		if (!tmp) throw '2nd field missing from @SQ line'
-		const l = tmp.split(':')
-		if (l[0] != 'SN') throw '@SQ line 2nd field is not "SN" but ' + l[0]
-		if (!l[1]) throw '@SQ line no value for SN'
-		chrlst.push(l[1])
-	}
-	return common.contigNameNoChr(genome, chrlst)
+// withoutIndex=true when the bam file has no index, such as a gdc slice or a truncated file
+export async function bam_ifnochr(file, genome, dir, withoutIndex) {
+	return common.contigNameNoChr(genome, await listBamChrs(file, dir, withoutIndex))
 }
 
 export function query_bigbed_by_coord(bigbed, chr, start, end) {
@@ -941,7 +906,7 @@ genome is used for validating chr names. when routes are fixed, genome should be
 
 throws on any err. makes no return. may update q
 */
-// every samtools/tabix/bcftools spawn goes through here: an argument that starts with "-" and contains ":" is a
+// every bcftools spawn goes through here: an argument that starts with "-" and contains ":" is a
 // region built from a request chr (e.g. "-o/path:1-2"), which the tool would parse as an option
 // ponytail: catches region-shaped injection only; request values used as a whole argument must still be validated at the route
 export function spawnTool(bin, args, opts) {
@@ -1039,18 +1004,6 @@ export function isAbortError(e) {
 		if (e.name === 'AbortError') return true
 	}
 	// may add additional logic to detect
-}
-
-//////////////////////////////
-//         fragile!!        //
-//////////////////////////////
-// these error messages are printed by samtools 1.19.2 and are required for detecting and using truncated gdc bams.
-// if in a new version they change such messages on a whim, our gdc bam tk features will break!!
-export const SAMTOOLS_ERR_MSG = {
-	// from "samtools view"
-	view: 'EOF marker is absent. The input is probably truncated',
-	// from "samtools quickcheck"
-	quickcheck: 'was missing EOF block when one should be present.'
 }
 
 // obj: object to be updated

@@ -5,7 +5,7 @@ of ProteinPaint, which the release images in `container/server` and `container/f
 
 | Target (image) | Contents |
 |---|---|
-| `ppbase` | the OS (Debian trixie), R, Python, Node, htslib/samtools/bcftools, and tools such as `straw` and `gfClient` |
+| `ppbase` | the OS (Debian trixie), R, Python, Node, htslib/bcftools, and tools such as `straw` and `gfClient` |
 | `ppserver` | `ppbase` + the `@sjcrh/proteinpaint-server` package and `app-server.mjs` |
 | `ppfull` | `ppserver` + the `@sjcrh/proteinpaint-front` package, `app-full.mjs`, and `container/public` |
 
@@ -118,7 +118,7 @@ The `Dockerfile` stages are ordered and split so that the slow steps are rebuilt
 | Stage | Contents | Rebuilt when |
 |---|---|---|
 | `os` | the apt system libs, build toolchain, R, and python3 | the pinned base image or the apt package list changes |
-| `hts` | htslib, samtools, bcftools | `htsversion` changes |
+| `hts` | htslib, bcftools | `htsversion` changes |
 | `rlib` | the R packages, CRAN binaries from the Posit Package Manager, and the compiled Bioconductor packages | `R/utils` changes |
 | `py` | the python venv | `python/requirements.txt` changes |
 | `tools` | `straw`, `gfClient`, and the UCSC binaries | the download list changes |

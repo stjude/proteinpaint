@@ -6,7 +6,6 @@ import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 
-// const samtools = serverconfig.samtools
 // const bcftools = serverconfig.bcftools
 // const hicstraw = serverconfig.hicstraw
 

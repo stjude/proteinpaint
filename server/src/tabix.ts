@@ -1,24 +1,21 @@
 import fs from 'fs'
-import path from 'path'
 import { gunzipSync } from 'zlib'
 import { TabixIndexedFile } from '@gmod/tabix'
 import { unzip } from '@gmod/bgzf-filehandle'
 import { SharedBudget } from '@gmod/shared-read-cache'
-import { LocalFile, RemoteFile } from 'generic-filehandle2'
-import type { Fetcher, GenericFilehandle } from 'generic-filehandle2'
-import serverconfig from './serverconfig.js'
+import { LocalFile } from 'generic-filehandle2'
+import type { GenericFilehandle } from 'generic-filehandle2'
 import { libraryErrorText } from './utils/libraryError.ts'
-import { cache_index, download_index, illegalUrlHost, test_url } from './utils.js'
+import { locateIndexedFile } from './indexedFile.ts'
+import { OpenFiles } from './utils/openFiles.ts'
+import type { IndexKind } from './indexedFile.ts'
 
 /*
 Reads a bgzipped, tabix-indexed file in the server process, with @gmod/tabix, instead of with the tabix tool.
 The reads are the same as those of the tool, see readTabixLines(), readTabixHeader(), and listTabixChrs().
 
-A file is a path under tp or cachedir, where a relative path is under tp, or an http or https url when
-serverconfig.features.ALLOW_remotefilefromurl is true. The index of a local file is file.tbi, or else file.csi.
-The index of a url file is kept in the cache dir of the url, from cache_index() in utils.js, as tabix keeps the
-index that it downloads in its working dir: it is downloaded from the url with .tbi, or else .csi, if it is not
-there yet.
+A file is located as in indexedFile.ts. The index of a local file is file.tbi, or else file.csi. The index of a url
+file is url.tbi, or else url.csi, which is kept in the cache dir of the url.
 
 An opened file, with its parsed index, is kept for later reads, until its index or data file changes or it is one
 of the files that have not been read for the longest time, see maxOpenFiles.
@@ -34,8 +31,6 @@ type ReadArg = {
 /** a range of getLines(), which is 0-based and half-open; no end for the end of the chromosome */
 type Range = { chr: string; start: number; end?: number }
 type OpenFile = {
-	/** changes when the index or data file changes */
-	stamp: string
 	tbx: TabixIndexedFile
 	handles: GenericFilehandle[]
 	indexPath: string
@@ -52,22 +47,15 @@ const maxRegions = 1000
 const maxOpenFiles = 100
 /** the decompressed chunks that all open files keep for later reads, in bytes */
 const chunkCacheBudget = new SharedBudget(256 * 2 ** 20)
-/** the redirects of a url that are followed, as in download_index() of utils.js */
-const maxRedirects = 5
-/** the time limit of each request of a url file, with its redirects and body, in ms; a test may change it */
-export const urlRequest = { timeoutMs: 60_000 }
+const tabixIndex: IndexKind = { name: 'tabix', localPaths: f => [f + '.tbi', f + '.csi'], exts: ['.tbi', '.csi'] }
 
-// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
-const cachedir = serverconfig.cachedir
-
-/** by the order of last use, the least recently used first */
-const openFiles = new Map<string, OpenFile>()
+const openFiles = new OpenFiles<OpenFile>(maxOpenFiles, closeFile)
 
 /*
 The read of each region of a file, in the order of the regions, as tabix reads them.
 
 file: the full path of a local file, or a url
-dir: the cache dir of a url file, from cache_index(), where its index is kept; none for a local file
+dir: the cache dir of a url file, where its index is kept, see indexedFile.ts; none for a local file
 regions: [{chr, start, stop}], with the coordinates that tabix reads, see getRange()
 callback(line, stop): called with each line; stop() ends the read early, such as when too many lines are read
 	A callback that throws rejects the read.
@@ -160,23 +148,13 @@ function getRange(r: Region): Range | null {
 
 /** returns the open file of a file, which is opened again if its index or data file has changed */
 async function openTabixFile(file: unknown, dir: unknown): Promise<OpenFile> {
-	// a url and a local file are checked and located by separate functions, so that a url never reaches the reads of
-	// a local file
-	const { location, index, open } =
-		typeof file == 'string' && file.includes('://') ? await locateUrlFile(file, dir) : await locateLocalFile(file, dir)
+	const { location, index, open } = await locateIndexedFile(file, dir, tabixIndex)
 	const key = location + '\t' + index.path
-	const cached = openFiles.get(key)
-	// a map keeps the order of insertion, so a file is moved to the end on each use
-	openFiles.delete(key)
-	if (cached?.stamp == index.stamp) {
-		openFiles.set(key, cached)
-		return cached
-	}
-	if (cached) closeFile(cached)
+	const cached = openFiles.get(key, index.stamp)
+	if (cached) return cached
 	const fh = open()
 	const ih = new LocalFile(index.path)
 	const f: OpenFile = {
-		stamp: index.stamp,
 		tbx: new TabixIndexedFile({
 			filehandle: fh,
 			...(index.isCsi ? { csiFilehandle: ih } : { tbiFilehandle: ih }),
@@ -186,12 +164,7 @@ async function openTabixFile(file: unknown, dir: unknown): Promise<OpenFile> {
 		indexPath: index.path,
 		isCsi: index.isCsi
 	}
-	openFiles.set(key, f)
-	for (const [k, old] of openFiles) {
-		if (openFiles.size <= maxOpenFiles) break
-		openFiles.delete(k)
-		closeFile(old)
-	}
+	openFiles.set(key, index.stamp, f)
 	return f
 }
 
@@ -199,165 +172,6 @@ function closeFile(f: OpenFile) {
 	f.tbx.clearChunkCache()
 	// a read in progress may still use a handle, which is opened again if so
 	for (const h of f.handles) h.close().catch(() => {})
-}
-
-type Index = { path: string; isCsi: boolean; stamp: string }
-/** a checked file, with its index and the function that opens a handle of the file */
-type Located = { location: string; index: Index; open: () => GenericFilehandle }
-
-/** returns a local file under tp or cachedir, with its index; a dir is not used for a local file, but is checked */
-async function locateLocalFile(file: unknown, dir: unknown): Promise<Located> {
-	const location = checkFile(file)
-	optionalCacheDir(dir)
-	return { location, index: await getLocalIndex(location), open: () => new LocalFile(location) }
-}
-
-/** returns a url file, with its index in the cache dir of the url */
-async function locateUrlFile(file: string, dir: unknown): Promise<Located> {
-	const location = checkUrl(file)
-	const cacheDir = optionalCacheDir(dir)
-	return {
-		location,
-		index: await getUrlIndex(location, cacheDir),
-		open: () => new RemoteFile(location, { fetch: checkedFetch })
-	}
-}
-
-/** returns the index of a local file, file.tbi or else file.csi, as tabix finds it */
-async function getLocalIndex(file: string): Promise<Index> {
-	let data: fs.Stats
-	try {
-		data = await fs.promises.stat(file)
-	} catch (_) {
-		throw 'cannot open the tabix file'
-	}
-	for (const ext of ['.tbi', '.csi']) {
-		const s = await fs.promises.stat(file + ext).catch(() => null)
-		if (!s) continue
-		// tabix warns about such an index, by the mtime in seconds, and its read was rejected for the warning
-		if (Math.floor(s.mtimeMs / 1000) < Math.floor(data.mtimeMs / 1000))
-			throw 'the index file is older than the data file'
-		return { path: file + ext, isCsi: ext == '.csi', stamp: `${stamp(s)} ${stamp(data)}` }
-	}
-	throw 'cannot find the index of the tabix file'
-}
-
-/*
-returns the index of a url file in its cache dir, which is downloaded there from the url with .tbi, or else .csi,
-if it is not there yet. The index has the name that tabix gives the index it downloads, the url file name with .tbi
-or .csi, or else is any .tbi or .csi file in the dir, such as from an index url given to cache_index().
-A url file without a cache dir has the cache dir of the url.
-*/
-async function getUrlIndex(url: string, dir: string | null): Promise<Index> {
-	if (!dir) dir = (await cache_index(url)) as string
-	const name = path.basename(new URL(url).pathname)
-	if (!name) throw 'url must end with a file name'
-	const found = async (file: string): Promise<Index | undefined> => {
-		const s = await fs.promises.stat(file).catch(() => null)
-		if (s?.isFile()) return { path: file, isCsi: file.endsWith('.csi'), stamp: stamp(s) }
-	}
-	for (const ext of ['.tbi', '.csi']) {
-		const index = await found(path.join(dir, name + ext))
-		if (index) return index
-	}
-	const entries = await fs.promises.readdir(dir).catch(() => [] as string[])
-	for (const ext of ['.tbi', '.csi']) {
-		for (const e of entries.filter(e => e.endsWith(ext)).sort()) {
-			const index = await found(path.join(dir, e))
-			if (index) return index
-		}
-	}
-	for (const ext of ['.tbi', '.csi']) {
-		const u = new URL(url)
-		u.pathname += ext
-		const file = path.join(dir, name + ext)
-		try {
-			await download_index(u.href, file)
-		} catch (_) {
-			continue
-		}
-		const index = await found(file)
-		if (index) return index
-	}
-	throw 'cannot download the index of the url file'
-}
-
-function stamp(s: fs.Stats) {
-	return `${s.mtimeMs}:${s.size}:${s.ino}`
-}
-
-/** returns the absolute path of a local file under tp or cachedir, where a relative path is under tp, or throws */
-function checkFile(file: unknown): string {
-	// eslint-disable-next-line no-control-regex
-	if (typeof file != 'string' || !file || /[\x00-\x1f\x7f]/.test(file)) throw 'invalid file'
-	// a ".." segment could leave the root
-	if (file.split('/').includes('..')) throw 'invalid file'
-	const roots = path.isAbsolute(file) ? [serverconfig.tpmasterdir, cachedir] : [serverconfig.tpmasterdir]
-	for (const r of roots) {
-		if (!r) continue
-		const root = path.resolve(r)
-		const f = path.resolve(root, file)
-		if (f.startsWith(root + path.sep)) return f
-	}
-	throw 'invalid file'
-}
-
-/** returns the url of a url file, or throws; an ftp url, which tabix reads, is not supported by fetch() */
-function checkUrl(url: string): string {
-	if (!serverconfig.features?.ALLOW_remotefilefromurl) throw 'invalid file'
-	let protocol: string
-	try {
-		protocol = new URL(url).protocol
-	} catch (_) {
-		throw 'invalid file'
-	}
-	if (protocol == 'ftp:') throw 'ftp url is not supported for this file'
-	if (protocol != 'http:' && protocol != 'https:') throw 'invalid file'
-	const [e] = test_url(url)
-	if (e) throw 'invalid file'
-	if (illegalUrlHost(url)) throw 'invalid file'
-	return url
-}
-
-/** returns the cache dir of a dir argument, or null for none: a caller of a local file may give an empty string, such
- * as mds.svcnv.js, so that any value that is not true is none, as the reads did before they were in process */
-function optionalCacheDir(dir: unknown): string | null {
-	return dir ? checkCacheDir(dir) : null
-}
-
-/** returns the absolute path of a cache dir under cachedir, or throws, as checkCacheDir() of tools/index.ts */
-function checkCacheDir(dir: unknown): string {
-	// eslint-disable-next-line no-control-regex
-	if (typeof dir != 'string' || /[\x00-\x1f\x7f]/.test(dir)) throw 'invalid dir'
-	if (!path.isAbsolute(dir) || dir.split('/').includes('..')) throw 'invalid dir'
-	const root = path.resolve(cachedir)
-	const d = path.resolve(dir)
-	if (!d.startsWith(root + path.sep)) throw 'invalid dir'
-	return d
-}
-
-/*
-fetch() of a url file, which follows a redirect only to a url that is allowed, as download_index() of utils.js does:
-fetch() would otherwise follow a redirect from an allowed url to an internal host
-*/
-const checkedFetch: Fetcher = async (input, init) => {
-	let url = typeof input == 'string' ? input : input.url
-	// the signal of a request also aborts the read of its body, after the response is returned
-	const timeout = AbortSignal.timeout(urlRequest.timeoutMs)
-	const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout
-	for (let redirects = 0; ; redirects++) {
-		const res = await fetch(url, { ...init, signal, redirect: 'manual' })
-		if (res.status < 300 || res.status > 399) return res
-		const location = res.headers.get('location')
-		await res.body?.cancel()
-		if (!location) throw 'url redirect has no location'
-		if (redirects >= maxRedirects) throw 'url has too many redirects'
-		url = new URL(location, url).href
-		const [e] = test_url(url)
-		if (e) throw 'url redirect error: ' + e
-		const hostErr = illegalUrlHost(url)
-		if (hostErr) throw 'url redirect error: ' + hostErr
-	}
 }
 
 /** true if the index of a file is a csi index without the tabix header, which names the chromosomes, as of a bcf file */

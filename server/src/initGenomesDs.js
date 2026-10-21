@@ -261,10 +261,10 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 		}
 
 		try {
-			// test samtools and genomefile; runs after chrlookup is built since get_fasta() validates against it
+			// test genomefile; runs after chrlookup is built since get_fasta() validates against it
 			await utils.get_fasta(g, g.defaultcoord.chr + ':' + g.defaultcoord.start + '-' + (g.defaultcoord.start + 1))
 		} catch (e) {
-			// either samtools or fasta file failed
+			// the fasta file cannot be read
 			throw `${genomename}: cannot get genome sequence: ${e.message || e}`
 		}
 

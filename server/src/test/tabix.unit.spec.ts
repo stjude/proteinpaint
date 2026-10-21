@@ -5,7 +5,8 @@ import path from 'path'
 import zlib from 'zlib'
 import type { AddressInfo } from 'net'
 import serverconfig from '#src/serverconfig.js'
-import { readTabixLines, readTabixHeader, listTabixChrs, urlRequest } from '#src/tabix.ts'
+import { readTabixLines, readTabixHeader, listTabixChrs } from '#src/tabix.ts'
+import { urlRequest } from '#src/indexedFile.ts'
 import { cache_index, get_header_bcf } from '#src/utils.js'
 
 /*

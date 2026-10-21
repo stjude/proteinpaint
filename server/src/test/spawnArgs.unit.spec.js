@@ -13,8 +13,8 @@ import { setMovedRoutes } from './movedRoutes.js'
 import { init as onesampletkInit } from '../j2/onesampletk.ts'
 
 /*
-Specs for the request values that are passed as arguments to samtools and other tools, or to the reads of
-tabix files, which are in process, see tabix.ts.
+Specs for the request values that are passed as arguments to bcftools and other tools, or to the reads of
+tabix and bam files, which are in process, see tabix.ts and bamFile.ts.
 
 The server starts these tools with spawn() and an argument array, so each request value reaches a tool
 as one literal argument. The test values below have special characters, such as $(...), backticks, ";",
@@ -27,13 +27,12 @@ A local http server stands in for the remote host.
 test sections:
 - child_process usage
 - /ntseq coord
-- url and indexURL of the routes that run samtools, tabix, bcftools or bigBedInfo
+- url and indexURL of the routes that read bam, tabix, bcf, or bigbed urls
 - readTabixLines() and readTabixHeader() args
 */
 
 const srcDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-spawnargs-'))
-const hasSamtools = spawnSync(serverconfig.samtools, ['--version']).status === 0
 // /tkbedj only downloads an index after bigBedInfo runs, which some environments do not have
 const hasBigBedInfo = !spawnSync(serverconfig.bigBedInfo, []).error
 
@@ -123,11 +122,11 @@ function getGenome(genomefile = 'NA') {
 	}
 }
 
-const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100 }]
+const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100, x: 0 }]
 
-// routes that pass url and indexURL to samtools, tabix, bcftools or bigBedInfo
+// routes that read the url and indexURL of a bam or tabix file, or pass them to bcftools or bigBedInfo
 const urlRoutes = [
-	{ route: '/tkbam', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, regions: rglst() }) },
+	{ route: '/tkbam', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() }) },
 	{ route: '/tabixheader', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL }) },
 	{ route: '/vcfheader', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL }) },
 	{ route: '/bcfheader', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL }) },
@@ -199,14 +198,9 @@ tape('child_process usage', test => {
 })
 
 tape('/ntseq coord', async test => {
-	const genomes = [getGenome()]
-	if (hasSamtools) {
-		const fa = path.join(tmpdir, 'ntseq.fa')
-		fs.writeFileSync(fa, '>chr1\nACGTACGTAC\n')
-		genomes.push(getGenome(fa))
-	} else {
-		test.comment('samtools not found, only the genome without a fasta file is tested')
-	}
+	const fa = path.join(tmpdir, 'ntseq.fa')
+	fs.writeFileSync(fa, '>chr1\nACGTACGTAC\n')
+	const genomes = [getGenome(), getGenome(fa)]
 	for (const g of genomes) {
 		const handler = ntseqApi.methods.get.init({ genomes: { hg38: g } })
 		const label = g.genomefile == 'NA' ? 'no fasta' : 'real fasta'
@@ -225,7 +219,7 @@ tape('/ntseq coord', async test => {
 	test.end()
 })
 
-tape('url and indexURL of the routes that run samtools, tabix, bcftools or bigBedInfo', async test => {
+tape('url and indexURL of the routes that read bam, tabix, bcf, or bigbed urls', async test => {
 	for (const c of urlRoutes) {
 		const handler = routes[c.route]
 		const name = c.route == 'onesampletk' ? '/termdb/junction/onesampletk' : c.route
