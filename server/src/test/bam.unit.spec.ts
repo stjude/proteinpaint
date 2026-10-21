@@ -5,7 +5,15 @@ Run with:  node server/src/test/bam.unit.spec.ts
 *********************************************/
 
 import tape from 'tape'
-import bamRoute, { parse_align_output, get_partstack, may_trimstacks, read_limits, read_regions } from '../bam.js'
+import bamRoute, {
+	parse_align_output,
+	get_partstack,
+	may_trimstacks,
+	read_limits,
+	read_regions,
+	getGdcSliceUrl
+} from '../bam.js'
+import { gdcCheckPermission } from '../bam.gdc.js'
 
 tape('bam.js - parse_align_output', async t => {
 	const multiSeqClustal =
@@ -267,5 +275,86 @@ tape('bam.js - the request values of the rendering route', async t => {
 		const low = await renderEdge({ devicePixelRatio: 0.5 })
 		t.equal(pngWidth(low.groups[0].src), 500, 'should render a pixel ratio below 1 at 1')
 	}
+	t.end()
+})
+
+const gdcUUID = '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d'
+const notGdcUUIDs = [
+	'',
+	'abc',
+	gdcUUID.slice(1),
+	gdcUUID + 'a',
+	' ' + gdcUUID,
+	gdcUUID + '\n',
+	gdcUUID + '/x',
+	gdcUUID + '?x',
+	gdcUUID + '#x',
+	gdcUUID + '#/../../x',
+	'../' + gdcUUID,
+	gdcUUID.replace('-', '')
+]
+
+tape('bam.js - getGdcSliceUrl', t => {
+	t.equal(
+		getGdcSliceUrl('https://api.example.org', gdcUUID, 'chr17:7680000-7685000'),
+		`https://api.example.org/slicing/view/${gdcUUID}?region=chr17:7680000-7685000`,
+		'should return the slicing url of a uuid and a region'
+	)
+	t.equal(
+		getGdcSliceUrl('https://portal.example.org/auth/api/v0/', gdcUUID.toUpperCase(), 'chr1:1-2'),
+		`https://portal.example.org/auth/api/v0/slicing/view/${gdcUUID.toUpperCase()}?region=chr1:1-2`,
+		'should keep the path of the rest url'
+	)
+	t.equal(
+		getGdcSliceUrl('https://api.example.org', gdcUUID, encodeURIComponent('chr1/#?') + ':1-2'),
+		`https://api.example.org/slicing/view/${gdcUUID}?region=chr1%2F%23%3F:1-2`,
+		'should keep an encoded region in the query string'
+	)
+	t.equal(
+		new URL(getGdcSliceUrl('https://api.example.org', gdcUUID, 'chr1:1-2#x')).hash,
+		'',
+		'should keep a region in the query string'
+	)
+	for (const id of [...notGdcUUIDs, undefined, 1, {}]) {
+		t.throws(
+			() => getGdcSliceUrl('https://api.example.org', id, 'chr1:1-2'),
+			`should reject the value ${JSON.stringify(id)}`
+		)
+	}
+	t.end()
+})
+
+tape('bam.js - the gdc file values of a request', async t => {
+	let hostRequests = 0
+	const genomes = {
+		hg38: {
+			chrlookup: { CHR1: { name: 'chr1', len: 248956422 } },
+			datasets: {
+				GDC: {
+					getHostHeaders: () => {
+						hostRequests++
+						return { host: { rest: 'https://api.example.org' }, headers: {} }
+					}
+				}
+			}
+		}
+	}
+	for (const gdcFileUUID of [...notGdcUUIDs, 1, ['x']]) {
+		const query = {
+			gdcFileUUID,
+			gdcFilePosition: 'chr1.1.2',
+			downloadgdc: 1,
+			rglst: [{ chr: 'chr1', start: 1, stop: 2 }]
+		}
+		let data: any
+		await bamRoute(genomes)({ query, get: () => undefined, cookies: {} }, { send: (d: any) => (data = d) })
+		// a blank value is not a gdc request, and is rejected as a download without gdc values
+		t.match(String(data?.error), /gdcFileUUID|unauthorized/, `should reject the value ${JSON.stringify(gdcFileUUID)}`)
+	}
+	for (const id of notGdcUUIDs) {
+		const error = await gdcCheckPermission(id, genomes.hg38.datasets.GDC, {}).catch(e => e)
+		t.match(String(error), /gdcFileUUID/, `should not check the access of the value ${JSON.stringify(id)}`)
+	}
+	t.equal(hostRequests, 0, 'should not make a host request for an invalid value')
 	t.end()
 })
