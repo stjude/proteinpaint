@@ -1,1 +1,2 @@
-
+Features
+- Added a generalzied memory measurement tool

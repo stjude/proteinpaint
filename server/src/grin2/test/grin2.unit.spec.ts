@@ -8,8 +8,8 @@ import {
 	buildLesionTypeMap,
 	getCnvLesionType
 } from '../lesions.ts'
-import { grin2KeyInputs, normalizeExcludeOptions, resolveExcludeBeds } from '../main.ts'
-import { getCgroupInactiveFileBytes } from '../memory.ts'
+import { grin2KeyInputs, normalizeExcludeOptions, resolveExcludeBeds, getMaxLesions, lesionCapHit } from '../main.ts'
+import serverconfig from '../../serverconfig.js'
 import {
 	dtsnvindel,
 	dtcnv,
@@ -39,6 +39,8 @@ buildLesionTypeMap
 getCnvLesionType
 grin2KeyInputs + normalizeExcludeOptions
 resolveExcludeBeds
+getMaxLesions
+lesionCapHit
 */
 
 // Small TermdbTest-style fixtures. CNV objects mirror the dt:4 mlst entries that
@@ -615,27 +617,55 @@ tape('resolveExcludeBeds', test => {
 	test.end()
 })
 
-tape('getCgroupInactiveFileBytes', test => {
-	const files: Record<string, string> = {
-		'/proc/self/cgroup': '0::/\n',
-		'/sys/fs/cgroup/memory.stat': 'anon 1000\nfile 1300\nactive_file 100\ninactive_file 1200\n',
-		'/sys/fs/cgroup/system.slice/pp.service/memory.stat': 'inactive_file 500\n'
+tape('getMaxLesions', async test => {
+	// the configured max, under the 641,538 ceiling (a 2 GB budget)
+	const max = Math.min(serverconfig.features.grin2maxLesions || 250000, 641538)
+	const freeMB = (mb: number) => async () => mb
+	// the cap of one run at a time: its reservation is released before the next
+	const capAt = async (mb: number) => {
+		const { cap, releaseMemory } = await getMaxLesions(freeMB(mb))
+		releaseMemory()
+		return cap
 	}
-	const readFile = (f: string) => {
-		if (!(f in files)) throw new Error('ENOENT ' + f)
-		return files[f]
+	// cap = floor((free MB × 0.4 − 380) / 0.0026), then no higher than max
+	test.equal(await capAt(16000), max, 'plentiful memory => the configured max')
+	test.equal(await capAt(1500), Math.min(max, 84615), '1500 MB => 84,615')
+	test.equal(await capAt(1000), Math.min(max, 7692), '1000 MB => 7,692, not raised to a floor')
+	test.equal(await capAt(951), Math.min(max, 153), '951 MB => 153, the smallest cap that is not refused')
+	for (const mb of [950, 0]) {
+		try {
+			await capAt(mb)
+			test.fail(`${mb} MB => should throw`)
+		} catch (e: any) {
+			test.equal(e.code, 'LOW_MEMORY', `${mb} MB => refused, since the base overhead does not fit`)
+			test.equal(e.status, 503, `${mb} MB => status 503`)
+		}
 	}
-	test.equal(getCgroupInactiveFileBytes(readFile), 1200, 'container cgroup namespace root => its inactive_file')
-	files['/proc/self/cgroup'] = '0::/system.slice/pp.service\n'
-	test.equal(getCgroupInactiveFileBytes(readFile), 500, 'nested cgroup => that cgroup, not the root')
-	files['/proc/self/cgroup'] = '12:memory:/docker/abc\n1:name=systemd:/docker/abc\n'
-	test.equal(getCgroupInactiveFileBytes(readFile), 0, 'cgroup v1 => 0')
+
+	// two runs at once: the first reserves its whole 600 MB budget at 1500 MB free, so the second does not fit
+	const first = await getMaxLesions(freeMB(1500))
+	try {
+		await getMaxLesions(freeMB(1500))
+		test.fail('a second run while the first holds the budget => should throw')
+	} catch (e: any) {
+		test.equal(e.code, 'LOW_MEMORY', 'a second run while the first holds the budget => refused')
+	}
+	first.releaseMemory()
+	test.equal(await capAt(1500), Math.min(max, 84615), 'after the first run releases => the full cap again')
+	test.end()
+})
+
+tape('lesionCapHit', test => {
+	const full = { totalSamples: 10, processedSamples: 10, failedSamples: 0, unprocessedSamples: 0 }
+	const lesions = { totalLesions: 500, processedLesions: 500 }
+	test.equal(lesionCapHit({ ...full, ...lesions }), false, 'every sample and lesion used => not hit')
+	test.equal(lesionCapHit({ ...full, ...lesions, unprocessedSamples: 3 }), true, 'samples skipped after the cap => hit')
+	test.equal(lesionCapHit({ ...full, ...lesions, processedLesions: 499 }), true, 'last sample cut short => hit')
 	test.equal(
-		getCgroupInactiveFileBytes(() => {
-			throw new Error('ERR_ACCESS_DENIED')
-		}),
-		0,
-		'unreadable => 0'
+		lesionCapHit({ ...full, ...lesions, ssmCapReached: true }),
+		true,
+		'SNV/indel fetch stopped at the cap => hit'
 	)
+	test.equal(lesionCapHit({ ...full, ...lesions, cnvCapReached: true }), true, 'CNV fetch stopped at the cap => hit')
 	test.end()
 })

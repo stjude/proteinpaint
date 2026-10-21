@@ -1,4 +1,5 @@
 import tape from 'tape'
+import os from 'os'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { genomes as loadedGenomes } from '#src/initGenomesDs.js'
@@ -6,9 +7,9 @@ import { api as hicdataApi } from '#src/routes/hicdata.ts'
 import { api as hicgenomeApi } from '#src/routes/hicgenome.ts'
 import { api as blatApi } from '#src/routes/blat.ts'
 import * as fimo from '#src/fimo.js'
-import { getH5samples } from '#src/utils/h5samples.ts'
+import { getH5samples, getH5shape } from '#src/utils/h5samples.ts'
 import { validate_cumburden } from '#src/mds3.init.js'
-import { getMaxLesions } from '#src/grin2/memory.ts'
+import { getAvailableMemoryMB } from '#src/utils/memory.ts'
 import { checkDependenciesAndVersions } from '#src/checkDependenciesAndVersions.js'
 import * as utils from '#src/utils.js'
 import { StandIns } from './standIns.ts'
@@ -29,7 +30,7 @@ test sections:
 /fimo
 getH5samples()
 validate_cumburden()
-getMaxLesions()
+getAvailableMemoryMB()
 checkDependenciesAndVersions()
 query_bigbed_by_coord(), query_bigbed_by_name(), testIfFileIsBigbed()
 */
@@ -275,6 +276,44 @@ tape('getH5samples()', async test => {
 	test.end()
 })
 
+tape('getH5shape()', async test => {
+	standIns.add(
+		'h5dump',
+		`printf 'DATASET "beta/values" {\\n   DATASPACE  SIMPLE { ( 1304718, 415 ) / ( H5S_UNLIMITED, 415 ) }\\n}\\n'`
+	)
+	standIns.prependPath()
+	try {
+		const file = path.join(tp, 'files/hg38/TermdbTest/dnaMeth.h5')
+		test.deepEqual(
+			await getH5shape(file, 'beta/values'),
+			[1304718, 415],
+			'should return the dimensions from the header'
+		)
+		test.deepEqual(
+			standIns.calls('h5dump'),
+			[['-H', '-d', 'beta/values', file]],
+			'should read the header only, of the dataset and the file'
+		)
+		standIns.reset()
+		for (const [label, f, p] of [
+			['a dataset path that is an option', file, '-o'],
+			['a file outside tp', '/etc/passwd', 'beta/values']
+		] as const) {
+			try {
+				await getH5shape(f, p)
+				test.fail(`should reject ${label}`)
+			} catch (_) {
+				test.pass(`should reject ${label}`)
+			}
+		}
+		test.deepEqual(standIns.calls('h5dump'), [], 'should not start h5dump for a rejected call')
+	} finally {
+		standIns.restorePath()
+	}
+	standIns.reset()
+	test.end()
+})
+
 tape('validate_cumburden()', async test => {
 	const rscript = standIns.add('Rscript')
 	// any existing tp file stands in for an RData file, since the stand-in does not read it
@@ -309,7 +348,7 @@ tape('validate_cumburden()', async test => {
 	test.end()
 })
 
-tape('getMaxLesions()', async test => {
+tape('getAvailableMemoryMB()', async test => {
 	// 200000 pages of 16 KB is 3125 MB, enough for the full lesion cap
 	standIns.add(
 		'vm_stat',
@@ -317,10 +356,16 @@ tape('getMaxLesions()', async test => {
 	)
 	standIns.prependPath()
 	try {
-		const max = serverconfig.features.grin2maxLesions || 250000
-		const cap = await getMaxLesions()
-		if (process.platform == 'darwin') test.equal(cap, max, 'should return the full lesion cap from the vm_stat output')
-		else test.ok(Number.isInteger(cap), 'should return a lesion cap')
+		const availableMem = await getAvailableMemoryMB()
+		if (process.platform == 'darwin')
+			test.equal(availableMem, 3125, 'should return the available memory from the vm_stat output')
+		else {
+			const totalMB = os.totalmem() / 1024 / 1024
+			test.ok(
+				Number.isFinite(availableMem) && availableMem > 0 && availableMem <= totalMB,
+				'should return a memory cap in MB, between 0 and less than or equal to total memory'
+			)
+		}
 		test.deepEqual(
 			standIns.calls('vm_stat'),
 			process.platform == 'darwin' ? [[]] : [],

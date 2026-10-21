@@ -255,6 +255,14 @@ const otherOps: Record<string, { input: Record<string, unknown>; argv: string[];
 			file: ['../a.h5', '/etc/passwd', path.join(cache, 'a.h5'), 'a/-o.h5']
 		}
 	},
+	'h5dump.shape': {
+		input: { dataset: 'beta/values', file: 'files/hg38/a.h5' },
+		argv: ['-H', '-d', 'beta/values', path.join(tp, 'files/hg38/a.h5')],
+		bad: {
+			dataset: ['-o', '/meta//names', '/meta/../names', 'a b', 'a;ls', '/', '', 'a'.repeat(257), ['samples']],
+			file: ['../a.h5', '/etc/passwd', path.join(cache, 'a.h5'), 'a/-o.h5']
+		}
+	},
 	'Rscript.loadRData': {
 		input: { file: path.join(tp, 'files/a.RData') },
 		argv: ['--vanilla', '-e', 'load(commandArgs(trailingOnly = TRUE)[1])', path.join(tp, 'files/a.RData')],

@@ -7,6 +7,8 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { getAvailableMemoryMB, runFitsInMemory, admitRun, type MemoryCost } from '#src/utils/memory.ts'
+import { getH5samples } from '#src/utils/h5samples.ts'
 import {
 	buildGroupValues,
 	canonicalizeSamplelst,
@@ -199,13 +201,17 @@ export async function getDeCacheResult(
 	return { result, cacheId }
 }
 
+/** a counts file built on demand: its path, its samples in file order, and its gene count, without which the memory
+ * check is skipped */
+type BuiltCounts = { file: string; samples: string[]; genes?: number }
+
 /* the pseudobulk branch below fills in only the first two, so the rest are optional. named
 because the two returns have different shapes and the union would otherwise hide the
 builder-only fields from callers */
 type ResolvedDE = {
 	countsFile?: string
 	allSampleSet: Set<string>
-	buildCountsFile?: (samples: string[], q: any) => Promise<{ file: string; samples: string[] }>
+	buildCountsFile?: (samples: string[], q: any) => Promise<BuiltCounts>
 	previewCountsFiles?: (samples: string[], q: any) => Promise<CountsFilePreview>
 	maxSamples?: number
 }
@@ -248,12 +254,13 @@ async function runDeFresh(
 	ds: any,
 	term_results: any,
 	term_results2: any,
-	buildCountsFile?: (samples: string[], q: any) => Promise<{ file: string; samples: string[] }>
+	buildCountsFile?: (samples: string[], q: any) => Promise<BuiltCounts>
 ): Promise<DeCacheResult> {
 	const groups = await resolveSampleGroups(param, allSampleSet, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 
 	let input_file = countsFile
+	let built: BuiltCounts | undefined
 	if (!input_file) {
 		/* the ds has no static counts file and assembles one for exactly the samples being compared,
 		so this has to run after resolveSampleGroups -- and after the alerts throw above, so a request
@@ -263,7 +270,7 @@ async function runDeFresh(
 		so they would need the same drop-filtering applied below; add a dropMissing() helper in
 		sampleGroups.ts when a build-on-demand ds needs tw. */
 		if (param.tw || param.tw2) throw new Error('confounding variables are not supported for this dataset')
-		const built = await buildCountsFile!([...groups.group1names, ...groups.group2names], param)
+		built = await buildCountsFile!([...groups.group1names, ...groups.group2names], param)
 		input_file = built.file
 		// edge_newh5.R fails hard when a requested case/control is absent from the h5 'samples', so
 		// drop the samples whose counts file could not be fetched
@@ -302,52 +309,147 @@ async function runDeFresh(
 		if (new Set(expression_input.conf2).size === 1) throw new Error('Confounding variable 2 has only one value')
 	}
 
-	if (engine === 'edgeR') {
-		const time1 = new Date().valueOf()
-		const result = JSON.parse(await run_R('edge_newh5.R', JSON.stringify(expression_input)))
-		mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
-		// edge_newh5.R reports per-stage elapsed seconds and peak MB in its JSON. Logged
-		// unconditionally (not mayLog) because the point is diagnosing slow runs on deployed
-		// servers, where debugmode is off. One line per DE run, and DE runs are rare. Absent from
-		// the log means the result came from the de/ cache and the R script never ran.
-		console.log(
-			`[DE] ${groups.group1names.length}v${groups.group2names.length} samples, stages(s):`,
-			JSON.stringify(result.timings),
-			'peakMB:',
-			JSON.stringify(result.memory_mb)
-		)
-		param.method = 'edgeR'
+	/* Refused before R or rust starts when the run would not fit in memory. Dropping genes or samples to make it fit
+	would change the statistics, so the user is asked for a smaller cohort instead. A built file is in cachedir, which
+	the h5dump tool does not read, so its builder reports the gene count; one that does not is left unchecked.
+	ponytail: a built file is checked after it is built, so a refused run has already downloaded its counts files;
+	check before building, with the gene axis, if that wasted download matters. */
+	const genes = built ? built.genes : (await getH5samples(countsFile!, 'item')).length
+	let releaseMemory = () => {}
+	if (genes) {
+		releaseMemory = admitDeRun({
+			method: DE_method,
+			n1: groups.group1names.length,
+			n2: groups.group2names.length,
+			genes,
+			// a built file's samples are in file order, as are a static file's in allSampleSet, read at startup
+			spanSamples: selectedColumnSpan(built ? built.samples : [...allSampleSet], [
+				...groups.group1names,
+				...groups.group2names
+			]),
+			availableMB: await getAvailableMemoryMB(),
+			confounded: Boolean(param.tw || param.tw2)
+		})
+	}
 
-		const qlImage = deImageFromB64(result.ql_image_b64, 'ql_image')
-		const mdsImage = deImageFromB64(result.mds_image_b64, 'mds_image')
+	try {
+		if (engine === 'edgeR') {
+			const time1 = new Date().valueOf()
+			const result = JSON.parse(await run_R('edge_newh5.R', JSON.stringify(expression_input)))
+			mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
+			// edge_newh5.R reports per-stage elapsed seconds and R's heap MB (gc(), several times below the process's
+			// real peak; the [memory] lines carry the estimate that admitted the run) in its JSON. Logged
+			// unconditionally (not mayLog) because the point is diagnosing slow runs on deployed
+			// servers, where debugmode is off. One line per DE run, and DE runs are rare. Absent from
+			// the log means the result came from the de/ cache and the R script never ran.
+			console.log(
+				`[DE] ${groups.group1names.length}v${groups.group2names.length} samples, stages(s):`,
+				JSON.stringify(result.timings),
+				'rHeapMB:',
+				JSON.stringify(result.memory_mb)
+			)
+			param.method = 'edgeR'
+
+			const qlImage = deImageFromB64(result.ql_image_b64, 'ql_image')
+			const mdsImage = deImageFromB64(result.mds_image_b64, 'mds_image')
+
+			const cacheResult: DeCacheResult = {
+				geneRows: result.gene_data,
+				sample_size1: result.num_controls[0],
+				sample_size2: result.num_cases[0],
+				method: param.method,
+				bcv: result.bcv && result.bcv[0] != null ? result.bcv[0] : undefined,
+				...(qlImage ? { qlImage } : {}),
+				...(mdsImage ? { mdsImage } : {})
+			}
+			return cacheResult
+		}
+
+		const time1 = new Date().valueOf()
+		const result: GeneDEEntry[] = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
+		mayLog('Time taken to run Wilcoxon DE pipeline:', formatElapsedTime(Date.now() - time1))
+		param.method = 'wilcoxon'
 
 		const cacheResult: DeCacheResult = {
-			geneRows: result.gene_data,
-			sample_size1: result.num_controls[0],
-			sample_size2: result.num_cases[0],
-			method: param.method,
-			bcv: result.bcv && result.bcv[0] != null ? result.bcv[0] : undefined,
-			...(qlImage ? { qlImage } : {}),
-			...(mdsImage ? { mdsImage } : {})
+			geneRows: result,
+			sample_size1: groups.group1names.length,
+			sample_size2: groups.group2names.length,
+			method: param.method
 		}
 		return cacheResult
+	} finally {
+		releaseMemory()
 	}
-
-	const time1 = new Date().valueOf()
-	const result: GeneDEEntry[] = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
-	mayLog('Time taken to run Wilcoxon DE pipeline:', formatElapsedTime(Date.now() - time1))
-	param.method = 'wilcoxon'
-
-	const cacheResult: DeCacheResult = {
-		geneRows: result,
-		sample_size1: groups.group1names.length,
-		sample_size2: groups.group2names.length,
-		method: param.method
-	}
-	return cacheResult
 }
 
 // ─── helpers ─── //
+
+/** Peak memory of one DE run by engine, per cell of the samples x genes counts matrix it reads. Measured on ASH (17,928
+ * genes, 102 to 4,438 samples, 2026-10-19) as the R or rust child's peak footprint plus the Node server's rise, and
+ * set at or above every run. The real curves are not straight: edgeR levels off and limma keeps climbing, so a large
+ * edgeR run is overestimated by up to ~3 GB. Only ASH was measured, so the cost per cell on another dataset is unverified. */
+export const DE_MEMORY: Record<'edgeR' | 'limma' | 'wilcoxon', MemoryCost> = {
+	edgeR: { baseMB: 950, perUnitMB: { cells: 1.8 / 17928 } },
+	limma: { baseMB: 1100, perUnitMB: { cells: 2.1 / 17928 } },
+	/* plus spanCells (genes x the columns from the first to the last selected sample) at 4 bytes each: DEanalysis.rs
+	reads that whole span as f32 in one call, so 20 samples spread over 10,000 columns cost 10,000 columns. The runs
+	above were measured as selected cells only, so this term only raises the estimate. */
+	wilcoxon: { baseMB: 250, perUnitMB: { cells: 0.45 / 17928, spanCells: 4 / 1024 ** 2 } }
+}
+
+/** Columns of the counts file from the first selected sample to the last, in file order, which DEanalysis.rs reads
+ * in full; `fileSamples` is the file's 'samples' dataset in order */
+export function selectedColumnSpan(fileSamples: string[], selected: string[]): number {
+	const column = new Map(fileSamples.map((s, i) => [s, i]))
+	let first = Infinity,
+		last = -Infinity
+	for (const s of selected) {
+		const i = column.get(s)
+		if (i === undefined) continue
+		first = Math.min(first, i)
+		last = Math.max(last, i)
+	}
+	return last >= first ? last - first + 1 : selected.length
+}
+
+/** Admits a DE run of n1 + n2 samples and `genes` genes (see admitRun): throws LOW_MEMORY when it does not fit beside
+ * the runs in progress, or reserves its memory and returns the release, to call in a finally once the engine ends.
+ * The refusal suggests wilcoxon too when this run is edgeR or limma without confounders (wilcoxon adjusts for none),
+ * wilcoxon would fit, the groups are large enough that wilcoxon would not fall back to edgeR, and this server offers
+ * it (features.runDE_methods lists the offered methods). */
+export function admitDeRun(opts: {
+	method: 'edgeR' | 'limma' | 'wilcoxon'
+	n1: number
+	n2: number
+	genes: number
+	/** the columns wilcoxon reads, from selectedColumnSpan(); n1 + n2 when the selected samples are adjacent */
+	spanSamples?: number
+	availableMB: number
+	/** the run adjusts for a confounder (tw or tw2) */
+	confounded?: boolean
+	runDE_methods?: string[]
+}): () => void {
+	const { method, n1, n2, genes, availableMB, confounded } = opts
+	const runDE_methods = 'runDE_methods' in opts ? opts.runDE_methods : serverconfig.features?.runDE_methods
+	const cells = (n1 + n2) * genes
+	const units = { cells, spanCells: Math.max(n1 + n2, opts.spanSamples ?? 0) * genes }
+	return admitRun(`DE ${method}`, DE_MEMORY[method], units, availableMB, () => {
+		const tryWilcoxon =
+			method != 'wilcoxon' &&
+			!confounded &&
+			(!runDE_methods || runDE_methods.includes('Wilcoxon')) &&
+			pickDeEngine('wilcoxon', n1, n2).engine == 'wilcoxon' &&
+			runFitsInMemory(DE_MEMORY.wilcoxon, units, availableMB)
+		return (
+			`Server memory is too low to run this differential expression analysis on ${(
+				n1 + n2
+			).toLocaleString()} samples. ` +
+			(tryWilcoxon
+				? 'Select a smaller cohort, or use the Wilcoxon method, which needs less memory.'
+				: 'Select a smaller cohort.')
+		)
+	})
+}
 
 /** Decide which pipeline runs, and the DE_method label handed to R.
  *

@@ -19,6 +19,8 @@ import { renderVolcano } from '../src/renderVolcano.ts'
 import { renderManhattanPoints } from '../src/renderManhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { getAvailableMemoryMB, admitRun, type MemoryCost } from '#src/utils/memory.ts'
+import { getH5samples } from '#src/utils/h5samples.ts'
 import {
 	buildGroupValues,
 	canonicalizeSamplelst,
@@ -465,6 +467,30 @@ type DiffMethInput = {
 	conf2_mode?: 'continuous' | 'discrete'
 }
 
+/** Peak memory of one diffMeth.R run, by the cells of the matrix file it reads in full (rows x samples in the file) and
+ * the cells it then copies for the selected samples (rows x selected samples). Measured on DISCOVER (128,994 and
+ * 375,525 rows x 155 samples) and MMRF (114,875 and 267,531 rows x 415 samples), 20 to 400 selected samples,
+ * 2026-10-20, as the R child's peak footprint plus the Node server's rise, and set at or above every run. An element
+ * type that keeps one class of a shared file (e.g. promoter_pls) still reads every row, but analyzes fewer, so it is
+ * overestimated by up to ~2 GB. */
+export const DM_MEMORY: MemoryCost = { baseMB: 880, perUnitMB: { fileCells: 0.0000107, cells: 0.000038 } }
+
+/** Rows and samples of a methylation matrix file, read once per file: a 375,525-row file takes one h5dump of its row
+ * labels, and the files do not change while the server runs. Rows are counted from meta/gene_names, which diffMeth.R
+ * requires in every layout; meta/chr is optional there, replaced by a chrom_lengths attribute in some files. */
+const fileShapes = new Map<string, Promise<{ rows: number; samples: number }>>()
+function methylationFileShape(file: string): Promise<{ rows: number; samples: number }> {
+	if (!fileShapes.has(file)) {
+		const shape = Promise.all([getH5samples(file, 'meta/gene_names'), getH5samples(file, 'meta/samples/names')]).then(
+			([rows, samples]) => ({ rows: rows.length, samples: samples.length })
+		)
+		// a failed read is not kept, so the next request tries again
+		shape.catch(() => fileShapes.delete(file))
+		fileShapes.set(file, shape)
+	}
+	return fileShapes.get(file)!
+}
+
 async function runDmFresh(
 	param: DiffMethRequest,
 	ds: any,
@@ -503,8 +529,26 @@ async function runDmFresh(
 		if (new Set(diffMethInput.conf2).size === 1) throw new Error('Confounding variable 2 has only one value')
 	}
 
+	// Refused before R starts when the run would not fit in memory, rather than dropping rows or samples, which would
+	// change the statistics. diffMeth.R reads the whole matrix file, so the file's size counts as well as the cohort's.
+	const nSamples = groups.group1names.length + groups.group2names.length
+	const { rows, samples: fileSamples } = await methylationFileShape(q.file)
+	const units = { fileCells: rows * fileSamples, cells: rows * nSamples }
+	const releaseMemory = admitRun(
+		'DM',
+		DM_MEMORY,
+		units,
+		await getAvailableMemoryMB(),
+		`Server memory is too low to run this differential methylation analysis on ${nSamples.toLocaleString()} samples. Select a smaller cohort.`
+	)
+
 	const time1 = Date.now()
-	const result = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethInput)))
+	let result
+	try {
+		result = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethInput)))
+	} finally {
+		releaseMemory()
+	}
 	mayLog('Time taken to run diffMeth:', formatElapsedTime(Date.now() - time1))
 
 	const cacheResult: DmCacheResult = {

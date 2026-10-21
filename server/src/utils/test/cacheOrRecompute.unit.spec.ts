@@ -15,6 +15,7 @@ generateHash is keyed, not a plain sha256 of the args
 cacheScope separates the cacheIds and cache files of identical args
 canonicalizeSamplelst sorts values by sampleId
 first call: miss → computeFresh runs; second call: hit, no recompute
+shouldPersist false: the result is returned but not cached, so the next call recomputes
 100 concurrent same-input calls dedup to one computeFresh (conference-room property)
 corrupted JSON file is treated as a miss and recomputed
 caller can evict a stale cache file by unlinking before recompute
@@ -135,6 +136,36 @@ tape('first call: miss → computeFresh runs; second call: hit, no recompute', a
 	const r2 = await cacheOrRecompute(opts)
 	t.equal(computeCount, 1, 'computeFresh did not run on second call (hit)')
 	t.equal(r2.cacheId, r1.cacheId, 'same cacheId across calls with same args')
+
+	cleanup()
+	t.end()
+})
+
+tape('shouldPersist false: the result is returned but not cached, so the next call recomputes', async t => {
+	ensureSubdir()
+	const tag = crypto.randomBytes(8).toString('hex')
+	let computeCount = 0
+	const opts = {
+		computeArgument: { tag, kind: 'should-persist' },
+		cacheSubdir: 'de' as const,
+		computeFresh: async ({ cacheId }: { cacheId: string }) => {
+			computeCount++
+			trackCachePath(cacheId)
+			return { complete: computeCount > 1 }
+		},
+		shouldPersist: (r: { complete: boolean }) => r.complete
+	}
+
+	const r1 = await cacheOrRecompute(opts)
+	t.equal(r1.result.complete, false, 'the first, incomplete result is returned')
+	t.notOk(fs.existsSync(r1.cacheFilePath), 'and not written')
+
+	const r2 = await cacheOrRecompute(opts)
+	t.equal(computeCount, 2, 'the next call recomputes')
+	t.ok(fs.existsSync(r2.cacheFilePath), 'a complete result is written')
+
+	await cacheOrRecompute(opts)
+	t.equal(computeCount, 2, 'and then served from the cache')
 
 	cleanup()
 	t.end()

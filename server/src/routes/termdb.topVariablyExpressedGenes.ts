@@ -9,6 +9,7 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { getAvailableMemoryMB, admitRun, type MemoryCost } from '#src/utils/memory.ts'
 import type { TopVeCacheResult } from '../../routes/types.ts'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { genomes } from '#src/initGenomesDs.js'
@@ -87,14 +88,32 @@ function nativeValidateQuery(ds: any) {
 			cacheSubdir: 'topve',
 			computeFresh: async () => {
 				const samples = await resolveNativeSamples(q, gE, ds)
-				const genes = await computeGenes4nativeDs(q, gE, samples)
-				const cacheResult: TopVeCacheResult = { genes }
-				return cacheResult
+				// refused rather than run on fewer samples, which would rank different genes; not cached, so a retry runs
+				const releaseMemory = admitRun(
+					'topVE',
+					TOPVE_MEMORY,
+					{ samples: samples.length },
+					await getAvailableMemoryMB(),
+					'Server memory is too low to find the top variably expressed genes right now. Try again later.'
+				)
+				try {
+					const genes = await computeGenes4nativeDs(q, gE, samples)
+					const cacheResult: TopVeCacheResult = { genes }
+					return cacheResult
+				} finally {
+					releaseMemory()
+				}
 			}
 		})
 		return result.genes
 	}
 }
+
+/** Peak memory of one native topVE run, by the samples in the cohort. topVEgene.py reads the expression matrix in chunks
+ * of a fixed size, so memory hardly grows with the cohort or maxGenes. Measured on ASH (19,411 genes, 16 to 4,873
+ * samples, maxGenes 100 and 1,000, 2026-10-20) as the python child's peak footprint plus the Node server's rise, and
+ * set at or above every run. */
+export const TOPVE_MEMORY: MemoryCost = { baseMB: 100, perUnitMB: { samples: 0.0092 } }
 
 /** The subset of a TopVE request that determines the cache identity.
  * Hash raw filter inputs (not resolved sample lists) to keep cache-hit

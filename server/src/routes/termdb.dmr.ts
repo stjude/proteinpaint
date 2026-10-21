@@ -3,7 +3,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
-import { resolveMethylationMatrix, resolveGroupNames } from '#src/utils/methylationMatrix.ts'
+import { resolveMethylationMatrix, resolveGroupNames, admitDmrcateJobs } from '#src/utils/methylationMatrix.ts'
 import { resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import serverconfig from '#src/serverconfig.js'
 import { formatElapsedTime } from '#shared'
@@ -98,10 +98,25 @@ function init({ genomes }) {
 				colors: q.colors
 			}
 
+			/* ponytail: the R backend (debugmode only) is not measured, so it is not admitted; give it its own cost if
+			it is ever offered outside debugmode */
+			const releaseMemory = useR
+				? () => {}
+				: await admitDmrcateJobs(
+						'DMR region',
+						[matrixFile],
+						1,
+						'Server memory is too low to analyze this region right now. Try again later.'
+				  )
 			const time1 = Date.now()
-			const result = useR
-				? JSON.parse(await run_R('dmrcate_full.R', JSON.stringify(dmrInput)))
-				: JSON.parse(await run_rust('dmrcate', JSON.stringify(dmrInput)))
+			let result
+			try {
+				result = useR
+					? JSON.parse(await run_R('dmrcate_full.R', JSON.stringify(dmrInput)))
+					: JSON.parse(await run_rust('dmrcate', JSON.stringify(dmrInput)))
+			} finally {
+				releaseMemory()
+			}
 			mayLog(`DMR analysis (${useR ? 'R' : 'Rust'}) time:`, formatElapsedTime(Date.now() - time1))
 			if (result.error) throw new Error(result.error)
 
