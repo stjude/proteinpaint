@@ -13,7 +13,7 @@ import { match_complexvariant_rust } from './bam.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
 import { gdcCheckPermission } from './bam.gdc.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import { depthExcludedFlags, forEachDepth, isBamTruncated, readBamRecords, samLine } from './bamFile.ts'
+import { depthExcludedFlags, isBamTruncated, RegionDepth, scanBamRecords, samLine } from './bamFile.ts'
 
 /*
 XXX quick fix to be removed/disabled later
@@ -48,7 +48,8 @@ when client zooms into one read group, server needs to know which group it is an
 .asPaired
 .stacksegspacing
 .canvaswidth
-.downsample{} // added by determine_downsampling
+.read_limit_reached // the number of reads that were read, if they were downsampled, see read_regions()
+.read_stops[] // {chr, position} of the first read that is not read, of each region whose reads were not all read
 .readcount_skipped
 .variant{}
 	.chr/pos/ref/alt
@@ -236,7 +237,15 @@ const ntboxwidthincrement = 0.5
 const readspace_px = 2
 const readspace_bp = 5
 
-const maxreadcount = 7000 // maximum number of reads to load
+/*
+the limits of the reads of a request, by their bases, so that the memory and time of a request are about the same for
+any read length; a read is at least minreadbases, for the cost of a read apart from its bases, see read_bases(). A test
+may change them.
+- maxscanbases: the reads that are read from the file, about 30K reads of 150nt, or 45K of 100nt. The reads after it
+  are not read, and the client is told where the reads stop, see q.read_stops
+- maxrenderbases: the reads that are rendered, about 7K reads of 150nt. More than 110% of it are downsampled to it
+*/
+export const read_limits = { maxscanbases: 4.5e6, maxrenderbases: 1.05e6, minreadbases: 100 }
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 const max_returntemplatebox = 2000 // maximum number of reads per group, for which to return the "templatebox"
 const minstackheight_returntemplatebox = 7 // minimum stack height (number of pixels) for which to return templatebox
@@ -925,6 +934,10 @@ async function do_query(q) {
 		// When maximum read limit is reached
 		result.count.read_limit_reached = q.read_limit_reached
 	}
+	if (q.read_stops) {
+		// the reads after these positions were not read
+		result.count.read_stops = q.read_stops
+	}
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 	{
 		const out = await divide_reads_togroups(q) // templates
@@ -1328,8 +1341,8 @@ async function query_reads(q) {
 			start: left_edge - varlen,
 			stop: right_edge + varlen
 		}
-		await determine_downsampling(q, [r])
-		await query_region(r, q)
+		// the depth is of q.regions[0], see get_depth()
+		await read_regions(q, [r], false)
 		q.regions[0].lines = r.lines
 		return
 	}
@@ -1343,85 +1356,127 @@ async function query_reads(q) {
 	//	return
 	//}
 
-	// query reads for all regions in q.regions
-	await determine_downsampling(q, q.regions)
-
-	for (const r of q.regions) {
-		await query_region(r, q) // add r.lines[]
-	}
+	// query reads for all regions in q.regions, add r.lines[], and the depth of each region if the pileup is plotted
+	await read_regions(q, q.regions, !q.partstack)
 }
 
 /*
-get total number of reads from all regions
-determine downsampling ratio
+for each region, keep in r.lines[] the sam lines of the reads that are not dropped or downsampled, as samtools view
+prints them for chr:start-stop, and add the reads to the depth of each region if withDepth is true, see get_depth().
+The reads are scanned in batches, which are not kept, so that the reads of a wide or deep region are not all in
+memory, and the scan ends when the reads of the request reach read_limits.maxscanbases: the position of the first
+read that is not read is kept in q.read_stops, and the reads from it on are not read. Each region may read an equal
+part of what is left of the limit, so that a region does not leave none to the regions after it. If the sam lines are
+more than 110% of read_limits.maxrenderbases, they are downsampled to it, see downsample_lines().
 regions can be defined by variant/sv position
 */
-async function determine_downsampling(q, regions) {
-	let totalreads = 0 // total number of reads from all regions
-	for (const r of regions) {
-		// as samtools view -c
-		totalreads += (await get_region_reads(q, r)).records.length
+export async function read_regions(q, regions, withDepth) {
+	const { maxscanbases, maxrenderbases } = read_limits
+	const kept = [] // {r, line, name, bases} of each read that is not dropped, in the order of the scan
+	let readcount = 0, // the reads that were read from all regions
+		readbases = 0,
+		keptbases = 0
+	for (const [i, r] of regions.entries()) {
+		r.lines = []
+		const depth = withDepth ? new RegionDepth(depth_region(q, r), depth_excluded_flags(q)) : null
+		if (depth) {
+			if (!q.regionDepths) q.regionDepths = new Map()
+			q.regionDepths.set(r, depth)
+		}
+		const limit = readbases + (maxscanbases - readbases) / (regions.length - i)
+		await scan_region(q, r, (records, refNames) => {
+			for (const record of records) {
+				if (readbases >= limit) {
+					// the first read that is not read
+					if (!q.read_stops) q.read_stops = []
+					q.read_stops.push({ chr: r.chr, position: record.start + 1 })
+					return true
+				}
+				const bases = read_bases(record)
+				readcount++
+				readbases += bases
+				depth?.add(record)
+				if (!is_dropped(q, record)) {
+					kept.push({ r, line: samLine(record, refNames), name: record.name, bases })
+					keptbases += bases
+				}
+			}
+		})
 	}
-	if (totalreads < maxreadcount * 1.1) {
+	if (keptbases <= maxrenderbases * 1.1) {
 		// no downsampling
+		for (const k of kept) k.r.lines.push(k.line)
 		return
 	}
-	// more than 110% of max reads, will apply downsampling
-	// 10% of maxreadcount as a unit, corresponding to 1 out of ten reads to be dropped
-	const unitcount = (totalreads - maxreadcount) / (maxreadcount * 0.1)
-	// keep/(keep+skip) is the downsampling ratio
-	// pointer++ for every read so that for every #(keep+skip) reads, #skip reads are skipped
-	q.downsample = {
-		keep: 10,
-		skip: Math.floor(unitcount),
-		pointer: 0
-	}
-	q.read_limit_reached = totalreads // notify client
+	downsample_lines(kept)
+	q.read_limit_reached = readcount // notify client
 }
 
 /*
-for each region, query its data
-the reads that are not dropped or downsampled are kept in r.lines[] as sam lines
+keeps in r.lines[] the lines of the kept reads of read_regions() that have the lowest hash of their name, up to
+read_limits.maxrenderbases, in the order of the scan; the reads of a template, which have the same name, are kept or
+dropped together, and a request of the same reads keeps the same lines, such as of another part of the stacks
 */
-async function query_region(r, q) {
-	r.lines = []
-	const { records, refNames } = await get_region_reads(q, r)
-	for (const record of records) {
-		// Show/Hide PCR optical duplicates
-		const flag = record.flags
-		if (flag & 0x400 && q.drop_pcrduplicates) {
-			continue
-		}
-		// Show/Hide secondary alignments
-		if (flag & 0x800 && q.drop_supplementary_alignments) {
-			continue
-		}
-		if (q.downsample) {
-			// apply downsampling based on the ratio specified in .keep and .skip
-			const d = q.downsample
-			d.pointer++
-			if (d.pointer >= d.keep && d.pointer < d.keep + d.skip) {
-				continue
-			}
-			if (d.pointer >= d.keep + d.skip) d.pointer = 0 // restart pointer
-		}
-
-		r.lines.push(samLine(record, refNames))
+function downsample_lines(kept) {
+	const hashes = kept.map(k => name_hash(k.name))
+	const order = kept.map((k, i) => i).sort((a, b) => hashes[a] - hashes[b] || a - b)
+	const isKept = new Uint8Array(kept.length)
+	let bases = 0,
+		lastHash
+	for (const i of order) {
+		// the reads of the same name, which are next to each other in the order, are kept together
+		if (bases >= read_limits.maxrenderbases && hashes[i] !== lastHash) break
+		isKept[i] = 1
+		bases += kept[i].bases
+		lastHash = hashes[i]
+	}
+	for (const [i, k] of kept.entries()) {
+		if (isKept[i]) k.r.lines.push(k.line)
 	}
 }
 
-/*
-returns {records, refNames} of readBamRecords() for a region, as samtools view reads them for chr:start-stop. The
-reads of a region are kept on q, so that the count, reads, and depth of a region of a request are from one read.
-*/
-function get_region_reads(q, r) {
-	if (!q.regionReads) q.regionReads = new Map()
+// the 32-bit fnv-1a hash of a read name, mixed by the finalizer of murmur3, so that names that differ at the end
+// differ in all the bits
+function name_hash(name) {
+	let h = 0x811c9dc5
+	for (let i = 0; i < name.length; i++) h = Math.imul(h ^ name.charCodeAt(i), 0x01000193)
+	h = Math.imul(h ^ (h >>> 16), 0x85ebca6b)
+	h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35)
+	return (h ^ (h >>> 16)) >>> 0
+}
+
+// the bases of a read for the limits of read_limits
+function read_bases(record) {
+	return Math.max(read_limits.minreadbases, record.seq_length)
+}
+
+function is_dropped(q, record) {
+	const flag = record.flags
+	// Show/Hide PCR optical duplicates
+	if (flag & 0x400 && q.drop_pcrduplicates) return true
+	// Show/Hide secondary alignments
+	if (flag & 0x800 && q.drop_supplementary_alignments) return true
+	return false
+}
+
+// calls back with the batches of scanBamRecords() for a region, as samtools view reads chr:start-stop
+function scan_region(q, r, onRecords) {
 	const region = { chr: q.nochr ? r.chr.replace('chr', '') : r.chr, start: Math.max(0, r.start - 1), end: r.stop }
-	const key = `${region.chr}\t${region.start}\t${region.end}`
-	if (!q.regionReads.has(key)) {
-		q.regionReads.set(key, readBamRecords({ file: q.file, dir: q.dir, region, withoutIndex: q.withoutIndex }))
-	}
-	return q.regionReads.get(key)
+	return scanBamRecords({ file: q.file, dir: q.dir, region, withoutIndex: q.withoutIndex }, onRecords)
+}
+
+// the positions of the depth of a region, which the reads may extend beyond
+function depth_region(q, r) {
+	return { chr: q.nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, end: r.stop }
+}
+
+// as samtools depth -g DUP, with -G 0x400 and -G 0x800 to drop the reads
+function depth_excluded_flags(q) {
+	let excludedFlags = depthExcludedFlags
+	// Show/Hide PCR optical duplicates
+	if (q.drop_pcrduplicates) excludedFlags |= 0x400
+	if (q.drop_supplementary_alignments) excludedFlags |= 0x800
+	return excludedFlags
 }
 
 /*
@@ -1434,7 +1489,7 @@ should summarize into bins, each bin for a pixel with .coverage for each pixel, 
 
 at r.ntwidth>=1:
 	get depth at each bp and plot one bar for each bp;
-	bplst[] is constructed directly according to the depth of each position from forEachDepth()
+	bplst[] is constructed directly according to the depth of each position from RegionDepth
 	non-covered basepairs will not show up in bplst
 	thus the genomic positions in the array may be *discontinuous*
 	and must use coordinate direct match to find in bplst but not "bp seek"
@@ -1446,16 +1501,24 @@ at r.ntwidth<1:
 */
 async function get_depth(q, r) {
 	const bplst = []
-	const reads = await get_region_reads(q, r)
-	// as samtools depth -g DUP, with -G 0x400 and -G 0x800 to drop the reads
-	let excludedFlags = depthExcludedFlags
-	// Show/Hide PCR optical duplicates
-	if (q.drop_pcrduplicates) excludedFlags |= 0x400
-	if (q.drop_supplementary_alignments) excludedFlags |= 0x800
-
-	// the positions of the region, which the reads may extend beyond
-	const region = { chr: q.nochr ? r.chr.replace('chr', '') : r.chr, start: r.start, end: r.stop }
-	forEachDepth(reads, region, excludedFlags, (position, depth) => {
+	// the depth from the scan of read_regions(), which is not kept after this
+	let regionDepth = q.regionDepths?.get(r)
+	if (regionDepth) {
+		q.regionDepths.delete(r)
+	} else {
+		// such as a region of a variant, whose reads are of another region; the depth is of the reads up to
+		// read_limits.maxscanbases, as read_regions() reads them
+		regionDepth = new RegionDepth(depth_region(q, r), depth_excluded_flags(q))
+		let bases = 0
+		await scan_region(q, r, records => {
+			for (const record of records) {
+				regionDepth.add(record)
+				bases += read_bases(record)
+				if (bases >= read_limits.maxscanbases) return true
+			}
+		})
+	}
+	regionDepth.forEach((position, depth) => {
 		if (r.ntwidth >= 1) {
 			// zoomed in, one element per basepair
 			bplst.push({ position, total: depth })
@@ -3095,58 +3158,60 @@ async function query_oneread(req, r) {
 		start: Math.max(0, Math.floor(r.start) - 1),
 		end: Math.ceil(r.stop)
 	}
-	const { records, refNames } = await readBamRecords({ file: _file, dir, region, withoutIndex })
-	for (const record of records) {
-		if (record.name != req.query.qname) continue
-		const s = parse_one_segment(
-			{ sam_info: samLine(record, refNames), keepallboxes: true, keepmatepos: true, keepunmappedread: true },
-			r
-		)
-		if (!s) continue
-		if (req.query.show_unmapped && s.discord_unmapped2) continue // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
-		if (
-			(req.query.start != s.segstart_original || req.query.stop != s.segstop) &&
-			!req.query.paired &&
-			!req.query.show_unmapped
-		)
-			continue
-		if (req.query.show_unmapped && req.query.getfirst) {
-			// In case first read is mapped and second unmapped
-			if (s.islast) {
-				lst = [s]
-				break
-			}
-		} else if (req.query.show_unmapped && req.query.getlast) {
-			// In case first read is mapped and second unmapped
-			if (s.isfirst) {
-				lst = [s]
-				break
-			}
-		} else if (req.query.getfirst) {
-			if (s.isfirst) {
-				lst = [s]
-				break
-			}
-		} else if (req.query.getlast) {
-			if (s.islast) {
-				lst = [s]
-				break
-			}
-		} else if (req.query.unknownorder) {
-			if (s.segstart == readstart && s.segstop == readstop) {
-				lst = [s]
-				break
-			}
-		} else {
-			// get both
-			if (s.isfirst) firstseg = s
-			else if (s.islast) lastseg = s
-			if (firstseg && lastseg) {
-				lst = [firstseg, lastseg]
-				break
+	// the reads are scanned in batches, which are not kept, until the read is found
+	await scanBamRecords({ file: _file, dir, region, withoutIndex }, (records, refNames) => {
+		for (const record of records) {
+			if (record.name != req.query.qname) continue
+			const s = parse_one_segment(
+				{ sam_info: samLine(record, refNames), keepallboxes: true, keepmatepos: true, keepunmappedread: true },
+				r
+			)
+			if (!s) continue
+			if (req.query.show_unmapped && s.discord_unmapped2) continue // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
+			if (
+				(req.query.start != s.segstart_original || req.query.stop != s.segstop) &&
+				!req.query.paired &&
+				!req.query.show_unmapped
+			)
+				continue
+			if (req.query.show_unmapped && req.query.getfirst) {
+				// In case first read is mapped and second unmapped
+				if (s.islast) {
+					lst = [s]
+					return true
+				}
+			} else if (req.query.show_unmapped && req.query.getlast) {
+				// In case first read is mapped and second unmapped
+				if (s.isfirst) {
+					lst = [s]
+					return true
+				}
+			} else if (req.query.getfirst) {
+				if (s.isfirst) {
+					lst = [s]
+					return true
+				}
+			} else if (req.query.getlast) {
+				if (s.islast) {
+					lst = [s]
+					return true
+				}
+			} else if (req.query.unknownorder) {
+				if (s.segstart == readstart && s.segstop == readstop) {
+					lst = [s]
+					return true
+				}
+			} else {
+				// get both
+				if (s.isfirst) firstseg = s
+				else if (s.islast) lastseg = s
+				if (firstseg && lastseg) {
+					lst = [firstseg, lastseg]
+					return true
+				}
 			}
 		}
-	}
+	})
 
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)

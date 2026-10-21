@@ -6,7 +6,17 @@ import zlib from 'zlib'
 import { spawnSync } from 'child_process'
 import type { AddressInfo } from 'net'
 import serverconfig from '#src/serverconfig.js'
-import { depthExcludedFlags, forEachDepth, isBamTruncated, listBamChrs, readBamRecords, samLine } from '#src/bamFile.ts'
+import {
+	depthExcludedFlags,
+	forEachDepth,
+	isBamTruncated,
+	listBamChrs,
+	readBamRecords,
+	RegionDepth,
+	samLine,
+	scanBamRecords,
+	scanWindow
+} from '#src/bamFile.ts'
 import { urlRequest } from '#src/indexedFile.ts'
 import { bam_ifnochr, cache_index } from '#src/utils.js'
 
@@ -17,6 +27,8 @@ readBamRecords() and samLine(): regions of a local file, as samtools view
 forEachDepth(): as samtools depth
 readBamRecords(): a whole file, and a truncated file
 readBamRecords(): a region of a file without an index
+scanBamRecords(): the windows and batches of a scan
+RegionDepth: the blocks of the depth
 isBamTruncated(), as samtools quickcheck
 listBamChrs() and bam_ifnochr()
 the index of a local file
@@ -257,6 +269,110 @@ tape('readBamRecords(): a region of a file without an index', async test => {
 	} finally {
 		fs.rmSync(dir, { recursive: true, force: true })
 	}
+	test.end()
+})
+
+tape('scanBamRecords(): the windows and batches of a scan', async test => {
+	const { firstBytes, bytes } = scanWindow
+	// a window for each base, or for each chunk of the index
+	scanWindow.firstBytes = scanWindow.bytes = 1
+	try {
+		for (const [region, e] of Object.entries<any>(expected.regions)) {
+			test.deepEqual(await view(edge, region), e.view, `should read the sam lines of ${region} in windows`)
+			for (const [key, flags] of Object.entries(depthFlags)) {
+				test.deepEqual(
+					await depth(edge, region, depthExcludedFlags | flags),
+					e.depth[key],
+					`should have the depth of ${region} with -G ${key} in windows`
+				)
+			}
+		}
+		let batches = 0
+		await scanBamRecords({ file: edge, region: toRegion('chr17:7670001-7670500') }, () => {
+			batches++
+		})
+		test.ok(batches > 1, 'should read a region in several windows')
+	} finally {
+		Object.assign(scanWindow, { firstBytes, bytes })
+	}
+
+	const region = toRegion('chr17:7680001-7700000')
+	const all = (await readBamRecords({ file: edge, region })).records.length
+	// windows that start at one byte and double, up to more than the region
+	Object.assign(scanWindow, { firstBytes: 1, bytes: 2 ** 30 })
+	try {
+		const names: string[] = []
+		let batches = 0
+		await scanBamRecords({ file: edge, region }, records => {
+			batches++
+			for (const r of records) names.push(r.name)
+		})
+		test.equal(names.length, all, 'should read the reads of a region in windows that double')
+		test.equal(new Set(names).size, all, 'should read each read of the region once in windows that double')
+		test.ok(batches > 2 && batches < 40, 'should read a region in windows that double')
+	} finally {
+		Object.assign(scanWindow, { firstBytes, bytes })
+	}
+	for (const withoutIndex of [false, true]) {
+		let batches = 0
+		const refNames = await scanBamRecords({ file: edge, region, withoutIndex }, records => {
+			batches++
+			return records.length > 0
+		})
+		test.equal(batches, 1, `should end the scan when the callback returns true, withoutIndex=${withoutIndex}`)
+		test.deepEqual(refNames, ['chr1', 'chr17', 'chrM'], 'should return the chromosome names of the file')
+	}
+	test.ok(all > 1, 'should have several reads in the region of the ended scans')
+	test.end()
+})
+
+tape('RegionDepth: the blocks of the depth', test => {
+	// a read with 100M from 65530, across the first two blocks, and a read with 10M 5D 10N 10M from 131070, across the
+	// second and third, which ends after the region; an unmapped read is excluded
+	// the cigar is unsigned, as in a bam record
+	const read = (start: number, cigar: [number, number][], flags = 0) =>
+		({ start, flags, NUMERIC_CIGAR: Uint32Array.from(cigar.map(([len, op]) => len * 16 + op)) } as any)
+	const depth = new RegionDepth({ chr: 'chr1', start: 65500, end: 131100 }, depthExcludedFlags)
+	depth.add(read(65530, [[100, 0]]))
+	depth.add(
+		read(131070, [
+			[10, 0],
+			[5, 2],
+			[10, 3],
+			[10, 0]
+		])
+	)
+	depth.add(read(65540, [[10, 0]], 0x4))
+	const out: number[][] = []
+	depth.forEach((p, d) => out.push([p, d]))
+	const expected: number[][] = []
+	for (let p = 65530; p < 65630; p++) expected.push([p, 1])
+	for (let p = 131070; p < 131080; p++) expected.push([p, 1])
+	// the deletion and the skip are printed with no depth, and the last match is up to the end of the region
+	for (let p = 131080; p < 131095; p++) expected.push([p, 0])
+	for (let p = 131095; p < 131100; p++) expected.push([p, 1])
+	test.deepEqual(out, expected, 'should have the depth of each position across blocks, in order')
+
+	// 1M 134217728N 1M, a length of 2^27 or more, which has the top bit of the cigar
+	const longSkip = new RegionDepth({ chr: 'chr1', start: 134217727, end: 134217731 }, depthExcludedFlags)
+	longSkip.add(
+		read(0, [
+			[1, 0],
+			[134217728, 3],
+			[1, 0]
+		])
+	)
+	const longOut: number[][] = []
+	longSkip.forEach((p, d) => longOut.push([p, d]))
+	test.deepEqual(
+		longOut,
+		[
+			[134217727, 0],
+			[134217728, 0],
+			[134217729, 1]
+		],
+		'should have the match after a skip with a length of 2^27'
+	)
 	test.end()
 })
 

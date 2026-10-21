@@ -10,8 +10,11 @@ import type { IndexKind } from './indexedFile.ts'
 
 /*
 Reads a bam file in the server process, with @gmod/bam, instead of with samtools. The reads are the same as those
-of samtools: see isBamTruncated() for quickcheck, listBamChrs() for view -H, readBamRecords() and samLine() for
-view and view -c, and forEachDepth() for depth.
+of samtools: see isBamTruncated() for quickcheck, listBamChrs() for view -H, scanBamRecords(), readBamRecords() and
+samLine() for view and view -c, and RegionDepth and forEachDepth() for depth.
+
+A large region is read by scanBamRecords() in batches, which it does not keep, so that its reads do not all stay in
+memory: a holder of a record keeps the whole chunk or window of the file that the record is in.
 
 A file is located as in indexedFile.ts. The index of a local file is found as htslib finds it, see bamIndex. The
 index of a url file is url.csi, or else url.bai, which is kept in the cache dir of the url. A file that has no index,
@@ -33,6 +36,8 @@ type ReadArg = {
 }
 /** the records of a read, and the chromosome names of the file, by the reference id of a record */
 export type BamReads = { records: BamRecord[]; refNames: string[] }
+/** a callback of scanBamRecords() with a batch of records, in the order of the file, which returns true to end the scan */
+type OnRecords = (records: BamRecord[], refNames: string[]) => boolean | void
 type OpenBam = { bam: BamFile; handles: GenericFilehandle[] }
 
 /** the local index is file.csi, x.csi, file.bai, or x.bai, for a file x.bam, by the order that htslib looks for it */
@@ -53,6 +58,17 @@ const maxWholeFileBytes = 256 * 2 ** 20
 const headerWindowBytes = 2 ** 16
 /** the end-of-file marker of a bgzf file, which is an empty block */
 const bgzfEof = Buffer.from('1f8b08040000000000ff0600424302001b0003000000000000000000', 'hex')
+
+/*
+the compressed bytes of the index chunks of each window of an indexed scan, see scanBamRecords(): the first window
+has firstBytes, and each window after it has twice the bytes of the one before it, up to bytes, which is about 64MB
+decompressed. A scan that is ended early, such as at a limit of reads, reads little more than it uses; a smaller
+window reads more of the chunks that are in several windows, for little less memory, since the chunk cache keeps the
+windows that were read. A test may change them.
+*/
+export const scanWindow = { firstBytes: 2 ** 20, bytes: 8 * 2 ** 20 }
+/** the positions of a block of RegionDepth, which is allocated when a read is first in it */
+const depthBlockSize = 2 ** 16
 
 /** the flags of the reads that samtools depth -g DUP excludes: unmapped, secondary, and qc fail */
 export const depthExcludedFlags = 0x4 | 0x100 | 0x200
@@ -101,25 +117,22 @@ export async function listBamChrs(file: unknown, dir: unknown, withoutIndex: boo
 }
 
 /*
-returns the records of a region of a bam file, which overlap the region, in the order of the file, as samtools view
-reads them. A file that is read whole, without an index, is read up to its last complete record if it is truncated,
-as samtools view reads it. The records of an indexed read are shared with other reads, and must not be changed.
+calls back with the records of a region of a bam file, which overlap the region, in the order of the file, as samtools
+view reads them, in batches that the scan does not keep. An indexed region is read in windows, of about
+the bytes of scanWindow each, by the index; a record that overlaps several windows is in the batch of the first one. A file that is read whole, without an index, is read in the windows of the stream, up to its last complete record
+if it is truncated, as samtools view reads it. Returns the chromosome names of the file, by the reference id of a
+record. The records of an indexed read are shared with other reads, and must not be changed.
 */
-export async function readBamRecords({
-	file,
-	dir = null,
-	region = null,
-	withoutIndex = false
-}: ReadArg): Promise<BamReads> {
+export async function scanBamRecords(
+	{ file, dir = null, region = null, withoutIndex = false }: ReadArg,
+	onRecords: OnRecords
+): Promise<string[]> {
 	if (region) {
 		const { chr, start, end } = region
 		if (typeof chr != 'string' || !chr) throw 'invalid region chr'
 		if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start) throw 'invalid region'
 	}
-	if (!region || withoutIndex) {
-		const reads = await readWholeFile(file, dir)
-		return region ? regionReads(reads, region) : reads
-	}
+	if (!region || withoutIndex) return await scanWholeFile(file, dir, region, onRecords)
 	const { chr, start, end } = region
 	const f = await openBamFile(file, dir)
 	try {
@@ -129,26 +142,42 @@ export async function readBamRecords({
 	}
 	// samtools view rejects such a region with an error
 	if (!Object.hasOwn(f.bam.chrToIndex!, chr)) throw 'the chromosome of the region is not in the bam file'
+	const refNames = f.bam.indexToChr!.map(c => c.refName)
+	const read = async (min: number, max: number) => {
+		try {
+			return await f.bam.getRecordsForRange(chr, min, max)
+		} catch (e) {
+			throw libraryErrorText(e)
+		}
+	}
+	let bytes: number
 	try {
-		const records = await f.bam.getRecordsForRange(chr, start, end)
-		return { records, refNames: f.bam.indexToChr!.map(c => c.refName) }
+		bytes = await f.bam.estimatedBytesForRegions([{ refName: chr, start, end }])
 	} catch (e) {
 		throw libraryErrorText(e)
 	}
+	let windowBytes = Math.min(scanWindow.firstBytes, scanWindow.bytes)
+	let min = start
+	do {
+		// the bytes of the region are taken to be even across it, with at least one base in each window
+		const width = bytes > 0 ? Math.max(1, Math.ceil(((end - start) * windowBytes) / bytes)) : end - start
+		const max = Math.min(end, min + width)
+		const records = await read(min, max)
+		// a record that starts before the window overlaps the one before it, and is in that batch
+		if (onRecords(min == start ? records : records.filter(r => r.start >= min), refNames)) break
+		min = max
+		windowBytes = Math.min(scanWindow.bytes, windowBytes * 2)
+	} while (min < end)
+	return refNames
 }
 
-/*
-returns the records of a whole file that overlap a region, as getRecordsForRange() finds them: the end of a record
-that has no base on the reference, such as an unmapped read at the position of its mate, is after its start
-*/
-function regionReads({ records, refNames }: BamReads, { chr, start, end }: Region): BamReads {
-	const refId = refNames.indexOf(chr)
-	// samtools view rejects such a region with an error
-	if (refId < 0) throw 'the chromosome of the region is not in the bam file'
-	return {
-		records: records.filter(r => r.ref_id == refId && r.start < end && r.end > start),
-		refNames
-	}
+/** returns all the records of scanBamRecords(), such as for a small region */
+export async function readBamRecords(arg: ReadArg): Promise<BamReads> {
+	const records: BamRecord[] = []
+	const refNames = await scanBamRecords(arg, batch => {
+		for (const r of batch) records.push(r)
+	})
+	return { records, refNames }
 }
 
 /** returns the first 11 fields of the sam line of a record, as samtools view prints them, without the tags */
@@ -179,11 +208,61 @@ function qualText(q: Uint8Array | null): string {
 }
 
 /*
-calls back with the depth of each position of a region, as samtools depth -r prints it for the reads of the region:
-a position is in a match (M, = or X), deletion (D), or skip (N) of a read that has none of excludedFlags, and its
-depth is the number of such reads that have it in a match. The positions are 0-based, in order, from region.start
-to before region.end; a position that no read has is skipped.
+the depth of each position of a region, as samtools depth -r prints it for the reads of the region, which are added
+one at a time, so that they are not kept: a position is in a match (M, = or X), deletion (D), or skip (N) of a read
+that has none of excludedFlags, and its depth is the number of such reads that have it in a match. The depth is
+kept in blocks of depthBlockSize positions, which are allocated when a read is first in them.
 */
+export class RegionDepth {
+	private blocks = new Map<number, { depth: Int32Array; covered: Uint8Array }>()
+
+	constructor(private region: Region, private excludedFlags: number) {}
+
+	/** adds a read of the chromosome of the region */
+	add(r: BamRecord) {
+		if (r.flags & this.excludedFlags) return
+		const { start, end } = this.region
+		const cigar = r.NUMERIC_CIGAR
+		let pos = r.start
+		for (let i = 0; i < cigar.length; i++) {
+			// the length is the unsigned upper 28 bits
+			const len = cigar[i] >>> 4,
+				op = cigar[i] & 0xf
+			// M, D, N, =, X are on the reference, and only M, = and X are counted
+			if (op != 0 && op != 2 && op != 3 && op != 7 && op != 8) continue
+			const isMatch = op != 2 && op != 3
+			const a = Math.max(pos, start),
+				b = Math.min(pos + len, end)
+			for (let p = a; p < b; ) {
+				const k = Math.floor(p / depthBlockSize)
+				let block = this.blocks.get(k)
+				if (!block) {
+					block = { depth: new Int32Array(depthBlockSize), covered: new Uint8Array(depthBlockSize) }
+					this.blocks.set(k, block)
+				}
+				const blockStart = k * depthBlockSize
+				const stop = Math.min(b, blockStart + depthBlockSize)
+				for (; p < stop; p++) {
+					block.covered[p - blockStart] = 1
+					if (isMatch) block.depth[p - blockStart]++
+				}
+			}
+			pos += len
+		}
+	}
+
+	/** calls back with each position, 0-based, in order; a position that no read has is skipped */
+	forEach(callback: (position: number, depth: number) => void) {
+		for (const k of [...this.blocks.keys()].sort((a, b) => a - b)) {
+			const { depth, covered } = this.blocks.get(k)!
+			for (let i = 0; i < depthBlockSize; i++) {
+				if (covered[i]) callback(k * depthBlockSize + i, depth[i])
+			}
+		}
+	}
+}
+
+/** calls back with the depth of each position of a region, see RegionDepth, from the reads of the region */
 export function forEachDepth(
 	{ records, refNames }: BamReads,
 	region: Region,
@@ -192,39 +271,11 @@ export function forEachDepth(
 ) {
 	const refId = refNames.indexOf(region.chr)
 	if (refId < 0) return
-	const reads = records.filter(r => r.ref_id == refId && !(r.flags & excludedFlags))
-	let lo = region.end,
-		hi = region.start
-	for (const r of reads) {
-		lo = Math.min(lo, r.start)
-		hi = Math.max(hi, r.end)
+	const depth = new RegionDepth(region, excludedFlags)
+	for (const r of records) {
+		if (r.ref_id == refId) depth.add(r)
 	}
-	lo = Math.max(lo, region.start)
-	hi = Math.min(hi, region.end)
-	if (hi <= lo) return
-	const depth = new Int32Array(hi - lo)
-	const covered = new Uint8Array(hi - lo)
-	for (const r of reads) {
-		const cigar = r.NUMERIC_CIGAR
-		let pos = r.start
-		for (let i = 0; i < cigar.length; i++) {
-			const len = cigar[i] >> 4,
-				op = cigar[i] & 0xf
-			// M, D, N, =, X are on the reference, and only M, = and X are counted
-			if (op != 0 && op != 2 && op != 3 && op != 7 && op != 8) continue
-			const isMatch = op != 2 && op != 3
-			const a = Math.max(pos, lo),
-				b = Math.min(pos + len, hi)
-			for (let p = a; p < b; p++) {
-				covered[p - lo] = 1
-				if (isMatch) depth[p - lo]++
-			}
-			pos += len
-		}
-	}
-	for (let i = 0; i < covered.length; i++) {
-		if (covered[i]) callback(lo + i, depth[i])
-	}
+	depth.forEach(callback)
 }
 
 /** returns the open file of a file, which is opened again if its index or data file has changed */
@@ -281,9 +332,19 @@ async function readHeader(fh: GenericFilehandle): Promise<BamStreamHeader> {
 	return header
 }
 
-/** the reads of a whole file, see readBamRecords() */
-async function readWholeFile(file: unknown, dir: unknown): Promise<BamReads> {
+/** the scan of a whole file, see scanBamRecords(), which keeps the records of the region if there is one */
+async function scanWholeFile(
+	file: unknown,
+	dir: unknown,
+	region: Region | null,
+	onRecords: OnRecords
+): Promise<string[]> {
 	const fh = (await locateDataFile(file, dir, bamIndex)).open()
+	let refNames: string[] = []
+	const batches = streamBamRecords({
+		bamFilehandle: fh,
+		onHeader: h => (refNames = h.indexToChr.map(c => c.refName))
+	})
 	try {
 		let size: number
 		try {
@@ -292,22 +353,45 @@ async function readWholeFile(file: unknown, dir: unknown): Promise<BamReads> {
 			throw libraryErrorText(e)
 		}
 		if (size > maxWholeFileBytes) throw 'the bam file is too large to read without an index'
-		let refNames: string[] = []
-		const records: BamRecord[] = []
-		try {
-			const batches = streamBamRecords({
-				bamFilehandle: fh,
-				onHeader: h => (refNames = h.indexToChr.map(c => c.refName))
-			})
-			for await (const batch of batches) {
-				for (const r of batch) records.push(r)
+		for (;;) {
+			let next: IteratorResult<BamRecord[]>
+			try {
+				next = await batches.next()
+			} catch (e) {
+				// the error of a file that ends before its end-of-file marker, after its last complete record
+				if (e instanceof Error && e.message.startsWith('truncated BAM')) break
+				throw libraryErrorText(e)
 			}
-		} catch (e) {
-			// the error of a file that ends before its end-of-file marker, after its last complete record
-			if (!(e instanceof Error && e.message.startsWith('truncated BAM'))) throw libraryErrorText(e)
+			if (next.done) break
+			if (!region) {
+				if (onRecords(next.value, refNames)) break
+				continue
+			}
+			// the records that overlap the region, as getRecordsForRange() finds them: the end of a record that has
+			// no base on the reference, such as an unmapped read at the position of its mate, is after its start
+			const refId = regionRefId(refNames, region)
+			const { start, end } = region
+			if (
+				onRecords(
+					next.value.filter(r => r.ref_id == refId && r.start < end && r.end > start),
+					refNames
+				)
+			)
+				break
 		}
-		return { records, refNames }
+		// such as a file that has no record
+		if (region) regionRefId(refNames, region)
+		return refNames
 	} finally {
+		// ends the read that is ahead of the scan, if it ended early
+		await batches.return().catch(() => {})
 		fh.close().catch(() => {})
 	}
+}
+
+function regionRefId(refNames: string[], region: Region): number {
+	const refId = refNames.indexOf(region.chr)
+	// samtools view rejects such a region with an error
+	if (refId < 0) throw 'the chromosome of the region is not in the bam file'
+	return refId
 }
