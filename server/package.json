@@ -82,7 +82,6 @@
     "generic-filehandle2": "^2.5.1",
     "jsonwebtoken": "^9.0.3",
     "ky": "^1.2.1",
-    "minimatch": "^10.0.1",
     "partjson": "^0.58.2",
     "picomatch": "^4.0.7",
     "secure-json-parse": "^4.1.0",

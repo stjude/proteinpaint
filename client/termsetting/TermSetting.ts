@@ -12,7 +12,7 @@ import { type Term, type Filter, type Q, type TermWrapper, TermTypes } from '#ty
 import { TwBase /*CatValues, CatPredefinedGS, CatCustomGS*/ } from '#tw'
 import { Menu } from '#dom'
 import { isDictionaryType } from '#shared/terms.js'
-import { minimatch } from 'minimatch'
+import pm from 'picomatch'
 import { HandlerBase } from './HandlerBase.ts'
 import { TermSettingView } from './TermSettingView.ts'
 import { TermSettingActions } from './TermSettingActions.ts'
@@ -159,7 +159,7 @@ export class TermSetting {
 		// support legacy options, now converted to use glob-style pattern matching
 		if (o.menuOptions == 'all') o.menuOptions = '*'
 		for (const opt of ['edit', 'replace', 'remove']) {
-			if (minimatch(opt, o.menuOptions)) return // matched at least one menu option
+			if (pm.isMatch(opt, o.menuOptions)) return // matched at least one menu option
 		}
 		throw `no matches found for termsetting opts.menuOptions='${o.menuOptions}'`
 	}

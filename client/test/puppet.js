@@ -9,7 +9,6 @@ import { decode as urlJsonDecode } from '#shared/urljson.js'
 import bodyParser from 'body-parser'
 import { ReqResCache, emitRelevantSpecCovDetails, publicSpecsDir } from '@sjcrh/augen/dev'
 import { getRelevantClientSpecs, getUrlParams } from './closestSpec.js'
-import { minimatch } from 'minimatch'
 import { createTapFailureTracker } from './tapFailures.js'
 
 // user __dirname later to detect relative path to public dir,

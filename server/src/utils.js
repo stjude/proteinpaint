@@ -10,7 +10,7 @@ import serverconfig from './serverconfig.js'
 import { cacheUrlProtocols } from './CacheManager.ts'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
-import { minimatch } from 'minimatch'
+import pm from 'picomatch'
 import { runTool } from './tools/index.ts'
 import { readFastaRegion } from './fasta.ts'
 import { readTabixLines, readTabixHeader, listTabixChrs } from './tabix.ts'
@@ -206,12 +206,12 @@ export function illegalpath(s, checkWhiteList = false, checkBlackList = true) {
 		// only if the req.query.file begins with or glob-matches any of the path pattern then it's allowed
 		let notlegal = true // safer default to illegal
 		for (const p of whiteListPaths) {
-			if (s.startsWith(p) || (p[0] != '!' && minimatch(s, p))) {
+			if (s.startsWith(p) || (p[0] != '!' && pm.isMatch(s, p))) {
 				// all allowed path requires matching a NON-NEGATED entry in whitelistPaths[]
 				notlegal = false
 				break
 			}
-			if (p[0] == '!' && !minimatch(s, p)) {
+			if (p[0] == '!' && !pm.isMatch(s, p)) {
 				// NOTE for safety:
 				// negated patterns will only be used to detect an illegal path,
 				// not matching a negated pattern does not imply a path is legal
