@@ -2665,19 +2665,34 @@ type MassNavTabEntry = {
 	hide?: boolean
 }
 
-type MassNavUserTabEntry = MassNavTabEntry & {
-	/** optional. computes what the user tab shows from the auth of the user. termdb/config sends it to the client
-	 * as termdbConfig.userTab, leaving out a field with an invalid value. the hook gets the ds as the 2nd argument,
-	 * to read data that is built at init, such as ds.cohort.termdb.geomap.sites */
-	getContent?: (q: UserTabHookArg, ds: any) => UserTabContent | undefined
-}
+type MassNavUserTabEntry = MassNavTabEntry &
+	UserTabContent & {
+		/** optional. computes what the user tab shows from the auth of the user. termdb/config calls it and sends
+		 * the content to the client in this entry, in termdbConfig.massNav.tabs.user, in place of the hook and
+		 * leaving out a field with an invalid value. when the ds has termdb.selectCohort, it is called once for
+		 * each value, with q.cohortKeys set, since access may differ by cohort, and the content is sent as
+		 * byCohort. the hook gets the ds as the 2nd argument, to read data that is built at init, such as
+		 * ds.cohort.termdb.geomap.sites */
+		getContent?: (q: UserTabHookArg, ds: any) => UserTabContent | undefined
+		/** only in what is sent to the client: the content by the index of the selectCohort value */
+		byCohort?: { [index: number]: UserTabContent }
+	}
+
+/** A message of the user tab, shown as one row of a table2col: the optional label, and the value. The client renders
+ * by property and does not parse the text, so a message is a whole phrase, not a part of a sentence around an email or link.
+ * A message has one value, which is text, an email address, or a link */
+type UserTabMsg = { label?: string } & (
+	| { txt: string } // text. with no label, the text spans both columns
+	| { email: string } // an email address, shown as a mailto link
+	| { link: string }
+) // an http(s) url, shown as a link
 
 /** What the mass nav user tab shows, as returned by massNav.tabs.user.getContent(). text, not html */
 type UserTabContent = {
 	/** the heading, in place of the default sign-in status such as 'Signed in' */
 	status?: string
-	/** the message under the heading. the client shows an email address in it as a mailto link */
-	msg?: string
+	/** the messages under the heading, one row each */
+	msgs?: UserTabMsg[]
 	/** a list under the message, such as the sites that the user has access to. the empty items are left out */
 	list?: { label: string; items: string[] }
 	/** true if the signed-in user has only public access, such as a public role, so that the default heading
@@ -2687,6 +2702,8 @@ type UserTabContent = {
 
 /** The auth of the user, as passed to massNav.tabs.user.getContent() */
 type UserTabHookArg = {
+	/** the keys of the selectCohort value that the content is for, [] if the ds has no selectCohort */
+	cohortKeys: readonly string[]
 	/** the clientAuthResult of the user's jwt payload, {} when the user has not signed in */
 	clientAuthResult: any
 	/** the dataset names in the login jwt of the user's active session, [] if none */

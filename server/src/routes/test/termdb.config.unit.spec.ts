@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getDsAllowedTermTypes, getLoneTermByType, getUserTab } from '../termdb.config.ts'
+import { getDsAllowedTermTypes, getLoneTermByType, getUserTab, getClientMassNav } from '../termdb.config.ts'
 import {
 	CATEGORICAL,
 	FLOAT,
@@ -423,16 +423,18 @@ const getDs = (getContent: any): any => ({ cohort: { massNav: { tabs: { user: { 
 
 tape('getUserTab() - computes the content from clientAuthResult', function (test) {
 	const ds = getDs(q =>
-		q.clientAuthResult.datasets?.length ? { msg: 'authorized' } : { msg: 'public only', isPublic: true }
+		q.clientAuthResult.datasets?.length
+			? { msgs: [{ txt: 'authorized' }] }
+			: { msgs: [{ txt: 'public only' }], isPublic: true }
 	)
 	test.deepEqual(
 		getUserTab(ds, { datasets: ['a'] }, {}),
-		{ msg: 'authorized' },
+		{ msgs: [{ txt: 'authorized' }] },
 		'Should return the message for an authorized user'
 	)
 	test.deepEqual(
 		getUserTab(ds, {}, {}),
-		{ msg: 'public only', isPublic: true },
+		{ msgs: [{ txt: 'public only' }], isPublic: true },
 		'Should return the message and isPublic for a user without authorization'
 	)
 	test.end()
@@ -444,7 +446,7 @@ tape(
 		const received: any[] = []
 		const ds = getDs((q, ds) => {
 			received.push({ q, ds })
-			return { msg: 'msg', isPublic: false }
+			return { msgs: [{ txt: 'msg' }], isPublic: false }
 		})
 		const datasets = Object.freeze(['sjlife', 'ccss'])
 		const __protected__ = Object.freeze({
@@ -456,14 +458,14 @@ tape(
 		})
 		test.deepEqual(
 			getUserTab(ds, { y: 2 }, __protected__),
-			{ msg: 'msg' },
+			{ msgs: [{ txt: 'msg' }] },
 			'Should leave out isPublic when it is false'
 		)
 		test.equal(received.length, 1, 'Should call the hook once')
 		test.deepEqual(
 			received[0].q,
-			{ clientAuthResult: { y: 2 }, datasets: ['sjlife', 'ccss'], isUserLoggedIn: true },
-			'Should pass only clientAuthResult, datasets, and isUserLoggedIn'
+			{ clientAuthResult: { y: 2 }, datasets: ['sjlife', 'ccss'], isUserLoggedIn: true, cohortKeys: [] },
+			'Should pass only clientAuthResult, datasets, isUserLoggedIn, and no cohortKeys without selectCohort'
 		)
 		test.true(Object.isFrozen(received[0].q), 'Should pass a frozen argument')
 		test.equal(received[0].q.datasets, datasets, 'Should pass the frozen datasets of __protected__ as they are')
@@ -475,7 +477,7 @@ tape(
 			getUserTab(ds, {}, p)
 			test.deepEqual(
 				received[0].q,
-				{ clientAuthResult: {}, datasets: [], isUserLoggedIn: false },
+				{ clientAuthResult: {}, datasets: [], isUserLoggedIn: false, cohortKeys: [] },
 				`Should default to no datasets and not logged in for __protected__=${JSON.stringify(p)}`
 			)
 		}
@@ -486,13 +488,17 @@ tape(
 tape('getUserTab() - returns the status, message, and list without the empty or invalid items', function (test) {
 	const ds = getDs(() => ({
 		status: 'Administrator',
-		msg: 'msg',
+		msgs: [{ txt: 'msg' }, { email: "o'connor@example.org" }, { label: 'Docs', link: 'https://example.org' }],
 		list: { label: 'Sites', items: ['a', '', 7, 'b'] },
 		other: 1
 	}))
 	test.deepEqual(
 		getUserTab(ds, {}, {}),
-		{ status: 'Administrator', msg: 'msg', list: { label: 'Sites', items: ['a', 'b'] } },
+		{
+			status: 'Administrator',
+			msgs: [{ txt: 'msg' }, { email: "o'connor@example.org" }, { label: 'Docs', link: 'https://example.org' }],
+			list: { label: 'Sites', items: ['a', 'b'] }
+		},
 		'Should return only the known fields, and the list without the empty or invalid items'
 	)
 	test.end()
@@ -505,7 +511,7 @@ tape('getUserTab() - returns undefined or leaves out a field without a usable va
 		{ tabs: {} },
 		{ tabs: { user: {} } },
 		{ tabs: { user: { top: 'USER' } } },
-		{ tabs: { user: { getContent: { msg: 'x' } } } }
+		{ tabs: { user: { getContent: { msgs: [{ txt: 'x' }] } } } }
 	]) {
 		const ds: any = { cohort: { massNav } }
 		test.equal(getUserTab(ds, {}, {}), undefined, `Should return undefined for massNav=${JSON.stringify(massNav)}`)
@@ -523,7 +529,21 @@ tape('getUserTab() - returns undefined or leaves out a field without a usable va
 	}
 	const fields = {
 		status: ['', 7, { text: 'x' }],
-		msg: ['', 7, { text: 'x' }],
+		msgs: [
+			'x',
+			[],
+			[{}, null, 7, { txt: '' }, { email: '' }, { link: '' }, { label: 'x', txt: '' }],
+			[{ email: 'a b@c.org' }, { email: 'a@b@c.org' }, { email: '"a@c.org' }, { email: 'a@' }, { email: '@c.org' }],
+			[{ link: 'javascript:alert(1)' }, { link: 'data:text/html,x' }, { link: '//example.org' }, { link: 'not a url' }],
+			[
+				{ email: 'a@b.org', link: 'https://a.org' },
+				{ txt: 'x', email: 'a@b.org' },
+				{ txt: 'x', link: 'https://a.org' },
+				{ label: 'x' },
+				{ label: '', txt: 'x' },
+				{ label: 7, txt: 'x' }
+			]
+		],
 		isPublic: ['true', 1, false],
 		list: [
 			'a',
@@ -539,11 +559,11 @@ tape('getUserTab() - returns undefined or leaves out a field without a usable va
 		for (const value of values) {
 			test.deepEqual(
 				getUserTab(
-					getDs(() => ({ [field]: value, msg: field == 'msg' ? value : 'm' })),
+					getDs(() => ({ [field]: value, msgs: field == 'msgs' ? value : [{ txt: 'm' }] })),
 					{},
 					{}
 				),
-				field == 'msg' ? undefined : { msg: 'm' },
+				field == 'msgs' ? undefined : { msgs: [{ txt: 'm' }] },
 				`Should leave out ${field}=${JSON.stringify(value)}`
 			)
 		}
@@ -577,3 +597,89 @@ tape('getUserTab() - returns undefined or leaves out a field without a usable va
 	}
 	test.end()
 })
+
+tape('getUserTab() - keeps the valid parts of msgs, with the value of an email or link as it is', function (test) {
+	const ds = getDs(() => ({
+		msgs: [
+			{ txt: 'a' },
+			{ label: 'Team', email: "o'connor@example.org" },
+			{ link: 'http://example.org/x?y=1' },
+			{ link: 'javascript:alert(1)' },
+			{ email: 'a b@c.org' },
+			7
+		]
+	}))
+	test.deepEqual(
+		getUserTab(ds, {}, {}),
+		{
+			msgs: [{ txt: 'a' }, { label: 'Team', email: "o'connor@example.org" }, { link: 'http://example.org/x?y=1' }]
+		},
+		'Should leave out the invalid parts, and keep the apostrophe in the address'
+	)
+	test.end()
+})
+
+tape('getUserTab() - computes the content for each value of selectCohort, by index', function (test) {
+	const received: any[] = []
+	const ds: any = getDs((q, _) => {
+		received.push(q.cohortKeys)
+		return {
+			status: q.cohortKeys.join('+') || 'none',
+			msgs: [{ txt: q.clientAuthResult[q.cohortKeys[0]]?.role || 'public' }]
+		}
+	})
+	ds.cohort.termdb = { selectCohort: { values: [{ keys: ['abbrev'] }, { keys: ['full'] }, { keys: ['x', 'y'] }, {}] } }
+	test.deepEqual(
+		getUserTab(ds, { abbrev: { role: 'admin' }, full: { role: 'user' } }, {}),
+		{
+			byCohort: {
+				0: { status: 'abbrev', msgs: [{ txt: 'admin' }] },
+				1: { status: 'full', msgs: [{ txt: 'user' }] },
+				2: { status: 'x+y', msgs: [{ txt: 'public' }] },
+				3: { status: 'none', msgs: [{ txt: 'public' }] }
+			}
+		},
+		'Should return the content of each cohort, with its own role'
+	)
+	test.deepEqual(received, [['abbrev'], ['full'], ['x', 'y'], []], 'Should pass the keys of each value to the hook')
+
+	const log = console.log
+	console.log = () => {}
+	try {
+		ds.cohort.massNav.tabs.user.getContent = q => {
+			if (q.cohortKeys[0] == 'abbrev') throw 'hook error'
+			return q.cohortKeys[0] == 'full' ? { isPublic: true } : undefined
+		}
+		test.deepEqual(
+			getUserTab(ds, {}, {}),
+			{ byCohort: { 1: { isPublic: true } } },
+			'Should leave out a cohort where the hook throws or has no content'
+		)
+	} finally {
+		console.log = log
+	}
+	test.end()
+})
+
+tape(
+	'getClientMassNav() - sends the content in massNav.tabs.user, without the hook, and does not change the ds',
+	function (test) {
+		const getContent = () => ({})
+		const massNav = { title: 't', tabs: { about: { top: 'A' }, user: { top: 'USER', getContent } } }
+		const out = getClientMassNav(massNav, { status: 's', byCohort: { 0: { isPublic: true } } })
+		test.deepEqual(
+			out,
+			{
+				title: 't',
+				tabs: { about: { top: 'A' }, user: { top: 'USER', status: 's', byCohort: { 0: { isPublic: true } } } }
+			},
+			'Should merge the content into the user tab entry'
+		)
+		test.equal(massNav.tabs.user.getContent, getContent, 'Should not remove the hook from the ds')
+		test.deepEqual(getClientMassNav(massNav, undefined).tabs.user, { top: 'USER' }, 'Should still leave out the hook')
+		test.equal(getClientMassNav(undefined, { status: 's' }), undefined, 'Should not add a massNav to a ds without one')
+		const noUser = { tabs: { about: {} } }
+		test.equal(getClientMassNav(noUser, { status: 's' }), noUser, 'Should not add a user tab to a ds without one')
+		test.end()
+	}
+)

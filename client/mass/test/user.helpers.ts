@@ -55,7 +55,7 @@ export function getUser(
 	user.dslabel = state.vocab.dslabel
 	user.savedSessions = opts.savedSessions || {}
 	user.serverCachedSessions = opts.serverCachedSessions || []
-	user.state = { termdbConfig: state.termdbConfig, nav: state.nav }
+	user.state = { termdbConfig: state.termdbConfig, nav: state.nav, activeCohort: state.activeCohort }
 	user.setRequiredAuth(state.termdbConfig)
 	return { user, holder, app, state, calls }
 }

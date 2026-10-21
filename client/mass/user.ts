@@ -1,6 +1,7 @@
 import { getCompInit, type AppApi, type RxComponent } from '#rx'
 import { Menu } from '#dom/menu'
 import { sayerror } from '#dom/sayerror'
+import { table2col } from '#dom/table2col'
 import { to_textfile } from '#dom/downloadTextfile'
 import { dofetch3 } from '#common/dofetch'
 import { parentCorsMessage } from '#common/embedder-helpers'
@@ -13,9 +14,9 @@ import { markSavedState, getSavedStateRefusal } from './sessionForm.ts'
 
 /*
 "user" tab will display following contents inside this.subheader:
-- the user authorization information, if the dataset requires authorization: the status, and termdbConfig.userTab
-  msg and list, as computed by the optional ds hook massNav.tabs.user.getContent(). userTab.status, if any,
-  replaces the default status
+- the user authorization information, if the dataset requires authorization: the status, and the msgs and list of
+  termdbConfig.massNav.tabs.user, as computed by the optional ds hook massNav.tabs.user.getContent(), by the active
+  cohort. the status, if any, replaces the default status
 - the session open/save/share/delete functionality, moved from the former session button. The options are always
   shown as buttons, and the selected option renders into dom.contentDiv
 
@@ -28,8 +29,17 @@ export function datasetRequiresAuth(termdbConfig: any): boolean {
 }
 
 /**
+ * What the user tab shows for the active cohort. The server computes the content by cohort when the dataset has a
+ * selectCohort, since the access of the user may differ by cohort, and sends it as byCohort, by the index of
+ * the cohort. Otherwise the content is on the tab entry itself.
+ */
+export function getUserTabContent(userTab: any, activeCohort?: number): any {
+	return (activeCohort != null && userTab?.byCohort?.[activeCohort]) || userTab
+}
+
+/**
  * The sign-in status line.
- * isPublic: termdbConfig.userTab.isPublic, from the optional ds hook massNav.tabs.user.getContent(), true if the
+ * isPublic: termdbConfig.massNav.tabs.user.isPublic, from the optional ds hook massNav.tabs.user.getContent(), true if the
  * signed-in user has only public access, such as a public role
  */
 export function getAuthStatus(signedIn: boolean, isPublic?: boolean): string {
@@ -142,9 +152,10 @@ export class MassUser implements RxComponent {
 			return markSavedState(trimGvTermsForSave(state))
 		}
 		return {
+			activeCohort: appState.activeCohort,
 			termdbConfig: {
 				requiredAuth: appState.termdbConfig?.requiredAuth,
-				userTab: appState.termdbConfig?.userTab
+				massNav: { tabs: { user: appState.termdbConfig?.massNav?.tabs?.user } }
 			}
 		}
 	}
@@ -204,7 +215,7 @@ export class MassUser implements RxComponent {
 		const vocabApi: any = this.app.vocabApi
 		const signedIn = vocabApi.hasVerifiedToken()
 		// computed by the optional ds hook massNav.tabs.user.getContent(), from the auth of the user
-		const userTab = this.state.termdbConfig.userTab
+		const userTab = getUserTabContent(this.state.termdbConfig.massNav?.tabs?.user, this.state.activeCohort)
 		// same label style as SESSION, with the status on the same row
 		const row = div.append('div')
 		row
@@ -221,18 +232,31 @@ export class MassUser implements RxComponent {
 		// reason for a failed sign-in, if any
 		const msg = vocabApi.tokenVerificationMessage
 		if (!signedIn && msg) row.append('span').style('margin-left', '5px').style('opacity', 0.65).text(msg)
-		// the message, after the status. text, not html, with each email address as a mailto link.
-		// split() with a capture group puts the emails at the odd indexes
-		if (userTab?.msg) {
-			const infoSpan = row
-				.append('span')
-				.attr('data-testid', 'sjpp-massnav-user-auth-info')
-				.style('margin-left', '5px')
-				.style('opacity', 0.75)
-			userTab.msg.split(/([\w.+-]+@[\w-]+(?:\.[\w-]+)+)/).forEach((part, i) => {
-				if (i % 2) infoSpan.append('a').attr('href', `mailto:${part}`).text(part)
-				else if (part) infoSpan.append('span').text(part)
-			})
+		// the messages under the row, as the rows of a table2col: the label, and the value as text, an email
+		// or a link. a message with only text shows the text alone. by property, so that no sentence is split around
+		// its target, which would not survive a change of the wording. text, not html, and the target is the value as
+		// it is, so that nothing is parsed from the text
+		if (userTab?.msgs?.length) {
+			// same table2col style as the run stats of the GRIN2 results view: default cell padding, gray label, and
+			// the value in the default text color
+			const table = table2col({ holder: div, margin: '2px 8px', testid: 'sjpp-massnav-user-auth-info' })
+			for (const m of userTab.msgs) {
+				const [td1, td2] = table.addRow(m.label)
+				const target = m.email ? `mailto:${m.email}` : m.link
+				if (target) {
+					const a = td2
+						.append('a')
+						.attr('href', target)
+						.text(m.email || m.link)
+					if (m.link) a.attr('target', '_blank')
+				} else if (m.label) {
+					td2.text(m.txt)
+				} else {
+					// text only, in a cell that spans both columns
+					td2.remove()
+					td1.attr('colspan', 2).style('color', null).text(m.txt)
+				}
+			}
 		}
 		// the list under the row, such as the sites of the user
 		if (userTab?.list) {

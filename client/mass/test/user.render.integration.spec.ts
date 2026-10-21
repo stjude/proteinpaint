@@ -168,13 +168,15 @@ tape('MassUser renderAuthInfo()', test => {
 	test.end()
 })
 
+const userTabs = (state: any) => (state.termdbConfig.massNav ||= { tabs: {} }).tabs
+
 tape('MassUser renderAuthInfo() userTab', test => {
 	const infoTestId = '[data-testid="sjpp-massnav-user-auth-info"]'
 
 	// text is not interpreted as html
 	{
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.userTab = { msg: '<b>bold</b>' }
+		userTabs(state).user = { msgs: [{ txt: '<b>bold</b>' }] }
 		user.renderAuthInfo()
 		test.equal(holder.select(infoTestId).text(), '<b>bold</b>', 'should show the text as it is')
 		test.equal(holder.select(`${infoTestId} b`).size(), 0, 'should not render html from the text')
@@ -182,9 +184,9 @@ tape('MassUser renderAuthInfo() userTab', test => {
 	}
 
 	// no message
-	for (const userTab of [undefined, {}, { msg: '' }, { isPublic: true }]) {
+	for (const userTab of [undefined, {}, { msgs: [] }, { isPublic: true }]) {
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.userTab = userTab
+		userTabs(state).user = userTab
 		user.renderAuthInfo()
 		test.equal(holder.select(infoTestId).size(), 0, `should not show a message for userTab=${JSON.stringify(userTab)}`)
 		test.equal(holder.select('[data-testid="sjpp-massnav-user-auth-status"]').size(), 1, 'should still show the status')
@@ -194,9 +196,9 @@ tape('MassUser renderAuthInfo() userTab', test => {
 	// replaced on re-render
 	{
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.userTab = { msg: 'first' }
+		userTabs(state).user = { msgs: [{ txt: 'first' }] }
 		user.renderAuthInfo()
-		state.termdbConfig.userTab = { msg: 'second' }
+		userTabs(state).user = { msgs: [{ txt: 'second' }] }
 		user.renderAuthInfo()
 		test.equal(holder.selectAll(infoTestId).size(), 1, 'should render the message once')
 		test.equal(holder.select(infoTestId).text(), 'second', 'should show the latest message')
@@ -206,7 +208,7 @@ tape('MassUser renderAuthInfo() userTab', test => {
 	// a public dataset has no auth info, even if there is a message
 	{
 		const { user, holder, state } = getUser()
-		state.termdbConfig.userTab = { msg: 'x', isPublic: true }
+		userTabs(state).user = { msgs: [{ txt: 'x' }], isPublic: true }
 		user.renderAuthInfo()
 		test.equal(holder.select(infoTestId).size(), 0, 'should not show a message when authorization is not required')
 		holder.remove()
@@ -220,7 +222,7 @@ tape('MassUser renderAuthInfo() userTab', test => {
 		[false, true, 'Requires sign-in']
 	] as [boolean, boolean | undefined, string][]) {
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified })
-		state.termdbConfig.userTab = { msg: 'msg', isPublic }
+		userTabs(state).user = { msgs: [{ txt: 'msg' }], isPublic }
 		user.renderAuthInfo()
 		test.equal(
 			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
@@ -238,7 +240,7 @@ tape('MassUser renderAuthInfo() userTab', test => {
 		[false, undefined]
 	] as [boolean, boolean | undefined][]) {
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified })
-		state.termdbConfig.userTab = { status: 'Public Access', isPublic }
+		userTabs(state).user = { status: 'Public Access', isPublic }
 		user.renderAuthInfo()
 		test.equal(
 			holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
@@ -251,23 +253,28 @@ tape('MassUser renderAuthInfo() userTab', test => {
 	// the list is under the row of the status and message
 	{
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.userTab = {
-			msg: 'msg',
+		userTabs(state).user = {
+			msgs: [{ txt: 'msg' }],
 			list: { label: 'Sites', items: ['A (India)', 'B (Nepal)'] }
 		}
 		user.renderAuthInfo()
-		const [row, listDiv] = Array.from(
+		const [row, infoDiv, listDiv] = Array.from(
 			(holder.select('[data-testid="sjpp-massnav-user-auth"]').node() as HTMLElement).children
 		)
 		test.deepEqual(
 			Array.from(row.children).map(c => c.getAttribute('data-testid')),
-			['sjpp-massnav-user-auth-label', 'sjpp-massnav-user-auth-status', 'sjpp-massnav-user-auth-info'],
-			'should show the label, status, and message on the same row'
+			['sjpp-massnav-user-auth-label', 'sjpp-massnav-user-auth-status'],
+			'should show the label and status on the same row'
+		)
+		test.equal(
+			infoDiv?.querySelector('table')?.getAttribute('data-testid'),
+			'sjpp-massnav-user-auth-info',
+			'should show the messages as a table under the row'
 		)
 		test.equal(
 			listDiv?.getAttribute('data-testid'),
 			'sjpp-massnav-user-auth-list',
-			'should show the list under the row'
+			'should show the list under the messages'
 		)
 		test.equal(holder.select('[data-testid="sjpp-massnav-user-auth-info"]').text(), 'msg', 'should show the message')
 		test.equal(holder.select('[data-testid="sjpp-massnav-user-auth-info"] a').size(), 0, 'should not add a link')
@@ -284,33 +291,78 @@ tape('MassUser renderAuthInfo() userTab', test => {
 		holder.remove()
 	}
 
-	// an email address in the message is a mailto link
+	// an email or link targets exactly its value, and nothing is parsed from the text. each message is a row
 	{
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.userTab = { msg: 'Please contact A.b@c.org. Or x+y@d.e.org' }
+		userTabs(state).user = {
+			msgs: [
+				{ txt: 'Write to a\'b@c.org or "x@y.org" in a sentence, not linked' },
+				{ label: 'Access', txt: 'Public' },
+				{ label: 'Questions?', email: "o'connor@example.org" },
+				{ label: 'Docs', link: 'https://example.org/a?b=1' },
+				{ email: 'x+y@d.e.org' }
+			]
+		}
 		user.renderAuthInfo()
-		const info = holder.select('[data-testid="sjpp-massnav-user-auth-info"]')
-		test.equal(info.text(), 'Please contact A.b@c.org. Or x+y@d.e.org', 'should show the whole message')
+		const rows = holder.selectAll(`${infoTestId} tr`).nodes() as HTMLElement[]
 		test.deepEqual(
-			info
-				.selectAll('a')
+			rows.map(r => Array.from(r.children).map(c => c.textContent)),
+			[
+				['Write to a\'b@c.org or "x@y.org" in a sentence, not linked'],
+				['Access', 'Public'],
+				['Questions?', "o'connor@example.org"],
+				['Docs', 'https://example.org/a?b=1'],
+				['', 'x+y@d.e.org']
+			],
+			'should show a row for each message, with the label in the first column'
+		)
+		test.equal(rows[0].children[0].getAttribute('colspan'), '2', 'should span a message with only text')
+		test.deepEqual(
+			holder
+				.selectAll(`${infoTestId} a`)
 				.nodes()
 				.map((n: any) => [n.getAttribute('href'), n.textContent]),
 			[
-				['mailto:A.b@c.org', 'A.b@c.org'],
+				["mailto:o'connor@example.org", "o'connor@example.org"],
+				['https://example.org/a?b=1', 'https://example.org/a?b=1'],
 				['mailto:x+y@d.e.org', 'x+y@d.e.org']
 			],
-			'should link each email, without the sentence-ending period'
+			'should link the whole address with an apostrophe, and not an address in text'
 		)
+		holder.remove()
+	}
+
+	// the content of the active cohort
+	{
+		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
+		userTabs(state).user = {
+			byCohort: { 0: { status: 'Admin', msgs: [{ txt: 'zero' }] }, 1: { status: 'Public', msgs: [{ txt: 'one' }] } }
+		}
+		for (const [activeCohort, status, msg] of [
+			[0, 'Admin', 'zero'],
+			[1, 'Public', 'one']
+		] as [number, string, string][]) {
+			user.state.activeCohort = activeCohort
+			user.renderAuthInfo()
+			test.equal(
+				holder.select('[data-testid="sjpp-massnav-user-auth-status"]').text(),
+				status,
+				`status for cohort ${activeCohort}`
+			)
+			test.equal(holder.select(infoTestId).text(), msg, `message for cohort ${activeCohort}`)
+		}
+		user.state.activeCohort = -1
+		user.renderAuthInfo()
+		test.equal(holder.select(infoTestId).size(), 0, 'should show no message without a content for the cohort')
 		holder.remove()
 	}
 
 	// the text of the status, message, and list is not interpreted as html
 	{
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.userTab = {
+		userTabs(state).user = {
 			status: '<b>s</b>',
-			msg: '<b>m</b>',
+			msgs: [{ txt: '<b>m</b>' }],
 			list: { label: '<b>l</b>', items: ['<b>i</b>'] }
 		}
 		user.renderAuthInfo()
@@ -326,9 +378,9 @@ tape('MassUser renderAuthInfo() userTab', test => {
 	}
 
 	// no list
-	for (const userTab of [undefined, {}, { msg: 'msg' }]) {
+	for (const userTab of [undefined, {}, { msgs: [{ txt: 'msg' }] }]) {
 		const { user, holder, state } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
-		state.termdbConfig.userTab = userTab
+		userTabs(state).user = userTab
 		user.renderAuthInfo()
 		test.equal(
 			holder.select('[data-testid="sjpp-massnav-user-auth-list"]').size(),
@@ -613,20 +665,22 @@ tape('MassUser destroy()', async test => {
 tape('MassUser getState()', test => {
 	const { user, holder } = getUser()
 	const big = { terms: Array.from({ length: 1000 }, (_, i) => ({ id: i })), queries: { a: 1 }, massNav: {} }
+	const userMassNav = { tabs: { user: { msgs: [{ txt: 'hi' }] } } }
 	const appState: any = {
 		vocab: { dslabel: 'x' },
 		plots: [{ id: 'p1' }],
 		nav: { activeTab: 3 },
-		termdbConfig: { ...big, requiredAuth: [jwtAuth], clientAuthResult: { datasets: ['a'] }, userTab: { msg: 'hi' } }
+		activeCohort: 1,
+		termdbConfig: { ...big, requiredAuth: [jwtAuth], clientAuthResult: { datasets: ['a'] }, massNav: userMassNav }
 	}
 	test.deepEqual(
 		user.getState(appState),
-		{ termdbConfig: { requiredAuth: [jwtAuth], userTab: { msg: 'hi' } } },
-		'should only have the requiredAuth and userTab that the component renders from'
+		{ activeCohort: 1, termdbConfig: { requiredAuth: [jwtAuth], massNav: userMassNav } },
+		'should only have the activeCohort, requiredAuth and user tab that the component renders from'
 	)
 	test.deepEqual(
 		user.getState({ vocab: {}, nav: {} }),
-		{ termdbConfig: { requiredAuth: undefined, userTab: undefined } },
+		{ activeCohort: undefined, termdbConfig: { requiredAuth: undefined, massNav: { tabs: { user: undefined } } } },
 		'should handle a missing termdbConfig'
 	)
 
@@ -643,7 +697,11 @@ tape('MassUser getState()', test => {
 	// and what the component renders is rendered from this state
 	const { user: user2, holder: holder2 } = getUser({ termdbConfig: { requiredAuth: [jwtAuth] }, verified: true })
 	user2.state = user2.getState({
-		termdbConfig: { ...big, requiredAuth: [jwtAuth], userTab: { msg: 'hi', isPublic: true } }
+		termdbConfig: {
+			...big,
+			requiredAuth: [jwtAuth],
+			massNav: { tabs: { user: { msgs: [{ txt: 'hi' }], isPublic: true } } }
+		}
 	})
 	user2.renderAuthInfo()
 	test.equal(
