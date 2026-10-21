@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Mass UI now shows a `User` tab. Functions for saving, sharing, opening, and deleting sessions are now within the User tab. The tab also displays information about the accessible data per role.
+- Added a generalzied memory measurement tool
 
 
 ## 2.220.0
