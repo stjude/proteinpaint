@@ -7,6 +7,11 @@ All notable changes to this project will be documented in this file.
 Features:
 - Mass UI now shows a `User` tab. Functions for saving, sharing, opening, and deleting sessions are now within the User tab. The tab also displays information about the accessible data per role.
 - Added a generalzied memory measurement tool
+- The server reads bam files in process, with @gmod/bam, instead of running samtools view, depth, and quickcheck; a gdc bam slice is read whole and is not indexed
+- The server and its Docker image do not need samtools; serverconfig.samtools is not used
+
+Fixes:
+- The reads and coverage of a truncated gdc bam slice are of the shown region, not of the whole slice
 
 
 ## 2.220.0
