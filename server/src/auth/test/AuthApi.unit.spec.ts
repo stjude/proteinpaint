@@ -1418,6 +1418,29 @@ tape('AuthApi.mayAdjustFilter: prepends authFilter using and when existing filte
 	test.end()
 })
 
+tape('AuthApi.mayAdjustFilter: prepends authFilter using and when existing filter.in is false', function (test) {
+	test.timeoutAfter(500)
+	test.plan(5)
+
+	const { authApi } = makeAuthApi()
+	const authFilter = { type: 'tvslst', join: '', lst: [] }
+	const existingFilter = { type: 'tvslst', in: false, join: 'and', lst: [{ tvs: {} }, { tvs: {} }] }
+	const q: any = {
+		__protected__: { clientAuthResult: {}, ignoredTermIds: [] },
+		filter: existingFilter
+	}
+	const ds = { cohort: { termdb: { getAdditionalFilter: () => authFilter } } }
+
+	authApi.mayAdjustFilter(q, ds as any, undefined)
+
+	test.notEqual(q.filter.in, false, 'should not set in=false on the wrapping filter')
+	test.equal(q.filter.join, 'and', 'should set join to and for the wrapping filter')
+	test.equal(q.filter.lst[0], authFilter, 'should prepend authFilter as the first entry')
+	test.equal(q.filter.lst[1], existingFilter, 'should keep the existing filter as the second entry')
+	test.equal(existingFilter.lst.length, 2, 'should not add authFilter to the existing filter.lst')
+	test.end()
+})
+
 tape('AuthApi.mayAdjustFilter: removes prior FILTER_TAG entry when authFilter is null', function (test) {
 	test.timeoutAfter(500)
 	test.plan(2)
@@ -1436,6 +1459,32 @@ tape('AuthApi.mayAdjustFilter: removes prior FILTER_TAG entry when authFilter is
 
 	test.equal(q.filter.lst.length, 1, 'should remove the auth filter entry')
 	test.equal(q.filter.lst[0], existingEntry, 'should keep the non-tagged entry')
+	test.end()
+})
+
+tape('AuthApi.mayAdjustFilter: keeps the existing filter when a prepended authFilter is removed', function (test) {
+	test.timeoutAfter(500)
+	test.plan(4)
+
+	const { authApi } = makeAuthApi()
+	const authFilter = { type: 'tvslst', join: '', lst: [] }
+	const existingFilter = { type: 'tvslst', in: false, join: 'and', lst: [{ tvs: {} }, { tvs: {} }] }
+	const q: any = {
+		__protected__: { clientAuthResult: {}, ignoredTermIds: [] },
+		filter: existingFilter
+	}
+	let returnedFilter: any = authFilter
+	const ds = { cohort: { termdb: { getAdditionalFilter: () => returnedFilter } } }
+
+	authApi.mayAdjustFilter(q, ds as any, undefined)
+	test.equal(q.filter.lst[0], authFilter, 'should prepend authFilter on the first call')
+
+	// a later call, such as for route-specific terms, may return no authFilter
+	returnedFilter = undefined
+	authApi.mayAdjustFilter(q, ds as any, undefined)
+	test.equal(q.filter.lst.length, 1, 'should remove only the authFilter entry')
+	test.equal(q.filter.lst[0], existingFilter, 'should keep the existing filter')
+	test.equal(q.filter.join, '', 'should set join to empty for a single entry')
 	test.end()
 })
 

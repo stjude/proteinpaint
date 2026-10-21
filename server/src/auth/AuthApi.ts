@@ -317,8 +317,8 @@ export class AuthApi implements AuthInterface {
 			// certain roles (from jwt payload) may have access to everything,
 			// revert or do not adjust the q.filter in this case
 			if (i !== -1) {
-				// remove a previously added auth filter
-				q.filter.lst.splice(i)
+				// remove a previously added auth filter, which may be prepended to the existing root filter
+				q.filter.lst.splice(i, 1)
 				if (q.filter.lst.length < 2) q.filter.join = ''
 			} else if (q.filter.tag === FILTER_TAG) {
 				// replace a previous authFilter that was set as the q.filter
@@ -335,11 +335,14 @@ export class AuthApi implements AuthInterface {
 			} else if (!q.filter.lst.length) q.filter = authFilter // replace an empty root filter
 			else if (q.filter.tag === FILTER_TAG) q.filter = authFilter
 			// replace a previous authFilter that was set as root q.filter
-			else if (q.filter.join != 'or') {
+			else if (q.filter.join != 'or' && q.filter.in !== false) {
 				// prevent unnecessary filter nesting,  root filter.lst[] with only one entry that is also a tvslst
 				q.filter.lst.push(authFilter) // add to the existing root filter.lst[] array
 				if (q.filter.join == '') q.filter.join = 'and'
-			} else q.filter = { type: 'tvslst', join: 'and', lst: [authFilter, q.filter] } // prepend the auth filter using an 'and' operator
+			}
+			// an 'or' root, or a root with in=false that applies to all of its lst[] entries,
+			// must be nested so that the auth filter is joined to the whole root filter
+			else q.filter = { type: 'tvslst', join: 'and', lst: [authFilter, q.filter] } // prepend the auth filter using an 'and' operator
 		}
 	}
 }

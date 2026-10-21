@@ -103,7 +103,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		lollipop: tdb.lollipop,
 		urlTemplates: tdb.urlTemplates,
 		title: 'title' in ds.cohort ? ds.cohort.title : { text: ds.label },
-		massNav: ds.cohort.massNav,
 		tracks: tdb.tracks,
 		sampleTypes: ds.cohort.termdb.sampleTypes,
 		hasSampleAncestry: ds.cohort.termdb.hasSampleAncestry,
@@ -165,7 +164,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	c.clientAuthResult = info?.clientAuthResult || {}
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds(c.clientAuthResult)
 	const userTab = getUserTab(ds, c.clientAuthResult, req.query.__protected__)
-	if (userTab) c.userTab = userTab
+	c.massNav = getClientMassNav(ds.cohort.massNav, userTab)
 	// app.middleware.js would have used authApi.mayAdjustFilter() to create an auth-related filter,
 	// note this may be undefined if there is no ds.cohort.termdb.getAdditionalFilter
 	c.authFilter = req.query.filter
@@ -674,36 +673,104 @@ export function getLoneTermByType(req, ds, loneTermByType) {
 }
 
 /*
-what the mass nav user tab shows about the auth of the user, as computed by the optional ds hooks in
-massNav.tabs.user: getMsg() for the message, and isPublic() for whether the user has only public access.
+what the mass nav user tab shows about the auth of the user, as returned by the optional ds hook
+massNav.tabs.user.getContent(): status for the heading, msgs for the message, list for a list such as the
+sites of the user, and isPublic for whether the user has only public access.
+the hook gets q and the ds. q.cohortKeys are the keys of the selectCohort value that the content is for, [] when
+the ds has no selectCohort. when the ds has one, the hook is called once for each value, since the access of the
+user may differ by cohort, and the content is returned by the index of the value, as byCohort, for the client to
+pick by the active cohort.
 clientAuthResult is from authApi.getNonsensitiveInfo(), {} when the user has no session.
 __protected__ is req.query.__protected__ as set by the auth middleware, which may be missing or partial, such as
-when the server has no auth. only the parts that the hooks may need are passed, with defaults.
-returns undefined when there are no hooks or no result. a hook that fails or returns an invalid value is
-ignored, since what the tab shows is optional
+when the server has no auth. only the parts that the hook may need are passed, with defaults.
+returns undefined when there is no hook or no result. a hook that fails is ignored, and so is a field with an
+invalid value, since what the tab shows is optional
 */
-export function getUserTab(ds, clientAuthResult, __protected__): { msg?: string; isPublic?: boolean } | undefined {
-	const hooks = ds.cohort.massNav?.tabs?.user
-	if (!hooks) return
-	const q = Object.freeze({
+type UserTabMsg = { label?: string } & ({ txt: string } | { email: string } | { link: string })
+type UserTabContent = {
+	status?: string
+	msgs?: UserTabMsg[]
+	list?: { label: string; items: string[] }
+	isPublic?: boolean
+}
+type UserTab = UserTabContent & { byCohort?: { [index: number]: UserTabContent } }
+
+export function getUserTab(ds, clientAuthResult, __protected__): UserTab | undefined {
+	const getContent = ds.cohort.massNav?.tabs?.user?.getContent
+	if (typeof getContent != 'function') return
+	const base = {
 		clientAuthResult,
 		datasets: Array.isArray(__protected__?.datasets) ? __protected__.datasets : [],
 		isUserLoggedIn: __protected__?.isUserLoggedIn === true
+	}
+	const getByKeys = (cohortKeys: string[]) => {
+		try {
+			return sanitizeUserTabContent(getContent(Object.freeze({ ...base, cohortKeys: Object.freeze(cohortKeys) }), ds))
+		} catch (e: any) {
+			console.log(e?.stack || e)
+		}
+	}
+	const values = ds.cohort.termdb?.selectCohort?.values
+	if (!Array.isArray(values)) return getByKeys([])
+	const byCohort: { [index: number]: UserTabContent } = {}
+	values.forEach((v, i) => {
+		const content = getByKeys(Array.isArray(v?.keys) ? v.keys.filter(isNonEmptyString) : [])
+		if (content) byCohort[i] = content
 	})
-	const userTab: { msg?: string; isPublic?: boolean } = {}
-	const msg = mayCallHook(hooks.getMsg, q)
-	if (msg && typeof msg == 'string') userTab.msg = msg
-	if (mayCallHook(hooks.isPublic, q) === true) userTab.isPublic = true
+	return Object.keys(byCohort).length ? { byCohort } : undefined
+}
+
+/* the known fields of what the hook returned, leaving out what is invalid */
+function sanitizeUserTabContent(content): UserTabContent | undefined {
+	if (!content || typeof content != 'object') return
+	const userTab: UserTabContent = {}
+	const { status, msgs, list } = content
+	if (isNonEmptyString(status)) userTab.status = status
+	if (Array.isArray(msgs)) {
+		const valid = msgs.map(sanitizeUserTabMsg).filter(m => m)
+		if (valid.length) userTab.msgs = valid as UserTabMsg[]
+	}
+	if (isNonEmptyString(list?.label) && Array.isArray(list.items)) {
+		const items = list.items.filter(isNonEmptyString)
+		if (items.length) userTab.list = { label: list.label, items }
+	}
+	if (content.isPublic === true) userTab.isPublic = true
 	return Object.keys(userTab).length ? userTab : undefined
 }
 
-function mayCallHook(hook, q) {
-	if (typeof hook != 'function') return
-	try {
-		return hook(q)
-	} catch (e: any) {
-		console.log(e?.stack || e)
+/* a message: one value, which is text, an email address to link as mailto:, or a link, and an optional label. the
+client does not parse the text, so the target is exactly the value. an email is one address with no whitespace or
+delimiters, and a link must be http(s), so not a javascript: url */
+function sanitizeUserTabMsg(m): UserTabMsg | undefined {
+	if (!m || typeof m != 'object') return
+	if (m.label !== undefined && !isNonEmptyString(m.label)) return
+	const label = m.label === undefined ? {} : { label: m.label }
+	const keys = ['txt', 'email', 'link'].filter(k => m[k] !== undefined)
+	if (keys.length != 1 || !isNonEmptyString(m[keys[0]])) return
+	if (keys[0] == 'txt') return { ...label, txt: m.txt }
+	if (keys[0] == 'email') {
+		if (/^[^\s@<>"]+@[^\s@<>"]+$/.test(m.email)) return { ...label, email: m.email }
+		return
 	}
+	try {
+		if (/^https?:$/.test(new URL(m.link).protocol)) return { ...label, link: m.link }
+	} catch (_) {
+		// an invalid url is left out
+	}
+}
+
+/* the massNav to send to the client. the user tab entry has its content, and not the hook, which is a function
+that cannot be sent. does not change the ds */
+export function getClientMassNav(massNav, userTab) {
+	if (!massNav) return massNav
+	const user = massNav.tabs?.user
+	if (!user) return massNav
+	const { getContent, ...entry } = user // eslint-disable-line @typescript-eslint/no-unused-vars
+	return { ...massNav, tabs: { ...massNav.tabs, user: { ...entry, ...userTab } } }
+}
+
+function isNonEmptyString(v): v is string {
+	return typeof v == 'string' && v.length > 0
 }
 
 function getSelectCohort(ds, req) {
