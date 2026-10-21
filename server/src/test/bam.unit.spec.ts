@@ -1,10 +1,11 @@
 /********************************************
-Unit Test for parse_align_output, get_partstack, may_trimstacks and read_regions (server/src/bam.js)
+Unit Test for parse_align_output, get_partstack, may_trimstacks, read_regions and the request values of the
+rendering route (server/src/bam.js)
 Run with:  node server/src/test/bam.unit.spec.ts
 *********************************************/
 
 import tape from 'tape'
-import { parse_align_output, get_partstack, may_trimstacks, read_limits, read_regions } from '../bam.js'
+import bamRoute, { parse_align_output, get_partstack, may_trimstacks, read_limits, read_regions } from '../bam.js'
 
 tape('bam.js - parse_align_output', async t => {
 	const multiSeqClustal =
@@ -199,6 +200,70 @@ tape('bam.js - read_regions: the limits of the reads', async t => {
 			for (const p of pairs) if (kept.filter((x: string) => x == p).length == 1) split++
 		}
 		t.equal(split, 0, 'should keep or drop the reads of a pair together')
+	}
+	t.end()
+})
+
+/** the response of the rendering route for a request of the reads of edge.bam, with changes to the request */
+async function renderEdge(change: Record<string, any>) {
+	// the reads from 7680001, at less than one pixel per base, so that the reference sequence is not read
+	const genomes = { hg38: { chrlookup: { CHR17: { name: 'chr17', len: 83257441 } } } }
+	const query = {
+		genome: 'hg38',
+		file: 'files/hg38/bam/edge.bam',
+		nochr: false,
+		pileupheight: 100,
+		rglst: [{ chr: 'chr17', start: 7680000, stop: 7685000, width: 500, x: 0 }],
+		...change
+	}
+	for (const [k, v] of Object.entries(query)) if (v === undefined) delete query[k]
+	let data: any
+	const req = { query, get: () => undefined, cookies: {} }
+	await bamRoute(genomes)(req, { send: (d: any) => (data = d) })
+	return data
+}
+
+/** the width of a png data url */
+const pngWidth = (src: string) => Buffer.from(src.split(',')[1], 'base64').readUInt32BE(16)
+
+tape('bam.js - the request values of the rendering route', async t => {
+	{
+		const data = await renderEdge({})
+		t.notOk(data.error, 'should render the reads of rglst')
+		t.equal(data.count?.r, 600, 'should render all the reads of rglst')
+	}
+	{
+		const data = await renderEdge({
+			rglst: JSON.stringify([{ chr: 'chr17', start: 7680000, stop: 7685000, width: 500, x: 0 }])
+		})
+		t.equal(data.count?.r, 600, 'should parse a JSON string of rglst')
+	}
+	{
+		const regions = [{ chr: 'chr17', start: 7680000, stop: 7685000, width: 500, x: 0 }]
+		const data = await renderEdge({ rglst: undefined, regions })
+		t.match(String(data.error), /rglst/, 'should reject a request of regions without rglst')
+	}
+	for (const rglst of ['[]x', '"chr17"', 'chr17']) {
+		const data = await renderEdge({ rglst })
+		t.match(String(data.error), /rglst/, `should reject rglst=${rglst}`)
+	}
+	{
+		const data = await renderEdge({ rglst: [{ chr: 'chr17', start: 7680000, stop: 7685000, width: 500 }] })
+		t.match(String(data.error), /\.x of a region/, 'should reject a region without x')
+	}
+	{
+		const data = await renderEdge({ rglst: [{ chr: 'chr17', start: 7680000, stop: 7685000, width: 500, x: 1e9 }] })
+		t.match(String(data.error), /out of bound/, 'should reject a region beyond the canvas width limit')
+	}
+	for (const pileupheight of [1e6, -1, 'x']) {
+		const data = await renderEdge({ pileupheight })
+		t.match(String(data.error), /pileupheight/, `should reject pileupheight=${pileupheight}`)
+	}
+	{
+		const data = await renderEdge({ devicePixelRatio: 1000 })
+		t.equal(pngWidth(data.groups[0].src), 500 * 4, 'should render a large pixel ratio at the limit')
+		const low = await renderEdge({ devicePixelRatio: 0.5 })
+		t.equal(pngWidth(low.groups[0].src), 500, 'should render a pixel ratio below 1 at 1')
 	}
 	t.end()
 })

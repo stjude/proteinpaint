@@ -230,7 +230,7 @@ export async function loadTk(tk, block) {
 async function getData(tk, block, additional = {}) {
 	const body = {
 		genome: block.genome.name,
-		regions: tk.regions,
+		rglst: tk.regions,
 		nucleotide_length: block.exonsf,
 		pileupheight: tk.pileupheight,
 		...additional
@@ -1542,7 +1542,7 @@ async function align_reads_to_allele(tk, group, block) {
 	const body = {
 		alignOneGroup: group.data.type,
 		genome: block.genome.name,
-		regions: tk.regions,
+		rglst: tk.regions,
 		variant: tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.')
 	}
 	if (tk.file) body.file = tk.file

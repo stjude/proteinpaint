@@ -247,6 +247,11 @@ may change them.
 */
 export const read_limits = { maxscanbases: 4.5e6, maxrenderbases: 1.05e6, minreadbases: 100 }
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
+// the limits of the request values that size a canvas: the width is of the regions of validateRglst() in utils.js, with
+// the space between them; a larger pixel ratio of the client is rendered at this one
+const maxcanvaswidth = 60000
+const maxpileupheight = 1000
+const maxdevicepixelratio = 4
 const max_returntemplatebox = 2000 // maximum number of reads per group, for which to return the "templatebox"
 const minstackheight_returntemplatebox = 7 // minimum stack height (number of pixels) for which to return templatebox
 const max_read_alignment = 200 // Max number of reads that can be aligned to reference sequence
@@ -771,8 +776,15 @@ export function get_partstack(query) {
 }
 
 async function get_q(genome, req) {
-	// validate regions before the file is read (bam_is_truncated() below)
-	utils.validateRglst({ rglst: req.query.regions }, genome)
+	// validate regions before the file is read (bam_is_truncated() below); the middleware has parsed and validated
+	// req.query.rglst if it is present, and an array is required of it here
+	utils.validateRglst(req.query, genome)
+	if (!Array.isArray(req.query.rglst)) throw 'rglst[] not array'
+	const regions = req.query.rglst
+	for (const r of regions) {
+		if (!Number.isFinite(r.x) || r.x < 0) throw '.x of a region not number'
+		if (!Number.isFinite(r.width) || r.x + r.width > maxcanvaswidth) throw '.width of a region out of bound'
+	}
 
 	const [filefullpath, dir] = await getFilefullpathOrUrl(req)
 	const q = {
@@ -784,12 +796,17 @@ async function get_q(genome, req) {
 		asPaired: req.query.asPaired,
 		getcolorscale: req.query.getcolorscale,
 		//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-		devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
+		devicePixelRatio: 1
+	}
+	if (req.query.devicePixelRatio) {
+		const ratio = Number(req.query.devicePixelRatio)
+		if (Number.isFinite(ratio)) q.devicePixelRatio = Math.min(maxdevicepixelratio, Math.max(1, ratio))
 	}
 
 	if (req.query.pileupheight) {
 		q.pileupheight = Number(req.query.pileupheight)
-		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
+		if (!Number.isFinite(q.pileupheight) || q.pileupheight <= 0 || q.pileupheight > maxpileupheight)
+			throw '.pileupheight out of bound'
 	}
 	if (req.query.drop_pcrduplicates) {
 		q.drop_pcrduplicates = true
@@ -800,6 +817,12 @@ async function get_q(genome, req) {
 
 	if (req.query.variant) {
 		q.diff_score_plotwidth = Number(req.query.diff_score_plotwidth)
+		if (
+			!Number.isFinite(q.diff_score_plotwidth) ||
+			q.diff_score_plotwidth < 0 ||
+			q.diff_score_plotwidth > maxcanvaswidth
+		)
+			throw '.diff_score_plotwidth out of bound'
 		if (req.query.max_diff_score) {
 			q.max_diff_score = Number(req.query.max_diff_score)
 			q.min_diff_score = Number(req.query.min_diff_score)
@@ -867,7 +890,7 @@ async function get_q(genome, req) {
 		// info not provided
 		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir, q.withoutIndex)
 	}
-	q.regions = req.query.regions
+	q.regions = regions
 
 	let maxntwidth = 0
 	for (const r of q.regions) {
@@ -908,11 +931,14 @@ async function mayReSliceFile(req, cachefile) {
 
 		// slice file not found. force to download slice here
 
-		const bakRegions = req.query.regions
+		const bakRglst = req.query.rglst
 		const tmp = req.query.gdcFilePosition.split(/[.:-]/)
-		req.query.regions = [{ chr: tmp[0], start: Number(tmp[1]), stop: Number(tmp[2]) }]
-		await downloadGdcBam2cacheFile_withDenial(req)
-		req.query.regions = bakRegions
+		req.query.rglst = [{ chr: tmp[0], start: Number(tmp[1]), stop: Number(tmp[2]) }]
+		try {
+			await downloadGdcBam2cacheFile_withDenial(req)
+		} finally {
+			req.query.rglst = bakRglst
+		}
 	} catch (e) {
 		throw e
 	}
@@ -3535,8 +3561,8 @@ function getGDCcacheFileName(req) {
 /*
 req.query{}
 	gdcFileUUID:str
-	gdcFilePosition:str // same as regions[0]
-	regions:[ {chr/start/stop}, ... ]
+	gdcFilePosition:str // same as rglst[0]
+	rglst:[ {chr/start/stop}, ... ]
 
 returns list of slice file sizes that's been cached
 
@@ -3549,9 +3575,12 @@ async function downloadGdcBam2cacheFile_withDenial(req) {
 	}
 
 	// query gdc bam slicing api using the uuid of one bam file
-	// download one bam slice for each region
-	const regions = req.query.regions
-	if (!Array.isArray(regions) || regions.length == 0) throw 'req.query.regions[] not non-empty array'
+	// download one bam slice for each region; the middleware has validated req.query.rglst of a request, against hg38,
+	// and it is validated again here, such as for the slice of gdcFilePosition of mayReSliceFile()
+	getGdcDs(req.query.__genomes)
+	utils.validateRglst(req.query, req.query.__genomes.hg38)
+	if (!Array.isArray(req.query.rglst)) throw 'rglst[] not array'
+	const regions = req.query.rglst
 	let fileStat
 	for (const r of regions) {
 		// FIXME NOTE FUTURE SOLUTION
