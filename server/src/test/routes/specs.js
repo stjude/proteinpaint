@@ -1,7 +1,7 @@
 /* these routes are for testing only */
 import fs from 'fs'
 import path from 'path'
-import { minimatch } from 'minimatch'
+import pm from 'picomatch'
 import serverconfig from '../../serverconfig.js'
 
 process.removeAllListeners('warning')
@@ -96,8 +96,8 @@ export function findMatchingSpecs(opts) {
 
 function getFromCache(pattern) {
 	if (specsCache[pattern]) return specsCache[pattern]
-	// prefer minimatch() against in-memory cache, which is much faster than glob.sync() against disk
-	return specsCache['*']?.filter(f => minimatch(f, pattern))
+	// prefer pm.isMatch() against in-memory cache, which is much faster than glob.sync() against disk
+	return specsCache['*']?.filter(f => pm.isMatch(f, pattern))
 }
 
 function replaceFilePath(f) {

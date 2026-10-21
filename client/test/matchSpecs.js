@@ -1,5 +1,5 @@
 import process from 'process'
-import { minimatch } from 'minimatch'
+import pm from 'picomatch'
 
 window.process = process
 
@@ -18,7 +18,7 @@ const patterns = [
 ]
 export const specsMatched = []
 
-// console.log(19, SPECNAME, NESTEDSPECDIR, minimatch('mass/test/dataDownload.integration.spec.js', `${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`))
+// console.log(19, SPECNAME, NESTEDSPECDIR, pm.isMatch('mass/test/dataDownload.integration.spec.js', `${NESTEDSPECDIR}/test/${SPECNAME}.spec.*s`))
 
 export function matchSpecs(filepath) {
 	//if (window.testHost) return true
@@ -30,7 +30,7 @@ export function matchSpecs(filepath) {
 	// }
 	if (exclude && filepath.includes(exclude)) return false
 	for (const pattern of patterns) {
-		if (pattern && minimatch(filepath, pattern)) {
+		if (pattern && pm.isMatch(filepath, pattern)) {
 			specsMatched.push(filepath)
 			return true
 		}

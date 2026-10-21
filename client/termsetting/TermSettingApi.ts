@@ -2,7 +2,7 @@ import type { TermSettingOpts } from './types'
 import { TermSetting } from './TermSetting.ts'
 import type { Term, TermWrapper, Filter } from '#types'
 import { call_fillTW, get$id, fillTermWrapper } from './utils.ts'
-import { minimatch } from 'minimatch'
+import pm from 'picomatch'
 import { copyMerge, deepEqual, sleep } from '#rx'
 import { trimGvQForCache } from '#shared/terms.js'
 import { select } from 'd3-selection'
@@ -207,7 +207,7 @@ export class TermSettingApi {
 			self.q &&
 			!self.term.groupsetting?.disabled &&
 			self.term.type != 'survival' &&
-			minimatch('edit', self.opts.menuOptions) &&
+			pm.isMatch('edit', self.opts.menuOptions) &&
 			!isFractionCollection
 		) {
 			// hide edit option for survival term because its showEditMenu() is disabled
@@ -226,7 +226,7 @@ export class TermSettingApi {
 			isFractionCollection &&
 			self.q &&
 			!self.term.groupsetting?.disabled &&
-			minimatch('edit', self.opts.menuOptions)
+			pm.isMatch('edit', self.opts.menuOptions)
 		) {
 			options.push({
 				label: 'Edit numerator/denominator',
@@ -264,7 +264,7 @@ export class TermSettingApi {
 			}
 		}
 
-		if (self.term.type == 'geneVariant' && minimatch('edit', self.opts.menuOptions)) {
+		if (self.term.type == 'geneVariant' && pm.isMatch('edit', self.opts.menuOptions)) {
 			/* settings the user built earlier for this gene, so that one can be applied without
 			rebuilding it, see remember_gvq() in client/mass/store.ts. Empty outside a mass app,
 			whose store is the only one that remembers them */
@@ -283,7 +283,7 @@ export class TermSettingApi {
 			}
 		}
 
-		if (minimatch('replace', self.opts.menuOptions)) {
+		if (pm.isMatch('replace', self.opts.menuOptions)) {
 			options.push({
 				label: 'Replace',
 				callback: (event, d) => {
@@ -292,7 +292,7 @@ export class TermSettingApi {
 			} as opt)
 		}
 
-		if (minimatch('remove', self.opts.menuOptions)) {
+		if (pm.isMatch('remove', self.opts.menuOptions)) {
 			options.push({ label: 'Remove', callback: () => self.actions.removeTerm() } as opt)
 		}
 
