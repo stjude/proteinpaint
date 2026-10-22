@@ -104,6 +104,9 @@ tape('admitRun', test => {
 		test.equal(e.message, 'Select a smaller cohort.', 'with the refusal message')
 	}
 	test.equal(memoryReservedMB(), 300, 'a refused run reserves nothing')
+	const reported = admitRun('test', cost, { rows: 200 }, 1000, refusal, true)
+	test.equal(memoryReservedMB(), 600, 'report mode => a run that does not fit is not refused, and is reserved')
+	reported()
 	release()
 	test.equal(memoryReservedMB(), 0, 'released')
 	test.end()

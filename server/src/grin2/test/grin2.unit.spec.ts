@@ -652,6 +652,13 @@ tape('getMaxLesions', async test => {
 	}
 	first.releaseMemory()
 	test.equal(await capAt(1500), Math.min(max, 84615), 'after the first run releases => the full cap again')
+
+	// report mode: never trimmed or refused, however little is free
+	for (const mb of [1500, 0]) {
+		const { cap, releaseMemory } = await getMaxLesions(freeMB(mb), true)
+		releaseMemory()
+		test.equal(cap, max, `report mode at ${mb} MB => the configured max`)
+	}
 	test.end()
 })
 

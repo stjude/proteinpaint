@@ -15,6 +15,8 @@ import {
 	reserveMemoryMB,
 	logMemoryAdmission,
 	lowMemoryError,
+	MEMORY_REPORT_ONLY,
+	RUN_MEMORY_FRACTION,
 	type MemoryCost
 } from '../utils/memory.ts'
 import { processSampleMlst, buildLesionTypeMap } from './lesions.ts'
@@ -600,16 +602,19 @@ async function runGrin2Fresh(
 
 /** The lesion cap for one run, and the release of the memory reserved for a run of that many lesions, to call in a
  * finally once the run ends. The cap leaves out memory that runs in progress have reserved. getAvailable: the
- * free-memory reader, replaced by a fixed value in the unit spec */
+ * free-memory reader, replaced by a fixed value in the unit spec. In report mode the cap is always MAX_LESIONS, and
+ * the log says whether a run of that many fits. */
 export async function getMaxLesions(
-	getAvailable = getAvailableMemoryMB
+	getAvailable = getAvailableMemoryMB,
+	reportOnly = MEMORY_REPORT_ONLY
 ): Promise<{ cap: number; releaseMemory: () => void }> {
 	const availableMemoryMB = await getAvailable()
 
 	// Run even when memory is plentiful, so a configured MAX_LESIONS that would not fit is still reduced
-	const cap = Math.min(MAX_LESIONS, largestSizeThatFits(availableMemoryMB, GRIN2_MEMORY, 'lesions'))
+	const fits = largestSizeThatFits(availableMemoryMB, GRIN2_MEMORY, 'lesions')
+	const cap = reportOnly ? MAX_LESIONS : Math.min(MAX_LESIONS, fits)
 	const neededMB = estimatePeakMB(GRIN2_MEMORY, { lesions: Math.max(0, cap) })
-	logMemoryAdmission('GRIN2', cap > 0, neededMB, availableMemoryMB)
+	logMemoryAdmission('GRIN2', cap > 0 && cap <= fits, neededMB, availableMemoryMB, RUN_MEMORY_FRACTION, reportOnly)
 	// Refused before any fetch: the budget cannot cover the base overhead, and the GDC batch fetch reads a cap of 0 as no cap
 	if (cap <= 0) throw lowMemoryError(LOW_MEMORY_MESSAGE)
 	if (cap < MAX_LESIONS) mayLog(`[GRIN2] Reduced lesion cap to ${cap.toLocaleString()} for low memory`)

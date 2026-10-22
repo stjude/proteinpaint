@@ -21,6 +21,59 @@ However, it's safer to simply have that file available just in case any imported
 and runs as part of test:unit, and that's why `server/emitImports.js` creates one if it doesn't exist by
 copying `container/ci/serverconfig.json`.
 
+### Memory budget
+
+Before a heavy run (GRIN2, differential expression, differential methylation and its DMR jobs, top variably
+expressed genes), the server reads the memory that is free on the host or container, and estimates the run's peak
+memory from costs measured on real runs (`GRIN2_MEMORY`, `DE_MEMORY`, `DM_MEMORY`, `TOPVE_MEMORY`, each next to its
+route; the checks are in `server/src/utils/memory.ts`). Runs plan within a budget, which is
+a share of that free memory, less what runs in progress have reserved. `memoryBudget` in serverconfig.json sets the
+share and what happens to a run that does not fit:
+
+```json
+"memoryBudget": { "mode": "enforce", "fraction": 0.4 }
+```
+
+Both keys are optional. With no `memoryBudget`, the server enforces a 40% budget.
+
+| key        | values                         | default     |
+| ---------- | ------------------------------ | ----------- |
+| `mode`     | `"enforce"` or `"report"`      | `"enforce"` |
+| `fraction` | a number above 0 and at most 1 | `0.4`       |
+
+The server refuses to start if either value is invalid.
+
+**`enforce`**: a run that does not fit is refused with a 503 error, code `LOW_MEMORY`, whose message tells the user
+what to change, such as a smaller cohort or the Wilcoxon method for DE. GRIN2 is trimmed instead: its lesion cap is
+lowered to what fits. It is refused only when the budget does not cover its base overhead, or when the cohort has
+more lesions than a cap below 50,000, the smallest run worth doing. Use this on shared or
+production servers, where one large request could otherwise use up the memory of every other request.
+
+**`report`**: the server still reads the free memory and logs each estimate, but every run goes ahead in full.
+Nothing is refused, and GRIN2 keeps its configured lesion cap (`features.grin2maxLesions`, at most about 641,000
+lesions, a fixed 2 GB ceiling). Use this on a laptop or a dedicated server, where free memory is often low because
+the OS keeps memory as cache, and an analysis that would finish would otherwise be refused. The logs then show how
+close each run came to the budget, to tune `fraction` before enforcing.
+
+`fraction` is the share of free memory that heavy runs may plan for together. The rest is headroom for the rest of
+the server and for error in the cost estimates. Raise it on a server that does little else, so that larger runs
+are admitted. Keep the default where many users run analyses at once.
+
+Each run logs one line, for example:
+
+```text
+[memory] DM admitted: needs 6,134 MB of a 6,400 MB budget (40% of 16,000 MB free), 0 MB reserved by runs in progress
+[memory] DE edgeR refused: needs 8,938 MB of a 4,800 MB budget (40% of 12,000 MB free), 0 MB reserved by runs in progress
+[memory] DE edgeR does not fit (report only): needs 8,938 MB of a 4,800 MB budget (40% of 12,000 MB free), 0 MB reserved by runs in progress
+```
+
+To change the budget without editing serverconfig.json, such as for one test server, set it in
+`PP_SERVERCONFIG_OVERRIDES`. Overrides replace top-level keys, so give the whole object:
+
+```bash
+PP_SERVERCONFIG_OVERRIDES='{"memoryBudget":{"mode":"report"}}' npm start
+```
+
 
 ## Develop
 
