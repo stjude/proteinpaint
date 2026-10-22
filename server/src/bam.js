@@ -4,7 +4,7 @@ import * as utils from './utils.js'
 import serverconfig, { generateHash } from './serverconfig.js'
 import { Readable, Transform } from 'stream'
 import { pipeline } from 'node:stream/promises'
-import { createCanvas } from 'canvas'
+import { makeCanvas, canvasToURL } from './canvas.ts'
 import * as bamcommon from './bam.common.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import ky from 'ky'
@@ -411,12 +411,13 @@ function getGdcDs(genomes) {
 async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_score) {
 	const multiplication_factor = q.diff_score_plotwidth / (max_diff_score - min_diff_score)
 	const diff_score_bar_width = max_diff_score * multiplication_factor - min_diff_score * multiplication_factor
-	const canvas = createCanvas(diff_score_bar_width * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
-	const ctx = canvas.getContext('2d')
+	// the width is NaN when max_diff_score equals min_diff_score, which gives an empty image
+	const { canvas, ctx } = makeCanvas(
+		Number.isFinite(diff_score_bar_width) ? diff_score_bar_width : 0,
+		group.canvasheight,
+		q.devicePixelRatio
+	)
 	//const read_height = group.templates[0].r.ntwidth
-	if (q.devicePixelRatio > 1) {
-		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
-	}
 	const diff_scores_list = templates.map(i => i.__tempscore)
 	const read_height = group.canvasheight / diff_scores_list.length
 	let i = 0
@@ -454,17 +455,13 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 	return {
 		height: group.canvasheight,
 		width: diff_score_bar_width,
-		src: canvas.toDataURL(),
+		src: await canvasToURL(canvas),
 		read_height: read_height
 	}
 }
 
 async function plot_pileup(q, templates) {
-	const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, q.pileupheight * q.devicePixelRatio)
-	const ctx = canvas.getContext('2d')
-	if (q.devicePixelRatio > 1) {
-		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
-	}
+	const { canvas, ctx } = makeCanvas(q.canvaswidth, q.pileupheight, q.devicePixelRatio)
 
 	const bplst = []
 	// array of array, stores depth for each region, each ele is { .position, .total/A/T/C/G }
@@ -531,7 +528,7 @@ async function plot_pileup(q, templates) {
 	return {
 		width: q.canvaswidth,
 		maxValue,
-		src: canvas.toDataURL()
+		src: await canvasToURL(canvas)
 	}
 }
 
@@ -1051,11 +1048,7 @@ async function do_query(q) {
 			count: { r: templates.reduce((i, j) => i + j.segments.length, 0) }
 		}
 
-		const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
-		const ctx = canvas.getContext('2d')
-		if (q.devicePixelRatio > 1) {
-			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
-		}
+		const { canvas, ctx } = makeCanvas(q.canvaswidth, group.canvasheight, q.devicePixelRatio)
 
 		ctx.textAlign = 'center'
 		ctx.textBaseline = 'middle'
@@ -1090,12 +1083,12 @@ async function do_query(q) {
 			}
 		}
 
-		gr.src = canvas.toDataURL()
+		gr.src = await canvasToURL(canvas)
 		result.groups.push(gr)
 		templates_total = [...templates_total, ...templates]
 	}
 	if (q.readcount_skipped) result.count.skipped = q.readcount_skipped
-	if (q.getcolorscale) result.colorscale = getcolorscale(q)
+	if (q.getcolorscale) result.colorscale = await getcolorscale(q)
 	if (!q.partstack) {
 		// not in partstack mode, may do pileup plot
 		if (result.count.r == 0) {
@@ -3036,7 +3029,7 @@ if b.qual is available, set text color based on it
 	}
 }
 
-function getcolorscale(q) {
+async function getcolorscale(q) {
 	/*
            base quality
            40  30  20  10  0
@@ -3057,11 +3050,7 @@ Insertion  BBBBBBBBBBBBBBBBB
 
 	const imgWidth = leftpad + barwidth + rightpad,
 		imgHeight = fontsize * 2 + labyspace + ticksize + (barheight + barspace) * 4
-	const canvas = createCanvas(q.devicePixelRatio * imgWidth, q.devicePixelRatio * imgHeight)
-	const ctx = canvas.getContext('2d')
-	if (q.devicePixelRatio > 1) {
-		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
-	}
+	const { canvas, ctx } = makeCanvas(imgWidth, imgHeight, q.devicePixelRatio)
 
 	ctx.fillStyle = 'black'
 	ctx.font = fontsize + 'pt Arial'
@@ -3123,7 +3112,7 @@ Insertion  BBBBBBBBBBBBBBBBB
 		ctx.fillRect(x, y, barwidth, barheight)
 	}
 
-	return { width: imgWidth, height: imgHeight, src: canvas.toDataURL() }
+	return { width: imgWidth, height: imgHeight, src: await canvasToURL(canvas) }
 }
 
 ////////////////////// get one read/template

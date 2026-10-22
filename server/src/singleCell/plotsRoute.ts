@@ -24,7 +24,7 @@ import { getColors, plotColor } from '#shared'
 import { isSingleCellTerm } from '#shared/terms.js'
 import { get_bin_label } from '#shared/termdb.bins.js'
 import { getNumericColorDomain } from './colorDomain.ts'
-import { makeCanvas } from './canvasRendering.ts'
+import { renderCellsImage } from './canvasRendering.ts'
 import { hasSingleCellDs } from './dataRoute.ts'
 import { getData } from '../termdb.matrix.js'
 import { getSampleCoordinatesByTerms, refColor } from '../routes/termdb.sampleScatter.js'
@@ -225,7 +225,7 @@ async function getSingleCellScatter(req, res, ds) {
 					? getNumericColorDomain(samples, q.canvasSettings)
 					: undefined
 			if (colorDomain) output.result.Default.colorDomain = colorDomain
-			const { src, canvasWidth, canvasHeight } = await makeCanvas(
+			const { src, canvasWidth, canvasHeight } = await renderCellsImage(
 				q,
 				samples,
 				colorMap,

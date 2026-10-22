@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import readline from 'readline'
-import { createCanvas } from 'canvas'
+import { makeCanvas, canvasToURL } from './canvas.ts'
 import * as utils from './utils.js'
 import serverconfig from './serverconfig.js'
 import { nt2aa } from '#shared/common.js'
@@ -195,9 +195,7 @@ async function do_query(req, genomeobj) {
 	}
 
 	if (items.length == 0) {
-		const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
-		const ctx = canvas.getContext('2d')
-		if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+		const { canvas, ctx } = makeCanvas(width, stackheight, req.query.devicePixelRatio)
 		ctx.font = stackheight + 'px Arial'
 		ctx.fillStyle = '#aaa'
 		ctx.textAlign = 'center'
@@ -205,7 +203,7 @@ async function do_query(req, genomeobj) {
 		ctx.fillText('No data in view range', width / 2, stackheight / 2)
 		///////////////////////// exit ///////////////////
 		return {
-			src: canvas.toDataURL(),
+			src: await canvasToURL(canvas),
 			height: stackheight
 		}
 	}
@@ -222,9 +220,7 @@ async function do_query(req, genomeobj) {
 		// do not show names
 		// may render strand
 		const notmanyitem = items.length < 200
-		const canvas = createCanvas(width * req.query.devicePixelRatio, stackheight * req.query.devicePixelRatio)
-		const ctx = canvas.getContext('2d')
-		if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+		const { canvas, ctx } = makeCanvas(width, stackheight, req.query.devicePixelRatio)
 		const mapisoform = items.length <= 200 ? [] : null
 		for (const item of items) {
 			ctx.fillStyle = getItemColor(item, req.query, result)
@@ -274,7 +270,7 @@ async function do_query(req, genomeobj) {
 				}
 			}
 		}
-		result.src = canvas.toDataURL()
+		result.src = await canvasToURL(canvas)
 		result.height = stackheight
 		result.mapisoform = mapisoform
 		return result ///////////////////////// exit ///////////////////
@@ -304,9 +300,8 @@ async function do_query(req, genomeobj) {
 	const bpcount = req.query.rglst.reduce((a, b) => a + b.stop - b.start, 0)
 	const maytranslate = req.query.translatecoding && bpcount < width * 3
 	const translateitem = []
-	const canvas = createCanvas(10, 10) // for measuring text only
-	let ctx = canvas.getContext('2d')
-	if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+	// for measuring text only, the canvas to render is made once its height is known
+	let { canvas, ctx } = makeCanvas(10, 10)
 	ctx.font = 'bold ' + fontsize + 'px Arial'
 
 	const packfull = items.length < packfull_cutoff
@@ -477,11 +472,8 @@ async function do_query(req, genomeobj) {
 
 	// render
 
-	canvas.width = width * req.query.devicePixelRatio
 	const finalheight = (stackheight + stackspace) * maxstack - stackspace
-	canvas.height = finalheight * req.query.devicePixelRatio
-	ctx = canvas.getContext('2d')
-	if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+	;({ canvas, ctx } = makeCanvas(width, finalheight, req.query.devicePixelRatio))
 	ctx.font = 'bold ' + fontsize + 'px Arial'
 	ctx.textBaseline = 'middle'
 	ctx.lineWidth = 1
@@ -678,7 +670,7 @@ async function do_query(req, genomeobj) {
 	result.returngmdata = returngmdata
 	if (translateitem.length == 0) {
 		// nothing to be translated
-		result.src = canvas.toDataURL()
+		result.src = await canvasToURL(canvas)
 		return result ///////////////////////// exit ///////////////////
 	}
 
@@ -855,7 +847,7 @@ async function do_query(req, genomeobj) {
 		}
 	}
 	// done translating
-	result.src = canvas.toDataURL()
+	result.src = await canvasToURL(canvas)
 	result.mapaa = mapaa
 	return result
 }

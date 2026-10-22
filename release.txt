@@ -1,1 +1,10 @@
+Features:
+- The server encodes bigwig, bedgraph, mds3 cnv density, sample genome-wide quantification, single cell plot, allelic imbalance (aicheck), bam pileup, bam track, LD track, bed and gene track, and violin plot rug and bean images with skia-canvas, off the main thread, so other requests are not blocked while an image is encoded
+- Remove the unused node-canvas (`canvas`) dependency from the server and container deps, now that all server rendering uses skia-canvas
+- Upgrade skia-canvas to 4.0.0, which installs its prebuilt binary from npm instead of downloading it from GitHub
 
+Fixes:
+- Adjacent bars of bigwig, bam pileup, and LD tracks do not show faint seams at a fractional devicePixelRatio
+- Text that the server draws vertically centered, such as track names and "No data in view range", is placed as in a browser, about 1 pixel higher than before
+- A server-rendered image that is too large for its devicePixelRatio is rendered at a lower one, instead of failing
+- When the min and max of a bigwig track are the same, such as when the view range has only 0 values, the axis shows a single tick, such as 0 instead of two 0.000000 ticks, and the track label does not overlap it

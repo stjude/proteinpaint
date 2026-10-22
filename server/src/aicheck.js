@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import * as utils from './utils.js'
 import serverconfig from './serverconfig.js'
-import { createCanvas } from 'canvas'
+import { makeCanvas, canvasToURL } from './canvas.ts'
 
 export default function (genomes) {
 	return async (req, res) => {
@@ -39,14 +39,11 @@ async function do_query(req, genomes) {
 	const gtotalcutoff = req.query.gtotalcutoff
 	const gmafrestrict = req.query.gmafrestrict
 
-	const canvas = createCanvas(
-		req.query.width * req.query.devicePixelRatio,
-		(vafheight * 3 + rowspace * 4 + coverageheight * 2) * req.query.devicePixelRatio
+	const { canvas, ctx } = makeCanvas(
+		req.query.width,
+		vafheight * 3 + rowspace * 4 + coverageheight * 2,
+		req.query.devicePixelRatio
 	)
-	const ctx = canvas.getContext('2d')
-	if (req.query.devicePixelRatio > 1) {
-		ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
-	}
 
 	// vaf track background
 	ctx.fillStyle = '#f1f1f1'
@@ -132,7 +129,7 @@ async function do_query(req, genomes) {
 		})
 	}
 	return {
-		src: canvas.toDataURL(),
+		src: await canvasToURL(canvas),
 		coveragemax: coveragemax
 	}
 }

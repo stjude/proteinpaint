@@ -1,8 +1,8 @@
 import * as utils from './utils.js'
-import { createCanvas } from 'canvas'
 import { rgb } from 'd3-color'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from './helpers.ts'
+import { makeCanvas, canvasToURL } from './canvas.ts'
 /*
 
 NOTE:
@@ -24,12 +24,10 @@ export default function (genomes) {
 	}
 }
 
-// upper limits of the size of the image, which is allocated in memory
+// upper limits of the request's image size; makeCanvas() further lowers the pixel ratio of a large image
 const maxWidth = 20000
 const maxBarHeight = 2000
 const maxPixelRatio = 5
-// upper limit of the image area in pixels, after applying the pixel ratio, since the dimensions multiply
-const maxPixels = 50000000
 
 export function validateCanvasSize(q) {
 	if (!Number.isFinite(q.barheight)) throw 'invalid barheight'
@@ -40,7 +38,6 @@ export function validateCanvasSize(q) {
 	if (q.devicePixelRatio === undefined) q.devicePixelRatio = 1
 	if (!Number.isFinite(q.devicePixelRatio)) throw 'invalid devicePixelRatio'
 	if (q.devicePixelRatio <= 0 || q.devicePixelRatio > maxPixelRatio) throw 'devicePixelRatio out of bound'
-	if (q.width * q.devicePixelRatio * q.barheight * q.devicePixelRatio > maxPixels) throw 'image size out of bound'
 }
 
 async function handle_tkbigwig(req, res, genomes) {
@@ -106,7 +103,7 @@ async function handle_tkbigwig(req, res, genomes) {
 	}
 	mayLog('bw python', Date.now() - t)
 
-	res.send(plotWiggle(req.query, pa))
+	res.send(await plotWiggle(req.query, pa))
 	mayLog('bw python+rendering', Date.now() - t)
 }
 
@@ -144,16 +141,12 @@ returns
 	nodata
 }
 */
-export function plotWiggle(q, pa) {
+export async function plotWiggle(q, pa) {
 	let nodata = true
 	for (const r of q.rglst) {
 		if (r.values) nodata = false
 	}
-	const canvas = createCanvas(q.width * q.devicePixelRatio, q.barheight * q.devicePixelRatio)
-	const ctx = canvas.getContext('2d')
-	if (q.devicePixelRatio > 1) {
-		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
-	}
+	const { canvas, ctx } = makeCanvas(q.width, q.barheight, q.devicePixelRatio)
 	if (nodata) {
 		// bigwig hard-coded stuff
 		ctx.font = '14px Arial'
@@ -161,7 +154,7 @@ export function plotWiggle(q, pa) {
 		ctx.textAlign = 'center'
 		ctx.textBaseline = 'middle'
 		ctx.fillText(q.name + ': no data in view range', q.width / 2, q.barheight / 2)
-		return { src: canvas.toDataURL(), nodata: true }
+		return { src: await canvasToURL(canvas), nodata: true }
 	}
 
 	let maxv = 0,
@@ -281,7 +274,7 @@ export function plotWiggle(q, pa) {
 			x += r.width + q.regionspace
 		}
 	}
-	result.src = canvas.toDataURL()
+	result.src = await canvasToURL(canvas)
 	return result
 }
 
@@ -301,18 +294,13 @@ async function getBedgraph(req, res, file, pa) {
 	pa={minv,maxv,bedgraphdir}
 	 */
 	if (pa.fixminv == undefined || pa.fixmaxv == undefined) throw 'Y axis scale must be defined for bedgraph track'
-	const canvas = createCanvas(
-		req.query.width * req.query.devicePixelRatio,
-		req.query.barheight * req.query.devicePixelRatio
-	)
-	const ctx = canvas.getContext('2d')
-	if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
+	const { canvas, ctx } = makeCanvas(req.query.width, req.query.barheight, req.query.devicePixelRatio)
 	let xoff = 0
 	for (let r of req.query.rglst) {
 		await bedgraphRegion(req, r, xoff, file, ctx, pa)
 		xoff += r.width + req.query.regionspace
 	}
-	res.send({ src: canvas.toDataURL() })
+	res.send({ src: await canvasToURL(canvas) })
 }
 
 async function bedgraphRegion(req, r, xoff, file, ctx, pa) {
