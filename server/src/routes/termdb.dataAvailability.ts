@@ -196,7 +196,7 @@ function getSurvivalTerms(q: DataAvailabilityRequest, ds: any, cohort: string): 
 	return terms.map((term: any) => {
 		// the unit of the count where the dataset has several sample types, e.g. "patients"
 		const unit = ds.cohort.termdb.hasSampleAncestry
-			? ds.cohort.termdb.sampleTypes?.[term.sample_type]?.plural_name
+			? ds.cohort.termdb.sampleTypes?.[ds.cohort.termdb.term2SampleType.get(term.id)]?.plural_name
 			: undefined
 		return { termid: term.id, name: term.name, ...(unit ? { unit } : {}), sampleIds: survivalSampleIds(ds, term.id) }
 	})
