@@ -78,7 +78,7 @@ function validateSwimmerRequest(q: SwimmerRequest) {
 	}
 }
 
-async function getSwimmerLanes(q: SwimmerRequest, ds: any): Promise<SwimmerResponse> {
+export async function getSwimmerLanes(q: SwimmerRequest, ds: any): Promise<SwimmerResponse> {
 	const sq = ds.queries?.swimmer
 	if (!sq?.data) throw 'swimmer plot not supported by this dataset'
 	if (sq.checkDataAccess && !sq.checkDataAccess(q)) throw 'no access'

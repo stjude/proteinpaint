@@ -28,6 +28,17 @@ export function init({ genomes }) {
 	}
 }
 
+/** the names of the samples with an image on a reference, one .nii file each, before any access check */
+export async function getImagingSampleNames(ref: { samples: string }): Promise<string[]> {
+	const dirPath = path.join(serverconfig.tpmasterdir, ref.samples)
+	// one async readdir instead of a sync stat per file: this is on a hot path (matrix click menus, sample
+	// view renders)
+	const files = (await fs.promises.readdir(dirPath, { withFileTypes: true }))
+		.filter(f => f.isFile() && f.name.endsWith('.nii'))
+		.map(f => f.name)
+	return files.map(name => name.split('.nii')[0])
+}
+
 async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: any): Promise<BrainSample[]> {
 	const ds = genomes[query.genome].datasets[query.dslabel]
 	const q = ds.queries.NIdata
@@ -39,14 +50,7 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 	const ref = q.references[query.refKey]
 	if (!ref) throw 'invalid refKey'
 	if (ref.referenceFile && ref.samples) {
-		const dirPath = path.join(serverconfig.tpmasterdir, ref.samples)
-		// one async readdir instead of a sync stat per file: this route is on a hot path
-		// (matrix click menus, sample view renders)
-		const files = (await fs.promises.readdir(dirPath, { withFileTypes: true }))
-			.filter(f => f.isFile() && f.name.endsWith('.nii'))
-			.map(f => f.name)
-
-		let sampleNames = files.map(name => name.split('.nii')[0])
+		let sampleNames = await getImagingSampleNames(ref)
 
 		// restrict to imaging samples passing the termdb filter and access control
 		sampleNames = await filterSampleNamesByAccess(query, ds, sampleNames)

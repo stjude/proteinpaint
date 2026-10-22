@@ -4,9 +4,10 @@ import { LINK, TEXT_DARK } from './SunburstRenderer'
 
 /*
 The sunburst on the About tab (massNav.tabs.about.showSunburst), of the dataset's default rings
-(termdb.sunburst.twLst). It zooms, selects and makes groups like the sunburst plot, but its Rings box only
-names the rings: they are edited in the full chart, which a link below them launches, since the About tab
-has no plot config to keep them in. The counts follow the global filter.
+(termdb.sunburst.twLst). It zooms, selects, launches the plots of a selection (in the plots tab) and makes
+groups like the sunburst plot, but its Rings box only names the rings: they are edited in the full chart,
+which a link below them launches, since the About tab has no plot config to keep them in. The counts follow
+the global filter.
 */
 
 export class AboutSunburst {
@@ -25,8 +26,14 @@ export class AboutSunburst {
 		this.app = app
 		this.onOpen = onOpen
 		const div = holder.append('div').attr('data-testid', 'sjpp-about-sunburst').style('white-space', 'normal')
-		// the Rings box and the stats close to the chart, 12px from it on both sides
-		this.chart = new SunburstChart({ holder: div, app, gap: 6 })
+		this.chart = new SunburstChart({
+			holder: div,
+			app,
+			// the Rings box and the stats close to the chart, 12px from it on both sides
+			gap: 6,
+			// a plot of the selection is shown in the plots tab, as the About tab's launch items are
+			beforeLaunch: () => app.dispatch({ type: 'tab_set', activeTab: 1 })
+		})
 	}
 
 	/** draw the counts of the app state's filter, unless they are shown already */

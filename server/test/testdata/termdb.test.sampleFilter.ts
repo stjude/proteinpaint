@@ -7,7 +7,7 @@ import termdbTestInit from '../../dataset/termdb.test.js'
 	with the dataset's getAdditionalFilter() -- the shape of a dataset where a session's grants decide
 	which samples it reads. The 'admin' role has no filter, and any other role reads the samples with
 	an id up to maxSampleId. TermdbTest and ProtectedTest have no sample filter, so they cannot
-	exercise that branch.
+	exercise that branch. A role other than 'admin' also does not see the term hiddenTermId (isTermVisible).
 
 	Load it from a test serverconfig with:
 	{ "name": "TermdbTest", "jsfile": "test/testdata/termdb.test.sampleFilter.ts" }
@@ -15,6 +15,8 @@ import termdbTestInit from '../../dataset/termdb.test.js'
 
 // the sample ids 1 to 100 of TermdbTest are of the 'sample' type, see the sampleidmap table of its db
 const maxSampleId = 50
+// a survival term, so that a route that lists survival terms is seen to leave out a hidden one
+export const hiddenTermId = 'efs'
 
 export default function (): Mds3 {
 	const ds = termdbTestInit()
@@ -29,5 +31,7 @@ export default function (): Mds3 {
 			lst: [{ type: 'tvs', tvs: { term: { type: 'samplelst', values: { '': { key: '', list } } } } }]
 		} as any
 	}
+	ds.cohort.termdb.isTermVisible = (__protected__, term) =>
+		__protected__?.clientAuthResult?.role == 'admin' || term?.id != hiddenTermId
 	return ds
 }
