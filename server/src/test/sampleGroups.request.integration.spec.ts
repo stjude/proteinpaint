@@ -209,6 +209,214 @@ for (const route of routes) {
 	})
 }
 
+/* termdb/dataAvailability counts the samples of each group that have each kind of data: they are the
+sizes that the preAnalysis of the analysis of that data gives the groups. */
+const dataTypeRoutes = { rnaseqGeneCount: routes[0], dnaMethylation: routes[1] }
+
+tape('termdb/dataAvailability counts of groups, by role', async test => {
+	test.timeoutAfter(30000)
+	if (!listGroups?.length) {
+		test.fail('the list form of the groups is missing')
+		return test.end()
+	}
+	for (const role of ['admin', 'user']) {
+		const jwt = await getSessionJwt(test, role)
+		if (!jwt) return test.end()
+		const get = async (groups: any) => {
+			const res = await post('/termdb/dataAvailability', { genome, dslabel, embedder, groups }, bearer(jwt))
+			if (!Array.isArray(res.body.groups)) return test.fail(`no counts for role='${role}': ${JSON.stringify(res.body)}`)
+			test.notOk(JSON.stringify(res.body).includes('"sampleId"'), `should not list the samples of a group`)
+			return res.body.groups
+		}
+		const asFilters = await get(filterGroups)
+		const asLists = await get(listGroups)
+		if (!asFilters || !asLists) return test.end()
+		test.deepEqual(asFilters, asLists, `should count filters as it counts their lists for role='${role}'`)
+		test.deepEqual(
+			asFilters.map(g => g.name),
+			filterGroups.map(g => g.name),
+			'should answer for the groups in request order'
+		)
+		for (const [dataType, route] of Object.entries(dataTypeRoutes)) {
+			const sizes = await getGroupSizes(test, route, role, { groups: filterGroups })
+			if (!sizes) return test.end()
+			test.deepEqual(
+				Object.fromEntries(asFilters.map(g => [g.name, g.data[dataType]])),
+				sizes,
+				`should count ${dataType} samples as ${route.path} preAnalysis does for role='${role}'`
+			)
+		}
+		test.ok(
+			asFilters.every(g => g.data.geneExpression > 0),
+			`should count the samples of expression plots for role='${role}'`
+		)
+	}
+	test.end()
+})
+
+/* the samples of a group that were assayed for each kind of mutation data are those of ds.assayAvailability
+whose assay term says so; a group of a patient-level filter has them as its child samples */
+const assayTerms = [
+	{ key: '1.germline', term: 'assayavailability_germline' },
+	{ key: '1.somatic', term: 'wgs_curated' },
+	{ key: '2', term: 'assayavailability_fusion' },
+	{ key: '4', term: 'assayavailability_cnv' }
+]
+
+tape('termdb/dataAvailability assayed samples of groups, by role', async test => {
+	test.timeoutAfter(30000)
+	const counts: any = {}
+	for (const role of ['admin', 'user']) {
+		const jwt = await getSessionJwt(test, role)
+		if (!jwt) return test.end()
+		const res = await post('/termdb/dataAvailability', { genome, dslabel, embedder, groups: filterGroups }, bearer(jwt))
+		if (!Array.isArray(res.body.groups)) {
+			test.fail(`no counts for role='${role}': ${JSON.stringify(res.body)}`)
+			return test.end()
+		}
+		const [group] = res.body.groups
+		test.deepEqual(
+			group.assays.map(a => a.key),
+			assayTerms.map(a => a.key),
+			`should list an assay per data type and origin for role='${role}'`
+		)
+		for (const { key, term } of assayTerms) {
+			// the samples of the group whose assay term says assayed, as getsamplelist gives them
+			const filter = {
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					...filterGroups[0].filter.lst,
+					{ type: 'tvs', tvs: { term: { id: term, type: 'categorical' }, values: [{ key: '1' }] } }
+				]
+			}
+			const list = await post(
+				'/termdb',
+				{ genome, dslabel, embedder, getsamplelist: 1, filter, mapParent2Children: true },
+				bearer(jwt)
+			)
+			test.equal(
+				group.assays.find(a => a.key == key)?.count,
+				Array.isArray(list.body) ? list.body.length : JSON.stringify(list.body),
+				`should count the ${key} assayed samples of a patient-level group for role='${role}'`
+			)
+		}
+		counts[role] = group.assays.reduce((n, a) => n + a.count, 0)
+	}
+	test.ok(counts.admin > 0 && counts.user < counts.admin, 'should count fewer assayed samples for role=user')
+	test.end()
+})
+
+/* the samples of a group with a value for a survival term are those that the survival curve of the group
+starts with: the number at risk at time 0. The survival terms are those of the active cohort, which TermdbTest
+has: its survival terms are in the cohorts ABC, XYZ and ABC,XYZ */
+tape('termdb/dataAvailability survival of groups, by role', async test => {
+	test.timeoutAfter(30000)
+	for (const role of ['admin', 'user']) {
+		const jwt = await getSessionJwt(test, role)
+		if (!jwt) return test.end()
+		const res = await post(
+			'/termdb/dataAvailability',
+			{ genome, dslabel, embedder, groups: filterGroups, cohort: 'ABC' },
+			bearer(jwt)
+		)
+		const survival = res.body.groups?.[0]?.survival
+		if (!Array.isArray(survival)) {
+			test.fail(`no survival counts for role='${role}': ${JSON.stringify(res.body)}`)
+			return test.end()
+		}
+		test.deepEqual(
+			survival.map(t => t.termid).sort(),
+			role == 'admin' ? ['efs', 'os'] : ['os'],
+			`should list each survival term that role='${role}' may see`
+		)
+		for (const t of survival) {
+			const curve = await post(
+				'/termdb/survival',
+				{
+					genome,
+					dslabel,
+					embedder,
+					filter: filterGroups[0].filter,
+					term1: { $id: t.termid, term: { id: t.termid, type: 'survival' }, q: {} }
+				},
+				bearer(jwt)
+			)
+			const nrisk = curve.body.keys?.indexOf('nrisk')
+			const atStart = curve.body.case?.[0]?.[nrisk] ?? 0
+			test.equal(t.count, atStart, `should count the ${t.termid} samples of the survival curve for role='${role}'`)
+		}
+	}
+	test.end()
+})
+
+tape('termdb/dataAvailability survival terms of no cohort', async test => {
+	test.timeoutAfter(30000)
+	const jwt = await getSessionJwt(test, 'admin')
+	if (!jwt) return test.end()
+	const res = await post('/termdb/dataAvailability', { genome, dslabel, embedder, groups: filterGroups }, bearer(jwt))
+	test.notOk(
+		res.body.groups?.[0]?.survival,
+		'should list no survival term without the active cohort of a dataset with cohorts'
+	)
+	test.end()
+})
+
+/* a group with both a filter and a list of samples is resolved by its filter, with the dataset's sample filter
+for the session, and not by the list */
+tape('termdb/dataAvailability group with a filter and a list', async test => {
+	test.timeoutAfter(30000)
+	const jwt = await getSessionJwt(test, 'user')
+	if (!jwt) return test.end()
+	const get = async (groups: any) =>
+		(await post('/termdb/dataAvailability', { genome, dslabel, embedder, groups, cohort: 'ABC' }, bearer(jwt))).body
+			.groups
+	const byFilter = await get([filterGroups[1]])
+	const both = await get([{ ...filterGroups[1], values: ids(1, 100) }])
+	test.deepEqual(both, byFilter, 'should count the group of its filter, not of its list')
+	test.end()
+})
+
+tape('termdb/dataAvailability kinds of data', async test => {
+	test.timeoutAfter(30000)
+	const jwt = await getSessionJwt(test, 'admin')
+	if (!jwt) return test.end()
+	const res = await post('/termdb/dataAvailability', { genome, dslabel, embedder, groups: filterGroups }, bearer(jwt))
+	const dataTypes = res.body.dataTypes
+	test.ok(
+		Array.isArray(dataTypes) && dataTypes.length && dataTypes.every(d => typeof d.label == 'string' && d.label),
+		'should label each kind of data'
+	)
+	for (const g of res.body.groups || [])
+		test.deepEqual(
+			Object.keys(g.data).sort(),
+			dataTypes.map(d => d.type).sort(),
+			`should count ${g.name} for each listed kind of data`
+		)
+	test.end()
+})
+
+tape('termdb/dataAvailability invalid groups', async test => {
+	test.timeoutAfter(30000)
+	const jwt = await getSessionJwt(test, 'admin')
+	if (!jwt) return test.end()
+	for (const [groups, message] of [
+		[undefined, 'groups[] must be a non-empty array'],
+		[[{ name: 'g' }], 'group "g" has neither filter nor values[]']
+	] as const) {
+		const res = await post('/termdb/dataAvailability', { genome, dslabel, embedder, groups }, bearer(jwt))
+		test.equal(res.body.error, message, `should reject groups=${JSON.stringify(groups)}`)
+	}
+	const res = await post(
+		'/termdb/dataAvailability',
+		{ genome, dslabel, embedder, groups: filterGroups, cohort: 'no such cohort' },
+		bearer(jwt)
+	)
+	test.equal(res.body.error, 'invalid cohort', 'should reject a cohort that the dataset does not have')
+	test.end()
+})
+
 tape('stop server', async test => {
 	test.timeoutAfter(10000)
 	await server?.stop()

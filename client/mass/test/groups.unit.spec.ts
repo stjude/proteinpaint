@@ -9,7 +9,8 @@ import {
 	getGroupFilterOfConditions,
 	getGvGroupFilterEntry,
 	getGroupForRegion,
-	getOthersGroup
+	getOthersGroup,
+	getAvailabilityGroups
 } from '../groups'
 
 /**
@@ -18,6 +19,7 @@ import {
  *  - groups getFilter()
  *  - groups getSampleFilter()
  *  - groups getSamplelstTW()
+ *  - groups getAvailabilityGroups()
  */
 
 const mockGrp1Values = [
@@ -441,6 +443,39 @@ tape('groups getOthersGroup()', test => {
 	const alone: any = getOthersGroup(placeholder, { filter: { type: 'tvslst', in: true, join: '', lst: [] } })
 	test.equal(alone.filter.lst.length, 1, 'without a filter of the app, the filter only excludes the listed samples')
 	test.notOk('filter0' in alone, 'and the group carries no cohort filter')
+	test.end()
+})
+
+tape('groups getAvailabilityGroups()', test => {
+	test.timeoutAfter(100)
+
+	const sex = (key: string) => ({
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [{ type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical' }, values: [{ key }] } }]
+	})
+	const byFilter = getSamplelstTWFromFilters([
+		{ name: 'a', filter: sex('1'), filter0: null, sampleCount: 3 },
+		{ name: 'b', filter: sex('2'), mapParent2Children: true }
+	])
+	test.deepEqual(
+		getAvailabilityGroups(byFilter),
+		[
+			{ name: 'a', filter: sex('1'), filter0: null },
+			{ name: 'b', filter: sex('2'), mapParent2Children: true }
+		],
+		'a group defined by a filter is given as its filter, with its cohort filter and sample level'
+	)
+
+	const listed = getSamplelstTW([{ name: 'a', items: [{ sampleId: 1, sample: 's1' }, { sampleId: 2 }] }])
+	const termfilter = { filter: sex('1'), filter0: { x: 1 } }
+	const [a, notA]: any[] = getAvailabilityGroups(listed, termfilter)
+	test.deepEqual(a, { name: 'a', values: [{ sampleId: 1 }, { sampleId: 2 }] }, 'a listed group is given as its ids')
+	test.equal(notA.name, 'Not in a', 'the rest of a listed group is kept')
+	test.notOk('values' in notA, 'the rest is not given as the list of the group it is the rest of')
+	test.deepEqual(notA.filter, getOthersGroup(listed.q.groups[1], termfilter).filter, 'the rest is given as its filter')
+	test.deepEqual(notA.filter0, { x: 1 }, 'with the cohort filter of the app')
 	test.end()
 })
 

@@ -7,6 +7,7 @@ import { AboutSunburst } from '../aboutSunburst'
 Tests:
 	- Render the default rings and follow the global filter
 	- Create a group and open the full chart
+	- Launch a plot of a selection in the plots tab
 */
 
 /*************************
@@ -123,5 +124,24 @@ tape('Create a group and open the full chart', test => {
 
 		chart.dom.rings.body.select('[data-testid=sjpp-about-sunburst-open]').node().click()
 		test.equal(sunburst.opened(), 1, 'Should open the full chart from the Rings box')
+	})
+})
+
+tape('Launch a plot of a selection in the plots tab', test => {
+	test.timeoutAfter(20000)
+	launch(test, async (sunburst: any, app) => {
+		await sunburst.update(app.getState())
+		const chart = sunburst.chart
+		chart.toggle(chart.renderer.root.children[0])
+		chart.dom.sel.body.select('[data-testid=sjpp-sunburst-show-data]').node().click()
+		const row = await waitFor(
+			() => chart.dom.sel.body.select('[data-testid=sjpp-sunburst-data-geneExpression]').node(),
+			10000
+		)
+		test.equal(app.getState().nav.activeTab, 0, 'Should start on the About tab')
+		row.click()
+		await waitFor(() => app.getState().plots.length)
+		test.equal(app.getState().nav.activeTab, 1, 'Should show the plots tab for the plot')
+		test.equal(app.getState().plots[0].chartType, 'GeneExpInput', 'Should create the plot of the data')
 	})
 })

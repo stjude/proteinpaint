@@ -9,6 +9,7 @@ Tests:
 	- Edit rings in the Rings box
 	- Pass a changed filter to the Rings box pills
 	- Select the wedge at the centre
+	- Show the available data of a selection
 */
 
 /*************************
@@ -283,6 +284,106 @@ tape('Select the wedge at the centre', test => {
 		test.deepEqual(bold, ['normal', 'bold'], 'Should mark only the ring shown around the centre')
 		inner.chart.renderer.dom.crumbs.select('.sjpp-sunburst-crumb').node().dispatchEvent(new MouseEvent('click'))
 		test.equal(inner.chart.renderer.focus.depth, 0, 'Should zoom out from the path')
+		if (test['_ok']) inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Show the available data of a selection', test => {
+	test.timeoutAfter(20000)
+	runpp({
+		state: { plots: [{ chartType: 'sunburst', twLst: [{ id: 'diaggrp' }, { id: 'sex' }] }] },
+		sunburst: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(sunburst) {
+		sunburst.on('postRender.test', null)
+		const inner = sunburst.Inner
+		const card = inner.chart.dom.sel.body
+		const section = () => card.select('[data-testid=sjpp-sunburst-group-data]')
+		test.ok(section().empty(), 'Should not offer the available data without a selection')
+
+		getWedge(sunburst, ALL).dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }))
+		const showBtn = section().select('[data-testid=sjpp-sunburst-show-data]')
+		test.equal(showBtn.text(), 'Show available data', 'Should offer to show the available data of the selection')
+		const children = [...card.node().children]
+		const createGroup = card.select('[data-testid=sjpp-sunburst-create-group]').node()
+		test.ok(
+			children.indexOf(section().node()) < children.findIndex(c => c.contains(createGroup)),
+			'Should show the button above the create-group action'
+		)
+
+		showBtn.node().click()
+		const expRow = await waitFor(
+			() => section().select('[data-testid=sjpp-sunburst-data-geneExpression]').node(),
+			10000
+		)
+		test.equal(
+			section().select('[data-testid=sjpp-sunburst-data-title]').text(),
+			'36 samples',
+			'Should name the number of selected samples'
+		)
+		const count = (row: any) => Number(row.lastChild.textContent.replace(/[^0-9]/g, ''))
+		test.ok(count(expRow) > 0 && count(expRow) <= 36, 'Should count the selected samples with gene expression data')
+		const methRow = section().select('[data-testid=sjpp-sunburst-data-dnaMethylation]').node()
+		test.ok(methRow && count(methRow) > 0, 'Should count the selected samples with DNA methylation data')
+		test.ok(
+			section().select('[data-testid=sjpp-sunburst-data-rnaseqGeneCount]').empty(),
+			'Should not list the counts of differential expression, which compares groups'
+		)
+
+		// a row opens the plot of its data, of the selected samples
+		const plots = inner.app.getState().plots.length
+		expRow.click()
+		const plot = await waitFor(() => inner.app.getState().plots[plots])
+		test.equal(plot.chartType, 'GeneExpInput', 'Should open the gene expression input form')
+		test.deepEqual(plot.spawnConfig.filter, inner.chart.plotFilter(), 'Should give its plots the selection as filter')
+		test.equal(plot.spawnConfig.filter.lst[0].tvs.values[0].key, ALL, 'Should filter by the selected wedge')
+
+		// the methylation row opens the term search, for the selected samples
+		methRow.click()
+		const dict = await waitFor(() => inner.app.getState().plots.find(p => p.chartType == 'dictionary'))
+		test.deepEqual(
+			dict.spawnConfig.filter,
+			inner.chart.plotFilter(),
+			'Should give a methylation plot the selection as filter'
+		)
+
+		// a mutation row counts the assayed samples and opens the genome browser of the selected samples
+		const assayRows = section().selectAll('[data-testid^=sjpp-sunburst-data-assay-]').nodes()
+		test.deepEqual(
+			assayRows.map((n: any) => n.getAttribute('data-testid')),
+			['1.germline', '1.somatic', '2', '4'].map(k => `sjpp-sunburst-data-assay-${k}`),
+			'Should list the assayed samples for each kind of mutation data'
+		)
+		const assayed = assayRows.find((n: any) => count(n) > 0) as any
+		test.ok(assayed, 'Should count selected samples assayed for mutations')
+		assayed.click()
+		const gb = await waitFor(() => inner.app.getState().plots.find(p => p.chartType == 'genomeBrowser'))
+		test.deepEqual(gb.filter, inner.chart.plotFilter(), 'Should open the genome browser with the selection as filter')
+
+		// a survival row counts the samples with a value for the term and opens its survival curve
+		const osRow = section().select('[data-testid=sjpp-sunburst-data-survival-os]').node()
+		test.ok(osRow && count(osRow) > 0 && count(osRow) <= 36, 'Should count the selected samples with overall survival')
+		osRow.click()
+		const surv = await waitFor(() => inner.app.getState().plots.find(p => p.chartType == 'survival'))
+		test.equal(surv.term.term.id, 'os', 'Should open the survival curve of the term')
+		test.deepEqual(surv.filter, inner.chart.plotFilter(), 'Should give the survival plot the selection as filter')
+
+		// Hide goes back to the button, which shows the data again
+		section().select('[data-testid=sjpp-sunburst-hide-data]').node().click()
+		test.ok(section().select('[data-testid^=sjpp-sunburst-data-]').empty(), 'Should hide the data')
+		section().select('[data-testid=sjpp-sunburst-show-data]').node().click()
+		await waitFor(() => section().select('[data-testid=sjpp-sunburst-data-geneExpression]').node(), 10000)
+		test.pass('Should show the data again from the button')
+
+		// a change of the selection hides the data
+		inner.chart.toggle(getWedge(sunburst, ALL).__data__)
+		getWedge(sunburst, 'Hodgkin lymphoma').dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }))
+		test.ok(
+			section().select('[data-testid=sjpp-sunburst-show-data]').node(),
+			'Should offer the button again for a new selection'
+		)
 		if (test['_ok']) inner.app.destroy()
 		test.end()
 	}

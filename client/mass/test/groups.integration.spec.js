@@ -1,6 +1,6 @@
 import tape from 'tape'
 //import { copyMerge } from '#rx/index.js'
-import { groupsInit, maxGroupsPerVariable } from '../groups'
+import { groupsInit, maxGroupsPerVariable, getSamplelstTWFromFilters } from '../groups'
 import { select } from 'd3-selection'
 import * as helpers from '../../test/front.helpers.js'
 import { sleep, detectLst, detectGte, detectOne } from '../../test/test.helpers.js'
@@ -164,6 +164,55 @@ tape('a variable made from groups is defined by their filters', test => {
 				menu.querySelector('[data-testid="sjpp-delete-variable"]'),
 				'should draw the menu of the variable to its last option'
 			)
+			// then how many samples of each group have each kind of data
+			const row = await detectOne({ elem: menu, selector: '[data-testid="sjpp-group-data-geneExpression"]' })
+			test.ok(
+				[...row.querySelectorAll('td')].slice(1).every(td => Number(td.textContent) > 0),
+				'should show the samples of each group with gene expression data in the menu of the variable'
+			)
+			test.ok(
+				menu.querySelector('[data-testid="sjpp-da-option"]'),
+				'should offer differential expression of two groups with data'
+			)
+			// survival and mutations are sections of the table, whose rows open their plots of the groups
+			test.ok(menu.querySelector('[data-testid="sjpp-group-section-survival"]'), 'should list survival as a section')
+			test.ok(menu.querySelector('[data-testid="sjpp-group-section-mutations"]'), 'should list mutations as a section')
+			test.notOk(
+				menu.querySelector('[data-testid="sjpp-survival-option"]'),
+				'should open survival from its rows, not from a menu option'
+			)
+			const plots = groups.app.getState().plots.length
+			menu
+				.querySelector('[data-testid="sjpp-group-survival-os"]')
+				.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+			let surv
+			for (let i = 0; i < 100 && !surv; i++) {
+				surv = groups.app
+					.getState()
+					.plots.slice(plots)
+					.find(p => p.chartType == 'survival')
+				if (!surv) await sleep(50)
+			}
+			test.equal(surv?.term?.term?.id || surv?.term?.id, 'os', 'should open the survival plot of the term of the row')
+			test.equal(surv?.term2?.term?.type, 'samplelst', 'should divide the survival plot by the groups')
+			groups.tip.hide()
+
+			// a group without samples has no data: an analysis of both groups is not offered, and a kind of data that
+			// no group has is not listed
+			const none = { name: 'none', filter: tvslst('sex', 'no such value') }
+			const twNone = getSamplelstTWFromFilters([
+				{ ...male, filter: filterJoin([male.filter, groups.state.termfilter.filter]) },
+				{ ...none, filter: filterJoin([none.filter, groups.state.termfilter.filter]) }
+			])
+			groups.showGroupsMenu({ target: document.body }, twNone, () => {})
+			const menu2 = groups.tip.d.node()
+			await detectOne({ elem: menu2, selector: '[data-testid="sjpp-group-data-geneExpression"]' })
+			test.notOk(
+				menu2.querySelector('[data-testid="sjpp-da-option"]'),
+				'should not offer differential expression when a group has no samples with data'
+			)
+			test.notOk(menu2.querySelector('[data-testid="sjpp-da-note"]'), 'should not show the case/control note then')
+			test.ok(menu2.querySelector('[data-testid="sjpp-summarize-option"]'), 'should still offer a summary')
 			groups.tip.hide()
 
 			// the server takes the variable, and gives every group its samples
