@@ -8,6 +8,8 @@ Features:
 - The server encodes bigwig, bedgraph, mds3 cnv density, sample genome-wide quantification, single cell plot, allelic imbalance (aicheck), bam pileup, bam track, LD track, bed and gene track, and violin plot rug and bean images with skia-canvas, off the main thread, so other requests are not blocked while an image is encoded
 - Remove the unused node-canvas (`canvas`) dependency from the server and container deps, now that all server rendering uses skia-canvas
 - Upgrade skia-canvas to 4.0.0, which installs its prebuilt binary from npm instead of downloading it from GitHub
+- The server reads bigBed files in process, with @gmod/bbi, instead of running bigBedToBed, bigBedNamedItems, and bigBedInfo
+- The server and its Docker image do not need the ucsc bigBed tools; serverconfig.bigBedToBed, bigBedNamedItems, and bigBedInfo are not used
 
 Fixes:
 - Adjacent bars of bigwig, bam pileup, and LD tracks do not show faint seams at a fractional devicePixelRatio

@@ -1,4 +1,1 @@
-Features:
-- The server reads bigBed files in process, with @gmod/bbi, instead of running bigBedToBed, bigBedNamedItems, and bigBedInfo
-- The server and its Docker image do not need the ucsc bigBed tools; serverconfig.bigBedToBed, bigBedNamedItems, and bigBedInfo are not used
 
