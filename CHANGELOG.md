@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.222.0
 
 Features:
 - The server encodes bigwig, bedgraph, mds3 cnv density, sample genome-wide quantification, single cell plot, allelic imbalance (aicheck), bam pileup, bam track, LD track, bed and gene track, and violin plot rug and bean images with skia-canvas, off the main thread, so other requests are not blocked while an image is encoded
