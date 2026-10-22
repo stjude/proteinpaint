@@ -86,10 +86,8 @@ export function reserveMemoryMB(mb: number, label = 'a run'): () => void {
 	}
 }
 
-/** Logs whether a heavy run was admitted, in one format for every route, e.g.
- * `[memory] DM admitted: needs 6,134 MB of a 6,400 MB budget (40% of 16,000 MB free), 0 MB reserved by runs in progress`
- * In report mode, whether it fits instead, e.g. `[memory] DM does not fit (report only): needs ...`
- * Called before the run's own memory is reserved, so the reserved figure is the other runs'. */
+/** Logs whether a heavy run was admitted, in one format for every route; see memoryAdmissionMessage(). Called before
+ * the run's own memory is reserved, so the reserved figure is the other runs'. */
 export function logMemoryAdmission(
 	label: string,
 	admitted: boolean,
@@ -100,18 +98,41 @@ export function logMemoryAdmission(
 	/** the cost's maxMB, the most one run may plan for */
 	runMaxMB?: number
 ): void {
+	mayLog(memoryAdmissionMessage(label, admitted, neededMB, availableMB, fraction, reportOnly, runMaxMB))
+}
+
+/** The line that logMemoryAdmission() logs. It names the fixed cap that applies to the run, and whether the run is
+ * under it: the run's own maxMB when the cost has one below serverconfig's, else serverconfig's maxMB. e.g.
+ * `[memory] DM admitted: needs 6,134 MB, under the 9,318 MB maxMB, of a 6,400 MB budget (40% of 16,000 MB free),
+ * 0 MB reserved by runs in progress`
+ * `[memory] DE limma refused: needs 4,579 MB, over the 2,200 MB per-run maxMB, of a 9,318 MB budget (maxMB, below 40%
+ * of 100,000 MB free), 0 MB reserved by runs in progress`
+ * In report mode it says whether the run fits instead, e.g. `[memory] DM does not fit (report only): needs ...` */
+export function memoryAdmissionMessage(
+	label: string,
+	admitted: boolean,
+	neededMB: number,
+	availableMB: number,
+	fraction = RUN_MEMORY_FRACTION,
+	reportOnly = MEMORY_REPORT_ONLY,
+	runMaxMB?: number,
+	maxMB = RUN_MEMORY_MAX_MB,
+	reserved = reservedMB
+): string {
 	const decision = reportOnly
 		? `${admitted ? 'fits' : 'does not fit'} (report only)`
 		: admitted
 		? 'admitted'
 		: 'refused'
-	const budget = memoryBudgetMB(availableMB, fraction)
+	const perRun = runMaxMB != undefined && runMaxMB < maxMB
+	const cap = perRun ? runMaxMB : maxMB
+	const budget = memoryBudgetMB(availableMB, fraction, maxMB)
 	const share = `${fraction * 100}% of ${formatMB(availableMB)} free`
-	mayLog(
-		`[memory] ${label} ${decision}: needs ${formatMB(neededMB)} of a ${formatMB(budget)} budget ` +
-			`(${budget < availableMB * fraction ? `maxMB, below ${share}` : share}), ` +
-			(runMaxMB ? `at most ${formatMB(runMaxMB)} per run, ` : '') +
-			`${formatMB(reservedMB)} reserved by runs in progress`
+	return (
+		`[memory] ${label} ${decision}: needs ${formatMB(neededMB)}, ${neededMB <= cap ? 'under' : 'over'} the ` +
+		`${formatMB(cap)} ${perRun ? 'per-run maxMB' : 'maxMB'}, of a ${formatMB(budget)} budget ` +
+		`(${budget < availableMB * fraction ? `maxMB, below ${share}` : share}), ` +
+		`${formatMB(reserved)} reserved by runs in progress`
 	)
 }
 

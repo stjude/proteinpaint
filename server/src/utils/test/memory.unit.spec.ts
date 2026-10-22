@@ -9,6 +9,7 @@ import {
 	memoryReservedMB,
 	admitRun,
 	memoryBudgetMB,
+	memoryAdmissionMessage,
 	RUN_MEMORY_FRACTION,
 	RUN_MEMORY_MAX_MB,
 	DEFAULT_MAX_MB
@@ -55,6 +56,29 @@ tape("a cost's own maxMB", test => {
 	test.equal(runFitsInMemory(cost, { rows: 201 }, 100000), false, '301 MB run in a large budget, maxMB 300 => refused')
 	test.equal(runFitsInMemory(cost, { rows: 200 }, 500), false, 'the budget below maxMB (200 MB) => the budget decides')
 	test.equal(largestSizeThatFits(100000, cost, 'rows'), 200, 'a large budget => trimmed to maxMB, 200 rows')
+	test.end()
+})
+
+tape('memoryAdmissionMessage', test => {
+	// label, admitted, needed, available, fraction, report only, run maxMB, maxMB, reserved
+	test.equal(
+		memoryAdmissionMessage('DMR scan', true, 1133, 14285, 0.4, true, undefined, 9318, 0),
+		'[memory] DMR scan fits (report only): needs 1,133 MB, under the 9,318 MB maxMB, of a 5,714 MB budget ' +
+			'(40% of 14,285 MB free), 0 MB reserved by runs in progress',
+		'under maxMB, the budget is the share'
+	)
+	test.equal(
+		memoryAdmissionMessage('DM', false, 10000, 100000, 0.4, false, undefined, 9318, 500),
+		'[memory] DM refused: needs 10,000 MB, over the 9,318 MB maxMB, of a 9,318 MB budget ' +
+			'(maxMB, below 40% of 100,000 MB free), 500 MB reserved by runs in progress',
+		'over maxMB, the budget is maxMB'
+	)
+	test.equal(
+		memoryAdmissionMessage('DE limma', false, 4579, 100000, 0.4, false, 2200, 9318, 0),
+		'[memory] DE limma refused: needs 4,579 MB, over the 2,200 MB per-run maxMB, of a 9,318 MB budget ' +
+			'(maxMB, below 40% of 100,000 MB free), 0 MB reserved by runs in progress',
+		"a run's own maxMB below serverconfig's => the per-run maxMB"
+	)
 	test.end()
 })
 
