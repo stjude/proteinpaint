@@ -659,7 +659,15 @@ export class SunburstChart {
 		const q = this.app.vocabApi.termdbConfig?.queries || {}
 		// the mutations of the selected samples, in the genome browser after a gene is entered
 		if (row.kind == 'assay')
-			return q.snvindel || q.svfusion || q.cnv ? { chartType: 'genomeBrowser', filter } : undefined
+			return q.snvindel || q.svfusion || q.cnv
+				? {
+						chartType: 'genomeBrowser',
+						filter,
+						/* the mutation track shown, which the genome browser hides by default when the dataset also has
+						trackLst. The query is copied as the browser's config replaces it, not merged */
+						...(q.snvindel ? { snvindel: { ...structuredClone(q.snvindel), shown: true } } : {})
+				  }
+				: undefined
 		// the survival curve of the selected samples
 		if (row.kind == 'survival') return { chartType: 'survival', term: { id: row.key }, filter }
 		// the input form of expression plots; each plot it opens has the filter

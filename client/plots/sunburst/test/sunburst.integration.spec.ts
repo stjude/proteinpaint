@@ -361,6 +361,7 @@ tape('Show the available data of a selection', test => {
 		assayed.click()
 		const gb = await waitFor(() => inner.app.getState().plots.find(p => p.chartType == 'genomeBrowser'))
 		test.deepEqual(gb.filter, inner.chart.plotFilter(), 'Should open the genome browser with the selection as filter')
+		test.equal(gb.snvindel?.shown, true, 'Should show the mutation track')
 
 		// a survival row counts the samples with a value for the term and opens its survival curve
 		const osRow = section().select('[data-testid=sjpp-sunburst-data-survival-os]').node()
