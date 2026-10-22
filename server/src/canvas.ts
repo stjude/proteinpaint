@@ -39,7 +39,10 @@ export function makeCanvas(width: number, height: number, devicePixelRatio = 1):
 	if (width * height > 0) dpr = Math.min(dpr, Math.sqrt(maxCanvasPixels / (width * height)))
 
 	// skia-canvas truncates a fractional size, floor it here so canvas.width and .height are the bitmap size
-	const canvas = new Canvas(Math.floor(width * dpr), Math.floor(height * dpr))
+	const canvas = new Canvas(
+		Math.max(width * devicePixelRatio >= 1 ? 1 : 0, Math.floor(width * dpr)),
+		Math.max(height * devicePixelRatio >= 1 ? 1 : 0, Math.floor(height * dpr))
+	)
 	const ctx = canvas.getContext('2d')
 	if (dpr != 1) ctx.scale(dpr, dpr)
 	return { canvas, ctx, devicePixelRatio: dpr }
