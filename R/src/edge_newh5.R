@@ -72,7 +72,7 @@ render_plot_b64 <- function(plotter) {
     if (device_open) invisible(capture.output(try(dev.off(), silent = TRUE)))
     if (file.exists(tmp)) unlink(tmp)
   }, add = TRUE)
-  png(filename = tmp, width = 1000, height = 1000, res = 200)
+  ragg::agg_png(filename = tmp, width = 1000, height = 1000, res = 200)
   device_open <- TRUE
   par(oma = c(0, 0, 0, 0))
   plotter()

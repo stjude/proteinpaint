@@ -30,7 +30,6 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     build-essential \
-    librsvg2-dev \
 	libbz2-dev \
 	libcurl4-openssl-dev \
 	libgsl-dev \
@@ -47,9 +46,16 @@ RUN apt-get update && apt-get install -y \
 	zlib1g-dev \
 	libjpeg-dev \
 	libgif-dev \
-    libcairo2-dev \
-    libpango1.0-dev \
-    libpangocairo-1.0-0 \
+	# The headers of ragg, which R/src uses instead of png() to draw the plots without cairo or pango, and of its
+	# systemfonts and textshaping deps, for when one of them is compiled from source instead of installed from a
+	# P3M binary. R itself still pulls in the cairo and pango runtime libs: they are hard deps of r-base-core.
+	libfontconfig-dev \
+	libfreetype-dev \
+	libfribidi-dev \
+	libharfbuzz-dev \
+	libpng-dev \
+	libtiff-dev \
+	libwebp-dev \
     fontconfig \
     fonts-dejavu-core \
     fonts-texgyre \
