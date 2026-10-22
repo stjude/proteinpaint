@@ -522,20 +522,6 @@ function add_hg38() {
 		)
 	}
 
-	// human meme file is build-independent
-	{
-		const a = path.join(UC.TP, 'utils/meme/motif_databases/HUMAN/')
-		mkdir(a)
-		trydownload(
-			path.join(a, 'HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'
-		)
-		trydownload(
-			path.join(a, 'HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
-		)
-	}
-
 	SC.genomes.push({
 		name: 'hg38',
 		species: 'human',
@@ -722,20 +708,6 @@ function add_hg19() {
 		file: './genome/hg19.js',
 		datasets: [{ name: 'ClinVar', jsfile: './dataset/clinvar.hg19.js' }]
 	})
-
-	// meme
-	{
-		const a = path.join(UC.TP, 'utils/meme/motif_databases/HUMAN/')
-		mkdir(a)
-		trydownload(
-			path.join(a, 'HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme'
-		)
-		trydownload(
-			path.join(a, 'HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'),
-			'https://proteinpaint.stjude.org/ppSupport/static/hg19/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
-		)
-	}
 }
 
 function abort(m) {

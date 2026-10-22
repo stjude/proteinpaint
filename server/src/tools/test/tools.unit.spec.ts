@@ -18,7 +18,7 @@ file fields: roots and debugmodeAnyRoot
 runTool(): does not start the tool for a rejected input
 runTool(): passes the argv of a valid input
 runToolOutput(): resolves with the exit code and output
-getArgv(): list slots and prefixed slots
+getArgv(): list, number, and prefixed slots
 checkSpec(): rejects malformed specs
 mergeSpecs(): rejects an op that is in more than one spec file
 specs are frozen, and a recompiled pattern does not change the checks
@@ -201,24 +201,6 @@ tape('hicstraw.query: rejected inputs', test => {
 
 /** for each op other than hicstraw.query: a valid input, its argv, and values that must be rejected */
 const otherOps: Record<string, { input: Record<string, unknown>; argv: string[]; bad: Record<string, unknown[]> }> = {
-	'fimo.scan': {
-		input: { thresh: 1e-4, motifDb: 'anno/db/motif.meme', fasta: path.join(cache, '0.123') },
-		argv: [
-			'--parse-genomic-coord',
-			'--verbosity',
-			'1',
-			'--text',
-			'--thresh',
-			'0.0001',
-			path.join(tp, 'anno/db/motif.meme'),
-			path.join(cache, '0.123')
-		],
-		bad: {
-			thresh: ['1e-4', '-o', -0.1, 1.5, NaN, Infinity, null],
-			motifDb: ['../x.meme', '/etc/passwd', path.join(cache, 'x.meme'), '-o', ''],
-			fasta: [path.join(tp, 'x.fa'), '/tmp/x.fa', path.join(cache, '../x.fa'), path.join(cache, '-o'), cache]
-		}
-	},
 	'gfClient.align': {
 		input: {
 			host: 'blat.a.org',
@@ -406,15 +388,15 @@ tape('every field rejects the hostile values of its type', test => {
 })
 
 tape('file fields: roots and debugmodeAnyRoot', test => {
-	const s = specs['fimo.scan']
-	const input = otherOps['fimo.scan'].input
+	const s = specs['gfClient.align']
+	const input = otherOps['gfClient.align'].input
 	test.equal(
-		getArgv('fimo.scan', s, { ...input, fasta: '0.123' })[7],
+		getArgv('gfClient.align', s, { ...input, queryFile: '0.123' })[3],
 		path.join(cache, '0.123'),
 		'should resolve a relative path under the root'
 	)
 	test.equal(
-		getArgv('fimo.scan', s, { ...input, fasta: 'a b (1),v2=x@y~.fa' })[7],
+		getArgv('gfClient.align', s, { ...input, queryFile: 'a b (1),v2=x@y~.fa' })[3],
 		path.join(cache, 'a b (1),v2=x@y~.fa'),
 		'should accept the space, parentheses, and other allowed characters of a file name'
 	)
@@ -513,36 +495,36 @@ tape('runTool(): passes the argv of a valid input', async test => {
 tape('runToolOutput(): resolves with the exit code and output', async test => {
 	const bin = path.join(tmpdir, 'out.sh')
 	fs.writeFileSync(bin, `#!/bin/sh\nprintf '%s ' "$@"\nprintf 'warn' >&2\nexit 3\n`, { mode: 0o755 })
-	const prev = serverconfig.fimo
-	serverconfig.fimo = bin
+	const prev = serverconfig.gfClient
+	serverconfig.gfClient = bin
 	try {
-		const { input, argv } = otherOps['fimo.scan']
-		const out = await runToolOutput('fimo.scan', input)
+		const { input, argv } = otherOps['gfClient.align']
+		const out = await runToolOutput('gfClient.align', input)
 		test.deepEqual(
 			out,
 			{ code: 3, stdout: argv.join(' ') + ' ', stderr: 'warn' },
 			'should resolve with the code, stdout, and stderr'
 		)
-		serverconfig.fimo = path.join(tmpdir, 'missing')
+		serverconfig.gfClient = path.join(tmpdir, 'missing')
 		try {
-			await runToolOutput('fimo.scan', input)
+			await runToolOutput('gfClient.align', input)
 			test.fail('should reject when the tool cannot be started')
 		} catch (e: any) {
 			test.equal(e?.code, 'ENOENT', 'should reject with the spawn error when the tool cannot be started')
 		}
 		try {
-			await runToolOutput('fimo.scan', { ...input, thresh: '-o' })
+			await runToolOutput('gfClient.align', { ...input, port: '-o' })
 			test.fail('should reject an invalid input')
 		} catch (e) {
-			test.match(String(e), /invalid thresh/, 'should reject an invalid input')
+			test.match(String(e), /invalid port/, 'should reject an invalid input')
 		}
 	} finally {
-		serverconfig.fimo = prev
+		serverconfig.gfClient = prev
 	}
 	test.end()
 })
 
-tape('getArgv(): list slots and prefixed slots', test => {
+tape('getArgv(): list, number, and prefixed slots', test => {
 	// no op has a list field, so a list slot is tested with this spec
 	const l: ToolSpec = {
 		bin: () => 'x',
@@ -562,6 +544,17 @@ tape('getArgv(): list slots and prefixed slots', test => {
 			() => getArgv('t.list', l, { regions }),
 			/invalid regions/,
 			`should reject regions=${JSON.stringify(regions)}`
+		)
+	}
+	// no op has a number field, so a number slot is tested with this spec
+	const n: ToolSpec = { bin: () => 'x', fields: { thresh: { type: 'number', min: 0, max: 1 } }, argv: ['$thresh'] }
+	checkSpec('t.number', n)
+	test.deepEqual(getArgv('t.number', n, { thresh: 1e-4 }), ['0.0001'], 'should put a number in its argv slot')
+	for (const thresh of hostileValues(n.fields.thresh)) {
+		test.throws(
+			() => getArgv('t.number', n, { thresh }),
+			/invalid thresh/,
+			`should reject thresh=${JSON.stringify(thresh)}`
 		)
 	}
 	const p: ToolSpec = {

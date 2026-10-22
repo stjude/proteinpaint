@@ -1259,9 +1259,9 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 								.slice(0, 6)
 								.map(i => i.sampleobj.name)
 								.join('<br>') +
-						  '<br><i>... and ' +
-						  (m.sampledata.length - 6) +
-						  ' more samples</i>'
+							'<br><i>... and ' +
+							(m.sampledata.length - 6) +
+							' more samples</i>'
 						: m.sampledata.map(i => i.sampleobj.name).join('<br>')
 			})
 
@@ -1355,13 +1355,6 @@ export async function click_multi_singleitem(p) {
 		block: p.block,
 		m: p.item,
 		sample: p.sample
-	})
-	mayaddtab_fimo(tabs, {
-		tk: p.tk,
-		block: p.block,
-		m: p.item,
-		sample: p.sample,
-		samplegroup: p.samplegroup
 	})
 
 	client.tab2box(pane.body.style('padding-top', '10px'), tabs)
@@ -2545,96 +2538,6 @@ function mayaddtab_mutationsignature(tabs, samplename, tk, block) {
 						.attr('width', pad + labelw + labelspace + barw + pad)
 						.attr('height', pad + axish + rowspace + (rowh + rowspace) * s.annotation.length + pad)
 				}
-				wait.remove()
-			} catch (e) {
-				wait.text('Error: ' + (e.message || e))
-				if (e.stack) console.log(e.stack)
-			}
-		}
-	})
-}
-
-function mayaddtab_fimo(tabs, arg) {
-	/*
-may create a tf motif find button for mutation
-*/
-	if (!arg.tk || !arg.block || !arg.block.genome || !arg.block.genome.fimo_motif) return
-	if (!arg.m || arg.m.dt != common.dtsnvindel) return
-	tabs.push({
-		label: 'TF motif',
-		callback: async div => {
-			const wait = client.tab_wait(div)
-			try {
-				// generate fimo query param
-				const fimoarg = {
-					genome: arg.block.genome,
-					div: div,
-					m: {
-						chr: arg.m.chr,
-						pos: arg.m.pos + 1, // 1 based
-						ref: arg.m.ref,
-						alt: arg.m.alt
-					}
-				}
-				// if fpkm is available and how to query
-				if (arg.tk.iscustom) {
-					if (arg.tk.checkexpressionrank) {
-						fimoarg.factor_profiles = [
-							{
-								isgenevalue: 1,
-								name: 'Gene ' + arg.tk.gecfg.datatype,
-								file: arg.tk.checkexpressionrank.file,
-								url: arg.tk.checkexpressionrank.url,
-								indexURL: arg.tk.checkexpressionrank.indexURL
-							}
-						]
-
-						if (arg.sample) {
-							fimoarg.factor_profiles.push({
-								isgenevalueonesample: 1,
-								name: arg.sample.samplename + ' ' + arg.tk.gecfg.datatype,
-								samplename: arg.sample.samplename,
-								file: arg.tk.checkexpressionrank.file,
-								url: arg.tk.checkexpressionrank.url,
-								indexURL: arg.tk.checkexpressionrank.indexURL
-							})
-						}
-					}
-				} else {
-					// native
-					if (arg.tk.checkexpressionrank) {
-						const fpro = {
-							isgenevalue: 1,
-							datatype: arg.tk.checkexpressionrank.datatype,
-							querykey: arg.tk.checkexpressionrank.querykey,
-							mdslabel: arg.tk.mds.label
-						}
-						if (arg.samplegroup) {
-							if (arg.samplegroup.attributes) {
-								// restrict expression to a group
-								fpro.name = arg.samplegroup.name + ' ' + arg.tk.gecfg.datatype
-								fpro.samplegroup_attrlst = arg.samplegroup.attributes
-							}
-						}
-						if (!fpro.name) {
-							fpro.name = 'Gene ' + arg.tk.gecfg.datatype
-						}
-						fimoarg.factor_profiles = [fpro]
-
-						if (arg.sample) {
-							fimoarg.factor_profiles.push({
-								isgenevalueonesample: 1,
-								name: arg.sample.samplename + ' ' + arg.tk.gecfg.datatype,
-								samplename: arg.sample.samplename,
-								datatype: arg.tk.checkexpressionrank.datatype,
-								querykey: arg.tk.checkexpressionrank.querykey,
-								mdslabel: arg.tk.mds.label
-							})
-						}
-					}
-				}
-				const _ = await import('./mds.fimo')
-				await _.init(fimoarg)
 				wait.remove()
 			} catch (e) {
 				wait.text('Error: ' + (e.message || e))

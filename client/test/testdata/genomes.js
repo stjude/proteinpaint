@@ -4,7 +4,6 @@ export const hg19 = {
 	hasSNP: true,
 	hasIdeogram: false,
 	hasClinvarVCF: true,
-	fimo_motif: true,
 	blat: false,
 	geneset: [
 		{
@@ -855,7 +854,6 @@ export const hg38 = {
 	hasSNP: false,
 	hasIdeogram: false,
 	hasClinvarVCF: true,
-	fimo_motif: true,
 	blat: false,
 	defaultcoord: {
 		chr: 'chr17',

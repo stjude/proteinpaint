@@ -36,11 +36,7 @@ curl --parallel \
     https://proteinpaint.stjude.org/ppSupport/db/proteindomain.db \
     \
     --next --remote-name-all --continue-at - --create-dirs --output-dir anno/msigdb/ \
-    https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs \
-    \
-    --next --remote-name-all --continue-at - --create-dirs --output-dir utils/meme/motif_databases/HUMAN/ \
-    https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme \
-    https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv
+    https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs
 
 # Ensures index files are newer than data files so tabix won't break
 touch genomes/*.fai genomes/*.gzi

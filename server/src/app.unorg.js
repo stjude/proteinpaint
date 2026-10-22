@@ -48,7 +48,6 @@ import bampile_request_closure from './bampile.js'
 import bedj_request_closure from './bedj.js'
 import { mds3_request_closure } from './mds3.load.js'
 import * as singlecell from './singlecell.js'
-import * as fimo from './fimo.js'
 import mdsgeneboxplot_closure from './mds.geneboxplot.js'
 import { handle_mdssurvivalplot } from './km.js'
 import { protectedRoutes } from './auth/protectedRoutes.ts'
@@ -119,13 +118,6 @@ export function setRoutes(app, _genomes, serverconfig) {
 		app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot(genomes))
 	} else {
 		console.log('!! Skipped setting up route: legacy mds routes')
-	}
-
-	// fimo is a genome-level feature (also launched standalone via runpp({fimo})), not tied to mds datasets
-	if (genomeLst.some(g => g.fimo_motif)) {
-		app.post(basepath + '/fimo', fimo.handle_closure(genomes))
-	} else {
-		console.log('!! Skipped setting up route: fimo')
 	}
 }
 

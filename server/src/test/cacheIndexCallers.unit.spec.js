@@ -219,19 +219,6 @@ const routeCases = [
 		file: 'mds.expressionrank.js',
 		query: (url, indexURL) => ({ genome: 'hg38', iscustom: 1, sample: 's1', url, indexURL, rglst: rglst() })
 	},
-	{
-		name: 'mdsgenevalueonesample',
-		route: '/mdsgenevalueonesample',
-		file: 'mds.genevalueonesample.js',
-		query: (url, indexURL) => ({
-			genome: 'hg38',
-			iscustom: 1,
-			sample: 's1',
-			genes: [{ gene: 'TP53', chr: 'chr1', start: 1, stop: 2 }],
-			url,
-			indexURL
-		})
-	},
 	...['isgenevalue', 'iscnv', 'isloh', 'isitd', 'issvfusion', 'issvcnv', 'isvcf', 'ismutation'].map(flag => ({
 		name: 'samplematrix-' + flag,
 		route: '/samplematrix',
