@@ -113,6 +113,11 @@ async function openBigbedFile(file: unknown): Promise<OpenFile> {
 		closeFile(f)
 		throw libraryErrorText(e)
 	}
+	const existing = openFiles.get(location, stamp)
+	if (existing) {
+		closeFile(f)
+		return existing
+	}
 	openFiles.set(location, stamp, f)
 	return f
 }
