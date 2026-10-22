@@ -1286,6 +1286,35 @@ tape('AuthApi.getHealth: uses cached result on subsequent calls', async function
 	test.end()
 })
 
+tape('AuthApi.getHealth: sends a json content-type with the basic login request', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(4)
+
+	const { authApi } = makeAuthApi({ type: 'basic', authRoute: '/dslogin', password: 'pw' }) // pragma: allowlist secret
+	const originalFetch = globalThis.fetch
+	let calledUrl: any, calledInit: any
+	// the app rejects a POST that is not content-type: application/json, so the healthcheck must set it
+	globalThis.fetch = (async (url: any, init: any) => {
+		calledUrl = url
+		calledInit = init
+		return { json: async () => ({ status: 'ok' }) }
+	}) as any
+	try {
+		const result: any = await authApi.getHealth()
+		test.equal(calledUrl, 'http://localhost:3000/dslogin', 'should post to the local login route')
+		test.equal(calledInit.headers['content-type'], 'application/json', 'should set content-type to application/json')
+		test.equal(
+			calledInit.headers.authorization,
+			`Basic ${btoa('pw')}`,
+			'should still send the basic authorization header'
+		) // pragma: allowlist secret
+		test.deepEqual(result.errors, [], 'should not report an error when the login route responds with status ok')
+	} finally {
+		globalThis.fetch = originalFetch
+	}
+	test.end()
+})
+
 tape('AuthApi.mayAdjustFilter: returns early when ds has no getAdditionalFilter', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
