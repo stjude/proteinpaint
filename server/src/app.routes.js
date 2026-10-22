@@ -63,6 +63,7 @@ export const routeFiles = [
 	import('./routes/termdb.regression.ts'),
 	import('./routes/termdb.config.ts'),
 	import('./routes/termdb.dapVolcano.ts'),
+	import('./routes/termdb.dataAvailability.ts'),
 	import('./routes/termdb.descrstats.ts'),
 	import('./routes/termdb.DE.ts'),
 	import('./routes/termdb.diffMeth.ts'),

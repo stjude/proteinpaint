@@ -10,7 +10,7 @@ import {
 } from '#filter/filter'
 import { appInit } from '#termdb/app'
 import { fillTermWrapper, get$id } from '#termsetting'
-import { getCurrentCohortChartTypes } from './charts'
+import { getCurrentCohortChartTypes, getActiveCohortStr } from './charts'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { isNumericTerm, termType2label } from '#shared/terms.js'
@@ -25,6 +25,7 @@ import {
 	BACKGROUND_CORRECTION_TITLE
 } from '../plots/volcano/settings/defaults.ts'
 import { getGEunit } from '#tw/geneExpression'
+import { renderDataAvailability } from './groupDataAvailability.ts'
 
 /*
 this
@@ -224,12 +225,12 @@ class MassGroups {
 
 		const groupsInfo = menuDiv.append('div').attr('data-testid', 'sjpp-groups-menu')
 
-		const table = table2col({ holder: groupsInfo })
-		table.table.style('scale', 0.9).style('margin-left', '0px')
+		const table = table2col({ holder: groupsInfo, cellPadding: '2px 6px' })
+		table.table.style('font-size', '.85em')
 		for (const [grpKey, grp] of Object.entries(tw.term.values)) {
 			const [c1, c2] = table.addRow()
 			// color via CSSOM (.style) and label via .text() — never interpolate user values into markup
-			const square = c1.append('span').style('display', 'inline-block').style('margin', '0 4px')
+			const square = c1.append('span').style('display', 'inline-block').style('margin', '0 6px 0 0')
 			if (grp.color) square.style('width', '12px').style('height', '12px').style('background-color', grp.color)
 			else
 				square
@@ -242,17 +243,10 @@ class MassGroups {
 			const sampleLabel = this.app.vocabApi.termdbConfig?.uiLabels?.samples || 'samples'
 			// a group defined by a filter lists no sample, and carries the number that its filter selected
 			const n = grp.othersGroupSampleNum || (grp.list?.length ?? tw.q.groups.find(g => g.name == grpKey)?.sampleCount)
-			if (Number.isFinite(n)) c2.text(`${n} ${sampleLabel}`)
+			if (Number.isFinite(n)) c2.text(`${n.toLocaleString()} ${sampleLabel}`)
 		}
 
-		if (this.state.currentCohortChartTypes.includes('DA') && samplelstTW.q.groups.length == 2)
-			addDiffAnalysisPlotMenuItem(menuDiv, this, samplelstTW)
-		addSummarizeOptions(menuDiv, this, samplelstTW, id)
-		mayAddHierClusterPlotMenuItem('geneExpression', menuDiv, 'Gene expression', this.tip2, samplelstTW, id, this, true)
-		mayAddMatrixMenuItems(menuDiv, 'Matrix', this.tip2, samplelstTW, id, this, this.state, true, () => this.newId)
-		mayAddSamplescatterOption(menuDiv, this, samplelstTW)
-		mayAddGenomebrowserOption(menuDiv, this, samplelstTW)
-		mayAddBrainImagingOption(menuDiv, this, samplelstTW)
+		renderGroupActions(this, menuDiv, samplelstTW, id)
 
 		//show option to delete custom variable
 		menuDiv
@@ -268,6 +262,95 @@ class MassGroups {
 }
 
 export const groupsInit = getCompInit(MassGroups)
+
+/* The options of the menu of a custom variable, given as its samplelst tw: the counts of the groups' samples
+with each kind of data of the dataset, whose rows may open a plot of the groups, then the analyses and plots
+of the groups, of which those that need data that the groups lack are removed once the counts arrive.
+
+self{} is the caller, as the options use it:
+	app: the mass app, whose dispatch() creates the plots
+	state: {termfilter, currentCohortChartTypes, matrixplots}
+	tip, tip2, tip3: Menu instances: the menu (hidden when a plot is created), its submenu with tip.d as the
+		parent_menu, and the gene search tooltip
+	newId(): an id for a new plot
+id: the id of the plot that a new plot is inserted before, if any
+Returns a promise that resolves when the counts are drawn. */
+function renderGroupActions(self, menuDiv, samplelstTW, id) {
+	const availabilityDiv = menuDiv.append('div')
+	if (self.state.currentCohortChartTypes.includes('DA') && samplelstTW.q.groups.length == 2)
+		addDiffAnalysisPlotMenuItem(menuDiv, self, samplelstTW)
+	addSummarizeOptions(menuDiv, self, samplelstTW, id)
+	mayAddHierClusterPlotMenuItem('geneExpression', menuDiv, 'Gene expression', self.tip2, samplelstTW, id, self, true)
+	mayAddMatrixMenuItems(menuDiv, 'Matrix', self.tip2, samplelstTW, id, self, self.state, true, () => self.newId)
+	mayAddSamplescatterOption(menuDiv, self, samplelstTW)
+	mayAddGenomebrowserOption(menuDiv, self, samplelstTW)
+	mayAddBrainImagingOption(menuDiv, self, samplelstTW)
+	const chartTypes = self.state.currentCohortChartTypes
+	return renderDataAvailability({
+		holder: availabilityDiv,
+		menuDiv,
+		vocabApi: self.app.vocabApi,
+		groups: getAvailabilityGroups(samplelstTW, self.state.termfilter),
+		colors: Object.fromEntries(Object.entries(samplelstTW.term.values).map(([k, v]) => [k, v.color])),
+		filter0: self.state.termfilter?.filter0,
+		cohort: getActiveCohortStr(self.app.getState()),
+		// a row of the table may open a plot of the groups, which then replaces the menu option for that plot
+		rowAction: row => {
+			if (row.kind == 'survival' && chartTypes.includes('survival'))
+				return {
+					replaces: 'sjpp-survival-option',
+					run: () => {
+						self.tip.hide()
+						self.tip2.hide()
+						openPlot('survival', { id: row.key }, samplelstTW, self.app, id, () => self.newId)
+					}
+				}
+			if (row.kind == 'assay' && canCompareMutations(self, samplelstTW))
+				return { replaces: 'sjpp-genome-browser-option', run: () => compareMutations(self, samplelstTW) }
+			// the lanes of the groups' patients, in a section per group
+			if (row.kind == 'data' && row.key == 'longitudinal' && chartTypes.includes('swimmer'))
+				return {
+					run: () => {
+						self.tip.hide()
+						self.tip2.hide()
+						self.app.dispatch({
+							type: 'plot_create',
+							config: { chartType: 'swimmer', term0: structuredClone(samplelstTW) }
+						})
+					}
+				}
+			if (row.kind == 'data' && row.key == 'NIdata')
+				return {
+					replaces: 'sjpp-brain-imaging-option',
+					run: anchor => showBrainImagingMenu(self, samplelstTW, anchor)
+				}
+		}
+	})
+}
+
+/* The groups of a samplelst tw as termdb/dataAvailability takes them: a group defined by a filter, or one
+that lists its samples. An in:false group lists the samples of the group that it is the rest of, so it
+is given as the filter of that rest. */
+export function getAvailabilityGroups(samplelstTW, termfilter = {}) {
+	return samplelstTW.q.groups.map(g => {
+		if (g.in === false && Array.isArray(g.values)) {
+			const { name, filter, filter0 } = getOthersGroup(g, termfilter)
+			return filter0 === undefined ? { name, filter } : { name, filter, filter0 }
+		}
+		if (isFilterGroup(g)) {
+			const group = { name: g.name, filter: g.filter }
+			if (g.filter0 !== undefined) group.filter0 = g.filter0
+			if (g.mapParent2Children) group.mapParent2Children = true
+			return group
+		}
+		return { name: g.name, values: (g.values || []).map(v => ({ sampleId: v.sampleId })) }
+	})
+}
+
+// a group of a samplelst tw that is defined by a filter and lists no sample
+function isFilterGroup(group) {
+	return !!group.filter && !Array.isArray(group.values)
+}
 
 function addSummarizeOptions(menuDiv, self, samplelstTW, id) {
 	const d = menuDiv
@@ -296,31 +379,39 @@ function addSummarizeOptions(menuDiv, self, samplelstTW, id) {
 		addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', self.tip2, samplelstTW, id, self, true)
 }
 
+// whether the mutations of the groups can be compared in the genome browser
+function canCompareMutations(self, samplelstTW) {
+	if (!self.state.currentCohortChartTypes.includes('genomeBrowser')) return false
+	if (!self.app.vocabApi.termdbConfig.queries?.snvindel) return false // for now only allow for snvindel
+	if (self.app.vocabApi.termdbConfig.queries.snvindel.details) return false // allows to disable this option for sjlife
+	return samplelstTW.q.groups.length == 2 // hardcoded to only support 2 groups
+}
+
 function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
-	if (!self.state.currentCohortChartTypes.includes('genomeBrowser')) return
-	if (!self.app.vocabApi.termdbConfig.queries?.snvindel) return // for now only allow for snvindel
-	if (self.app.vocabApi.termdbConfig.queries.snvindel.details) return // allows to disable this option for sjlife
-	if (samplelstTW.q.groups.length != 2) return // hardcoded to only support 2 groups
+	if (!canCompareMutations(self, samplelstTW)) return
 	menuDiv
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		.attr('data-testid', 'sjpp-genome-browser-option')
 		.text('Compare mutations')
-		.on('click', () => {
-			self.tip.hide()
-			self.tip2.hide()
-			self.tip3.hide()
-			const [f1, f2] = makeFiltersFromTwoSampleGroups(samplelstTW)
-			const config = {
-				chartType: 'genomeBrowser',
-				snvindel: { shown: true, filter: f1 }, // code filter in 1st tk
-				subMds3Tks: [{ filterObj: f2 }] // code filter in 2nd tk
-			}
-			self.app.dispatch({
-				type: 'plot_create',
-				config
-			})
-		})
+		.on('click', () => compareMutations(self, samplelstTW))
+}
+
+// the genome browser with a mutation track of each of the two groups
+function compareMutations(self, samplelstTW) {
+	self.tip.hide()
+	self.tip2.hide()
+	self.tip3.hide()
+	const [f1, f2] = makeFiltersFromTwoSampleGroups(samplelstTW)
+	const config = {
+		chartType: 'genomeBrowser',
+		snvindel: { shown: true, filter: f1 }, // code filter in 1st tk
+		subMds3Tks: [{ filterObj: f2 }] // code filter in 2nd tk
+	}
+	self.app.dispatch({
+		type: 'plot_create',
+		config
+	})
 }
 
 function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
@@ -332,98 +423,114 @@ function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		.attr('data-testid', 'sjpp-brain-imaging-option')
 		.text('Compare brain imaging')
-		.on('click', async () => {
-			const tip = self.tip2
-			tip.clear().showunderoffset(d.node())
-			const submenu = tip.d.append('div')
-			const wait = submenu.append('div').style('margin', '5px').style('opacity', 0.5).text('Loading...')
+		.on('click', () => showBrainImagingMenu(self, samplelstTW, d.node()))
+	d.insert('div').html('›').style('float', 'right')
+}
 
-			/* unique explicitly-listed samples of this samplelst variable.
-			a complement group ("Not in X", in:false) reuses the primary group's list
-			to mark "everyone else"; its list entries are not its own members, so skip it
-			to avoid sending (and summing) the same sample twice */
-			const seen = new Set()
-			const sampleNames = []
-			let listedItemCount = 0
-			for (const grp of Object.values(samplelstTW.term.values)) {
-				if (grp.in === false) continue
-				for (const item of grp.list || []) {
-					listedItemCount++
-					if (!item.sample || seen.has(item.sample)) continue
-					seen.add(item.sample)
-					sampleNames.push(item.sample)
-				}
-			}
-			// the divide-by samplelst term buckets any extra sample into the complement
-			// group server-side (NOT IN sql), so a "vs others" comparison works by
-			// sending every imaging sample rather than only the listed ones
-			const hasComplement = Object.values(samplelstTW.term.values).some(g => g.in === false)
-			if (!sampleNames.length) {
-				// distinguish an empty variable from sample names hidden by permissions
-				wait.text(listedItemCount ? 'Sample names are not accessible' : 'No samples in this variable')
-				return
-			}
+// the brain templates, each with the number of the groups' samples with an image on it, under the anchor
+async function showBrainImagingMenu(self, samplelstTW, anchor) {
+	const NIdata = self.app.vocabApi.termdbConfig?.queries?.NIdata
+	const tip = self.tip2
+	tip.clear().showunderoffset(anchor)
+	const submenu = tip.d.append('div')
+	const wait = submenu.append('div').style('margin', '5px').style('opacity', 0.5).text('Loading...')
 
-			// let user select a template; show imaging availability per template.
-			// per-template try/catch: one broken template must not hide the others
-			const entries = await Promise.all(
-				Object.keys(NIdata.references).map(async refKey => {
-					try {
-						const available = await getBrainImagingSampleSet(
-							self.app.vocabApi.vocab.genome,
-							self.app.vocabApi.vocab.dslabel,
-							refKey
-						)
-						return { refKey, available }
-					} catch (e) {
-						return { refKey, error: e.message || e }
-					}
-				})
-			)
-			wait.remove()
+	/* unique explicitly-listed samples of this samplelst variable.
+	a complement group ("Not in X", in:false) reuses the primary group's list
+	to mark "everyone else"; its list entries are not its own members, so skip it
+	to avoid sending (and summing) the same sample twice */
+	const seen = new Set()
+	const sampleNames = []
+	let listedItemCount = 0
+	const addName = name => {
+		listedItemCount++
+		if (!name || seen.has(name)) return
+		seen.add(name)
+		sampleNames.push(name)
+	}
+	for (const grp of Object.values(samplelstTW.term.values)) {
+		if (grp.in === false) continue
+		for (const item of grp.list || []) addName(item.sample)
+	}
+	// a group defined by a filter lists no sample: its samples are those that the filter selects
+	try {
+		for (const g of samplelstTW.q.groups) {
+			if (!isFilterGroup(g)) continue
+			const lst = await self.app.vocabApi.getFilteredSampleList(g.filter, g.filter0, g.mapParent2Children)
+			for (const s of lst) addName(s.name)
+		}
+	} catch (e) {
+		wait.text(`Cannot get the samples of the groups: ${e?.message || e}`)
+		return
+	}
+	// the divide-by samplelst term buckets any extra sample into the complement
+	// group server-side (NOT IN sql), so a "vs others" comparison works by
+	// sending every imaging sample rather than only the listed ones
+	const hasComplement = Object.values(samplelstTW.term.values).some(g => g.in === false)
+	if (!sampleNames.length) {
+		// distinguish an empty variable from sample names hidden by permissions
+		wait.text(listedItemCount ? 'Sample names are not accessible' : 'No samples in this variable')
+		return
+	}
 
-			for (const { refKey, available, error } of entries) {
-				if (error) {
-					sayerror(submenu, `${refKey}: ${error}`)
-					continue
-				}
-				const groupNames = sampleNames.filter(name => available.has(name))
-				const otherCount = hasComplement ? available.size - groupNames.length : 0
-				const row = submenu
-					.append('div')
-					.text(
-						`${refKey} (${groupNames.length} of ${sampleNames.length} with imaging` +
-							(otherCount ? `, vs ${otherCount} others)` : ')')
-					)
-				if (!groupNames.length) {
-					row.attr('class', 'sja_menuoption_not_interactive').style('opacity', 0.5)
-					continue
-				}
-				// with a complement group, send all imaging samples so the "others"
-				// panel is populated; otherwise only the variable's own samples
-				const names = hasComplement ? [...available] : groupNames
-				row.attr('class', 'sja_menuoption sja_sharp_border').on('click', async () => {
-					self.tip.hide()
-					tip.hide()
-					// use the custom variable as the divide-by term, so each group
-					// renders as its own panel on the shared template
-					const divideByTW = structuredClone(samplelstTW)
-					await fillTermWrapper(divideByTW, self.app.vocabApi)
-					// default slice positions are resolved by getPlotConfig()
-					// from the template's dataset-configured parameters
-					self.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: 'brainImaging',
-							queryKey: refKey,
-							selectedSampleFileNames: names.map(name => name + '.nii'),
-							divideByTW
-						}
-					})
-				})
+	// let user select a template; show imaging availability per template.
+	// per-template try/catch: one broken template must not hide the others
+	const entries = await Promise.all(
+		Object.keys(NIdata.references).map(async refKey => {
+			try {
+				const available = await getBrainImagingSampleSet(
+					self.app.vocabApi.vocab.genome,
+					self.app.vocabApi.vocab.dslabel,
+					refKey
+				)
+				return { refKey, available }
+			} catch (e) {
+				return { refKey, error: e.message || e }
 			}
 		})
-	d.insert('div').html('›').style('float', 'right')
+	)
+	wait.remove()
+
+	for (const { refKey, available, error } of entries) {
+		if (error) {
+			sayerror(submenu, `${refKey}: ${error}`)
+			continue
+		}
+		const groupNames = sampleNames.filter(name => available.has(name))
+		const otherCount = hasComplement ? available.size - groupNames.length : 0
+		const row = submenu
+			.append('div')
+			.text(
+				`${refKey} (${groupNames.length} of ${sampleNames.length} with imaging` +
+					(otherCount ? `, vs ${otherCount} others)` : ')')
+			)
+		if (!groupNames.length) {
+			row.attr('class', 'sja_menuoption_not_interactive').style('opacity', 0.5)
+			continue
+		}
+		// with a complement group, send all imaging samples so the "others"
+		// panel is populated; otherwise only the variable's own samples
+		const names = hasComplement ? [...available] : groupNames
+		row.attr('class', 'sja_menuoption sja_sharp_border').on('click', async () => {
+			self.tip.hide()
+			tip.hide()
+			// use the custom variable as the divide-by term, so each group
+			// renders as its own panel on the shared template
+			const divideByTW = structuredClone(samplelstTW)
+			await fillTermWrapper(divideByTW, self.app.vocabApi)
+			// default slice positions are resolved by getPlotConfig()
+			// from the template's dataset-configured parameters
+			self.app.dispatch({
+				type: 'plot_create',
+				config: {
+					chartType: 'brainImaging',
+					queryKey: refKey,
+					selectedSampleFileNames: names.map(name => name + '.nii'),
+					divideByTW
+				}
+			})
+		})
+	}
 }
 
 // a group of a samplelst tw lists its samples, or is defined by a filter that selected some
@@ -727,6 +834,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 	// small text to explain which is case/control. always show this for all DA
 	const noteDiv = div
 		.append('div')
+		.attr('data-testid', 'sjpp-da-note')
 		.style('font-size', '0.8em')
 		.style('opacity', 0.8)
 		.style('padding', '3px 3px 3px 10px')

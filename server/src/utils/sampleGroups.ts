@@ -107,6 +107,12 @@ function readableSamples(allSampleSet: Set<string>, ds: any, __protected__: any)
 	return readable
 }
 
+/** A filter that selects the listed samples, by a samplelst term of one category. */
+export function samplelstFilter(list: { sampleId: number | string }[]): any {
+	const term = { type: 'samplelst', values: { '': { key: '', list } } }
+	return { type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term } }] }
+}
+
 /** Walk one sample group's values and collect names + confounder values.
  * A name is included iff every configured confounder (tw, tw2) has data
  * for that sample — the two early-return guards enforce that without a
@@ -134,19 +140,7 @@ export async function buildGroupValues(
 		// ds has sample ancestry
 		// data for DE/DM (i.e. genomic data) are assumed to be
 		// at sample-level, so map sample ids to sample-level
-		const term = {
-			type: 'samplelst',
-			values: {
-				'': { key: '', list: values }
-			}
-		}
-		const filter = {
-			type: 'tvslst',
-			in: true,
-			join: '',
-			lst: [{ type: 'tvs', tvs: { term } }]
-		}
-		const arg = { filter }
+		const arg = { filter: samplelstFilter(values) }
 		maySetMapParent2Children(arg, ds, true)
 		const allSamples = [...readable].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
 		// filtering samples by samplelst term
