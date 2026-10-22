@@ -211,7 +211,12 @@ tape('a variable made from groups is defined by their filters', test => {
 				menu2.querySelector('[data-testid="sjpp-da-option"]'),
 				'should not offer differential expression when a group has no samples with data'
 			)
-			test.notOk(menu2.querySelector('[data-testid="sjpp-da-note"]'), 'should not show the case/control note then')
+			// each element class of methylation has its own samples, so differential methylation is kept, with its note
+			test.ok(
+				menu2.querySelector('[data-testid="sjpp-da-dnaMeth-option"]'),
+				'should keep differential methylation, which may have samples in another element class'
+			)
+			test.ok(menu2.querySelector('[data-testid="sjpp-da-note"]'), 'should keep the case/control note with it')
 			test.ok(menu2.querySelector('[data-testid="sjpp-summarize-option"]'), 'should still offer a summary')
 			groups.tip.hide()
 

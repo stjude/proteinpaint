@@ -57,18 +57,25 @@ export function availabilitySections(
 		label: a.label,
 		counts: res.groups.map(g => g.assays?.find(b => b.key == a.key)?.count)
 	}))
-	const survival: AvailabilityRow[] = (first?.survival || []).map(t => ({
-		kind: 'survival',
-		key: t.termid,
-		label: t.name,
-		counts: res.groups.map(g => g.survival?.find(u => u.termid == t.termid)?.count)
-	}))
 	const hasData = (r: AvailabilityRow) => r.counts.some(n => n && n > 0)
-	const survivalUnit = first?.survival?.[0]?.unit
+	const survival: AvailabilityRow[] = (first?.survival || [])
+		.map(t => ({
+			kind: 'survival' as const,
+			key: t.termid,
+			label: t.name,
+			...(t.unit ? { unit: t.unit } : {}),
+			counts: res.groups.map(g => g.survival?.find(u => u.termid == t.termid)?.count)
+		}))
+		.filter(hasData)
+	/* the unit of a survival term is of its sample type: in the section title when the shown terms share it, else
+	in each row */
+	const units = new Set(survival.map(r => r.unit))
+	const survivalUnit = units.size == 1 ? [...units][0] : undefined
+	if (survivalUnit) for (const r of survival) delete r.unit
 	const sections: AvailabilitySection[] = [
 		{ key: 'data', rows: data.filter(hasData) },
 		{ key: 'mutations', title: 'Mutations · samples assayed', rows: assays.filter(hasData) },
-		{ key: 'survival', title: `Survival${survivalUnit ? ' · ' + survivalUnit : ''}`, rows: survival.filter(hasData) }
+		{ key: 'survival', title: `Survival${survivalUnit ? ' · ' + survivalUnit : ''}`, rows: survival }
 	]
 	return sections.filter(s => s.rows.length)
 }
