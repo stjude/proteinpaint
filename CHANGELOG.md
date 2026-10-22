@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Remove the TF motif analysis that used FIMO: the runpp({fimo}) app, the TF motif tab of the legacy mds svcnv track, and the /fimo and /mdsgenevalueonesample routes; the genome fimo_motif setting, serverconfig.fimo, and the HOCOMOCO motif files are not used
+
+
 ## 2.222.0
 
 Features:
