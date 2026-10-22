@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import * as utils from './utils.js'
 import serverconfig from './serverconfig.js'
-import { createCanvas } from 'canvas'
+import { makeCanvas, canvasToURL } from './canvas.ts'
 import { bplen } from '#shared/common.js'
 
 /*
@@ -87,12 +87,12 @@ async function loadTk(req, genome) {
 			}
 		})
 
-		r2.img = plot_img(r, pairs, coordset, connheight, req.query.devicePixelRatio || 1)
+		r2.img = await plot_img(r, pairs, coordset, connheight, req.query.devicePixelRatio || 1)
 	}
 	return result
 }
 
-function plot_img(r, pairs, coordset, connheight, devicePixelRatio) {
+async function plot_img(r, pairs, coordset, connheight, devicePixelRatio) {
 	/*
 x1 ------------
 	mapping of actual coord positions
@@ -120,11 +120,7 @@ x2 ------------
 	}
 	const canvasheight = connheight + maxpairheight + binsize / 2
 
-	const canvas = createCanvas(r.width * devicePixelRatio, canvasheight * devicePixelRatio)
-	const ctx = canvas.getContext('2d')
-	if (devicePixelRatio > 1) {
-		ctx.scale(devicePixelRatio, devicePixelRatio)
-	}
+	const { canvas, ctx } = makeCanvas(r.width, canvasheight, devicePixelRatio)
 	ctx.strokeStyle = 'black'
 	for (const c of coordset) {
 		ctx.beginPath()
@@ -154,7 +150,7 @@ x2 ------------
 
 	return {
 		height: canvasheight,
-		src: canvas.toDataURL()
+		src: await canvasToURL(canvas)
 	}
 }
 

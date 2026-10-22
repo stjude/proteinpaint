@@ -84,7 +84,7 @@ function init_q(req) {
 	return query
 }
 
-function finalize_result(q, ds, result) {
+async function finalize_result(q, ds, result) {
 	const sampleSet = new Set() // collects sample ids if present in data points
 
 	if (result.skewer) {
@@ -143,8 +143,8 @@ function finalize_result(q, ds, result) {
 			}
 			result.cnvDensity = {
 				cnvMsg: result.cnv.cnvMsg,
-				gain: plotWiggle(q1, { fixminv: 0, fixmaxv: bothMax }),
-				loss: plotWiggle(q2, { fixminv: -bothMax, fixmaxv: 0 }),
+				gain: await plotWiggle(q1, { fixminv: 0, fixmaxv: bothMax }),
+				loss: await plotWiggle(q2, { fixminv: -bothMax, fixmaxv: 0 }),
 				max: bothMax,
 				segmentCount: result.cnv.cnvs.length
 			}
@@ -396,7 +396,7 @@ export async function load_driver(q, ds) {
 
 		// add queries for new data types
 
-		finalize_result(q, ds, result)
+		await finalize_result(q, ds, result)
 		return result
 	}
 

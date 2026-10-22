@@ -1,5 +1,5 @@
 import * as utils from './utils.js'
-import { createCanvas } from 'canvas'
+import { makeCanvas, canvasToURL } from './canvas.ts'
 import { basecolor } from '#shared/common.js'
 
 export default function (genomes) {
@@ -69,9 +69,8 @@ async function do_query(req, res, genomes) {
 	}
 
 	const height = allheight + midpad + fineheight
-	const canvas = createCanvas(width, height)
+	const { canvas, ctx } = makeCanvas(width, height)
 	const itemcount = req.query.rglst.reduce((i, j) => i + j.items.length, 0)
-	const ctx = canvas.getContext('2d')
 	if (itemcount == 0) {
 		// no data
 		ctx.font = '15px Arial'
@@ -79,7 +78,7 @@ async function do_query(req, res, genomes) {
 		ctx.textAlign = 'center'
 		ctx.textBaseline = 'middle'
 		ctx.fillText('No data in view range', width / 2, height / 2)
-		res.send({ src: canvas.toDataURL() })
+		res.send({ src: await canvasToURL(canvas) })
 		return
 	}
 	let allgrades = null
@@ -98,7 +97,7 @@ async function do_query(req, res, genomes) {
 			usegrade = allgrades[0]
 		}
 		if (!usegrade) {
-			res.send({ src: canvas.toDataURL() })
+			res.send({ src: await canvasToURL(canvas) })
 			return
 		}
 	}
@@ -171,7 +170,7 @@ async function do_query(req, res, genomes) {
 		x += r.width + regionspace
 	}
 	res.send({
-		src: canvas.toDataURL(),
+		src: await canvasToURL(canvas),
 		allgrades: allgrades,
 		usegrade: usegrade,
 		allmax: allmax

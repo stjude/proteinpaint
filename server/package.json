@@ -71,7 +71,6 @@
     "@types/express-session": "^1.18.1",
     "better-sqlite3": "^12.4.1",
     "body-parser": "^1.15.2",
-    "canvas": "~3.2.0",
     "compression": "^1.6.2",
     "cookie-parser": "^1.4.5",
     "d3": "^7.6.1",
@@ -85,7 +84,7 @@
     "partjson": "^0.58.2",
     "picomatch": "^4.0.7",
     "secure-json-parse": "^4.1.0",
-    "skia-canvas": "~3.0.8",
+    "skia-canvas": "~4.0.0",
     "tiny-async-pool": "^1.2.0",
     "tough-cookie": "^4.1.4"
   },

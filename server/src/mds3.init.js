@@ -4,7 +4,7 @@ import path from 'path'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { scaleLinear } from 'd3-scale'
-import { createCanvas } from 'canvas'
+import { makeCanvas, canvasToURL } from './canvas.ts'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { toBreakpointPos, isSelfBreakpointInRange, isPartnerBreakpointInRange } from './svfusion.breakpoint.ts'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
@@ -2715,9 +2715,7 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 
 	const canvasWidth = xpad * 2 + axisWidth + plotWidth
 	const canvasHeight = ypad * 2 + axisHeight
-	const canvas = createCanvas(canvasWidth * devicePixelRatio, canvasHeight * devicePixelRatio)
-	const ctx = canvas.getContext('2d')
-	if (devicePixelRatio > 1) ctx.scale(devicePixelRatio, devicePixelRatio)
+	const { canvas, ctx } = makeCanvas(canvasWidth, canvasHeight, devicePixelRatio)
 
 	plotTick(control.max)
 	plotTick(0)
@@ -2745,13 +2743,17 @@ function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio 
 		})
 		rl.on('close', () => {
 			addLines()
-			resolve({
-				src: canvas.toDataURL(),
-				canvasWidth,
-				canvasHeight,
-				xoff: xpad + axisWidth,
-				chrLst
-			})
+			canvasToURL(canvas)
+				.then(src =>
+					resolve({
+						src,
+						canvasWidth,
+						canvasHeight,
+						xoff: xpad + axisWidth,
+						chrLst
+					})
+				)
+				.catch(reject)
 		})
 	})
 

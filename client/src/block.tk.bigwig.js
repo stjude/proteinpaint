@@ -72,9 +72,6 @@ export async function bigwigload(tk, block) {
 		if (data.error) throw data.error
 		if (!data.src) throw 'data.src missing'
 
-		// in case height changed
-		tk.tklabel.transition().attr('y', tk.barheight / 2)
-
 		tk.img.attr('xlink:href', data.src)
 
 		if (data.minv != undefined) {
@@ -83,6 +80,14 @@ export async function bigwigload(tk, block) {
 		if (data.maxv != undefined) {
 			tk.scale.max = data.maxv
 		}
+
+		// when min=max, the axis has a sole tick in the middle
+		const sameMinMax = tk.scale.min == tk.scale.max
+
+		// in case height changed
+		// with a sole tick in the middle, move the label up to not overlap with it
+		tk.tklabel.transition().attr('y', !data.nodata && sameMinMax ? block.labelfontsize / 2 : tk.barheight / 2)
+
 		tk.leftaxis.selectAll('*').remove()
 
 		if (data.nodata) {
@@ -93,10 +98,16 @@ export async function bigwigload(tk, block) {
 		// update axis
 		const scale = scaleLinear().domain([tk.scale.min, tk.scale.max]).range([tk.barheight, 0])
 
-		const axis = d3axis.axisLeft().scale(scale).tickValues([tk.scale.min, tk.scale.max])
+		const axis = d3axis
+			.axisLeft()
+			.scale(scale)
+			.tickValues(sameMinMax ? [tk.scale.min] : [tk.scale.min, tk.scale.max])
 
 		if (tk.integer4axis) {
 			axis.tickFormat(d3format('d'))
+		} else if (sameMinMax) {
+			// the default format of a zero-span scale shows 0 as 0.000000
+			axis.tickFormat(d3format('~g'))
 		}
 
 		client.axisstyle({

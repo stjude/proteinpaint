@@ -16,7 +16,7 @@ import { scaleLinear, scaleLog } from 'd3'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { getData } from '../termdb.matrix.js'
-import { createCanvas } from 'canvas'
+import { makeCanvas, canvasToURL } from '#src/canvas.ts'
 import { getOrderedLabels } from '../termdb.barchart.js'
 import { getDescrStats, getStdDev, getMean } from '#routes/termdb.descrstats.ts'
 import { isNumericTerm, isNumericTw } from '#shared/terms.js'
@@ -334,18 +334,14 @@ async function createCanvasImg(
 				.range(isH ? [0, q.svgw] : [q.svgw, 0])
 		}
 
-		const [width, height] = isH
-			? [q.svgw * q.devicePixelRatio, q.radius * q.devicePixelRatio]
-			: [q.radius * q.devicePixelRatio, q.svgw * q.devicePixelRatio]
+		const [width, height] = isH ? [q.svgw, q.radius] : [q.radius, q.svgw]
 
 		for (const plot of chart.plots) {
 			// plot: { label=str, values=[v1,v2,...] }
 			plot.density = densities[plot.label] // set the plot density
 
 			//backend rendering bean/rug plot on top of violin plot based on orientation of plot
-			const canvas = createCanvas(width, height)
-			const ctx = canvas.getContext('2d')
-			if (q.devicePixelRatio != 1) ctx.scale(q.devicePixelRatio, q.devicePixelRatio) //scaling for sharper image
+			const { canvas, ctx } = makeCanvas(width, height, q.devicePixelRatio)
 			ctx.strokeStyle = 'black'
 			ctx.lineWidth = 1
 
@@ -378,7 +374,7 @@ async function createCanvasImg(
 				})
 			}
 
-			plot.src = canvas.toDataURL()
+			plot.src = await canvasToURL(canvas)
 
 			//generate summary stat values
 			plot.summaryStats = getDescrStats(plot.values)

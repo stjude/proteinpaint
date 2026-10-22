@@ -1,13 +1,13 @@
 import type { ColorMap, FormattedCell2Sample, SingleCellRange } from '#types'
 import { getCoordinate, calculatePadding, xAxisOffSet, yAxisOffSet } from '#shared'
-import { createCanvas } from 'canvas'
 import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { refColor } from '#routes/termdb.sampleScatter.js'
 import { SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE } from '#types'
+import { makeCanvas, canvasToURL } from '#src/canvas.ts'
 
-export async function makeCanvas(
+export async function renderCellsImage(
 	q /*:TermdbSingleCellPlotsRequest*/,
 	samples: FormattedCell2Sample[],
 	colorMap: ColorMap,
@@ -22,9 +22,7 @@ export async function makeCanvas(
 	const width = settings.width + xAxisOffSet + extraSpaceX + 20
 	const height = settings.height + yAxisOffSet + extraSpaceY + 20
 
-	const canvas = createCanvas(width * dpr, height * dpr)
-	const ctx = canvas.getContext('2d')
-	if (dpr > 1) ctx.scale(dpr, dpr)
+	const { canvas, ctx } = makeCanvas(width, height, dpr)
 
 	//This accounts for user defined min and max scales values
 	const xScale = scaleLinear()
@@ -71,5 +69,5 @@ export async function makeCanvas(
 		ctx.fill()
 	}
 
-	return { src: canvas.toDataURL(), canvasWidth: width, canvasHeight: height }
+	return { src: await canvasToURL(canvas), canvasWidth: width, canvasHeight: height }
 }
