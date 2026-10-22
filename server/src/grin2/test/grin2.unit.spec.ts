@@ -8,7 +8,14 @@ import {
 	buildLesionTypeMap,
 	getCnvLesionType
 } from '../lesions.ts'
-import { grin2KeyInputs, normalizeExcludeOptions, resolveExcludeBeds, getMaxLesions, lesionCapHit } from '../main.ts'
+import {
+	grin2KeyInputs,
+	normalizeExcludeOptions,
+	resolveExcludeBeds,
+	getMaxLesions,
+	lesionCapHit,
+	CEILING_LESIONS
+} from '../main.ts'
 import serverconfig from '../../serverconfig.js'
 import {
 	dtsnvindel,
@@ -618,8 +625,10 @@ tape('resolveExcludeBeds', test => {
 })
 
 tape('getMaxLesions', async test => {
-	// the configured max, under the 641,538 ceiling (a 2 GB budget)
-	const max = Math.min(serverconfig.features.grin2maxLesions || 250000, 641538)
+	// a fixed 2 GB, from the cost alone: a low configured maxMB must not lower it, or report mode would trim or refuse
+	test.equal(CEILING_LESIONS, 641538, 'the ceiling is (2048 - 380) / 0.0026 = 641,538 lesions, whatever the budget')
+	// the configured max, under that ceiling
+	const max = Math.min(serverconfig.features.grin2maxLesions || 250000, CEILING_LESIONS)
 	const freeMB = (mb: number) => async () => mb
 	// the cap of one run at a time: its reservation is released before the next
 	const capAt = async (mb: number) => {

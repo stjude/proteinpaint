@@ -33,8 +33,10 @@ import { resolveExcludeBeds } from '../utils/regionMask.ts'
 // and only together: a 380 MB base with 2.4 MB per 1,000 lesions is below every run of 100,000 lesions or more.
 export const GRIN2_MEMORY: MemoryCost = { baseMB: 380, perUnitMB: { lesions: 0.0026 } }
 const MIN_LESIONS = 50000 // smallest run worth doing; when memory cannot fit this many, the run is refused
-// Hard ceiling on the memory one run plans for, whatever the config or free memory: 2 GB ≈ 641,538 lesions
-const CEILING_LESIONS = largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1, 0)
+/* Hard ceiling on the memory one run plans for, whatever the config or free memory: 2 GB ≈ 641,538 lesions. Computed
+from the cost alone, not with largestSizeThatFits(), which applies the configured maxMB: a low maxMB would lower this
+ceiling, and so the cap of a report-mode run, which the budget must not affect. */
+export const CEILING_LESIONS = Math.floor((2048 - GRIN2_MEMORY.baseMB) / GRIN2_MEMORY.perUnitMB.lesions)
 const LOW_MEMORY_MESSAGE =
 	'Server memory is too low to run GRIN2 on this cohort right now. Try again later or select a smaller cohort.'
 // Maximum total number of lesions to process to avoid overwhelming the production server

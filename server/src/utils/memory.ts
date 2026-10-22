@@ -266,7 +266,7 @@ export function runFitsInMemory(
  * @example
  * largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions') // 430769: (1500 budget - 380 base) / 0.0026
  * largestSizeThatFits(300, GRIN2_MEMORY, 'lesions') // 0: 300 budget < 380 base, so GRIN2 refuses the run
- * largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1) // 641538: GRIN2's hard ceiling, the whole 2 GB as budget
+ * largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1) // 641538: the whole 2 GB as budget, under the default maxMB
  */
 export function largestSizeThatFits(
 	availableMB: number,

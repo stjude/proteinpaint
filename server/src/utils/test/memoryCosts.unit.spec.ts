@@ -220,6 +220,10 @@ tape('memory.ts @example outputs', test => {
 
 	test.equal(largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions'), 430769, 'GRIN2 at 1,500 MB => 430,769 lesions')
 	test.equal(largestSizeThatFits(300, GRIN2_MEMORY, 'lesions'), 0, 'GRIN2 at 300 MB => 0, refused')
-	test.equal(largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1), 641538, 'GRIN2 ceiling, all of 2 GB => 641,538')
+	test.equal(
+		largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1),
+		641538,
+		'all of 2 GB, under the default maxMB => 641,538 lesions'
+	)
 	test.end()
 })
