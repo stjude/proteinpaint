@@ -99,27 +99,30 @@ tape('admitDeRun', function (test) {
 	const orWilcoxon = 'Select a smaller cohort, or use the Wilcoxon method, which needs less memory.'
 
 	// on ASH, 500 samples (the DE sample limit) cost ≈ 1850 MB with edgeR, ≈ 2150 with limma and ≈ 509 with wilcoxon
-	test.equal(check('edgeR', 250, 250, 16000), '', 'edgeR on 500 samples fits in 16 GB')
+	test.equal(check('edgeR', 250, 250, 16000), '', 'edgeR on 500 samples fits in 16 GB (the 3,072 MB default maxMB)')
 	test.ok(
-		check('edgeR', 250, 250, 4000).endsWith(orWilcoxon),
-		'edgeR on 500 samples at 4 GB (1,600 MB budget) => suggests wilcoxon, which fits'
+		check('edgeR', 250, 250, 1600).endsWith(orWilcoxon),
+		'edgeR on 500 samples with 1,600 MB free => suggests wilcoxon, which fits'
 	)
-	test.ok(check('limma', 200, 300, 5000).endsWith(orWilcoxon), 'limma on 500 samples at 5 GB => suggests wilcoxon')
-	test.ok(check('limma', 200, 300, 5000).includes('on 500 samples'), 'the message says how many samples were selected')
 	test.ok(
-		check('edgeR', 250, 250, 4000, { runDE_methods: ['edgeR', 'Limma'] }).endsWith(smaller),
+		check('limma', 200, 300, 2000).endsWith(orWilcoxon),
+		'limma on 500 samples with 2,000 MB free => suggests wilcoxon'
+	)
+	test.ok(check('limma', 200, 300, 2000).includes('on 500 samples'), 'the message says how many samples were selected')
+	test.ok(
+		check('edgeR', 250, 250, 1600, { runDE_methods: ['edgeR', 'Limma'] }).endsWith(smaller),
 		'wilcoxon not offered by this server => only a smaller cohort'
 	)
-	test.ok(check('limma', 250, 250, 1000).endsWith(smaller), 'wilcoxon would not fit either => only a smaller cohort')
+	test.ok(check('limma', 250, 250, 400).endsWith(smaller), 'wilcoxon would not fit either => only a smaller cohort')
 	test.ok(
-		check('edgeR', 250, 250, 4000, { confounded: true }).endsWith(smaller),
+		check('edgeR', 250, 250, 1600, { confounded: true }).endsWith(smaller),
 		'a run with confounders => no wilcoxon, which would drop the adjustment'
 	)
 	test.ok(
-		check('edgeR', 6, 6, 1000).endsWith(smaller),
+		check('edgeR', 6, 6, 400).endsWith(smaller),
 		'groups of 8 or fewer => no wilcoxon, which would fall back to edgeR'
 	)
-	test.ok(check('wilcoxon', 250, 250, 1000).endsWith(smaller), 'wilcoxon itself too big => only a smaller cohort')
+	test.ok(check('wilcoxon', 250, 250, 400).endsWith(smaller), 'wilcoxon itself too big => only a smaller cohort')
 	test.ok(
 		check('limma', 250, 250, 100000, { genes: 59400 }).endsWith(orWilcoxon),
 		'limma on 500 samples of a 59,400-gene file (~4,579 MB) on a 100 GB host => over DE maxMB, suggests wilcoxon'
@@ -131,11 +134,11 @@ tape('deMethodsOverMemory', function (test) {
 	const genes = 17928
 	test.deepEqual(deMethodsOverMemory(500, genes, 500, 16000), [], '500 samples in 16 GB => every method fits')
 	test.deepEqual(
-		deMethodsOverMemory(500, genes, 500, 5000),
+		deMethodsOverMemory(500, genes, 500, 2000),
 		['limma'],
-		'500 samples at 5 GB (2,000 MB budget) => limma (~2,150 MB) does not fit'
+		'500 samples with 2,000 MB free => limma (~2,150 MB) does not fit'
 	)
-	test.deepEqual(deMethodsOverMemory(500, genes, 500, 5000, true), [], 'report mode => none refused')
+	test.deepEqual(deMethodsOverMemory(500, genes, 500, 2000, true), [], 'report mode => none refused')
 	test.deepEqual(
 		deMethodsOverMemory(500, 59400, 500, 100000),
 		['edgeR', 'limma'],

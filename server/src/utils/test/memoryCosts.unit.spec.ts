@@ -201,12 +201,25 @@ tape('memory.ts @example outputs', test => {
 		false,
 		'wilcoxon on 20 samples over a wide span at 1 GB => does not fit'
 	)
-	test.equal(runFitsInMemory(DM_MEMORY, mmrfAllccre, 16000), true, 'DM MMRF allccre at 16 GB => fits')
-	test.equal(runFitsInMemory(DM_MEMORY, mmrfAllccre, 12000), false, 'DM MMRF allccre at 12 GB => does not fit')
-	test.equal(runFitsInMemory(TOPVE_MEMORY, { samples: 4873 }, 200), false, 'topVE at 200 MB => does not fit')
+	test.equal(
+		runFitsInMemory(DM_MEMORY, mmrfAllccre, 16000),
+		false,
+		'DM MMRF allccre at 16 GB => over the default maxMB'
+	)
+	test.equal(
+		runFitsInMemory(DM_MEMORY, { fileCells: 114875 * 415, cells: 114875 * 200 }, 16000),
+		true,
+		'DM MMRF promoter, 200 selected, at 16 GB => fits'
+	)
+	test.equal(
+		r(estimatePeakMB(DM_MEMORY, { fileCells: 114875 * 415, cells: 114875 * 200 })),
+		2263,
+		'DM MMRF promoter, 200 selected => ≈ 2263 MB'
+	)
+	test.equal(runFitsInMemory(TOPVE_MEMORY, { samples: 4873 }, 100), false, 'topVE at 100 MB => does not fit')
 
-	test.equal(largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions'), 84615, 'GRIN2 at 1,500 MB => 84,615 lesions')
-	test.equal(largestSizeThatFits(900, GRIN2_MEMORY, 'lesions'), 0, 'GRIN2 at 900 MB => 0, refused')
+	test.equal(largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions'), 430769, 'GRIN2 at 1,500 MB => 430,769 lesions')
+	test.equal(largestSizeThatFits(300, GRIN2_MEMORY, 'lesions'), 0, 'GRIN2 at 300 MB => 0, refused')
 	test.equal(largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1), 641538, 'GRIN2 ceiling, all of 2 GB => 641,538')
 	test.end()
 })

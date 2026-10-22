@@ -627,12 +627,12 @@ tape('getMaxLesions', async test => {
 		releaseMemory()
 		return cap
 	}
-	// cap = floor((free MB × 0.4 − 380) / 0.0026), then no higher than max
+	// cap = floor((free MB, at most the 3,072 MB default maxMB, − 380) / 0.0026), then no higher than max
 	test.equal(await capAt(16000), max, 'plentiful memory => the configured max')
-	test.equal(await capAt(1500), Math.min(max, 84615), '1500 MB => 84,615')
-	test.equal(await capAt(1000), Math.min(max, 7692), '1000 MB => 7,692, not raised to a floor')
-	test.equal(await capAt(951), Math.min(max, 153), '951 MB => 153, the smallest cap that is not refused')
-	for (const mb of [950, 0]) {
+	test.equal(await capAt(600), Math.min(max, 84615), '600 MB => 84,615')
+	test.equal(await capAt(400), Math.min(max, 7692), '400 MB => 7,692, not raised to a floor')
+	test.equal(await capAt(380.4), Math.min(max, 153), '380.4 MB => 153, the smallest cap that is not refused')
+	for (const mb of [380, 0]) {
 		try {
 			await capAt(mb)
 			test.fail(`${mb} MB => should throw`)
@@ -642,16 +642,16 @@ tape('getMaxLesions', async test => {
 		}
 	}
 
-	// two runs at once: the first reserves its whole 600 MB budget at 1500 MB free, so the second does not fit
-	const first = await getMaxLesions(freeMB(1500))
+	// two runs at once: the first reserves its whole 600 MB budget at 600 MB free, so the second does not fit
+	const first = await getMaxLesions(freeMB(600))
 	try {
-		await getMaxLesions(freeMB(1500))
+		await getMaxLesions(freeMB(600))
 		test.fail('a second run while the first holds the budget => should throw')
 	} catch (e: any) {
 		test.equal(e.code, 'LOW_MEMORY', 'a second run while the first holds the budget => refused')
 	}
 	first.releaseMemory()
-	test.equal(await capAt(1500), Math.min(max, 84615), 'after the first run releases => the full cap again')
+	test.equal(await capAt(600), Math.min(max, 84615), 'after the first run releases => the full cap again')
 
 	// report mode: never trimmed or refused, however little is free
 	for (const mb of [1500, 0]) {
