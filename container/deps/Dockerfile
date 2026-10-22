@@ -114,6 +114,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # for bcftools, which is built with --enable-libgsl
     libgsl28 \
     libgslcblas0 \
+    # runtime libs for ragg, which R/src uses instead of png() to draw the plots, and its systemfonts and
+    # textshaping deps; the build-time headers are in the os stage's libfontconfig-dev/libfreetype-dev/etc.
+    libfontconfig1 \
+    libfreetype6 \
+    libfribidi0 \
+    libharfbuzz0b \
+    libpng16-16t64 \
+    libtiff6 \
+    libwebp7 \
+    libwebpmux3 \
     python3 \
     # loaded by some of the python packages in /opt/venv
     libpython3.13 \
@@ -147,7 +157,8 @@ RUN curl -fL https://github.com/samtools/htslib/releases/download/${htsversion}/
 RUN curl -fL https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
     cd bcftools-${htsversion} && \
     ./configure --enable-libgsl --with-htslib=system && \
-    make -j"$(nproc)" && make install DESTDIR=/staging
+    make -j"$(nproc)" && make install DESTDIR=/staging && \
+    rm -f /staging/usr/local/bin/plot-vcfstats /staging/usr/local/bin/plot-ampliconstats /staging/usr/local/bin/roh-viz /staging/usr/local/bin/ref-cache
 
 FROM os AS rlib
 
@@ -162,14 +173,17 @@ RUN echo 'options(repos = c(CRAN = Sys.getenv("PP_CRAN_REPO")), Ncpus = parallel
     >> /etc/R/Rprofile.site
 COPY ./R/utils ./R/utils
 RUN MAKEFLAGS="-j$(nproc)" Rscript R/utils/install.pkgs.R && \
-    rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+    rm -rf /tmp/downloaded_packages/ /tmp/*.rds && \
+    find /usr/local/lib/R/site-library /usr/lib/R/library -maxdepth 2 -type d \( -iname 'doc' -o -iname 'help' -o -iname 'html' \) -exec rm -rf {} +
 
 FROM os AS py
 
 COPY ./python/requirements.txt /tmp/requirements.txt
 RUN python3 -m venv /opt/venv && \
     /opt/venv/bin/pip install --no-cache-dir --upgrade pip && \
-    /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+    /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
+    find /opt/venv -name '__pycache__' -type d -exec rm -rf {} + && \
+    find /opt/venv -type d \( -iname 'test' -o -iname 'tests' \) -exec rm -rf {} +
 
 FROM os AS tools
 
