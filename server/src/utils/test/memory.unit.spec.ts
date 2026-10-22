@@ -1,4 +1,5 @@
 import tape from 'tape'
+import serverconfig from '#src/serverconfig.js'
 import {
 	getCgroupInactiveFileBytes,
 	estimatePeakMB,
@@ -10,6 +11,8 @@ import {
 	admitRun,
 	memoryBudgetMB,
 	memoryAdmissionMessage,
+	logMemoryAdmission,
+	validateMemoryBudget,
 	RUN_MEMORY_FRACTION,
 	RUN_MEMORY_MAX_MB,
 	DEFAULT_MAX_MB
@@ -60,6 +63,42 @@ tape("a cost's own maxMB", test => {
 		'the budget below maxMB (200 MB free) => the budget decides'
 	)
 	test.equal(largestSizeThatFits(100000, cost, 'rows'), 200, 'a large budget => trimmed to maxMB, 200 rows')
+	test.end()
+})
+
+tape('validateMemoryBudget', test => {
+	for (const ok of [{}, { fraction: 0.4 }, { fraction: 1 }, { maxMB: 3072 }, { mode: 'enforce' }, { mode: 'report' }])
+		test.doesNotThrow(() => validateMemoryBudget(ok), `${JSON.stringify(ok)} => valid`)
+	for (const [bad, re] of [
+		[{ fraction: true }, /fraction/],
+		[{ fraction: '0.4' }, /fraction/],
+		[{ fraction: 0 }, /fraction/],
+		[{ fraction: 1.5 }, /fraction/],
+		[{ fraction: NaN }, /fraction/],
+		[{ maxMB: '3072' }, /maxMB/],
+		[{ maxMB: 0 }, /maxMB/],
+		[{ mode: ['report'] }, /mode/],
+		[{ mode: 'Report' }, /mode/]
+	] as [any, RegExp][])
+		test.throws(() => validateMemoryBudget(bad), re, `${JSON.stringify(bad)} => throws`)
+	test.end()
+})
+
+tape('logMemoryAdmission prints in report mode without debugmode', test => {
+	const debugmode = serverconfig.debugmode
+	const log = console.log
+	const printed: string[] = []
+	serverconfig.debugmode = false
+	console.log = (...args) => printed.push(args.join(' '))
+	try {
+		logMemoryAdmission('test', false, 500, 1000, 0.4, true)
+		logMemoryAdmission('test', true, 100, 1000, 0.4, false)
+	} finally {
+		console.log = log
+		serverconfig.debugmode = debugmode
+	}
+	test.equal(printed.length, 1, 'only the report-mode line is printed with debugmode off')
+	test.ok(printed[0]?.startsWith('[memory] test does not fit (report only)'), 'it is the admission line')
 	test.end()
 })
 

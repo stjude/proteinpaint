@@ -29,12 +29,21 @@ export type MemoryUnits = Record<string, number>
  * mode: 'enforce' (default) refuses a run that does not fit and trims one that may be trimmed. 'report' only logs the
  * available memory and whether each run would fit, and lets every run go ahead in full. */
 const memoryBudget = serverconfig.memoryBudget || {}
-if ('fraction' in memoryBudget && !(memoryBudget.fraction > 0 && memoryBudget.fraction <= 1))
-	throw `serverconfig.memoryBudget.fraction must be a number above 0 and at most 1`
-if ('maxMB' in memoryBudget && !(Number.isFinite(memoryBudget.maxMB) && memoryBudget.maxMB > 0))
-	throw `serverconfig.memoryBudget.maxMB must be a number above 0`
-if ('mode' in memoryBudget && memoryBudget.mode != 'enforce' && memoryBudget.mode != 'report')
-	throw `serverconfig.memoryBudget.mode must be 'enforce' or 'report'`
+validateMemoryBudget(memoryBudget)
+
+/** Throws for a serverconfig.memoryBudget value of the wrong type or range, so that the server does not start with a
+ * budget other than the one written, e.g. fraction: true or mode: ['report'] */
+export function validateMemoryBudget(memoryBudget: any): void {
+	if ('fraction' in memoryBudget) {
+		const f = memoryBudget.fraction
+		if (!(typeof f == 'number' && f > 0 && f <= 1))
+			throw `serverconfig.memoryBudget.fraction must be a number above 0 and at most 1`
+	}
+	if ('maxMB' in memoryBudget && !(Number.isFinite(memoryBudget.maxMB) && memoryBudget.maxMB > 0))
+		throw `serverconfig.memoryBudget.maxMB must be a number above 0`
+	if ('mode' in memoryBudget && memoryBudget.mode !== 'enforce' && memoryBudget.mode !== 'report')
+		throw `serverconfig.memoryBudget.mode must be 'enforce' or 'report'`
+}
 
 export const RUN_MEMORY_FRACTION: number = memoryBudget.fraction ?? 1
 
@@ -86,8 +95,9 @@ export function reserveMemoryMB(mb: number, label = 'a run'): () => void {
 	}
 }
 
-/** Logs whether a heavy run was admitted, in one format for every route; see memoryAdmissionMessage(). Called before
- * the run's own memory is reserved, so the reserved figure is the other runs'. */
+/** Logs whether a heavy run was admitted, in one format for every route; see memoryAdmissionMessage(). Always logged in
+ * report mode, and only in debugmode otherwise. Called before the run's own memory is reserved, so the reserved figure
+ * is the other runs'. */
 export function logMemoryAdmission(
 	label: string,
 	admitted: boolean,
@@ -98,7 +108,10 @@ export function logMemoryAdmission(
 	/** the cost's maxMB, the most one run may plan for */
 	runMaxMB?: number
 ): void {
-	mayLog(memoryAdmissionMessage(label, admitted, neededMB, availableMB, fraction, reportOnly, runMaxMB))
+	const message = memoryAdmissionMessage(label, admitted, neededMB, availableMB, fraction, reportOnly, runMaxMB)
+	// report mode exists to show these lines on a deployed server, where debugmode is off
+	if (reportOnly) console.log(message)
+	else mayLog(message)
 }
 
 /** The line that logMemoryAdmission() logs. It names the fixed cap that applies to the run, and whether the run is
