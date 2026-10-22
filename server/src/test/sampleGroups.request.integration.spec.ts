@@ -308,8 +308,9 @@ tape('termdb/dataAvailability assayed samples of groups, by role', async test =>
 	test.end()
 })
 
-/* the samples of a group with a value for a survival term are those that the survival curve of the group
-starts with: the number at risk at time 0. The survival terms are those of the active cohort, which TermdbTest
+/* the samples of a group with a value for a survival term are those that the getsamplelist query gives for the
+group's filter and a survival filter of the term, with any exit code; the survival route is not used, as it needs
+R, which the request tests do not install. The survival terms are those of the active cohort, which TermdbTest
 has: its survival terms are in the cohorts ABC, XYZ and ABC,XYZ */
 tape('termdb/dataAvailability survival of groups, by role', async test => {
 	test.timeoutAfter(30000)
@@ -332,20 +333,26 @@ tape('termdb/dataAvailability survival of groups, by role', async test => {
 			`should list each survival term that role='${role}' may see`
 		)
 		for (const t of survival) {
-			const curve = await post(
-				'/termdb/survival',
-				{
-					genome,
-					dslabel,
-					embedder,
-					filter: filterGroups[0].filter,
-					term1: { $id: t.termid, term: { id: t.termid, type: 'survival' }, q: {} }
-				},
-				bearer(jwt)
+			// the samples of the group with a value of the term, of any exit code (0 or 1 in TermdbTest)
+			const filter = {
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					...filterGroups[0].filter.lst,
+					{ type: 'tvs', tvs: { term: { id: t.termid, type: 'survival' }, values: [{ key: 0 }, { key: 1 }] } }
+				]
+			}
+			const list = await post('/termdb', { genome, dslabel, embedder, getsamplelist: 1, filter }, bearer(jwt))
+			if (!Array.isArray(list.body)) {
+				test.fail(`no sample list of ${t.termid} for role='${role}': ${JSON.stringify(list.body)}`)
+				continue
+			}
+			test.equal(
+				t.count,
+				list.body.length,
+				`should count the samples of the group with a ${t.termid} value for role='${role}'`
 			)
-			const nrisk = curve.body.keys?.indexOf('nrisk')
-			const atStart = curve.body.case?.[0]?.[nrisk] ?? 0
-			test.equal(t.count, atStart, `should count the ${t.termid} samples of the survival curve for role='${role}'`)
 		}
 	}
 	test.end()
