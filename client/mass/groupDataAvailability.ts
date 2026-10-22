@@ -14,10 +14,7 @@ sunburst lists the same sections for its one selected group.
 const optionsByDataType: { [dataType in DataAvailabilityType]?: { testid: string; need: 'every' | 'some' }[] } = {
 	geneExpression: [{ testid: 'sjpp-hiercluster-option', need: 'some' }],
 	rnaseqGeneCount: [{ testid: 'sjpp-da-option', need: 'every' }],
-	dnaMethylation: [
-		{ testid: 'sjpp-da-dnaMeth-option', need: 'every' },
-		{ testid: 'sjpp-dmr-option', need: 'every' }
-	],
+	dnaMethylation: [{ testid: 'sjpp-dmr-option', need: 'every' }],
 	junction: [{ testid: 'sjpp-da-splicing-option', need: 'every' }],
 	NIdata: [{ testid: 'sjpp-brain-imaging-option', need: 'some' }]
 }
