@@ -28,20 +28,30 @@ expressed genes), the server reads the memory that is free on the host or contai
 memory from costs measured on real runs (`GRIN2_MEMORY`, `DE_MEMORY`, `DM_MEMORY`, `TOPVE_MEMORY`, each next to its
 route; the checks are in `server/src/utils/memory.ts`). Runs plan within a budget, which is
 a share of that free memory, less what runs in progress have reserved. `memoryBudget` in serverconfig.json sets the
-share and what happens to a run that does not fit:
+share, an optional cap in MB, and what happens to a run that does not fit:
 
 ```json
-"memoryBudget": { "mode": "enforce", "fraction": 0.4 }
+"memoryBudget": { "mode": "enforce", "fraction": 0.4, "maxMB": 8192 }
 ```
 
-Both keys are optional. With no `memoryBudget`, the server enforces a 40% budget.
+Every key is optional. With no `memoryBudget`, the server enforces a 40% budget, capped at 9,318 MB. The budget is
+always the smaller of `fraction` of the free memory and `maxMB`, so a high-memory host still has a fixed ceiling. The
+default cap is the largest run measured (limma on all 4,438 ASH samples, 9.1 GB). Runs are held to their estimated
+peak, which is set above the measured one, so under the default cap that limma run is refused and edgeR on all of ASH
+still fits. A server that needs larger runs sets a higher `maxMB`.
+
+`maxMB` is the total for all runs in progress. A differential expression run also has its own ceiling, `DE_MAX_MB`
+(2,200 MB) next to `DE_MEMORY`: limma on the 500 samples that one DE run may compare, on ASH's genes. A file with
+more genes allows fewer samples per method. Differential methylation and splicing have no ceiling of their own yet;
+they are still to be benchmarked, after which the default `maxMB` can come down to their largest run.
 
 | key        | values                         | default     |
 | ---------- | ------------------------------ | ----------- |
 | `mode`     | `"enforce"` or `"report"`      | `"enforce"` |
 | `fraction` | a number above 0 and at most 1 | `0.4`       |
+| `maxMB`    | a number above 0               | `9318`      |
 
-The server refuses to start if either value is invalid.
+The server refuses to start if any value is invalid.
 
 **`enforce`**: a run that does not fit is refused with a 503 error, code `LOW_MEMORY`, whose message tells the user
 what to change, such as a smaller cohort or the Wilcoxon method for DE. GRIN2 is trimmed instead: its lesion cap is

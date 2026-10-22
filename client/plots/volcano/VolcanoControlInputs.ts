@@ -1,6 +1,6 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
-import { getSampleNum, BACKGROUND_CORRECTION_TITLE } from './settings/defaults'
+import { BACKGROUND_CORRECTION_TITLE } from './settings/defaults'
 import {
 	PROTEOME_DAP,
 	DNA_METHYLATION,
@@ -32,7 +32,6 @@ const isScan = (plot: any) => plot?.settings?.volcano?.elementType == DMR_SCAN_E
 
 export class VolcanoControlInputs {
 	config: any
-	sampleNum?: number
 	/** term type used to determine which controls to show */
 	termType: string
 	/** control inputs for controls init */
@@ -50,7 +49,6 @@ export class VolcanoControlInputs {
 		chromosomes?: string[]
 	) {
 		this.config = config
-		if (this.config.termType == GENE_EXPRESSION) this.sampleNum = getSampleNum(config)
 		this.termType = termType
 		this.elementTypes = elementTypes || []
 		this.chromosomes = chromosomes || []
@@ -482,7 +480,6 @@ export class VolcanoControlInputs {
 
 	getMethodOptions() {
 		if (this.termType !== GENE_EXPRESSION) return
-		const settings = this.config.settings.volcano
 		const features = JSON.parse(sessionStorage.getItem('optionalFeatures') as string)
 		if (features?.runDE_methods?.length) {
 			const opts: { label: string; value: string }[] = []
@@ -491,12 +488,11 @@ export class VolcanoControlInputs {
 			}
 			return opts
 		}
-		if (this.sampleNum! < settings!.sampleNumCutoff) {
-			return [
-				{ label: 'edgeR', value: 'edgeR' },
-				{ label: 'Wilcoxon', value: 'wilcoxon' },
-				{ label: 'Limma', value: 'limma' }
-			]
-		} else return [{ label: 'Wilcoxon', value: 'wilcoxon' }]
+		// every method has the same sample limit (maxDESampleCutoff in #shared), which the run was already within
+		return [
+			{ label: 'edgeR', value: 'edgeR' },
+			{ label: 'Wilcoxon', value: 'wilcoxon' },
+			{ label: 'Limma', value: 'limma' }
+		]
 	}
 }

@@ -4,11 +4,18 @@ import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { formatElapsedTime } from '#shared'
+import { formatElapsedTime, maxDESampleCutoff, sampleLimitAlert } from '#shared'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import { getAvailableMemoryMB, runFitsInMemory, admitRun, type MemoryCost } from '#src/utils/memory.ts'
-import { getH5samples } from '#src/utils/h5samples.ts'
+import {
+	getAvailableMemoryMB,
+	runFitsInMemory,
+	admitRun,
+	MEMORY_REPORT_ONLY,
+	type MemoryCost,
+	type MemoryUnits
+} from '#src/utils/memory.ts'
+import { getH5samples, getH5shape } from '#src/utils/h5samples.ts'
 import {
 	buildGroupValues,
 	canonicalizeSamplelst,
@@ -68,20 +75,16 @@ export function init({ genomes }) {
 			// preAnalysis short-circuit: just sample counts, no cache touch.
 			if ((q as any).preAnalysis) {
 				const { ds, term_results, term_results2 } = await resolveDaContext(q, genomes)
-				const { allSampleSet, maxSamples, previewCountsFiles } = resolveDE(q, ds)
+				const { countsFile, allSampleSet, maxSamples, previewCountsFiles } = resolveDE(q, ds)
 				const groups = await resolveSampleGroups(q, allSampleSet, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
 				const alerts = [...groups.alerts]
-				/* a ds that builds its counts matrix on demand caps how many samples one run may pull.
-				report it here, not just at build time: the client hides the "Run" button whenever an
-				alert is present, so the user learns the cohort is too big before submitting rather
-				than after waiting on a failed request. */
-				const total = groups.group1names.length + groups.group2names.length
-				if (maxSamples && total > maxSamples) {
-					const noun = ds.cohort?.termdb?.uiLabels?.samples || 'samples'
-					alerts.push(`${total} ${noun} selected exceeds the limit of ${maxSamples} per run. Please narrow the cohort.`)
-				}
+				/* the sample limit, as runDeFresh() enforces it. reported here too: the client hides the
+				"Run" button whenever an alert is present, so the user learns the cohort is too big before
+				submitting rather than after waiting on a failed request. */
+				const limitAlert = deSampleLimitAlert(groups, ds, maxSamples)
+				if (limitAlert) alerts.push(limitAlert)
 				/* describe the counts files this run would use. skipped when an alert already stands,
 				since the client hides the run button and the preview costs a live metadata query.
 				a throw here is not a failed pre-analysis -- the counts are the answer, this is only
@@ -94,6 +97,23 @@ export function init({ genomes }) {
 						mayLog('[DE] counts file preview failed:', e?.message || e)
 					}
 				}
+				/* the methods that a run of these samples would be refused now for memory, for the client to gray
+				out. A built counts file has no gene count until it is built, so a ds that builds one is left
+				unchecked, as its run is. A failed read only leaves every method offered: the run checks again. */
+				let lowMemoryMethods: string[] = []
+				if (countsFile && !alerts.length) {
+					try {
+						const selected = [...groups.group1names, ...groups.group2names]
+						lowMemoryMethods = deMethodsOverMemory(
+							selected.length,
+							(await getH5shape(countsFile, 'item'))[0],
+							selectedColumnSpan([...allSampleSet], selected),
+							await getAvailableMemoryMB()
+						)
+					} catch (e: any) {
+						mayLog('[DE] pre-analysis memory check failed:', e?.message || e)
+					}
+				}
 				// the alert is a sibling of data{}, not a key in it: data{} is keyed by group name, and a
 				// group named 'alert' would otherwise be indistinguishable from this message
 				res.send({
@@ -102,7 +122,8 @@ export function init({ genomes }) {
 						[group2Name]: groups.group2names.length
 					},
 					...(alerts.length ? { alert: alerts.join(' | ') } : {}),
-					...(countsFiles ? { countsFiles } : {})
+					...(countsFiles ? { countsFiles } : {}),
+					...(lowMemoryMethods.length ? { lowMemoryMethods } : {})
 				})
 				return
 			}
@@ -194,8 +215,8 @@ export async function getDeCacheResult(
 		cacheSubdir: 'de',
 		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
-			const { countsFile, allSampleSet, buildCountsFile } = resolveDE(req, ds)
-			return runDeFresh(req, countsFile, allSampleSet, ds, term_results, term_results2, buildCountsFile)
+			const { countsFile, allSampleSet, buildCountsFile, maxSamples } = resolveDE(req, ds)
+			return runDeFresh(req, countsFile, allSampleSet, ds, term_results, term_results2, buildCountsFile, maxSamples)
 		}
 	})
 	return { result, cacheId }
@@ -254,10 +275,15 @@ async function runDeFresh(
 	ds: any,
 	term_results: any,
 	term_results2: any,
-	buildCountsFile?: (samples: string[], q: any) => Promise<BuiltCounts>
+	buildCountsFile?: (samples: string[], q: any) => Promise<BuiltCounts>,
+	maxSamples?: number
 ): Promise<DeCacheResult> {
 	const groups = await resolveSampleGroups(param, allSampleSet, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
+	/* checked here and not only in preAnalysis: preAnalysis shapes what the client offers, while this is the gate that
+	a direct request also passes through. Before a counts file is built, so a refused run downloads nothing. */
+	const limitAlert = deSampleLimitAlert(groups, ds, maxSamples)
+	if (limitAlert) throw new Error(limitAlert)
 
 	let input_file = countsFile
 	let built: BuiltCounts | undefined
@@ -384,17 +410,37 @@ async function runDeFresh(
 
 // ─── helpers ─── //
 
+/** The alert for groups over the sample limit of one DE run, or '': maxDESampleCutoff, or the ds's maxSamples when
+ * that is lower */
+export function deSampleLimitAlert(
+	groups: { group1names: string[]; group2names: string[] },
+	ds: any,
+	maxSamples?: number
+) {
+	return sampleLimitAlert(
+		groups.group1names.length + groups.group2names.length,
+		ds.cohort?.termdb?.uiLabels?.samples || 'samples',
+		Math.min(maxSamples || Infinity, maxDESampleCutoff)
+	)
+}
+
+/** The most MB that one DE run may plan for, however much memory the host has: limma, the costliest engine, on the 500
+ * samples that a DE run may compare (maxDESampleCutoff in #shared), on ASH's 17,928 genes (≈ 2150 MB). A file with more
+ * genes allows fewer samples, e.g. ~158 for limma on ~59,400 genes. */
+export const DE_MAX_MB = 2200
+
 /** Peak memory of one DE run by engine, per cell of the samples x genes counts matrix it reads. Measured on ASH (17,928
  * genes, 102 to 4,438 samples, 2026-10-19) as the R or rust child's peak footprint plus the Node server's rise, and
  * set at or above every run. The real curves are not straight: edgeR levels off and limma keeps climbing, so a large
- * edgeR run is overestimated by up to ~3 GB. Only ASH was measured, so the cost per cell on another dataset is unverified. */
+ * edgeR run is overestimated by up to ~3 GB. Only ASH was measured, so the cost per cell on another dataset is unverified.
+ * Each has maxMB DE_MAX_MB. */
 export const DE_MEMORY: Record<'edgeR' | 'limma' | 'wilcoxon', MemoryCost> = {
-	edgeR: { baseMB: 950, perUnitMB: { cells: 1.8 / 17928 } },
-	limma: { baseMB: 1100, perUnitMB: { cells: 2.1 / 17928 } },
+	edgeR: { baseMB: 950, perUnitMB: { cells: 1.8 / 17928 }, maxMB: DE_MAX_MB },
+	limma: { baseMB: 1100, perUnitMB: { cells: 2.1 / 17928 }, maxMB: DE_MAX_MB },
 	/* plus spanCells (genes x the columns from the first to the last selected sample) at 4 bytes each: DEanalysis.rs
 	reads that whole span as f32 in one call, so 20 samples spread over 10,000 columns cost 10,000 columns. The runs
 	above were measured as selected cells only, so this term only raises the estimate. */
-	wilcoxon: { baseMB: 250, perUnitMB: { cells: 0.45 / 17928, spanCells: 4 / 1024 ** 2 } }
+	wilcoxon: { baseMB: 250, perUnitMB: { cells: 0.45 / 17928, spanCells: 4 / 1024 ** 2 }, maxMB: DE_MAX_MB }
 }
 
 /** Columns of the counts file from the first selected sample to the last, in file order, which DEanalysis.rs reads
@@ -410,6 +456,26 @@ export function selectedColumnSpan(fileSamples: string[], selected: string[]): n
 		last = Math.max(last, i)
 	}
 	return last >= first ? last - first + 1 : selected.length
+}
+
+/** The sizes of a DE run of `samples` samples and `genes` genes in the units of DE_MEMORY; `spanSamples` is from
+ * selectedColumnSpan() */
+function deMemoryUnits(samples: number, genes: number, spanSamples = 0): MemoryUnits {
+	return { cells: samples * genes, spanCells: Math.max(samples, spanSamples) * genes }
+}
+
+/** The methods whose DE run of these sizes admitDeRun() would refuse now, beside the runs in progress; none in report
+ * mode, which refuses nothing. For the pre-analysis, to gray those methods out before the user picks one. */
+export function deMethodsOverMemory(
+	samples: number,
+	genes: number,
+	spanSamples: number,
+	availableMB: number,
+	reportOnly = MEMORY_REPORT_ONLY
+): string[] {
+	if (reportOnly) return []
+	const units = deMemoryUnits(samples, genes, spanSamples)
+	return Object.keys(DE_MEMORY).filter(m => !runFitsInMemory(DE_MEMORY[m], units, availableMB))
 }
 
 /** Admits a DE run of n1 + n2 samples and `genes` genes (see admitRun): throws LOW_MEMORY when it does not fit beside
@@ -431,8 +497,7 @@ export function admitDeRun(opts: {
 }): () => void {
 	const { method, n1, n2, genes, availableMB, confounded } = opts
 	const runDE_methods = 'runDE_methods' in opts ? opts.runDE_methods : serverconfig.features?.runDE_methods
-	const cells = (n1 + n2) * genes
-	const units = { cells, spanCells: Math.max(n1 + n2, opts.spanSamples ?? 0) * genes }
+	const units = deMemoryUnits(n1 + n2, genes, opts.spanSamples)
 	return admitRun(`DE ${method}`, DE_MEMORY[method], units, availableMB, () => {
 		const tryWilcoxon =
 			method != 'wilcoxon' &&

@@ -12,25 +12,51 @@ import { runToolOutput } from '../tools/index.ts'
 /** Peak memory of one run of a heavy process, as a line in the sizes that drive it: baseMB, plus perUnitMB[size] for
  * each unit of that size the run holds. A size is anything the run grows with: lesions for GRIN2, samples x genes
  * cells for DE, the rows x samples a methylation file holds, samples for top variably expressed genes. Fit it to
- * measured runs, and pick values at or above every run. */
-export type MemoryCost = { baseMB: number; perUnitMB: Record<string, number> }
+ * measured runs, and pick values at or above every run. maxMB, optional, is the most that one run by this cost may plan
+ * for, however large the budget: DE sets one, so a high-memory host does not admit a DE run larger than any it allows. */
+export type MemoryCost = { baseMB: number; perUnitMB: Record<string, number>; maxMB?: number }
 
 /** The size of one run in each of the units of a MemoryCost */
 export type MemoryUnits = Record<string, number>
 
-/** serverconfig.memoryBudget, optional: { fraction, mode }
+/** serverconfig.memoryBudget, optional: { fraction, maxMB, mode }
  * fraction: share of the available memory that the heavy runs of this server may plan for together, 0.4 by default.
  * Each run's estimate comes out of it, less what runs in progress have reserved (reserveMemoryMB). The rest is headroom
  * for the rest of the server and for error in the costs.
+ * maxMB: the most MB those runs may plan for together, however much memory is available, DEFAULT_MAX_MB by default.
+ * The budget is the smaller of the two, see memoryBudgetMB().
  * mode: 'enforce' (default) refuses a run that does not fit and trims one that may be trimmed. 'report' only logs the
  * available memory and whether each run would fit, and lets every run go ahead in full. */
 const memoryBudget = serverconfig.memoryBudget || {}
 if ('fraction' in memoryBudget && !(memoryBudget.fraction > 0 && memoryBudget.fraction <= 1))
 	throw `serverconfig.memoryBudget.fraction must be a number above 0 and at most 1`
+if ('maxMB' in memoryBudget && !(Number.isFinite(memoryBudget.maxMB) && memoryBudget.maxMB > 0))
+	throw `serverconfig.memoryBudget.maxMB must be a number above 0`
 if ('mode' in memoryBudget && memoryBudget.mode != 'enforce' && memoryBudget.mode != 'report')
 	throw `serverconfig.memoryBudget.mode must be 'enforce' or 'report'`
 
 export const RUN_MEMORY_FRACTION: number = memoryBudget.fraction ?? 0.4
+
+/** The cap when serverconfig sets no maxMB, so that a high-memory host still bounds what heavy runs may plan for: the
+ * largest run measured, limma on all 4,438 ASH samples (9.1 GB × 1024). The cap is held against a run's estimate, which
+ * is set above its measured peak, so that run itself (estimate ~10,420 MB) is refused under it, while edgeR on all of
+ * ASH (~8,938 MB) fits. A server that needs larger runs sets a higher maxMB. DE runs have their own, lower maxMB per run
+ * (DE_MEMORY), since a DE run is limited to 500 samples.
+ * TODO: benchmark DM (largest estimate now ~6,287 MB, MMRF allccre on all 415 samples) and differential splicing, give
+ * each its own maxMB as DE has, and lower this default to the largest of them. */
+export const DEFAULT_MAX_MB = 9318
+
+export const RUN_MEMORY_MAX_MB: number = memoryBudget.maxMB ?? DEFAULT_MAX_MB
+
+/** The MB that heavy runs may plan for together: `fraction` of availableMB, at most `maxMB`
+ * @example
+ * memoryBudgetMB(16000) // 6400: 40% of 16,000 MB, under the default maxMB
+ * memoryBudgetMB(100000) // 9318: 40% would be 40,000 MB, so the default maxMB
+ * memoryBudgetMB(16000, 0.4, 4096) // 4096: capped by maxMB
+ */
+export function memoryBudgetMB(availableMB: number, fraction = RUN_MEMORY_FRACTION, maxMB = RUN_MEMORY_MAX_MB): number {
+	return Math.min(availableMB * fraction, maxMB)
+}
 
 /** serverconfig.memoryBudget.mode is 'report': log, never refuse or trim */
 export const MEMORY_REPORT_ONLY = memoryBudget.mode == 'report'
@@ -70,16 +96,21 @@ export function logMemoryAdmission(
 	neededMB: number,
 	availableMB: number,
 	fraction = RUN_MEMORY_FRACTION,
-	reportOnly = MEMORY_REPORT_ONLY
+	reportOnly = MEMORY_REPORT_ONLY,
+	/** the cost's maxMB, the most one run may plan for */
+	runMaxMB?: number
 ): void {
 	const decision = reportOnly
 		? `${admitted ? 'fits' : 'does not fit'} (report only)`
 		: admitted
 		? 'admitted'
 		: 'refused'
+	const budget = memoryBudgetMB(availableMB, fraction)
+	const share = `${fraction * 100}% of ${formatMB(availableMB)} free`
 	mayLog(
-		`[memory] ${label} ${decision}: needs ${formatMB(neededMB)} of a ` +
-			`${formatMB(availableMB * fraction)} budget (${fraction * 100}% of ${formatMB(availableMB)} free), ` +
+		`[memory] ${label} ${decision}: needs ${formatMB(neededMB)} of a ${formatMB(budget)} budget ` +
+			`(${budget < availableMB * fraction ? `maxMB, below ${share}` : share}), ` +
+			(runMaxMB ? `at most ${formatMB(runMaxMB)} per run, ` : '') +
 			`${formatMB(reservedMB)} reserved by runs in progress`
 	)
 }
@@ -166,13 +197,15 @@ export function estimatePeakMB(cost: MemoryCost, units: MemoryUnits): number {
 }
 
 /** Whether a run of these sizes fits in `fraction` of `availableMB`, less `reservedMB`, the memory reserved by runs in
- * progress. Callers that must not trim a run refuse one that does not fit, e.g.
+ * progress, and in the cost's own maxMB if it has one. Callers that must not trim a run refuse one that does not fit, e.g.
  * `if (!runFitsInMemory(...)) throw lowMemoryError(...)`, then reserve its memory; admitRun() does both. The default budget
- * is RUN_MEMORY_FRACTION of availableMB, 40% unless serverconfig.memoryBudget sets it. The examples assume nothing
- * is reserved.
+ * is RUN_MEMORY_FRACTION of availableMB, 40% unless serverconfig.memoryBudget sets it, capped at RUN_MEMORY_MAX_MB. The
+ * examples assume nothing is reserved and the default maxMB.
  * @example
  * runFitsInMemory(DE_MEMORY.edgeR, { cells: 4438 * 17928 }, 12000) // false: ≈ 8938 MB > 4800 budget
- * runFitsInMemory(DE_MEMORY.wilcoxon, { cells: 4438 * 17928, spanCells: 4438 * 17928 }, 12000) // true: ≈ 2551 MB
+ * runFitsInMemory(DE_MEMORY.wilcoxon, { cells: 4438 * 17928, spanCells: 4438 * 17928 }, 12000) // false: ≈ 2551 MB fits
+ * // the 4800 budget, but not DE's own 2200 maxMB
+ * runFitsInMemory(DE_MEMORY.limma, { cells: 500 * 17928 }, 100000) // true: ≈ 2150 MB <= DE's 2200 maxMB
  * runFitsInMemory(DM_MEMORY, { fileCells: 267531 * 415, cells: 267531 * 400 }, 16000) // true: ≈ 6134 <= 6400
  * runFitsInMemory(DM_MEMORY, { fileCells: 267531 * 415, cells: 267531 * 400 }, 12000) // false: ≈ 6134 > 4800
  * runFitsInMemory(TOPVE_MEMORY, { samples: 4873 }, 200) // false: ≈ 145 > 80
@@ -184,10 +217,13 @@ export function runFitsInMemory(
 	fraction = RUN_MEMORY_FRACTION,
 	reservedMB = memoryReservedMB()
 ): boolean {
-	return estimatePeakMB(cost, units) <= availableMB * fraction - reservedMB
+	return (
+		estimatePeakMB(cost, units) <= Math.min(cost.maxMB ?? Infinity, memoryBudgetMB(availableMB, fraction) - reservedMB)
+	)
 }
 
-/** The largest `size` (e.g. lesions) whose run fits in `fraction` of `availableMB`, less `reservedMB`; 0 when even the
+/** The largest `size` (e.g. lesions) whose run fits in `fraction` of `availableMB`, less `reservedMB`, and in the cost's
+ * own maxMB if it has one; 0 when even the
  * base does not fit. For a run that may be trimmed rather than refused: the caller caps the size at this, as GRIN2 caps
  * its lesions, and reserves the capped run's memory. The cost must have no other size (estimatePeakMB throws if it
  * does). The examples assume nothing is reserved.
@@ -204,7 +240,8 @@ export function largestSizeThatFits(
 	reservedMB = memoryReservedMB()
 ): number {
 	const base = estimatePeakMB(cost, { [size]: 0 })
-	return Math.max(0, Math.floor((availableMB * fraction - reservedMB - base) / cost.perUnitMB[size]))
+	const room = Math.min(cost.maxMB ?? Infinity, memoryBudgetMB(availableMB, fraction) - reservedMB)
+	return Math.max(0, Math.floor((room - base) / cost.perUnitMB[size]))
 }
 
 /** Admits a heavy run that must not be trimmed, such as DE or DM: logs the decision, then throws lowMemoryError(refusal)
@@ -225,7 +262,7 @@ export function admitRun(
 ): () => void {
 	const neededMB = estimatePeakMB(cost, units)
 	const admitted = runFitsInMemory(cost, units, availableMB)
-	logMemoryAdmission(label, admitted, neededMB, availableMB, RUN_MEMORY_FRACTION, reportOnly)
+	logMemoryAdmission(label, admitted, neededMB, availableMB, RUN_MEMORY_FRACTION, reportOnly, cost.maxMB)
 	if (!admitted && !reportOnly) throw lowMemoryError(typeof refusal == 'function' ? refusal() : refusal)
 	return reserveMemoryMB(neededMB, label)
 }

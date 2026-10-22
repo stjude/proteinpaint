@@ -14,7 +14,7 @@ import {
 } from '#src/utils/methylationMatrix.ts'
 import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
-import { formatElapsedTime } from '#shared'
+import { formatElapsedTime, sampleLimitAlert } from '#shared'
 import { renderVolcano } from '../src/renderVolcano.ts'
 import { renderManhattanPoints } from '../src/renderManhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
@@ -54,6 +54,9 @@ export function init({ genomes }) {
 				const groups = await resolveDmSampleGroups(q, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
+				// the sample limit, as the run enforces it, so that the client hides the "Run" button
+				const limitAlert = dmSampleLimitAlert(groups, ds)
+				const alerts = limitAlert ? [...groups.alerts, limitAlert] : groups.alerts
 				// the alert is a sibling of data{}, not a key in it: data{} is keyed by group name, and a
 				// group named 'alert' would otherwise be indistinguishable from this message
 				res.send({
@@ -61,7 +64,7 @@ export function init({ genomes }) {
 						[group1Name]: groups.group1names.length,
 						[group2Name]: groups.group2names.length
 					},
-					...(groups.alerts.length ? { alert: groups.alerts.join(' | ') } : {})
+					...(alerts.length ? { alert: alerts.join(' | ') } : {})
 				})
 				return
 			}
@@ -472,7 +475,9 @@ type DiffMethInput = {
  * 375,525 rows x 155 samples) and MMRF (114,875 and 267,531 rows x 415 samples), 20 to 400 selected samples,
  * 2026-10-20, as the R child's peak footprint plus the Node server's rise, and set at or above every run. An element
  * type that keeps one class of a shared file (e.g. promoter_pls) still reads every row, but analyzes fewer, so it is
- * overestimated by up to ~2 GB. */
+ * overestimated by up to ~2 GB.
+ * TODO: benchmark DM against its sample limit (4,000, maxSampleCutoff in #shared) and give it its own maxMB, as DE_MEMORY
+ * has; until then a DM run is bounded only by the shared budget (serverconfig memoryBudget, DEFAULT_MAX_MB in memory.ts). */
 export const DM_MEMORY: MemoryCost = { baseMB: 880, perUnitMB: { fileCells: 0.0000107, cells: 0.000038 } }
 
 /** Rows and samples of a methylation matrix file, read once per file: a 375,525-row file takes one h5dump of its row
@@ -500,6 +505,9 @@ async function runDmFresh(
 ): Promise<DmCacheResult> {
 	const groups = await resolveDmSampleGroups(param, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
+	// checked here and not only in preAnalysis, which shapes what the client offers: a direct request comes here too
+	const limitAlert = dmSampleLimitAlert(groups, ds)
+	if (limitAlert) throw new Error(limitAlert)
 
 	const { q } = resolveElementQuery(ds, param.element_type)
 
@@ -587,6 +595,11 @@ export async function writeDmrBedjFile(name: string, text: string): Promise<stri
  * Wraps the shared `buildGroupValues` with DM-specific dataset query
  * lookup and user-facing alert messages (rendered directly in the
  * volcano UI, vs DE's engineer-facing strings). */
+/** The alert for groups over the sample limit of one differential methylation run, or '' */
+function dmSampleLimitAlert(groups: SampleGroups, ds: any): string {
+	return sampleLimitAlert(groups.group1names.length + groups.group2names.length, ds.cohort?.termdb?.uiLabels?.samples)
+}
+
 export async function resolveDmSampleGroups(
 	param: DiffMethRequest,
 	ds: any,

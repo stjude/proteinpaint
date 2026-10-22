@@ -876,8 +876,9 @@ type RnaseqGeneCount = {
 	 * query and no downloads. only for datasets with buildCountsFile; may throw, and the DE route
 	 * treats a throw as "no preview" rather than a failed pre-analysis. */
 	previewCountsFiles?: (samples: string[], q: any) => Promise<CountsFilePreview>
-	/** max samples one DE run may build a matrix for. reported during preAnalysis so the client can
-	 * warn before the user submits, and enforced by buildCountsFile itself */
+	/** max samples one DE run may compare, when lower than maxDESampleCutoff (500, in #shared), the limit of every
+	 * dataset. reported during preAnalysis so the client can warn before the user submits, and enforced by the
+	 * DE route before a run (and by a buildCountsFile that checks it itself) */
 	maxSamples?: number
 	/** DE method preselected in the client's method radio. only reorders the options — every method
 	 * stays selectable. omit to keep the client's own ordering (edgeR first) */

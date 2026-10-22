@@ -13,8 +13,6 @@ export type DefaultVolcanoSettings = {
 	pValue: number
 	/** Users may switch between 'original' and 'adjusted' p values */
 	pValueType: 'original' | 'adjusted'
-	/** Maximum number of samples to include in the analysis per termType */
-	sampleNumCutoff: number
 	/** Show the p-value table */
 	showPValueTable: boolean
 	/** Width of the plot in pixels */

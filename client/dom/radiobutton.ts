@@ -30,6 +30,8 @@ type RadioButtonOpts = {
 export type OptionEntry = {
 	/** only set for only *one* option */
 	checked?: boolean | number
+	/** shown grayed out, and cannot be selected */
+	disabled?: boolean
 	/** Text shown in the span to the right of the radio button */
 	label: string
 	/** Text shown in tooltip */
@@ -91,7 +93,7 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		}
 	}
 
-	const labels = divs.append('label')
+	const labels = divs.append('label').style('opacity', (d: OptionEntry) => (d.disabled ? 0.5 : null))
 	const inputs = labels
 		.append('input')
 		.attr('type', 'radio')
@@ -104,6 +106,7 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		.style('margin-top', '2px')
 		.style('margin-right', 0)
 		.property('checked', (d: OptionEntry) => d?.checked)
+		.property('disabled', (d: OptionEntry) => !!d.disabled)
 	if (opts.options.find(i => i.testid)) {
 		// if any testid is present, will assign to all
 		inputs.attr('data-testid', i => i.testid)
@@ -115,8 +118,8 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 			if (!opts.callback) return //So eslint doesn't complain
 			await opts.callback(d.value)
 			radio.main(d.value)
-			//Re-enable the radio buttons after the callback finishes
-			inputs.property('disabled', false)
+			//Re-enable the radio buttons after the callback finishes, except the disabled options
+			inputs.property('disabled', (d: OptionEntry) => !!d.disabled)
 		})
 	}
 

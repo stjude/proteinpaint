@@ -8,7 +8,10 @@ import {
 	reserveMemoryMB,
 	memoryReservedMB,
 	admitRun,
-	RUN_MEMORY_FRACTION
+	memoryBudgetMB,
+	RUN_MEMORY_FRACTION,
+	RUN_MEMORY_MAX_MB,
+	DEFAULT_MAX_MB
 } from '../memory.ts'
 
 tape('getCgroupInactiveFileBytes', test => {
@@ -43,6 +46,24 @@ tape('estimatePeakMB, runFitsInMemory', test => {
 	test.equal(runFitsInMemory(cost, { rows: 10, pairs: 40 }, 350), true, '140 MB in 40% of 350 MB (140) => fits')
 	test.equal(runFitsInMemory(cost, { rows: 10, pairs: 42 }, 350), false, '141 MB in 140 MB => does not fit')
 	test.equal(runFitsInMemory(cost, { rows: 10, pairs: 42 }, 350, 1), true, 'the whole 350 MB => fits')
+	test.end()
+})
+
+tape("a cost's own maxMB", test => {
+	const cost = { baseMB: 100, perUnitMB: { rows: 1 }, maxMB: 300 }
+	test.equal(runFitsInMemory(cost, { rows: 200 }, 100000), true, '300 MB run, maxMB 300 => fits')
+	test.equal(runFitsInMemory(cost, { rows: 201 }, 100000), false, '301 MB run in a large budget, maxMB 300 => refused')
+	test.equal(runFitsInMemory(cost, { rows: 200 }, 500), false, 'the budget below maxMB (200 MB) => the budget decides')
+	test.equal(largestSizeThatFits(100000, cost, 'rows'), 200, 'a large budget => trimmed to maxMB, 200 rows')
+	test.end()
+})
+
+tape('memoryBudgetMB', test => {
+	test.equal(RUN_MEMORY_MAX_MB, DEFAULT_MAX_MB, 'DEFAULT_MAX_MB when serverconfig sets no maxMB')
+	test.equal(memoryBudgetMB(16000), 6400, 'the default share of 16,000 MB, under the default cap')
+	test.equal(memoryBudgetMB(100000), DEFAULT_MAX_MB, 'a high-memory host => the default cap, not 40%')
+	test.equal(memoryBudgetMB(16000, 0.4, 4096), 4096, 'maxMB below the share => maxMB')
+	test.equal(memoryBudgetMB(8000, 0.4, 4096), 3200, 'the share below maxMB => the share')
 	test.end()
 })
 

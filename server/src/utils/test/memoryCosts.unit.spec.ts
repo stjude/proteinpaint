@@ -186,7 +186,16 @@ tape('memory.ts @example outputs', test => {
 	)
 
 	test.equal(runFitsInMemory(DE_MEMORY.edgeR, allAsh, 12000), false, 'edgeR on all ASH at 12 GB => does not fit')
-	test.equal(runFitsInMemory(DE_MEMORY.wilcoxon, allAsh, 12000), true, 'wilcoxon on all ASH at 12 GB => fits')
+	test.equal(
+		runFitsInMemory(DE_MEMORY.wilcoxon, allAsh, 12000),
+		false,
+		'wilcoxon on all ASH at 12 GB => fits the budget, not DE maxMB'
+	)
+	test.equal(
+		runFitsInMemory(DE_MEMORY.limma, { cells: 500 * 17928 }, 100000),
+		true,
+		'limma on 500 ASH samples => within DE maxMB'
+	)
 	test.equal(
 		runFitsInMemory(DE_MEMORY.wilcoxon, wideSpan, 1000),
 		false,

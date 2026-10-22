@@ -1,4 +1,6 @@
 import { roundValue } from '#shared/roundValue.js'
+// the sample limits of a run, shared with the server, which enforces them
+import { maxSampleCutoff, sampleLimitAlert } from '#shared'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { DEFAULT_MIN_CPGS } from '#types'
 import type {
@@ -17,11 +19,6 @@ export const DMRCATE_DEFAULTS = { lambda: 1000, C: 2, fdrCutoff: 0.05 }
 export const BACKGROUND_CORRECTION_TITLE =
 	'Score each DMR against width- and CpG-density-matched intergenic background instead of against zero, so the y axis asks "did this region move MORE than a region like it drifts" rather than "did it move". On a cohort whose whole genome shifts, the two questions have different answers -- on MMRF NSD2-high the hyper:hypo direction inverts. DMRs whose stratum holds too little background to score are counted in Statistics but not plotted. Makes the scan take 1.5 to 2 times as long.'
 
-// The max sample cutoff for volcano rendering
-export const maxSampleCutoff = 4000
-// The max sample cutoff for gene expression term type
-export const maxGESampleCutoff = 3000
-
 /*********** Set default settings per termType ***********/
 export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedVolcanoSettings {
 	const defaults = {
@@ -32,8 +29,6 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 		height: 400,
 		pValue: roundValue(-Math.log10(0.05), 2),
 		pValueType: 'adjusted',
-		//Only declare this value in one place
-		sampleNumCutoff: opts.termType == tt.GENE_EXPRESSION ? maxGESampleCutoff : maxSampleCutoff,
 		showPValueTable: false,
 		width: 400,
 		maxInteractiveDots: 5000,
@@ -123,13 +118,9 @@ export function validateVolcanoSettings(config: any, opts: any) {
 
 	const settings = config.settings.volcano
 	const sampleNum = getSampleNum(opts)
-	if (sampleNum > maxSampleCutoff) {
-		throw new Error(
-			`Sample size ${sampleNum} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
-		)
-	}
+	const limitAlert = sampleLimitAlert(sampleNum)
+	if (limitAlert) throw new Error(limitAlert)
 
-	validateGESettings(config.termType, settings, sampleNum, opts)
 	validateDMSettings(config.termType, settings)
 	validateDSSettings(config.termType, settings, opts)
 }
@@ -175,19 +166,6 @@ export function getSampleNum(config: any) {
 		return config.samplelst.groups.reduce((sum: number, g: any) => sum + (g.values?.length ?? g.sampleCount ?? 0), 0)
 	} else {
 		return maxSampleCutoff
-	}
-}
-
-function validateGESettings(termType: string, settings: GEVolcanoSettings, sampleNum: number, opts: any) {
-	if (termType != tt.GENE_EXPRESSION) return
-
-	const largeNum = sampleNum > settings.sampleNumCutoff
-	if (!opts.overrides && largeNum) {
-		settings.method = 'wilcoxon'
-	} else if (largeNum && settings.method != 'wilcoxon') {
-		throw new Error(
-			`${settings.method} is not supported for ${sampleNum} samples when termtype = ${termType}. Please use Wilcoxon.`
-		)
 	}
 }
 

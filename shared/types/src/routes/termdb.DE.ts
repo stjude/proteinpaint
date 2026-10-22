@@ -264,6 +264,10 @@ export type DEPreAnalysisResponse = {
 	 * absent when the preview query itself failed -- it is descriptive, so a failure there
 	 * must not fail the pre-analysis */
 	countsFiles?: CountsFilePreview
+	/** the methods ('edgeR', 'limma', 'wilcoxon') whose run of these samples would be refused now because server memory
+	 * is low, which the client grays out; absent when every method fits, in report mode, and for a ds that builds
+	 * its counts file on demand */
+	lowMemoryMethods?: string[]
 }
 
 /** Response for a full DE run (DERequest.preAnalysis absent/false). */
