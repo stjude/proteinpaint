@@ -257,7 +257,8 @@ export class AuthApi implements AuthInterface {
 							const res = await fetch(`http://localhost:${port}${cred.authRoute}`, {
 								method: 'POST',
 								headers: {
-									authorization: `Basic ${btoa(cred.password)}`
+									authorization: `Basic ${btoa(cred.password)}`,
+									'content-type': 'application/json'
 								},
 								body: JSON.stringify({
 									dslabel: dslabelPattern,
