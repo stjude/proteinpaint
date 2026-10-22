@@ -269,27 +269,7 @@ const otherOps: Record<string, { input: Record<string, unknown>; argv: string[];
 		bad: { file: ["a'); system('ls'); ('", '/etc/passwd', path.join(tp, '../a.RData'), '-o'] }
 	},
 	vm_stat: { input: {}, argv: [], bad: {} },
-	'bcftools.version': { input: {}, argv: ['-v'], bad: {} },
-	'bigBed.query': {
-		input: { chr: 'chr1', start: 0, end: 1000, file: 'anno/a.bb' },
-		argv: ['-chrom=chr1', '-start=0', '-end=1000', path.join(tp, 'anno/a.bb'), 'stdout'],
-		bad: {
-			chr: ['-o', 'chr1 ', 'chr1;ls'],
-			start: [-1, '0', 1.5],
-			end: ['1000', 1e15],
-			file: ['/etc/passwd', '-o', path.join(cache, 'a.bb')]
-		}
-	},
-	'bigBed.byName': {
-		input: { file: 'anno/a.bb', name: 'rs123' },
-		argv: [path.join(tp, 'anno/a.bb'), 'rs123', 'stdout'],
-		bad: { file: ['/etc/passwd', path.join(cache, 'a.bb')], name: ['-o', 'rs1 rs2', 'rs1;ls', ''] }
-	},
-	'bigBed.info': {
-		input: { file: 'anno/a.bb' },
-		argv: [path.join(tp, 'anno/a.bb')],
-		bad: { file: ['/etc/passwd', '-o', path.join(cache, 'a.bb')] }
-	}
+	'bcftools.version': { input: {}, argv: ['-v'], bad: {} }
 }
 
 tape('other ops: argv of valid inputs, and rejected values', test => {
@@ -584,10 +564,15 @@ tape('getArgv(): list slots and prefixed slots', test => {
 			`should reject regions=${JSON.stringify(regions)}`
 		)
 	}
-	const b = specs['bigBed.query']
+	const p: ToolSpec = {
+		bin: () => 'x',
+		fields: { chr: { type: 'string', pattern: /^chr\d+$/, maxLength: 10 }, start: { type: 'int', min: 0, max: 100 } },
+		argv: ['-chrom=$chr', '-start=$start']
+	}
+	checkSpec('t.prefix', p)
 	test.deepEqual(
-		getArgv('bigBed.query', b, otherOps['bigBed.query'].input).slice(0, 3),
-		['-chrom=chr1', '-start=0', '-end=1000'],
+		getArgv('t.prefix', p, { chr: 'chr1', start: 0 }),
+		['-chrom=chr1', '-start=0'],
 		'should put a value after the literal prefix of its slot'
 	)
 	test.end()

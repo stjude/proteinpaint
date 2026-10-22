@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "@gmod/bam": "^10.1.0",
+    "@gmod/bbi": "^12.0.0",
     "@gmod/bgzf-filehandle": "^6.8.2",
     "@gmod/indexedfasta": "^5.0.13",
     "@gmod/shared-read-cache": "^2.1.0",

@@ -11,10 +11,10 @@ import { cacheUrlProtocols } from './CacheManager.ts'
 import { Readable } from 'stream'
 import { pipeline } from 'stream/promises'
 import pm from 'picomatch'
-import { runTool } from './tools/index.ts'
 import { readFastaRegion } from './fasta.ts'
 import { readTabixLines, readTabixHeader, listTabixChrs } from './tabix.ts'
 import { listBamChrs } from './bamFile.ts'
+import { readBigbedLines, readBigbedByName, isBigbedFile } from './bigbed.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -23,8 +23,10 @@ export * from './xfetch.js'
 export { connect_db } from './sql.ts'
 // the reads of a bgzipped, tabix-indexed file, see tabix.ts
 export { readTabixLines, readTabixHeader, listTabixChrs }
+// the reads of a bigBed file, see bigbed.ts
+export { readBigbedLines, readBigbedByName, isBigbedFile }
 
-const { bcftools, bigBedInfo } = serverconfig
+const { bcftools } = serverconfig
 
 /*********************** EXPORTED
 cache_index
@@ -41,8 +43,6 @@ file_not_exist
 file_not_readable
 get_lines_bigfile
 get_lines_txtfile
-query_bigbed_by_coord
-query_bigbed_by_name
 get_header_tabix
 get_header_vcf
 get_header_bcf
@@ -52,7 +52,6 @@ connect_db
 snpgtCacheFile
 snpgtSampleColumn
 bam_ifnochr
-testIfFileIsBigbed
 spawnTool
 validateRglst
 ********************** INTERNAL
@@ -303,7 +302,7 @@ for (const [ip, prefix] of [
 
 	returns an error message if the url host is not allowed, or undefined if allowed
 
-	A url is fetched by spawned tools, such as straw, bigBedToBed, tabix, and pyBigWig, so a request
+	A url is fetched by spawned tools, such as straw, tabix, and pyBigWig, so a request
 	could otherwise make the server fetch from its internal network (SSRF).
 	- serverconfig.urlHosts[], if set, is the list of allowed hosts: 'a.org' matches only that host,
 	  '.a.org' matches any subdomain of a.org. A listed host is allowed even if it is not public.
@@ -311,7 +310,7 @@ for (const [ip, prefix] of [
 	  that resolves to a non-public ip address is not detected, so set serverconfig.urlHosts to fully
 	  prevent SSRF.
 	- an index url that is downloaded by download_index() has each redirect destination checked as well.
-	  A url that is fetched by a spawned tool, such as bcftools, straw or bigBedToBed, may still
+	  A url that is fetched by a spawned tool, such as bcftools or straw, may still
 	  follow a redirect to a host that is not allowed, since these tools follow redirects internally;
 	  restrict the outbound network access of the server to fully prevent that.
 */
@@ -789,47 +788,6 @@ export async function bam_ifnochr(file, genome, dir, withoutIndex) {
 	return common.contigNameNoChr(genome, await listBamChrs(file, dir, withoutIndex))
 }
 
-export function query_bigbed_by_coord(bigbed, chr, start, end) {
-	// input coordinates need to be 0-based
-	// output data is in bed format and output lines are split into an array
-	return new Promise((resolve, reject) => {
-		// throws on an invalid input, which rejects this promise
-		const ps = runTool('bigBed.query', { chr, start, end, file: bigbed })
-		const out = []
-		const err = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.stderr.on('data', i => err.push(i))
-		ps.on('close', code => {
-			if (code !== 0) reject(`bigBed query exited with non-zero status and this standard error:\n${err.join('')}`)
-			if (err.length > 0) reject(err.join(''))
-			const str = out.join('').trim()
-			// do not return array of one empty string ['']
-			// if str is empty string, return blank array; otherwise split by newline
-			resolve(str ? str.split('\n') : [])
-		})
-	})
-}
-
-export function query_bigbed_by_name(bigbed, name) {
-	// query bigbed by name field
-	// output data is in bed format and output lines are split into an array
-	return new Promise((resolve, reject) => {
-		// throws on an invalid input, which rejects this promise
-		const ps = runTool('bigBed.byName', { file: bigbed, name })
-		const out = []
-		const err = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.stderr.on('data', i => err.push(i))
-		ps.on('close', code => {
-			if (code !== 0) reject(`bigBed query exited with non-zero status and this standard error:\n${err.join('')}`)
-			if (err.length > 0) reject(err.join(''))
-			// same as above
-			const str = out.join('').trim()
-			resolve(str ? str.split('\n') : [])
-		})
-	})
-}
-
 export function tabixnoterror(s) {
 	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }
@@ -845,55 +803,6 @@ export function getRandomInt(min, max) {
 
 export function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-/*
-input: full file path
-output:
-	boolean
-	TODO change to resolve({isbb:boolean, message:str, index:...})
-*/
-export async function testIfFileIsBigbed(file) {
-	return new Promise((resolve, reject) => {
-		let ps
-		try {
-			ps = runTool('bigBed.info', { file })
-		} catch (_) {
-			// a file that the tools module rejects is not a usable bigBed file
-			return resolve(false)
-		}
-		const out = []
-		const err = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.stderr.on('data', i => err.push(i))
-		ps.on('close', code => {
-			const e = err.join('')
-			if (e) {
-				// two types of known error
-				// do not print file name in the error message to guard against attack string
-				if (e.includes('is not a big bed file')) {
-					//reject('File is not a bigBed file')
-					resolve(false)
-				} else if (e.includes("Couldn't open")) {
-					//reject('Invalid file')
-					resolve(false)
-				} else {
-					//reject('Error detecting if file is bigbed')
-					resolve(false)
-				}
-			}
-			// no error from stderr. if there are text in stdout, then file should be bb
-			const text = out.join('').trim()
-			if (text.startsWith('version')) resolve(true)
-			// TODO also test extraIndexCount. return object but not true/false
-		})
-		ps.on('error', e => {
-			if (e.code === 'ENOENT') return reject(`cannot find bigBedInfo binary='${bigBedInfo}'`)
-			// reject('Error detecting if file is bigbed')
-			console.log('\n--- testIfFileIsBigbed() error ---\n', e, '\n')
-			resolve(false)
-		})
-	})
 }
 
 /* 

@@ -1,0 +1,8 @@
+chr1	10	20	a	0	+
+chr1	15	15	ins1	0	+
+chr1	30	40	b	0	-
+chr1	50	60	dup	0	+
+chr1	100	100	ins2	0	+
+chr1	200	300	dup	0	-
+chr2	5	10	dup	0	+
+chr2	400	500	last	0	+

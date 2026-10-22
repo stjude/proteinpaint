@@ -136,32 +136,6 @@ if (UC.URL) {
 // if binpath is provided, will download binaries
 if (UC.BINPATH) {
 	{
-		const a = path.join(UC.BINPATH, 'bigBedNamedItems')
-		trydownload(
-			a,
-			UC.MAC
-				? 'http://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/bigBedNamedItems'
-				: 'http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedNamedItems'
-		)
-		if (!validateurlmode) {
-			exec('chmod +x ' + a)
-			SC.bigBedNamedItems = a
-		}
-	}
-	{
-		const a = path.join(UC.BINPATH, 'bigBedToBed')
-		trydownload(
-			a,
-			UC.MAC
-				? 'http://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/bigBedToBed'
-				: 'http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedToBed'
-		)
-		if (!validateurlmode) {
-			exec('chmod +x ' + a)
-			SC.bigBedToBed = a
-		}
-	}
-	{
 		const a = path.join(UC.BINPATH, 'gfClient')
 		trydownload(
 			a,

@@ -121,7 +121,7 @@ The `Dockerfile` stages are ordered and split so that the slow steps are rebuilt
 | `hts` | htslib, bcftools | `htsversion` changes |
 | `rlib` | the R packages, CRAN binaries from the Posit Package Manager, and the compiled Bioconductor packages | `R/utils` changes |
 | `py` | the python venv | `python/requirements.txt` changes |
-| `tools` | `straw`, `gfClient`, and the UCSC binaries | the download list changes |
+| `tools` | `straw` and `gfClient` | the download list changes |
 | `ppbase` | copies the above, the node install from the official `node` image, and applies the Debian security updates | every day, which is a fast step |
 
 The `hts`, `rlib`, `py`, and `tools` stages only depend on `os`, so they are built in parallel. In CI, the cache

@@ -227,7 +227,7 @@ function getServerconfigPaths(ctx) {
 		sslKey: serverconfig.ssl?.key,
 		sslCert: serverconfig.ssl?.cert,
 		// python/index.js setPythonBinPath() checks that this file exists; other tool paths, such as
-		// serverconfig.bigBedToBed or hicstraw, are only spawned, which the permission model does not restrict
+		// serverconfig.hicstraw or gfClient, are only spawned, which the permission model does not restrict
 		python: serverconfig.python
 	}
 	if (!ctx.env.PP_MODE?.startsWith('container')) return paths
