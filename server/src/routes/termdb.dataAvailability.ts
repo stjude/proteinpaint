@@ -330,7 +330,11 @@ async function getImagingSamples(q: DataAvailabilityRequest, ds: any): Promise<S
 	const names = new Set<string>()
 	for (const ref of Object.values(NIdata.references || {}) as any[]) {
 		if (!ref.referenceFile || !ref.samples) continue
-		for (const n of await getImagingSampleNames(ref)) names.add(n)
+		try {
+			for (const n of await getImagingSampleNames(ref)) names.add(n)
+		} catch (e: any) {
+			mayLog(`[dataAvailability] imaging reference of ${ds.label}:`, e?.message || e)
+		}
 	}
 	return names
 }
