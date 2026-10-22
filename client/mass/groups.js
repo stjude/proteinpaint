@@ -456,7 +456,7 @@ async function showBrainImagingMenu(self, samplelstTW, anchor) {
 	try {
 		for (const g of samplelstTW.q.groups) {
 			if (!isFilterGroup(g)) continue
-			const lst = await self.app.vocabApi.getFilteredSampleList(g.filter, g.filter0, g.mapParent2Children)
+			const lst = await self.app.vocabApi.getFilteredSampleList(g.filter, g.filter0, true)
 			for (const s of lst) addName(s.name)
 		}
 	} catch (e) {
