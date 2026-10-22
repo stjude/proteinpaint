@@ -36,7 +36,6 @@ export const routeFiles = [
 	import('./routes/isoformlst.ts'),
 	import('./routes/massSession.ts'),
 	import('./routes/mdsexpressionrank.ts'),
-	import('./routes/mdsgenevalueonesample.ts'),
 	import('./routes/mdssvcnv.ts'),
 	import('./routes/ntseq.ts'),
 	import('./routes/pdomain.ts'),

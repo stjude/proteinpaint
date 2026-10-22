@@ -11,8 +11,6 @@ export type ClientGenome = {
 	chrlookup: ChrLookUp
 	datasets: { [index: string]: any }
 	defaultcoord: DefaultCoord
-	/** true if .fimo_motif={ db: ...} defined in genome */
-	fimo_motif?: boolean
 	hasClinvarVCF?: boolean
 	/** Same as genome.genedb.hasIdeogram */
 	hasIdeogram: boolean

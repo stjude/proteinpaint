@@ -51,8 +51,6 @@ type OtherBlockLevelArgs = {
 	dataset?: string
 	/** Inits the mass disco plot */
 	disco?: DiscoPlot
-	/** Inits the mds fimo app */
-	fimo?: Fimo
 	/** Inits the fusion editor app */
 	fusioneditor?: FusionEditor
 	gene2canonicalisoform?: any
@@ -178,12 +176,6 @@ type MClassOverride = {
 
 type TrackEntry = {
 	type: string
-	//TODO: add types for this
-}
-
-type Fimo = {
-	/** Threshold for FIMO analysis */
-	fimo_thres: number
 	//TODO: add types for this
 }
 

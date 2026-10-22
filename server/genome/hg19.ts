@@ -17,10 +17,6 @@ export default {
 	snp: {
 		bigbedfile: 'anno/dbsnp.hg19.bb'
 	},
-	fimo_motif: {
-		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',
-		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
-	},
 	tracks: [
 		{
 			__isgene: true, // only for initialization

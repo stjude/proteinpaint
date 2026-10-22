@@ -39,9 +39,6 @@ divide into groups by L1/L2 hierarchy levels
 	called by clicking a group in boxplot panel
 	.k
 	.kvalue
-.getgroup2boxplot
-	modifier of .getgroup; to yield a boxplot rather than list of exp values
-	only used for fimo panel
 */
 
 export default genomes => {
@@ -247,22 +244,6 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 			}
 		}
 	})
-
-	if (req.query.getgroup2boxplot) {
-		getgroupdata.sort((i, j) => i.value - j.value)
-		const { w1, w2, p25, p50, p75, out } = boxplot_getvalue(getgroupdata)
-		return {
-			n: getgroupdata.length,
-			min: getgroupdata[0].value,
-			max: getgroupdata[getgroupdata.length - 1].value,
-			w1,
-			w2,
-			p25,
-			p50,
-			p75,
-			out
-		}
-	}
 
 	const groups = []
 	for (const [n, o] of key2samplegroup) {

@@ -9,7 +9,6 @@ import { server_init_db_queries, setSupportedChartTypes, listDbTables } from './
 import { sql } from './sql.ts'
 import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
-import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 import { clinsig } from '../dataset/clinvar.ts'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 import { mayLog } from './helpers.ts'
@@ -376,20 +375,6 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 			await utils.file_is_readable(g.snp.bigbedfile)
 		}
 
-		if (g.fimo_motif) {
-			if (!g.fimo_motif.db) throw genomename + '.fimo_motif: db file missing'
-			g.fimo_motif.db = path.join(serverconfig.tpmasterdir, g.fimo_motif.db)
-			if (g.fimo_motif.annotationfile) {
-				const [err, items] = parse_textfilewithheader(
-					fs.readFileSync(path.join(serverconfig.tpmasterdir, g.fimo_motif.annotationfile), { encoding: 'utf8' }).trim()
-				)
-				g.fimo_motif.tf2attr = {}
-				for (const i of items) {
-					g.fimo_motif.tf2attr[i.Model.split('_')[0]] = i
-				}
-			}
-		}
-
 		if (g.hicenzymefragment) {
 			if (!Array.isArray(g.hicenzymefragment)) throw 'hicenzymefragment should be an array'
 			for (const frag of g.hicenzymefragment) {
@@ -478,8 +463,8 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 					typeof _ds == 'function'
 						? await _ds(common, { serverconfig, clinsig, dsHelpers })
 						: typeof _ds?.default == 'function'
-						? await _ds.default(common, { serverconfig, clinsig, dsHelpers })
-						: _ds.default || _ds
+							? await _ds.default(common, { serverconfig, clinsig, dsHelpers })
+							: _ds.default || _ds
 
 				if (d.updateAttr) {
 					utils.doUpdateAttr(ds, d.updateAttr)

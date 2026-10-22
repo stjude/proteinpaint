@@ -66,7 +66,6 @@ launchhic()
 launchsamplematrix()
 launchmdssamplescatterplot
 launchmdssurvivalplot
-launch_fimo
 launch_genefusion
 launch_singlecell
 
@@ -539,11 +538,6 @@ async function parseEmbedThenUrl(arg, app) {
 		return app
 	}
 
-	if (arg.fimo) {
-		launch_fimo(arg.fimo, app)
-		return app
-	}
-
 	if (arg.mdssurvivalplot) {
 		if (arg.genome) arg.mdssurvivalplot.genome = arg.genome
 		launchmdssurvivalplot(arg.mdssurvivalplot, app)
@@ -860,23 +854,6 @@ function launchmdssurvivalplot(arg, app) {
 	}
 	import('./mds.survivalplot').then(_ => {
 		_.init(arg, app.holder0, app.debugmode)
-	})
-}
-
-function launch_fimo(arg, app) {
-	if (!arg.genome) {
-		app.error0('missing genome for fimo')
-		return
-	}
-	const genome = app.genomes[arg.genome]
-	if (!genome) {
-		app.error0('invalid genome for fimo')
-		return
-	}
-	arg.genome = genome
-	arg.div = app.holder0
-	import('./mds.fimo').then(_ => {
-		_.init(arg)
 	})
 }
 

@@ -6,7 +6,6 @@ import { genomes as loadedGenomes } from '#src/initGenomesDs.js'
 import { api as hicdataApi } from '#src/routes/hicdata.ts'
 import { api as hicgenomeApi } from '#src/routes/hicgenome.ts'
 import { api as blatApi } from '#src/routes/blat.ts'
-import * as fimo from '#src/fimo.js'
 import { getH5samples, getH5shape } from '#src/utils/h5samples.ts'
 import { validate_cumburden } from '#src/mds3.init.js'
 import { getAvailableMemoryMB } from '#src/utils/memory.ts'
@@ -26,7 +25,6 @@ test sections:
 /hicdata
 /hicgenome
 /blat
-/fimo
 getH5samples()
 validate_cumburden()
 getAvailableMemoryMB()
@@ -62,12 +60,9 @@ async function withConfig(key: string, value: unknown, fn: () => Promise<void>) 
 	}
 }
 
-/** a genome with only what the routes below use; genomefile NA makes get_fasta() return Ns without reading a file */
+/** a genome with only what the routes below use */
 const genome = {
-	genomefile: 'NA',
-	chrlookup: { CHR1: { name: 'chr1', len: 1000000 } },
-	blat: { host: 'blat.a.org', port: '1234', seqDir: '/home/root/pp/tp/genomes/' },
-	fimo_motif: { db: path.join(tp, 'anno/db/motif.meme') }
+	blat: { host: 'blat.a.org', port: '1234', seqDir: '/home/root/pp/tp/genomes/' }
 }
 
 tape('\n', test => {
@@ -191,48 +186,6 @@ tape('/blat', async test => {
 		for (const k of Object.keys(loadedGenomes)) delete loadedGenomes[k]
 		Object.assign(loadedGenomes, prevGenomes)
 	}
-	standIns.reset()
-	test.end()
-})
-
-tape('/fimo', async test => {
-	// no output means no motif match
-	const fimoBin = standIns.add('fimo')
-	await withConfig('fimo', fimoBin, async () => {
-		const handler = fimo.handle_closure({ hgX: genome })
-		const q = { genome: 'hgX', flankspan: 20, m: { chr: 'chr1', pos: 1000, ref: 'N', alt: 'T' } }
-		const ok = await send(handler, { ...q, fimo_thresh: '1e-3' })
-		test.notOk(ok.error, 'should not return an error for a valid request')
-		const calls = standIns.calls('fimo')
-		test.equal(calls.length, 2, 'should start fimo for the reference and the mutated sequence')
-		for (const argv of calls) {
-			test.deepEqual(
-				argv.slice(0, 7),
-				['--parse-genomic-coord', '--verbosity', '1', '--text', '--thresh', '0.001', genome.fimo_motif.db],
-				'should pass the request threshold as a number and the motif db of the genome'
-			)
-			test.ok(argv[7]?.startsWith(cache + path.sep), 'should pass a fasta file in cachedir')
-		}
-		standIns.reset()
-		await send(handler, q)
-		test.equal(
-			standIns.calls('fimo')[0]?.[5],
-			'0.0001',
-			'should pass the fimo default threshold when none is requested'
-		)
-		standIns.reset()
-		for (const [label, query] of [
-			['a position that is not an integer, which only the route checks', { ...q, m: { ...q.m, pos: '1000' } }],
-			['a missing allele, which only the route checks', { ...q, m: { ...q.m, alt: '' } }],
-			['a threshold that is an option', { ...q, fimo_thresh: '-o' }],
-			['a threshold with shell syntax', { ...q, fimo_thresh: '0.1;ls' }],
-			['a threshold over 1', { ...q, fimo_thresh: 2 }]
-		] as const) {
-			const res = await send(handler, query)
-			test.ok(res.error, `should reject ${label}`)
-		}
-		test.deepEqual(standIns.calls('fimo'), [], 'should not start fimo for a rejected request')
-	})
 	standIns.reset()
 	test.end()
 })

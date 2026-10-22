@@ -76,17 +76,6 @@ const routeCases = [
 			stop: 2
 		})
 	},
-	{
-		name: 'mdsgenevalueonesample',
-		route: '/mdsgenevalueonesample',
-		query: file => ({
-			genome: 'hg38',
-			iscustom: 1,
-			sample: 's1',
-			genes: [{ gene: 'TP53', chr: 'chr1', start: 1, stop: 2 }],
-			file
-		})
-	},
 	...[common.tkt.mdsvcf, common.tkt.mdssvcnv, common.tkt.mdsexpressionrank].map(type => ({
 		name: 'samplematrix ' + type,
 		route: '/samplematrix',

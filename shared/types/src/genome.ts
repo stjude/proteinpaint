@@ -36,11 +36,6 @@ type Snp = {
 	bigbedfile: string
 }
 
-type FimoMotif = {
-	db: string
-	annotationfile: string
-}
-
 type TrackCategoryEntry = {
 	color: string
 	label: string
@@ -121,7 +116,6 @@ export type Genome = MinGenome & {
 	proteindomain?: DbStatement
 	repeatmasker?: DbStatement
 	snp?: Snp
-	fimo_motif?: FimoMotif
 	tracks?: Track[]
 	geneset?: GeneSet[]
 	hicdomain?: HicDomain

@@ -62,10 +62,6 @@ curl --parallel \
     https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.bcf.gz \
     https://proteinpaint.stjude.org/ppSupport/clinvar.hg38.bcf.gz.csi \
     \
-    --next --remote-name-all --continue-at - --create-dirs --output-dir utils/meme/motif_databases/HUMAN/ \
-    https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme \
-    https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv \
-    \
     --next --remote-name-all --continue-at - --create-dirs --output-dir . \
     https://proteinpaint.stjude.org/ppSupport/ppdemo_bam.tar.gz `# This tarball only contains the BAM slices which are shown in http://proteinpaint.stjude.org/bam`
 

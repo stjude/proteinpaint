@@ -28,7 +28,7 @@ tape('\n', test => {
 
 tape('set up routes by the loaded datasets', test => {
 	const always = ['get /cardsjson', 'get /isoformbycoord']
-	const mds = ['post /mdsexpressionrank', 'post /mdsgenevalueonesample', 'post /mdssvcnv', 'post /samplematrix']
+	const mds = ['post /mdsexpressionrank', 'post /mdssvcnv', 'post /samplematrix']
 	test.deepEqual(getMounted({}), always, 'should not set up the legacy mds routes with no genome')
 	test.deepEqual(
 		getMounted({ hg38: { datasets: { Mds3Ds: { isMds3: true } } } }),

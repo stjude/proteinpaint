@@ -185,7 +185,7 @@ cd $TP_FOLDER
 if [ "$DOWNLOAD" = true ]; then
    curl https://proteinpaint.stjude.org/ppSupport/ppdemo_bam.tar.gz -O # This tarball only contains the BAM slices which are shown in http://proteinpaint.stjude.org/bam 
    tar zxvf ppdemo_bam.tar.gz # Releases the "proteinpaint_demo/" folder under $TP_FOLDER 
-   mkdir -p genomes/ anno/db/ anno/msigdb/ hg19/ hg38/ utils/meme/motif_databases/HUMAN/
+   mkdir -p genomes/ anno/db/ anno/msigdb/ hg19/ hg38/
    
    cd genomes/
    if [ "$hg19" = true ]; then
@@ -230,10 +230,6 @@ if [ "$DOWNLOAD" = true ]; then
    
    cd ../msigdb/
    curl https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs -O
-
-   cd ../../utils/meme/motif_databases/HUMAN/
-   curl https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme -O
-   curl https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv -O
 fi
 
 cd $CURRENT_DIR
