@@ -242,7 +242,7 @@ async function mapRsid2chr(snps, genome) {
 			continue
 		}
 		if (snp.rsid) {
-			const hits = await utils.query_bigbed_by_name(genome.snp.bigbedfile, snp.rsid)
+			const hits = await utils.readBigbedByName(genome.snp.bigbedfile, snp.rsid)
 			const majorhits = []
 			for (const line of hits) {
 				// must guard against invalid chr as this is querying by name but not by range

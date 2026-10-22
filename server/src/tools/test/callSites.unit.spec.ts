@@ -11,7 +11,6 @@ import { getH5samples, getH5shape } from '#src/utils/h5samples.ts'
 import { validate_cumburden } from '#src/mds3.init.js'
 import { getAvailableMemoryMB } from '#src/utils/memory.ts'
 import { checkDependenciesAndVersions } from '#src/checkDependenciesAndVersions.js'
-import * as utils from '#src/utils.js'
 import { StandIns } from './standIns.ts'
 
 /*
@@ -32,7 +31,6 @@ getH5samples()
 validate_cumburden()
 getAvailableMemoryMB()
 checkDependenciesAndVersions()
-query_bigbed_by_coord(), query_bigbed_by_name(), testIfFileIsBigbed()
 */
 
 const tp = path.resolve(serverconfig.tpmasterdir)
@@ -404,63 +402,6 @@ tape('checkDependenciesAndVersions()', async test => {
 		standIns.restorePath()
 		if (skip !== undefined) features.skip_checkDependenciesAndVersions = skip
 	}
-	standIns.reset()
-	test.end()
-})
-
-tape('query_bigbed_by_coord(), query_bigbed_by_name(), testIfFileIsBigbed()', async test => {
-	const toBed = standIns.add('bigBedToBed', `printf 'chr1\\t1\\t2\\tx\\n'`)
-	const named = standIns.add('bigBedNamedItems', `printf 'chr1\\t1\\t2\\trs1\\n'`)
-	const info = standIns.add('bigBedInfo', `echo 'version: 4'`)
-	const file = path.join(tp, 'anno/a.bb')
-	await withConfig('bigBedToBed', toBed, async () => {
-		await withConfig('bigBedNamedItems', named, async () => {
-			await withConfig('bigBedInfo', info, async () => {
-				test.deepEqual(
-					await utils.query_bigbed_by_coord(file, 'chr1', 0, 1000),
-					['chr1\t1\t2\tx'],
-					'should return the lines of a region'
-				)
-				test.deepEqual(
-					standIns.calls('bigBedToBed'),
-					[['-chrom=chr1', '-start=0', '-end=1000', file, 'stdout']],
-					'should pass the region as options'
-				)
-				test.deepEqual(
-					await utils.query_bigbed_by_name(file, 'rs1'),
-					['chr1\t1\t2\trs1'],
-					'should return the lines of a name'
-				)
-				test.deepEqual(standIns.calls('bigBedNamedItems'), [[file, 'rs1', 'stdout']], 'should pass the name')
-				test.equal(await utils.testIfFileIsBigbed(file), true, 'should detect a bigBed file from its info')
-				test.deepEqual(standIns.calls('bigBedInfo'), [[file]], 'should pass the file')
-				standIns.reset()
-				for (const [label, fn] of [
-					['a chr that is an option', () => utils.query_bigbed_by_coord(file, '-o', 0, 1)],
-					['a start that is not an integer', () => utils.query_bigbed_by_coord(file, 'chr1', '0;ls', 1)],
-					['a name with shell syntax', () => utils.query_bigbed_by_name(file, 'rs1;ls')],
-					['a file outside tp', () => utils.query_bigbed_by_name('/etc/passwd', 'rs1')]
-				] as const) {
-					try {
-						await fn()
-						test.fail(`should reject ${label}`)
-					} catch (_) {
-						test.pass(`should reject ${label}`)
-					}
-				}
-				test.equal(
-					await utils.testIfFileIsBigbed('/etc/passwd'),
-					false,
-					'should not detect a file outside tp as bigBed'
-				)
-				test.deepEqual(
-					[...standIns.calls('bigBedToBed'), ...standIns.calls('bigBedNamedItems'), ...standIns.calls('bigBedInfo')],
-					[],
-					'should not start a bigBed tool for a rejected call'
-				)
-			})
-		})
-	})
 	standIns.reset()
 	test.end()
 })

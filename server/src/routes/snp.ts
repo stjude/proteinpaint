@@ -55,12 +55,12 @@ export async function searchSNP(q: SnpRequest, genome) {
 				// guard against big range and avoid retrieving snps from whole chromosome that will overwhelm server
 				throw 'range too big'
 			}
-			const snps = await utils.query_bigbed_by_coord(genome.snp.bigbedfile, q.chr, r.start, r.stop)
+			const snps = await utils.readBigbedLines(genome.snp.bigbedfile, q.chr, r.start, r.stop)
 			for (const snp of snps) {
 				const hit = snp2hit(snp)
 				if (q.alleleLst) {
 					/*
-					TODO: output of utils.query_bigbed_by_coord() is not guaranteed to yield variants with the same start position, even if r.stop - r.start is a single base (see documentation for bigBedToBed). Therefore, the alleles in q.alleleLst[] may be checked against variants with different start position.
+					TODO: output of utils.readBigbedLines() is not guaranteed to yield variants with the same start position, even if r.stop - r.start is a single base (see readBigbedLines() in bigbed.ts). Therefore, the alleles in q.alleleLst[] may be checked against variants with different start position.
 					*/
 					// given alleles must be found in a snp for it to be returned
 					let missing = false
@@ -82,7 +82,7 @@ export async function searchSNP(q: SnpRequest, genome) {
 			// query dbSNP bigbed file by rsID
 			// see above for description of output snp fields
 			if (genome.genomicNameRegexp.test(n)) continue
-			const snps = await utils.query_bigbed_by_name(genome.snp.bigbedfile, n)
+			const snps = await utils.readBigbedByName(genome.snp.bigbedfile, n)
 			for (const snp of snps) {
 				const hit = snp2hit(snp)
 				hits.push(hit)

@@ -3,7 +3,6 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import http from 'http'
-import { spawnSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import serverconfig from '../serverconfig.js'
 import * as common from '#shared/common.js'
@@ -28,8 +27,6 @@ test sections:
 
 const srcDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-cacheidx-callers-'))
-// /tkbedj runs bigBedInfo, which some environments do not have
-const hasBigBedInfo = !spawnSync(serverconfig.bigBedInfo, []).error
 const up = '/..'.repeat(40) // more than enough to reach "/" from any cachedir
 // a new array for each request, since some handlers add properties to rglst[]
 const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100, x: 0 }]
@@ -358,10 +355,6 @@ for (const c of routeCases) {
 	tape(`${c.route == 'onesampletk' ? '/termdb/junction/onesampletk' : c.route} (${c.file}), ${c.name}`, async test => {
 		const handler = routes[c.route]
 		test.equal(typeof handler, 'function', 'should be a mounted route')
-		if (c.route == '/tkbedj' && !hasBigBedInfo) {
-			test.comment('bigBedInfo not found, skipped')
-			return test.end()
-		}
 
 		// valid url: the index must be downloaded, otherwise this route did not reach cache_index()
 		const ctl = `/ctl-${c.name}/t.gz`

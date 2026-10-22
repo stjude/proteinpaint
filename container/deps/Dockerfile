@@ -140,12 +140,10 @@ RUN python3 -m venv /opt/venv && \
 FROM os AS tools
 
 ARG ARCH='x86_64'
+# the bigBed tools of ucsc are not downloaded, since the server reads bigBed files in process, see server/src/bigbed.ts
 RUN mkdir -p /home/root/pp/tools && \
     if [ "$ARCH" = "x86_64" ]; then \
         wget https://proteinpaint.stjude.org/ppdemo/tools/linux/straw -P /home/root/pp/tools/ && \
-        wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
-        wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/ && \
-        wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedInfo -P /home/root/pp/tools/ && \
         wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/blat/gfClient -P /home/root/pp/tools/ && \
         chmod -R 755 /home/root/pp/tools; \
     else \

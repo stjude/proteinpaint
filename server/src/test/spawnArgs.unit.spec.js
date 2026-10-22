@@ -3,7 +3,6 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import http from 'http'
-import { spawnSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
@@ -33,8 +32,6 @@ test sections:
 
 const srcDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-spawnargs-'))
-// /tkbedj only downloads an index after bigBedInfo runs, which some environments do not have
-const hasBigBedInfo = !spawnSync(serverconfig.bigBedInfo, []).error
 
 let markerCount = 0
 const markers = []
@@ -124,7 +121,7 @@ function getGenome(genomefile = 'NA') {
 
 const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100, x: 0 }]
 
-// routes that read the url and indexURL of a bam or tabix file, or pass them to bcftools or bigBedInfo
+// routes that read the url and indexURL of a bam, tabix, or bigBed file, or pass them to bcftools
 const urlRoutes = [
 	{ route: '/tkbam', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() }) },
 	{ route: '/tabixheader', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL }) },
@@ -233,7 +230,6 @@ tape('url and indexURL of the routes that read bam, tabix, bcf, or bigbed urls',
 			const n = ++idxCount
 			const r2 = await send(handler, c.query(`http://${H}/idx${n}/t.gz`, `http://${H}/idx${n}x${p}/t.gz.tbi`))
 			test.notOk(r2?.timeout, `${name} should respond to indexURL with ${show(p)}`)
-			if (c.route == '/tkbedj' && !hasBigBedInfo) continue
 			test.ok(
 				[...hits].some(h => h.startsWith(`/idx${n}x`)),
 				`${name} should request indexURL with ${show(p)}`

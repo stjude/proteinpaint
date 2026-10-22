@@ -1,7 +1,6 @@
 import tape from 'tape'
 import fs from 'fs'
 import path from 'path'
-import { spawnSync } from 'child_process'
 import serverconfig from '../serverconfig.js'
 import bedj_request_closure from '../bedj.js'
 
@@ -48,14 +47,7 @@ tape('/tkbedj: list length limit', async test => {
 	test.end()
 })
 
-// the route runs bigBedInfo on a file, which some environments do not have
-const hasBigBedInfo = !spawnSync(serverconfig.bigBedInfo, []).error
-
 tape('/tkbedj: plain text file', async test => {
-	if (!hasBigBedInfo) {
-		test.comment('bigBedInfo not found, skipped')
-		return test.end()
-	}
 	const file = `bedjSpec-${process.pid}.txt`
 	const filepath = path.join(serverconfig.cachedir, 'bedj', file)
 	fs.mkdirSync(path.dirname(filepath), { recursive: true })

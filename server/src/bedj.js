@@ -899,7 +899,7 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 
 	// append the file type to req.query{}, see query_file()
 	req.query.fileType = 'tabix'
-	if (await utils.testIfFileIsBigbed(tkfile)) req.query.fileType = 'bigbed'
+	if (await utils.isBigbedFile(tkfile)) req.query.fileType = 'bigbed'
 	// a url is not checked by its name, which may end in a query string
 	else if (!isurl && !tkfile.endsWith('.gz')) req.query.fileType = 'txt'
 	// else the read error would show the full path of the file
@@ -1027,7 +1027,7 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 		const items = []
 
 		if (q.fileType == 'bigbed') {
-			const lines = await utils.query_bigbed_by_coord(tkfile, flag_gm.chr, flag_gm.start, flag_gm.stop)
+			const lines = await utils.readBigbedLines(tkfile, flag_gm.chr, flag_gm.start, flag_gm.stop)
 			for (const line of lines) {
 				const l = line.split('\t')
 
@@ -1105,7 +1105,7 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 		const itemofthisregion = []
 
 		if (q.fileType == 'bigbed') {
-			const lines = await utils.query_bigbed_by_coord(tkfile, r.chr, r.start, r.stop)
+			const lines = await utils.readBigbedLines(tkfile, r.chr, r.start, r.stop)
 			for (const line of lines) {
 				const l = line.split('\t')
 

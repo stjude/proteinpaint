@@ -77,9 +77,6 @@ if (!serverconfig.port) serverconfig.port = process.env.PP_PORT || 3000
 // default binary cmd paths
 if (!serverconfig.bcftools) serverconfig.bcftools = 'bcftools'
 if (!serverconfig.hicstraw) serverconfig.hicstraw = 'straw'
-if (!serverconfig.bigBedToBed) serverconfig.bigBedToBed = 'bigBedToBed'
-if (!serverconfig.bigBedInfo) serverconfig.bigBedInfo = 'bigBedInfo'
-if (!serverconfig.bigBedNamedItems) serverconfig.bigBedNamedItems = 'bigBedNamedItems'
 if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
 if (!serverconfig.gfServer) serverconfig.gfServer = 'gfServer'
 if (!serverconfig.gfClient) serverconfig.gfClient = 'gfClient'
@@ -351,10 +348,7 @@ if (process.env.PP_MODE?.startsWith('container')) {
 		port: 3000,
 		tpmasterdir: '/home/root/pp/tp',
 		cachedir: '/home/root/pp/cache',
-		hicstraw: '/home/root/pp/tools/straw',
-		bigBedToBed: '/home/root/pp/tools/bigBedToBed',
-		bigBedNamedItems: '/home/root/pp/tools/bigBedNamedItems',
-		bigBedInfo: '/home/root/pp/tools/bigBedInfo'
+		hicstraw: '/home/root/pp/tools/straw'
 		// note that bcftools and similar binaries are
 		// saved in the usual */bin/ paths so locating them
 		// is not needed when calling via Node child_process.spawn() or exec()

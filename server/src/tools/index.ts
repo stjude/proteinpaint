@@ -3,7 +3,6 @@ import type { ChildProcessWithoutNullStreams } from 'child_process'
 import path from 'path'
 import serverconfig from '../serverconfig.js'
 import { illegalUrlHost } from '../utils.js'
-import { specs as bigbedSpecs } from './bigbed.ts'
 import { specs as fimoSpecs } from './fimo.ts'
 import { specs as gfClientSpecs } from './gfClient.ts'
 import { specs as h5dumpSpecs } from './h5dump.ts'
@@ -78,16 +77,7 @@ const fileRoots: Readonly<Record<FileRoot, () => string>> = Object.freeze({
 })
 
 export const specs: Readonly<Record<string, ToolSpec>> = deepFreeze(
-	mergeSpecs([
-		bigbedSpecs,
-		fimoSpecs,
-		gfClientSpecs,
-		h5dumpSpecs,
-		hicstrawSpecs,
-		rscriptSpecs,
-		systemSpecs,
-		versionSpecs
-	])
+	mergeSpecs([fimoSpecs, gfClientSpecs, h5dumpSpecs, hicstrawSpecs, rscriptSpecs, systemSpecs, versionSpecs])
 )
 /*
 The patterns that the string fields are checked with: a copy of each spec pattern, made when the specs are checked
