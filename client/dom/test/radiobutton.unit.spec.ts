@@ -4,6 +4,7 @@ import { make_radios } from '#dom'
 
 /* Tests
 	 - default radio button rendering
+	 - disabled option
 	 - Missing callbacks
 	 - Duplicate callbacks
 */
@@ -86,6 +87,31 @@ tape('default radio button rendering', test => {
 	/** .main() */
 	main(2)
 	test.equal(renderedInputs[1].checked, true, `Should check the second button when main is called with it's value`)
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('disabled option', async test => {
+	test.timeoutAfter(100)
+	const holder = getHolder() as any
+	const { labels, inputs } = make_radios({
+		holder,
+		options: [
+			{ checked: true, label: 'A', value: 'a' },
+			{ label: 'B', value: 'b', disabled: true }
+		],
+		callback: () => {
+			//Comment so eslint doesn't complain
+		}
+	})
+	const [a, b] = inputs.nodes()
+	test.equal(b.disabled, true, 'Should disable the disabled option')
+	test.equal(labels.nodes()[1].style.opacity, '0.5', 'Should gray out its label')
+	a.dispatchEvent(new Event('input'))
+	await new Promise(resolve => setTimeout(resolve, 0))
+	test.equal(a.disabled, false, 'Should re-enable the other options after the callback')
+	test.equal(b.disabled, true, 'Should keep the disabled option disabled after the callback')
 
 	if (test['_ok']) holder.remove()
 	test.end()

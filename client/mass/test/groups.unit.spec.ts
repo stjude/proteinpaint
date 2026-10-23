@@ -1,4 +1,5 @@
 import tape from 'tape'
+import * as d3s from 'd3-selection'
 import {
 	getFilter,
 	getSampleFilter,
@@ -10,7 +11,8 @@ import {
 	getGvGroupFilterEntry,
 	getGroupForRegion,
 	getOthersGroup,
-	getAvailabilityGroups
+	getAvailabilityGroups,
+	renderPreAnalysisData
 } from '../groups'
 
 /**
@@ -20,6 +22,7 @@ import {
  *  - groups getSampleFilter()
  *  - groups getSamplelstTW()
  *  - groups getAvailabilityGroups()
+ *  - groups renderPreAnalysisData()
  */
 
 const mockGrp1Values = [
@@ -545,5 +548,42 @@ tape('groups getGvGroupFilterEntry()', test => {
 		undefined,
 		'undefined without a group setting'
 	)
+	test.end()
+})
+
+tape('groups renderPreAnalysisData()', test => {
+	const holder: any = d3s.select('body').append('div')
+	const samplelstTW = {
+		q: { groups: [{ name: 'g1' }, { name: 'g2' }] },
+		term: { values: { g1: { color: 'red' }, g2: { color: 'blue' } } }
+	}
+	const render = (data: any, alert?: string) => {
+		holder.selectAll('*').remove()
+		renderPreAnalysisData({ preAnalysisData: { data, alert }, samplelstTW, groups: [], holder, self: {} })
+		return {
+			inputs: holder.selectAll('input[type=radio]').nodes() as HTMLInputElement[],
+			run: holder.select('[data-testid=sjpp-da-run-btn]').node()
+		}
+	}
+
+	const under = render({ g1: 100, g2: 100 })
+	test.equal(under.inputs.length, 3, 'should list the 3 methods')
+	test.ok(
+		under.inputs.every(i => !i.disabled),
+		'should offer every method under the limit'
+	)
+	test.ok(under.run, 'should show the run button')
+
+	const alert = '2980 samples selected exceeds the limit of 500 per run. Please narrow the cohort.'
+	const over = render({ g1: 2930, g2: 50 }, alert)
+	test.equal(over.inputs.length, 3, 'should still list the 3 methods over the limit')
+	test.ok(
+		over.inputs.every(i => i.disabled),
+		'should gray out every method over the limit'
+	)
+	test.equal(over.run, null, 'should not show the run button over the limit')
+	test.ok(holder.text().includes(alert), 'should show the alert')
+
+	if (test['_ok']) holder.remove()
 	test.end()
 })

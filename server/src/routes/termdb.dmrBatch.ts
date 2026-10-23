@@ -3,7 +3,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
-import { formatElapsedTime } from '#shared'
+import { formatElapsedTime, sampleLimitAlert } from '#shared'
 import { chrSeed } from '#src/utils/dmrStats.ts'
 import {
 	resolveMethylationMatrix,
@@ -337,6 +337,9 @@ export async function runDmrBatch(
 				throw new Error(
 					`Each group needs at least 3 samples with methylation data (got ${group1.length} and ${group2.length}).`
 				)
+			// the limit that the differential methylation pre-analysis reports, on the same samples with data
+			const limitAlert = sampleLimitAlert(group1.length + group2.length, ds.cohort?.termdb?.uiLabels?.samples)
+			if (limitAlert) throw new Error(limitAlert)
 			const nodeRss0 = process.memoryUsage().rss
 			const nodeCpu0 = process.cpuUsage()
 			const perChromosome: NonNullable<TermdbDmrBatchSuccessResponse['resources']>['perChromosome'] = []

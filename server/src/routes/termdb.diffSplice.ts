@@ -10,7 +10,7 @@ import type {
 } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import { formatElapsedTime } from '#shared'
+import { formatElapsedTime, sampleLimitAlert } from '#shared'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
@@ -99,6 +99,9 @@ export function init({ genomes }) {
 							`Group "${name}" has ${n} ${noun} with splicing data, which exceeds the limit of ${cap} per group. Please narrow the group.`
 						)
 				}
+				// and the limit on both groups together that every differential analysis has
+				const limitAlert = sampleLimitAlert(groups.group1names.length + groups.group2names.length, noun)
+				if (limitAlert) alerts.push(limitAlert)
 				// the alert is a sibling of data{}, not a key in it: data{} is keyed by group name, and a
 				// group named 'alert' would otherwise be indistinguishable from this message
 				res.send({
@@ -229,6 +232,13 @@ async function runDsFresh(
 		throw new Error(
 			`Group sizes ${groups.group1names.length} and ${groups.group2names.length} exceed the limit of ${cap} samples per group for differential splicing.`
 		)
+	const limitAlert = sampleLimitAlert(
+		groups.group1names.length + groups.group2names.length,
+		ds.cohort?.termdb?.uiLabels?.samples
+	)
+	if (limitAlert) throw new Error(limitAlert)
+	/* TODO: benchmark the memory of a run, and admit it with admitRun() and a cost with its own maxMB, as DE and DM do;
+	until then it is bounded only by the sample limits above. */
 
 	// the label is what the response reports; diffSpliceScreen.py is edgeR-only and takes no method
 	const { label } = pickDsEngine(req.method)

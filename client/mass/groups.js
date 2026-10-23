@@ -18,12 +18,7 @@ import { uiLabel } from '#shared'
 import { TermTypes, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { dofetch3 } from '#common/dofetch'
 import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
-import {
-	maxSampleCutoff,
-	maxGESampleCutoff,
-	scaleDsFilters,
-	BACKGROUND_CORRECTION_TITLE
-} from '../plots/volcano/settings/defaults.ts'
+import { scaleDsFilters, BACKGROUND_CORRECTION_TITLE } from '../plots/volcano/settings/defaults.ts'
 import { getGEunit } from '#tw/geneExpression'
 import { renderDataAvailability } from './groupDataAvailability.ts'
 
@@ -953,22 +948,45 @@ export function renderPreAnalysisData(arg) {
 
 	const numControl = preAnalysisData.data[samplelstTW.q.groups[0].name]
 	const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
-
-	if (numControl + numCase > maxSampleCutoff) {
-		if (preAnalysisData.alert)
-			preAnalysisData.alert += ` | Sample size ${
-				numControl + numCase
-			} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
-		else
-			preAnalysisData.alert = `Sample size ${
-				numControl + numCase
-			} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
-	}
+	// the sample limit of a run (maxSampleCutoff in #shared) comes as preAnalysisData.alert: the server enforces it
 
 	// display actual numbers of samples with assay data
 	// gdc etc. call them cases, not samples
 	const uiLabels = self?.app?.vocabApi?.termdbConfig?.uiLabels
 	const sampleLabel = uiLabels?.samples || 'samples'
+
+	/* the analysis methods, for expression only: methylation has a single engine (diffMeth.R), so there is
+	nothing to choose. Every method is listed, and one that cannot run on these groups is grayed out with
+	the reason as its tooltip: small groups rule out wilcoxon here, the server lists the methods that
+	would be refused for memory, and a cohort over the sample limit comes as the alert, which grays out
+	every method below. */
+	const sample_size_limit = 8
+	const lowMemoryMethods = preAnalysisData.lowMemoryMethods || []
+	const total = numControl + numCase
+	const options = !isGE
+		? []
+		: [
+				{ label: 'edgeR', value: 'edgeR' },
+				{ label: 'Wilcoxon', value: 'wilcoxon' },
+				{ label: 'Limma', value: 'limma' }
+		  ].map(o => {
+				const reason =
+					numControl <= sample_size_limit && numCase <= sample_size_limit && o.value == 'wilcoxon'
+						? `Wilcoxon needs more than ${sample_size_limit} ${sampleLabel} in at least one group`
+						: lowMemoryMethods.includes(o.value)
+						? `Server memory is too low to run ${o.label} on ${total} ${sampleLabel}`
+						: ''
+				return reason ? { ...o, disabled: true, reason } : o
+		  })
+	// with every method grayed out there is nothing to run, so the alert hides the run button
+	if (options.length && options.every(o => o.disabled)) {
+		const msg = `Server memory is too low to run this analysis on ${total} ${sampleLabel}. Please select a smaller cohort.`
+		preAnalysisData.alert = preAnalysisData.alert ? `${preAnalysisData.alert} | ${msg}` : msg
+	}
+	// with an alert, such as a cohort over the sample limit, nothing can run: the methods stay listed, grayed out
+	if (preAnalysisData.alert)
+		for (const o of options) Object.assign(o, { disabled: true, reason: preAnalysisData.alert })
+
 	const menuDiv = tip ? tip.d.append('div') : holder.append('div')
 	/* these counts are a subset of the group sizes shown in the groups table: only the samples that
 	actually have data for this assay can be compared. without this header the two numbers look like a
@@ -1008,7 +1026,7 @@ export function renderPreAnalysisData(arg) {
 	const offersClass =
 		!!arg.onElementType && elementTypes.length > 1 && elementTypes.some(e => e.key == DMR_SCAN_ELEMENT_TYPE)
 	const launchDEDiv =
-		!preAnalysisData.alert || offersClass
+		!preAnalysisData.alert || offersClass || options.length
 			? menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
 			: undefined
 	const addSelectRow = (label, testid, options, value, callback) => {
@@ -1034,66 +1052,51 @@ export function renderPreAnalysisData(arg) {
 			arg.onElementType
 		)
 
+	/* the methods, also under an alert, when they are all grayed out. a ds may prefer one method: gdc sets
+	wilcoxon because its cohorts are large enough that edgeR's estimateDisp dominates (measured ~25x slower
+	on a 1370-case cohort). this only moves the preferred method to the front -- it is preselected as the
+	first method that is not grayed out -- so every method stays available and nothing changes for other
+	datasets. */
+	const preferredMethod = self?.app?.vocabApi?.termdbConfig?.queries?.rnaseqGeneCount?.defaultMethod
+	if (preferredMethod) {
+		const i = options.findIndex(o => o.value == preferredMethod)
+		if (i > 0) options.unshift(options.splice(i, 1)[0])
+	}
+
+	let selectedMethod = options.find(o => !o.disabled)?.value
+
+	if (options.length) {
+		const radioRow = launchDEDiv.append('tr')
+		radioRow
+			.append('td')
+			.html('Method')
+			.attr('aria-label', 'DE Method')
+			.attr('class', 'sja-termdb-config-row-label')
+			.style('padding', '5px')
+
+		const cell = radioRow.append('td')
+		const radioBtnDiv = cell.append('div')
+
+		const radios = make_radios({
+			holder: radioBtnDiv,
+			inputName: `de-method-${Date.now()}`,
+			options: options.map(o => ({
+				...o,
+				title: o.reason ? `${o.label} method: ${o.reason}` : `${o.label} method`,
+				checked: o.value === selectedMethod
+			})),
+			styles: {
+				display: 'inline-block',
+				padding: '0 12px 0 0'
+			},
+			callback: v => (selectedMethod = v)
+		})
+		// why a grayed-out method cannot run
+		radios.divs.attr('title', o => o.reason || null)
+	}
+
 	// option to launch the analysis
-	const sample_size_limit = 8
 	if (!preAnalysisData.alert) {
-		const options = !isGE
-			? []
-			: numControl + numCase >= maxGESampleCutoff
-			? [{ label: 'Wilcoxon', value: 'wilcoxon' }]
-			: numControl <= sample_size_limit && numCase <= sample_size_limit
-			? [
-					{ label: 'edgeR', value: 'edgeR' },
-					{ label: 'Limma', value: 'limma' }
-			  ]
-			: [
-					{ label: 'edgeR', value: 'edgeR' },
-					{ label: 'Wilcoxon', value: 'wilcoxon' },
-					{ label: 'Limma', value: 'limma' }
-			  ]
-
-		/* a ds may prefer one method: gdc sets wilcoxon because its cohorts are large enough that
-		edgeR's estimateDisp dominates (measured ~25x slower on a 1370-case cohort). this only moves
-		the preferred method to the front -- it is the preselected radio because make_radios checks
-		index 0 -- so every method stays available and nothing changes for other datasets. */
-		const preferredMethod = self?.app?.vocabApi?.termdbConfig?.queries?.rnaseqGeneCount?.defaultMethod
-		if (preferredMethod) {
-			const i = options.findIndex(o => o.value == preferredMethod)
-			// absent when the group sizes rule it out (wilcoxon is not offered for <=8 per group)
-			if (i > 0) options.unshift(options.splice(i, 1)[0])
-		}
-
-		let selectedMethod = options[0]?.value
-
-		// methylation has a single engine (diffMeth.R), so there is no method to choose
-		if (options.length) {
-			const radioRow = launchDEDiv.append('tr')
-			radioRow
-				.append('td')
-				.html('Method')
-				.attr('aria-label', 'DE Method')
-				.attr('class', 'sja-termdb-config-row-label')
-				.style('padding', '5px')
-
-			const cell = radioRow.append('td')
-			const radioBtnDiv = cell.append('div')
-
-			make_radios({
-				holder: radioBtnDiv,
-				inputName: `de-method-${Date.now()}`,
-				options: options.map((o, i) => ({
-					...o,
-					title: `${o.label} method`,
-					checked: i === 0 // preselect first option
-				})),
-				styles: {
-					display: 'inline-block',
-					padding: '0 12px 0 0'
-				},
-				callback: v => (selectedMethod = v)
-			})
-		}
-
 		let scanChromosome = ''
 		let backgroundCorrection = false
 		// the scan's extent and correction, only while the scan is the class the panel is on
