@@ -29,7 +29,10 @@ COPY ./server/package.json  ./
 # A temporary npm cache, instead of one under HOME. npm run by root gives the installed files the owner of this dir,
 # so it is changed to root first. The files from an older base image, which the app user owns, are also changed;
 # that copies them into this layer, but finds no file to change in a base image whose app files root owns.
+# The @sjcrh packages of the base image are removed first: npm keeps an installed package whose tarball has the same
+# path and version, such as a workspace whose code changed after its last version bump.
 RUN chown 0:0 . && \
+    rm -rf node_modules/@sjcrh && \
     npm install --omit=dev --cache=/tmp/npm-cache && rm -rf /tmp/npm-cache && \
     find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
     find . ! -type l -perm /022 -exec chmod go-w {} +
