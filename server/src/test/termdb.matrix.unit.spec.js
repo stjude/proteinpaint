@@ -45,6 +45,7 @@ getData: a request of only a negated samplelst group is rejected
 shouldMapParent2Children: handles object sample type metadata with child sample types
 getData: custom bins of a non-dict numeric term come back colored and distinct
 getData: custom bins of a single-cell gene expression term come back colored and distinct
+getData: single-cell terms take precedence over configured sample type labels
 */
 
 tape('id2sampleRef(): prefers id2sampleRefs, else id2sampleName raw-then-Number, no NaN on string ids', test => {
@@ -1139,6 +1140,31 @@ tape('getData: custom bins of a single-cell gene expression term come back color
 	t.equal(data.samples.cell1.scexp.key, '<6', 'a cell below the cutoff is keyed by the first bin')
 	t.equal(data.samples.cell2.scexp.key, '≥6', 'a cell at or above the cutoff is keyed by the last bin')
 	t.equal(tw.q.lst.filter(b => 'color' in b).length, 0, 'no color leaks onto the request q.lst[]')
+	t.end()
+})
+
+tape('getData: single-cell terms take precedence over configured sample type labels', async t => {
+	await ensureOpenAuth()
+	const tw = {
+		$id: 'scexp',
+		term: {
+			type: 'singleCellGeneExpression',
+			gene: 'CLN8',
+			name: 'CLN8',
+			sample: { sID: 'sample1' },
+			sampleTypeLabel: ''
+		},
+		q: { mode: 'continuous' }
+	}
+	const sampleTypes = {
+		2: { name: 'tumor', plural_name: 'tumors', parent_id: 1 },
+		3: { name: 'normal', plural_name: 'normals', parent_id: 1 }
+	}
+	const ds = makeNoDbDs({ scExpValues: { cell1: 5 }, sampleTypes })
+	const data = await getData({ terms: [tw], filter: emptyFilter(), sampleTypes: [2, 3] }, ds)
+
+	t.equal(data.error, undefined, 'no error')
+	t.deepEqual(data.sampleType, { name: 'cell', plural_name: 'cells' }, 'single-cell results are labeled as cells')
 	t.end()
 })
 
