@@ -14,7 +14,7 @@ rm -f \
 	/usr/bin/openssl /usr/bin/c_rehash \
 	/usr/bin/git /usr/bin/git-* \
 	/usr/bin/ssh /usr/bin/ssh-* /usr/bin/scp /usr/bin/sftp /usr/bin/slogin \
-	/usr/bin/apt /usr/bin/apt-* /usr/bin/dpkg /usr/bin/dpkg-* /usr/bin/cpan /usr/bin/cpan5* \
+	/usr/bin/apt /usr/bin/apt-* /usr/bin/dpkg /usr/bin/dpkg-* /usr/bin/cpan /usr/bin/cpan5* /usr/bin/sqv \
 	/usr/bin/pip /usr/bin/pip3* /opt/venv/bin/pip /opt/venv/bin/pip3* \
 	/usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
 	/usr/bin/gcc /usr/bin/gcc-* /usr/bin/g++ /usr/bin/g++-* /usr/bin/cc /usr/bin/c++ /usr/bin/c89* /usr/bin/c99* \
@@ -36,7 +36,7 @@ find / -xdev -perm /6000 -type f -exec chmod ug-s {} +
 
 # fail the build if a listed command is still on PATH
 failed=0
-for c in curl wget GET POST lwp-download openssl git ssh scp sftp apt apt-get dpkg cpan pip pip3 npm npx corepack \
+for c in curl wget GET POST lwp-download openssl git ssh scp sftp apt apt-get dpkg sqv cpan pip pip3 npm npx corepack \
 	gcc g++ cc c++ cpp gfortran as ld make cmake pkg-config su chsh chfn passwd gpasswd newgrp mount umount; do
 	if command -v "$c"; then
 		echo "ERROR: $c is still on PATH"
