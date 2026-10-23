@@ -1,5 +1,9 @@
 # Proteinpaint Front
 
+> **Note:** this workspace package is private since v2.219.1, so `@sjcrh/proteinpaint-front` is no longer published to the npm registry.
+> Its latest published version there, 2.219.0, is frozen and outdated, and likely not what the latest container builds use:
+> the release images install this workspace from a tarball that `container/pack.sh` packs from the source code.
+
 The web bundle for window.runproteinpaint(). The intent is for this package to contain
 most of the "porcelain" or "portal-like" features of proteinpaint, such as headers
 and other elements that are not likely to be shown by an embedder portal. 
