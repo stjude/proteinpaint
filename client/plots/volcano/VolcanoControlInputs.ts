@@ -488,7 +488,8 @@ export class VolcanoControlInputs {
 			}
 			return opts
 		}
-		// every method has the same sample limit (maxDESampleCutoff in #shared), which the run was already within
+		/* every method is offered: these controls are built before the run reports its sample count. A method over its
+		own sample limit (deMethodSampleLimits in #shared) is refused by the server, with the methods that allow the run */
 		return [
 			{ label: 'edgeR', value: 'edgeR' },
 			{ label: 'Wilcoxon', value: 'wilcoxon' },

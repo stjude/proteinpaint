@@ -21,8 +21,9 @@ export type MemoryUnits = Record<string, number>
 
 /** serverconfig.memoryBudget, optional: { maxMB, fraction, mode }
  * maxMB: the most MB that the heavy runs of this server may plan for together, however much memory is available,
- * DEFAULT_MAX_MB by default. Each run's estimate comes out of it, less what runs in progress have reserved
- * (reserveMemoryMB). By default this alone is the budget, up to all the available memory.
+ * DEFAULT_MAX_MB by default, or no cap in report mode, which then reports each run against the available memory alone.
+ * Each run's estimate comes out of it, less what runs in progress have reserved (reserveMemoryMB). By default this
+ * alone is the budget, up to all the available memory.
  * fraction: optional, a share of the available memory to plan within as well, to leave the rest as headroom for the
  * rest of the server and for error in the costs; 1 (all of it) by default. The budget is the smaller of fraction of
  * the available memory and maxMB, see memoryBudgetMB().
@@ -55,7 +56,9 @@ export const RUN_MEMORY_FRACTION: number = memoryBudget.fraction ?? 1
  * TODO: benchmark DM and differential splicing, give each its own maxMB per run as DE has, and revisit this default. */
 export const DEFAULT_MAX_MB = 3072
 
-export const RUN_MEMORY_MAX_MB: number = memoryBudget.maxMB ?? DEFAULT_MAX_MB
+// report mode without a maxMB has no cap: it refuses nothing, and reports whether each run fits in the free memory
+export const RUN_MEMORY_MAX_MB: number =
+	memoryBudget.maxMB ?? (memoryBudget.mode === 'report' ? Infinity : DEFAULT_MAX_MB)
 
 /** The MB that heavy runs may plan for together: `fraction` of availableMB, at most `maxMB`
  * @example
@@ -121,7 +124,9 @@ export function logMemoryAdmission(
  * `[memory] DM refused: needs 6,134 MB, over the 3,072 MB maxMB, of a 3,072 MB budget (maxMB, below 16,000 MB free),
  * 0 MB reserved by runs in progress`
  * With a fraction set, the budget names its share, e.g. `(40% of 16,000 MB free)`.
- * In report mode it says whether the run fits instead, e.g. `[memory] DM does not fit (report only): needs ...` */
+ * In report mode it says whether the run fits instead, e.g. `[memory] DM does not fit (report only): needs ...`, and
+ * without a maxMB there is no cap to name: `[memory] DM fits (report only): needs 6,134 MB, of a 16,000 MB budget
+ * (16,000 MB free), 0 MB reserved by runs in progress` */
 export function memoryAdmissionMessage(
 	label: string,
 	admitted: boolean,
@@ -143,9 +148,12 @@ export function memoryAdmissionMessage(
 	const budget = memoryBudgetMB(availableMB, fraction, maxMB)
 	// all of the free memory when serverconfig sets maxMB alone
 	const share = `${fraction == 1 ? '' : `${fraction * 100}% of `}${formatMB(availableMB)} free`
+	// no cap in report mode without a maxMB
+	const capped = Number.isFinite(cap)
+		? `${neededMB <= cap ? 'under' : 'over'} the ${formatMB(cap)} ${perRun ? 'per-run maxMB' : 'maxMB'}, `
+		: ''
 	return (
-		`[memory] ${label} ${decision}: needs ${formatMB(neededMB)}, ${neededMB <= cap ? 'under' : 'over'} the ` +
-		`${formatMB(cap)} ${perRun ? 'per-run maxMB' : 'maxMB'}, of a ${formatMB(budget)} budget ` +
+		`[memory] ${label} ${decision}: needs ${formatMB(neededMB)}, ${capped}of a ${formatMB(budget)} budget ` +
 		`(${budget < availableMB * fraction ? `maxMB, below ${share}` : share}), ` +
 		`${formatMB(reserved)} reserved by runs in progress`
 	)

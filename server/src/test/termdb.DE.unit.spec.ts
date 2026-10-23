@@ -1,4 +1,5 @@
 import tape from 'tape'
+import { deSampleLimit } from '#shared'
 import {
 	pickDeEngine,
 	admitDeRun,
@@ -144,6 +145,10 @@ tape('deMethodsOverMemory', function (test) {
 		['edgeR', 'limma'],
 		'500 samples of a 59,400-gene file on a 100 GB host => DE maxMB refuses edgeR and limma, wilcoxon fits'
 	)
+	test.notOk(
+		deMethodsOverMemory(deSampleLimit('wilcoxon'), genes, 4873, 100000).includes('wilcoxon'),
+		'wilcoxon at its sample limit, reading every ASH column, fits DE maxMB (no method allowed but refused for memory)'
+	)
 	test.end()
 })
 
@@ -153,22 +158,38 @@ tape('deSampleLimitAlert', function (test) {
 		group2names: Array.from({ length: n2 }, (_, i) => `b${i}`)
 	})
 	const ds = { cohort: { termdb: { uiLabels: { samples: 'cases' } } } }
-	test.equal(deSampleLimitAlert(groups(250, 250), ds), '', '500 samples => within the default limit')
+	// no method: whether any method may run, wilcoxon's 3,000
+	test.equal(deSampleLimitAlert(groups(2930, 50), ds), '', '2,980 samples, no method => wilcoxon may run')
 	test.match(
-		deSampleLimitAlert(groups(2930, 50), ds),
-		/^2980 cases selected exceeds the limit of 500 per run/,
-		'over 500 => alert'
+		deSampleLimitAlert(groups(2930, 1943), ds),
+		/^4873 cases selected exceeds the limit of 3000 per run/,
+		'4,873 samples, no method => no method may run'
+	)
+	// by method
+	test.equal(deSampleLimitAlert(groups(250, 250), ds, undefined, 'limma'), '', 'limma on 500 => within its limit')
+	test.equal(
+		deSampleLimitAlert(groups(2930, 50), ds, undefined, 'edgeR'),
+		'2980 cases selected exceeds the limit of 500 per run for edgeR. Please use Wilcoxon, or narrow the cohort.',
+		'edgeR on 2,980 => refused, naming wilcoxon'
+	)
+	test.equal(deSampleLimitAlert(groups(2930, 50), ds, undefined, 'wilcoxon'), '', 'wilcoxon on 2,980 => allowed')
+	test.equal(
+		deSampleLimitAlert(groups(2930, 1943), ds, undefined, 'wilcoxon'),
+		'4873 cases selected exceeds the limit of 3000 per run for Wilcoxon. Please narrow the cohort.',
+		'wilcoxon on 4,873 => refused, no other method allows it'
+	)
+	// a ds limit lowers every method's
+	test.match(
+		deSampleLimitAlert(groups(10, 11), ds, 20, 'wilcoxon'),
+		/exceeds the limit of 20 per run for Wilcoxon/,
+		'a ds limit below every method => that limit'
 	)
 	test.match(
-		deSampleLimitAlert(groups(10, 11), ds, 20),
-		/exceeds the limit of 20 per run/,
-		'a ds limit below 500 => that limit'
+		deSampleLimitAlert(groups(700, 670), ds, 1500, 'edgeR'),
+		/exceeds the limit of 500 per run for edgeR\. Please use Wilcoxon/,
+		'a ds limit above 500, as gdc sets => edgeR still 500'
 	)
-	test.match(
-		deSampleLimitAlert(groups(300, 301), ds, 1500),
-		/exceeds the limit of 500 per run/,
-		'a ds limit above 500, as gdc sets => still 500'
-	)
+	test.equal(deSampleLimitAlert(groups(700, 670), ds, 1500, 'wilcoxon'), '', 'gdc: wilcoxon on 1,370 => allowed')
 	test.end()
 })
 

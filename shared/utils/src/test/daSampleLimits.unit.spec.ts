@@ -1,12 +1,25 @@
 import tape from 'tape'
-import { maxSampleCutoff, sampleLimitAlert } from '../daSampleLimits.ts'
+import { maxSampleCutoff, deSampleLimit, sampleLimitAlert } from '../daSampleLimits.ts'
 
 /* Tests
+	- deSampleLimit()
 	- sampleLimitAlert()
 */
 
 tape('\n', test => {
 	test.comment('-***- daSampleLimits -***-')
+	test.end()
+})
+
+tape('deSampleLimit()', test => {
+	test.equal(deSampleLimit('edgeR'), 500, 'edgeR => 500')
+	test.equal(deSampleLimit('limma'), 500, 'limma => 500')
+	test.equal(deSampleLimit('wilcoxon'), 3000, 'wilcoxon => 3,000')
+	test.equal(deSampleLimit(), 3000, 'no method => the most any method allows, 3,000')
+	test.equal(deSampleLimit('unknown'), 500, 'an unknown method => the lowest limit')
+	test.equal(deSampleLimit('wilcoxon', 1500), 1500, 'a lower dataset limit => the dataset limit')
+	test.equal(deSampleLimit('edgeR', 1500), 500, 'a higher dataset limit => the method limit')
+	test.equal(deSampleLimit(undefined, 20), 20, 'no method, a low dataset limit => the dataset limit')
 	test.end()
 })
 

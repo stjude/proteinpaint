@@ -574,14 +574,21 @@ tape('groups renderPreAnalysisData()', test => {
 	)
 	test.ok(under.run, 'should show the run button')
 
-	const alert = '2980 samples selected exceeds the limit of 500 per run. Please narrow the cohort.'
-	const over = render({ g1: 2930, g2: 50 }, alert)
-	test.equal(over.inputs.length, 3, 'should still list the 3 methods over the limit')
+	// 2,980 samples: over the edgeR and limma limit (500), under wilcoxon's (3,000)
+	const mixed = render({ g1: 2930, g2: 50 })
+	const enabled = mixed.inputs.filter(i => !i.disabled).map(i => i.value)
+	test.deepEqual(enabled, ['wilcoxon'], 'over 500 samples => only wilcoxon is offered')
+	test.equal(mixed.inputs.find(i => i.checked)?.value, 'wilcoxon', 'and preselected')
+	test.ok(mixed.run, 'and the run button is shown')
+
+	const alert = '4873 samples selected exceeds the limit of 3000 per run. Please narrow the cohort.'
+	const over = render({ g1: 2930, g2: 1943 }, alert)
+	test.equal(over.inputs.length, 3, 'should still list the 3 methods over the limit of every method')
 	test.ok(
 		over.inputs.every(i => i.disabled),
-		'should gray out every method over the limit'
+		'should gray out every method over the limit of every method'
 	)
-	test.equal(over.run, null, 'should not show the run button over the limit')
+	test.equal(over.run, null, 'should not show the run button over the limit of every method')
 	test.ok(holder.text().includes(alert), 'should show the alert')
 
 	if (test['_ok']) holder.remove()

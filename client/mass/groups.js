@@ -14,7 +14,7 @@ import { getCurrentCohortChartTypes, getActiveCohortStr } from './charts'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { isNumericTerm, termType2label } from '#shared/terms.js'
-import { uiLabel } from '#shared'
+import { uiLabel, deSampleLimit } from '#shared'
 import { TermTypes, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { dofetch3 } from '#common/dofetch'
 import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
@@ -948,7 +948,7 @@ export function renderPreAnalysisData(arg) {
 
 	const numControl = preAnalysisData.data[samplelstTW.q.groups[0].name]
 	const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
-	// the sample limit of a run (maxSampleCutoff in #shared) comes as preAnalysisData.alert: the server enforces it
+	// over the sample limit of every method, the server sends preAnalysisData.alert, and enforces it
 
 	// display actual numbers of samples with assay data
 	// gdc etc. call them cases, not samples
@@ -957,9 +957,9 @@ export function renderPreAnalysisData(arg) {
 
 	/* the analysis methods, for expression only: methylation has a single engine (diffMeth.R), so there is
 	nothing to choose. Every method is listed, and one that cannot run on these groups is grayed out with
-	the reason as its tooltip: small groups rule out wilcoxon here, the server lists the methods that
-	would be refused for memory, and a cohort over the sample limit comes as the alert, which grays out
-	every method below. */
+	the reason as its tooltip: a method over its own sample limit (deMethodSampleLimits in #shared), small
+	groups for wilcoxon, and the methods that the server lists as refused for memory. A cohort over the
+	limit of every method comes as the alert, which grays out every method below. */
 	const sample_size_limit = 8
 	const lowMemoryMethods = preAnalysisData.lowMemoryMethods || []
 	const total = numControl + numCase
@@ -971,7 +971,9 @@ export function renderPreAnalysisData(arg) {
 				{ label: 'Limma', value: 'limma' }
 		  ].map(o => {
 				const reason =
-					numControl <= sample_size_limit && numCase <= sample_size_limit && o.value == 'wilcoxon'
+					total > deSampleLimit(o.value)
+						? `${o.label} is limited to ${deSampleLimit(o.value)} ${sampleLabel} per run`
+						: numControl <= sample_size_limit && numCase <= sample_size_limit && o.value == 'wilcoxon'
 						? `Wilcoxon needs more than ${sample_size_limit} ${sampleLabel} in at least one group`
 						: lowMemoryMethods.includes(o.value)
 						? `Server memory is too low to run ${o.label} on ${total} ${sampleLabel}`

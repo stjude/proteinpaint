@@ -135,6 +135,19 @@ tape('memoryAdmissionMessage', test => {
 			'(5,000 MB free), 0 MB reserved by runs in progress',
 		'maxMB alone, less memory free => the budget is all the free memory'
 	)
+	// report mode without a maxMB: no cap
+	test.equal(
+		memoryAdmissionMessage('DM', true, 6134, 16000, 1, true, undefined, Infinity, 0),
+		'[memory] DM fits (report only): needs 6,134 MB, of a 16,000 MB budget (16,000 MB free), ' +
+			'0 MB reserved by runs in progress',
+		'no cap => no maxMB in the line, and the budget is the free memory'
+	)
+	test.equal(
+		memoryAdmissionMessage('DE limma', true, 2150, 16000, 1, true, 2200, Infinity, 0),
+		'[memory] DE limma fits (report only): needs 2,150 MB, under the 2,200 MB per-run maxMB, of a 16,000 MB budget ' +
+			'(16,000 MB free), 0 MB reserved by runs in progress',
+		"no cap, a run's own maxMB => the per-run maxMB"
+	)
 	test.end()
 })
 

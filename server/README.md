@@ -47,11 +47,11 @@ samples that one DE run may compare, on ASH's genes. A file with more genes allo
 Differential methylation and splicing have no ceiling of their own yet; they are still to be benchmarked, after
 which the default `maxMB` can be revisited.
 
-| key        | values                         | default                     |
-| ---------- | ------------------------------ | --------------------------- |
-| `mode`     | `"enforce"` or `"report"`      | `"enforce"`                 |
-| `maxMB`    | a number above 0               | `3072`                      |
-| `fraction` | a number above 0 and at most 1 | `1`, all of the free memory |
+| key        | values                         | default                       |
+| ---------- | ------------------------------ | ----------------------------- |
+| `mode`     | `"enforce"` or `"report"`      | `"enforce"`                   |
+| `maxMB`    | a number above 0               | `3072`, none in `report` mode |
+| `fraction` | a number above 0 and at most 1 | `1`, all of the free memory   |
 
 The server refuses to start if any value is invalid.
 
@@ -64,8 +64,9 @@ production servers, where one large request could otherwise use up the memory of
 **`report`**: the server still reads the free memory and logs each estimate, but every run goes ahead in full.
 Nothing is refused, and GRIN2 keeps its configured lesion cap (`features.grin2maxLesions`, at most about 641,000
 lesions, a fixed 2 GB ceiling). Use this on a laptop or a dedicated server, where free memory is often low because
-the OS keeps memory as cache, and an analysis that would finish would otherwise be refused. The logs then show how
-close each run came to the budget, to tune `maxMB` before enforcing.
+the OS keeps memory as cache, and an analysis that would finish would otherwise be refused. Without a `maxMB`,
+report mode has no cap: each run is reported against the free memory alone, and its log line names no `maxMB`. With
+a `maxMB`, the logs show how close each run came to it, to tune `maxMB` before enforcing.
 
 `fraction` is optional: a share of the free memory that heavy runs may plan for together, so that the rest stays
 free for the rest of the server and for error in the cost estimates. The budget is then the smaller of that share

@@ -4,7 +4,7 @@ import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { formatElapsedTime, maxDESampleCutoff, sampleLimitAlert } from '#shared'
+import { formatElapsedTime, deMethodSampleLimits, deSampleLimit, sampleLimitAlert } from '#shared'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
@@ -80,9 +80,10 @@ export function init({ genomes }) {
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
 				const alerts = [...groups.alerts]
-				/* the sample limit, as runDeFresh() enforces it. reported here too: the client hides the
-				"Run" button whenever an alert is present, so the user learns the cohort is too big before
-				submitting rather than after waiting on a failed request. */
+				/* the sample limit of the method that allows the most, as runDeFresh() enforces it: over it, no
+				method may run, and the client hides the "Run" button whenever an alert is present, so the user
+				learns the cohort is too big before submitting rather than after waiting on a failed request. The
+				client grays out each method over its own limit (deMethodSampleLimits in #shared). */
 				const limitAlert = deSampleLimitAlert(groups, ds, maxSamples)
 				if (limitAlert) alerts.push(limitAlert)
 				/* describe the counts files this run would use. skipped when an alert already stands,
@@ -280,9 +281,11 @@ async function runDeFresh(
 ): Promise<DeCacheResult> {
 	const groups = await resolveSampleGroups(param, allSampleSet, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
-	/* checked here and not only in preAnalysis: preAnalysis shapes what the client offers, while this is the gate that
-	a direct request also passes through. Before a counts file is built, so a refused run downloads nothing. */
-	const limitAlert = deSampleLimitAlert(groups, ds, maxSamples)
+	/* the sample limit of the method that would run, checked here and not only in preAnalysis: preAnalysis shapes what
+	the client offers, while this is the gate that a direct request also passes through. Before a counts file is built,
+	so a refused run downloads nothing; samples dropped by the build only make the run smaller. */
+	const { DE_method: limitMethod } = pickDeEngine(param.method, groups.group1names.length, groups.group2names.length)
+	const limitAlert = deSampleLimitAlert(groups, ds, maxSamples, limitMethod)
 	if (limitAlert) throw new Error(limitAlert)
 
 	let input_file = countsFile
@@ -410,23 +413,34 @@ async function runDeFresh(
 
 // ─── helpers ─── //
 
-/** The alert for groups over the sample limit of one DE run, or '': maxDESampleCutoff, or the ds's maxSamples when
- * that is lower */
+/** The alert for groups over the sample limit of a DE run by `method`, or ''; see deSampleLimit() in #shared, which
+ * the ds's maxSamples may lower. With no `method`, the limit of the method that allows the most: whether any may run.
+ * The alert for a method names the methods that would allow these groups. */
 export function deSampleLimitAlert(
 	groups: { group1names: string[]; group2names: string[] },
 	ds: any,
-	maxSamples?: number
-) {
-	return sampleLimitAlert(
-		groups.group1names.length + groups.group2names.length,
-		ds.cohort?.termdb?.uiLabels?.samples || 'samples',
-		Math.min(maxSamples || Infinity, maxDESampleCutoff)
+	maxSamples?: number,
+	method?: string
+): string {
+	const total = groups.group1names.length + groups.group2names.length
+	const noun = ds.cohort?.termdb?.uiLabels?.samples || 'samples'
+	const limit = deSampleLimit(method, maxSamples)
+	if (!method || total <= limit) return sampleLimitAlert(total, noun, limit)
+	const others = Object.keys(deMethodSampleLimits).filter(m => m != method && total <= deSampleLimit(m, maxSamples))
+	return (
+		`${total} ${noun} selected exceeds the limit of ${limit} per run for ${deMethodLabel(method)}. ` +
+		(others.length
+			? `Please use ${others.map(deMethodLabel).join(' or ')}, or narrow the cohort.`
+			: 'Please narrow the cohort.')
 	)
 }
 
+const deMethodLabel = (method: string) => (method == 'wilcoxon' ? 'Wilcoxon' : method)
+
 /** The most MB that one DE run may plan for, however much memory the host has: limma, the costliest engine, on the 500
- * samples that a DE run may compare (maxDESampleCutoff in #shared), on ASH's 17,928 genes (≈ 2150 MB). A file with more
- * genes allows fewer samples, e.g. ~158 for limma on ~59,400 genes. */
+ * samples that it may compare (deMethodSampleLimits in #shared), on ASH's 17,928 genes (≈ 2150 MB). A file with more
+ * genes allows fewer samples, e.g. ~158 for limma on ~59,400 genes. Wilcoxon, limited to 3,000 samples, needs
+ * ~1,933 MB there at most. */
 export const DE_MAX_MB = 2200
 
 /** Peak memory of one DE run by engine, per cell of the samples x genes counts matrix it reads. Measured on ASH (17,928
