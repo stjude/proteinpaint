@@ -1,35 +1,36 @@
-import { type AggregateMatrix, validatePlotConfig } from '../AggregateMatrix.ts'
+import { type AggregateMatrix, validatePlotConfig, wrapBareTerms } from '../AggregateMatrix.ts'
 import type { AppApi } from '#rx'
 
 export class AggMatrixModel {
-    ag: AggregateMatrix
-    app: AppApi
+	ag: AggregateMatrix
+	app: AppApi
 
-    constructor(ag: AggregateMatrix) {
-        this.ag = ag
-        this.app = ag.app
-    }
+	constructor(ag: AggregateMatrix) {
+		this.ag = ag
+		this.app = ag.app
+	}
 
-    async getData() {
-        const state = this.ag.state
-        const config = structuredClone(state.config)
-        
-        validatePlotConfig(config)
+	async getData() {
+		const state = this.ag.state
+		const config = structuredClone(state.config)
 
-        const settings = config.settings.aggregateMatrix || {}
+		wrapBareTerms(config)
+		validatePlotConfig(config)
 
-        const body = {
-            rows: config.rows,
-            columns: config.columns,
-            gradientMethod: settings.gradientMethod,
-            sizeMethod: settings.sizeMethod,
-            minDotSize: settings.minDotSize,
-            maxDotSize: settings.maxDotSize,
-            filter: state.termfilter.filter,
-            filter0: state.termfilter.filter0,
-            signal: this.ag.api?.getAbortSignal()
-        }
+		const settings = config.settings.aggregateMatrix || {}
 
-        return await this.app.vocabApi.getAggregateMatrixData(body)
-    }
+		const body = {
+			rows: config.rows,
+			columns: config.columns,
+			gradientMethod: settings.gradientMethod,
+			sizeMethod: settings.sizeMethod,
+			minDotSize: settings.minDotSize,
+			maxDotSize: settings.maxDotSize,
+			filter: state.termfilter.filter,
+			filter0: state.termfilter.filter0,
+			signal: this.ag.api?.getAbortSignal()
+		}
+
+		return await this.app.vocabApi.getAggregateMatrixData(body)
+	}
 }
