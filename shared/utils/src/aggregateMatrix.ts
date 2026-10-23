@@ -1,10 +1,29 @@
-import { CATEGORICAL, FLOAT, GENE_EXPRESSION, GENE_VARIANT, INTEGER, PSEUDOBULK, SSGSEA } from '#types'
+import {
+	CATEGORICAL,
+	DNA_METHYLATION,
+	FLOAT,
+	GENE_EXPRESSION,
+	GENE_VARIANT,
+	INTEGER,
+	ISOFORM_EXPRESSION,
+	PSEUDOBULK,
+	SSGSEA
+} from '#types'
 import { isNonDictionaryType } from './terms.js'
 
 /** Term types that can be rows or columns of the aggregate matrix.
  * Every type here is exercised, as both a row and a column, by
  * server/src/test/aggregateMatrix.request.integration.spec.ts. Add a type here only with a test for it. */
-export const AGG_MATRIX_TERM_TYPES: string[] = [CATEGORICAL, INTEGER, FLOAT, GENE_EXPRESSION, SSGSEA, GENE_VARIANT]
+export const AGG_MATRIX_TERM_TYPES: string[] = [
+	CATEGORICAL,
+	INTEGER,
+	FLOAT,
+	GENE_EXPRESSION,
+	ISOFORM_EXPRESSION,
+	SSGSEA,
+	DNA_METHYLATION,
+	GENE_VARIANT
+]
 
 /** Term types accepted for rows. */
 export const AGG_MATRIX_ROW_TYPES: string[] = AGG_MATRIX_TERM_TYPES
@@ -14,6 +33,33 @@ export const AGG_MATRIX_ROW_TYPES: string[] = AGG_MATRIX_TERM_TYPES
 export const AGG_MATRIX_COLUMN_TYPES: string[] = [...AGG_MATRIX_TERM_TYPES, PSEUDOBULK]
 
 type AxisName = 'rows' | 'columns'
+
+/** Identifier of one non-dictionary term, which is one row or column of the matrix.
+ *
+ * Uses .gene, .id, or .name. A geneVariant term may have only .genes[], so its identifier is built from
+ * the gene (or the name or coordinates of a region) of each entry, joined by a comma.
+ * Returns undefined when the term has nothing to identify it. */
+export function getAggMatrixTermId(term: any): string | undefined {
+	const id = term?.gene || term?.id || term?.name
+	if (id) return String(id)
+	if (!Array.isArray(term?.genes) || !term.genes.length) return
+	const ids = term.genes.map(getGeneEntryId)
+	if (ids.some(id => !id)) return
+	return ids.join(',')
+}
+
+/** Label of one non-dictionary term. A term without a .name is labeled by its identifier. */
+export function getAggMatrixTermLabel(term: any): string | undefined {
+	return term?.name || getAggMatrixTermId(term)
+}
+
+function getGeneEntryId(entry: any): string | undefined {
+	const id = entry?.gene || entry?.name || entry?.id
+	if (id) return String(id)
+	if (entry?.chr && Number.isFinite(entry.start) && Number.isFinite(entry.stop)) {
+		return `${entry.chr}:${entry.start}-${entry.stop}`
+	}
+}
 
 /** Validate one axis of the aggregate matrix, that is, a map of section names to term wrappers.
  *
@@ -44,8 +90,10 @@ export function validateAggMatrixAxis(axis: any, name: AxisName, allowEmpty = fa
 		if (!allowedTypes.includes(termType)) {
 			throw new Error(`${name} section '${section}' has unsupported term type '${termType}'`)
 		}
-		if (!isNonDictionaryType(termType) && terms.length != 1) {
-			throw new Error(`${name} dictionary section '${section}' must contain one term`)
+		if (!isNonDictionaryType(termType)) {
+			if (terms.length != 1) throw new Error(`${name} dictionary section '${section}' must contain one term`)
+		} else if (terms.some(tw => !getAggMatrixTermId(tw.term))) {
+			throw new Error(`${name} section '${section}' has a ${termType} term without an identifier`)
 		}
 	}
 }
