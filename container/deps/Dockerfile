@@ -129,7 +129,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpython3.13 \
     r-base-core \
   && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/* && \
+  # r-base-core pulls in LaTeX (texmf) and Tcl/Tk, which the app does not use: no PDF package docs are
+  # built, and no R package here loads tcltk
+  rm -rf /usr/share/texmf /usr/share/tcltk /usr/lib/x86_64-linux-gnu/libtcl8.6.so* /usr/lib/x86_64-linux-gnu/libtk8.6.so* \
+    /usr/lib/R/library/tcltk && \
+  # this stage's own r-base-core install, independent of the rlib stage's: ppruntime copies rlib's
+  # /usr/lib/R/library over this one, which does not delete a path only present here, such as this doc/help/html
+  find /usr/lib/R/library -maxdepth 2 -type d \( -iname 'doc' -o -iname 'help' -o -iname 'html' \) -exec rm -rf {} + && \
+  # interactive-shell tab-completion scripts, unused in a non-interactive server container
+  rm -rf /usr/share/bash-completion /etc/bash_completion.d /etc/bash_completion && \
+  # lsblk and zip are unused standalone tools; the hdf5-tools companions below are unused, see the
+  # h5dump check above. sqv (apt's GPG verification backend) stays: a later apt-get upgrade in this
+  # stage still needs it, see removeTools.sh, which removes it once apt itself is gone for good
+  rm -f /usr/bin/lsblk /usr/bin/zip /usr/bin/h5diff /usr/bin/h5repack /usr/bin/h5import \
+    /usr/bin/h5ls /usr/bin/h5perf_serial /usr/bin/h5stat /usr/bin/h5watch /usr/bin/h5copy /usr/bin/h5unjam
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
@@ -174,7 +188,9 @@ RUN echo 'options(repos = c(CRAN = Sys.getenv("PP_CRAN_REPO")), Ncpus = parallel
 COPY ./R/utils ./R/utils
 RUN MAKEFLAGS="-j$(nproc)" Rscript R/utils/install.pkgs.R && \
     rm -rf /tmp/downloaded_packages/ /tmp/*.rds && \
-    find /usr/local/lib/R/site-library /usr/lib/R/library -maxdepth 2 -type d \( -iname 'doc' -o -iname 'help' -o -iname 'html' \) -exec rm -rf {} +
+    find /usr/local/lib/R/site-library /usr/lib/R/library -maxdepth 2 -type d \( -iname 'doc' -o -iname 'help' -o -iname 'html' \) -exec rm -rf {} + && \
+    # the tcltk R package, which the app does not use, see the osruntime stage
+    rm -rf /usr/lib/R/library/tcltk
 
 FROM os AS py
 
