@@ -9,8 +9,11 @@ let python = 'python3'
 // This should be called at the beginning of the server runtime code,
 // so that the same binpath will be reused throughoutt the server lifetime.
 // TODO: may limit the reset to once?
+// A missing binpath does not stop the server, since python is optional: it is still used instead of the default,
+// which may be another python without the required packages, so that a run_python() call fails and tells the binpath.
 export function setPythonBinPath(binpath) {
-	if (!fs.existsSync(binpath)) throw `invalid python binpath='${binpath}'`
+	if (!fs.existsSync(binpath))
+		console.warn(`WARNING: python binpath='${binpath}' does not exist, requests that need python will fail`)
 	python = binpath
 }
 

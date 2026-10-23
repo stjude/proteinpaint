@@ -206,7 +206,8 @@ export function runproteinpaint(arg) {
 	return response
 		.then(async data => {
 			if (data.error) throw { message: 'Cannot get genomes: ' + data.error }
-			if (!data.genomes) throw { message: 'no genome data!?' }
+			if (!data.genomes)
+				throw { message: 'The selected analysis tool is currently unavailable. Please try again later.' }
 			if (data.debugmode) app.debugmode = true
 
 			if (data.base_zindex) {

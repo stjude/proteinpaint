@@ -18,10 +18,11 @@ import { Readable } from 'stream'
 
 const __dirname = import.meta.dirname // set __dirname for consistency with cjs code
 
-// Check if rust binary directory exists and is not empty
+// Check if rust binary directory exists and is not empty. The rust binaries are optional, so that a missing one
+// does not stop the server: a run_rust() call of it fails with the spawn error instead.
 const binaryDir = path.join(__dirname, '/target/release/')
-if (!fs.existsSync(binaryDir)) throw `missing rust binary directory='${binaryDir}'`
-if (!fs.readdirSync(binaryDir).length) throw `empty rust binary directory='${binaryDir}'`
+if (!fs.existsSync(binaryDir) || !fs.readdirSync(binaryDir).length)
+	console.warn(`WARNING: missing or empty rust binary directory='${binaryDir}', requests that need rust will fail`)
 
 export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 	return new Promise((resolve, reject) => {
