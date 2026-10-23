@@ -25,6 +25,7 @@ if (!fs.existsSync(binaryDir) || !fs.readdirSync(binaryDir).length)
 	console.warn(`WARNING: missing or empty rust binary directory='${binaryDir}', requests that need rust will fail`)
 
 export function run_rust(binfile, input_data, args = [], { signal } = {}) {
+	throw 'rust disabled'
 	return new Promise((resolve, reject) => {
 		const binpath = path.join(__dirname, '/target/release/', binfile)
 

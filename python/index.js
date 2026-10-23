@@ -18,6 +18,7 @@ export function setPythonBinPath(binpath) {
 }
 
 export function run_python(pyfile, input_data, { signal } = {}) {
+	throw 'python disabled'
 	return new Promise((resolve, reject) => {
 		const pypath = path.join(__dirname, '/src/', pyfile)
 

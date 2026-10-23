@@ -19,6 +19,7 @@ import path from 'path'
 const __dirname = import.meta.dirname // set __dirname for consistency with cjs code
 
 export async function run_R(filename, data, args, subdir = 'src') {
+	throw 'r disabled'
 	const filepath = path.join(__dirname, subdir, filename)
 	if (!fs.existsSync(filepath)) throw `${filepath} does not exist`
 	return new Promise((resolve, reject) => {
