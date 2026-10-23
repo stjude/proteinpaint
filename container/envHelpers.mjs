@@ -9,6 +9,8 @@
 	   directory, the node install, the OS temp dir, and ./serverconfig.json entries, so that
 	   a path traversal bug in a server route cannot read or write files outside of those paths.
 	   Additional paths may be set as colon-separated PP_ALLOW_FS_READ and PP_ALLOW_FS_WRITE values.
+	   Child processes and worker threads are allowed, and WASI is denied, unless PP_ALLOW_CHILD_PROCESS,
+	   PP_ALLOW_WORKER or PP_ALLOW_WASI is set to 'true' or 'false', such as in an image without spawned tools.
 
 	2. does not need read access to any credentials file: each <NAME>_CREDS env variable is set
 	   to the content of the file named by the corresponding <NAME>_CREDS_FILE env variable, e.g.
@@ -183,9 +185,14 @@ export function getNodeConfig(ctx) {
 			permission: true,
 			'allow-fs-read': removeCoveredPaths(read),
 			'allow-fs-write': removeCoveredPaths(write),
-			// needed for tsx, esbuild, rust/python/R and other tools, but these are not restricted by the permission model
-			'allow-child-process': true,
-			'allow-worker': true,
+			// needed for tsx, esbuild, rust/python/R and other tools, but these are not restricted by the permission model;
+			// an image without those tools, which runs the rust wasm modules in-process instead, sets PP_ALLOW_CHILD_PROCESS=false,
+			// PP_ALLOW_WORKER=false and PP_ALLOW_WASI=true, see rust/index.js
+			'allow-child-process': getAllowValue('PP_ALLOW_CHILD_PROCESS', true, ctx),
+			'allow-worker': getAllowValue('PP_ALLOW_WORKER', true, ctx),
+			// the rust wasm modules, which get no preopened dir, since a WASI file access is not restricted by the
+			// permission model
+			'allow-wasi': getAllowValue('PP_ALLOW_WASI', false, ctx),
 			// needed for native modules such as sqlite, which are also not restricted by the permission model
 			'allow-addons': true
 		}
@@ -379,6 +386,14 @@ function isMainModule() {
 // so that an explicitly empty env variable, such as PP_ALLOW_FS_READ='', overrides a .env value
 function getEnvValue(name, ctx) {
 	return (name in ctx.env ? ctx.env[name] : ctx.dotenv[name]) ?? ''
+}
+
+// an empty or absent value is the default; an unknown value, such as a typo of false, must not silently allow the permission
+function getAllowValue(name, defaultValue, ctx) {
+	const value = getEnvValue(name, ctx)
+	if (value == '') return defaultValue
+	if (value == 'true' || value == 'false') return value == 'true'
+	throw `invalid ${name}='${value}', must be 'true', 'false' or empty`
 }
 
 function addPath(set, p, ctx) {

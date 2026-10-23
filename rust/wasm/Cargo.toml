@@ -1,0 +1,42 @@
+# the rust binaries that are built for wasm32-wasip1, from the same source files as ../Cargo.toml, with only
+# the dependencies that they use, since some dependencies of the main package, such as hdf5, do not build for wasm
+#
+# r_mathlib compiles C code, which needs clang, llvm-ar and a WASI libc, such as on Debian trixie, where the ppgdc
+# image builds these modules from the published package:
+#
+# apt-get install clang llvm wasi-libc && rustup target add wasm32-wasip1
+# cd rust/wasm && AR_wasm32_wasip1=llvm-ar CC_wasm32_wasip1=clang \
+#   BINDGEN_EXTRA_CLANG_ARGS_wasm32_wasip1="--target=wasm32-wasip1 --sysroot=/usr -fvisibility=default" \
+#   cargo build --locked --release --target wasm32-wasip1
+#
+# -fvisibility=default is needed since clang hides the functions of a wasm target by default, which bindgen skips.
+# The macOS ar writes an archive index that the wasm linker cannot read, so a module would import the C functions,
+# such as pwilcox, instead of including them, and fail to instantiate: use llvm-ar, such as from `brew install llvm`.
+# The modules are in ../target/wasm, see .cargo/config.toml. run_rust() in ../index.js runs a module in the node
+# process, with node:wasi, when the node permission model does not allow a child process. A module must only use
+# stdin, stdout and stderr: it gets no preopened dir, since a WASI file access is not checked by the permission model.
+[package]
+name = "PP_rust_wasm"
+version = "0.1.0"
+edition = "2018"
+autobins = false
+
+[dependencies]
+fishers_exact = "^1.0.1"
+json = "^0.12.4"
+r_mathlib = "^0.2.0"
+serde = { version = "^1.0.147", features = ["derive"] }
+serde_json = "^1.0.142"
+statrs = "^0.16.0"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+
+[[bin]]
+name = "fisher"
+path = "../src/fisher.rs"
+
+[[bin]]
+name = "wilcoxon"
+path = "../src/wilcoxon.rs"
