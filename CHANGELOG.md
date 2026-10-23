@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Updated memory measurement tool to support custom memory fractions
+- Allow memory measurement tool to simply report avaialble and used memory
+
 
 ## 2.223.0
 

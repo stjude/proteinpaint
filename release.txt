@@ -1,4 +1,1 @@
 
-Features
-- Updated memory measurement tool to support custom memory fractions
-- Allow memory measurement tool to simply report avaialble and used memory
