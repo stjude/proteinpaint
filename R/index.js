@@ -27,6 +27,14 @@ export async function run_R(filename, data, args, subdir = 'src') {
 		// spawn R child process
 		// --vanilla: use only the R installation defaults, not user or site startup files
 		const sp = spawn('Rscript', ['--vanilla', filepath, ...(args || [])])
+		// R may exit before it reads all of its input, such as when a library cannot be loaded, and the write to
+		// the closed pipe then emits an error on sp.stdin, which would exit the node process if not listened to.
+		// It is recorded and not rejected here, since sp.on('close') follows with the exit code and stderr of R,
+		// which tell the actual cause.
+		let stdinError
+		sp.stdin.on('error', err => {
+			stdinError = err
+		})
 		if (data) {
 			// stream input data into R
 			try {
@@ -63,6 +71,10 @@ export async function run_R(filename, data, args, subdir = 'src') {
 				// handle R stderr
 				const errmsg = `R process emitted standard error\nR stderr: ${stderr}`
 				reject(errmsg)
+			}
+			if (stdinError) {
+				// R exited without an error but did not read all of its input, so its output is not a valid result
+				reject(`R process did not read all of its input: ${stdinError.message || stdinError}`)
 			}
 			// return standard out from R
 			resolve(stdout)

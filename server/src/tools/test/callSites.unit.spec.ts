@@ -340,16 +340,22 @@ tape('checkDependenciesAndVersions()', async test => {
 	standIns.prependPath()
 	try {
 		await withConfig('bcftools', bcftools, async () => {
-			await checkDependenciesAndVersions(serverconfig)
+			const deps = await checkDependenciesAndVersions(serverconfig)
 			test.deepEqual(standIns.calls('bcftools'), [['-v']], 'should run bcftools -v')
+			test.deepEqual(deps, { R: true, bcftools: true }, 'should find R and bcftools usable')
 		})
 		await withConfig('bcftools', oldBcftools, async () => {
-			try {
-				await checkDependenciesAndVersions(serverconfig)
-				test.fail('should reject a bcftools version that is too old')
-			} catch (e) {
-				test.match(String(e), /bcftools not >= 1\.10/, 'should reject a bcftools version that is too old')
-			}
+			const deps = await checkDependenciesAndVersions(serverconfig)
+			test.equal(deps.bcftools, false, 'should not throw and find a bcftools version that is too old not usable')
+		})
+		await withConfig('bcftools', path.join(standIns.dir, 'missing-bcftools'), async () => {
+			const deps = await checkDependenciesAndVersions(serverconfig)
+			test.equal(deps.bcftools, false, 'should not throw and find a missing bcftools not usable')
+		})
+		standIns.add('Rscript', `echo 'there is no package called jsonlite' >&2; exit 1`)
+		await withConfig('bcftools', bcftools, async () => {
+			const deps = await checkDependenciesAndVersions(serverconfig)
+			test.deepEqual(deps, { R: false, bcftools: true }, 'should not throw and find R that fails its check not usable')
 		})
 	} finally {
 		standIns.restorePath()
