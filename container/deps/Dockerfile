@@ -8,7 +8,7 @@ ARG registry=docker.io/library
 # are applied on top of the cached layers instead, in the ppbase `apt-get upgrade` step. Bump the digests
 # deliberately, which rebuilds every stage, see "Updating the base images" in deps/README.md.
 ARG DEBIAN_IMAGE=debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f
-ARG NODE_IMAGE=node:24.22.0-trixie-slim@sha256:7f486cabe892bff8fef04c0f7da8dba84a560be3e4e2740b7a86afc57ebec315
+ARG NODE_IMAGE=node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea
 
 # the node install is copied from the official image into ppbase, which must be on the same Debian release
 FROM ${registry}/${NODE_IMAGE} AS node

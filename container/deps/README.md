@@ -137,7 +137,7 @@ digests periodically, such as monthly, or for a node version change, which rebui
 
 ```bash
 docker buildx imagetools inspect debian:trixie-slim --format '{{json .Manifest.Digest}}'
-docker buildx imagetools inspect node:24.22.0-trixie-slim --format '{{json .Manifest.Digest}}'
+docker buildx imagetools inspect node:24.22.1-trixie-slim --format '{{json .Manifest.Digest}}'
 ```
 
 The `node` image must be on the same Debian release as the `debian` image. A move to the next Debian
