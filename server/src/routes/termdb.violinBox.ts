@@ -14,7 +14,6 @@ import type {
 import type { ReqQueryAddons } from '../../routes/types.ts'
 import { scaleLinear, scaleLog } from 'd3'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { run_R } from '@sjcrh/proteinpaint-r'
 import { getData } from '../termdb.matrix.js'
 import { makeCanvas, canvasToURL } from '#src/canvas.ts'
 import { getOrderedLabels } from '../termdb.barchart.js'
@@ -23,6 +22,7 @@ import { isNumericTerm, isNumericTw } from '#shared/terms.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { mayLog } from '#src/helpers.ts'
+import { kernelDensity } from '#src/utils/density.ts'
 
 export const payload: RoutePayload = {
 	init,
@@ -416,12 +416,9 @@ export async function getDensities(
 		transformedPlot2Values = plot2Values
 	}
 
-	const plot2Density: any = JSON.parse(
-		await run_R('density.R', JSON.stringify({ plot2Values: transformedPlot2Values }))
-	)
 	const densities = {}
-	for (const plot in plot2Density) {
-		const result: { x: number[]; y: number[] } = plot2Density[plot]
+	for (const plot in transformedPlot2Values) {
+		const result = kernelDensity(transformedPlot2Values[plot])
 		const bins: any = []
 		let densityMin = Infinity
 		let densityMax = -Infinity
