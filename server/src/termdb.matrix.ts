@@ -471,7 +471,12 @@ async function getSampleData(q, ds) {
 
 	// determine the sample type
 	let sampleType
-	if (
+	if (processedSingleCellTerm === true) {
+		// work around for single cell cases
+		// TODO: may support single cell as another
+		// sample type in ds.cohort.termdb.sampleTypes
+		sampleType = { name: 'cell', plural_name: 'cells' }
+	} else if (
 		q.terms.some(tw => tw.term.sampleTypeLabel != null) &&
 		q.sampleTypes?.every(st => Number.isInteger(ds.cohort.termdb.sampleTypes[st].parent_id))
 	) {
@@ -491,11 +496,6 @@ async function getSampleData(q, ds) {
 			name: names.join(' / '),
 			plural_name: plural_names.join(' / ')
 		}
-	} else if (processedSingleCellTerm === true) {
-		// work around for single cell cases
-		// TODO: may support single cell as another
-		// sample type in ds.cohort.termdb.sampleTypes
-		sampleType = { name: 'cell', plural_name: 'cells' }
 	} else {
 		// determine sample type based on the returned samples
 		const sids = Object.keys(samples)
