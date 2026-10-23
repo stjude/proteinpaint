@@ -7,7 +7,9 @@ export const maxSampleCutoff = 4000
 
 /** The most samples that one differential expression run may compare, by any method. A dataset may set a lower limit
  * (queries.rnaseqGeneCount.maxSamples), not a higher one. At 500 samples, the R methods need ~2.2 GB on ASH. */
-export const maxDESampleCutoff = 500
+// Update (10-23-2026): increasing to 1000 samples to allow for
+// DE analysis in MMRF
+export const maxDESampleCutoff = 1000
 
 /** The alert for a run of `total` samples over `limit`, or '' when it is within it. `limit` is maxSampleCutoff, or
  * the limit of the analysis or the dataset; `noun` is the dataset's label for samples, e.g. 'cases'. */
