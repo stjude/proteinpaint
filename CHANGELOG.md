@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - Updated memory measurement tool to support custom memory fractions
 - Allow memory measurement tool to simply report avaialble and used memory
+- The violin plot and the numeric term summary of mds3 track samples compute the density curve in the server process instead of starting an R process for each request
 
 
 ## 2.223.0
