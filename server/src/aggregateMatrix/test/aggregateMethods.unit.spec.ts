@@ -29,6 +29,15 @@ function getDs() {
 	}
 }
 
+/**************
+ test sections
+***************/
+
+tape('\n', test => {
+	test.comment('-***- src/aggregateMatrix/aggregateMethods -***-')
+	test.end()
+})
+
 tape('aggregate method availability follows dataset data and term kind', test => {
 	const ds: any = getDs()
 	initAggregateMethods(ds)
