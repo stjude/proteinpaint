@@ -13,7 +13,10 @@ import serverconfig from '#src/serverconfig.js'
 const readTabixLines: any = utils.readTabixLines
 
 const payload: RoutePayload = {
-	init,
+	// not set up when disabled by serverconfig.features.disableFeature_junctionOnesampletk
+	get init() {
+		return serverconfig.features.disableFeature_junctionOnesampletk ? null : init
+	},
 	request: { typeId: 'TermdbJunctionOneSampleTkRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'TermdbJunctionOneSampleTkResponse' }
 }
