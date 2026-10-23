@@ -7,7 +7,7 @@ set -euo pipefail
 ###############
 
 USAGE="Usage:
-	./build2.sh [-z] [-a] [-v] [-i] [-r] [-b] [-c] [subdir]
+	./build2.sh [-z] [-a] [-k] [-v] [-i] [-r] [-b] [-c] [subdir]
 	
 	subdir: 'server' | 'full', the subdirectory to build
 
@@ -18,6 +18,8 @@ USAGE="Usage:
 			 Implies -z, and always packs new tarballs, with the linux/arm64 rust binaries from the -v volume,
 			 since the image build can neither download nor compile them. Afterwards, also when the build fails,
 			 restores tmppack, server/package.json and full/package.json to their content before the pack
+	-k KEEPSJCRH: with -z or -a, keep the @sjcrh packages and lockfile of the base image, as in a release build,
+			 instead of reinstalling them from the tarballs, see REINSTALL_SJCRH in the Dockerfile
 	-v RUST_VOLUME: the docker volume with the linux/arm64 rust binaries in release/, for -a; defaults to
 			 sjpp-dev_rust-target, which the sjpp dev container builds
 	-i BASE_IMAGE: the deps image to build on, instead of the published ghcr.io/stjude/pp<subdir> image of
@@ -39,16 +41,20 @@ PKGPATH=""
 ARM64=""
 BASE_IMAGE=""
 RUST_VOLUME=sjpp-dev_rust-target
+KEEPSJCRH=""
 
 #################
 # PROCESSED ARGS
 #################
 
-while getopts "zav:i:r:b:c:h" opt; do
+while getopts "zakv:i:r:b:c:h" opt; do
 	case "${opt}" in
 	a)
 		ARM64=1
 		PKGPATH=/home/root/pp/tmppack
+		;;
+	k)
+		KEEPSJCRH=1
 		;;
 	v)
 		RUST_VOLUME=${OPTARG}
@@ -236,11 +242,17 @@ if [[ "$BASE_IMAGE" != "" ]]; then
 	BASEARG=(--build-arg "BASE_IMAGE=$BASE_IMAGE")
 fi
 
+# the tarballs may have the same path and version as the base image packages, but changed code
+REINSTALLARG=()
+if [[ "$PKGPATH" != "" && "$KEEPSJCRH" == "" ]]; then
+	REINSTALLARG=(--build-arg REINSTALL_SJCRH=1)
+fi
+
 echo "building $IMGNAME image"
 
 docker buildx build . \
 	--file ./$SUBDIR/Dockerfile \
-	"${TAGS[@]}" ${BASEARG[@]+"${BASEARG[@]}"} $PLATFORM \
+	"${TAGS[@]}" ${BASEARG[@]+"${BASEARG[@]}"} ${REINSTALLARG[@]+"${REINSTALLARG[@]}"} $PLATFORM \
 	--build-arg IMGVER=$IMGVER \
 	--build-arg IMGREV=$IMGREV \
 	--build-arg CROSSENV="$CROSSENV" $BUILDARGS \

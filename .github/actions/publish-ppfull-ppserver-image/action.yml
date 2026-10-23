@@ -66,16 +66,17 @@ runs:
         git fetch --tags --quiet origin $TAG # always use tagged commit for build 
         git checkout $TAG
 
-        # the images install the workspace tarballs from container/tmppack, instead of from the npm registry
+        # the images install the workspace tarballs from container/tmppack, instead of from the npm registry;
+        # -k keeps the base image @sjcrh packages and lockfile, since the release bumped the version of each changed workspace
         npm ci
         cd container;
         ./pack.sh
-        ./build2.sh -z -r "ghcr.io/stjude/" server;
+        ./build2.sh -z -k -r "ghcr.io/stjude/" server;
         TAG="$(node -p "require('./server/package.json').version")";
         HASH="$(git rev-parse --short HEAD)";
         docker push "ghcr.io/stjude/ppserver:$TAG-$HASH";
         
-        ./build2.sh -z -r "ghcr.io/stjude/" full;
+        ./build2.sh -z -k -r "ghcr.io/stjude/" full;
         TAG="$(node -p "require('./full/package.json').version")";
         docker push "ghcr.io/stjude/ppfull:$TAG-$HASH";
 
