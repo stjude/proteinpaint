@@ -2,6 +2,8 @@ import tape from 'tape'
 import {
 	AGG_MATRIX_COLUMN_TYPES,
 	AGG_MATRIX_ROW_TYPES,
+	getAggMatrixTermId,
+	getAggMatrixTermLabel,
 	validateAggMatrixAxes,
 	validateAggMatrixAxis
 } from '../aggregateMatrix.js'
@@ -11,6 +13,7 @@ import {
    - validateAggMatrixAxis(): accepted sections
    - validateAggMatrixAxis(): rejected axes and sections
    - validateAggMatrixAxes(): combinations of rows and columns
+getAggMatrixTermId() and getAggMatrixTermLabel()
 */
 
 const tw = (type: string, id = type) => ({ term: { id, name: id, type } })
@@ -37,7 +40,16 @@ tape('\n', test => {
 })
 
 tape('accepted term types', test => {
-	for (const type of ['categorical', 'integer', 'float', 'geneExpression', 'ssGSEA', 'geneVariant']) {
+	for (const type of [
+		'categorical',
+		'integer',
+		'float',
+		'geneExpression',
+		'isoformExpression',
+		'ssGSEA',
+		'dnaMethylation',
+		'geneVariant'
+	]) {
 		test.ok(AGG_MATRIX_ROW_TYPES.includes(type), `${type} should be an accepted row type`)
 		test.ok(AGG_MATRIX_COLUMN_TYPES.includes(type), `${type} should be an accepted column type`)
 	}
@@ -131,7 +143,15 @@ tape('validateAggMatrixAxis(): rejected axes and sections', test => {
 })
 
 tape('validateAggMatrixAxes(): combinations of rows and columns', test => {
-	const types = ['categorical', 'float', 'geneExpression', 'ssGSEA', 'geneVariant']
+	const types = [
+		'categorical',
+		'float',
+		'geneExpression',
+		'isoformExpression',
+		'ssGSEA',
+		'dnaMethylation',
+		'geneVariant'
+	]
 	for (const rowType of types) {
 		for (const columnType of types) {
 			test.equal(
@@ -166,5 +186,84 @@ tape('validateAggMatrixAxes(): combinations of rows and columns', test => {
 
 	error = message(() => validateAggMatrixAxes(undefined, { C: [tw('categorical')] }))
 	test.ok(/invalid \.rows/.test(error), `should reject missing rows: ${error}`)
+	test.end()
+})
+
+tape('getAggMatrixTermId() and getAggMatrixTermLabel()', test => {
+	const gene = (name: string) => ({ kind: 'gene', gene: name, type: 'geneVariant' })
+	const cases: [string, any, string | undefined, string | undefined][] = [
+		['a gene', { type: 'geneExpression', gene: 'TP53', name: 'TP53 FPKM' }, 'TP53', 'TP53 FPKM'],
+		[
+			'an id, without a gene or name',
+			{ type: 'ssGSEA', id: 'HALLMARK_ADIPOGENESIS' },
+			'HALLMARK_ADIPOGENESIS',
+			'HALLMARK_ADIPOGENESIS'
+		],
+		['a name only', { type: 'geneVariant', name: 'TP53' }, 'TP53', 'TP53'],
+		['a geneVariant term with one gene in genes[]', { type: 'geneVariant', genes: [gene('TP53')] }, 'TP53', 'TP53'],
+		[
+			'a geneVariant term with several genes in genes[]',
+			{ type: 'geneVariant', genes: [gene('TP53'), gene('KRAS')] },
+			'TP53,KRAS',
+			'TP53,KRAS'
+		],
+		[
+			'a geneVariant term with a named region in genes[]',
+			{
+				type: 'geneVariant',
+				genes: [{ kind: 'coord', chr: 'chr12', start: 25205246, stop: 25250936, name: 'KRASregion' }]
+			},
+			'KRASregion',
+			'KRASregion'
+		],
+		[
+			'a geneVariant term with an unnamed region in genes[]',
+			{ type: 'geneVariant', genes: [{ kind: 'coord', chr: 'chr12', start: 25205246, stop: 25250936 }] },
+			'chr12:25205246-25250936',
+			'chr12:25205246-25250936'
+		],
+		[
+			'a geneVariant term with a name, which labels genes[]',
+			{ type: 'geneVariant', name: 'Hotspots', genes: [gene('KRAS')] },
+			'Hotspots',
+			'Hotspots'
+		],
+		['a term without an identifier', { type: 'geneVariant' }, undefined, undefined],
+		['a geneVariant term with an empty genes[]', { type: 'geneVariant', genes: [] }, undefined, undefined],
+		[
+			'a geneVariant term with an unidentifiable entry in genes[]',
+			{ type: 'geneVariant', genes: [gene('TP53'), { kind: 'coord' }] },
+			undefined,
+			undefined
+		],
+		['no term', undefined, undefined, undefined]
+	]
+	for (const [name, term, id, label] of cases) {
+		test.equal(getAggMatrixTermId(term), id, `should return the id for ${name}`)
+		test.equal(getAggMatrixTermLabel(term), label, `should return the label for ${name}`)
+	}
+	test.end()
+})
+
+tape('validateAggMatrixAxis(): identifiers of non-dictionary terms', test => {
+	const geneVariantTw = (genes: any[], extra = {}) => ({ term: { type: 'geneVariant', genes, ...extra }, q: {} })
+	test.equal(
+		message(() =>
+			validateAggMatrixAxis(
+				{ A: [geneVariantTw([{ kind: 'gene', gene: 'TP53' }]), geneVariantTw([{ kind: 'gene', gene: 'KRAS' }])] },
+				'rows'
+			)
+		),
+		undefined,
+		'should accept geneVariant terms that only have genes[]'
+	)
+	for (const [name, tws] of [
+		['a geneVariant term without genes', [geneVariantTw([])]],
+		['a geneVariant gene without a name or coordinates', [geneVariantTw([{ kind: 'gene' }])]],
+		['a geneExpression term without a gene, id, or name', [{ term: { type: 'geneExpression' } }]]
+	] as [string, any[]][]) {
+		const error = message(() => validateAggMatrixAxis({ A: tws }, 'columns'))
+		test.ok(/without an identifier/.test(error), `should reject ${name}: ${error}`)
+	}
 	test.end()
 })

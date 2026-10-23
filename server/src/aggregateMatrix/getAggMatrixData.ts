@@ -8,6 +8,7 @@ import type {
 import { PSEUDOBULK } from '#types'
 import { isDictionaryType, isNumericTerm } from '#shared/terms.js'
 import { get_bin_label } from '#shared/termdb.bins.js'
+import { getAggMatrixTermId, getAggMatrixTermLabel } from '#shared/aggregateMatrix.js'
 import { getData } from '../termdb.matrix.js'
 import { calculateAggregateMethod, calculateSampleBasedMethods } from './aggregateMethods.ts'
 
@@ -219,8 +220,9 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 	const entries: ResolvedAxisEntry[] = []
 	for (const source of sources) {
 		if (!source.expand) {
-			const id = source.tw.term.gene || source.tw.term.id || source.tw.term.name
-			entries.push({ id, label: source.tw.term.name || id, section: source.section, source })
+			const id = getAggMatrixTermId(source.tw.term)
+			if (!id) throw new Error(`${source.tw.term.type} term has no identifier`)
+			entries.push({ id, label: getAggMatrixTermLabel(source.tw.term)!, section: source.section, source })
 			continue
 		}
 		const observed = new Set<string>()
@@ -332,9 +334,9 @@ function makeRows(q: AggregateMatrixDataRequest) {
 	let longestLabel = ''
 	for (const section in q.rows) {
 		const terms = q.rows[section].map(tw => {
-			const id = tw.term?.['gene'] || tw.term.id
+			const id = getAggMatrixTermId(tw.term)
 			if (!id) throw new Error(`Row term has no identifier`)
-			const label = tw.term.name || id
+			const label = getAggMatrixTermLabel(tw.term)!
 			if (label.length > longestLabel.length) longestLabel = label
 			const row = { id, label, section, tw, queryId: `agg_row_${rows.length}` }
 			rows.push(row)

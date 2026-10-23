@@ -37,7 +37,15 @@ tape('\n', function (test) {
 
 tape('Accepted rows and columns', function (test) {
 	test.equal(message(config()), undefined, 'Should accept geneExpression rows and pseudobulk columns')
-	for (const type of ['categorical', 'float', 'geneExpression', 'ssGSEA', 'geneVariant']) {
+	for (const type of [
+		'categorical',
+		'float',
+		'geneExpression',
+		'isoformExpression',
+		'ssGSEA',
+		'dnaMethylation',
+		'geneVariant'
+	]) {
 		test.equal(
 			message(config({ rows: { A: [tw('geneVariant', 'KRAS')] }, columns: { B: [tw(type)] } })),
 			undefined,

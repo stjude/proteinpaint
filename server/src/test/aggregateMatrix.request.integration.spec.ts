@@ -36,6 +36,22 @@ const agedx = {
 }
 const ge = (gene: string) => ({ term: { type: 'geneExpression', id: gene, gene, name: gene }, q: {} })
 const ssgsea = (id: string) => ({ term: { type: 'ssGSEA', id, name: id }, q: {} })
+const isoform = (isoform: string, name: string) => ({
+	term: { type: 'isoformExpression', id: isoform, isoform, name },
+	q: {}
+})
+const methylation = (name: string, chr: string, start: number, stop: number) => ({
+	term: {
+		type: 'dnaMethylation',
+		id: `${chr}:${start}-${stop}`,
+		name,
+		chr,
+		start,
+		stop,
+		genomicFeatureType: 'promoter'
+	},
+	q: {}
+})
 const gv = (gene: string) => ({
 	term: {
 		type: 'geneVariant',
@@ -67,7 +83,25 @@ const kinds: Kind[] = [
 		count: 2,
 		numeric: true
 	},
-	{ label: 'geneVariant', axis: { Variants: [gv('KRAS'), gv('TP53')] }, count: 2, numeric: false }
+	{ label: 'geneVariant', axis: { Variants: [gv('KRAS'), gv('TP53')] }, count: 2, numeric: false },
+	{
+		label: 'isoformExpression',
+		axis: { Isoforms: [isoform('ENST00000269305', 'TP53'), isoform('ENST00000311936', 'KRAS')] },
+		count: 2,
+		numeric: true
+	},
+	{
+		label: 'dnaMethylation',
+		axis: {
+			// The TermdbTest methylation file only has probes on chr17, in the TP53 region
+			Regions: [
+				methylation('TP53 promoter', 'chr17', 7673484, 7681953),
+				methylation('TP53 3 prime', 'chr17', 7682557, 7687424)
+			]
+		},
+		count: 2,
+		numeric: true
+	}
 ]
 
 /** Term types that are valid rows. Rows are never checked against the method, only the columns are. */
@@ -147,6 +181,53 @@ tape('every row x column term type combination returns a matrix', async test => 
 			)
 		}
 	}
+	test.end()
+})
+
+tape('geneVariant terms identified only by genes[]', async test => {
+	test.timeoutAfter(30000)
+	// The shape of the geneVariant terms in client/test/testdata/data.ts: no .id, .gene, or .name on the term
+	const byGenes = (gene: any) => ({
+		term: { type: 'geneVariant', genes: [{ ...gene, type: 'geneVariant' }] },
+		q: { type: 'predefined-groupset', predefined_groupset_idx: 0, hiddenValues: {} }
+	})
+	const tp53 = byGenes({ kind: 'gene', gene: 'TP53' })
+	const krasRegion = byGenes({ kind: 'coord', chr: 'chr12', start: 25205246, stop: 25250936, name: 'KRASregion' })
+	const methods = { gradientMethod: 'percent', sizeMethod: 'count' }
+
+	let res = await post({ rows: { Genes: [tp53, krasRegion] }, columns: kinds[0].axis, ...methods })
+	test.notOk(res.error, 'should not return an error for rows that are only identified by genes[]')
+	test.deepEqual(
+		res.axesLayout?.rows.sections[0].terms,
+		[
+			{ id: 'TP53', label: 'TP53' },
+			{ id: 'KRASregion', label: 'KRASregion' }
+		],
+		'should identify rows by their gene or region name'
+	)
+	test.deepEqual(
+		res.data?.map(row => row[0].row),
+		['TP53', 'KRASregion'],
+		'should use the identifiers in the cells'
+	)
+
+	res = await post({ rows: kinds[0].axis, columns: { Genes: [tp53, krasRegion] }, ...methods })
+	test.notOk(res.error, 'should not return an error for columns that are only identified by genes[]')
+	test.deepEqual(
+		res.axesLayout?.columns.sections[0].terms.map(term => term.id),
+		['TP53', 'KRASregion'],
+		'should identify columns by their gene or region name'
+	)
+
+	res = await post({
+		rows: { Genes: [{ term: { type: 'geneVariant', genes: [{ kind: 'gene' }] }, q: {} }] },
+		columns: kinds[0].axis,
+		...methods
+	})
+	test.ok(
+		/without an identifier/.test(String(res.error)),
+		`should reject a geneVariant term that cannot be identified: ${res.error}`
+	)
 	test.end()
 })
 
@@ -247,12 +328,20 @@ tape('stop server', async test => {
 	test.end()
 })
 
-async function post(body: any) {
-	const res = await fetch(`${server.url}/termdb/aggregateMatrix`, {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ genome, dslabel, ...body }),
-		signal: AbortSignal.timeout(30000)
-	})
-	return await res.json()
+async function post(body: any, retries = 1): Promise<any> {
+	try {
+		const res = await fetch(`${server.url}/termdb/aggregateMatrix`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ genome, dslabel, ...body }),
+			signal: AbortSignal.timeout(30000)
+		})
+		return await res.json()
+	} catch (e: any) {
+		// The server may close a kept-alive connection that the client then reuses. The route only reads data,
+		// so a request that was reset before a response can be sent again.
+		if (e.cause?.code == 'ECONNRESET' && retries > 0) return post(body, retries - 1)
+		// A crashed server only shows up as a failed fetch, so include the end of its log
+		throw new Error(`${e.message} (${e.cause?.code || e.cause?.message}). Server log: ${server.getLogs().slice(-3000)}`)
+	}
 }
