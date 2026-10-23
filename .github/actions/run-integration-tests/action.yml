@@ -71,6 +71,8 @@ runs:
         context: ./container/
         file: ./container/server/Dockerfile
         tags: ppserver:latest
+        # the tarballs may have the same path and version as the base image packages, but changed code
+        build-args: REINSTALL_SJCRH=1
         platforms: linux/amd64
         outputs: type=docker
         cache-from: type=gha

@@ -13,6 +13,8 @@ FROM $BASE_IMAGE
 
 ARG IMGREV=""
 ARG IMGVER=""
+# set to reinstall the @sjcrh packages of the base image, see the npm install below
+ARG REINSTALL_SJCRH=""
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
@@ -29,12 +31,14 @@ COPY ./full/package.json  ./
 # A temporary npm cache, instead of one under HOME. npm run by root gives the installed files the owner of this dir,
 # so it is changed to root first. The files from an older base image, which the app user owns, are also changed;
 # that copies them into this layer, but finds no file to change in a base image whose app files root owns.
-# The @sjcrh packages of the base image are removed first: npm keeps an installed package whose tarball has the same
-# path and version, such as a workspace whose code changed after its last version bump. The lockfiles are also removed,
-# since they have the integrity of the base image tarballs, which then fails for a changed tarball; npm keeps the
-# installed versions of the other packages.
+# With REINSTALL_SJCRH, as set by the CI builds and the local build2.sh -z builds, the @sjcrh packages of the base image
+# are removed first: npm keeps an installed package whose tarball has the same path and version, such as a workspace
+# whose code changed after its last version bump. The lockfiles are also removed, since they have the integrity of the
+# base image tarballs, which then fails for a changed tarball; npm keeps the installed versions of the other packages.
+# The release build does not set it (build2.sh -k): its version bump gives each changed workspace a new tarball, and
+# the base image lockfile and rust binaries are kept.
 RUN chown 0:0 . && \
-    rm -rf node_modules/@sjcrh package-lock.json node_modules/.package-lock.json && \
+    if [ -n "$REINSTALL_SJCRH" ]; then rm -rf node_modules/@sjcrh package-lock.json node_modules/.package-lock.json; fi && \
     npm install --omit=dev --cache=/tmp/npm-cache && rm -rf /tmp/npm-cache && \
     find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
     find . ! -type l -perm /022 -exec chmod go-w {} +
