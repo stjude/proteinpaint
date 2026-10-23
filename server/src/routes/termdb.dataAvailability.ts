@@ -26,6 +26,7 @@ import { dt2label } from '#shared/common.js'
 import { termType2label } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { validGenomeDs } from './common.ts'
+import serverconfig from '#src/serverconfig.js'
 
 /*
 how many samples of each sample group have each kind of data of the dataset: gene expression (the
@@ -54,7 +55,10 @@ const dataTypeLabels: { [dataType in DataAvailabilityType]: string } = {
 }
 
 export const payload: RoutePayload = {
-	init,
+	// not set up when disabled by serverconfig.features.disableFeature_termdbDataAvailability
+	get init() {
+		return serverconfig.features.disableFeature_termdbDataAvailability ? null : init
+	},
 	request: { typeId: 'DataAvailabilityRequest' },
 	response: { typeId: 'DataAvailabilityResponse' }
 }
