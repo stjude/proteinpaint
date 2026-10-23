@@ -98,7 +98,7 @@ tape('admitDeRun', function (test) {
 	const smaller = 'Select a smaller cohort.'
 	const orWilcoxon = 'Select a smaller cohort, or use the Wilcoxon method, which needs less memory.'
 
-	// on ASH, 500 samples (the DE sample limit) cost ≈ 1850 MB with edgeR, ≈ 2150 with limma and ≈ 509 with wilcoxon
+	// on ASH, 500 samples cost ≈ 1850 MB with edgeR, ≈ 2150 with limma and ≈ 509 with wilcoxon
 	test.equal(check('edgeR', 250, 250, 16000), '', 'edgeR on 500 samples fits in 16 GB (the 3,072 MB default maxMB)')
 	test.ok(
 		check('edgeR', 250, 250, 1600).endsWith(orWilcoxon),
@@ -153,21 +153,21 @@ tape('deSampleLimitAlert', function (test) {
 		group2names: Array.from({ length: n2 }, (_, i) => `b${i}`)
 	})
 	const ds = { cohort: { termdb: { uiLabels: { samples: 'cases' } } } }
-	test.equal(deSampleLimitAlert(groups(250, 250), ds), '', '500 samples => within the default limit')
+	test.equal(deSampleLimitAlert(groups(500, 500), ds), '', '1000 samples => within the default limit')
 	test.match(
-		deSampleLimitAlert(groups(2930, 50), ds),
-		/^2980 cases selected exceeds the limit of 500 per run/,
-		'over 500 => alert'
+		deSampleLimitAlert(groups(501, 500), ds),
+		/^1001 cases selected exceeds the limit of 1000 per run/,
+		'over 1000 => alert'
 	)
 	test.match(
 		deSampleLimitAlert(groups(10, 11), ds, 20),
 		/exceeds the limit of 20 per run/,
-		'a ds limit below 500 => that limit'
+		'a ds limit below 1000 => that limit'
 	)
 	test.match(
-		deSampleLimitAlert(groups(300, 301), ds, 1500),
-		/exceeds the limit of 500 per run/,
-		'a ds limit above 500, as gdc sets => still 500'
+		deSampleLimitAlert(groups(501, 500), ds, 1500),
+		/exceeds the limit of 1000 per run/,
+		'a ds limit above 1000 => still 1000'
 	)
 	test.end()
 })
