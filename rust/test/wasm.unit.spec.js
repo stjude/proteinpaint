@@ -21,7 +21,8 @@ function runChecks(checks, permissionFlags = ['--allow-wasi']) {
 		import { run_rust } from ${JSON.stringify(path.join(rustDir, 'index.js'))}
 		${checks}
 		console.log('checks passed')`
-	const args = ['--permission', `--allow-fs-read=${rustDir}`, `--allow-fs-read=${tmpdir}`, `--allow-fs-write=${tmpdir}`]
+	// no write path, since a module's stdin, stdout and stderr are in memory
+	const args = ['--permission', `--allow-fs-read=${rustDir}`, `--allow-fs-read=${tmpdir}`]
 	return spawnSync(process.execPath, [...args, ...permissionFlags, '--input-type=module', '-e', code], {
 		encoding: 'utf8',
 		env: { ...process.env, TMPDIR: tmpdir }
