@@ -22,6 +22,7 @@ edition = "2018"
 autobins = false
 
 [dependencies]
+bio = "1.5.0"
 fishers_exact = "^1.0.1"
 json = "^0.12.4"
 r_mathlib = "^0.2.0"
@@ -40,3 +41,15 @@ path = "../src/fisher.rs"
 [[bin]]
 name = "wilcoxon"
 path = "../src/wilcoxon.rs"
+
+[[bin]]
+name = "indel"
+path = "../src/indel.rs"
+
+[[bin]]
+name = "align"
+path = "../src/align.rs"
+
+[[bin]]
+name = "sv"
+path = "../src/sv.rs"
