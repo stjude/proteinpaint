@@ -64,6 +64,33 @@ test('container: tp and cache dirs are fixed, and serverconfig.json is not writa
 	assert.deepEqual(opts['allow-fs-write'].toSorted(), ['/home/root/pp/cache', '/home/root/pp/tp_write', '/tmp/user'])
 })
 
+test('features.disableFileCache: only the PP_ALLOW_FS_WRITE paths are writable, and the cache dir is still readable', () => {
+	for (const PP_MODE of ['', 'container-prod']) {
+		const ctx = fakeContext({
+			env: { PP_MODE },
+			files: {
+				'/app/serverconfig.json': JSON.stringify({ cachedir: '/data/cache', features: { disableFileCache: true } })
+			}
+		})
+		const opts = getNodeConfig(ctx).nodeOptions
+		assert.deepEqual(opts['allow-fs-write'], [], PP_MODE)
+		assert.ok(opts['allow-fs-read'].includes('/tmp/user'), PP_MODE)
+		assert.ok(opts['allow-fs-read'].includes(PP_MODE ? '/home/root/pp' : '/data/cache'), PP_MODE)
+	}
+	const ctx = fakeContext({
+		env: { PP_ALLOW_FS_WRITE: '/w1' },
+		files: { '/app/serverconfig.json': JSON.stringify({ features: { disableFileCache: true } }) }
+	})
+	assert.deepEqual(getNodeConfig(ctx).nodeOptions['allow-fs-write'], ['/w1'])
+	// only a true value, which server/src/serverconfig.js also requires, disables the write paths
+	const ctx2 = fakeContext({
+		files: {
+			'/app/serverconfig.json': JSON.stringify({ cachedir: '/data/cache', features: { disableFileCache: 'false' } })
+		}
+	})
+	assert.ok(getNodeConfig(ctx2).nodeOptions['allow-fs-write'].includes('/data/cache'))
+})
+
 test('container: a dir is listed before, and not after, its allowed subpaths', () => {
 	// the permission model denies access to /home/root/pp itself when /home/root/pp/app/active is listed first
 	const ctx = fakeContext({ env: { PP_MODE: 'container-prod' }, cwd: '/home/root/pp/app/active' })

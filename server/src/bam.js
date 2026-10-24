@@ -14,6 +14,7 @@ import { basecolor, bplen } from '#shared/common.js'
 import { gdcCheckPermission, getGdcFileUrl, validateGdcFileUUID } from './bam.gdc.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { depthExcludedFlags, isBamTruncated, RegionDepth, scanBamRecords, samLine } from './bamFile.ts'
+import { isCacheSubdirDisabled } from './CacheManager.ts'
 
 /*
 XXX quick fix to be removed/disabled later
@@ -279,6 +280,8 @@ export default function (genomes) {
 	return async (req, res) => {
 		try {
 			if (req.query.gdcFileUUID) {
+				// a gdc bam slice is written to cachedir_bam before it is read, so no slicing request is accepted
+				if (gdcBamSliceDisabled) throw 'This server does not support bam slicing.'
 				validateGdcFileUUID(req.query.gdcFileUUID)
 				/****************************
 				!!! always make an api query to verify access to prevent unauthorized access !!!
@@ -3626,6 +3629,8 @@ async function streamGdcBam2response(req, res) {
 
 // created by CacheManager at server launch
 const cachedir_bam = path.join(serverconfig.cachedir, 'bam')
+// with features.disableFileCache, or a zero maxAge or maxSize for the bam cache subdir in features.cacheMonitor
+const gdcBamSliceDisabled = isCacheSubdirDisabled(serverconfig.features, 'bam')
 
 /* returns the url string of the gdc slicing api for a file uuid and a region "chr:start-stop", where any character of
 the region that is not allowed in a query string is percent-encoded

@@ -5,12 +5,13 @@ import type { RouteApi } from '#types'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
+import { isCacheSubdirDisabled } from '#src/CacheManager.ts'
 
 // a zero maxAge or maxSize for the massSession cache subdir means that the cache monitor
-// would evict every saved session, so the /massSession and /sessionIds routes are not set up at all,
+// would evict every saved session, and features.disableFileCache means that no session can be saved,
+// so the /massSession and /sessionIds routes are not set up at all,
 // to reduce the attack surface on a server that does not support saved sessions, such as for GDC
-const cacheOpts = serverconfig.features?.cacheMonitor?.subdirs?.massSession
-export const isDisabled = cacheOpts?.maxAge === 0 || cacheOpts?.maxSize === 0
+export const isDisabled = isCacheSubdirDisabled(serverconfig.features, 'massSession')
 
 export const api: RouteApi = {
 	// saves, gets, or deletes a mass app state as a server-side session file

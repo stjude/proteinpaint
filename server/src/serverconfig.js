@@ -149,6 +149,15 @@ if (!serverconfig.features) {
 	serverconfig.features = {}
 }
 
+// nothing is written under the cachedir, and the features that need a cache file are not available, see server/README.md;
+// a strict boolean, since a value such as 'false' would otherwise disable the cache
+if (
+	serverconfig.features.disableFileCache !== undefined &&
+	typeof serverconfig.features.disableFileCache != 'boolean'
+) {
+	throw `serverconfig.features.disableFileCache must be either undefined or boolean`
+}
+
 if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	// only apply optional routeSetters in debugmode and when the binpath
 	// indicates the server code is not installed as a node_module
@@ -421,7 +430,13 @@ if (firstLoad) Object.defineProperty(globalThis, firstLoadFlag, { value: true, c
 if (serverconfig.hideCachedir ?? process.env.PP_MODE?.startsWith('container')) {
 	// a later copy does not use the cache, and must not use the configured cachedir, which is the parent of the subdir
 	if (!firstLoad) delete serverconfig.cachedir
-	else {
+	else if (serverconfig.features.disableFileCache) {
+		// the subdir is not created and is never written, but its path is still the derived one, so that no code
+		// reads a file from the configured cachedir
+		const parent = serverconfig.cachedir
+		if (!parent) throw 'serverconfig.cachedir missing'
+		serverconfig.cachedir = path.join(parent, getCacheSubdirName())
+	} else {
 		const parent = serverconfig.cachedir
 		if (!parent) throw 'serverconfig.cachedir missing'
 		// a parent dir that is created here is owned by the server user, which the warning below reports
@@ -442,8 +457,7 @@ if (serverconfig.hideCachedir ?? process.env.PP_MODE?.startsWith('container')) {
 					`and the files cached by an earlier process are not found or removed`
 			)
 		}
-		// not a generateHash() value, since the HMAC input is not a JSON array
-		const dirName = crypto.createHmac('sha256', cacheIdKey).update('cachedir').digest('hex').slice(0, 32)
+		const dirName = getCacheSubdirName()
 		serverconfig.cachedir = path.join(parent, dirName)
 		// the name is not logged, so that it is not in any log output
 		fs.mkdirSync(serverconfig.cachedir, { recursive: true, mode: 0o700 })
@@ -451,6 +465,11 @@ if (serverconfig.hideCachedir ?? process.env.PP_MODE?.startsWith('container')) {
 	}
 }
 delete serverconfig.hideCachedir
+
+// not a generateHash() value, since the HMAC input is not a JSON array
+function getCacheSubdirName() {
+	return crypto.createHmac('sha256', cacheIdKey).update('cachedir').digest('hex').slice(0, 32)
+}
 
 /*
 	Moves the entries of the earlier cache layout, such as the saved sessions in massSession/, from the configured

@@ -61,6 +61,8 @@ validateRglst
 // under cachedir, so it is off by default; enable with serverconfig.features.ALLOW_remotefilefromurl=true
 // on environments that support remote files, e.g. custom tracks by url
 const remoteFileNotAllowed = 'Remote file not supported on this server.'
+// nothing is written under cachedir, see isCacheSubdirDisabled() in CacheManager.ts
+const fileCacheNotAllowed = 'This server does not support this request.'
 
 /*
 -- for tabix files, if no indexURL is given, allow using either tbi or csi file at the same location
@@ -74,6 +76,7 @@ const remoteFileNotAllowed = 'Remote file not supported on this server.'
 */
 export async function cache_index(gzurl, indexurl) {
 	if (!serverconfig.features.ALLOW_remotefilefromurl) throw remoteFileNotAllowed
+	if (serverconfig.features.disableFileCache) throw fileCacheNotAllowed
 	if (!gzurl) throw '.gz file URL missing'
 	if (typeof gzurl != 'string') throw '.gz file URL not string'
 	if (indexurl) {
@@ -694,6 +697,7 @@ export function write_file(file, text) {
 }
 
 export async function write_tmpfile(text) {
+	if (serverconfig.features.disableFileCache) throw fileCacheNotAllowed
 	const tmp = Math.random().toString()
 	await write_file(path.join(cachedir, tmp), text)
 	return tmp
