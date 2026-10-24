@@ -12,13 +12,12 @@ Standard output of the rust binary is returned.
 When the node permission model does not allow a child process, such as in an image without the rust binaries, a binary
 that has a wasm32-wasip1 module, see wasm/Cargo.toml, is run in this process with node:wasi instead, which requires
 the --allow-wasi permission. The module gets the input as its stdin and no preopened dir, so it has no other file
-system access, no network, no env vars, and cannot start a process. A module runs synchronously, and blocks the event
+system access, its stdin, stdout and stderr are in memory, so no file is written, no network, no env vars, and cannot start a process. A module runs synchronously, and blocks the event
 loop until it exits.
 */
 
 // Import necessary modules
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
 import { spawn } from 'child_process'
 import { Readable } from 'stream'
@@ -131,8 +130,9 @@ function getOutput(binfile, code, stdout, stderr, stdinError) {
 // the compiled wasm module of each binary, by name
 const wasmModules = new Map()
 
-// runs the wasm module of a binary in this process, with the input in a file that is its stdin, and its stdout and
-// stderr in files, in a new temp dir that is removed when it exits; node:wasi takes file descriptors, not streams
+// runs the wasm module of a binary in this process, with its stdin, stdout and stderr in memory, so that no file is
+// written, such as when the node permission model allows no write path; node:wasi only takes file descriptors for
+// these, so the fd_read and fd_write imports of fds 0, 1 and 2 are replaced instead
 async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	if (signal?.aborted) throw new Error(`run_rust('${binfile}'): aborted before start`)
 	if (typeof binfile != 'string' || !binaryName.test(binfile)) throw `invalid rust binary name`
@@ -163,38 +163,77 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	// a long input may still arrive after an abort
 	if (signal?.aborted) throw new Error(`run_rust('${binfile}'): aborted`)
 
-	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-wasm-'))
-	const fds = []
+	// no preopens and no env
+	const wasi = new WASI({ version: 'preview1', args: [binfile, ...args], env: {}, returnOnExit: true })
+	const stdio = { stdin: Buffer.isBuffer(input) ? input : Buffer.from(input), offset: 0, stdout: [], stderr: [] }
+	const imports = wasi.getImportObject()
+	let memory
+	imports.wasi_snapshot_preview1 = {
+		...imports.wasi_snapshot_preview1,
+		...stdioImports(imports.wasi_snapshot_preview1, stdio, () => memory)
+	}
+	const instance = await WebAssembly.instantiate(wasmModule, imports)
+	memory = instance.exports.memory
+	let code
 	try {
-		const file = name => path.join(dir, name)
-		fs.writeFileSync(file('stdin'), input, { mode: 0o600 })
-		const [stdin, stdout, stderr] = ['stdin', 'stdout', 'stderr'].map((name, i) => {
-			fds.push(fs.openSync(file(name), i ? 'w' : 'r', 0o600))
-			return fds[i]
-		})
-		// no preopens and no env
-		const wasi = new WASI({
-			version: 'preview1',
-			args: [binfile, ...args],
-			env: {},
-			stdin,
-			stdout,
-			stderr,
-			returnOnExit: true
-		})
-		const instance = await WebAssembly.instantiate(wasmModule, wasi.getImportObject())
-		let code
-		try {
-			code = wasi.start(instance)
-		} catch (e) {
-			// a rust panic is a wasm trap, which throws instead of an exit code; the panic message is in stderr
-			code = `${e.message || e}`
+		code = wasi.start(instance)
+	} catch (e) {
+		// a rust panic is a wasm trap, which throws instead of an exit code; the panic message is in stderr
+		code = `${e.message || e}`
+	}
+	return getOutput(
+		binfile,
+		code,
+		Buffer.concat(stdio.stdout).toString('utf8'),
+		Buffer.concat(stdio.stderr).toString('utf8')
+	)
+}
+
+const WASI_ESUCCESS = 0
+const WASI_EBADF = 8
+
+// the fd_read import reads fd 0 from stdio.stdin, and the fd_write import appends fds 1 and 2 to stdio.stdout and
+// stdio.stderr; an iovec is a {buf: u32 pointer, buf_len: u32} pair in the module memory, and the byte count is
+// written at the u32 pointer of the last argument. Other fds use the node:wasi imports, which find no open file
+// without a preopened dir.
+function stdioImports(wasiImports, stdio, getMemory) {
+	const iovecs = (iovs, iovsLen) => {
+		const view = new DataView(getMemory().buffer)
+		const lst = []
+		for (let i = 0; i < iovsLen; i++) {
+			const p = iovs + i * 8
+			lst.push(new Uint8Array(getMemory().buffer, view.getUint32(p, true), view.getUint32(p + 4, true)))
 		}
-		for (const fd of fds.splice(0)) fs.closeSync(fd)
-		return getOutput(binfile, code, fs.readFileSync(file('stdout'), 'utf8'), fs.readFileSync(file('stderr'), 'utf8'))
-	} finally {
-		for (const fd of fds) fs.closeSync(fd)
-		fs.rmSync(dir, { recursive: true, force: true })
+		return lst
+	}
+	const setCount = (ptr, n) => new DataView(getMemory().buffer).setUint32(ptr, n, true)
+	return {
+		fd_read(fd, iovs, iovsLen, nreadPtr) {
+			if (fd > 2) return wasiImports.fd_read(fd, iovs, iovsLen, nreadPtr)
+			if (fd != 0) return WASI_EBADF
+			let n = 0
+			for (const buf of iovecs(iovs, iovsLen)) {
+				const chunk = stdio.stdin.subarray(stdio.offset, stdio.offset + buf.length)
+				buf.set(chunk)
+				stdio.offset += chunk.length
+				n += chunk.length
+				if (chunk.length < buf.length) break
+			}
+			setCount(nreadPtr, n)
+			return WASI_ESUCCESS
+		},
+		fd_write(fd, iovs, iovsLen, nwrittenPtr) {
+			if (fd > 2) return wasiImports.fd_write(fd, iovs, iovsLen, nwrittenPtr)
+			if (fd == 0) return WASI_EBADF
+			let n = 0
+			for (const buf of iovecs(iovs, iovsLen)) {
+				// a copy, since the module may reuse its buffer
+				;(fd == 1 ? stdio.stdout : stdio.stderr).push(Buffer.from(buf))
+				n += buf.length
+			}
+			setCount(nwrittenPtr, n)
+			return WASI_ESUCCESS
+		}
 	}
 }
 
