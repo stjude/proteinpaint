@@ -159,6 +159,10 @@ function buildImages {
 	set -x
 	docker buildx build "$CTX" "${common[@]}" ${cache[@]+"${cache[@]}"} --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM $BUILDARGS --output type=docker
 
+	# the app-free base of ppserver/ppfull, published under its own tag so that server/Dockerfile and
+	# full/Dockerfile can build on it without duplicating its layers under the ppserver/ppfull tags
+	docker buildx build "$CTX" "${common[@]}" --target ppruntime --tag "${MODE}ppdepsruntime:latest" $PLATFORM $BUILDARGS --output type=docker
+
 	docker buildx build "$CTX" "${common[@]}" --target ppserver --tag "${MODE}ppserver:latest" $PLATFORM \
 		--build-arg SERVERPKGVER="$SERVERPKGVER" --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
 
@@ -177,10 +181,12 @@ function tagImages {
 	for target in server full; do
 		docker tag "${MODE}pp${target}:latest" "${MODE}pp${target}:$IMGVER"
 	done
+	docker tag "${MODE}ppdepsruntime:latest" "${MODE}ppdepsruntime:$IMGVER"
 	if [[ "$HASH" != "" ]]; then
 		for target in base server full; do
 			docker tag "${MODE}pp${target}:latest" "${MODE}pp${target}:$IMGVER-$HASH"
 		done
+		docker tag "${MODE}ppdepsruntime:latest" "${MODE}ppdepsruntime:$IMGVER-$HASH"
 	fi
 }
 
