@@ -1,11 +1,11 @@
 #Unit test image for ProteinPaint (server+Python workspaces).
 
-# Pull the published base (whole environment: Node, /opt/venv Python, R, bcftools) from GHCR
-FROM ghcr.io/stjude/ppserver:latest
+# Pull the published deps base (whole environment: Node and npm, /opt/venv Python and pip, R, bcftools, and the build
+# toolchain) from GHCR. The ppserver and ppfull images are not used here, since they have no npm, pip, or toolchain.
+FROM ghcr.io/stjude/ppbase:latest
 
-# The ppserver image runs as the unprivileged app user (UID 1000), but this image installs packages
-# into root-owned dirs, such as the npm global prefix under /usr/local and the python venv under /opt/venv,
-# and only runs the server and python unit tests in CI, so it runs as root.
+# This image installs packages into root-owned dirs, such as the npm global prefix under /usr/local and the python
+# venv under /opt/venv, and only runs the server and python unit tests in CI, so it runs as root, like ppbase.
 USER root
 
 WORKDIR /home/root/proteinpaint
