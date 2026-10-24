@@ -58,31 +58,8 @@ runs:
         username: ${{ github.actor }}
         password: ${{ inputs.TOKEN }}
 
-    # TEMPORARY: the "docker" driver shares the runner's local image store directly, so the locally-built
-    # ppdepsruntime image below resolves without a registry pull. The default docker-container driver runs
-    # BuildKit in an isolated container that cannot see it, and tries (and fails) to pull it from a registry
-    # instead. Revert this along with the rest of the TEMPORARY changes once ppdepsruntime is published, so
-    # this step goes back to the type=gha build cache.
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
-      with:
-        driver: docker
-
-    # TEMPORARY, for testing this branch before ppdepsruntime is published: build only the ppruntime target
-    # locally instead of pulling ghcr.io/stjude/ppdepsruntime, which does not exist yet. deps/build.sh is not
-    # used here since it also builds ppserver/ppfull from deps/Dockerfile, which install published app
-    # packages that this branch does not need and may not exist yet. Revert once ppdepsruntime is published.
-    - name: Build ppdepsruntime locally
-      shell: bash
-      run: |
-        CTX=$(mktemp -d)
-        mkdir -p "$CTX/R" "$CTX/python"
-        cp container/deps/Dockerfile "$CTX/"
-        cp -R R/utils "$CTX/R/"
-        cp python/requirements.txt "$CTX/python/"
-        cp container/deps/checkSharedLibs.sh "$CTX/"
-        docker buildx build "$CTX" --file "$CTX/Dockerfile" --target ppruntime --tag ppdepsruntime:latest \
-          --build-arg ARCH=x86_64 --build-arg OS_UPDATES="$(date -u +%Y-%m-%d)" --output type=docker
 
     - name: Build Docker Image
       uses: docker/build-push-action@v7
@@ -95,14 +72,11 @@ runs:
         file: ./container/server/Dockerfile
         tags: ppserver:latest
         # the tarballs may have the same path and version as the base image packages, but changed code
-        # TEMPORARY: BASE_IMAGE, see the "Build ppdepsruntime locally" step above
-        build-args: |
-          REINSTALL_SJCRH=1
-          BASE_IMAGE=ppdepsruntime:latest
+        build-args: REINSTALL_SJCRH=1
         platforms: linux/amd64
         outputs: type=docker
-        # TEMPORARY: the docker driver (see "Set up Docker Buildx" above) does not support the type=gha
-        # cache backend, only the default docker-container driver does
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         provenance: false
         sbom: false
 
