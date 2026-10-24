@@ -101,6 +101,7 @@ client/.nyc_output*/*
 client/.coverage*/*
 client/passedTests.txt
 client/failedTests.txt
+client/failedTests.json
 
 cairo-*/*
 canvas/*

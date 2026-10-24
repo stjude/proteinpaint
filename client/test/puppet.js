@@ -10,6 +10,7 @@ import bodyParser from 'body-parser'
 import { ReqResCache, emitRelevantSpecCovDetails, publicSpecsDir } from '@sjcrh/augen/dev'
 import { getRelevantClientSpecs, getUrlParams } from './closestSpec.js'
 import { createTapFailureTracker } from './tapFailures.js'
+import { compareFailures, compareIncompleteGroups, formatComparison, getFailureId } from './expectedFailures.js'
 
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
@@ -201,19 +202,53 @@ async function runTest(patternsStr) {
 		const totalFail = results.reduce((n, r) => n + (r?.parsed?.fail || 0), 0)
 		// groups that never produced a TAP summary (timeout, page load error, thrown exception)
 		const erroredGroups = results.filter(r => !r?.parsed && !r?.passed)
-		const runPassed = totalFail === 0 && erroredGroups.length === 0
+		const trackedFailures = results.flatMap(r => r?.trackedFailures || [])
+		const incompletePatterns = erroredGroups.map(r => r?.pattern)
+		// every failed assertion and incomplete group, to compare the failures of different runs or builds
+		if (trackedFailures.length || erroredGroups.length) {
+			const failures = trackedFailures.map(f => {
+				const { operator, expected, actual } = f.details
+				return { ...getFailureId(f), operator, expected, actual }
+			})
+			const incompleteGroups = erroredGroups.map(r => ({ pattern: r?.pattern, error: r?.error }))
+			const json = JSON.stringify({ failures, incompleteGroups }, null, '\t')
+			fs.writeFileSync('failedTests.json', json + '\n', { encoding: 'utf8' })
+		} else fs.rmSync('failedTests.json', { force: true })
+		// With PP_EXPECTED_FAILURES=<json file>, such as test/expectedFailures.nocp.json for an image whose server cannot
+		// start R, python or a rust binary, the run passes when every failed assertion, and every group that did not
+		// complete, is listed in that file. A failure that the tracker did not see is never expected.
+		let comparisonText = ''
+		let unexpectedCount = totalFail + erroredGroups.length
+		if (process.env.PP_EXPECTED_FAILURES) {
+			const file = process.env.PP_EXPECTED_FAILURES
+			const expectedJson = JSON.parse(fs.readFileSync(file, 'utf8'))
+			for (const key of ['failures', 'incompleteGroups']) {
+				if (!Array.isArray(expectedJson[key])) throw `missing a ${key}[] array in ${file}`
+			}
+			const failures = compareFailures(trackedFailures, expectedJson.failures)
+			const groups = compareIncompleteGroups(incompletePatterns, expectedJson.incompleteGroups)
+			comparisonText = formatComparison(failures, groups)
+			console.log(`\n${comparisonText}\n`)
+			// a completed group's failure count that differs from its tracked failures
+			const untracked = results.reduce(
+				(n, r) => n + (r?.parsed ? Math.abs(r.parsed.fail - (r.trackedFailures?.length || 0)) : 0),
+				0
+			)
+			unexpectedCount = failures.unexpected.length + groups.unexpected.length + untracked
+		}
+		const runPassed = unexpectedCount === 0
 
 		if (runPassed) {
 			// IMPORTANT: CI gates the whole integration run on the mere existence of this file
 			// (see .github/actions/run-integration-tests/action.yml, which sets
 			// INTEGRATION_TEST_PASSED=true iff client/passedTests.txt exists). It MUST therefore
 			// be written ONLY when everything passed — writing it on failure reports a green run.
-			fs.writeFileSync('passedTests.txt', summaryText, { encoding: 'utf8' })
+			fs.writeFileSync('passedTests.txt', summaryText + comparisonText, { encoding: 'utf8' })
 			// drop any stale failure record from a previous run
 			fs.rmSync('failedTests.txt', { force: true })
 		} else {
 			// keep the failure summary as an artifact, but under a name the CI gate does NOT check
-			fs.writeFileSync('failedTests.txt', summaryText, { encoding: 'utf8' })
+			fs.writeFileSync('failedTests.txt', summaryText + comparisonText, { encoding: 'utf8' })
 			// the failed assertions, without having to search the whole test output for them
 			const failureSummaries = results.map(r => r?.failureSummary).filter(Boolean)
 			if (failureSummaries.length) console.log(`\n${failureSummaries.join('\n\n')}`)
@@ -427,7 +462,8 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 		const passed = status === 'ok' && parsed.fail === 0
 		if (!passed) errors[pattern] = `${parsed.fail || 'unknown number of'} failing test(s)`
 		const failureSummary = failureTracker.format({ title: `Failed assertions for spec pattern=${pattern}` })
-		return { pattern, testedFiles, passed, coverageList, lastLines, parsed, failureSummary }
+		const trackedFailures = failureTracker.failures
+		return { pattern, testedFiles, passed, coverageList, lastLines, parsed, failureSummary, trackedFailures }
 	} catch (error) {
 		console.error(`\n!!! error running pattern=${pattern} !!!\n`)
 		errors[pattern] = error
