@@ -6,14 +6,18 @@ of ProteinPaint, which the release images in `container/server` and `container/f
 | Target (image) | Contents |
 |---|---|
 | `ppbase` | the OS (Debian trixie), the build toolchain, R, Python, Node and npm, htslib/samtools/bcftools, and tools such as `straw` and `gfClient` |
-| `ppserver` | the runtime libraries and the same R, Python, Node, htslib and tool files as `ppbase` (the `ppruntime` stage) + the `@sjcrh/proteinpaint-server` package and `app-server.mjs` |
+| `ppdepsruntime` (the `ppruntime` stage) | the runtime libraries and the same R, Python, Node, htslib and tool files as `ppbase`, without the app |
+| `ppserver` | `ppdepsruntime` + the `@sjcrh/proteinpaint-server` package and `app-server.mjs` |
 | `ppfull` | `ppserver` + the `@sjcrh/proteinpaint-front` package, `app-full.mjs`, and `container/public` |
 
-`ppserver` and `ppfull` have no build toolchain, `-dev` packages, or npm: the app is installed on `ppbase`, in the
-`ppserverdeps` and `ppfulldeps` stages, and copied into them. The `server` and `full` Dockerfiles likewise install
-the app with npm in a stage on the official `node` image. `ppbase` keeps the toolchain, for the sjpp dev container.
+`ppdepsruntime`, `ppserver`, and `ppfull` have no build toolchain, `-dev` packages, or npm: the app is installed on
+`ppbase`, in the `ppserverdeps` and `ppfulldeps` stages, and copied into `ppserver`/`ppfull`. The `server` and `full`
+Dockerfiles build on `ppdepsruntime`, instead of on `ppserver`/`ppfull`, so that they do not ship the app layer that
+`ppserver`/`ppfull` already has twice: once hidden by a later whiteout, and once replaced with the current app code.
+They likewise install the app with npm in a stage on the official `node` image. `ppbase` keeps the toolchain, for
+the sjpp dev container.
 
-`ppserver` and `ppfull` run as the unprivileged `app` user (UID/GID 1000), while `ppbase` runs as root.
+`ppdepsruntime`, `ppserver`, and `ppfull` run as the unprivileged `app` user (UID/GID 1000), while `ppbase` runs as root.
 The app files under `/home/root/pp/app/active`, including `node_modules` and, in `ppfull`, the client bundle in
 `bin/` and `public/`, are owned by root and only read by the `app` user. The `ppfull` client bundle is generated at
 build time, so nothing under the app dir is written at runtime, except to a dir that a deployment mounts there.
@@ -36,7 +40,7 @@ the deps image version that is set as `ARG VERSION` in `container/server/Dockerf
 
 The `CD-publish-deps-image` workflow runs on a manual dispatch, or on a push to the `deps-image` branch.
 It packs the local workspaces (`container/pack.sh`), sets the versions (`deps/version.sh`), builds the
-3 images (`deps/build.sh -m ghcr.io/stjude/`), runs the integration tests against `ppserver`, pushes the
+4 images (`deps/build.sh -m ghcr.io/stjude/`), runs the integration tests against `ppserver`, pushes the
 images to ghcr.io, and then commits the new deps version to `ARG VERSION` in the `server` and `full`
 Dockerfiles (`container/update_deps_version.sh`).
 
@@ -79,10 +83,10 @@ whether or not it has changed. Do not use its server-only `-s` option here, sinc
 tarball that the `ppfull` image installs. It modifies tracked `package.json` files that must be restored
 afterwards.
 
-The built images are tagged `ppbase:latest`, `ppserver:latest`, and `ppfull:latest`. To verify:
+The built images are tagged `ppbase:latest`, `ppdepsruntime:latest`, `ppserver:latest`, and `ppfull:latest`. To verify:
 
 ```bash
-docker image inspect ppserver:latest ppfull:latest --format '{{.RepoTags}} user={{.Config.User}}'
+docker image inspect ppdepsruntime:latest ppserver:latest ppfull:latest --format '{{.RepoTags}} user={{.Config.User}}'
 ```
 
 ### Running a local build

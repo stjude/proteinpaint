@@ -78,8 +78,10 @@ runs:
 
         HASH=$(git rev-parse --short HEAD 2>/dev/null)
         docker push ghcr.io/stjude/ppbase:latest
+        docker push ghcr.io/stjude/ppdepsruntime:$TAG
         docker push ghcr.io/stjude/ppserver:$TAG
         docker push ghcr.io/stjude/ppfull:$TAG
+        docker push ghcr.io/stjude/ppdepsruntime:latest
         docker push ghcr.io/stjude/ppserver:latest
         docker push ghcr.io/stjude/ppfull:latest
 

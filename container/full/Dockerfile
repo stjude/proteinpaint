@@ -2,8 +2,9 @@
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
 ARG VERSION=2.222.0
-# the published deps image of VERSION, or another one such as a local arm64 image, see build2.sh -a and -i
-ARG BASE_IMAGE=ghcr.io/stjude/ppfull:$VERSION
+# the published, app-free deps image of VERSION, or another one such as a local arm64 image, see build2.sh -a and -i;
+# not ppfull, which already has an app installed, so that this build does not ship its app layer twice
+ARG BASE_IMAGE=ghcr.io/stjude/ppdepsruntime:$VERSION
 # the same as NODE_IMAGE in deps/Dockerfile, whose node install is in the base image
 ARG NODE_IMAGE=node:24.22.0-trixie-slim@sha256:7f486cabe892bff8fef04c0f7da8dba84a560be3e4e2740b7a86afc57ebec315
 

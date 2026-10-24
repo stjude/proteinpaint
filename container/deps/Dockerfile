@@ -343,13 +343,14 @@ RUN --mount=type=bind,source=checkSharedLibs.sh,target=/tmp/checkSharedLibs.sh s
     /usr/bin/h5dump && \
     python3 -c 'import h5py, numpy, scipy.linalg, scipy.special'
 
-# the interpreter and tool dirs are installed by root and are only read by the app user
+# the interpreter and tool dirs are installed by root and are only read by the app user; USER app is left as the
+# last instruction of this stage, so that the published ppdepsruntime image, like ppserver/ppfull, defaults to the
+# unprivileged app user, which check_base_user.sh requires of a published base image
 USER app
 RUN for d in /opt/venv /opt/venv/lib/python3*/site-packages /usr/local/lib/R/site-library /usr/lib/R/site-library \
         /usr/lib/R/library /usr/local/bin /home/root/pp/tools; do \
         if [ -e "$d" ] && [ -w "$d" ]; then echo "ERROR: $d is writable by the app user"; exit 1; fi; \
     done
-USER root
 
 ARG IMGREV=""
 ARG IMGVER=""
@@ -391,6 +392,10 @@ CMD ["sh", "-c", "node app-server.mjs"]
 
 # target for the backend-only SJ server app
 FROM ppruntime AS ppserver
+
+# ppruntime ends as the app user, so that the published ppdepsruntime image defaults to it; this stage still
+# installs the app as root, as before
+USER root
 
 ARG IMGREV=""
 ARG IMGVER=""
@@ -462,6 +467,10 @@ CMD ["sleep", "3600"]
 
 # target for the full (backend + frontend) SJ app
 FROM ppruntime AS ppfull
+
+# ppruntime ends as the app user, so that the published ppdepsruntime image defaults to it; this stage still
+# installs the app as root, as before
+USER root
 
 ARG IMGREV=""
 ARG IMGVER=""
