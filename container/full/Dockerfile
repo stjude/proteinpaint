@@ -1,7 +1,7 @@
 # Default to Docker Hub, but enable the base image to be pulled from a
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
-ARG VERSION=2.222.0
+ARG VERSION=2.223.0
 # the published, app-free deps image of VERSION, or another one such as a local arm64 image, see build2.sh -a and -i;
 # not ppfull, which already has an app installed, so that this build does not ship its app layer twice
 ARG BASE_IMAGE=ghcr.io/stjude/ppdepsruntime:$VERSION
