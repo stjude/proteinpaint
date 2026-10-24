@@ -61,6 +61,12 @@ runs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
 
+    # TEMPORARY, for testing this branch before ppdepsruntime is published: build it locally instead of
+    # pulling ghcr.io/stjude/ppdepsruntime, which does not exist yet. Revert once it is published.
+    - name: Build ppdepsruntime locally
+      shell: bash
+      run: ./container/deps/build.sh
+
     - name: Build Docker Image
       uses: docker/build-push-action@v7
       env:
@@ -72,7 +78,10 @@ runs:
         file: ./container/server/Dockerfile
         tags: ppserver:latest
         # the tarballs may have the same path and version as the base image packages, but changed code
-        build-args: REINSTALL_SJCRH=1
+        # TEMPORARY: BASE_IMAGE, see the "Build ppdepsruntime locally" step above
+        build-args: |
+          REINSTALL_SJCRH=1
+          BASE_IMAGE=ppdepsruntime:latest
         platforms: linux/amd64
         outputs: type=docker
         cache-from: type=gha
