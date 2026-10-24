@@ -133,6 +133,16 @@ export const cacheUrlProtocols: ReadonlySet<string> = new Set(
 
 type CacheRegistry = typeof cacheRegistry
 
+/** true when nothing may be written to the cache subdir, so that the feature that writes to it is not available:
+ * - serverconfig.features.disableFileCache, which disables every subdir, see server/README.md
+ * - a zero maxAge or maxSize override in serverconfig.features.cacheMonitor.subdirs, which would evict every file;
+ *   only the features that check this function are then disabled, such as the massSession and bam subdirs */
+export function isCacheSubdirDisabled(features: any, subdir: keyof CacheRegistry): boolean {
+	if (features?.disableFileCache) return true
+	const o = features?.cacheMonitor?.subdirs?.[subdir]
+	return o?.maxAge === 0 || o?.maxSize === 0
+}
+
 /** the subdirs that cacheOrRecompute may write to */
 export type CacheSubdir = {
 	[K in keyof CacheRegistry]: CacheRegistry[K]['type'] extends 'compute' ? K : never
@@ -171,6 +181,8 @@ type CacheOpts = {
 	subdirs?: { [dirName: string]: EvictionOpts }
 	callbacks: Callbacks
 	mustExitPendingValidation?: boolean
+	// equals serverconfig.features.disableFileCache: no dir is created and no file is checked
+	disableFileCache?: boolean
 }
 
 // options to trigger a callback after
@@ -248,6 +260,10 @@ export class CacheManager {
 			}
 		}
 
+		if (opts.disableFileCache) {
+			if (!this.quiet) console.log('the file cache is disabled, the cache monitor is not started')
+			return
+		}
 		if (!fs.existsSync(this.cachedir)) fs.mkdirSync(this.cachedir, { recursive: true })
 		for (const [dirName, item] of Object.entries(registry)) {
 			// an override only replaces the given properties, the rest fall back to this entry and then to its type's defaults

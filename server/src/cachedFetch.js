@@ -4,12 +4,13 @@ import crypto from 'crypto'
 import serverconfig from './serverconfig.js'
 import { xfetch } from './xfetch.js'
 
-// the keys are url substrings to cache responses for, the values are not used
-const extApiCache = serverconfig.features?.extApiCache || {}
+// the keys are url substrings to cache responses for, the values are not used;
+// none is cached with serverconfig.features.disableFileCache
+const extApiCache = (!serverconfig.features?.disableFileCache && serverconfig.features?.extApiCache) || {}
 // declared in cacheRegistry and evicted by CacheManager; also created here,
 // for when cachedFetch is used without a CacheManager, such as in spec files
 const extApiResponseDir = path.join(serverconfig.cachedir, 'extApiResponse')
-if (serverconfig.features?.extApiCache && !fs.existsSync(extApiResponseDir)) {
+if (Object.keys(extApiCache).length && !fs.existsSync(extApiResponseDir)) {
 	fs.mkdirSync(extApiResponseDir, { recursive: true })
 }
 

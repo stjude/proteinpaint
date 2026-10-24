@@ -1,7 +1,7 @@
 import tape from 'tape'
 import path from 'path'
 import fs from 'fs'
-import { CacheManager, cacheRegistry, cacheUrlProtocols } from '#src/CacheManager.ts'
+import { CacheManager, cacheRegistry, cacheUrlProtocols, isCacheSubdirDisabled } from '#src/CacheManager.ts'
 
 /** Tests
  * - init() cache files
@@ -937,5 +937,33 @@ tape('rejects invalid subdir overrides', test => {
 		'constructor throws on an override of maxPending'
 	)
 	test.equal(fs.existsSync(cachedir), false, 'should not create the cachedir when an override is invalid')
+	test.end()
+})
+
+tape('disableFileCache', test => {
+	const cachedir = path.join(process.cwd(), '.cache-test7')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager({ quiet: true, cachedir, disableFileCache: true, callbacks: {} })
+	test.equal(monitor.subdirs.size, 0, 'should not set up any subdir')
+	test.equal(fs.existsSync(cachedir), false, 'should not create the cachedir')
+	test.equal(monitor.intervalId, undefined, 'should not start the cache monitor')
+	test.end()
+})
+
+tape('isCacheSubdirDisabled()', test => {
+	test.equal(isCacheSubdirDisabled({ disableFileCache: true }, 'bam'), true, 'disableFileCache disables every subdir')
+	test.equal(isCacheSubdirDisabled({ disableFileCache: true }, 'de'), true, 'disableFileCache disables every subdir')
+	for (const opt of ['maxAge', 'maxSize']) {
+		const features = { cacheMonitor: { subdirs: { bam: { [opt]: 0 } } } }
+		test.equal(isCacheSubdirDisabled(features, 'bam'), true, `a zero ${opt} disables the subdir`)
+		test.equal(isCacheSubdirDisabled(features, 'massSession'), false, `a zero ${opt} does not disable another subdir`)
+	}
+	test.equal(
+		isCacheSubdirDisabled({ cacheMonitor: { subdirs: { bam: { maxAge: 1 } } } }, 'bam'),
+		false,
+		'a non-zero maxAge does not disable the subdir'
+	)
+	test.equal(isCacheSubdirDisabled({}, 'bam'), false, 'no option does not disable the subdir')
+	test.equal(isCacheSubdirDisabled(undefined, 'bam'), false, 'no features does not disable the subdir')
 	test.end()
 })

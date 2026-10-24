@@ -25,6 +25,23 @@ However, it's safer to simply have that file available just in case any imported
 and runs as part of test:unit, and that's why `server/emitImports.js` creates one if it doesn't exist by
 copying `container/ci/serverconfig.json`.
 
+### File cache
+
+With `"features": {"disableFileCache": true}`, the server writes no file:
+
+- the cachedir and its subdirs are not created, and the cache monitor is not started
+- `cacheOrRecompute()` results are computed again on every request, and `features.extApiCache` is ignored
+- the requests that need a written file are rejected with an error, such as a GDC bam slice for the bam and
+  Sequence Reads apps, a remote track index, or a temp file for a spawned tool; the `/massSession` and
+  `/sessionIds` routes are not set up
+- `container/envHelpers.mjs` allows no `--allow-fs-write` path, not even the OS temp dir, except the
+  `PP_ALLOW_FS_WRITE` ones, so any other write is denied by the node permission model. A `tsx` dev server
+  needs its own temp dir, such as `PP_ALLOW_FS_WRITE=$TMPDIR/tsx-$(id -u)`.
+
+A single feature can be disabled instead with a zero `maxAge` or `maxSize` for its subdir in
+`features.cacheMonitor.subdirs`, which is checked by the `massSession` and `bam` subdirs, see
+`isCacheSubdirDisabled()` in `src/CacheManager.ts`.
+
 ### Memory budget
 
 Before a heavy run (GRIN2, differential expression, differential methylation and its DMR jobs, top variably

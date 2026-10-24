@@ -11,6 +11,7 @@
 	   Additional paths may be set as colon-separated PP_ALLOW_FS_READ and PP_ALLOW_FS_WRITE values.
 	   Child processes and worker threads are allowed, and WASI is denied, unless PP_ALLOW_CHILD_PROCESS,
 	   PP_ALLOW_WORKER or PP_ALLOW_WASI is set to 'true' or 'false', such as in an image without spawned tools.
+	   With serverconfig.json features.disableFileCache, no path is writable except the PP_ALLOW_FS_WRITE ones.
 
 	2. does not need read access to any credentials file: each <NAME>_CREDS env variable is set
 	   to the content of the file named by the corresponding <NAME>_CREDS_FILE env variable, e.g.
@@ -156,14 +157,17 @@ export function getNodeConfig(ctx) {
 	allow(read, path.dirname(path.dirname(ctx.execPath)))
 	// per-user temp dir, such as for the tsx cache and server temp files
 	allow(read, ctx.tmpdir)
-	allow(write, ctx.tmpdir)
 
 	const serverconfig = getServerconfigPaths(ctx)
 	allow(read, serverconfig.tpmasterdir)
 	allow(read, serverconfig.tp_native_dir)
 	allow(read, serverconfig.cachedir)
-	allow(write, serverconfig.cachedir)
-	allow(write, serverconfig.tpWriteDir)
+	// with features.disableFileCache, the server writes no file, not even in the temp dir
+	if (!serverconfig.disableFileCache) {
+		allow(write, ctx.tmpdir)
+		allow(write, serverconfig.cachedir)
+		allow(write, serverconfig.tpWriteDir)
+	}
 	allow(read, serverconfig.sslKey)
 	allow(read, serverconfig.sslCert)
 	// a bare command name, such as python3, is resolved from PATH when spawned
@@ -235,7 +239,9 @@ function getServerconfigPaths(ctx) {
 		sslCert: serverconfig.ssl?.cert,
 		// python/index.js setPythonBinPath() checks that this file exists; other tool paths, such as
 		// serverconfig.hicstraw or gfClient, are only spawned, which the permission model does not restrict
-		python: serverconfig.python
+		python: serverconfig.python,
+		// not a path: no write path is allowed, see getNodeConfig()
+		disableFileCache: serverconfig.features?.disableFileCache === true
 	}
 	if (!ctx.env.PP_MODE?.startsWith('container')) return paths
 	// do not also allow writing to /home/root/pp/cachedir, which some deployments mount: the permission

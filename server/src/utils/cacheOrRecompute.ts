@@ -11,6 +11,8 @@ export { generateHash }
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir: string = serverconfig.cachedir
+// every result is computed again, and is not written, see isCacheSubdirDisabled() in CacheManager.ts
+const disableFileCache = !!serverconfig.features?.disableFileCache
 
 const HASH_RE = /^[0-9a-f]{32}$/
 
@@ -104,10 +106,10 @@ export async function cacheOrRecompute<TArgs, TResult>(
 	if (inUse >= cap) throw makeBusyError()
 
 	const work = (async (): Promise<CacheOrRecomputeResult<TResult>> => {
-		const cached = await tryReadJson<TResult>(file)
+		const cached = disableFileCache ? null : await tryReadJson<TResult>(file)
 		if (cached !== null) return { result: cached, cacheId, cacheFilePath: file }
 		const fresh = await computeFresh({ cacheId })
-		if (opts.shouldPersist?.(fresh) !== false) await writeJsonCache(file, fresh)
+		if (!disableFileCache && opts.shouldPersist?.(fresh) !== false) await writeJsonCache(file, fresh)
 		return { result: fresh, cacheId, cacheFilePath: file }
 	})()
 	pending.set(dedupKey, work)

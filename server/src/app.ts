@@ -30,7 +30,8 @@ export async function launch() {
 	try {
 		new CacheManager(
 			Object.assign({ cachedir }, serverconfig.features?.cacheMonitor || {}, {
-				mustExitPendingValidation: serverconfig.features?.mustExitPendingValidation
+				mustExitPendingValidation: serverconfig.features?.mustExitPendingValidation,
+				disableFileCache: serverconfig.features?.disableFileCache
 			})
 		)
 
