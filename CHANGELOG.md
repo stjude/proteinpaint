@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.224.0
 
 Features:
 - Updated memory measurement tool to support custom memory fractions

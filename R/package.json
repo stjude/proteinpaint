@@ -1,5 +1,5 @@
 {
-  "version": "2.222.0",
+  "version": "2.224.0",
   "name": "@sjcrh/proteinpaint-r",
   "description": "R-based utilities for proteinpaint",
   "main": "index.js",
