@@ -56,9 +56,12 @@ WORKDIR /home/root/pp/app/active
 COPY ./full/app-full.mjs ./envHelpers.mjs ./runtimePosture.mjs ./
 COPY ./public ./public
 # The client bundle in bin/ and the public/cards are generated at build time, so that app-full.mjs reuses them at
-# startup instead of writing them. tar run by root keeps the file owner and modes from the bundle archive, which are
-# changed to root and go-w.
-RUN node node_modules/@sjcrh/proteinpaint-front/init.js && \
+# startup instead of writing them. init.js keeps an existing public/cards, such as one that a local container/public
+# has from an earlier run and that the COPY above adds, so it is removed first to use the cards of the installed
+# front package. tar run by root keeps the file owner and modes from the bundle archive, which are changed to root
+# and go-w.
+RUN rm -rf public/cards && \
+    node node_modules/@sjcrh/proteinpaint-front/init.js && \
     test -f bin/.pp-bundle-ready && \
     find bin public \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
     find bin public ! -type l -perm /022 -exec chmod go-w {} +
