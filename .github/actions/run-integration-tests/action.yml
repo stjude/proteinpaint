@@ -58,8 +58,15 @@ runs:
         username: ${{ github.actor }}
         password: ${{ inputs.TOKEN }}
 
+    # TEMPORARY: the "docker" driver shares the runner's local image store directly, so the locally-built
+    # ppdepsruntime image below resolves without a registry pull. The default docker-container driver runs
+    # BuildKit in an isolated container that cannot see it, and tries (and fails) to pull it from a registry
+    # instead. Revert this along with the rest of the TEMPORARY changes once ppdepsruntime is published, so
+    # this step goes back to the type=gha build cache.
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
+      with:
+        driver: docker
 
     # TEMPORARY, for testing this branch before ppdepsruntime is published: build only the ppruntime target
     # locally instead of pulling ghcr.io/stjude/ppdepsruntime, which does not exist yet. deps/build.sh is not
@@ -94,8 +101,8 @@ runs:
           BASE_IMAGE=ppdepsruntime:latest
         platforms: linux/amd64
         outputs: type=docker
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        # TEMPORARY: the docker driver (see "Set up Docker Buildx" above) does not support the type=gha
+        # cache backend, only the default docker-container driver does
         provenance: false
         sbom: false
 
