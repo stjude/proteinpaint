@@ -49,7 +49,7 @@ tape(
 		assert.equal(Math.round(w[0].pvalue * 1000) / 1000, 0.393)
 		// a panic rejects with the panic message, and the process keeps running
 		await assert.rejects(run_rust('fisher', '{"input":[{"index":0,"n1":"x"}]}'), /non-zero status[^]*panicked/)
-		await assert.rejects(run_rust('DEanalysis', '{}'), /this binary has no wasm module/)
+		await assert.rejects(run_rust('DEanalysis', '{}'), /^this server build does not support this data computation request$/)
 		await assert.rejects(run_rust('../fisher', '{}'), /invalid rust binary name/)`)
 		test.equal(result.status, 0, result.stderr)
 		test.ok(result.stdout.includes('checks passed'), 'the checks ran')

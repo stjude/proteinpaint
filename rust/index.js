@@ -37,7 +37,9 @@ const wasmDir = path.join(__dirname, '/target/wasm/wasm32-wasip1/release/')
 	const dir = useWasm ? wasmDir : binaryDir
 	if (!fs.existsSync(dir) || !fs.readdirSync(dir).length)
 		console.warn(
-			`WARNING: missing or empty rust ${useWasm ? 'wasm module' : 'binary'} directory='${dir}', requests that need rust will fail`
+			`WARNING: missing or empty rust ${
+				useWasm ? 'wasm module' : 'binary'
+			} directory='${dir}', requests that need rust will fail`
 		)
 }
 
@@ -136,8 +138,13 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	if (typeof binfile != 'string' || !binaryName.test(binfile)) throw `invalid rust binary name`
 	const modpath = path.join(wasmDir, binfile + '.wasm')
 	if (!wasmModules.has(binfile)) {
-		if (!fs.existsSync(modpath))
-			throw `run_rust('${binfile}'): this binary has no wasm module, and a child process is not allowed`
+		if (!fs.existsSync(modpath)) {
+			// the details are only logged, see unsupportedComputation in server/src/tools/spawnProcess.ts
+			console.warn(
+				`run_rust('${binfile}'): no wasm module, and the node permission model does not allow a child process`
+			)
+			throw 'this server build does not support this data computation request'
+		}
 		wasmModules.set(binfile, WebAssembly.compile(fs.readFileSync(modpath)))
 	}
 	const [wasmModule, input, { WASI }] = await Promise.all([

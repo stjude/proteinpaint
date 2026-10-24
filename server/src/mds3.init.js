@@ -722,9 +722,9 @@ async function mayRemoveQuery(ds, key, validate, removed) {
 		await validate()
 	} catch (e) {
 		const message = `${e?.message || e}`
-		// the node permission model error, or the error of an R or python package that only rejects, in an image without R
-		// or python
-		if (!/--allow-child-process|is not available in this server/.test(message)) throw e
+		// the node permission model error, or the error of a tool that this server build does not have, see
+		// unsupportedComputation in tools/spawnProcess.ts
+		if (!/--allow-child-process|does not support this data computation request/.test(message)) throw e
 		console.warn(`WARNING: ${ds.label}: removed queries.${key}, since a child process is not allowed: ${message}`)
 		delete ds.queries[key]
 		removed.add(key)
