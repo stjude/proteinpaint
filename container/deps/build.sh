@@ -145,28 +145,33 @@ function stageTarballs {
 # OS_UPDATES is the current date, so that the ppbase step that applies the Debian security updates
 # runs once a day, without invalidating the cached R and python stages.
 #
-# PPDEPS_CACHE_REF, when set to an image ref such as ghcr.io/stjude/ppbase:buildcache, imports and exports
-# the cache of every stage from/to that registry ref, so that a CI runner without a local cache reuses the
-# lower layers of the last build. It requires a buildx builder with the docker-container driver.
+# PPDEPS_CACHE_REF, when set to an image ref such as ghcr.io/stjude/ppbase:buildcache, imports the cache of
+# every stage from that registry ref into each of the 4 builds below, so that a CI runner without a local
+# cache reuses the lower layers of the last build. It requires a buildx builder with the docker-container
+# driver. Only the last build, ppfull, exports back to it: its dependency graph reaches every other target
+# (ppbase, ppruntime, ppserver), so its cache covers the whole build; exporting from every target would just
+# repeat the same upload.
 function buildImages {
 	local osupdates="${OS_UPDATES:-$(date -u +%Y-%m-%d)}"
 	local common=(--file "$CTX/Dockerfile" --build-arg ARCH="$ARCH" --build-arg IMGVER="$IMGVER" --build-arg IMGREV="$IMGREV"
 		--build-arg OS_UPDATES="$osupdates")
-	local cache=()
+	local cachefrom=()
+	local cacheto=()
 	if [[ "${PPDEPS_CACHE_REF:-}" != "" ]]; then
-		cache=(--cache-from "type=registry,ref=$PPDEPS_CACHE_REF" --cache-to "type=registry,ref=$PPDEPS_CACHE_REF,mode=max")
+		cachefrom=(--cache-from "type=registry,ref=$PPDEPS_CACHE_REF")
+		cacheto=(--cache-to "type=registry,ref=$PPDEPS_CACHE_REF,mode=max")
 	fi
 	set -x
-	docker buildx build "$CTX" "${common[@]}" ${cache[@]+"${cache[@]}"} --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM $BUILDARGS --output type=docker
+	docker buildx build "$CTX" "${common[@]}" ${cachefrom[@]+"${cachefrom[@]}"} --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM $BUILDARGS --output type=docker
 
 	# the app-free base of ppserver/ppfull, published under its own tag so that server/Dockerfile and
 	# full/Dockerfile can build on it without duplicating its layers under the ppserver/ppfull tags
-	docker buildx build "$CTX" "${common[@]}" --target ppruntime --tag "${MODE}ppdepsruntime:latest" $PLATFORM $BUILDARGS --output type=docker
+	docker buildx build "$CTX" "${common[@]}" ${cachefrom[@]+"${cachefrom[@]}"} --target ppruntime --tag "${MODE}ppdepsruntime:latest" $PLATFORM $BUILDARGS --output type=docker
 
-	docker buildx build "$CTX" "${common[@]}" --target ppserver --tag "${MODE}ppserver:latest" $PLATFORM \
+	docker buildx build "$CTX" "${common[@]}" ${cachefrom[@]+"${cachefrom[@]}"} --target ppserver --tag "${MODE}ppserver:latest" $PLATFORM \
 		--build-arg SERVERPKGVER="$SERVERPKGVER" --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
 
-	docker buildx build "$CTX" "${common[@]}" --target ppfull --tag "${MODE}ppfull:latest" $PLATFORM \
+	docker buildx build "$CTX" "${common[@]}" ${cachefrom[@]+"${cachefrom[@]}"} ${cacheto[@]+"${cacheto[@]}"} --target ppfull --tag "${MODE}ppfull:latest" $PLATFORM \
 		--build-arg SERVERPKGVER="$SERVERPKGVER" --build-arg FRONTPKGVER="$FRONTPKGVER" --build-arg CROSSENV="$CROSSENV" \
 		$BUILDARGS --output type=docker
 	set +x
