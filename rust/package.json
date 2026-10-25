@@ -26,6 +26,9 @@
 		"index.js",
 		"Cargo.toml",
 		"src",
+		"wasm/Cargo.toml",
+		"wasm/Cargo.lock",
+		"wasm/.cargo/config.toml",
 		"downloadBinariesOrCompileSource.js",
 		"LICENSE/*"
 	],

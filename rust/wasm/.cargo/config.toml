@@ -1,0 +1,3 @@
+# under ../target, which is gitignored, so that the server finds a module at rust/target/wasm/wasm32-wasip1/release
+[build]
+target-dir = "../target/wasm"
