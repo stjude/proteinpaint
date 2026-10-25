@@ -8,6 +8,8 @@ import {
 	groupsetUsesMafFilter,
 	tvsUsesMafFilter,
 	mayAdd_mayGetGeneVariantData,
+	mayRemoveDependentQueries,
+	mayRemoveQuery,
 	mayFilterByMaf,
 	mayValidateBcfMafFilter,
 	setFile,
@@ -65,6 +67,9 @@ Tests:
 	setFile: validates and resolves files
 	toBreakpointPos: parses breakpoint positions
 	svfusionByNameGetter_file: breakpoint positions of the file
+	mayRemoveQuery: a query whose tool is not allowed is removed, other errors still fail
+	mayRemoveQuery: with a child process allowed, every validation error fails
+	mayRemoveDependentQueries: native top genes are removed with geneExpression, a ds-supplied getter is kept
 */
 
 test('\n', t => {
@@ -3373,3 +3378,109 @@ function getOriginSplitDs() {
 		}
 	}
 }
+
+// the permission model of a server that cannot start a child process
+const noChildProcess = { has: scope => scope != 'child' }
+
+// passes when the promise rejects with an error that matches the pattern
+async function rejects(t, promise, pattern, message) {
+	try {
+		await promise
+		t.fail(message)
+	} catch (e) {
+		t.match(`${e?.message || e}`, pattern, message)
+	}
+}
+
+test('mayRemoveQuery: a query whose tool is not allowed is removed, other errors still fail', async t => {
+	const ds = { label: 'test', queries: { geneExpression: {}, ssGSEA: {}, singleCell: {} } }
+	const removed = new Set()
+	const warn = console.warn
+	console.warn = () => {}
+	try {
+		await mayRemoveQuery(
+			ds,
+			'geneExpression',
+			async () => {
+				throw new Error('Access to this API has been restricted. Use --allow-child-process to manage permissions.')
+			},
+			removed,
+			noChildProcess
+		)
+		await mayRemoveQuery(
+			ds,
+			'ssGSEA',
+			async () => {
+				throw 'this server build does not support this data computation request'
+			},
+			removed,
+			noChildProcess
+		)
+		t.deepEqual([...removed], ['geneExpression', 'ssGSEA'], 'should track the removed queries')
+		t.notOk(ds.queries.geneExpression, 'should remove a query whose validation is denied a child process')
+		t.notOk(ds.queries.ssGSEA, 'should remove a query whose tool is not in this server build')
+		let validated = false
+		await mayRemoveQuery(ds, 'singleCell', async () => (validated = true), removed, noChildProcess)
+		t.ok(validated && ds.queries.singleCell, 'should keep a query whose validation succeeds')
+		await rejects(
+			t,
+			mayRemoveQuery(
+				ds,
+				'singleCell',
+				async () => {
+					throw 'singleCell.samples missing'
+				},
+				removed,
+				noChildProcess
+			),
+			/singleCell.samples missing/,
+			'should rethrow an unrelated validation error'
+		)
+		t.ok(ds.queries.singleCell, 'should not remove a query for an unrelated validation error')
+		t.deepEqual([...removed], ['geneExpression', 'ssGSEA'], 'should not track a query that is kept')
+	} finally {
+		console.warn = warn
+	}
+	t.end()
+})
+
+test('mayRemoveQuery: with a child process allowed, every validation error fails', async t => {
+	const ds = { label: 'test', queries: { geneExpression: {} } }
+	const removed = new Set()
+	const denied = async () => {
+		throw 'this server build does not support this data computation request'
+	}
+	for (const permission of [undefined, { has: () => true }]) {
+		await rejects(
+			t,
+			mayRemoveQuery(ds, 'geneExpression', denied, removed, permission),
+			/does not support/,
+			`should rethrow ${permission ? 'with a permission model that allows it' : 'without a permission model'}`
+		)
+	}
+	t.ok(ds.queries.geneExpression, 'should not remove the query')
+	t.equal(removed.size, 0, 'should not track a removed query')
+	let validated = false
+	await mayRemoveQuery({ queries: {} }, 'geneExpression', async () => (validated = true), removed, noChildProcess)
+	t.ok(validated, 'should still call the validation of an absent query, which may check other settings')
+	t.end()
+})
+
+test('mayRemoveDependentQueries: native top genes are removed with geneExpression, a ds-supplied getter is kept', t => {
+	const warn = console.warn
+	console.warn = () => {}
+	try {
+		const native = { label: 'test', queries: { topVariablyExpressedGenes: {} } }
+		mayRemoveDependentQueries(native, new Set())
+		t.ok(native.queries.topVariablyExpressedGenes, 'should keep the native query while geneExpression is available')
+		mayRemoveDependentQueries(native, new Set(['geneExpression']))
+		t.notOk(native.queries.topVariablyExpressedGenes, 'should remove the native query with geneExpression')
+		const getGenes = async () => []
+		const api = { label: 'test', queries: { topVariablyExpressedGenes: { getGenes } } }
+		mayRemoveDependentQueries(api, new Set(['geneExpression']))
+		t.equal(api.queries.topVariablyExpressedGenes?.getGenes, getGenes, 'should keep a ds-supplied getGenes()')
+	} finally {
+		console.warn = warn
+	}
+	t.end()
+})

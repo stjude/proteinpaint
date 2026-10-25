@@ -170,14 +170,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_singleSampleGenomeQuantification(ds, genome)
 			await validate_query_singleSampleGbtk(ds, genome)
 			await mayRemoveToolQuery('singleCell', () => validate_query_singleCell(ds, genome))
-			// the native top genes are computed from the geneExpression file; a ds-supplied getGenes() does not need it
-			const topVE = ds.queries.topVariablyExpressedGenes
-			if (topVE && typeof topVE.getGenes != 'function' && removedToolQueries.has('geneExpression')) {
-				console.warn(
-					`WARNING: ${ds.label}: removed queries.topVariablyExpressedGenes, since queries.geneExpression is removed`
-				)
-				delete ds.queries.topVariablyExpressedGenes
-			}
+			mayRemoveDependentQueries(ds, removedToolQueries)
 			await validate_query_TopVariablyExpressedGenes(ds)
 			await validate_query_trackLst(ds, genome)
 			await validate_query_NIdata(ds)
@@ -717,8 +710,8 @@ When the node permission model does not allow a child process, such as in an ima
 fails for that reason is removed with a warning, instead of failing the dataset init, so that the other queries of the
 dataset are still available. Any other validation error still fails the dataset init.
 */
-async function mayRemoveQuery(ds, key, validate, removed) {
-	if (!ds.queries[key] || !process.permission || process.permission.has('child')) return await validate()
+export async function mayRemoveQuery(ds, key, validate, removed, permission = process.permission) {
+	if (!ds.queries[key] || !permission || permission.has('child')) return await validate()
 	try {
 		await validate()
 	} catch (e) {
@@ -729,6 +722,18 @@ async function mayRemoveQuery(ds, key, validate, removed) {
 		console.warn(`WARNING: ${ds.label}: removed queries.${key}, since a child process is not allowed: ${message}`)
 		delete ds.queries[key]
 		removed.add(key)
+	}
+}
+
+// removes a query whose data comes from a query that mayRemoveQuery() removed
+export function mayRemoveDependentQueries(ds, removed) {
+	// the native top genes are computed from the geneExpression file; a ds-supplied getGenes() does not need it
+	const topVE = ds.queries.topVariablyExpressedGenes
+	if (topVE && typeof topVE.getGenes != 'function' && removed.has('geneExpression')) {
+		console.warn(
+			`WARNING: ${ds.label}: removed queries.topVariablyExpressedGenes, since queries.geneExpression is removed`
+		)
+		delete ds.queries.topVariablyExpressedGenes
 	}
 }
 
