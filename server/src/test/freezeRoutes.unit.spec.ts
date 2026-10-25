@@ -18,7 +18,7 @@ function getApp() {
 		next()
 	})
 	app.get('/a', (req, res) => res.send('a'))
-	app.post('/b/:id', (req, res) => res.send('b' + req.params.id))
+	app.post('/b/:id', (req, res) => res.json({ id: req.params.id }))
 	const router = express.Router()
 	router.get('/c', (req, res) => res.send('c'))
 	app.use('/sub', router)
@@ -93,7 +93,7 @@ tape('freezeRoutes() keeps existing routes working', async test => {
 			test.equal(a.headers.get('x-test'), 'ok', 'should apply an existing middleware')
 
 			const b = await fetch(`${url}/b/1`, { method: 'POST' })
-			test.equal(await b.text(), 'b1', 'should respond to an existing POST route with a param')
+			test.deepEqual(await b.json(), { id: '1' }, 'should respond to an existing POST route with a param')
 
 			const c = await fetch(`${url}/sub/c`)
 			test.equal(await c.text(), 'c', 'should respond to a route in a sub-router')
