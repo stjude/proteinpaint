@@ -59,7 +59,7 @@ export async function plotSingleSampleGenomeQuantification(
 			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
 			singleSampleGenomeQuantification: { dataType: queryKey, sample: sample[q.sample_id_key] }
 		}
-		const data = await dofetch3('mds3', { body })
+		const data = await dofetch3('termdb/mds3', { body })
 		if (data.error) throw data.error
 
 		// optional query, if present, will enable clicking on genome-wide img to launch block
@@ -149,7 +149,7 @@ async function plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, c
 		dslabel,
 		singleSampleGbtk: { dataType: q.singleSampleGbtk, sample: sample[q2.sample_id_key] }
 	}
-	const d2 = await dofetch3('mds3', { body })
+	const d2 = await dofetch3('termdb/mds3', { body })
 	// d2={path:str}
 	if (!d2.path) return // no file
 	// has bedgraph file, load block

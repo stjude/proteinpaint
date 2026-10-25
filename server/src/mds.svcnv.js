@@ -1,5 +1,5 @@
 /*
-The /mdssvcnv route handler of legacy mds datasets, moved from app.unorg.js, see routes/mdssvcnv.ts
+The /mdssvcnv route handler of legacy mds datasets, see routes/mdssvcnv.ts
 */
 
 import { mdssvcnv_do_copyneutralloh, get_rank_from_sortedarray, setGenomes as setSharedGenomes } from './mds.shared.js'
@@ -12,7 +12,7 @@ import * as vcf from '#shared/vcf.js'
 import { handle_mdssvcnv_expression } from './handle_mdssvcnv_expression.js'
 import { draw_partition } from './partitionmatrix.js'
 
-// set by the route init, so that the moved code can use genomes as in app.unorg.js
+// set by the route init, so that the handler code can use the loaded genomes
 let genomes
 
 export { handle_mdssvcnv }

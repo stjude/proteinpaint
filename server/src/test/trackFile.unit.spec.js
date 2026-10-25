@@ -2,8 +2,7 @@ import tape from 'tape'
 import serverconfig from '../serverconfig.js'
 import * as common from '#shared/common.js'
 import * as utils from '../utils.js'
-import { setRoutes } from '../app.unorg.js'
-import { setMovedRoutes } from './movedRoutes.js'
+import { getTestRoutes } from './testRoutes.js'
 
 /*
 Specs for the custom track file paths of the mds routes.
@@ -90,8 +89,6 @@ const routeCases = [
 
 tape('\n', function (test) {
 	test.comment('-***- track file specs -***-')
-	routes = {}
-	const record = (p, h) => (routes[p] = h)
 	const genomes = {
 		hg38: {
 			name: 'hg38',
@@ -101,9 +98,7 @@ tape('\n', function (test) {
 			datasets: { FakeMds: { isMds: true } }
 		}
 	}
-	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
-	setRoutes(app, genomes, {})
-	setMovedRoutes(app, genomes)
+	routes = getTestRoutes(genomes)
 	test.end()
 })
 

@@ -11,7 +11,6 @@ import * as augen from '@sjcrh/augen'
 import serverconfig, { lockServerconfig } from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares, jsonErrorHandler } from './app.middlewares.js'
-import * as oldApp from './app.unorg.js'
 import { getAuthApi, extractValidatedCreds } from './auth.ts'
 import { sendMessageToSlack } from './postOnSlack.ts'
 import { routeFiles } from './app.routes.js'
@@ -90,8 +89,6 @@ shared/types/src/routes and not when modified.
 			// 	outputFile: path.join(__dirname, '../../shared/types/src/checkers/routes.ts')
 			// }
 		})
-
-		oldApp.setRoutes(app, genomes, serverconfig)
 
 		// last, so that it handles an error passed to next() by any middleware or route above
 		app.use(jsonErrorHandler)

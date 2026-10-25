@@ -1,12 +1,12 @@
 /*
-The /cardsjson route handler, moved from app.unorg.js, see routes/cardsjson.ts
+The /cardsjson route handler, see routes/cardsjson.ts
 */
 
 import serverconfig from './serverconfig.js'
 import * as utils from './utils.js'
 import * as common from '#shared/common.js'
 
-// set by the route init, so that the moved code can use genomes as in app.unorg.js
+// set by the route init, so that the handler code can use the loaded genomes
 let genomes
 
 export { handle_cards }

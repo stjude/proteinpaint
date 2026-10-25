@@ -615,7 +615,7 @@ function mayaddGetter_m2csq(tk, block) {
 		}
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (tk.token) headers['X-Auth-Token'] = tk.token
-		return await dofetch3('mds3', { body, headers }, { serverData: tk.cache })
+		return await dofetch3('termdb/mds3', { body, headers }, { serverData: tk.cache })
 	}
 }
 
@@ -800,7 +800,7 @@ function addV2Sgetter_native(tk, block) {
 			if (lst.length) par.hiddenmclasslst = JSON.stringify(lst) // lst contains mixture of mclass(str) and dt(int), pass json array instead of comma-joined string
 		}
 
-		const data = await dofetch3('mds3', { body: par, headers }, { serverData: tk.cache })
+		const data = await dofetch3('termdb/mds3', { body: par, headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
 		const r = data.variant2samples
 		if (!r) throw 'result error'

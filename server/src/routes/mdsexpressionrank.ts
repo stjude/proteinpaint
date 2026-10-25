@@ -4,7 +4,7 @@ import { hasMdsDataset } from '#src/mds.shared.js'
 import { handle_mdsexpressionrank, setGenomes } from '#src/mds.expressionrank.js'
 
 /*
-The route of the expression rank track of a legacy mds dataset, which was set up by app.unorg.js. The handler is in mds.expressionrank.js.
+The route of the expression rank track of a legacy mds dataset. The handler is in mds.expressionrank.js.
 */
 
 const payload: RoutePayload = {

@@ -3,9 +3,13 @@ import path from 'path'
 import fs from 'fs'
 import * as utils from '#src/utils.js'
 import { imageSize } from '#src/utils/imageSize.ts'
+import serverconfig from '#src/serverconfig.js'
 
 const payload: RoutePayload = {
-	init,
+	// not set up when disabled by serverconfig.features.disableFeature_img
+	get init() {
+		return serverconfig.features.disableFeature_img ? null : init
+	},
 	request: { typeId: 'imgRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'imgResponse' }
 }

@@ -12,7 +12,7 @@ import { joinUrl, memFetch } from '#shared/index.js'
 const sessions = [0]
 
 export default async function setRoutes(app, basepath) {
-	app.use(basepath + '/mds3', (req, res, next) => {
+	app.use(basepath + '/termdb/mds3', (req, res, next) => {
 		if (req.cookies.gdcsessionid) {
 			req.headers['X-Auth-Token'] = sessions[+req.cookies.gdcsessionid]
 		}

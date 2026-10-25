@@ -7,8 +7,7 @@ import { fileURLToPath } from 'url'
 import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
 import { api as ntseqApi } from '../routes/ntseq.ts'
-import { setRoutes } from '../app.unorg.js'
-import { setMovedRoutes } from './movedRoutes.js'
+import { getTestRoutes } from './testRoutes.js'
 import { init as onesampletkInit } from '../j2/onesampletk.ts'
 
 /*
@@ -155,12 +154,8 @@ tape('\n', async function (test) {
 	allowRemoteFile = serverconfig.features.ALLOW_remotefilefromurl
 	serverconfig.features.ALLOW_remotefilefromurl = true
 
-	routes = {}
-	const record = (p, h) => (routes[p] = h)
 	const genomes = { hg38: getGenome() }
-	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
-	setRoutes(app, genomes, {})
-	setMovedRoutes(app, genomes)
+	routes = getTestRoutes(genomes)
 	routes.onesampletk = onesampletkInit({ genomes })
 	test.end()
 })

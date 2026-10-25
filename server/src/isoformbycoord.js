@@ -1,5 +1,5 @@
 /*
-The /isoformbycoord route handler, moved from app.unorg.js, see routes/isoformbycoord.ts
+The /isoformbycoord route handler, see routes/isoformbycoord.ts
 */
 
 import serverconfig from './serverconfig.js'
@@ -7,7 +7,7 @@ import path from 'path'
 import * as utils from './utils.js'
 import * as common from '#shared/common.js'
 
-// set by the route init, so that the moved code can use genomes as in app.unorg.js
+// set by the route init, so that the handler code can use the loaded genomes
 let genomes
 
 export { handle_isoformbycoord }

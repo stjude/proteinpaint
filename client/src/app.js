@@ -751,7 +751,7 @@ async function may_launchGeneView(arg, app) {
 		if (!arg.mds3_ssm2canonicalisoform.ssm_id) throw '.ssm_id missing from mds3_ssm2canonicalisoform'
 		if (!arg.mds3_ssm2canonicalisoform.dslabel) throw '.dslabel missing from mds3_ssm2canonicalisoform'
 		const data = await client.dofetch2(
-			'mds3?' +
+			'termdb/mds3?' +
 				'genome=' +
 				arg.genome +
 				'&dslabel=' +

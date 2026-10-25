@@ -49,7 +49,7 @@ class GeneExpression {
 
 	async main() {
 		const body = this.getParam()
-		const data = await dofetch3('mds3', { body })
+		const data = await dofetch3('termdb/mds3', { body })
 		plotHeatmap_R(data, this)
 	}
 

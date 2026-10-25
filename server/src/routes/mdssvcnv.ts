@@ -4,7 +4,7 @@ import { hasMdsDataset } from '#src/mds.shared.js'
 import { handle_mdssvcnv, setGenomes } from '#src/mds.svcnv.js'
 
 /*
-The route of the svcnv track of a legacy mds dataset, which was set up by app.unorg.js. The handler is in mds.svcnv.js.
+The route of the svcnv track of a legacy mds dataset. The handler is in mds.svcnv.js.
 */
 
 const payload: RoutePayload = {
