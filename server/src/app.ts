@@ -71,7 +71,6 @@ export async function launch() {
 		const __dirname = import.meta.dirname || new URL('.', import.meta.url).pathname
 
 		augen.setRoutes(app, routes, {
-			app,
 			genomes,
 			basepath: serverconfig.basepath || '',
 			apiJson: path.join(__dirname, '../../public/docs/server-api.json'),
