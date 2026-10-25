@@ -1,9 +1,13 @@
 import { fileurl, file_is_readable } from '#src/utils.js'
 import { do_hicstat } from '#src/hicstat.ts'
+import serverconfig from '#src/serverconfig.js'
 import type { HicstatRequest, HicstatResponse, RouteApi, RoutePayload } from '#types'
 
 const payload: RoutePayload = {
-	init,
+	// not set up when disabled by serverconfig.features.disableFeature_hictk
+	get init() {
+		return serverconfig.features.disableFeature_hictk ? null : init
+	},
 	request: { typeId: 'HicstatRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'HicstatResponse' }
 }

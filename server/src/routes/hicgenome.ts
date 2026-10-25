@@ -5,9 +5,13 @@ import readline from 'readline'
 import { runTool } from '#src/tools/index.ts'
 import { mapConcurrent } from '#src/utils/concurrencyLimiter.ts'
 import { getStrawArgs, validChrlst, validHicChr, STRAW_CONCURRENCY } from '#src/utils/hicStraw.ts'
+import serverconfig from '#src/serverconfig.js'
 
 export const payload: RoutePayload = {
-	init,
+	// not set up when disabled by serverconfig.features.disableFeature_hictk
+	get init() {
+		return serverconfig.features.disableFeature_hictk ? null : init
+	},
 	request: { typeId: 'HicGenomeRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'HicGenomeResponse' }
 }

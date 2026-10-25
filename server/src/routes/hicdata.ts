@@ -3,9 +3,13 @@ import { fileurl } from '#src/utils.js'
 import readline from 'readline'
 import { runTool } from '#src/tools/index.ts'
 import { getStrawArgs, validHicPos } from '#src/utils/hicStraw.ts'
+import serverconfig from '#src/serverconfig.js'
 
 export const payload: RoutePayload = {
-	init,
+	// not set up when disabled by serverconfig.features.disableFeature_hictk
+	get init() {
+		return serverconfig.features.disableFeature_hictk ? null : init
+	},
 	request: { typeId: 'HicdataRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'HicdataResponse' }
 }
