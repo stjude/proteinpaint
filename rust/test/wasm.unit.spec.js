@@ -50,7 +50,14 @@ tape(
 		// a panic rejects with the panic message, and the process keeps running
 		await assert.rejects(run_rust('fisher', '{"input":[{"index":0,"n1":"x"}]}'), /non-zero status[^]*panicked/)
 		await assert.rejects(run_rust('DEanalysis', '{}'), /^this server build does not support this data computation request$/)
-		await assert.rejects(run_rust('../fisher', '{}'), /invalid rust binary name/)`)
+		await assert.rejects(run_rust('../fisher', '{}'), /invalid rust binary name/)
+		// an abort stops a stream input that does not end, and destroys it
+		const stalled = new Readable({ read() {} })
+		stalled.push('{"input":')
+		const controller = new AbortController()
+		setTimeout(() => controller.abort(), 50)
+		await assert.rejects(run_rust('fisher', stalled, [], { signal: controller.signal }), /run_rust\\('fisher'\\): aborted$/)
+		assert.ok(stalled.destroyed, 'the stalled input is destroyed')`)
 		test.equal(result.status, 0, result.stderr)
 		test.ok(result.stdout.includes('checks passed'), 'the checks ran')
 		test.end()

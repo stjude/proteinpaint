@@ -149,7 +149,7 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	}
 	const [wasmModule, input, { WASI }] = await Promise.all([
 		wasmModules.get(binfile),
-		readInput(input_data),
+		readInput(input_data, signal, binfile),
 		// imported only when used, since the import logs an experimental feature warning
 		import('node:wasi')
 	])
@@ -191,10 +191,22 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	}
 }
 
-async function readInput(input_data) {
+// collects a stream input; an abort stops a stream that does not end, and destroys it, as the native path ends the
+// input of the killed process
+async function readInput(input_data, signal, binfile) {
 	if (typeof input_data == 'string' || Buffer.isBuffer(input_data)) return input_data
-	const chunks = []
-	for await (const chunk of Readable.from(input_data))
-		chunks.push(typeof chunk == 'string' ? Buffer.from(chunk) : chunk)
-	return Buffer.concat(chunks)
+	const stream = Readable.from(input_data)
+	const onAbort = () => {
+		const err = new Error(`run_rust('${binfile}'): aborted`)
+		stream.destroy(err)
+		if (typeof input_data?.destroy == 'function') input_data.destroy()
+	}
+	signal?.addEventListener('abort', onAbort, { once: true })
+	try {
+		const chunks = []
+		for await (const chunk of stream) chunks.push(typeof chunk == 'string' ? Buffer.from(chunk) : chunk)
+		return Buffer.concat(chunks)
+	} finally {
+		signal?.removeEventListener('abort', onAbort)
+	}
 }
