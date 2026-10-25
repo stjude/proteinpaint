@@ -8,6 +8,7 @@ import { freezeRoutes } from '../freezeRoutes.ts'
 	Tests:
 		freezeRoutes() prevents adding routes and middlewares
 		freezeRoutes() prevents replacing a route handler
+		freezeRoutes() locks the app settings and request handling
 		freezeRoutes() keeps existing routes working
 */
 
@@ -15,6 +16,12 @@ function getApp() {
 	const app: any = express()
 	app.use((req, res, next) => {
 		res.set('x-test', 'ok')
+		// a method that is assigned to a response instance, as in app.middlewares.js
+		const send = res.send
+		res.send = function (body) {
+			res.set('x-send', 'ok')
+			return send.call(this, body)
+		}
 		next()
 	})
 	app.get('/a', (req, res) => res.send('a'))
@@ -97,6 +104,24 @@ tape('freezeRoutes() prevents replacing a route handler', test => {
 	test.end()
 })
 
+tape('freezeRoutes() locks the app settings and request handling', test => {
+	const { app } = getApp()
+	app.enable('trust proxy')
+	freezeRoutes(app)
+
+	test.throws(() => app.set('trust proxy', false), TypeError, 'should throw on app.set()')
+	test.throws(() => app.disable('etag'), TypeError, 'should throw on app.disable()')
+	test.equal(app.enabled('trust proxy'), true, 'should keep a setting from before the freeze')
+	test.throws(() => (app.settings = {}), TypeError, 'should throw on replacing the app settings')
+	test.throws(() => (app.handle = () => {}), TypeError, 'should throw on replacing app.handle')
+	test.throws(() => (app.listen = () => {}), TypeError, 'should throw on replacing app.listen')
+	test.throws(() => (app.response.send = () => {}), TypeError, 'should throw on adding to the app response prototype')
+	test.throws(() => (app.request.get = () => {}), TypeError, 'should throw on adding to the app request prototype')
+	test.throws(() => (app.response = {}), TypeError, 'should throw on replacing the app response prototype')
+	test.throws(() => (app.request = {}), TypeError, 'should throw on replacing the app request prototype')
+	test.end()
+})
+
 tape('freezeRoutes() keeps existing routes working', async test => {
 	const { app } = getApp()
 	freezeRoutes(app)
@@ -110,6 +135,7 @@ tape('freezeRoutes() keeps existing routes working', async test => {
 			test.equal(a.status, 200, 'should respond to an existing GET route')
 			test.equal(await a.text(), 'a', 'should use the existing GET handler')
 			test.equal(a.headers.get('x-test'), 'ok', 'should apply an existing middleware')
+			test.equal(a.headers.get('x-send'), 'ok', 'should use a method that a middleware assigned to the response')
 
 			const b = await fetch(`${url}/b/1`, { method: 'POST' })
 			test.deepEqual(await b.json(), { id: '1' }, 'should respond to an existing POST route with a param')

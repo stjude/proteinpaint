@@ -8,15 +8,25 @@
 
 	The layer objects are not frozen, since Layer.match() sets layer.params and layer.path on each request.
 	Only the properties that determine which handler is called are made non-writable and non-configurable.
+
+	The app settings, such as 'trust proxy', are also frozen, since some are read on each request. The app
+	methods that handle each request are locked, and the request and response prototypes of the app may not
+	get new properties. The express base request and response prototypes are not frozen, so that
+	a middleware may still assign a method, such as res.send, to a request or response instance.
 */
 
 const lockedLayerProps = ['handle', 'route', 'regexp', 'keys', 'method']
+const lockedAppProps = ['settings', 'request', 'response', 'handle', 'lazyrouter', 'listen']
 
 export function freezeRoutes(app) {
 	const router = app._router
 	if (!router) return
 	lockProp(app, '_router')
 	freezeRouter(router)
+	Object.freeze(app.settings)
+	Object.freeze(app.request)
+	Object.freeze(app.response)
+	for (const key of lockedAppProps) lockProp(app, key)
 }
 
 function freezeRouter(router) {
