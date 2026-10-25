@@ -58,8 +58,8 @@ function lockLayer(layer) {
 		for (const key of layer.keys) Object.freeze(key)
 		Object.freeze(layer.keys)
 	}
-	for (const key of lockedLayerProps) {
-		if (Object.hasOwn(layer, key)) lockProp(layer, key)
+	for (const key of [...lockedLayerProps, 'match', 'handle_request', 'handle_error']) {
+		if (key in layer) lockProp(layer, key)
 	}
 	// a nested router, such as from app.use(express.Router()) or app.get(path, express.Router())
 	if (Array.isArray(layer.handle?.stack)) freezeRouter(layer.handle)
