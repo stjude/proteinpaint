@@ -64,6 +64,37 @@ tape(
 	}
 )
 
+tape(
+	'a module that does not compile rejects before a stream input is read, and is compiled again by a later call',
+	{ skip: !hasModules },
+	test => {
+		// a module name that no binary has, which the checks replace with a module that compiles
+		const name = 'pp_test_invalid_module'
+		const modpath = path.join(wasmDir, name + '.wasm')
+		fs.writeFileSync(modpath, 'not a wasm module')
+		try {
+			const result = runChecks(
+				`
+			const stalled = new Readable({ read() {} })
+			stalled.push('{"input":')
+			await assert.rejects(run_rust('${name}', stalled), WebAssembly.CompileError)
+			assert.equal(stalled.readableDidRead, false, 'the stream input is not read')
+			const fs = await import('node:fs')
+			fs.copyFileSync(${JSON.stringify(path.join(wasmDir, 'fisher.wasm'))}, ${JSON.stringify(modpath)})
+			const input = [{ index: 0, n1: 605, n2: 2050, n3: 503, n4: 1895 }]
+			const out = JSON.parse(await run_rust('${name}', JSON.stringify({ input })))
+			assert.deepEqual(out.map(r => r.p_value), [0.12552895565046274])`,
+				['--allow-wasi', `--allow-fs-write=${wasmDir}`]
+			)
+			test.equal(result.status, 0, result.stderr)
+			test.ok(result.stdout.includes('checks passed'), 'the checks ran')
+		} finally {
+			fs.rmSync(modpath, { force: true })
+		}
+		test.end()
+	}
+)
+
 tape('a wasm module requires the --allow-wasi permission', { skip: !hasModules }, test => {
 	const result = runChecks(
 		`await assert.rejects(run_rust('fisher', '{"input":[]}'), { code: 'ERR_ACCESS_DENIED' })`,

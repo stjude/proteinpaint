@@ -1,6 +1,6 @@
 // Syntax: cd .. && cargo build --release
-use bio::alignment::pairwise::*;
 use bio::alignment::AlignmentOperation;
+use bio::alignment::pairwise::*;
 use std::cmp;
 use std::process::Command;
 use std::str;
@@ -10,19 +10,18 @@ use std::str;
 #[allow(dead_code)]
 fn check_base_pair_quality_scores(
     // Function that checks for base pair quality score to ensure all reads being aligned have high quality reads near the variant position
-    quality_score_sequence: &String, // String containing read base pair sequence
-    alphabets: &Vec<char>,           // Alphabets from CIGAR sequence
-    numbers: &Vec<i64>,              // Numbers from CIGAR sequence
-    mut start_position: i64,         // Start position of read
-    variant_pos: i64,                // Start position of variant
-    flanking_region_length: i64, // Flanking region uptil where base-pair quality of nucleotides need to be checked
-    indel_length: i64,           // Indel length
-    left_flanking_region_limit: i64, // Left hand region upto where base-pair quality check needs to be carried out
+    quality_score_sequence: &String,  // String containing read base pair sequence
+    alphabets: &Vec<char>,            // Alphabets from CIGAR sequence
+    numbers: &Vec<i64>,               // Numbers from CIGAR sequence
+    mut start_position: i64,          // Start position of read
+    variant_pos: i64,                 // Start position of variant
+    flanking_region_length: i64,      // Flanking region uptil where base-pair quality of nucleotides need to be checked
+    indel_length: i64,                // Indel length
+    left_flanking_region_limit: i64,  // Left hand region upto where base-pair quality check needs to be carried out
     right_flanking_region_limit: i64, // Right hand region upto where base-pair quality check needs to be carried out
 ) -> bool {
     let quality_check_pass_fail = true; // Flag to record whether base pair quality check passed or failed
-    let high_quality_score_characters: [&str; 11] =
-        ["?", "@", "A", "B", "C", "D", "E", "F", "G", "H", "I"]; // Array storing phred33 base pair quality scores >= 30
+    let high_quality_score_characters: [&str; 11] = ["?", "@", "A", "B", "C", "D", "E", "F", "G", "H", "I"]; // Array storing phred33 base pair quality scores >= 30
     if &alphabets[0].to_string().as_str() == &"S" {
         start_position -= numbers[0].to_string().parse::<i64>().unwrap();
     }
@@ -34,26 +33,20 @@ fn check_base_pair_quality_scores(
         if &alphabets[i].to_string().as_str() == &"H" {
             // Ignore hardclips
             continue;
-        } else if &alphabets[i].to_string().as_str() == &"M"
-            || &alphabets[i].to_string().as_str() == &"S"
-        {
+        } else if &alphabets[i].to_string().as_str() == &"M" || &alphabets[i].to_string().as_str() == &"S" {
             // Checking to see if within variant region or flanking region
             let fragment_length = numbers[i].to_string().parse::<i64>().unwrap(); // Length of CIGAR fragment
             let mut current_nucl = current_pos; // Nucleotide iterator w.r.t genomic coordinates (used in for loop below)
             let mut current_nucl_read = nclt_pos; // Nucleotide iterator w.r.t read being analyzed (used in for loop below)
             for j in 0..fragment_length {
-                if left_flanking_region_limit <= current_nucl
-                    && current_nucl <= right_flanking_region_limit
-                {}
+                if left_flanking_region_limit <= current_nucl && current_nucl <= right_flanking_region_limit {}
 
                 current_nucl += 1;
             }
 
             current_pos += fragment_length;
             nclt_pos += fragment_length;
-        } else if &alphabets[i].to_string().as_str() == &"D"
-            || &alphabets[i].to_string().as_str() == &"N"
-        {
+        } else if &alphabets[i].to_string().as_str() == &"D" || &alphabets[i].to_string().as_str() == &"N" {
             current_pos += numbers[i].to_string().parse::<i64>().unwrap();
         } else if &alphabets[i].to_string().as_str() == &"I" {
             nclt_pos += numbers[i].to_string().parse::<i64>().unwrap();
@@ -73,11 +66,11 @@ pub fn realign_reads(
     start_positions: &String, // Variable contains start position of reads separated by "-" character
     cigar_sequences: &String, // Variable contains cigar sequences separated by "-" character
     quality_scores: &String, // Variable contains quality scores of reads separated by "-" character
-    clustalo_path: &String,  // Path to clustalo
-    ref_sequence: &String,   // Complete original reference sequence
-    alt_sequence: &String,   // Complete original alternate sequence
-    variant_pos: i64,        // Original variant position
-    indel_length: i64,       // Indel length
+    clustalo_path: &String, // Path to clustalo
+    ref_sequence: &String, // Complete original reference sequence
+    alt_sequence: &String, // Complete original alternate sequence
+    variant_pos: i64,   // Original variant position
+    indel_length: i64,  // Indel length
 ) {
     // NOTE: This function assumes there is only ONE alternate allele. In case of multi-allelelic variants in a region, may have to employ some machine-learning techniques like KMeans clustering to determine number of alternate alleles at a particular region.
 
@@ -109,8 +102,7 @@ pub fn realign_reads(
             let mut current_pos = start_positions_list[i].to_string().parse::<i64>().unwrap();
             let no_ins_del = 0;
             for j in 0..alphabets.len() {
-                if &alphabets[0].to_string().as_str() == &"S"
-                    || &alphabets[0].to_string().as_str() == &"H"
+                if &alphabets[0].to_string().as_str() == &"S" || &alphabets[0].to_string().as_str() == &"H"
                 // Ignore hardclips at start of sequence
                 {
                     // When the first entry in the cigar sequence is a softclip the start position is generally starts from the next CIGAR entry
@@ -122,18 +114,14 @@ pub fn realign_reads(
                     let ins_del_end = current_pos + numbers[j].to_string().parse::<i64>().unwrap(); // Position of end-point of insertion/deletion
                     if (variant_pos - current_pos).abs() <= flanking_region_length
                         || (current_pos + ins_del_end - variant_pos).abs() <= flanking_region_length
-                        || (variant_pos + indel_length - current_pos).abs()
-                            <= flanking_region_length
-                        || (current_pos + ins_del_end - variant_pos - indel_length).abs()
-                            <= flanking_region_length
+                        || (variant_pos + indel_length - current_pos).abs() <= flanking_region_length
+                        || (current_pos + ins_del_end - variant_pos - indel_length).abs() <= flanking_region_length
                     // Checking if there is a splice site near the variant region. If yes, that read is not considered for realignment
                     {
                         break;
                     }
                     current_pos += numbers[j].to_string().parse::<i64>().unwrap();
-                } else if &alphabets[j].to_string().as_str() == &"I"
-                    || &alphabets[j].to_string().as_str() == &"D"
-                {
+                } else if &alphabets[j].to_string().as_str() == &"I" || &alphabets[j].to_string().as_str() == &"D" {
                     let ins_del_end = current_pos + numbers[j].to_string().parse::<i64>().unwrap(); // Position of end-point of insertion/deletion
 
                     //println!("current_pos:{}", current_pos);
@@ -214,11 +202,8 @@ pub fn check_read_within_indel_region(
             let (alphabets, numbers) = parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
             let cigar_length: usize = alphabets.len();
             // Check to see if the first item in cigar is a soft clip
-            if &alphabets[0].to_string().as_str() == &"S"
-                || &alphabets[0].to_string().as_str() == &"I"
-            {
-                correct_start_position =
-                    correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
+            if &alphabets[0].to_string().as_str() == &"S" || &alphabets[0].to_string().as_str() == &"I" {
+                correct_start_position = correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
                 // Correcting for incorrect left position (when read starts with a softclip) by subtracting length of softclip from original left most position of read
             }
             let mut correct_start_position_without_splicing = correct_start_position; // Correct start position without splicing (if read is spliced);
@@ -233,8 +218,7 @@ pub fn check_read_within_indel_region(
                 } else if &alphabets[i].to_string().as_str() == &"N" {
                     splice_freq += 1;
                     correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
-                    correct_start_position_without_splicing +=
-                        numbers[i].to_string().parse::<i64>().unwrap();
+                    correct_start_position_without_splicing += numbers[i].to_string().parse::<i64>().unwrap();
                 } else if &alphabets[i].to_string().as_str() == &"I" {
                 } else {
                     correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
@@ -264,9 +248,8 @@ pub fn check_read_within_indel_region(
             #[allow(unused_comparisons)] // In the future, may remove this "if strictness" condition
             if strictness >= 0 {
                 let percentage_indel_length: f64 = 0.0; // Minimum fraction of length of indel needed to decide the max distance a read can be from the start of an indel so as to decide if the read harbors variant region
-                let indel_cutoff: i64 =
-                    (indel_length as f64 * percentage_indel_length).ceil() as i64; // Max distance from start of an indel a read can start so as to consider if read contains variant region
-                                                                                   //println!("indel_cutoff:{}", indel_cutoff);
+                let indel_cutoff: i64 = (indel_length as f64 * percentage_indel_length).ceil() as i64; // Max distance from start of an indel a read can start so as to consider if read contains variant region
+                //println!("indel_cutoff:{}", indel_cutoff);
                 if (indel_start + indel_cutoff <= correct_start_position
                     && correct_end_position <= indel_stop - indel_cutoff)
                     || (correct_start_position <= indel_start && indel_stop <= correct_end_position)
@@ -289,8 +272,7 @@ pub fn check_read_within_indel_region(
             {
                 //println!("case3 within_indel");
                 within_indel = 1;
-            } else if (indel_start <= correct_start_position
-                && correct_start_position <= indel_stop)
+            } else if (indel_start <= correct_start_position && correct_start_position <= indel_stop)
                 || (indel_start <= correct_end_position && correct_end_position <= indel_stop)
             // When read contains only part of a read
             {
@@ -317,9 +299,7 @@ pub fn check_read_within_indel_region(
             //    indel_start + indel_length as i64
             //);
             //println!("within_indel:{}", within_indel);
-            if splice_freq > 0
-                && ((within_indel == 1 && refalleles.len() == 1) || refalleles.len() > 1)
-            {
+            if splice_freq > 0 && ((within_indel == 1 && refalleles.len() == 1) || refalleles.len() > 1) {
                 let mut nucleotide_position_without_splicing = 0; // This contains the position of nucleotide being analyzed w.r.t to read without splicing
                 let mut nucleotide_position_wrt_genome = correct_start_position; // This contains the position of nucleotide being analyzed w.r.t to genome
                 let mut new_frag = 1; // Flag indicating start of a new fragment after splicing
@@ -338,28 +318,22 @@ pub fn check_read_within_indel_region(
                     }
 
                     if &alphabets[i].to_string().as_str() != &"N" {
-                        nucleotide_position_without_splicing +=
-                            numbers[i].to_string().parse::<i64>().unwrap();
+                        nucleotide_position_without_splicing += numbers[i].to_string().parse::<i64>().unwrap();
                     }
 
                     if &alphabets[i].to_string().as_str() == &"N" {
-                        nucleotide_position_wrt_genome +=
-                            numbers[i].to_string().parse::<i64>().unwrap();
+                        nucleotide_position_wrt_genome += numbers[i].to_string().parse::<i64>().unwrap();
                     } else if &alphabets[i].to_string().as_str() == &"I" {
                         // In case of an insertion, the position w.r.t to read will change, but no change will occur w.r.t reference genome since the inserted nucleotides are not present in the reference genome
                         splice_stop_pos += numbers[i].to_string().parse::<i64>().unwrap();
                     } else if &alphabets[i].to_string().as_str() == &"D" {
                         // In case of a deletion, the position w.r.t reference genome will change but no change will occur w.r.t reads since the deleted nucleotides are not present in the read
                         splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
-                        nucleotide_position_wrt_genome +=
-                            numbers[i].to_string().parse::<i64>().unwrap();
-                    } else if &alphabets[i].to_string().as_str() == &"M"
-                        || &alphabets[i].to_string().as_str() == &"S"
-                    {
+                        nucleotide_position_wrt_genome += numbers[i].to_string().parse::<i64>().unwrap();
+                    } else if &alphabets[i].to_string().as_str() == &"M" || &alphabets[i].to_string().as_str() == &"S" {
                         splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
                         splice_stop_pos += numbers[i].to_string().parse::<i64>().unwrap();
-                        nucleotide_position_wrt_genome +=
-                            numbers[i].to_string().parse::<i64>().unwrap();
+                        nucleotide_position_wrt_genome += numbers[i].to_string().parse::<i64>().unwrap();
                     }
 
                     //println!(
@@ -458,8 +432,7 @@ pub fn check_read_within_indel_region(
                     && splice_freq == 0
                 // When read starts and ends with a softclip
                 {
-                    if (indel_start - correct_start_position).abs()
-                        <= (indel_start - correct_end_position).abs()
+                    if (indel_start - correct_start_position).abs() <= (indel_start - correct_end_position).abs()
                     // When start position is closer to indel start, read is right aligned
                     {
                         alignment_side = "right".to_string();
@@ -503,8 +476,7 @@ pub fn check_read_within_indel_region(
                     alignment_side = "right".to_string();
                     //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
                     //read_indel_start = correct_end_position as usize - sequence.len();
-                } else if (indel_start - correct_start_position).abs()
-                    <= (indel_start - correct_end_position).abs()
+                } else if (indel_start - correct_start_position).abs() <= (indel_start - correct_end_position).abs()
                 // When start position is closer to indel start, read is right aligned
                 {
                     alignment_side = "right".to_string();
@@ -584,29 +556,17 @@ fn check_first_last_nucleotide_correctly_aligned(
     let mut wrong_substitution = true; // Flag to check if last nucleotide has a substitution that should have been placed earlier
     for i in 0..align_chars.len() {
         let j = align_chars.len() - i - 1;
-        if &align_chars[j].to_string() == &"|"
-            && first == 0
-            && first_substituted_nucleotides.len() == 0
-        {
+        if &align_chars[j].to_string() == &"|" && first == 0 && first_substituted_nucleotides.len() == 0 {
             first_matched_nucleotides.push(r_seq_chars[j]);
             wrong_substitution = false;
-        } else if &align_chars[j].to_string() == &"|"
-            && first == 0
-            && first_substituted_nucleotides.len() > 0
-        {
+        } else if &align_chars[j].to_string() == &"|" && first == 0 && first_substituted_nucleotides.len() > 0 {
             wrong_substitution = false;
-        } else if &align_chars[j].to_string() == &"*"
-            && first == 0
-            && first_matched_nucleotides.len() == 0
-        {
+        } else if &align_chars[j].to_string() == &"*" && first == 0 && first_matched_nucleotides.len() == 0 {
             first_substituted_nucleotides.push(q_seq_chars[j]);
         } else if first == 1 && &align_chars[j].to_string() != &"|" {
             // Addition of nucleotides to first unmatched sequence
             first_unmatched_sequence.push(r_seq_chars[j]);
-        } else if first == 0
-            && &align_chars[j].to_string() != &"|"
-            && &align_chars[j].to_string() != &"*"
-        {
+        } else if first == 0 && &align_chars[j].to_string() != &"|" && &align_chars[j].to_string() != &"*" {
             // End of first matched nucleotide and start of first unmatched sequence
             first += 1;
             first_unmatched_sequence.push(r_seq_chars[j]);
@@ -621,9 +581,7 @@ fn check_first_last_nucleotide_correctly_aligned(
     let mut first_unmatched_sequence_right_wrt_partially_matched_nucleotides = String::new(); // First unmatched sequence to the right w.r.t first_partially_matched_nucleotides_right
     for i in 0..align_chars.len() {
         let j = align_chars.len() - i - 1;
-        if (&align_chars[j].to_string() == &"|" || &align_chars[j].to_string() == &"*")
-            && first == 0
-        {
+        if (&align_chars[j].to_string() == &"|" || &align_chars[j].to_string() == &"*") && first == 0 {
             first_partially_matched_nucleotides_right.push(q_seq_chars[j]);
         } else if first == 0 && &align_chars[j].to_string() == &" " {
             first += 1;
@@ -640,9 +598,7 @@ fn check_first_last_nucleotide_correctly_aligned(
     let mut first_partially_matched_nucleotides_left = String::new(); // First partially matched sequence on the left hand side
     let mut first_unmatched_sequence_left_wrt_partially_matched_nucleotides = String::new(); // First unmatched sequence to the right w.r.t first_partially_matched_nucleotides_left
     for i in 0..align_chars.len() {
-        if (&align_chars[i].to_string() == &"|" || &align_chars[i].to_string() == &"*")
-            && first == 0
-        {
+        if (&align_chars[i].to_string() == &"|" || &align_chars[i].to_string() == &"*") && first == 0 {
             first_partially_matched_nucleotides_left.push(q_seq_chars[i]);
             //println!("i:{}", i);
             //println!("q_seq_chars[i]:{}", q_seq_chars[i]);
@@ -671,8 +627,7 @@ fn check_first_last_nucleotide_correctly_aligned(
     first_unmatched_sequence = reverse_string(&first_unmatched_sequence);
     first_matched_nucleotides = reverse_string(&first_matched_nucleotides);
     first_substituted_nucleotides = reverse_string(&first_substituted_nucleotides);
-    first_partially_matched_nucleotides_right =
-        reverse_string(&first_partially_matched_nucleotides_right);
+    first_partially_matched_nucleotides_right = reverse_string(&first_partially_matched_nucleotides_right);
     first_unmatched_sequence_right_wrt_partially_matched_nucleotides =
         reverse_string(&first_unmatched_sequence_right_wrt_partially_matched_nucleotides);
     //println!(
@@ -735,8 +690,7 @@ fn check_first_last_nucleotide_correctly_aligned(
     let mut alignment_changed = false; // Flag to check if the alignment has been modified or not
     if alignment_wrong == true {
         // This will work only if the nucleotide at the end of the sequence is wrong (not beginning)
-        let correct_alignment_length =
-            r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
+        let correct_alignment_length = r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
         //println!("correct_alignment_length:{}", correct_alignment_length);
         for i in 0..correct_alignment_length {
             //Adding those nucleotides that are correctly aligned
@@ -750,9 +704,7 @@ fn check_first_last_nucleotide_correctly_aligned(
         for i in 0..first_unmatched_sequence.len() {
             if align_chars[correct_alignment_length + i] == '*' {
                 // Check if there are any substitutions in first unmatched sequence
-                for j in
-                    last_print_position + correct_alignment_length..correct_alignment_length + i + 1
-                {
+                for j in last_print_position + correct_alignment_length..correct_alignment_length + i + 1 {
                     // Printing all nucleotides upto the substitution
                     q_seq_correct.push(q_seq_chars[j]);
                     align_correct.push(align_chars[j]);
@@ -765,9 +717,7 @@ fn check_first_last_nucleotide_correctly_aligned(
                 || q_seq_chars[correct_alignment_length + i] == 'G'
             // Check if there are any insertions in first unmatched sequence
             {
-                for j in
-                    last_print_position + correct_alignment_length..correct_alignment_length + i + 1
-                {
+                for j in last_print_position + correct_alignment_length..correct_alignment_length + i + 1 {
                     // Printing all nucleotides upto the insertion
                     q_seq_correct.push(q_seq_chars[j]);
                     align_correct.push(align_chars[j]);
@@ -796,8 +746,7 @@ fn check_first_last_nucleotide_correctly_aligned(
                     //    "first_unmatched_sequence_vector[i + j]:{}",
                     //    first_unmatched_sequence_vector[i + j]
                     //);
-                    if first_matched_nucleotides_vector[j] != first_unmatched_sequence_vector[i + j]
-                    {
+                    if first_matched_nucleotides_vector[j] != first_unmatched_sequence_vector[i + j] {
                         all_matched_nucleotides = false;
                         break;
                     }
@@ -812,8 +761,7 @@ fn check_first_last_nucleotide_correctly_aligned(
             //        first_matched_nucleotides.len()
             //    );
             //}
-            if num_iterations != first_matched_nucleotides.len() && all_matched_nucleotides == true
-            {
+            if num_iterations != first_matched_nucleotides.len() && all_matched_nucleotides == true {
                 // If all the nucleotides in first_matched_nucleotides have not been parsed set all_matched_nucleotides = false
                 all_matched_nucleotides = false;
             }
@@ -839,8 +787,7 @@ fn check_first_last_nucleotide_correctly_aligned(
         // Adding unmatched nucleotide(s) to first nucleotide after last_print_position
         for i in 0..first_matched_nucleotides.len() {
             if first_matched_nucleotides_vector[i]
-                == r_seq_chars
-                    [last_print_position + best_alignment_position + correct_alignment_length + i]
+                == r_seq_chars[last_print_position + best_alignment_position + correct_alignment_length + i]
             {
                 align_correct.push('|');
             } else {
@@ -848,10 +795,8 @@ fn check_first_last_nucleotide_correctly_aligned(
                 align_correct.push('*'); // Should not happen but just in case
             }
             q_seq_correct.push(first_matched_nucleotides_vector[i]);
-            r_seq_correct.push(
-                r_seq_chars
-                    [last_print_position + best_alignment_position + correct_alignment_length + i],
-            )
+            r_seq_correct
+                .push(r_seq_chars[last_print_position + best_alignment_position + correct_alignment_length + i])
         }
         alignment_changed = true;
         //println!("q_seq_correct:{}", q_seq_correct);
@@ -860,8 +805,7 @@ fn check_first_last_nucleotide_correctly_aligned(
     } else if wrong_substitution == true {
         let correct_alignment_length =
             r_seq.len() - first_unmatched_sequence.len() - first_substituted_nucleotides.len();
-        let first_substituted_nucleotides_vector: Vec<_> =
-            first_substituted_nucleotides.chars().collect();
+        let first_substituted_nucleotides_vector: Vec<_> = first_substituted_nucleotides.chars().collect();
         for i in 0..correct_alignment_length {
             //Adding those nucleotides that are correctly aligned
             q_seq_correct.push(q_seq_chars[i]);
@@ -874,9 +818,7 @@ fn check_first_last_nucleotide_correctly_aligned(
         for i in 0..first_unmatched_sequence.len() {
             if align_chars[correct_alignment_length + i] == '*' {
                 // Check if there are any substitutions in first unmatched sequence
-                for j in
-                    last_print_position + correct_alignment_length..correct_alignment_length + i + 1
-                {
+                for j in last_print_position + correct_alignment_length..correct_alignment_length + i + 1 {
                     // Printing all nucleotides upto the substitution
                     q_seq_correct.push(q_seq_chars[j]);
                     align_correct.push(align_chars[j]);
@@ -889,9 +831,7 @@ fn check_first_last_nucleotide_correctly_aligned(
                 || q_seq_chars[correct_alignment_length + i] == 'G'
             // Check if there are any insertions in first unmatched sequence
             {
-                for j in
-                    last_print_position + correct_alignment_length..correct_alignment_length + i + 1
-                {
+                for j in last_print_position + correct_alignment_length..correct_alignment_length + i + 1 {
                     // Printing all nucleotides upto the insertion
                     q_seq_correct.push(q_seq_chars[j]);
                     align_correct.push(align_chars[j]);
@@ -920,9 +860,7 @@ fn check_first_last_nucleotide_correctly_aligned(
                     //    "first_unmatched_sequence_vector[i + j]:{}",
                     //    first_unmatched_sequence_vector[i + j]
                     //);
-                    if first_substituted_nucleotides_vector[j]
-                        != first_unmatched_sequence_vector[i + j]
-                    {
+                    if first_substituted_nucleotides_vector[j] != first_unmatched_sequence_vector[i + j] {
                         all_substituted_nucleotides = false;
                         break;
                     }
@@ -937,9 +875,7 @@ fn check_first_last_nucleotide_correctly_aligned(
             //        first_substituted_nucleotides.len()
             //    );
             //}
-            if num_iterations != first_substituted_nucleotides.len()
-                && all_substituted_nucleotides == true
-            {
+            if num_iterations != first_substituted_nucleotides.len() && all_substituted_nucleotides == true {
                 // If all the nucleotides in first_matched_nucleotides have not been parsed set all_matched_nucleotides = false
                 all_substituted_nucleotides = false;
             }
@@ -965,18 +901,15 @@ fn check_first_last_nucleotide_correctly_aligned(
         // Adding unmatched nucleotide(s) to first nucleotide after last_print_position
         for i in 0..first_substituted_nucleotides.len() {
             if first_substituted_nucleotides_vector[i]
-                == r_seq_chars
-                    [last_print_position + best_alignment_position + correct_alignment_length + i]
+                == r_seq_chars[last_print_position + best_alignment_position + correct_alignment_length + i]
             {
                 align_correct.push('|');
             } else {
                 align_correct.push('*');
             }
             q_seq_correct.push(first_substituted_nucleotides_vector[i]);
-            r_seq_correct.push(
-                r_seq_chars
-                    [last_print_position + best_alignment_position + correct_alignment_length + i],
-            )
+            r_seq_correct
+                .push(r_seq_chars[last_print_position + best_alignment_position + correct_alignment_length + i])
         }
         alignment_changed = true;
     } else if first_matched_nucleotides.len() > 0
@@ -985,8 +918,7 @@ fn check_first_last_nucleotide_correctly_aligned(
     {
         // Check if there is better alignment for last matched sequence
         //println!("Fully matched right-sequence");
-        let correct_alignment_length =
-            r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
+        let correct_alignment_length = r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
         for i in 0..correct_alignment_length {
             //Adding those nucleotides that are correctly aligned
             q_seq_correct.push(q_seq_chars[i]);
@@ -1013,8 +945,7 @@ fn check_first_last_nucleotide_correctly_aligned(
                     //    "first_unmatched_sequence_vector[i + j]:{}",
                     //    first_unmatched_sequence_vector[i + j]
                     //);
-                    if first_matched_nucleotides_vector[j] != first_unmatched_sequence_vector[i + j]
-                    {
+                    if first_matched_nucleotides_vector[j] != first_unmatched_sequence_vector[i + j] {
                         all_matched_nucleotides = false;
                         break;
                     }
@@ -1029,8 +960,7 @@ fn check_first_last_nucleotide_correctly_aligned(
             //        first_matched_nucleotides.len()
             //    );
             //}
-            if num_iterations != first_matched_nucleotides.len() && all_matched_nucleotides == true
-            {
+            if num_iterations != first_matched_nucleotides.len() && all_matched_nucleotides == true {
                 // If all the nucleotides in first_matched_nucleotides have not been parsed set all_matched_nucleotides = false
                 all_matched_nucleotides = false;
             }
@@ -1061,8 +991,7 @@ fn check_first_last_nucleotide_correctly_aligned(
                 {
                     align_correct.push('|');
                 } else {
-                    align_correct
-                        .push(align_chars[correct_alignment_length + last_print_position + k]);
+                    align_correct.push(align_chars[correct_alignment_length + last_print_position + k]);
                 }
             }
             alignment_changed = true;
@@ -1109,8 +1038,7 @@ fn check_first_last_nucleotide_correctly_aligned(
                     //    first_unmatched_sequence_right_wrt_partially_matched_nucleotides_vector[i + j]
                     //);
                     if first_partially_matched_nucleotides_right_vector[j]
-                        != first_unmatched_sequence_right_wrt_partially_matched_nucleotides_vector
-                            [i + j]
+                        != first_unmatched_sequence_right_wrt_partially_matched_nucleotides_vector[i + j]
                     {
                         all_matched_nucleotides = false;
                         break;
@@ -1126,9 +1054,7 @@ fn check_first_last_nucleotide_correctly_aligned(
             //        first_partially_matched_nucleotides_right.len()
             //    );
             //}
-            if num_iterations != first_partially_matched_nucleotides_right.len()
-                && all_matched_nucleotides == true
-            {
+            if num_iterations != first_partially_matched_nucleotides_right.len() && all_matched_nucleotides == true {
                 // If all the nucleotides in first_partially_matched_nucleotides_right have not been parsed set all_matched_nucleotides = false
                 all_matched_nucleotides = false;
             }
@@ -1152,15 +1078,13 @@ fn check_first_last_nucleotide_correctly_aligned(
             for k in 0..first_partially_matched_nucleotides_right.len() {
                 q_seq_correct.push(first_partially_matched_nucleotides_right_vector[k]);
                 if correct_alignment_length + last_print_position + k < align_chars.len() {
-                    r_seq_correct
-                        .push(r_seq_chars[correct_alignment_length + last_print_position + k]);
+                    r_seq_correct.push(r_seq_chars[correct_alignment_length + last_print_position + k]);
                     if r_seq_chars[correct_alignment_length + last_print_position + k]
                         == first_partially_matched_nucleotides_right_vector[k]
                     {
                         align_correct.push('|');
                     } else {
-                        align_correct
-                            .push(align_chars[correct_alignment_length + last_print_position + k]);
+                        align_correct.push(align_chars[correct_alignment_length + last_print_position + k]);
                     }
                 }
             }
@@ -1234,8 +1158,7 @@ fn check_first_last_nucleotide_correctly_aligned(
                     //    first_unmatched_sequence_left_wrt_partially_matched_nucleotides_vector[i + j]
                     //);
                     if first_partially_matched_nucleotides_left_vector[j]
-                        != first_unmatched_sequence_left_wrt_partially_matched_nucleotides_vector
-                            [i + j]
+                        != first_unmatched_sequence_left_wrt_partially_matched_nucleotides_vector[i + j]
                     {
                         if hit == false {
                             // Ensure that all_matched_nucleotides = true once first optimized alignment is found
@@ -1247,9 +1170,7 @@ fn check_first_last_nucleotide_correctly_aligned(
                     num_iterations += 1;
                 }
             }
-            if num_iterations != first_partially_matched_nucleotides_left.len()
-                && all_matched_nucleotides == true
-            {
+            if num_iterations != first_partially_matched_nucleotides_left.len() && all_matched_nucleotides == true {
                 if hit == false {
                     // If all the nucleotides in first_partially_matched_nucleotides_left have not been parsed set all_matched_nucleotides = false
                     all_matched_nucleotides = false;
@@ -1422,8 +1343,7 @@ pub fn align_single_reads(query_seq: &String, ref_seq: String) -> (String, Strin
         }
     }
     // Need to check if the first and last nucleotide has been incorrectly aligned or not
-    let (q_seq_final, align_final, r_seq_final) =
-        check_first_last_nucleotide_correctly_aligned(&q_seq, &align, &r_seq);
+    let (q_seq_final, align_final, r_seq_final) = check_first_last_nucleotide_correctly_aligned(&q_seq, &align, &r_seq);
     //let (q_seq_trim, align_trim, r_seq_trim) = trim_misaligned_parts(q_seq_final, align_final, r_seq_final);
     let num_matches = align_final.matches("|").count() as f64 / align_final.len() as f64;
     //println!("q_seq_final:{}", q_seq_final);
@@ -1464,9 +1384,7 @@ fn trim_misaligned_parts(
 
     let mut stop_misaligned: bool = false; // Flag to store if the end of alignment is significantly misaligned
     num_matches = 0.0;
-    for i in
-        align_chars.len() - cmp::min(alignment_length_check, align_chars.len())..align_chars.len()
-    {
+    for i in align_chars.len() - cmp::min(alignment_length_check, align_chars.len())..align_chars.len() {
         if align_chars[i] == '|' {
             num_matches += 1.0;
         }
@@ -1564,10 +1482,8 @@ pub fn determine_start_stop_indel_region_in_read(
     let mut num_matches_alt = 0;
     let mut num_matches_ref = 0;
     // Please keep correctly_aligned_nclt_in_right_alt and correctly_aligned_nclt_in_right_ref separate because they may be different when there are gaps outside the variant region
-    let mut correctly_aligned_nclt_in_right_alt =
-        correct_end_position - variant_pos - ref_length as i64;
-    let mut correctly_aligned_nclt_in_right_ref =
-        correct_end_position - variant_pos - ref_length as i64;
+    let mut correctly_aligned_nclt_in_right_alt = correct_end_position - variant_pos - ref_length as i64;
+    let mut correctly_aligned_nclt_in_right_ref = correct_end_position - variant_pos - ref_length as i64;
 
     if alignment_side == "left".to_string() {
         red_region_start_alt = (variant_pos - correct_start_position).abs();
@@ -1604,9 +1520,7 @@ pub fn determine_start_stop_indel_region_in_read(
         }
     } else if alignment_side == "right".to_string() {
         // Check if there are any gaps in the query sequence between end of alignment and end of variant sequence
-        for i in
-            (q_seq_alt.len() - correctly_aligned_nclt_in_right_alt as usize..q_seq_alt.len()).rev()
-        {
+        for i in (q_seq_alt.len() - correctly_aligned_nclt_in_right_alt as usize..q_seq_alt.len()).rev() {
             if i < q_seq_alt_vec.len() {
                 if q_seq_alt_vec[i] != '-' {
                     num_matches_alt += 1;
@@ -1624,9 +1538,7 @@ pub fn determine_start_stop_indel_region_in_read(
                 break;
             }
         }
-        for i in
-            (q_seq_ref.len() - correctly_aligned_nclt_in_right_ref as usize..q_seq_ref.len()).rev()
-        {
+        for i in (q_seq_ref.len() - correctly_aligned_nclt_in_right_ref as usize..q_seq_ref.len()).rev() {
             if i < q_seq_ref_vec.len() {
                 if q_seq_ref_vec[i] != '-' {
                     num_matches_ref += 1;
@@ -1654,10 +1566,8 @@ pub fn determine_start_stop_indel_region_in_read(
         //    correctly_aligned_nclt_in_right_ref
         //);
 
-        red_region_start_alt =
-            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt - alt_length as i64;
-        red_region_start_ref =
-            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref - ref_length as i64;
+        red_region_start_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt - alt_length as i64;
+        red_region_start_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref - ref_length as i64;
         red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt;
         red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref;
 
@@ -1739,23 +1649,18 @@ pub fn determine_start_stop_indel_region_in_read(
     }
 
     if alignment_side == "left".to_string()
-        && (red_region_start_alt >= q_seq_alt.len() as i64
-            || red_region_start_ref >= q_seq_ref.len() as i64)
+        && (red_region_start_alt >= q_seq_alt.len() as i64 || red_region_start_ref >= q_seq_ref.len() as i64)
     {
         // In case of reads with very poor alignment but left-aligned, the start site of read may be greater than the length of the alignment in such case, try right-aligning the reads
-        let correctly_aligned_nclt_in_right_alt =
-            correct_end_position - variant_pos - ref_length as i64;
-        let correctly_aligned_nclt_in_right_ref =
-            correct_end_position - variant_pos - ref_length as i64;
+        let correctly_aligned_nclt_in_right_alt = correct_end_position - variant_pos - ref_length as i64;
+        let correctly_aligned_nclt_in_right_ref = correct_end_position - variant_pos - ref_length as i64;
         //println!(
         //    "correctly_aligned_nclt_in_right:{}",
         //    correctly_aligned_nclt_in_right
         //);
         //println!("Was originally left-aligned but start position was higher than alignment length, so attempted to right-align");
-        red_region_start_alt =
-            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt - alt_length as i64;
-        red_region_start_ref =
-            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref - ref_length as i64;
+        red_region_start_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt - alt_length as i64;
+        red_region_start_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref - ref_length as i64;
         red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt;
         red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref;
 
@@ -1796,8 +1701,7 @@ pub fn determine_start_stop_indel_region_in_read(
             }
         }
     } else if alignment_side == "right".to_string()
-        && (red_region_start_alt >= q_seq_alt.len() as i64
-            || red_region_start_ref >= q_seq_ref.len() as i64)
+        && (red_region_start_alt >= q_seq_alt.len() as i64 || red_region_start_ref >= q_seq_ref.len() as i64)
     // In case of reads with very poor alignment but right-aligned, the start site of read may be greater than the length of the alignment in such case, try left-aligning the reads
     {
         //println!("Was originally right-aligned but start position was higher than alignment length, so attempted to left-align");

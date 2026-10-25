@@ -145,14 +145,21 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 			)
 			throw 'this server build does not support this data computation request'
 		}
-		wasmModules.set(binfile, WebAssembly.compile(fs.readFileSync(modpath)))
+		const compiled = WebAssembly.compile(fs.readFileSync(modpath))
+		// a failed compile is not cached, so that a later call compiles the module again
+		compiled.catch(() => {
+			if (wasmModules.get(binfile) === compiled) wasmModules.delete(binfile)
+		})
+		wasmModules.set(binfile, compiled)
 	}
-	const [wasmModule, input, { WASI }] = await Promise.all([
+	// the module is ready before a stream input is read, so that a failed setup does not leave the input being read
+	const [wasmModule, { WASI }] = await Promise.all([
 		wasmModules.get(binfile),
-		readInput(input_data, signal, binfile),
 		// imported only when used, since the import logs an experimental feature warning
 		import('node:wasi')
 	])
+	if (signal?.aborted) throw new Error(`run_rust('${binfile}'): aborted`)
+	const input = await readInput(input_data, signal, binfile)
 	// a long input may still arrive after an abort
 	if (signal?.aborted) throw new Error(`run_rust('${binfile}'): aborted`)
 
