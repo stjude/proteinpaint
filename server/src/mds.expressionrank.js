@@ -1,5 +1,5 @@
 /*
-The /mdsexpressionrank route handler of legacy mds datasets, moved from app.unorg.js, see routes/mdsexpressionrank.ts
+The /mdsexpressionrank route handler of legacy mds datasets, see routes/mdsexpressionrank.ts
 */
 
 import { mds_query_arg_check, get_rank_from_sortedarray, setGenomes as setSharedGenomes } from './mds.shared.js'
@@ -8,7 +8,7 @@ import path from 'path'
 import * as utils from './utils.js'
 import * as common from '#shared/common.js'
 
-// set by the route init, so that the moved code can use genomes as in app.unorg.js
+// set by the route init, so that the handler code can use the loaded genomes
 let genomes
 
 export { handle_mdsexpressionrank }

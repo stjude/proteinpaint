@@ -4,7 +4,7 @@ import { hasMdsDataset } from '#src/mds.shared.js'
 import { handle_samplematrix, setGenomes } from '#src/mds.samplematrix.js'
 
 /*
-The route of the sample matrix of a legacy mds dataset, which was set up by app.unorg.js. The handler is in mds.samplematrix.js.
+The route of the sample matrix of a legacy mds dataset. The handler is in mds.samplematrix.js.
 */
 
 const payload: RoutePayload = {

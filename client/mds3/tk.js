@@ -215,7 +215,7 @@ async function getTkData(tk, block) {
 	} else {
 		// request data from server, either official or custom sources
 		const [body, headers] = getParameter(tk, block)
-		data = await dofetch3('mds3', { body, headers })
+		data = await dofetch3('termdb/mds3', { body, headers })
 	}
 	if (data.error) throw data.error
 	return data

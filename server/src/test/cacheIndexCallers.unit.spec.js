@@ -6,8 +6,7 @@ import http from 'http'
 import { fileURLToPath } from 'url'
 import serverconfig from '../serverconfig.js'
 import * as common from '#shared/common.js'
-import { setRoutes } from '../app.unorg.js'
-import { setMovedRoutes } from './movedRoutes.js'
+import { getTestRoutes } from './testRoutes.js'
 import { init as onesampletkInit } from '../j2/onesampletk.ts'
 
 /*
@@ -168,19 +167,19 @@ const routeCases = [
 	{
 		name: 'tabixheader',
 		route: '/tabixheader',
-		file: 'app.unorg.js',
+		file: 'routes/tabixheader.ts',
 		query: (url, indexURL) => ({ genome: 'hg38', url, indexURL })
 	},
 	{
 		name: 'vcfheader',
 		route: '/vcfheader',
-		file: 'app.unorg.js',
+		file: 'routes/vcfheader.ts',
 		query: (url, indexURL) => ({ genome: 'hg38', url, indexURL })
 	},
 	{
 		name: 'bcfheader',
 		route: '/bcfheader',
-		file: 'app.unorg.js',
+		file: 'routes/bcfheader.ts',
 		query: (url, indexURL) => ({ genome: 'hg38', url, indexURL })
 	},
 	{
@@ -288,12 +287,8 @@ tape('\n', async function (test) {
 	allowRemoteFile = serverconfig.features.ALLOW_remotefilefromurl
 	serverconfig.features.ALLOW_remotefilefromurl = true
 
-	routes = {}
-	const record = (p, h) => (routes[p] = h)
 	const genomes = { hg38: getGenome() }
-	const app = { get: record, post: record, all: record, put: record, delete: record, use: () => {} }
-	setRoutes(app, genomes, {})
-	setMovedRoutes(app, genomes)
+	routes = getTestRoutes(genomes)
 	routes.onesampletk = onesampletkInit({ genomes })
 	test.end()
 })

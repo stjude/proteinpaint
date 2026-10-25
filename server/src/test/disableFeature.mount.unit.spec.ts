@@ -7,6 +7,21 @@ import * as cardsjson from '#src/routes/cardsjson.ts'
 import * as hicdata from '#src/routes/hicdata.ts'
 import * as hicgenome from '#src/routes/hicgenome.ts'
 import * as hicstat from '#src/routes/hicstat.ts'
+import * as tkbam from '#src/routes/tkbam.ts'
+import * as tkld from '#src/routes/tkld.ts'
+import * as gdcbam from '#src/routes/gdcbam.ts'
+import * as ideogram from '#src/routes/ideogram.ts'
+import * as img from '#src/routes/img.ts'
+import * as singlecell from '#src/routes/singlecell.ts'
+import * as study from '#src/routes/study.ts'
+import * as svmr from '#src/routes/svmr.ts'
+import * as tabixheader from '#src/routes/tabixheader.ts'
+import * as textfile from '#src/routes/textfile.ts'
+import * as tkaicheck from '#src/routes/tkaicheck.ts'
+import * as tkbampile from '#src/routes/tkbampile.ts'
+import * as tkbigwig from '#src/routes/tkbigwig.ts'
+import * as vcfheader from '#src/routes/vcfheader.ts'
+import * as bcfheader from '#src/routes/bcfheader.ts'
 
 /*
 Tests:
@@ -27,7 +42,22 @@ const routeByFeature = {
 	disableFeature_hictk: {
 		routes: [hicdata, hicgenome, hicstat],
 		mounted: ['get /hicdata', 'post /hicdata', 'get /hicgenome', 'post /hicgenome', 'get /hicstat', 'post /hicstat']
-	}
+	},
+	disableFeature_tkbam: { routes: [tkbam], mounted: ['get /tkbam', 'post /tkbam'] },
+	disableFeature_tkld: { routes: [tkld], mounted: ['post /tkld'] },
+	disableFeature_gdcbam: { routes: [gdcbam], mounted: ['get /gdcbam'] },
+	disableFeature_ideogram: { routes: [ideogram], mounted: ['get /ideogram'] },
+	disableFeature_img: { routes: [img], mounted: ['get /img', 'post /img'] },
+	disableFeature_legacysinglecell: { routes: [singlecell], mounted: ['post /singlecell'] },
+	disableFeature_legacystudy: { routes: [study], mounted: ['post /study'] },
+	disableFeature_svmr: { routes: [svmr], mounted: ['post /svmr'] },
+	disableFeature_tabixheader: { routes: [tabixheader], mounted: ['get /tabixheader'] },
+	disableFeature_textfile: { routes: [textfile], mounted: ['post /textfile'] },
+	disableFeature_tkaicheck: { routes: [tkaicheck], mounted: ['get /tkaicheck'] },
+	disableFeature_tkbampile: { routes: [tkbampile], mounted: ['get /tkbampile'] },
+	disableFeature_tkbigwig: { routes: [tkbigwig], mounted: ['post /tkbigwig'] },
+	disableFeature_vcfheader: { routes: [vcfheader], mounted: ['get /vcfheader'] },
+	disableFeature_bcfheader: { routes: [bcfheader], mounted: ['get /bcfheader'] }
 }
 
 // returns the route methods that augen sets up from the given routes with the given serverconfig.features

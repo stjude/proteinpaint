@@ -5,7 +5,7 @@ import path from 'path'
 import http from 'http'
 import serverconfig from '../serverconfig.js'
 import * as utils from '../utils.js'
-import { setRoutes } from '../app.unorg.js'
+import { getTestRoutes } from './testRoutes.js'
 
 /*
 Regression specs for path traversal in cache_index() (ANT-2026-UGQ1CB65).
@@ -266,14 +266,8 @@ tape('fileurl() url branch', test => {
 })
 
 tape('/tkbedj, /tabixheader via the real route table', async test => {
-	const routes = {}
-	const record = (p, h) => (routes[p] = h)
 	const genome = { name: 'hg38', chrlookup: { CHR1: { name: 'chr1', len: 248956422 } }, datasets: {} }
-	setRoutes(
-		{ get: record, post: record, all: record, put: record, delete: record, use: () => {} },
-		{ hg38: genome },
-		{}
-	)
+	const routes = getTestRoutes({ hg38: genome })
 	const escape = path.join(tmpdir, 'route-escape')
 	const url = `http://${H}${up}${escape}/a`
 	const indexURL = `http://${H}/payload.so`

@@ -1,5 +1,5 @@
 /*
-The /samplematrix route handler of legacy mds datasets, moved from app.unorg.js, see routes/samplematrix.ts
+The /samplematrix route handler of legacy mds datasets, see routes/samplematrix.ts
 */
 
 import { mdssvcnv_do_copyneutralloh, setGenomes as setSharedGenomes } from './mds.shared.js'
@@ -9,7 +9,7 @@ import * as utils from './utils.js'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 
-// set by the route init, so that the moved code can use genomes as in app.unorg.js
+// set by the route init, so that the handler code can use the loaded genomes
 let genomes
 
 export { handle_samplematrix }

@@ -1,4 +1,10 @@
 {
+	"termdb": [
+		"samples"
+	],
+	"termdb/barsql": [
+		"minSampleSize"
+	],
 	"termdb/cuminc": [
 		"minSampleSize"
 	],

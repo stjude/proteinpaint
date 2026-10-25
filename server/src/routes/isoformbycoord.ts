@@ -2,7 +2,7 @@ import type { RouteApi, RoutePayload } from '#types'
 import { handle_isoformbycoord, setGenomes } from '#src/isoformbycoord.js'
 
 /*
-The route of the isoforms at a genomic position, which was set up by app.unorg.js. The handler is in isoformbycoord.js.
+The route of the isoforms at a genomic position. The handler is in isoformbycoord.js.
 */
 
 const payload: RoutePayload = {

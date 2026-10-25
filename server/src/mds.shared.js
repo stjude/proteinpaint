@@ -1,10 +1,10 @@
 /*
-The helpers that the route handlers of legacy mds datasets share, moved from app.unorg.js
+The helpers that the route handlers of legacy mds datasets share
 */
 
 import * as common from '#shared/common.js'
 
-// set by the route init, so that the moved code can use genomes as in app.unorg.js
+// set by the route init, so that the handler code can use the loaded genomes
 let genomes
 
 export { mds_query_arg_check, mdssvcnv_do_copyneutralloh, get_rank_from_sortedarray }
@@ -90,7 +90,7 @@ function get_rank_from_sortedarray(v, lst) {
 	return Math.ceil((100 * i) / lst.length)
 }
 
-/** true if a loaded genome has a legacy mds dataset; the legacy mds routes are only set up then, see app.unorg.js */
+/** true if a loaded genome has a legacy mds dataset; the legacy mds routes are only set up then */
 export function hasMdsDataset(genomes) {
 	return Object.values(genomes).some(g => Object.values(g.datasets || {}).some(ds => ds.isMds))
 }
