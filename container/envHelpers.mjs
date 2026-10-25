@@ -86,7 +86,7 @@ export function envHelpers(args, deps = {}) {
 	logAllowedPaths(config)
 	const creds = { ...getEnvCreds(ctx), ...readCreds(credsFiles, ctx) }
 	mayCheckRuntimePosture(config, ctx)
-	return runCommand(command, creds, ctx)
+	return runCommand(command, creds, config, ctx)
 }
 
 // the side-effecting dependencies and process details, injectable so that tests can run in-process
@@ -314,7 +314,7 @@ function getEnvCreds(ctx) {
 }
 
 // router: a node command replaces this process, and a tsx command or node watch mode runs as a child process
-function runCommand(command, creds, ctx) {
+function runCommand(command, creds, config, ctx) {
 	if (path.basename(command[0]) != 'node' || isNodeWatchMode(command)) return spawnCommand(command, creds, ctx)
 	if (typeof ctx.execve != 'function') {
 		console.warn(
@@ -323,7 +323,7 @@ function runCommand(command, creds, ctx) {
 		)
 		return spawnCommand(command, creds, ctx)
 	}
-	execCommand(command, creds, ctx)
+	execCommand(command, creds, config, ctx)
 }
 
 // node --watch restarts the server with its initial env, which would name a removed handoff file; a matching
@@ -333,7 +333,7 @@ function isNodeWatchMode([, ...args]) {
 }
 
 // replaces this process with the command, without any <NAME>_CREDS env variable in its initial env
-function execCommand([cmd, ...cmdArgs], creds, ctx) {
+function execCommand([cmd, ...cmdArgs], creds, config, ctx) {
 	const env = { ...ctx.env }
 	for (const name of getEnvCredsNames(env)) delete env[name]
 	// an existing handoff file name, such as from a container env entry, is not passed
@@ -345,6 +345,8 @@ function execCommand([cmd, ...cmdArgs], creds, ctx) {
 		// removed before the server starts listening
 		dir = ctx.fs.mkdtempSync(path.join(ctx.tmpdir, 'pp-creds-'))
 		env.PP_CREDS_HANDOFF_FILE = path.join(dir, 'creds.json')
+		// with features.disableFileCache, the OS temp dir is not an allowed write path, so only this dir is allowed
+		cmdArgs = [...handoffWriteFlags(dir, config, ctx), ...cmdArgs]
 	}
 	// process.execve() requires a path, and does not search PATH like spawn()
 	const file = cmd.includes(path.sep) ? cmd : ctx.execPath
@@ -355,6 +357,16 @@ function execCommand([cmd, ...cmdArgs], creds, ctx) {
 		if (dir) ctx.fs.rmSync(dir, { recursive: true, force: true })
 		throw e
 	}
+}
+
+// the --allow-fs-write flags for the handoff dir, which the server removes, if no allowed write path covers it
+function handoffWriteFlags(dir, config, ctx) {
+	const allowed = config.nodeOptions['allow-fs-write']
+	const paths = new Set()
+	addPath(paths, dir, ctx)
+	if ([...paths].every(p => allowed.some(a => p == a || p.startsWith(a.endsWith(path.sep) ? a : a + path.sep))))
+		return []
+	return [...paths].map(p => `--allow-fs-write=${p}`)
 }
 
 function spawnCommand([cmd, ...cmdArgs], creds, ctx) {

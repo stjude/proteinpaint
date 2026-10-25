@@ -152,9 +152,18 @@ function boundariesCachePath(h5ad: string, mtime: number, kind: string): string 
 }
 const boundariesInflight = new Map<string, Promise<void>>() // cacheFile -> pending generation (resolves once the cache file itself is ready to stream)
 
+// the actions that write a temp file or a cache file, see the disableFileCache check in init()
+export const fileWritingActions = new Set(['tile', 'overlaytile', 'boundaries', 'annotations'])
+
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
+			// these actions have python write a temp file, which a tile or polygon set is then cached from; with
+			// features.disableFileCache, the server writes no file, so they are rejected before python runs
+			if (serverconfig.features?.disableFileCache && fileWritingActions.has(req.params.action)) {
+				res.status(400).send({ status: 'error', error: 'This server does not support this request.' })
+				return
+			}
 			const q = req.query // slide-addressing + per-action params
 			const slide = slidePath(genomes, q) // resolve + validate the slide first, whatever the action
 

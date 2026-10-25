@@ -20,6 +20,11 @@ import { CacheManager } from './CacheManager.ts'
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
 
+// the last Slack message hash is kept in memory instead of in a file, with features.disableFileCache
+function getSlackHashFile() {
+	return serverconfig.features?.disableFileCache ? '' : path.join(cachedir, '/slack/last_message_hash.txt')
+}
+
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)
 
@@ -153,11 +158,7 @@ init with bad config, data, and/or code
 		if (serverconfig.slackWebhookUrl) {
 			const url = serverconfig.URL
 			const message = `Startup error on: ${url} \n` + `${msg}`
-			await sendMessageToSlack(
-				serverconfig.slackWebhookUrl,
-				message,
-				path.join(cachedir, '/slack/last_message_hash.txt')
-			)
+			await sendMessageToSlack(serverconfig.slackWebhookUrl, message, getSlackHashFile())
 				.then(() => {
 					process.exit(exitCode)
 				})
@@ -329,7 +330,7 @@ function processTrackedDs(trackedDatasets) {
 			pendingNotification = sendMessageToSlack(
 				serverconfig.slackWebhookUrl,
 				`\n${serverconfig.URL} ${hostname}: ${msg}`,
-				path.join(cachedir, '/slack/last_message_hash.txt')
+				getSlackHashFile()
 			).catch(console.log)
 		}
 	}

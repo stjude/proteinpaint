@@ -8,8 +8,12 @@ import crypto from 'crypto'
  * Sends a message to a specified Slack webhook. If the last message sent has the same hash value as the current message, the message will not be sent.
  * @param webhookUrl The URL of the Slack webhook.
  * @param message The message to be sent.
- * @param lastMessageHashFile The path of the file where the last message hash value is stored.
+ * @param lastMessageHashFile The path of the file where the last message hash value is stored, or an empty string
+ * to keep it in memory instead, such as with serverconfig.features.disableFileCache.
  */
+// the last message hash when no hash file is used, which lasts only as long as this server process
+let lastMessageHashInMemory = ''
+
 export async function sendMessageToSlack(
 	webhookUrl: string,
 	message: string,
@@ -24,20 +28,17 @@ export async function sendMessageToSlack(
 			reject(new Error('Webhook URL is not defined'))
 			return
 		}
-		if (!lastMessageHashFile) {
-			reject(new Error('lastMessageHashFile is not defined'))
-			return
-		}
+		if (lastMessageHashFile) {
+			// Ensure the directory exists
+			const directory = path.dirname(lastMessageHashFile)
+			if (!fs.existsSync(directory)) {
+				fs.mkdirSync(directory, { recursive: true })
+			}
 
-		// Ensure the directory exists
-		const directory = path.dirname(lastMessageHashFile)
-		if (!fs.existsSync(directory)) {
-			fs.mkdirSync(directory, { recursive: true })
-		}
-
-		// Initialize hash file if it doesn't exist
-		if (!fs.existsSync(lastMessageHashFile)) {
-			fs.writeFileSync(lastMessageHashFile, '', 'utf8')
+			// Initialize hash file if it doesn't exist
+			if (!fs.existsSync(lastMessageHashFile)) {
+				fs.writeFileSync(lastMessageHashFile, '', 'utf8')
+			}
 		}
 
 		// a validation run is not the live server, such as a pre-deploy trial of a new release
@@ -47,7 +48,9 @@ export async function sendMessageToSlack(
 		const hash = crypto.createHash('sha256').update(message).digest('hex')
 
 		// Read the last message hash from file
-		const lastMessageHash = fs.readFileSync(lastMessageHashFile, 'utf8').match(/lastSlackMessageHash=(\w+)/)?.[1] ?? ''
+		const lastMessageHash = lastMessageHashFile
+			? fs.readFileSync(lastMessageHashFile, 'utf8').match(/lastSlackMessageHash=(\w+)/)?.[1] ?? ''
+			: lastMessageHashInMemory
 
 		// Skip sending if the hash is unchanged
 		if (lastMessageHash === hash) {
@@ -90,7 +93,8 @@ export async function sendMessageToSlack(
 			if (res.statusCode === 200) {
 				console.log(`Message posted successfully on Slack`)
 				// Save the new hash to the file
-				fs.writeFileSync(lastMessageHashFile, `lastSlackMessageHash=${hash}`, 'utf8')
+				if (lastMessageHashFile) fs.writeFileSync(lastMessageHashFile, `lastSlackMessageHash=${hash}`, 'utf8')
+				else lastMessageHashInMemory = hash
 			} else {
 				console.log(`Error posting message on Slack: ${res.statusCode} ${res.statusMessage}`)
 			}
