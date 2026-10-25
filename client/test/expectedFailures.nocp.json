@@ -735,6 +735,24 @@
 			"section": "plots/w2/wsi",
 			"test": "fixed-sample plain-WSI mode renders the pinned sample without the spatial machinery",
 			"reason": "python: wsi_tile.py"
+		},
+		{
+			"section": "mds3",
+			"test": "Official data on TP53, extensive ui test",
+			"assertion": "Cannot read properties of undefined (reading 'length')",
+			"reason": "bcftools: reads the TermdbTest snvindel .bcf file: the mds3 track has no data, before the group hangs"
+		},
+		{
+			"section": "block tracks",
+			"test": "basic bedj & bw test, could be expanded",
+			"assertion": "good bw <image> width>500 & height=123",
+			"reason": "python: bigWigSummary.py: the bigwig track renders no image, before the group hangs"
+		},
+		{
+			"section": "block tracks",
+			"test": "basic bedj & bw test, could be expanded",
+			"assertion": "there are two <text> in left axis",
+			"reason": "python: bigWigSummary.py: the bigwig track renders no image, before the group hangs"
 		}
 	],
 	"incompleteGroups": [

@@ -228,7 +228,6 @@ async function runTest(patternsStr) {
 			const failures = compareFailures(trackedFailures, expectedJson.failures)
 			const groups = compareIncompleteGroups(incomplete, expectedJson.incompleteGroups)
 			comparisonText = formatComparison(failures, groups)
-			console.log(`\n${comparisonText}\n`)
 			// a completed group's failure count that differs from its tracked failures
 			const untracked = results.reduce(
 				(n, r) => n + (r?.parsed ? Math.abs(r.parsed.fail - (r.trackedFailures?.length || 0)) : 0),
@@ -262,6 +261,8 @@ async function runTest(patternsStr) {
 			}
 			exitCode = 1
 		}
+		// last, after the failure details, so that the result of the comparison is not missed in a long log
+		if (comparisonText) console.log(`\n${comparisonText}\n`)
 	} catch (e) {
 		// an unexpected error, such as from the coverage report generation, must not look like a passed run
 		console.error(e)
