@@ -16,6 +16,7 @@ import { sendMessageToSlack } from './postOnSlack.ts'
 import { routeFiles } from './app.routes.js'
 import { setPythonBinPath } from '@sjcrh/proteinpaint-python'
 import { CacheManager } from './CacheManager.ts'
+import { freezeRoutes } from './freezeRoutes.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -197,6 +198,8 @@ async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 		server.listen(port, '0.0.0.0', () => {
 			console.log(`HTTPS ${message}`)
 		})
+		// all routes and middlewares are set by now, no route may be added or replaced afterward
+		freezeRoutes(app)
 		return server
 	} else {
 		const server = await http.createServer(app)
@@ -207,6 +210,8 @@ async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 			}
 			console.log(message)
 		})
+		// all routes and middlewares are set by now, no route may be added or replaced afterward
+		freezeRoutes(app)
 
 		if (routeCallbacks.setCloseServer) {
 			routeCallbacks.setCloseServer(() => {
