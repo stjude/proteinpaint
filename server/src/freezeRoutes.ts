@@ -31,21 +31,27 @@ function freezeRouter(router) {
 			lockProp(route, 'stack')
 			lockProp(route, 'methods')
 		}
-		// a nested router, such as from app.use(express.Router())
-		if (Array.isArray(layer.handle?.stack)) freezeRouter(layer.handle)
 	}
 	Object.freeze(router.stack)
 	lockProp(router, 'stack')
 	if (router.params) {
+		// each param name has an array of callbacks from router.param()
+		for (const callbacks of Object.values(router.params)) Object.freeze(callbacks)
 		Object.freeze(router.params)
 		lockProp(router, 'params')
 	}
 }
 
 function lockLayer(layer) {
+	if (Array.isArray(layer.keys)) {
+		for (const key of layer.keys) Object.freeze(key)
+		Object.freeze(layer.keys)
+	}
 	for (const key of lockedLayerProps) {
 		if (Object.hasOwn(layer, key)) lockProp(layer, key)
 	}
+	// a nested router, such as from app.use(express.Router()) or app.get(path, express.Router())
+	if (Array.isArray(layer.handle?.stack)) freezeRouter(layer.handle)
 }
 
 function lockProp(obj, key) {
