@@ -170,8 +170,9 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_singleSampleGenomeQuantification(ds, genome)
 			await validate_query_singleSampleGbtk(ds, genome)
 			await mayRemoveToolQuery('singleCell', () => validate_query_singleCell(ds, genome))
-			// the native top genes are computed from the geneExpression file
-			if (ds.queries.topVariablyExpressedGenes && removedToolQueries.has('geneExpression')) {
+			// the native top genes are computed from the geneExpression file; a ds-supplied getGenes() does not need it
+			const topVE = ds.queries.topVariablyExpressedGenes
+			if (topVE && typeof topVE.getGenes != 'function' && removedToolQueries.has('geneExpression')) {
 				console.warn(
 					`WARNING: ${ds.label}: removed queries.topVariablyExpressedGenes, since queries.geneExpression is removed`
 				)
