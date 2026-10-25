@@ -44,6 +44,7 @@ function freezeRouter(router) {
 	}
 	Object.freeze(router.stack)
 	lockProp(router, 'stack')
+	for (const key of ['handle', 'process_params']) lockProp(router, key)
 	if (router.params) {
 		// each param name has an array of callbacks from router.param()
 		for (const callbacks of Object.values(router.params)) Object.freeze(callbacks)
