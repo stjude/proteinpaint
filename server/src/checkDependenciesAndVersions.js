@@ -14,14 +14,6 @@ export async function checkDependenciesAndVersions(serverconfig) {
 		console.log('SKIPPED checkDependenciesAndVersions()')
 		return dependencies
 	}
-	// R and bcftools are started as child processes, which an image without them does not allow, see
-	// PP_ALLOW_CHILD_PROCESS in container/envHelpers.mjs
-	if (process.permission && !process.permission.has('child')) {
-		console.log('the node permission model does not allow a child process, so R and bcftools are not usable')
-		dependencies.R = false
-		dependencies.bcftools = false
-		return dependencies
-	}
 
 	// test if R has all required libraries
 	dependencies.R = await isUsable('R', () => run_R('validate.pkgs.R', null, null, 'utils'))

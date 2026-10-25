@@ -2,7 +2,7 @@ import tape from 'tape'
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
-import { mayValidatePseudobulk, validate_query_singleCell } from '../samplesRoute.ts'
+import { validate_query_singleCell } from '../samplesRoute.ts'
 import serverconfig from '#src/serverconfig.js'
 
 /**
@@ -13,7 +13,6 @@ import serverconfig from '#src/serverconfig.js'
  *  - missing plot.folder is rejected whenever a built-in file-based path will read it
  *  - missing geneExpression.folder is rejected when no geneExpression.get is supplied
  *  - the built-in file-based getters reject a sample id that would traverse out of tpmasterdir
- *  - pseudobulk whose h5 files cannot be read without a child process is removed, with only its terms
  */
 
 /** plots[] as GDC declares them: color/coords columns, but no folder, since data comes from an API */
@@ -205,57 +204,3 @@ tape('validate_query_singleCell: native sample list includes plot and spatial-on
 
 	test.end()
 })
-
-tape(
-	'mayValidatePseudobulk: pseudobulk that cannot be read without a child process is removed, with only its terms',
-	async test => {
-		// the permission model of a server that cannot start a child process
-		const noChildProcess: any = { has: (scope: string) => scope != 'child' }
-		const colorTerm = { id: 'Cluster', type: 'singleCellCellType' }
-		// adds a term before it reads an h5 file, as validatePseudobulk() does
-		const addTermThen = (err?: any) => async (ds: any) => {
-			const q = ds.queries.singleCell
-			if (!q.terms) q.terms = []
-			q.terms.push({ id: 'T cell', type: 'pseudobulk' })
-			if (err) throw err
-		}
-		const denied = 'this server build does not support this data computation request'
-		const { warn } = console
-		console.warn = () => {}
-		try {
-			const ds = makeDs({ samples: {}, data: {}, terms: [colorTerm], pseudobulk: {} })
-			await mayValidatePseudobulk(ds, noChildProcess, addTermThen(denied))
-			const q = ds.queries.singleCell
-			test.notOk(q.pseudobulk, 'should remove pseudobulk')
-			test.deepEqual(q.terms, [colorTerm], 'should remove only the terms that pseudobulk added')
-			test.ok(q.samples && q.data, 'should keep the other single-cell settings')
-
-			const noTerms = makeDs({ samples: {}, data: {}, pseudobulk: {} })
-			await mayValidatePseudobulk(noTerms, noChildProcess, addTermThen(denied))
-			test.notOk('terms' in noTerms.queries.singleCell, 'should remove a terms[] that only pseudobulk created')
-
-			const kept = makeDs({ samples: {}, data: {}, terms: [colorTerm], pseudobulk: {} })
-			await mayValidatePseudobulk(kept, noChildProcess, addTermThen())
-			test.ok(kept.queries.singleCell.pseudobulk, 'should keep pseudobulk whose validation succeeds')
-			test.equal(kept.queries.singleCell.terms.length, 2, 'should keep the pseudobulk terms')
-
-			for (const [label, permission, err] of [
-				['an unrelated validation error', noChildProcess, new Error('member.folder must be a non-empty string')],
-				['a denied tool when a child process is allowed', { has: () => true }, denied]
-			] as any[]) {
-				const other = makeDs({ samples: {}, data: {}, terms: [colorTerm], pseudobulk: {} })
-				let message = ''
-				try {
-					await mayValidatePseudobulk(other, permission, addTermThen(err))
-				} catch (e: any) {
-					message = `${e?.message || e}`
-				}
-				test.equal(message, `${err?.message || err}`, `should fail the init for ${label}`)
-				test.ok(other.queries.singleCell.pseudobulk, `should not remove pseudobulk for ${label}`)
-			}
-		} finally {
-			console.warn = warn
-		}
-		test.end()
-	}
-)

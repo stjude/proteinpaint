@@ -111,7 +111,7 @@ export function formatFailures(failures, { maxValueLength = 200, title = 'Failed
 }
 
 // the first stack frame in a spec bundle, not in a shared tape or helper chunk
-export function getSpecLocation(stack) {
+function getSpecLocation(stack) {
 	if (!stack) return
 	for (const frame of stack.split('\n')) {
 		const m = SPEC_FRAME.exec(frame)

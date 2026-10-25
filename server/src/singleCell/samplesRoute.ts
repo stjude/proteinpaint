@@ -28,7 +28,6 @@ import { SINGLECELL_CELLTYPE, SINGLECELL_NUMERIC_VALUE } from '#types'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { SingleCellMetaCache } from './SingleCellMetaCache.ts'
-import { isChildProcessDenied } from '#src/mds3.init.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { validatePseudobulk } from './validatePseudobulk.ts'
 import type { ReqQueryAddons } from '#routes/types.js'
@@ -121,7 +120,7 @@ export async function validate_query_singleCell(ds: any, _genome: any): Promise<
 
 	if (ds.queries.singleCell?.pseudobulk) {
 		//** NOTE This will not work for the gdc */
-		await mayValidatePseudobulk(ds)
+		await validatePseudobulk(ds)
 	}
 
 	if (q.geneExpression) {
@@ -141,27 +140,6 @@ export async function validate_query_singleCell(ds: any, _genome: any): Promise<
 	if (q.images) {
 		if (typeof q.images != 'object') throw new Error('singleCell.images not object')
 		validateImages(q.images)
-	}
-}
-
-/* Validates the optional pseudobulk, whose h5 files are read with h5dump. When the node permission model does not allow
-a child process, pseudobulk is removed with a warning, together with the terms that it added, and the other single-cell
-settings are still validated and available; any other error still fails the dataset init. */
-export async function mayValidatePseudobulk(ds: any, permission = process.permission, validate = validatePseudobulk) {
-	const q = ds.queries.singleCell
-	const termCount = q.terms?.length
-	try {
-		await validate(ds)
-	} catch (e: any) {
-		if (!isChildProcessDenied(e, permission)) throw e
-		console.warn(
-			`WARNING: ${ds.label}: removed queries.singleCell.pseudobulk, since a child process is not allowed: ${
-				e?.message || e
-			}`
-		)
-		delete q.pseudobulk
-		if (termCount === undefined) delete q.terms
-		else q.terms.length = termCount
 	}
 }
 

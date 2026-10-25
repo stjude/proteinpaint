@@ -3,7 +3,7 @@ import { boxplot_getvalue } from '#shared/boxplot.js'
 import { JT_na, JT_canonical } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
-import { isChildProcessDenied, setFile, validateSampleHeader } from '../mds3.init.js'
+import { setFile, validateSampleHeader } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
 import { maySetMapParent2Children } from '../termdb.matrix.js'
 import { getH5samples } from '../utils/h5samples.ts'
@@ -220,29 +220,12 @@ export async function validate_query_junction(ds: any, genome: any) {
 }
 
 /* Intron clusters for differential splicing: an h5 beside the junction tabix file.
-allSampleSet is read by the diffSplice route. The samples are read with h5dump: when the node permission model does not
-allow a child process, the cluster is removed with a warning, and the junction query, which does not need it, is kept;
-the diffSplice route is then not set up for this ds. Any other error still fails the dataset init. */
-export async function validate_junction_cluster(
-	ds: any,
-	junctionQ: any,
-	permission = process.permission,
-	getSamples = getH5samples
-) {
+allSampleSet is read by the diffSplice route. */
+async function validate_junction_cluster(ds: any, junctionQ: any) {
 	const q = junctionQ.cluster
 	if (!q) return
 	await setFile(q, 'junction.cluster')
-	let samples: string[]
-	try {
-		samples = await getSamples(q.file, 'samples')
-	} catch (e: any) {
-		if (!isChildProcessDenied(e, permission)) throw e
-		console.warn(
-			`WARNING: ${ds.label}: removed queries.junction.cluster, since a child process is not allowed: ${e?.message || e}`
-		)
-		delete junctionQ.cluster
-		return
-	}
+	const samples = await getH5samples(q.file, 'samples')
 	q.allSampleSet = new Set(samples)
 	console.log(q.allSampleSet.size, `junction cluster samples from ${ds.label}`)
 }

@@ -144,9 +144,6 @@ export async function init(ds, genome, totalDsLst = 0) {
 		validateDemoJwtInputs(ds)
 
 		if (ds.queries) {
-			// the queries that mayRemoveToolQuery() removes
-			const removedToolQueries = new Set()
-			const mayRemoveToolQuery = (key, validate) => mayRemoveQuery(ds, key, validate, removedToolQueries)
 			// must validate snvindel query before variant2sample
 			// as vcf header must be parsed to supply samples for variant2samples
 			await validate_query_snvindel(ds, genome)
@@ -156,21 +153,20 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_itd(ds, genome)
 			await validate_query_junction(ds, genome)
 			await validate_query_ld(ds, genome)
-			await mayRemoveToolQuery('geneExpression', () => validate_query_geneExpression(ds, genome))
-			await mayRemoveToolQuery('isoformExpression', () => validateQueryIsoformExpression(ds, genome))
-			await mayRemoveToolQuery('ssGSEA', () => validate_query_ssGSEA(ds, genome))
-			await mayRemoveToolQuery('dnaMethylation', () => validate_query_dnaMethylation(ds, genome))
+			await validate_query_geneExpression(ds, genome)
+			await validateQueryIsoformExpression(ds, genome)
+			await validate_query_ssGSEA(ds, genome)
+			await validate_query_dnaMethylation(ds, genome)
 			await validate_query_metaboliteIntensity(ds, genome)
 			await validate_query_proteome(ds, genome)
 			await validate_query_getTopTermsByType(ds, genome)
 			await validate_query_getTopMutatedGenes(ds, genome)
 			await validate_query_getSampleImages(ds, genome)
-			await mayRemoveToolQuery('rnaseqGeneCount', () => validate_query_rnaseqGeneCount(ds, genome))
+			await validate_query_rnaseqGeneCount(ds, genome)
 			await validate_query_singleSampleMutation(ds, genome)
 			await validate_query_singleSampleGenomeQuantification(ds, genome)
 			await validate_query_singleSampleGbtk(ds, genome)
-			await mayRemoveToolQuery('singleCell', () => validate_query_singleCell(ds, genome))
-			mayRemoveDependentQueries(ds, removedToolQueries)
+			await validate_query_singleCell(ds, genome)
 			await validate_query_TopVariablyExpressedGenes(ds)
 			await validate_query_trackLst(ds, genome)
 			await validate_query_NIdata(ds)
@@ -702,46 +698,6 @@ function sort_mclass(set) {
 	}
 	lst.sort((i, j) => j[1] - i[1])
 	return lst
-}
-
-/*
-Validates a query whose validation starts an HDF5, python or R tool, such as h5dump to read the samples of an HDF5 file.
-When the node permission model does not allow a child process, such as in an image without those tools, a query that
-fails for that reason is removed with a warning, instead of failing the dataset init, so that the other queries of the
-dataset are still available. Any other validation error still fails the dataset init.
-*/
-export async function mayRemoveQuery(ds, key, validate, removed, permission = process.permission) {
-	if (!ds.queries[key]) return await validate()
-	try {
-		await validate()
-	} catch (e) {
-		if (!isChildProcessDenied(e, permission)) throw e
-		console.warn(
-			`WARNING: ${ds.label}: removed queries.${key}, since a child process is not allowed: ${e?.message || e}`
-		)
-		delete ds.queries[key]
-		removed.add(key)
-	}
-}
-
-/** true for the error of a tool that cannot start, when the node permission model does not allow a child process:
-the permission model error, or the error of a tool that this server build does not have, see unsupportedComputation in
-tools/spawnProcess.ts; also used for a part of a query, see validate_junction_cluster() in j2/validate.ts */
-export function isChildProcessDenied(e, permission = process.permission) {
-	if (!permission || permission.has('child')) return false
-	return /--allow-child-process|does not support this data computation request/.test(`${e?.message || e}`)
-}
-
-// removes a query whose data comes from a query that mayRemoveQuery() removed
-export function mayRemoveDependentQueries(ds, removed) {
-	// the native top genes are computed from the geneExpression file; a ds-supplied getGenes() does not need it
-	const topVE = ds.queries.topVariablyExpressedGenes
-	if (topVE && typeof topVE.getGenes != 'function' && removed.has('geneExpression')) {
-		console.warn(
-			`WARNING: ${ds.label}: removed queries.topVariablyExpressedGenes, since queries.geneExpression is removed`
-		)
-		delete ds.queries.topVariablyExpressedGenes
-	}
 }
 
 async function validate_query_NIdata(ds) {

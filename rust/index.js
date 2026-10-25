@@ -139,7 +139,7 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	const modpath = path.join(wasmDir, binfile + '.wasm')
 	if (!wasmModules.has(binfile)) {
 		if (!fs.existsSync(modpath)) {
-			// the details are only logged, see unsupportedComputation in server/src/tools/spawnProcess.ts
+			// the details are only logged, and the response has a neutral error
 			console.warn(
 				`run_rust('${binfile}'): no wasm module, and the node permission model does not allow a child process`
 			)

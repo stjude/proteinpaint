@@ -1,6 +1,7 @@
 import fs from 'fs'
 import net from 'net'
 import path from 'path'
+import { spawn } from 'child_process'
 import readline from 'readline'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
@@ -13,7 +14,6 @@ import pm from 'picomatch'
 import { readFastaRegion } from './fasta.ts'
 import { readTabixLines, readTabixHeader, listTabixChrs } from './tabix.ts'
 import { listBamChrs } from './bamFile.ts'
-import { spawnProcess } from './tools/spawnProcess.ts'
 import { readBigbedLines, readBigbedByName, isBigbedFile } from './bigbed.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
@@ -822,7 +822,7 @@ export function spawnTool(bin, args, opts) {
 	for (const a of args) {
 		if (typeof a == 'string' && a[0] == '-' && a.includes(':')) throw 'invalid region argument'
 	}
-	return spawnProcess(bin, args, opts)
+	return spawn(bin, args, opts)
 }
 
 // upper limits of a region's pixel width, the sum of the widths and the number of regions, which size

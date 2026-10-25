@@ -1,7 +1,8 @@
+import { spawn } from 'child_process'
+import type { ChildProcessWithoutNullStreams } from 'child_process'
 import path from 'path'
 import serverconfig from '../serverconfig.js'
 import { illegalUrlHost } from '../utils.js'
-import { spawnProcess } from './spawnProcess.ts'
 import { specs as gfClientSpecs } from './gfClient.ts'
 import { specs as h5dumpSpecs } from './h5dump.ts'
 import { specs as hicstrawSpecs } from './hicstraw.ts'
@@ -87,14 +88,14 @@ const patterns = new WeakMap<object, RegExp>()
 for (const [op, spec] of Object.entries(specs)) checkSpec(op, spec)
 
 /** op: a key of specs, such as 'hicstraw.query'; input: the field values of the op */
-export function runTool(op: string, input: Record<string, unknown>): ReturnType<typeof spawnProcess> {
+export function runTool(op: string, input: Record<string, unknown>): ChildProcessWithoutNullStreams {
 	const spec = Object.hasOwn(specs, op) ? specs[op] : undefined
 	if (!spec) throw `unknown tool operation: ${op}`
 	const argv = getArgv(op, spec, input)
 	const bin = spec.bin()
 	if (typeof bin != 'string' || !bin) throw `${op}: tool binary is not configured`
 	// no shell option, so that the default of no shell is used and each argument reaches the tool as one literal string
-	return spawnProcess(bin, argv)
+	return spawn(bin, argv)
 }
 
 /** same as runTool(), and resolves with the exit code and output; rejects with the error if the tool cannot be started */

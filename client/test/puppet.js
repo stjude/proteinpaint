@@ -10,7 +10,6 @@ import bodyParser from 'body-parser'
 import { ReqResCache, emitRelevantSpecCovDetails, publicSpecsDir } from '@sjcrh/augen/dev'
 import { getRelevantClientSpecs, getUrlParams } from './closestSpec.js'
 import { createTapFailureTracker } from './tapFailures.js'
-import { compareFailures, compareIncompleteGroups, formatComparison, getFailureId } from './expectedFailures.js'
 
 // user __dirname later to detect relative path to public dir,
 // since the unit test may be triggered from the pp dir with --workspace option
@@ -202,57 +201,19 @@ async function runTest(patternsStr) {
 		const totalFail = results.reduce((n, r) => n + (r?.parsed?.fail || 0), 0)
 		// groups that never produced a TAP summary (timeout, page load error, thrown exception)
 		const erroredGroups = results.filter(r => !r?.parsed && !r?.passed)
-		const trackedFailures = results.flatMap(r => r?.trackedFailures || [])
-		const incomplete = erroredGroups.map(r => ({ pattern: r?.pattern, phase: r?.phase, assertions: r?.assertions }))
-		// every failed assertion and incomplete group, to compare the failures of different runs or builds
-		if (trackedFailures.length || erroredGroups.length) {
-			const failures = trackedFailures.map(f => {
-				const { operator, expected, actual } = f.details
-				return { ...getFailureId(f), operator, expected, actual }
-			})
-			const incompleteGroups = erroredGroups.map(r => ({
-				pattern: r?.pattern,
-				phase: r?.phase,
-				assertions: r?.assertions,
-				error: r?.error
-			}))
-			const json = JSON.stringify({ failures, incompleteGroups }, null, '\t')
-			fs.writeFileSync('failedTests.json', json + '\n', { encoding: 'utf8' })
-		} else fs.rmSync('failedTests.json', { force: true })
-		// With PP_EXPECTED_FAILURES=<json file>, such as test/expectedFailures.nocp.json for an image whose server cannot
-		// start R, python or a rust binary, the run passes when every failed assertion, and every group that did not
-		// complete, is listed in that file. A failure that the tracker did not see is never expected.
-		let comparisonText = ''
-		let unexpectedCount = totalFail + erroredGroups.length
-		if (process.env.PP_EXPECTED_FAILURES) {
-			const file = process.env.PP_EXPECTED_FAILURES
-			const expectedJson = JSON.parse(fs.readFileSync(file, 'utf8'))
-			for (const key of ['failures', 'incompleteGroups']) {
-				if (!Array.isArray(expectedJson[key])) throw `missing a ${key}[] array in ${file}`
-			}
-			const failures = compareFailures(trackedFailures, expectedJson.failures)
-			const groups = compareIncompleteGroups(incomplete, expectedJson.incompleteGroups)
-			comparisonText = formatComparison(failures, groups)
-			// a completed group's failure count that differs from its tracked failures
-			const untracked = results.reduce(
-				(n, r) => n + (r?.parsed ? Math.abs(r.parsed.fail - (r.trackedFailures?.length || 0)) : 0),
-				0
-			)
-			unexpectedCount = failures.unexpected.length + groups.unexpected.length + untracked
-		}
-		const runPassed = unexpectedCount === 0
+		const runPassed = totalFail === 0 && erroredGroups.length === 0
 
 		if (runPassed) {
 			// IMPORTANT: CI gates the whole integration run on the mere existence of this file
 			// (see .github/actions/run-integration-tests/action.yml, which sets
 			// INTEGRATION_TEST_PASSED=true iff client/passedTests.txt exists). It MUST therefore
 			// be written ONLY when everything passed — writing it on failure reports a green run.
-			fs.writeFileSync('passedTests.txt', summaryText + comparisonText, { encoding: 'utf8' })
+			fs.writeFileSync('passedTests.txt', summaryText, { encoding: 'utf8' })
 			// drop any stale failure record from a previous run
 			fs.rmSync('failedTests.txt', { force: true })
 		} else {
 			// keep the failure summary as an artifact, but under a name the CI gate does NOT check
-			fs.writeFileSync('failedTests.txt', summaryText + comparisonText, { encoding: 'utf8' })
+			fs.writeFileSync('failedTests.txt', summaryText, { encoding: 'utf8' })
 			// the failed assertions, without having to search the whole test output for them
 			const failureSummaries = results.map(r => r?.failureSummary).filter(Boolean)
 			if (failureSummaries.length) console.log(`\n${failureSummaries.join('\n\n')}`)
@@ -266,8 +227,6 @@ async function runTest(patternsStr) {
 			}
 			exitCode = 1
 		}
-		// last, after the failure details, so that the result of the comparison is not missed in a long log
-		if (comparisonText) console.log(`\n${comparisonText}\n`)
 	} catch (e) {
 		// an unexpected error, such as from the coverage report generation, must not look like a passed run
 		console.error(e)
@@ -406,12 +365,6 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 	const output = []
 	// the failed assertions of this pattern, to summarize at the end of a long test run
 	const failureTracker = createTapFailureTracker()
-	// the step of this group that an error is thrown in: setup, navigation, test or coverage; only an error in the test
-	// step, a timeout waiting for the TAP summary, may match an expected incomplete group, see compareIncompleteGroups()
-	let phase = 'setup'
-	// the TAP assertions that the page printed, so that a group that hangs before any test ran, such as when its test
-	// bundle does not load, is not taken for an expected hang
-	let assertions = 0
 	// the browser context setup is inside the try, so a failure to create it only fails this group
 	try {
 		context = await browser.createBrowserContext()
@@ -421,7 +374,6 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 				const msg = m.text()
 				console.log(`${tag}${msg}`)
 				output.push(msg)
-				if (/^(not )?ok \d/.test(msg)) assertions++
 				failureTracker.add(msg)
 				/*
 	        detected last lines are expected to look like below,
@@ -448,18 +400,15 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 		// Enable JavaScript coverage (CSS coverage is left off, as in the original)
 		await page.coverage.startJSCoverage({ resetOnNavigation: true, includeRawScriptCoverage: true })
 		console.log(`\n--- testing http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern} ---\n`)
-		phase = 'navigation'
 		// Navigate to test page
 		const r = await page.goto(`http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern}`, {
 			timeout: Number(process.env.PUPPET_GOTO_TIMEOUT) || 1000
 		})
 		if (!r.ok()) throw `Error loading page: ${r.status()}`
 
-		phase = 'test'
 		const status = await waitForTap(lastLines)
 		console.log(`${tag}test run time=${(Date.now() - startTime) / 1000} s`)
 
-		phase = 'coverage'
 		const jsCoverage = await page.coverage.stopJSCoverage()
 		const matched = jsCoverage.filter(({ rawScriptCoverage: c }) => {
 			//if (!c.url.includes('node_modules') && !c.url.includes('sjcrh/proteinpaint-')) console.log(c.url)
@@ -478,26 +427,11 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 		const passed = status === 'ok' && parsed.fail === 0
 		if (!passed) errors[pattern] = `${parsed.fail || 'unknown number of'} failing test(s)`
 		const failureSummary = failureTracker.format({ title: `Failed assertions for spec pattern=${pattern}` })
-		const trackedFailures = failureTracker.failures
-		return { pattern, testedFiles, passed, coverageList, lastLines, parsed, failureSummary, trackedFailures }
+		return { pattern, testedFiles, passed, coverageList, lastLines, parsed, failureSummary }
 	} catch (error) {
 		console.error(`\n!!! error running pattern=${pattern} !!!\n`)
 		errors[pattern] = error
-		// the assertions that failed before the error, such as a timeout, are still compared with the expected failures
-		const failureSummary = failureTracker.format({ title: `Failed assertions for spec pattern=${pattern}` })
-		const trackedFailures = failureTracker.failures
-		return {
-			pattern,
-			testedFiles,
-			passed: false,
-			coverageList: [],
-			lastLines,
-			error: String(error),
-			phase,
-			assertions,
-			failureSummary,
-			trackedFailures
-		}
+		return { pattern, testedFiles, passed: false, coverageList: [], lastLines, error: String(error) }
 	} finally {
 		// closing the context also tears down its page(s) and in-flight coverage
 		await context?.close().catch(() => {})
