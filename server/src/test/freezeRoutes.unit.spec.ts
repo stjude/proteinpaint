@@ -18,11 +18,19 @@ function getApp() {
 		next()
 	})
 	app.get('/a', (req, res) => res.send('a'))
+	app.param('id', (req, res, next) => {
+		res.set('x-param', 'ok')
+		next()
+	})
 	app.post('/b/:id', (req, res) => res.json({ id: req.params.id }))
 	const router = express.Router()
 	router.get('/c', (req, res) => res.send('c'))
 	app.use('/sub', router)
-	return { app, router }
+	// a router that is used as a route callback, instead of with app.use()
+	const routeRouter = express.Router()
+	routeRouter.get('/r', (req, res) => res.send('r'))
+	app.get('/r', routeRouter)
+	return { app, router, routeRouter }
 }
 
 async function listen(app) {
@@ -38,7 +46,7 @@ tape('\n', test => {
 })
 
 tape('freezeRoutes() prevents adding routes and middlewares', test => {
-	const { app, router } = getApp()
+	const { app, router, routeRouter } = getApp()
 	const route = app._router.stack.find(layer => layer.route?.path == '/a').route
 	freezeRoutes(app)
 
@@ -49,6 +57,11 @@ tape('freezeRoutes() prevents adding routes and middlewares', test => {
 		() => router.get('/x', (req, res) => res.send('x')),
 		/not extensible/,
 		'should throw on adding a route to an existing sub-router'
+	)
+	test.throws(
+		() => routeRouter.get('/x', (req, res) => res.send('x')),
+		/not extensible/,
+		'should throw on adding a route to a router that is used as a route callback'
 	)
 	test.throws(
 		() => route.post((req, res) => res.send('x')),
@@ -75,6 +88,12 @@ tape('freezeRoutes() prevents replacing a route handler', test => {
 	test.throws(() => (layer.route.methods.delete = true), TypeError, 'should throw on enabling another route method')
 	test.throws(() => (app._router = express.Router()), TypeError, 'should throw on replacing the app router')
 	test.throws(() => (router.stack = []), TypeError, 'should throw on replacing a sub-router stack')
+	const paramCallbacks = app._router.params.id
+	test.throws(() => paramCallbacks.push(() => {}), TypeError, 'should throw on adding a param callback')
+	test.throws(() => (paramCallbacks[0] = () => {}), TypeError, 'should throw on replacing a param callback')
+	const keys = stack.find(layer => layer.route?.path == '/b/:id').keys
+	test.throws(() => (keys[0].name = 'x'), TypeError, 'should throw on renaming a layer key')
+	test.throws(() => keys.pop(), TypeError, 'should throw on removing a layer key')
 	test.end()
 })
 
@@ -94,9 +113,13 @@ tape('freezeRoutes() keeps existing routes working', async test => {
 
 			const b = await fetch(`${url}/b/1`, { method: 'POST' })
 			test.deepEqual(await b.json(), { id: '1' }, 'should respond to an existing POST route with a param')
+			test.equal(b.headers.get('x-param'), 'ok', 'should apply an existing param callback')
 
 			const c = await fetch(`${url}/sub/c`)
 			test.equal(await c.text(), 'c', 'should respond to a route in a sub-router')
+
+			const r = await fetch(`${url}/r`)
+			test.equal(await r.text(), 'r', 'should respond to a route in a router that is used as a route callback')
 		}
 		const x = await fetch(`${url}/x`)
 		test.equal(x.status, 404, 'should respond with 404 to an unregistered path')
