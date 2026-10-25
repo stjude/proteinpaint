@@ -1,12 +1,13 @@
 import tape from 'tape'
 import https from 'https'
 import { EventEmitter } from 'events'
-import { labelValidationRun, sendMessageToSlack } from '../postOnSlack.ts'
+import { labelValidationRun, sendMessageToSlack, getSlackHashFile } from '../postOnSlack.ts'
 
 /**
  * Tests
  * 		labelValidationRun()
  * 		sendMessageToSlack() without a hash file
+ * 		getSlackHashFile()
  */
 
 /**************
@@ -62,5 +63,19 @@ tape('sendMessageToSlack() without a hash file', async function (test) {
 	} finally {
 		;(https as any).request = request
 	}
+	test.end()
+})
+
+tape('getSlackHashFile()', function (test) {
+	test.equal(
+		getSlackHashFile({}, '/cache'),
+		'/cache/slack/last_message_hash.txt',
+		'should return the hash file in the cache dir'
+	)
+	test.equal(
+		getSlackHashFile({ features: { disableFileCache: true } }, '/cache'),
+		'',
+		'should return an empty string with features.disableFileCache, to keep the hash in memory'
+	)
 	test.end()
 })

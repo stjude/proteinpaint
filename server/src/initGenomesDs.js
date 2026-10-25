@@ -12,7 +12,7 @@ import * as mds3_init from './mds3.init.js'
 import { clinsig } from '../dataset/clinvar.ts'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 import { mayLog } from './helpers.ts'
-import { sendMessageToSlack } from './postOnSlack.ts'
+import { sendMessageToSlack, getSlackHashFile } from './postOnSlack.ts'
 import { mapConcurrent } from './utils/concurrencyLimiter.ts'
 import { initGeneDbLookups } from './genedbLookups.ts'
 // server-internal utilities that GDC query code depends on; injected so that code can move to
@@ -463,8 +463,8 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 					typeof _ds == 'function'
 						? await _ds(common, { serverconfig, clinsig, dsHelpers })
 						: typeof _ds?.default == 'function'
-							? await _ds.default(common, { serverconfig, clinsig, dsHelpers })
-							: _ds.default || _ds
+						? await _ds.default(common, { serverconfig, clinsig, dsHelpers })
+						: _ds.default || _ds
 
 				if (d.updateAttr) {
 					utils.doUpdateAttr(ds, d.updateAttr)
@@ -653,7 +653,7 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 					sendMessageToSlack(
 						serverconfig.slackWebhookUrl,
 						`\n${serverconfig.URL}: ${msg}`,
-						path.join(cachedir, '/slack/last_message_hash.txt')
+						getSlackHashFile(serverconfig, cachedir)
 					).catch(console.log)
 				}
 				// NOTE: the server is not crashed here, even when this is the only configured dataset,
@@ -678,7 +678,7 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 						sendMessageToSlack(
 							serverconfig.slackWebhookUrl,
 							`\n${serverconfig.URL}: ${msg}`,
-							path.join(cachedir, '/slack/last_message_hash.txt')
+							getSlackHashFile(serverconfig, cachedir)
 						).catch(console.log)
 					}
 					// retries are exhausted and cancelled, so this must not be reported as an active
