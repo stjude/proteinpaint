@@ -95,6 +95,21 @@ tape('freezeRoutes() prevents replacing a route handler', test => {
 	test.throws(() => (layer.route.methods.delete = true), TypeError, 'should throw on enabling another route method')
 	test.throws(() => (app._router = express.Router()), TypeError, 'should throw on replacing the app router')
 	test.throws(() => (router.stack = []), TypeError, 'should throw on replacing a sub-router stack')
+	test.throws(() => (app._router.handle = () => {}), TypeError, 'should throw on replacing the app router handle()')
+	test.throws(
+		() => (app._router.process_params = () => {}),
+		TypeError,
+		'should throw on replacing the app router process_params()'
+	)
+	test.throws(() => ((router as any).handle = () => {}), TypeError, 'should throw on replacing a sub-router handle()')
+	// the first layer is from app.use(), the others are route layers and the method layers of a route
+	const middlewareLayer = stack.find(layer => !layer.route)
+	const methodLayer = layer.route.stack[0]
+	for (const [name, l] of Object.entries({ middleware: middlewareLayer, route: layer, method: methodLayer })) {
+		for (const key of ['match', 'handle_request', 'handle_error']) {
+			test.throws(() => (l[key] = () => {}), TypeError, `should throw on replacing a ${name} layer ${key}()`)
+		}
+	}
 	const paramCallbacks = app._router.params.id
 	test.throws(() => paramCallbacks.push(() => {}), TypeError, 'should throw on adding a param callback')
 	test.throws(() => (paramCallbacks[0] = () => {}), TypeError, 'should throw on replacing a param callback')
