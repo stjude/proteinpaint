@@ -467,7 +467,19 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 	} catch (error) {
 		console.error(`\n!!! error running pattern=${pattern} !!!\n`)
 		errors[pattern] = error
-		return { pattern, testedFiles, passed: false, coverageList: [], lastLines, error: String(error) }
+		// the assertions that failed before the error, such as a timeout, are still compared with the expected failures
+		const failureSummary = failureTracker.format({ title: `Failed assertions for spec pattern=${pattern}` })
+		const trackedFailures = failureTracker.failures
+		return {
+			pattern,
+			testedFiles,
+			passed: false,
+			coverageList: [],
+			lastLines,
+			error: String(error),
+			failureSummary,
+			trackedFailures
+		}
 	} finally {
 		// closing the context also tears down its page(s) and in-flight coverage
 		await context?.close().catch(() => {})
