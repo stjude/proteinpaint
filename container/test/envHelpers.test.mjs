@@ -380,6 +380,20 @@ test('the handoff dir is removed when process.execve() fails', t => {
 	assert.deepEqual(ctx.removed, [{ p: '/tmp/user/pp-creds-XXXXXX', opts: { recursive: true, force: true } }])
 })
 
+test('features.disableFileCache: only the handoff dir is an added write path, so that the server can remove it', t => {
+	for (const disableFileCache of [false, true]) {
+		const ctx = fakeContext({
+			env: { PP_CREDS: '{"a":1}' },
+			files: { '/app/serverconfig.json': JSON.stringify({ features: { disableFileCache } }) }
+		})
+		runInProcess(t, ['node', 'app.mjs'], ctx)
+		const writeFlags = ctx.execved[0].args.filter(a => a.startsWith('--allow-fs-write='))
+		const handoffFlag = '--allow-fs-write=/tmp/user/pp-creds-XXXXXX'
+		if (disableFileCache) assert.deepEqual(writeFlags, [handoffFlag])
+		else assert.equal(writeFlags.includes(handoffFlag), false, 'the OS temp dir already covers the handoff dir')
+	}
+})
+
 test('a tsx command runs as a child process with credentials in its env, since tsx watch reloads the server', t => {
 	const ctx = fakeContext({
 		env: { PP_CREDS_FILE: '/secrets/pp.json' },
@@ -414,17 +428,22 @@ test('without process.execve(), a node command runs as a child process with a wa
 	assert.equal(ctx.spawned[0].opts.env.PP_CREDS, '{"a":1}')
 })
 
-test('smoke: the command replaces this process, with the permission model and credentials, and its exit code propagates', () => {
-	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'envHelpers-smoke-'))
-	// the handoff dir is created in os.tmpdir(), which is set here to check that the command can remove it
-	const tmpdir = path.join(dir, 'tmp')
-	// the credentials file must not be under an allowed read path, such as the cwd or OS temp dir
-	const credsFile = path.join(import.meta.dirname, `.smoke-creds-${process.pid}.json`)
-	try {
-		fs.mkdirSync(tmpdir)
-		fs.writeFileSync(credsFile, '{"a":1}')
-		// reads and removes the handoff file like server/src/serverconfig.js
-		const child = `
+for (const disableFileCache of [false, true])
+	test(`smoke: the command replaces this process, with the permission model and credentials, and its exit code propagates${
+		disableFileCache ? ', with features.disableFileCache' : ''
+	}`, () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'envHelpers-smoke-'))
+		// the handoff dir is created in os.tmpdir(), which is set here to check that the command can remove it
+		const tmpdir = path.join(dir, 'tmp')
+		// the credentials file must not be under an allowed read path, such as the cwd or OS temp dir
+		const credsFile = path.join(import.meta.dirname, `.smoke-creds-${process.pid}.json`)
+		try {
+			fs.mkdirSync(tmpdir)
+			fs.writeFileSync(credsFile, '{"a":1}')
+			if (disableFileCache)
+				fs.writeFileSync(path.join(dir, 'serverconfig.json'), JSON.stringify({ features: { disableFileCache } }))
+			// reads and removes the handoff file like server/src/serverconfig.js
+			const child = `
 			const fs = require('fs')
 			let canReadCredsFile = true
 			try { fs.readFileSync(${JSON.stringify(credsFile)}) } catch { canReadCredsFile = false }
@@ -434,29 +453,30 @@ test('smoke: the command replaces this process, with the permission model and cr
 			const envCreds = Object.keys(process.env).filter(k => k.endsWith('_CREDS'))
 			console.log(JSON.stringify({ permission: !!process.permission, handoff, envCreds, canReadCredsFile, pid: process.pid }))
 			process.exit(3)`
-		const ps = spawnSync(process.execPath, [SCRIPT, 'node', '-e', child], {
-			cwd: dir,
-			encoding: 'utf8',
-			env: { ...process.env, TMPDIR: tmpdir, PP_CREDS_FILE: credsFile, PP_ZZTEST_CREDS: 'z' }
-		})
-		assert.equal(ps.status, 3, ps.stderr)
-		assert.deepEqual(JSON.parse(ps.stdout), {
-			permission: true,
-			handoff: { PP_ZZTEST_CREDS: 'z', PP_CREDS: '{"a":1}' },
-			envCreds: [],
-			canReadCredsFile: false,
-			// the envHelpers.mjs process that spawnSync() started, which process.execve() replaced
-			pid: ps.pid
-		})
-		// a node command gets the permission model from flags, so no config file is written
-		assert.equal(fs.existsSync(path.join(dir, 'node.config.json')), false)
-		assert.match(ps.stderr, /envHelpers\.mjs: allow-fs-read /)
-		assert.deepEqual(fs.readdirSync(tmpdir), [], 'the command should be able to remove the handoff dir')
-	} finally {
-		fs.rmSync(dir, { recursive: true })
-		fs.rmSync(credsFile, { force: true })
-	}
-})
+			const ps = spawnSync(process.execPath, [SCRIPT, 'node', '-e', child], {
+				cwd: dir,
+				encoding: 'utf8',
+				env: { ...process.env, TMPDIR: tmpdir, PP_CREDS_FILE: credsFile, PP_ZZTEST_CREDS: 'z' }
+			})
+			assert.equal(ps.status, 3, ps.stderr)
+			assert.deepEqual(JSON.parse(ps.stdout), {
+				permission: true,
+				handoff: { PP_ZZTEST_CREDS: 'z', PP_CREDS: '{"a":1}' },
+				envCreds: [],
+				canReadCredsFile: false,
+				// the envHelpers.mjs process that spawnSync() started, which process.execve() replaced
+				pid: ps.pid
+			})
+			// a node command gets the permission model from flags, so no config file is written
+			assert.equal(fs.existsSync(path.join(dir, 'node.config.json')), false)
+			assert.match(ps.stderr, /envHelpers\.mjs: allow-fs-read /)
+			assert.deepEqual(fs.readdirSync(tmpdir), [], 'the command should be able to remove the handoff dir')
+			if (disableFileCache) assert.match(ps.stderr, /envHelpers\.mjs: allow-fs-write\s*$/m)
+		} finally {
+			fs.rmSync(dir, { recursive: true })
+			fs.rmSync(credsFile, { force: true })
+		}
+	})
 
 test('smoke: node --watch restarts the command with the credentials', async () => {
 	// resolved, since node resolves the script path, which the permission model denies through a symlinked dir,

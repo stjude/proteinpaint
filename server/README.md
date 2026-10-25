@@ -32,11 +32,14 @@ With `"features": {"disableFileCache": true}`, the server writes no file:
 - the cachedir and its subdirs are not created, and the cache monitor is not started
 - `cacheOrRecompute()` results are computed again on every request, and `features.extApiCache` is ignored
 - the requests that need a written file are rejected with an error, such as a GDC bam slice for the bam and
-  Sequence Reads apps, a remote track index, or a temp file for a spawned tool; the `/massSession` and
-  `/sessionIds` routes are not set up
+  Sequence Reads apps, a remote track index, a temp file for a spawned tool, or a whole-slide image tile,
+  overlay tile, boundaries or annotations request; the `/massSession` and `/sessionIds` routes are not set up
+- a Slack startup notification is still sent, and the last message hash, which skips sending the same message
+  again, is kept in memory instead of in the cachedir
 - `container/envHelpers.mjs` allows no `--allow-fs-write` path, not even the OS temp dir, except the
   `PP_ALLOW_FS_WRITE` ones, so any other write is denied by the node permission model. A `tsx` dev server
-  needs its own temp dir, such as `PP_ALLOW_FS_WRITE=$TMPDIR/tsx-$(id -u)`.
+  needs its own temp dir, such as `PP_ALLOW_FS_WRITE=$TMPDIR/tsx-$(id -u)`. With credentials, the
+  credentials handoff dir, which the server removes at startup, is also allowed.
 
 A single feature can be disabled instead with a zero `maxAge` or `maxSize` for its subdir in
 `features.cacheMonitor.subdirs`, which is checked by the `massSession` and `bam` subdirs, see
