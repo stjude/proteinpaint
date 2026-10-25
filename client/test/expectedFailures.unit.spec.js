@@ -118,15 +118,15 @@ tape('compareIncompleteGroups() matches by pattern', test => {
 	]
 	const result = compareIncompleteGroups(
 		[
-			{ pattern: 'dir=mds3&name=*', phase: 'test' },
-			{ pattern: 'dir=src&name=*', phase: 'test' }
+			{ pattern: 'dir=mds3&name=*', phase: 'test', assertions: 5 },
+			{ pattern: 'dir=src&name=*', phase: 'test', assertions: 2 }
 		],
 		expectedList
 	)
 	test.deepEqual(result.expected, [expectedList[0]], 'should expect a listed pattern')
 	test.deepEqual(
 		result.unexpected,
-		[{ pattern: 'dir=src&name=*', phase: 'test' }],
+		[{ pattern: 'dir=src&name=*', phase: 'test', assertions: 2 }],
 		'should not expect a pattern that is not listed'
 	)
 	test.deepEqual(result.notFailing, [expectedList[1]], 'should list the entries of groups that completed')
@@ -142,16 +142,38 @@ tape('compareIncompleteGroups() matches by pattern', test => {
 tape('compareIncompleteGroups() only expects a group that did not complete in its test phase', test => {
 	const expectedList = [{ pattern: 'dir=mds3&name=*', reason: 'bcftools: snvindel bcf file' }]
 	for (const phase of ['setup', 'navigation', 'coverage', undefined]) {
-		const result = compareIncompleteGroups([{ pattern: 'dir=mds3&name=*', phase }], expectedList)
+		const result = compareIncompleteGroups([{ pattern: 'dir=mds3&name=*', phase, assertions: 5 }], expectedList)
 		test.deepEqual(result.expected, [], `should not expect a listed pattern whose error is in the ${phase} phase`)
-		test.deepEqual(result.unexpected, [{ pattern: 'dir=mds3&name=*', phase }], `should report the ${phase} phase error`)
+		test.deepEqual(
+			result.unexpected,
+			[{ pattern: 'dir=mds3&name=*', phase, assertions: 5 }],
+			`should report the ${phase} phase error`
+		)
 		test.deepEqual(result.notFailing, [], 'should not list the entry as a group that completed')
 	}
-	const result = compareIncompleteGroups([{ pattern: 'dir=mds3&name=*', phase: 'navigation' }], expectedList)
+	const result = compareIncompleteGroups(
+		[{ pattern: 'dir=mds3&name=*', phase: 'navigation', assertions: 0 }],
+		expectedList
+	)
 	const text = formatComparison(compareFailures([], []), result)
 	test.ok(
 		text.includes('UNEXPECTED incomplete groups:\n  dir=mds3&name=* (in the navigation step)'),
 		'should show the step of an unexpected incomplete group'
 	)
+	test.end()
+})
+
+tape('compareIncompleteGroups() does not expect a test phase timeout before any test ran', test => {
+	const expectedList = [{ pattern: 'dir=mds3&name=*', reason: 'bcftools: snvindel bcf file' }]
+	for (const assertions of [0, undefined]) {
+		const result = compareIncompleteGroups([{ pattern: 'dir=mds3&name=*', phase: 'test', assertions }], expectedList)
+		test.deepEqual(result.expected, [], `should not expect a listed group with assertions=${assertions}`)
+		test.equal(result.unexpected.length, 1, `should report the group with assertions=${assertions}`)
+		const text = formatComparison(compareFailures([], []), result)
+		test.ok(
+			text.includes('UNEXPECTED incomplete groups:\n  dir=mds3&name=* (before any test ran)'),
+			'should show that no test ran'
+		)
+	}
 	test.end()
 })

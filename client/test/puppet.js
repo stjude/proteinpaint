@@ -203,14 +203,19 @@ async function runTest(patternsStr) {
 		// groups that never produced a TAP summary (timeout, page load error, thrown exception)
 		const erroredGroups = results.filter(r => !r?.parsed && !r?.passed)
 		const trackedFailures = results.flatMap(r => r?.trackedFailures || [])
-		const incomplete = erroredGroups.map(r => ({ pattern: r?.pattern, phase: r?.phase }))
+		const incomplete = erroredGroups.map(r => ({ pattern: r?.pattern, phase: r?.phase, assertions: r?.assertions }))
 		// every failed assertion and incomplete group, to compare the failures of different runs or builds
 		if (trackedFailures.length || erroredGroups.length) {
 			const failures = trackedFailures.map(f => {
 				const { operator, expected, actual } = f.details
 				return { ...getFailureId(f), operator, expected, actual }
 			})
-			const incompleteGroups = erroredGroups.map(r => ({ pattern: r?.pattern, phase: r?.phase, error: r?.error }))
+			const incompleteGroups = erroredGroups.map(r => ({
+				pattern: r?.pattern,
+				phase: r?.phase,
+				assertions: r?.assertions,
+				error: r?.error
+			}))
 			const json = JSON.stringify({ failures, incompleteGroups }, null, '\t')
 			fs.writeFileSync('failedTests.json', json + '\n', { encoding: 'utf8' })
 		} else fs.rmSync('failedTests.json', { force: true })
@@ -404,6 +409,9 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 	// the step of this group that an error is thrown in: setup, navigation, test or coverage; only an error in the test
 	// step, a timeout waiting for the TAP summary, may match an expected incomplete group, see compareIncompleteGroups()
 	let phase = 'setup'
+	// the TAP assertions that the page printed, so that a group that hangs before any test ran, such as when its test
+	// bundle does not load, is not taken for an expected hang
+	let assertions = 0
 	// the browser context setup is inside the try, so a failure to create it only fails this group
 	try {
 		context = await browser.createBrowserContext()
@@ -413,6 +421,7 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 				const msg = m.text()
 				console.log(`${tag}${msg}`)
 				output.push(msg)
+				if (/^(not )?ok \d/.test(msg)) assertions++
 				failureTracker.add(msg)
 				/*
 	        detected last lines are expected to look like below,
@@ -485,6 +494,7 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 			lastLines,
 			error: String(error),
 			phase,
+			assertions,
 			failureSummary,
 			trackedFailures
 		}
