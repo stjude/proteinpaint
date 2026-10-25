@@ -57,10 +57,12 @@ export function compareFailures(failures, expectedList) {
 }
 
 /**
- * returns { expected, unexpected, notFailing } for the patterns of the groups that did not complete, compared with the
- * expectedList of { pattern, reason }
+ * returns { expected, unexpected, notFailing } for the { pattern, phase } of the groups that did not complete, compared
+ * with the expectedList of { pattern, reason }. Only a group that did not complete in its test phase, such as a spec
+ * that hangs, may be expected: an error in the browser setup, the page navigation or the coverage collection, such as
+ * a page that is not found, is never expected, even for a listed pattern.
  */
-export function compareIncompleteGroups(patterns, expectedList) {
+export function compareIncompleteGroups(groups, expectedList) {
 	for (const [i, entry] of expectedList.entries()) {
 		for (const key of ['pattern', 'reason']) {
 			if (typeof entry[key] != 'string' || !entry[key])
@@ -69,12 +71,14 @@ export function compareIncompleteGroups(patterns, expectedList) {
 	}
 	const expected = []
 	const unexpected = []
-	for (const pattern of patterns) {
-		const entry = expectedList.find(e => e.pattern == pattern)
+	for (const { pattern, phase } of groups) {
+		const entry = phase == 'test' ? expectedList.find(e => e.pattern == pattern) : undefined
 		if (entry) expected.push(entry)
-		else unexpected.push({ pattern })
+		else unexpected.push({ pattern, phase })
 	}
-	return { expected, unexpected, notFailing: expectedList.filter(e => !expected.includes(e)) }
+	// an entry whose group did not complete in another phase is not listed as a group that completed
+	const notFailing = expectedList.filter(e => !groups.some(g => g.pattern == e.pattern))
+	return { expected, unexpected, notFailing }
 }
 
 /** returns the comparisons of compareFailures() and, optionally, compareIncompleteGroups() as lines of text */
@@ -87,7 +91,9 @@ export function formatComparison(failures, groups = { expected: [], unexpected: 
 		if (!list.length) return
 		lines.push('', title)
 		for (const f of list) {
-			const id = f.pattern || `[${f.section}] ${f.test}${f.assertion ? ` › ${f.assertion}` : ''}`
+			const id = f.pattern
+				? `${f.pattern}${f.phase && f.phase != 'test' ? ` (in the ${f.phase} step)` : ''}`
+				: `[${f.section}] ${f.test}${f.assertion ? ` › ${f.assertion}` : ''}`
 			lines.push(`  ${id}${withReason ? `  (${f.reason})` : ''}`)
 		}
 	}

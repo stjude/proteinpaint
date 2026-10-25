@@ -203,14 +203,14 @@ async function runTest(patternsStr) {
 		// groups that never produced a TAP summary (timeout, page load error, thrown exception)
 		const erroredGroups = results.filter(r => !r?.parsed && !r?.passed)
 		const trackedFailures = results.flatMap(r => r?.trackedFailures || [])
-		const incompletePatterns = erroredGroups.map(r => r?.pattern)
+		const incomplete = erroredGroups.map(r => ({ pattern: r?.pattern, phase: r?.phase }))
 		// every failed assertion and incomplete group, to compare the failures of different runs or builds
 		if (trackedFailures.length || erroredGroups.length) {
 			const failures = trackedFailures.map(f => {
 				const { operator, expected, actual } = f.details
 				return { ...getFailureId(f), operator, expected, actual }
 			})
-			const incompleteGroups = erroredGroups.map(r => ({ pattern: r?.pattern, error: r?.error }))
+			const incompleteGroups = erroredGroups.map(r => ({ pattern: r?.pattern, phase: r?.phase, error: r?.error }))
 			const json = JSON.stringify({ failures, incompleteGroups }, null, '\t')
 			fs.writeFileSync('failedTests.json', json + '\n', { encoding: 'utf8' })
 		} else fs.rmSync('failedTests.json', { force: true })
@@ -226,7 +226,7 @@ async function runTest(patternsStr) {
 				if (!Array.isArray(expectedJson[key])) throw `missing a ${key}[] array in ${file}`
 			}
 			const failures = compareFailures(trackedFailures, expectedJson.failures)
-			const groups = compareIncompleteGroups(incompletePatterns, expectedJson.incompleteGroups)
+			const groups = compareIncompleteGroups(incomplete, expectedJson.incompleteGroups)
 			comparisonText = formatComparison(failures, groups)
 			console.log(`\n${comparisonText}\n`)
 			// a completed group's failure count that differs from its tracked failures
@@ -400,6 +400,9 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 	const output = []
 	// the failed assertions of this pattern, to summarize at the end of a long test run
 	const failureTracker = createTapFailureTracker()
+	// the step of this group that an error is thrown in: setup, navigation, test or coverage; only an error in the test
+	// step, a timeout waiting for the TAP summary, may match an expected incomplete group, see compareIncompleteGroups()
+	let phase = 'setup'
 	// the browser context setup is inside the try, so a failure to create it only fails this group
 	try {
 		context = await browser.createBrowserContext()
@@ -435,15 +438,18 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 		// Enable JavaScript coverage (CSS coverage is left off, as in the original)
 		await page.coverage.startJSCoverage({ resetOnNavigation: true, includeRawScriptCoverage: true })
 		console.log(`\n--- testing http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern} ---\n`)
+		phase = 'navigation'
 		// Navigate to test page
 		const r = await page.goto(`http://localhost:${STATICPORT}/puppet.html?port=${DATAPORT}&${pattern}`, {
 			timeout: Number(process.env.PUPPET_GOTO_TIMEOUT) || 1000
 		})
 		if (!r.ok()) throw `Error loading page: ${r.status()}`
 
+		phase = 'test'
 		const status = await waitForTap(lastLines)
 		console.log(`${tag}test run time=${(Date.now() - startTime) / 1000} s`)
 
+		phase = 'coverage'
 		const jsCoverage = await page.coverage.stopJSCoverage()
 		const matched = jsCoverage.filter(({ rawScriptCoverage: c }) => {
 			//if (!c.url.includes('node_modules') && !c.url.includes('sjcrh/proteinpaint-')) console.log(c.url)
@@ -477,6 +483,7 @@ async function runOnePattern(browser, _pattern, startTime, errors, tagLogs) {
 			coverageList: [],
 			lastLines,
 			error: String(error),
+			phase,
 			failureSummary,
 			trackedFailures
 		}

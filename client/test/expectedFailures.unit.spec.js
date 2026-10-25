@@ -116,15 +116,42 @@ tape('compareIncompleteGroups() matches by pattern', test => {
 		{ pattern: 'dir=mds3&name=*', reason: 'bcftools: snvindel bcf file' },
 		{ pattern: 'dir=violin&name=*', reason: 'R: density.R' }
 	]
-	const result = compareIncompleteGroups(['dir=mds3&name=*', 'dir=src&name=*'], expectedList)
+	const result = compareIncompleteGroups(
+		[
+			{ pattern: 'dir=mds3&name=*', phase: 'test' },
+			{ pattern: 'dir=src&name=*', phase: 'test' }
+		],
+		expectedList
+	)
 	test.deepEqual(result.expected, [expectedList[0]], 'should expect a listed pattern')
-	test.deepEqual(result.unexpected, [{ pattern: 'dir=src&name=*' }], 'should not expect a pattern that is not listed')
+	test.deepEqual(
+		result.unexpected,
+		[{ pattern: 'dir=src&name=*', phase: 'test' }],
+		'should not expect a pattern that is not listed'
+	)
 	test.deepEqual(result.notFailing, [expectedList[1]], 'should list the entries of groups that completed')
 	test.throws(() => compareIncompleteGroups([], [{ pattern: 'x' }]), /must have a non-empty reason/)
 	const text = formatComparison(compareFailures([], []), result)
 	test.ok(
 		text.indexOf('UNEXPECTED incomplete groups:\n  dir=src&name=*') > 0,
 		'should list the unexpected incomplete groups'
+	)
+	test.end()
+})
+
+tape('compareIncompleteGroups() only expects a group that did not complete in its test phase', test => {
+	const expectedList = [{ pattern: 'dir=mds3&name=*', reason: 'bcftools: snvindel bcf file' }]
+	for (const phase of ['setup', 'navigation', 'coverage', undefined]) {
+		const result = compareIncompleteGroups([{ pattern: 'dir=mds3&name=*', phase }], expectedList)
+		test.deepEqual(result.expected, [], `should not expect a listed pattern whose error is in the ${phase} phase`)
+		test.deepEqual(result.unexpected, [{ pattern: 'dir=mds3&name=*', phase }], `should report the ${phase} phase error`)
+		test.deepEqual(result.notFailing, [], 'should not list the entry as a group that completed')
+	}
+	const result = compareIncompleteGroups([{ pattern: 'dir=mds3&name=*', phase: 'navigation' }], expectedList)
+	const text = formatComparison(compareFailures([], []), result)
+	test.ok(
+		text.includes('UNEXPECTED incomplete groups:\n  dir=mds3&name=* (in the navigation step)'),
+		'should show the step of an unexpected incomplete group'
 	)
 	test.end()
 })
