@@ -34,7 +34,7 @@ With `"features": {"disableFileCache": true}`, the server writes no file:
 - the requests that need a written file are rejected with an error, such as a GDC bam slice for the bam and
   Sequence Reads apps, a remote track index, a temp file for a spawned tool, or a whole-slide image tile,
   overlay tile, boundaries or annotations request; the `/massSession` and `/sessionIds` routes are not set up
-- a Slack startup notification is still sent, and the last message hash, which skips sending the same message
+- a Slack startup or dataset retry notification is still sent, and the last message hash, which skips sending the same message
   again, is kept in memory instead of in the cachedir
 - `container/envHelpers.mjs` allows no `--allow-fs-write` path, not even the OS temp dir, except the
   `PP_ALLOW_FS_WRITE` ones, so any other write is denied by the node permission model. A `tsx` dev server

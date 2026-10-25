@@ -13,18 +13,13 @@ import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares, jsonErrorHandler } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
 import { getAuthApi, extractValidatedCreds } from './auth.ts'
-import { sendMessageToSlack } from './postOnSlack.ts'
+import { sendMessageToSlack, getSlackHashFile } from './postOnSlack.ts'
 import { routeFiles } from './app.routes.js'
 import { setPythonBinPath } from '@sjcrh/proteinpaint-python'
 import { CacheManager } from './CacheManager.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
-
-// the last Slack message hash is kept in memory instead of in a file, with features.disableFileCache
-function getSlackHashFile() {
-	return serverconfig.features?.disableFileCache ? '' : path.join(cachedir, '/slack/last_message_hash.txt')
-}
 
 const basepath = serverconfig.basepath || ''
 Object.freeze(process.argv)
@@ -161,7 +156,7 @@ init with bad config, data, and/or code
 		if (serverconfig.slackWebhookUrl) {
 			const url = serverconfig.URL
 			const message = `Startup error on: ${url} \n` + `${msg}`
-			await sendMessageToSlack(serverconfig.slackWebhookUrl, message, getSlackHashFile())
+			await sendMessageToSlack(serverconfig.slackWebhookUrl, message, getSlackHashFile(serverconfig, cachedir))
 				.then(() => {
 					process.exit(exitCode)
 				})
@@ -333,7 +328,7 @@ function processTrackedDs(trackedDatasets) {
 			pendingNotification = sendMessageToSlack(
 				serverconfig.slackWebhookUrl,
 				`\n${serverconfig.URL} ${hostname}: ${msg}`,
-				getSlackHashFile()
+				getSlackHashFile(serverconfig, cachedir)
 			).catch(console.log)
 		}
 	}

@@ -11,6 +11,16 @@ import crypto from 'crypto'
  * @param lastMessageHashFile The path of the file where the last message hash value is stored, or an empty string
  * to keep it in memory instead, such as with serverconfig.features.disableFileCache.
  */
+/**
+ * Returns the hash file path for sendMessageToSlack(), or an empty string to keep the last message hash in memory
+ * with serverconfig.features.disableFileCache, since the server then writes no file.
+ * @param serverconfig The loaded serverconfig.
+ * @param cachedir The server cache dir, a copy of serverconfig.cachedir, which is deleted at startup.
+ */
+export function getSlackHashFile(serverconfig: any, cachedir: string): string {
+	return serverconfig.features?.disableFileCache ? '' : path.join(cachedir, '/slack/last_message_hash.txt')
+}
+
 // the last message hash when no hash file is used, which lasts only as long as this server process
 let lastMessageHashInMemory = ''
 
