@@ -1,5 +1,9 @@
 import tape from 'tape'
-import { computeTypes, getJunctionData } from '../validate.js'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import serverconfig from '#src/serverconfig.js'
+import { computeTypes, getJunctionData, validate_junction_cluster } from '../validate.js'
 
 tape('\n', test => {
 	test.comment('-***- junction/validate specs -***-')
@@ -75,3 +79,72 @@ tape('getJunctionData: reformats sn2rc for termdb.matrix', async test => {
 	test.deepEqual(result.term2sample2value.get('junction-1'), { 'sample-1': 12 }, 'returns sample-to-count values')
 	test.end()
 })
+
+// the permission model of a server that cannot start a child process
+const noChildProcess: any = { has: (scope: string) => scope != 'child' }
+
+tape(
+	'validate_junction_cluster: a cluster whose samples cannot be read without a child process is removed',
+	async test => {
+		const tpmasterdir = serverconfig.tpmasterdir
+		const tmpdir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pp-junction-'))
+		await fs.promises.writeFile(path.join(tmpdir, 'cluster.h5'), '')
+		serverconfig.tpmasterdir = tmpdir
+		const { log, warn } = console
+		console.log = console.warn = () => {}
+		const ds = { label: 'test' }
+		const denied = async () => {
+			throw 'this server build does not support this data computation request'
+		}
+		try {
+			const junctionQ: any = { file: 'junction.gz', cluster: { file: 'cluster.h5' } }
+			await validate_junction_cluster(ds, junctionQ, noChildProcess, denied)
+			test.notOk(junctionQ.cluster, 'should remove the cluster when its samples cannot be read without a child process')
+			test.equal(junctionQ.file, 'junction.gz', 'should keep the junction query')
+
+			const kept: any = { cluster: { file: 'cluster.h5' } }
+			await validate_junction_cluster(ds, kept, noChildProcess, async () => ['s1', 's2'])
+			test.deepEqual([...kept.cluster.allSampleSet], ['s1', 's2'], 'should keep a cluster whose samples are read')
+
+			for (const [label, junction, permission, getSamples, pattern] of [
+				[
+					'an unrelated sample read error',
+					{ cluster: { file: 'cluster.h5' } },
+					noChildProcess,
+					async () => {
+						throw new Error('No samples found')
+					},
+					/No samples found/
+				],
+				[
+					'a missing cluster file',
+					{ cluster: { file: 'missing.h5' } },
+					noChildProcess,
+					denied,
+					/No such file or directory/
+				],
+				[
+					'a denied tool when a child process is allowed',
+					{ cluster: { file: 'cluster.h5' } },
+					{ has: () => true },
+					denied,
+					/does not support/
+				]
+			] as any[]) {
+				let message = ''
+				try {
+					await validate_junction_cluster(ds, junction, permission, getSamples)
+				} catch (e: any) {
+					message = `${e?.message || e}`
+				}
+				test.match(message, pattern, `should fail the init for ${label}`)
+				test.ok(junction.cluster, `should not remove the cluster for ${label}`)
+			}
+		} finally {
+			Object.assign(console, { log, warn })
+			serverconfig.tpmasterdir = tpmasterdir
+			await fs.promises.rm(tmpdir, { recursive: true, force: true })
+		}
+		test.end()
+	}
+)

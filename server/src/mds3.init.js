@@ -711,18 +711,25 @@ fails for that reason is removed with a warning, instead of failing the dataset 
 dataset are still available. Any other validation error still fails the dataset init.
 */
 export async function mayRemoveQuery(ds, key, validate, removed, permission = process.permission) {
-	if (!ds.queries[key] || !permission || permission.has('child')) return await validate()
+	if (!ds.queries[key]) return await validate()
 	try {
 		await validate()
 	} catch (e) {
-		const message = `${e?.message || e}`
-		// the node permission model error, or the error of a tool that this server build does not have, see
-		// unsupportedComputation in tools/spawnProcess.ts
-		if (!/--allow-child-process|does not support this data computation request/.test(message)) throw e
-		console.warn(`WARNING: ${ds.label}: removed queries.${key}, since a child process is not allowed: ${message}`)
+		if (!isChildProcessDenied(e, permission)) throw e
+		console.warn(
+			`WARNING: ${ds.label}: removed queries.${key}, since a child process is not allowed: ${e?.message || e}`
+		)
 		delete ds.queries[key]
 		removed.add(key)
 	}
+}
+
+/** true for the error of a tool that cannot start, when the node permission model does not allow a child process:
+the permission model error, or the error of a tool that this server build does not have, see unsupportedComputation in
+tools/spawnProcess.ts; also used for a part of a query, see validate_junction_cluster() in j2/validate.ts */
+export function isChildProcessDenied(e, permission = process.permission) {
+	if (!permission || permission.has('child')) return false
+	return /--allow-child-process|does not support this data computation request/.test(`${e?.message || e}`)
 }
 
 // removes a query whose data comes from a query that mayRemoveQuery() removed

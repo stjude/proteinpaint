@@ -8,6 +8,7 @@ import {
 	groupsetUsesMafFilter,
 	tvsUsesMafFilter,
 	mayAdd_mayGetGeneVariantData,
+	isChildProcessDenied,
 	mayRemoveDependentQueries,
 	mayRemoveQuery,
 	mayFilterByMaf,
@@ -69,6 +70,7 @@ Tests:
 	svfusionByNameGetter_file: breakpoint positions of the file
 	mayRemoveQuery: a query whose tool is not allowed is removed, other errors still fail
 	mayRemoveQuery: with a child process allowed, every validation error fails
+	isChildProcessDenied: only a denied tool error with a permission model that denies a child process
 	mayRemoveDependentQueries: native top genes are removed with geneExpression, a ds-supplied getter is kept
 */
 
@@ -3482,5 +3484,21 @@ test('mayRemoveDependentQueries: native top genes are removed with geneExpressio
 	} finally {
 		console.warn = warn
 	}
+	t.end()
+})
+
+test('isChildProcessDenied: only a denied tool error with a permission model that denies a child process', t => {
+	const permissionError = new Error(
+		'Access to this API has been restricted. Use --allow-child-process to manage permissions.'
+	)
+	const toolError = 'this server build does not support this data computation request'
+	t.ok(isChildProcessDenied(permissionError, noChildProcess), 'should match the permission model error')
+	t.ok(
+		isChildProcessDenied(toolError, noChildProcess),
+		'should match the error of a tool that this build does not have'
+	)
+	t.notOk(isChildProcessDenied('h5dump failed for dataset', noChildProcess), 'should not match another error')
+	t.notOk(isChildProcessDenied(toolError, { has: () => true }), 'should not match when a child process is allowed')
+	t.notOk(isChildProcessDenied(toolError, undefined), 'should not match without a permission model')
 	t.end()
 })
