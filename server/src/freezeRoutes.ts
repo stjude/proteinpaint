@@ -61,14 +61,28 @@ function lockLayer(layer) {
 		for (const key of layer.keys) Object.freeze(key)
 		Object.freeze(layer.keys)
 	}
-	// matching with a regexp that is not global or sticky does not set regexp.lastIndex, so it may be frozen
-	const re = layer.regexp
-	if (re instanceof RegExp && !re.global && !re.sticky) Object.freeze(re)
+	if (layer.regexp instanceof RegExp) layer.regexp = getLockedMatcher(layer.regexp)
 	for (const key of lockedLayerProps) {
 		if (key in layer) lockProp(layer, key)
 	}
 	// a nested router, such as from app.use(express.Router()) or app.get(path, express.Router())
 	if (Array.isArray(layer.handle?.stack)) freezeRouter(layer.handle)
+}
+
+// Layer.match() uses only regexp.fast_slash, regexp.fast_star, and regexp.exec(). A frozen RegExp may still
+// get a new pattern from RegExp.prototype.compile(), so the layer gets a frozen object that matches with
+// a private copy of the RegExp instead.
+function getLockedMatcher(re) {
+	const matcher = new RegExp(re)
+	return Object.freeze({
+		fast_slash: re.fast_slash,
+		fast_star: re.fast_star,
+		source: re.source,
+		flags: re.flags,
+		exec: (str: string) => matcher.exec(str),
+		test: (str: string) => matcher.test(str),
+		toString: () => matcher.toString()
+	})
 }
 
 function lockProp(obj, key) {

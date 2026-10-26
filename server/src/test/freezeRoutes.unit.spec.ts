@@ -122,6 +122,11 @@ tape('freezeRoutes() prevents replacing a route handler', test => {
 			`should throw on replacing a ${name} layer regexp exec()`
 		)
 		test.throws(() => (l.regexp.fast_slash = true), TypeError, `should throw on changing a ${name} layer regexp option`)
+		test.throws(
+			() => RegExp.prototype.compile.call(l.regexp, '^\\/x\\/?$', 'i'),
+			TypeError,
+			`should throw on compiling a new pattern into a ${name} layer regexp`
+		)
 	}
 	const paramCallbacks = app._router.params.id
 	test.throws(() => paramCallbacks.push(() => {}), TypeError, 'should throw on adding a param callback')
@@ -176,9 +181,12 @@ tape('freezeRoutes() handles a router that is mounted within itself', test => {
 
 tape('freezeRoutes() keeps existing routes working', async test => {
 	const { app } = getApp()
+	const regexp = app._router.stack.find(layer => layer.route?.path == '/a').regexp
 	freezeRoutes(app)
 	// may be called again without error
 	freezeRoutes(app)
+	// a new pattern in the RegExp from before the freeze should not change what the layer matches
+	regexp.compile('^\\/x\\/?$', 'i')
 	const { server, url } = await listen(app)
 	try {
 		// each route is requested twice, since express updates layer properties on each request
