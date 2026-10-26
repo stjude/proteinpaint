@@ -107,6 +107,13 @@ tape('freezeRoutes() prevents replacing a route handler', test => {
 	// the first layer is from app.use(), the others are route layers and the method layers of a route
 	const middlewareLayer = stack.find(layer => !layer.route)
 	const methodLayer = layer.route.stack[0]
+	// router.use() sets layer.route = undefined, so that a middleware layer is not handled as a route
+	test.throws(
+		() => (middlewareLayer.route = layer.route),
+		TypeError,
+		'should throw on assigning a route to a middleware layer'
+	)
+	test.equal(middlewareLayer.route, undefined, 'should keep a middleware layer without a route')
 	for (const [name, l] of Object.entries({ middleware: middlewareLayer, route: layer, method: methodLayer })) {
 		for (const key of ['match', 'handle_request', 'handle_error']) {
 			test.throws(() => (l[key] = () => {}), TypeError, `should throw on replacing a ${name} layer ${key}()`)
