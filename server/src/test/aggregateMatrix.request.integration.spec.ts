@@ -231,6 +231,40 @@ tape('geneVariant terms identified only by genes[]', async test => {
 	test.end()
 })
 
+tape('geneVariant terms only match samples with a variant', async test => {
+	test.timeoutAfter(30000)
+	/* Not every sample with data for a gene has a variant: TermdbTest annotates wildtype (WT) and not tested (Blank)
+	samples too, and those must not count. The expected counts do not come from this route. They were counted
+	independently from the termdb/matrix response of sex and each gene variant term, keeping the samples that have
+	a value with a class other than WT and Blank (a matrix value without a $ code). TP53 has 6 such samples, of
+	which 3 for each sex key, and the KRAS region has 4, of which 3 for sex key 1 and 1 for sex key 2.
+	The sex term has no values, so the columns are identified by the sex keys. */
+	const byGenes = (gene: any) => ({ term: { type: 'geneVariant', genes: [{ ...gene, type: 'geneVariant' }] }, q: {} })
+	const tp53 = byGenes({ kind: 'gene', gene: 'TP53' })
+	const krasRegion = byGenes({ kind: 'coord', chr: 'chr12', start: 25205246, stop: 25250936, name: 'KRASregion' })
+
+	const res = await post({
+		rows: { Genes: [tp53, krasRegion] },
+		columns: { Sex: [{ term: { id: 'sex', type: 'categorical' }, q: {} }] },
+		gradientMethod: 'percent',
+		sizeMethod: 'count'
+	})
+	test.notOk(res.error, 'should not return an error')
+	const counts = Object.fromEntries(res.data.flat().map(cell => [`${cell.row}/${cell.column}`, cell.sizeValue]))
+	test.deepEqual(
+		counts,
+		{ 'TP53/1': 3, 'TP53/2': 3, 'KRASregion/1': 3, 'KRASregion/2': 1 },
+		'should count only the samples with a variant, by sex'
+	)
+
+	const percents = Object.fromEntries(res.data.flat().map(cell => [`${cell.row}/${cell.column}`, cell.colorValue]))
+	test.ok(
+		percents['TP53/1'] > percents['KRASregion/2'] && percents['KRASregion/2'] > 0,
+		'should give percent values that follow the counts'
+	)
+	test.end()
+})
+
 tape('percent is bounded by the cohort', async test => {
 	test.timeoutAfter(30000)
 	const res = await post({
