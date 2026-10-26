@@ -9,11 +9,16 @@ Specs for the /tkbedj route, client-supplied item list branch and plain text fil
 
 test sections:
 - /tkbedj: list length limit
+- /tkbedj: gene region
+- /tkbedj: disableFeature_custombedjfile
 - /tkbedj: plain text file
 */
 
 const maxBedItems = 1000
-const genomes = { hg38: { name: 'hg38' } }
+const chrlen = 248956422
+const genomes = {
+	hg38: { name: 'hg38', chrlookup: { CHR1: { name: 'chr1', len: chrlen }, CHR2: { name: 'chr2', len: 242193529 } } }
+}
 const handler = bedj_request_closure(genomes)
 
 function makeItems(count) {
@@ -44,6 +49,62 @@ tape('/tkbedj: list length limit', async test => {
 	const overLimit = await send({ genome: 'hg38', getdata: 1, bedItems: makeItems(maxBedItems + 1), rglst })
 	test.ok(overLimit.error, 'should reject a list over the maximum length')
 
+	test.end()
+})
+
+tape('/tkbedj: gene region', async test => {
+	const sendGm = gmregion =>
+		send({ genome: 'hg38', getdata: 1, bedItems: makeItems(1), rglst: [{ chr: 'chr1', start: 0, stop: 10 }], gmregion })
+
+	const valid = await sendGm({ chr: 'chr1', start: 0, stop: 10, width: 800 })
+	test.equal(valid.error, undefined, 'should accept a gene region within the chromosome')
+
+	const emptyRegion = await sendGm({ chr: 'chr1', start: 0, stop: 0 })
+	test.ok(String(emptyRegion.error).includes('stop < start'), 'should reject a gene region with stop not after start')
+
+	const pastEnd = await sendGm({ chr: 'chr1', start: 0, stop: chrlen + 1 })
+	test.ok(String(pastEnd.error).includes('stop out of bound'), 'should reject a gene region past the chromosome end')
+
+	const unknownChr = await sendGm({ chr: 'chrZ', start: 0, stop: 10 })
+	test.ok(String(unknownChr.error).includes('invalid chr name'), 'should reject a gene region on an unknown chromosome')
+
+	test.end()
+})
+
+tape('/tkbedj: disableFeature_custombedjfile', async test => {
+	const trackFile = 'anno/refGene.hg38.test.gz'
+	const nativeHandler = bedj_request_closure({
+		hg38: { ...genomes.hg38, tracks: [{ type: 'bedj', name: 'RefGene', file: trackFile }] }
+	})
+	const sendNative = query =>
+		new Promise(resolve => {
+			const q = { genome: 'hg38', getdata: 1, rglst: [{ chr: 'chr1', start: 0, stop: 10000 }], ...query }
+			Promise.resolve(nativeHandler({ query: q }, { send: resolve })).catch(e => resolve({ error: String(e) }))
+		})
+
+	serverconfig.features.disableFeature_custombedjfile = true
+	try {
+		const native = await sendNative({ file: trackFile })
+		test.equal(native.error, undefined, 'should read a genome track file')
+		test.ok(Array.isArray(native.items), 'should return the items of a genome track file')
+
+		const other = await sendNative({ file: 'anno/gencode.v41.hg38.test.gz' })
+		test.equal(other.error, 'file is not a track of this genome', 'should reject a file that is not a genome track')
+
+		const cache = await sendNative({ file: 'x.gz', isCache: true })
+		test.equal(cache.error, 'custom track file is not allowed', 'should reject a cache file')
+
+		const url = await sendNative({ url: 'https://example.org/x.gz' })
+		test.equal(url.error, 'custom track file is not allowed', 'should reject a url')
+
+		const items = await sendNative({ bedItems: makeItems(1) })
+		test.equal(items.error, undefined, 'should still accept client-supplied items, which read no file')
+	} finally {
+		delete serverconfig.features.disableFeature_custombedjfile
+	}
+
+	const custom = await sendNative({ file: 'anno/gencode.v41.hg38.test.gz' })
+	test.equal(custom.error, undefined, 'should read another tp file when the flag is not set')
 	test.end()
 })
 

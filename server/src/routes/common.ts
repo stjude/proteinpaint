@@ -72,6 +72,21 @@ export function findForbiddenName(input: any): string {
 	return ''
 }
 
+/*
+Parse a request parameter that a route receives as a JSON string. setAppMiddlewares() checks the payload with
+findForbiddenName() before a route runs, when such a parameter is still a whole string, so the parsed value is
+checked here in the same way. name: the parameter name, for the error message
+*/
+export function parseJsonParam(v: string, name: string): any {
+	const parsed = JSON.parse(v)
+	const path = findForbiddenName(parsed)
+	if (path) {
+		const subpath = path == '(value)' ? '' : path.startsWith('[') ? path : '.' + path
+		throw `forbidden request payload name at ${name}${subpath}`
+	}
+	return parsed
+}
+
 export function validBoolean(input, err?: string): boolean {
 	// urlJsonDecode(req.query) as called in app.middleware will convert '1' and '0' to a number
 	if (input === 1) return true // normalize value to a boolean

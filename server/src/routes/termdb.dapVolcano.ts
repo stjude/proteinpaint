@@ -8,6 +8,7 @@ import serverconfig from '#src/serverconfig.js'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasProteomeDs, listCohortSamples } from './termdb.proteome.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
+import { parseJsonParam } from './common.ts'
 
 export const payload: RoutePayload = {
 	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
@@ -102,7 +103,10 @@ function init({ genomes }) {
 			// another's on upper-cased gene (human APP ↔ mouse App), one most-significant row
 			// per gene, and correlate log2FC across the shared genes with R's cor.test (corr.R)
 			if (q.concordanceWith) {
-				const w = typeof q.concordanceWith === 'string' ? JSON.parse(q.concordanceWith) : q.concordanceWith
+				const w =
+					typeof q.concordanceWith === 'string'
+						? parseJsonParam(q.concordanceWith, 'concordanceWith')
+						: q.concordanceWith
 				const wc = proteomeConfig.organisms?.[w?.organism]?.assays?.[w?.assay]?.cohorts?.[w?.cohort]
 				if (!wc?.DAPfile) throw `no DAPfile for ${w?.organism}/${w?.assay}/${w?.cohort}`
 				const yRows = await readDap(wc.DAPfile)

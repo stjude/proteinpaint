@@ -8,6 +8,7 @@ import { readTabixLines } from './utils.js'
 import { string2pos } from '#shared/common.js'
 import { authApi } from './auth.js'
 import { searchSNP } from '#routes/snp.ts'
+import { parseJsonParam } from '#routes/common.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
 import { uiLabel } from '#shared'
@@ -214,6 +215,8 @@ async function trigger_findterm(q, req, res, termdb, ds, genome) {
 
 	try {
 		if (q.targetType == TermTypeGroups.DICTIONARY_VARIABLES) {
+			// a dataset getter may parse the treeFilter string, so it is checked here like a parsed request parameter
+			if (typeof q.treeFilter == 'string' && q.treeFilter) parseJsonParam(q.treeFilter, 'treeFilter')
 			const _terms = await termdb.q.findTermByName(str, q.cohortStr, q.usecase, q.treeFilter)
 
 			terms.push(..._terms.map(copy_term))

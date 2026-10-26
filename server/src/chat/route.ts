@@ -18,6 +18,7 @@ import { resolveToPlotState } from './scaffold2state.ts'
 import { runOmnisearch } from './search.ts'
 import path from 'path'
 import fs from 'fs'
+import { parseJsonParam } from '../routes/common.ts'
 
 const payload: RoutePayload = {
 	init,
@@ -95,8 +96,9 @@ export function init({ genomes }) {
 			let rawFilter: any
 			if (typeof q.filter === 'string') {
 				try {
-					rawFilter = JSON.parse(q.filter)
+					rawFilter = parseJsonParam(q.filter, 'filter')
 				} catch (e) {
+					if (typeof e == 'string') throw new Error(e)
 					throw new Error('Failed to parse filter JSON string: ' + e)
 				}
 			} else {

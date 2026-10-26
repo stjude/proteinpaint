@@ -172,6 +172,26 @@ tape('validateRglst', test => {
 		'throws with too many regions'
 	)
 	test.doesNotThrow(
+		() => utils.validateRglst({ rglst: [{ chr: '1', start: 0, stop: 248956422 }] }),
+		'accepts a whole chr1 region'
+	)
+	test.throws(
+		() =>
+			utils.validateRglst({
+				rglst: [
+					{ chr: '1', start: 0, stop: 248956422 },
+					{ chr: '2', start: 0, stop: 60000000 }
+				]
+			}),
+		/q\.rglst\[\] total length out of bound/,
+		'throws when the region lengths add up to over the limit'
+	)
+	test.throws(
+		() => utils.validateRglst({ rglst: Array.from({ length: 2 }, () => ({ chr: '1', start: 0, stop: 248956422 })) }),
+		/q\.rglst\[\] total length out of bound/,
+		'throws with a repeated whole chromosome region'
+	)
+	test.doesNotThrow(
 		() => utils.validateRglst({ rglst: [{ chr: '1', start: 1, stop: 10, width: 800.5 }] }),
 		'accepts a decimal width within the limit'
 	)

@@ -1,3 +1,5 @@
+import { parseJsonParam } from './routes/common.ts'
+
 /*
 Reconstruct the term wrappers that a chart request posts as term0, term1 and term2.
 
@@ -19,7 +21,7 @@ export function getTwByIndex(q: any) {
 
 function getTw(q: any, termnum: string) {
 	// a whole wrapper has tw.term, while the split form posts a bare term under this key
-	const posted = mayParseJson(q[termnum])
+	const posted = mayParseJson(q[termnum], termnum)
 	const tw = posted?.term ? posted : getSplitTw(q, posted, termnum)
 	if (!tw) return
 	// a route validates the term type before getData() is called, so a term supplied as an
@@ -45,15 +47,15 @@ function getSplitTw(q: any, postedTerm: any, termnum: string) {
 	if (!term) return
 	return {
 		term,
-		q: mayParseJson(q[termnum + '_q']),
+		q: mayParseJson(q[termnum + '_q'], termnum + '_q'),
 		$id: q[termnum + '_$id'],
 		type: q[termnum + '_type']
 	}
 }
 
 /** a request parameter is decoded by the urljson middleware, unless it was manually encoded */
-function mayParseJson(v: any) {
-	return typeof v == 'string' ? JSON.parse(decodeURIComponent(v)) : v
+function mayParseJson(v: any, name: string) {
+	return typeof v == 'string' ? parseJsonParam(decodeURIComponent(v), name) : v
 }
 
 /** the tw type may be missing when a request is not assembled by the client tw router */

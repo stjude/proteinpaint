@@ -1,5 +1,6 @@
 import type { TermChildrenRequest, TermChildrenResponse, RouteApi, RoutePayload } from '#types'
 import { copy_term, get_ds_tdb } from '#src/termdb.js'
+import { parseJsonParam } from './common.ts'
 
 export const payload: RoutePayload = {
 	init,
@@ -46,6 +47,8 @@ async function trigger_children(
 	/* get children terms of q.tid, or the root terms when q.tid is missing */
 	const cohortValues = q.cohortValues || ''
 	const treeFilter = q.treeFilter || ''
+	// a dataset getter may parse the treeFilter string, so it is checked here like a parsed request parameter
+	if (typeof treeFilter == 'string' && treeFilter) parseJsonParam(treeFilter, 'treeFilter')
 	const terms = q.tid
 		? await tdb.q.getTermChildren(req, q.tid, cohortValues, treeFilter)
 		: await tdb.q.getRootTerms(req, cohortValues, treeFilter)

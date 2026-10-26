@@ -1,7 +1,12 @@
+import { parseJsonParam } from './routes/common.ts'
+
 export function parsearg(q) {
 	// q is client request
 	if (q.samplefiltertemp) {
-		const j = typeof q.samplefiltertemp == 'string' ? JSON.parse(q.samplefiltertemp) : q.samplefiltertemp
+		const j =
+			typeof q.samplefiltertemp == 'string'
+				? parseJsonParam(q.samplefiltertemp, 'samplefiltertemp')
+				: q.samplefiltertemp
 		const key2values = new Map()
 		for (const k in j) {
 			const lst = j[k]

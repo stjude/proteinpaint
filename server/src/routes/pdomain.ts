@@ -18,6 +18,9 @@ export const api: RouteApi = {
 	}
 }
 
+// upper limit of the distinct isoforms of a request, well above the isoforms of any gene
+const maxIsoforms = 1000
+
 function init({ genomes }) {
 	return function handle_pdomain(req, res) {
 		try {
@@ -31,8 +34,11 @@ function init({ genomes }) {
 				return res.send({ lst: [] })
 			}
 			if (!Array.isArray(q.isoforms)) throw 'isoforms[] missing'
+			const isoforms = [...new Set(q.isoforms)]
+			if (isoforms.length > maxIsoforms)
+				throw `isoforms[] has ${isoforms.length} isoforms, it must have ${maxIsoforms} or fewer`
 			const lst: any[] = []
-			for (const isoform of q.isoforms) {
+			for (const isoform of isoforms) {
 				if (g.genomicNameRegexp.test(isoform)) continue
 				const tmp = g.proteindomain.getbyisoform.all(isoform)
 				// FIXME returned {data} is text not json

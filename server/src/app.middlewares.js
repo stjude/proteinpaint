@@ -249,7 +249,8 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	validator.setRouteLevelMiddleware({ routes })
 }
 
-const hiddenQueryKeys = new Set(['jwt', '__protected__', '__abortSignal'])
+// not logged: credentials, and the request info that the server adds
+const hiddenQueryKeys = new Set(['jwt', 'token', 'sessionid', '__protected__', '__abortSignal'])
 
 function log(req) {
 	const j = {}
@@ -401,8 +402,10 @@ export function getCacheControl(path, responseMaxAge, isPrivate = false) {
 	if (filename == 'proteinpaint.js') return 'no-cache'
 	// immutable response before expiration, client must revalidate after max-age;
 	// by convention, any path that has a dot will be treated as
-	// a static file and not handled here with cache-control
-	if (!path.includes('.')) return `immutable,max-age=${responseMaxAge || 1}`
+	// a static file and not handled here with cache-control.
+	// private: a route response can depend on the request credentials, such as a session cookie,
+	// so only the browser cache of the requester may store it, and not a shared cache
+	if (!path.includes('.')) return `private, max-age=${responseMaxAge || 1}, immutable`
 }
 
 function maySetTestDataCacheDir(doneLoading) {

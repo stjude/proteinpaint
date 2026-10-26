@@ -62,8 +62,21 @@ export async function xfetch(url, opts = {}) {
 			// in one request in a set of awaited parallel requests means that the
 			// Promise.all() will fail anyway
 			if (!opts.signal?.aborted) abortCtrlBy.signal.get(opts.signal)?.abort()
+			removeCredentials(e)
 			throw e
 		})
+}
+
+// the request headers that can have a user credential, such as those of getHostHeaders() of the GDC dataset
+const credentialHeaders = ['cookie', 'x-auth-token', 'authorization']
+
+/* an error from ky, such as HTTPError or TimeoutError, has the request and the ky options, both with the request
+headers; these are removed, so that a caller that logs the whole error does not log a credential */
+export function removeCredentials(e) {
+	for (const headers of [e?.request?.headers, e?.options?.headers]) {
+		if (typeof headers?.delete != 'function') continue
+		for (const h of credentialHeaders) headers.delete(h)
+	}
 }
 
 const retriesByHostpath = serverconfig.retriesByHostpath || {

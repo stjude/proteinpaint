@@ -32,6 +32,7 @@ const W2_SLIDE_EXT = /\.(svs|ome\.tiff?)$/i
 import { createHash } from 'crypto' // sha1 for cache file names
 import path from 'path' // all slide/cache path resolution
 import serverconfig from '#src/serverconfig.js' // tpmasterdir, cachedir, feature gates
+import { parseJsonParam } from './common.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -606,12 +607,12 @@ function init({ genomes }) {
 				let genes: string[] | undefined
 				try {
 					if (q.genes !== undefined) {
-						genes = typeof q.genes == 'string' ? JSON.parse(q.genes) : q.genes
+						genes = typeof q.genes == 'string' ? parseJsonParam(q.genes, 'genes') : q.genes
 						if (!Array.isArray(genes) || !genes.length || !genes.every(g => typeof g == 'string' && g)) {
 							throw new Error('genes must be a non-empty array of gene names')
 						}
 					} else if (q.colors !== undefined) {
-						type_colors = typeof q.colors == 'string' ? JSON.parse(q.colors) : q.colors
+						type_colors = typeof q.colors == 'string' ? parseJsonParam(q.colors, 'colors') : q.colors
 					} else {
 						type_colors = {} // neither given: an empty-fill tile, same as today's default
 					}

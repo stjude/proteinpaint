@@ -16,6 +16,7 @@ import {
 import { summarize_mclass } from '#shared/mds3tk.js'
 import { plotWiggle } from './bw.js'
 import { maySetMapParent2Children } from './termdb.matrix.js'
+import { parseJsonParam } from './routes/common.ts'
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -77,7 +78,7 @@ function init_q(req) {
 
 	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {
-		query.hiddenmclass = new Set(JSON.parse(query.hiddenmclasslst))
+		query.hiddenmclass = new Set(parseJsonParam(query.hiddenmclasslst, 'hiddenmclasslst'))
 		delete query.hiddenmclasslst
 		// this filter set is passed to actual data querying method, after class is set for each item, will check it to decide if to drop
 	}
@@ -509,14 +510,16 @@ function may_validate_filters(q, ds) {
 		const f =
 			typeof q.filter0 == 'object'
 				? q.filter0
-				: JSON.parse(
-						typeof q.filter0 == 'string' && q.filter0.startsWith('%') ? decodeURIComponent(q.filter0) : q.filter0
+				: parseJsonParam(
+						typeof q.filter0 == 'string' && q.filter0.startsWith('%') ? decodeURIComponent(q.filter0) : q.filter0,
+						'filter0'
 				  )
 		q.filter0 = ds.validate_filter0(f)
 	}
 	if (q.filterObj && typeof q.filterObj == 'string') {
-		q.filterObj = JSON.parse(
-			typeof q.filterObj == 'string' && q.filterObj.startsWith('%') ? decodeURIComponent(q.filterObj) : q.filterObj
+		q.filterObj = parseJsonParam(
+			typeof q.filterObj == 'string' && q.filterObj.startsWith('%') ? decodeURIComponent(q.filterObj) : q.filterObj,
+			'filterObj'
 		)
 	}
 	if (q.skewerRim) {

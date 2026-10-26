@@ -4,6 +4,7 @@ import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
 import { sql } from './sql.ts'
+import { parseJsonParam } from './routes/common.ts'
 import { read_file, snpgtCacheFile, snpgtSampleColumn, trackXfetch } from './utils.js'
 import {
 	isDictionaryType,
@@ -221,7 +222,7 @@ function validateArg(q, ds) {
 			throw `${rootName} level is not supported with numeric data`
 	}
 	if (q.filter0) {
-		if (typeof q.filter0 == 'string') q.filter0 = JSON.parse(q.filter0)
+		if (typeof q.filter0 == 'string') q.filter0 = parseJsonParam(q.filter0, 'filter0')
 	}
 	if (ds.cohort?.termdb?.getRestrictedTermValues) {
 		if (!q.__protected__) throw `missing q.__protected__, must be set upstream of getData()`
