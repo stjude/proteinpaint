@@ -159,12 +159,12 @@ tape('Multiple sections and categories aggregate matrix', function (test) {
 		test.equal(rendered.error, '', 'Should not display an error')
 		test.deepEqual(
 			rendered.rowSections,
-			['Genes', 'Really long row section label for testing'],
+			['Genes', 'Really long row section gene variant label for testing'],
 			'Should render the row sections in the requested order'
 		)
 		test.deepEqual(
 			rendered.colSections,
-			['Gene sets', 'Really long column section label for testing'],
+			['Gene sets', 'Really long column section gene label for testing'],
 			'Should render the column sections in the requested order'
 		)
 		test.equal(rendered.rowLabels.length, 4, 'Should render a row label for every row term')
@@ -217,7 +217,12 @@ tape('Gene variant rows by sex columns', function (test) {
 			['TP53', 'KRASregion'],
 			'Should label gene variant terms by their gene or region name, as the terms have only genes[]'
 		)
-		test.ok(rendered.colLabels.length > 0, 'Should render a column label for each observed sex category')
+		// The shared sex term lists 1 as Female, but in TermdbTest 1 is Male. The labels come from the dataset.
+		test.deepEqual(
+			rendered.colLabels,
+			['Male', 'Female'],
+			'Should label the sex categories with the labels of the dataset, not of the term in the request'
+		)
 		test.equal(
 			rendered.dots,
 			rendered.rowLabels.length * rendered.colLabels.length,

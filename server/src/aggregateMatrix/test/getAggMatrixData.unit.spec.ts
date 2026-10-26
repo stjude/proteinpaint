@@ -1,8 +1,9 @@
 import tape from 'tape'
-import { hasVariant } from '../getAggMatrixData.ts'
+import { getValueLabel, hasVariant } from '../getAggMatrixData.ts'
 
 /* test sections
 	- Should only match geneVariant annotations that have a variant
+	- Should label values with the dataset term, then the request term, then the key
 */
 
 tape('\n', test => {
@@ -31,5 +32,36 @@ tape('Should only match geneVariant annotations that have a variant', test => {
 	test.equal(hasVariant({ values: [{ dt: 1 }] }), false, 'Should not match a value without a class')
 	test.equal(hasVariant({ key: 'TP53' }), false, 'Should not match an annotation without values')
 	test.equal(hasVariant(undefined), false, 'Should not match a missing annotation')
+	test.end()
+})
+
+tape('Should label values with the dataset term, then the request term, then the key', test => {
+	const datasetTerm = { values: { 1: { label: 'Male' }, 2: { label: 'Female' } } }
+	const requestTerm = { values: { 1: { label: 'Female' }, 2: { label: 'Male' }, 3: { label: 'Other' } } }
+
+	test.equal(getValueLabel(requestTerm, '1', datasetTerm), 'Male', 'Should prefer the label in the dataset term')
+	test.equal(
+		getValueLabel(requestTerm, '2', datasetTerm),
+		'Female',
+		'Should prefer the label in the dataset term for every key'
+	)
+	test.equal(
+		getValueLabel(requestTerm, '3', datasetTerm),
+		'Other',
+		'Should use the label in the request term when the dataset term has none'
+	)
+	test.equal(getValueLabel(requestTerm, '4', datasetTerm), '4', 'Should use the key when neither term has a label')
+	test.equal(getValueLabel(requestTerm, '1'), 'Female', 'Should use the request term when there is no dataset term')
+	test.equal(getValueLabel({}, '[0, 5)', undefined), '[0, 5)', 'Should use the key as the label of a bin')
+	test.equal(
+		getValueLabel({}, 'Female', { values: { 2: { label: 'Female' } } }),
+		'Female',
+		'Should find a label that is already the label of a value'
+	)
+	test.equal(
+		getValueLabel({ values: { 1: {} } }, '1', { values: { 1: { color: 'blue' } } }),
+		'1',
+		'Should ignore a value without a label'
+	)
 	test.end()
 })

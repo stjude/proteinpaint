@@ -121,8 +121,8 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 		q,
 		ds
 	)
-	const rows = resolveAxisEntries(rowSources, response)
-	const columns = resolveAxisEntries(columnSources, response)
+	const rows = resolveAxisEntries(rowSources, response, ds)
+	const columns = resolveAxisEntries(columnSources, response, ds)
 	if (!rows.length || !columns.length) throw new Error('No aggregate matrix axis entries found')
 
 	const rowLookup = makeEntryLookup(rows)
@@ -217,7 +217,7 @@ function makeAxisSources(axis: Record<string, any[]>, prefix: string): AxisSourc
 	return sources
 }
 
-function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataResponse): ResolvedAxisEntry[] {
+function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataResponse, ds: any): ResolvedAxisEntry[] {
 	const entries: ResolvedAxisEntry[] = []
 	for (const source of sources) {
 		if (!source.expand) {
@@ -226,6 +226,7 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 			entries.push({ id, label: getAggMatrixTermLabel(source.tw.term)!, section: source.section, source })
 			continue
 		}
+		const datasetTerm = getDatasetTerm(ds, source.tw.term)
 		const observed = new Set<string>()
 		for (const sample of Object.values<any>(response.samples)) {
 			const entry = sample[source.queryId]
@@ -234,12 +235,13 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 		const ref = response.refs?.byTermId?.[source.queryId]
 		const bins = ref?.bins || []
 		/** If there are configured bins, use them to determine the order of keys.
-		 * Otherwise, fall back to the key order from the reference. */
+		 * Otherwise, fall back to the key order from the reference, then to the order of the term's values.
+		 * Without these, the keys would be in the order of the samples in the response. */
 		const configuredKeys = bins.length
 			? bins.map(bin => String(get_bin_label(bin, source.tw.q)))
 			: Array.isArray(ref?.keyOrder)
 			? ref.keyOrder.map(String)
-			: []
+			: Object.keys(datasetTerm?.values || source.tw.term.values || {})
 		const orderedKeys = configuredKeys.filter(key => observed.has(key))
 		const orderedKeySet = new Set(orderedKeys)
 		for (const key of observed) {
@@ -250,7 +252,7 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 		for (const key of orderedKeys) {
 			entries.push({
 				id: key,
-				label: getValueLabel(source.tw.term, key),
+				label: getValueLabel(source.tw.term, key, datasetTerm),
 				section: source.section,
 				source,
 				key
@@ -308,10 +310,23 @@ function getCanonicalValueKey(term: any, key: string | number) {
 	return key
 }
 
-function getValueLabel(term: any, key: string) {
-	const value = term.values?.[key]
+/** The dataset's own definition of a dictionary term, if it has one. The keys in the data come from the dataset,
+ * so its term.values are what name them. A term sent in a request may have values that differ from the dataset's. */
+function getDatasetTerm(ds: any, term: any) {
+	if (!term?.id) return
+	return ds.cohort?.termdb?.q?.termjsonByOneid?.(term.id)
+}
+
+function findValueLabel(term: any, key: string): string | undefined {
+	const value = term?.values?.[key]
 	if (value?.label) return value.label
-	return Object.entries<any>(term.values || {}).find(([, value]) => value.label === key)?.[1]?.label || key
+	return Object.entries<any>(term?.values || {}).find(([, value]) => value.label === key)?.[1]?.label
+}
+
+/** Label a key with the label in term.values of the dataset's term when it has one, then of the term in the request.
+ * A key without a label, such as a bin of a numeric term, is its own label. */
+export function getValueLabel(term: any, key: string, datasetTerm?: any) {
+	return findValueLabel(datasetTerm, key) ?? findValueLabel(term, key) ?? key
 }
 
 function makeAxisLayout(entries: ResolvedAxisEntry[], axis: 'row' | 'column') {

@@ -265,6 +265,47 @@ tape('geneVariant terms only match samples with a variant', async test => {
 	test.end()
 })
 
+tape('dictionary values are labeled by the dataset term', async test => {
+	test.timeoutAfter(30000)
+	// In TermdbTest, sex 1 is Male and 2 is Female
+	const sexWith = (values?: any) => ({ term: { id: 'sex', name: 'Sex', type: 'categorical', values }, q: {} })
+	const labels = res => res.axesLayout?.columns.sections[0].terms.map(term => `${term.id}=${term.label}`)
+	const request = (sexTw: any) =>
+		post({ rows: kinds[4].axis, columns: { Sex: [sexTw] }, gradientMethod: 'percent', sizeMethod: 'count' })
+
+	let res = await request(sexWith())
+	test.notOk(res.error, 'should not return an error for a term without values')
+	test.deepEqual(
+		labels(res),
+		['1=Male', '2=Female'],
+		'should label the keys with the dataset term when the request has no values'
+	)
+
+	res = await request(sexWith({ 1: { label: 'Female' }, 2: { label: 'Male' } }))
+	test.notOk(res.error, 'should not return an error for a term with values that disagree with the dataset')
+	test.deepEqual(
+		labels(res),
+		['1=Male', '2=Female'],
+		'should prefer the dataset labels over the labels in the request term'
+	)
+
+	res = await request(sexWith({ 1: { label: 'Male' }, 2: { label: 'Female' } }))
+	test.deepEqual(
+		labels(res),
+		['1=Male', '2=Female'],
+		'should label the keys the same when the request agrees with the dataset'
+	)
+
+	res = await post({ rows: kinds[4].axis, columns: { Age: [agedx] }, gradientMethod: 'mean', sizeMethod: 'percent' })
+	test.notOk(res.error, 'should not return an error for a binned numeric term')
+	const bins = res.axesLayout.columns.sections[0].terms
+	test.ok(
+		bins.length > 1 && bins.every(bin => bin.label === bin.id),
+		'should label the bins of a numeric term with their own label'
+	)
+	test.end()
+})
+
 tape('percent is bounded by the cohort', async test => {
 	test.timeoutAfter(30000)
 	const res = await post({
