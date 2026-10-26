@@ -330,7 +330,8 @@ export function server_init_db_queries(ds) {
 					t.name = i.name || t.name
 					t.included_types = i.included_types ? i.included_types.split(',') : ['TO-DO-PLACEHOLDER']
 					t.child_types = i.child_types ? i.child_types.split(',') : []
-					if (hasChildSampleTypes) t.child_sample_types = i.child_sample_types ? i.child_sample_types.split(',') : []
+					if (hasChildSampleTypes)
+						t.child_sample_types = i.child_sample_types ? i.child_sample_types.split(',').map(Number) : []
 					return t
 				})
 				cache.set(cacheId, re)
@@ -433,7 +434,8 @@ export function server_init_db_queries(ds) {
 						j.name = i.name || j.name
 						j.included_types = i.included_types ? i.included_types.split(',') : []
 						j.child_types = i.child_types ? i.child_types.split(',') : []
-						if (hasChildSampleTypes) j.child_sample_types = i.child_sample_types ? i.child_sample_types.split(',') : []
+						if (hasChildSampleTypes)
+							j.child_sample_types = i.child_sample_types ? i.child_sample_types.split(',').map(Number) : []
 						return j
 					})
 				}
