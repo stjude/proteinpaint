@@ -856,11 +856,15 @@ async function do_query(req, genomeobj) {
 
 const maxBedItems = 1000
 
-/* when serverconfig.features.disableFeature_custombedjfile is true, a file can only be one of the
-genome track files, genome.tracks[].file, and not a custom file, url or cache file */
+/* when serverconfig.features.disableFeature_custombedjfile is true, allow configured genome
+tracks and Hi-C fragment files requested as BED data, but not custom files, urls or cache files */
 function requireNativeFile(q, genomeobj) {
 	if (q.url || q.isCache) throw 'custom track file is not allowed'
-	if (typeof q.file != 'string' || !genomeobj.tracks?.some(t => t.file === q.file))
+	if (
+		typeof q.file != 'string' ||
+		(!genomeobj.tracks?.some(t => t.file === q.file) &&
+			!(q.getBED && genomeobj.hicenzymefragment?.some(f => f.file === q.file)))
+	)
 		throw 'file is not a track of this genome'
 }
 
