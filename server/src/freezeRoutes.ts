@@ -65,6 +65,8 @@ function lockLayer(layer) {
 	for (const key of lockedLayerProps) {
 		if (key in layer) lockProp(layer, key)
 	}
+	// express uses handle.length to tell an error handler, with 4 arguments, from other handlers
+	if (typeof layer.handle == 'function') lockProp(layer.handle, 'length')
 	// a nested router, such as from app.use(express.Router()) or app.get(path, express.Router())
 	if (Array.isArray(layer.handle?.stack)) freezeRouter(layer.handle)
 }

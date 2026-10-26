@@ -111,6 +111,13 @@ tape('freezeRoutes() prevents replacing a route handler', test => {
 		for (const key of ['match', 'handle_request', 'handle_error']) {
 			test.throws(() => (l[key] = () => {}), TypeError, `should throw on replacing a ${name} layer ${key}()`)
 		}
+		const length = l.handle.length
+		test.throws(
+			() => Object.defineProperty(l.handle, 'length', { value: 4 }),
+			TypeError,
+			`should throw on redefining the length of a ${name} layer handle`
+		)
+		test.equal(l.handle.length, length, `should keep the length of a ${name} layer handle`)
 	}
 	for (const key of ['dispatch', '_handles_method', '_options']) {
 		test.throws(() => (layer.route[key] = () => {}), TypeError, `should throw on replacing a route ${key}()`)
