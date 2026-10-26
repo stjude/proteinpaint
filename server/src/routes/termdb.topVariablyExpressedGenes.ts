@@ -13,12 +13,15 @@ import { getAvailableMemoryMB, admitRun, type MemoryCost } from '#src/utils/memo
 import type { TopVeCacheResult } from '../../routes/types.ts'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { genomes } from '#src/initGenomesDs.js'
+import serverconfig from '#src/serverconfig.js'
 
 export const payload: RoutePayload = {
 	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
 	// is evaluated (this module is also imported by mds3.init.js, which is imported by initGenomesDs.js);
-	// the route is only set up when at least one ds has ds.queries.topVariablyExpressedGenes
+	// the route is only set up when at least one ds has ds.queries.topVariablyExpressedGenes,
+	// and not when disabled by serverconfig.features.disableFeature_topVariablyExpressedGenes
 	get init() {
+		if (serverconfig.features.disableFeature_topVariablyExpressedGenes) return null
 		return hasTopVariablyExpressedGenesDs(genomes) ? init : null
 	},
 	request: { typeId: 'TermdbTopVariablyExpressedGenesRequest' /*, checkers: TODO write validator */ },
@@ -71,6 +74,12 @@ function init({ genomes }) {
 export function validate_query_TopVariablyExpressedGenes(ds: any) {
 	const q = ds.queries.topVariablyExpressedGenes
 	if (!q) return
+	if (serverconfig.features.disableFeature_topVariablyExpressedGenes) {
+		// removed so that termdb.config does not expose it to the client, and other server code
+		// that checks for this ds query, such as chat/hiercluster.ts, will not call ds-supplied getGenes()
+		delete ds.queries.topVariablyExpressedGenes
+		return
+	}
 	if (typeof q.getGenes == 'function') return // ds-supplied
 	nativeValidateQuery(ds)
 }
