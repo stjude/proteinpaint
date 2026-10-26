@@ -11,6 +11,7 @@ import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import { handle_mdssvcnv_expression } from './handle_mdssvcnv_expression.js'
 import { draw_partition } from './partitionmatrix.js'
+import { parseJsonParam } from './routes/common.ts'
 
 // set by the route init, so that the handler code can use the loaded genomes
 let genomes
@@ -79,7 +80,7 @@ async function handle_mdssvcnv(req, res) {
 			}
 
 			if (req.query.checkvcf) {
-				const vcf = JSON.parse(req.query.checkvcf)
+				const vcf = parseJsonParam(req.query.checkvcf, 'checkvcf')
 				if (!vcf.file && !vcf.url) throw 'no file or url for custom VCF track'
 				if (vcf.file) {
 					if (utils.illegalpath(vcf.file, false, false)) throw 'invalid vcf file'

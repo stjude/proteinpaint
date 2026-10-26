@@ -38,6 +38,8 @@ const bcfformat_snplst = '%CHROM\t%POS\t%REF\t%ALT[\t%TGT]\n'
 const bcfformat_snplocus = '%POS\t%ID\t%REF\t%ALT\t%INFO[\t%TGT]\n'
 const missing_gt = './.'
 const snplocusMaxVariantCount = 1000
+// upper limit of the lines of the snplst text, the same as the variants of a snplocus term
+const snplstMaxLineCount = 1000
 
 export async function validate(q, tdb, ds, genome) {
 	try {
@@ -164,6 +166,9 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 async function validateInputCreateCache_by_snptext(q, ds, genome) {
 	if (!genome.snp) throw 'snp not supported by genome'
 	if (!q.snptext) throw '.snptext missing'
+	if (typeof q.snptext != 'string') throw '.snptext not string'
+	// queryBcf() reads the genotypes from this track, check before the snps are looked up
+	if (!ds.queries?.snvindel?.byrange?._tk) throw 'snp genotypes not supported by dataset'
 
 	const snps = parseSnpText(q.snptext)
 	if (!snps.length) throw 'no snps'
@@ -197,11 +202,16 @@ async function validateInputCreateCache_by_snptext(q, ds, genome) {
 function parseSnpText(text) {
 	// duplicated code with client
 	const snps = []
-	for (const tmp of text.trim().split('\n')) {
+	const lines = text.trim().split('\n')
+	if (lines.length > snplstMaxLineCount)
+		throw `snp text has ${lines.length} lines, it must have ${snplstMaxLineCount} or fewer`
+	const seen = new Set()
+	for (const tmp of lines) {
 		const [rsid, ale] = tmp.trim().split(/[\s\t]/)
 		if (rsid && rsid.startsWith('rs')) {
 			// valid rsID
-			if (snps.find(i => i.rsid == rsid)) continue // duplicate
+			if (seen.has(rsid)) continue // duplicate
+			seen.add(rsid)
 			const s = {
 				rsid,
 				snpid: rsid

@@ -182,6 +182,8 @@ async function do_query(req, genomeobj) {
 	}
 
 	const flag_gm = req.query.gmregion || null
+	// the gene region is read in place of the rglst[] regions, so it has the same limits
+	if (flag_gm) utils.validateRglst({ rglst: [flag_gm] }, genomeobj)
 	const gmisoform = req.query.isoform
 	const flag_onerow = req.query.onerow
 	const categories = req.query.categories || null
@@ -854,6 +856,18 @@ async function do_query(req, genomeobj) {
 
 const maxBedItems = 1000
 
+/* when serverconfig.features.disableFeature_custombedjfile is true, allow configured genome
+tracks and Hi-C fragment files requested as BED data, but not custom files, urls or cache files */
+function requireNativeFile(q, genomeobj) {
+	if (q.url || q.isCache) throw 'custom track file is not allowed'
+	if (
+		typeof q.file != 'string' ||
+		(!genomeobj.tracks?.some(t => t.file === q.file) &&
+			!(q.getBED && genomeobj.hicenzymefragment?.some(f => f.file === q.file)))
+	)
+		throw 'file is not a track of this genome'
+}
+
 async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 	if (req.query.bedItems) {
 		// client supplies list of "bed" items to render. no file to read
@@ -883,6 +897,8 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 		return lst
 	}
 	// read a file for items
+
+	if (serverconfig.features.disableFeature_custombedjfile) requireNativeFile(req.query, genomeobj)
 
 	let e, tkfile, isurl
 	if (req.query.file && req.query.isCache) {

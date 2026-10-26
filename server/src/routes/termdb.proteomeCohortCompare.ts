@@ -6,6 +6,7 @@ import serverconfig from '#src/serverconfig.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasProteomeDs } from './termdb.proteome.ts'
+import { parseJsonParam } from './common.ts'
 
 /*
 Cross-cohort proteome comparison via standardized fold change (log2FC-z).
@@ -506,7 +507,7 @@ function init({ genomes }) {
 			const organisms = ds.queries?.proteome?.organisms
 			if (!organisms) throw 'proteome not configured for this dataset'
 
-			const cohorts: CohortRef[] = typeof q.cohorts === 'string' ? JSON.parse(q.cohorts) : q.cohorts
+			const cohorts: CohortRef[] = typeof q.cohorts === 'string' ? parseJsonParam(q.cohorts, 'cohorts') : q.cohorts
 			if (!Array.isArray(cohorts) || cohorts.length < 2) throw 'at least two cohorts are required'
 
 			// species guard — the catalog UI can no longer produce a mixed-species selection,

@@ -247,8 +247,16 @@ tape('getCacheControl()', test => {
 	)
 	test.equal(getCacheControl('/bin/123.proteinpaint.js'), undefined, 'should not set a header for an unhashed chunk')
 	test.equal(getCacheControl('/bin/dist/app.js'), undefined, 'should not set a header for other static files')
-	test.equal(getCacheControl('/genomes'), 'immutable,max-age=1', 'should default to a 1 second max-age for a route')
-	test.equal(getCacheControl('/genomes', 5), 'immutable,max-age=5', 'should use the responseMaxAge for a route')
+	test.equal(
+		getCacheControl('/genomes'),
+		'private, max-age=1, immutable',
+		'should default to a 1 second max-age for a route, in the browser cache only'
+	)
+	test.equal(
+		getCacheControl('/genomes', 5),
+		'private, max-age=5, immutable',
+		'should use the responseMaxAge for a route, in the browser cache only'
+	)
 	test.end()
 })
 

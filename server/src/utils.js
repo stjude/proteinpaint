@@ -15,6 +15,7 @@ import { readFastaRegion } from './fasta.ts'
 import { readTabixLines, readTabixHeader, listTabixChrs } from './tabix.ts'
 import { listBamChrs } from './bamFile.ts'
 import { readBigbedLines, readBigbedByName, isBigbedFile } from './bigbed.ts'
+import { parseJsonParam } from './routes/common.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -717,11 +718,15 @@ export function read_file(file) {
 	})
 }
 
+// upper limit of the length of a sequence that get_fasta() reads, which is above the span of the longest genes
+const maxFastaLength = 5_000_000
+
 export async function get_fasta(gn, coord) {
 	// coord may come from a request; rebuild it from validated parts so that only a validated region is read
 	// donotextend=true keeps the given range as is; a missing actualposition means only a chr name was given
 	const p = typeof coord == 'string' && gn.chrlookup ? common.string2pos(coord, gn, true) : null
 	if (!p?.actualposition) throw 'invalid coordinate'
+	if (p.stop - p.start + 1 > maxFastaLength) throw `sequence region is longer than ${maxFastaLength} bp`
 	const pos = `${p.chr}:${p.start}-${p.stop}`
 
 	if (gn.genomefile == 'NA') {
@@ -834,19 +839,23 @@ export function spawnTool(bin, args, opts) {
 const maxRglstWidth = 20000
 const maxRglstTotalWidth = 50000
 const maxRglstLength = 1000
+// upper limit of the sum of the region lengths in bp, which sizes the data that a request reads,
+// and still allows a whole chr1 (about 249 Mb) in one view
+const maxRglstTotalLength = 300_000_000
 
 export function validateRglst(q, genome) {
 	if (typeof q.rglst == 'string') {
 		try {
-			q.rglst = JSON.parse(q.rglst)
+			q.rglst = parseJsonParam(q.rglst, 'rglst')
 		} catch (e) {
-			throw 'invalid JSON in q.rglst="[]"'
+			throw typeof e == 'string' ? e : 'invalid JSON in q.rglst="[]"'
 		}
 	}
 	if (!Array.isArray(q.rglst)) throw 'q.rglst[] not array'
 	if (q.rglst.length == 0) throw 'q.rglst[] blank array'
 	if (q.rglst.length > maxRglstLength) throw 'q.rglst[] too many regions'
-	let totalWidth = 0
+	let totalWidth = 0,
+		totalLength = 0
 	for (const r of q.rglst) {
 		if (typeof r != 'object') throw 'element of q.rglst[] not object'
 		if (typeof r.chr != 'string') throw 'q.rglst[].chr not string'
@@ -862,6 +871,8 @@ export function validateRglst(q, genome) {
 		if (r.stop < 0) throw 'q.rglst[].stop<0'
 		if (c && r.stop > c.len) throw 'q.rglst[].stop out of bound'
 		if (r.stop <= r.start) throw 'q.rglst[].stop < start'
+		totalLength += r.stop - r.start
+		if (totalLength > maxRglstTotalLength) throw 'q.rglst[] total length out of bound'
 		if (r.width != null) {
 			if (!Number.isFinite(r.width)) throw 'q.rglst[].width not number'
 			if (r.width < 0 || r.width > maxRglstWidth) throw 'q.rglst[].width out of bound'

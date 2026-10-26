@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { findForbiddenName, forbiddenNames } from '../common.ts'
+import { findForbiddenName, forbiddenNames, parseJsonParam } from '../common.ts'
 
 /**************
  test sections
@@ -73,5 +73,26 @@ tape('deep and cyclic payloads', test => {
 	const cyclic: any = { a: 1 }
 	cyclic.self = cyclic
 	test.equal(findForbiddenName(cyclic), '', 'returns for a cyclic object without a forbidden name')
+	test.end()
+})
+
+tape('parseJsonParam', test => {
+	test.deepEqual(parseJsonParam('{"lst":[{"a":1}]}', 'filter'), { lst: [{ a: 1 }] }, 'returns the parsed value')
+	test.throws(
+		() => parseJsonParam('{"lst":[{"key":"constructor"}]}', 'filter'),
+		/forbidden request payload name at filter\.lst\[0\]\.key/,
+		'rejects a forbidden string value in the parsed object'
+	)
+	test.throws(
+		() => parseJsonParam('[{"__proto__":{"x":1}}]', 'rglst'),
+		/forbidden request payload name at rglst\[0\]\.__proto__/,
+		'rejects a forbidden key in the parsed array'
+	)
+	test.throws(
+		() => parseJsonParam('"toString"', 'term1'),
+		/forbidden request payload name at term1$/,
+		'rejects a forbidden parsed string'
+	)
+	test.throws(() => parseJsonParam('{', 'filter'), SyntaxError, 'throws on invalid JSON')
 	test.end()
 })

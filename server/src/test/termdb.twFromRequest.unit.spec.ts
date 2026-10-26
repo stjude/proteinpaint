@@ -190,6 +190,26 @@ tape('getTwByIndex: parses a JSON-encoded term', function (test) {
 	test.end()
 })
 
+tape('getTwByIndex: rejects a forbidden name in a JSON-encoded tw or q', function (test) {
+	const tw = {
+		$id: 't1',
+		term: { type: 'samplelst', name: 'g', values: {} },
+		q: { groups: [{ name: '__proto__', in: false, values: [] }] }
+	}
+	test.throws(
+		() => getTwByIndex({ ds: mockDs, term1: JSON.stringify(tw) }),
+		/forbidden request payload name at term1\.q\.groups\[0\]\.name/,
+		'Should reject a forbidden value in a whole tw string'
+	)
+	test.throws(
+		() => getTwByIndex({ ds: mockDs, term1: tw.term, term1_q: JSON.stringify(tw.q), term1_$id: 't1' }),
+		/forbidden request payload name at term1_q\.groups\[0\]\.name/,
+		'Should reject a forbidden value in a term<i>_q string'
+	)
+	test.equal(Object.prototype['name' as any], undefined, 'Should not add a property to Object.prototype')
+	test.end()
+})
+
 /**************
  getTwBins
 ***************/

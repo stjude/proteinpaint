@@ -3,6 +3,7 @@ import { get_rows_by_one_key } from './termdb.sql.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import path from 'path'
 import serverconfig from './serverconfig.js'
+import { validateRglst } from './utils.js'
 
 /*
 
@@ -37,7 +38,7 @@ get_mds3variantData
 */
 
 export async function get_mds3variantData(q, res, ds, genome) {
-	validateParam(q, ds)
+	validateParam(q, ds, genome)
 
 	const results = await getResultsWithMlst(q, ds)
 	/* results = {
@@ -67,11 +68,15 @@ export async function get_mds3variantData(q, res, ds, genome) {
 	res.send(results)
 }
 
-function validateParam(q, ds) {
+function validateParam(q, ds, genome) {
+	// the client only requests this for a dataset with snvindel.details{}, see termdb.config.ts
+	if (!ds.queries?.snvindel?.details) throw 'snvindel.details not supported by this dataset'
 	if (!q.chr) throw 'q.chr missing'
 	q.start = Number(q.start)
 	q.stop = Number(q.stop) // somehow q.stop can be string
 	if (!Number.isInteger(q.start) || !Number.isInteger(q.stop)) throw 'q.start/stop is not integer'
+	// the region is queried as rglst[] in getResultsWithMlst(), which the middleware does not validate here
+	validateRglst({ rglst: [{ chr: q.chr, start: q.start, stop: q.stop }] }, genome)
 	if (typeof q.details != 'object') throw 'q.details{} not object'
 	if (!Array.isArray(q.details.groups)) throw 'q.details.groups[] not array'
 	if (!q.details.groups[0]) throw 'q.details.groups[0] missing'

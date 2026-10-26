@@ -18,6 +18,9 @@ export const api: RouteApi = {
 	}
 }
 
+// upper limit of the distinct isoforms of a request, well above the isoforms of any gene
+const maxIsoforms = 1000
+
 function init({ genomes }) {
 	return function handle_isoformlst(req, res) {
 		try {
@@ -25,8 +28,11 @@ function init({ genomes }) {
 			const g = genomes[q.genome]
 			if (!g) throw 'invalid genome'
 			if (!Array.isArray(q.lst)) throw '.lst missing'
+			const isoforms = [...new Set(q.lst)]
+			if (isoforms.length > maxIsoforms)
+				throw `.lst has ${isoforms.length} isoforms, it must have ${maxIsoforms} or fewer`
 			const lst: any[] = []
-			for (const isoform of q.lst) {
+			for (const isoform of isoforms) {
 				if (g.genomicNameRegexp.test(isoform)) continue
 				const tmp: any[] = g.genedb.getjsonbyisoform.all(isoform)
 				lst.push(

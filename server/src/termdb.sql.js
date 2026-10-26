@@ -12,6 +12,7 @@ import { authApi } from '#src/auth.js'
 // because the binding is only dereferenced at runtime, never during module evaluation
 import { maySetMapParent2Children } from './termdb.matrix.js'
 import { sql } from './sql.ts'
+import { parseJsonParam } from './routes/common.ts'
 
 /* a ds with sample ancestry may annotate terms at different levels (e.g. patient vs sample).
 CTEs of parent-level filter terms must be mapped down to leaf-level samples, otherwise
@@ -161,7 +162,7 @@ export async function get_samplecount(q, ds) {
 	if (typeof q.filter == 'object') {
 		j = q.filter
 	} else if (typeof q.filter == 'string') {
-		j = JSON.parse(q.filter)
+		j = parseJsonParam(q.filter, 'filter')
 	} else {
 		throw 'q.filter not obj or str'
 	}
@@ -356,7 +357,7 @@ export async function get_term_cte(q, index, filter, termWrapper = null) {
 	if (!term) throw `no term found by id='${termid}'`
 	let termq = (termWrapper && termWrapper.q) || q['term' + index + '_q'] || {}
 	if (typeof termq == 'string') {
-		termq = JSON.parse(decodeURIComponent(termq))
+		termq = parseJsonParam(decodeURIComponent(termq), 'term' + index + '_q')
 	}
 
 	const tablename = 'samplekey_' + index

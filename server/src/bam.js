@@ -15,6 +15,7 @@ import { gdcCheckPermission, getGdcFileUrl, validateGdcFileUUID } from './bam.gd
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { depthExcludedFlags, isBamTruncated, RegionDepth, scanBamRecords, samLine } from './bamFile.ts'
 import { isCacheSubdirDisabled } from './CacheManager.ts'
+import { parseJsonParam } from './routes/common.ts'
 
 /*
 XXX quick fix to be removed/disabled later
@@ -885,7 +886,7 @@ async function get_q(genome, req) {
 
 	if (req.query.gdc) {
 	} else if (req.query.nochr) {
-		q.nochr = typeof req.query.nochr == 'string' ? JSON.parse(req.query.nochr) : req.query.nochr // parse "true" into json true
+		q.nochr = typeof req.query.nochr == 'string' ? parseJsonParam(req.query.nochr, 'nochr') : req.query.nochr // parse "true" into json true
 	} else {
 		// info not provided
 		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir, q.withoutIndex)

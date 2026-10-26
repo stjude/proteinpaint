@@ -12,6 +12,7 @@ import * as bulkitd from '#shared/bulk.itd.js'
 import * as bulksv from '#shared/bulk.sv.js'
 import * as bulksvjson from '#shared/bulk.svjson.js'
 import * as bulktrunc from '#shared/bulk.trunc.js'
+import { parseJsonParam } from './routes/common.ts'
 
 const handlers = {
 	snvindel: bulksnv,
@@ -129,7 +130,7 @@ export async function getTermTypes(q) {
 	// assumes this function will get attached as a method of a dataset bootstrap object
 	const ds = this
 	try {
-		const ids = typeof q.ids == 'string' ? JSON.parse(q.ids) : q.ids
+		const ids = typeof q.ids == 'string' ? parseJsonParam(q.ids, 'ids') : q.ids
 		const rows = !ids.length
 			? []
 			: ds.cohort.db.connection

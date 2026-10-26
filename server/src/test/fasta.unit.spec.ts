@@ -108,5 +108,14 @@ tape('get_fasta()', async test => {
 	] as const) {
 		await rejects(test, () => get_fasta(g, coord), pattern, `should reject ${label}`)
 	}
+
+	// a genomefile of NA returns Ns, so these do not read a file
+	const longGenome = { genomefile: 'NA', chrlookup: { CHRA: { name: 'chrA', len: 10_000_000 } } }
+	test.equal(
+		(await get_fasta(longGenome, 'chrA:1-5000000')).length,
+		5_000_000 + '>chrA:1-5000000\n'.length,
+		'should read 5 Mb'
+	)
+	await rejects(test, () => get_fasta(longGenome, 'chrA:1-5000001'), /longer than/, 'should reject a region over 5 Mb')
 	test.end()
 })

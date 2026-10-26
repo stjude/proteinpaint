@@ -1,10 +1,11 @@
 import tape from 'tape'
-import { makeCacheid } from '../termdb.snp.js'
+import { makeCacheid, validate } from '../termdb.snp.js'
 import { snpgtCacheFile } from '../utils.js'
 
 /* test sections
 
 makeCacheid()
+validate(): snptext
 */
 
 tape('\n', test => {
@@ -29,5 +30,24 @@ tape('makeCacheid()', test => {
 	test.doesNotThrow(() => snpgtCacheFile(cacheid2, ds2), 'should be accepted by snpgtCacheFile()')
 
 	test.throws(() => makeCacheid({}), /does not support/, 'should throw for a ds without genomename and label')
+	test.end()
+})
+
+tape('validate(): snptext', async test => {
+	const genome = { snp: { bigbedfile: 'x.bb' }, chrlookup: {} }
+	const ds = { queries: { snvindel: { byrange: { _tk: {} } } } }
+	const lines = n => Array.from({ length: n }, (_, i) => 'rs' + i).join('\n')
+
+	const tooMany = await validate({ snptext: lines(1001) }, null, ds, genome)
+	test.ok(String(tooMany.error).includes('must have 1000 or fewer'), 'should reject more than 1000 lines')
+
+	const noTrack = await validate({ snptext: lines(2) }, null, { queries: {} }, genome)
+	test.ok(
+		String(noTrack.error).includes('not supported by dataset'),
+		'should reject a dataset without a genotype track'
+	)
+
+	const notString = await validate({ snptext: ['rs1'] }, null, ds, genome)
+	test.ok(String(notString.error).includes('not string'), 'should reject a non-string snptext')
 	test.end()
 })
