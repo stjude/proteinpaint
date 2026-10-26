@@ -5,7 +5,7 @@ import { getGeneVariantTw, getIsoformExpCollectionFractionTw, getSsgseaTw } from
 
 /*
 Tests:
-	- Simple aggregate matrix
+	- Test rendering of two genes vs single gene set
 	- Multiple sections and categories aggregate matrix
 	- Gene variant rows by sex columns
 	- Diagnosis group rows by age columns
@@ -74,10 +74,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-/* The tests below are not async functions: tape ends a test when the promise it returns resolves,
-which is before the plot renders. */
-
-tape('Simple aggregate matrix', function (test) {
+tape('Test rendering of two genes vs single gene set', function (test) {
 	test.timeoutAfter(10000)
 
 	runpp({
@@ -131,11 +128,11 @@ tape('Multiple sections and categories aggregate matrix', function (test) {
 					chartType: 'aggregateMatrix',
 					rows: {
 						Genes: [geneExpression('TP53'), geneExpression('KRAS')],
-						'Really long row section label for testing': [tp53Variant, krasRegionVariant]
+						'Really long row section gene variant label for testing': [tp53Variant, krasRegionVariant]
 					},
 					columns: {
 						'Gene sets': [ssgsea],
-						'Really long column section label for testing': [geneExpression('KRAS')]
+						'Really long column section gene label for testing': [geneExpression('KRAS')]
 					},
 					settings: {
 						aggregateMatrix: {
@@ -188,7 +185,7 @@ tape('Gene variant rows by sex columns', function (test) {
 				{
 					chartType: 'aggregateMatrix',
 					rows: {
-						Genes: [tp53Variant, krasRegionVariant]
+						'Gene variants': [tp53Variant, krasRegionVariant]
 					},
 					columns: {
 						Sex: [sex]

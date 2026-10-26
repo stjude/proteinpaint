@@ -5,7 +5,8 @@ import type {
 	ValidAggMatrixResponse,
 	ValidGetDataResponse
 } from '#types'
-import { PSEUDOBULK } from '#types'
+import { GENE_VARIANT, PSEUDOBULK } from '#types'
+import { mclass } from '#shared/common.js'
 import { isDictionaryType, isNumericTerm } from '#shared/terms.js'
 import { get_bin_label } from '#shared/termdb.bins.js'
 import { getAggMatrixTermId, getAggMatrixTermLabel } from '#shared/aggregateMatrix.js'
@@ -273,12 +274,20 @@ function resolveSampleEntryIndexes(sample: any, sources: AxisSource[], lookup: M
 	for (const source of sources) {
 		const annotation = sample[source.queryId]
 		if (!annotation) continue
+		if (source.tw.term.type == GENE_VARIANT && !hasVariant(annotation)) continue
 		for (const key of getAnnotationKeys(annotation, source.tw.term)) {
 			const index = lookup.get(`${source.queryId}\0${source.expand ? String(key) : ''}`)
 			if (index !== undefined) indexes.push(index)
 		}
 	}
 	return indexes
+}
+
+/** A geneVariant annotation lists the status of every queried variant type, including wildtype (WT) and
+ * not tested (Blank). Only a variant of any other class makes the sample a match for the term. */
+export function hasVariant(annotation: any): boolean {
+	if (!Array.isArray(annotation?.values)) return false
+	return annotation.values.some(v => v?.class && v.class != mclass.WT.key && v.class != mclass.Blank.key)
 }
 
 function getAnnotationKeys(annotation: any, term?: any): (string | number)[] {
