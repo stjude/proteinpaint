@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.224.1
 
 Fixes:
 - bump dompurify to 3.4.17 to resolve a dependabot alert
