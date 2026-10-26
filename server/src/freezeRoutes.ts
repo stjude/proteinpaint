@@ -15,10 +15,13 @@
 	a middleware may still assign a method, such as res.send, to a request or response instance.
 */
 
-const lockedLayerProps = ['handle', 'route', 'regexp', 'keys', 'method']
+const lockedLayerProps = ['handle', 'route', 'regexp', 'keys', 'method', 'match', 'handle_request', 'handle_error']
+const lockedRouteProps = ['stack', 'methods', 'dispatch', '_handles_method', '_options']
 const lockedAppProps = ['settings', 'request', 'response', 'handle', 'lazyrouter', 'listen']
 
 export function freezeRoutes(app) {
+	// an app without any route or middleware creates its router only when one is added
+	if (!app._router && typeof app.lazyrouter == 'function') app.lazyrouter()
 	const router = app._router
 	if (!router) return
 	lockProp(app, '_router')
@@ -31,6 +34,8 @@ export function freezeRoutes(app) {
 
 function freezeRouter(router) {
 	if (!Array.isArray(router.stack) || Object.isFrozen(router.stack)) return
+	// freeze the stack before its layers, so that a router that is mounted within itself is visited only once
+	Object.freeze(router.stack)
 	for (const layer of router.stack) {
 		lockLayer(layer)
 		const route = layer.route
@@ -38,11 +43,9 @@ function freezeRouter(router) {
 			for (const routeLayer of route.stack) lockLayer(routeLayer)
 			Object.freeze(route.stack)
 			Object.freeze(route.methods)
-			lockProp(route, 'stack')
-			lockProp(route, 'methods')
+			for (const key of lockedRouteProps) lockProp(route, key)
 		}
 	}
-	Object.freeze(router.stack)
 	lockProp(router, 'stack')
 	for (const key of ['handle', 'process_params']) lockProp(router, key)
 	if (router.params) {
@@ -58,7 +61,10 @@ function lockLayer(layer) {
 		for (const key of layer.keys) Object.freeze(key)
 		Object.freeze(layer.keys)
 	}
-	for (const key of [...lockedLayerProps, 'match', 'handle_request', 'handle_error']) {
+	// matching with a regexp that is not global or sticky does not set regexp.lastIndex, so it may be frozen
+	const re = layer.regexp
+	if (re instanceof RegExp && !re.global && !re.sticky) Object.freeze(re)
+	for (const key of lockedLayerProps) {
 		if (key in layer) lockProp(layer, key)
 	}
 	// a nested router, such as from app.use(express.Router()) or app.get(path, express.Router())
