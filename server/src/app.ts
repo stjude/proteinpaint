@@ -68,6 +68,9 @@ export async function launch() {
 		*/
 		const authApi = await getAuthApi(app, genomes, { validatedCreds }, true)
 		await authApi.maySetAuthRoutes(app, genomes, basepath, serverconfig)
+		// an optional route setter may add routes after an await, as in test/routes/gdc.js,
+		// so wait for it to finish before the data routes are set and the routes are frozen
+		if (routeCallbacks?.pending.length) await Promise.all(routeCallbacks.pending)
 
 		const __dirname = import.meta.dirname || new URL('.', import.meta.url).pathname
 
@@ -173,7 +176,7 @@ async function handle_argv(argv: string[]): Promise<{ message?: string; error?: 
 		return { message: `You may now run the server.`, code: 0 }
 }
 
-async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
+async function startServer(app, routeCallbacks?: OptionalRouteCallbacks) {
 	// serverconfig.appEnable is an array of strings that are
 	// valid arguments to http://expressjs.com/en/4x/api.html#app.enabled
 	// For example, when the server sits behind a trusted reverse proxy,
@@ -209,7 +212,7 @@ async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 		// all routes and middlewares are set by now, no route may be added or replaced afterward
 		freezeRoutes(app)
 
-		if (routeCallbacks.setCloseServer) {
+		if (routeCallbacks?.setCloseServer) {
 			routeCallbacks.setCloseServer(() => {
 				server.close()
 				process.exit(0)
@@ -222,17 +225,21 @@ async function startServer(app, routeCallbacks: OptionalRouteCallbacks = {}) {
 
 type OptionalRouteCallbacks = {
 	setCloseServer?: (a: any) => void
+	/** the promises from async route setters, which are awaited after the auth routes are set */
+	pending: Promise<unknown>[]
 }
 
 async function setOptionalRoutes(app, genomes) {
 	// routeSetters is an array of "filepath/name.js"
 	if (!serverconfig.routeSetters) return
-	const routeCallbacks: OptionalRouteCallbacks = {}
+	const routeCallbacks: OptionalRouteCallbacks = { pending: [] }
 	for (const fname of serverconfig.routeSetters) {
 		if (fname.endsWith('.js') || fname.endsWith('.ts')) {
 			const _ = await import(fname)
 			const d = _.default(app, basepath, genomes)
-			if (d?.setCloseServer && fname.includes('coverage')) {
+			// not awaited here, so that an async setter can call app.use() before the auth middleware is set
+			if (d instanceof Promise) routeCallbacks.pending.push(d)
+			else if (d?.setCloseServer && fname.includes('coverage')) {
 				routeCallbacks.setCloseServer = d.setCloseServer
 			}
 		}
