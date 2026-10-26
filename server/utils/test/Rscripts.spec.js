@@ -40,41 +40,7 @@ const fold_change_cutoff = 0.001 // If the difference between the actual and exp
 
 // TODO: Why are these tests commented out? Probably should re-enable them and fix any issues if possible.
 // If they are no longer relevant or needed, they should be removed
-/** 
-// fisher.2x3.R tests
-tape('fisher.2x3.R', async function (test) {
-	test.timeoutAfter(5000)
-	test.plan(2)
-	const invalidInput =
-		'0\t506\t1451\t68\t206\t3\t11,1\t246\t1711\t24\t250\t1\t13,2\t102\t1855\t16\t258\t0\t14,3\t167\t1790\t22\t252\t2\t12,4\t174\t1783\t30\t244\t4\t10'
-	try {
-		const output = await run_R(path.join(__dirname, '../fisher.2x3.R'), invalidInput)
-		test.fail('should emit an error on invalid input')
-	} catch (error) {
-		test.deepEqual(error, TypeError('lines.join is not a function'), 'should emit an error on invalid input')
-	}
-	const validInput = [
-		'0\t506\t1451\t68\t206\t3\t11',
-		'1\t246\t1711\t24\t250\t1\t13',
-		'2\t102\t1855\t16\t258\t0\t14',
-		'3\t167\t1790\t22\t252\t2\t12',
-		'4\t174\t1783\t30\t244\t4\t10'
-	]
-	const output = await run_R(path.join(__dirname, '../fisher.2x3.R'), validInput)
-	test.deepEqual(
-		output,
-		[
-			'0\t506\t1451\t68\t206\t3\t11\t0.918925559316051',
-			'1\t246\t1711\t24\t250\t1\t13\t0.181035956038115',
-			'2\t102\t1855\t16\t258\t0\t14\t0.843096446394939',
-			'3\t167\t1790\t22\t252\t2\t12\t0.568558123095687',
-			'4\t174\t1783\t30\t244\t4\t10\t0.0301248106031606'
-		],
-		'should match expected output'
-	)
-	test.end()
-})
-
+/**
 // km.R tests
 tape('km.R', async function (test) {
 	test.timeoutAfter(5000)
@@ -260,20 +226,6 @@ tape('regression.R', async function (test) {
 	test.end()
 })
 
-// wilcoxon.R tests
-tape('wilcoxon.R', async function (test) {
-	test.timeoutAfter(5000)
-	test.plan(1)
-	// const infile = path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_input.json')
-	const injson = fs.readFileSync(path.join(serverconfig.binpath,'test/testdata/R/wilcoxon_input.json'), { encoding: 'utf8' })
-	const expjson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_output.json'), { encoding: 'utf8' })
-	// const expfile = path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_output.json')
-	const Rout = await run_R(path.join(__dirname, '../wilcoxon.R'), [injson])
-	const out = JSON.parse(Rout[0])
-	const exp = JSON.parse(await utils.read_file(expjson))
-	test.deepEqual(out, exp, 'wilcoxon should match expected output')
-	test.end()
-})
 */
 
 tape('\n', function (test) {
