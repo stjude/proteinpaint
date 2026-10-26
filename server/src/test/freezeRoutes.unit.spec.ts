@@ -9,6 +9,8 @@ import { freezeRoutes } from '../freezeRoutes.ts'
 		freezeRoutes() prevents adding routes and middlewares
 		freezeRoutes() prevents replacing a route handler
 		freezeRoutes() locks the app settings and request handling
+		freezeRoutes() locks an app without routes
+		freezeRoutes() handles a router that is mounted within itself
 		freezeRoutes() keeps existing routes working
 */
 
@@ -110,6 +112,17 @@ tape('freezeRoutes() prevents replacing a route handler', test => {
 			test.throws(() => (l[key] = () => {}), TypeError, `should throw on replacing a ${name} layer ${key}()`)
 		}
 	}
+	for (const key of ['dispatch', '_handles_method', '_options']) {
+		test.throws(() => (layer.route[key] = () => {}), TypeError, `should throw on replacing a route ${key}()`)
+	}
+	for (const [name, l] of Object.entries({ middleware: middlewareLayer, route: layer })) {
+		test.throws(
+			() => (l.regexp.exec = () => null),
+			TypeError,
+			`should throw on replacing a ${name} layer regexp exec()`
+		)
+		test.throws(() => (l.regexp.fast_slash = true), TypeError, `should throw on changing a ${name} layer regexp option`)
+	}
 	const paramCallbacks = app._router.params.id
 	test.throws(() => paramCallbacks.push(() => {}), TypeError, 'should throw on adding a param callback')
 	test.throws(() => (paramCallbacks[0] = () => {}), TypeError, 'should throw on replacing a param callback')
@@ -137,6 +150,30 @@ tape('freezeRoutes() locks the app settings and request handling', test => {
 	test.end()
 })
 
+tape('freezeRoutes() locks an app without routes', test => {
+	const app: any = express()
+	freezeRoutes(app)
+	test.throws(() => app.get('/x', (req, res) => res.send('x')), /not extensible/, 'should throw on app.get()')
+	test.throws(() => app.use((req, res, next) => next()), /not extensible/, 'should throw on app.use()')
+	test.throws(() => app.set('trust proxy', true), TypeError, 'should throw on app.set()')
+	test.end()
+})
+
+tape('freezeRoutes() handles a router that is mounted within itself', test => {
+	const app: any = express()
+	const router = express.Router()
+	router.get('/c', (req, res) => res.send('c'))
+	router.use('/loop', router)
+	app.use('/sub', router)
+	test.doesNotThrow(() => freezeRoutes(app), 'should not throw')
+	test.throws(
+		() => router.get('/x', (req, res) => res.send('x')),
+		/not extensible/,
+		'should throw on adding a route to the router'
+	)
+	test.end()
+})
+
 tape('freezeRoutes() keeps existing routes working', async test => {
 	const { app } = getApp()
 	freezeRoutes(app)
@@ -151,6 +188,8 @@ tape('freezeRoutes() keeps existing routes working', async test => {
 			test.equal(await a.text(), 'a', 'should use the existing GET handler')
 			test.equal(a.headers.get('x-test'), 'ok', 'should apply an existing middleware')
 			test.equal(a.headers.get('x-send'), 'ok', 'should use a method that a middleware assigned to the response')
+			const upper = await fetch(`${url}/A`)
+			test.equal(upper.status, 200, 'should match a path without case sensitivity, as before the freeze')
 
 			const b = await fetch(`${url}/b/1`, { method: 'POST' })
 			test.deepEqual(await b.json(), { id: '1' }, 'should respond to an existing POST route with a param')
