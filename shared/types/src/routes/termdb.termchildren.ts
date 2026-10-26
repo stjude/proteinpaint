@@ -16,6 +16,7 @@ interface Entries {
 	isleaf: boolean
 	included_types: string[]
 	child_types: string[]
+	child_sample_types?: string[]
 }
 
 export type TermChildrenResponse = {
