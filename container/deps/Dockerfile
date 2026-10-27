@@ -32,7 +32,6 @@ RUN apt-get update && apt-get install -y \
     build-essential \
 	libbz2-dev \
 	libcurl4-openssl-dev \
-	libgsl-dev \
 	libhdf5-dev \
 	hdf5-tools \
 	# Runtime HDF5 for the rust binaries, which are compiled in container/rust/Dockerfile and copied in by
@@ -94,7 +93,7 @@ RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 #################
 
 # The base of the ppruntime stage, for the ppserver and ppfull images: the shared libraries that R, the R and python
-# packages, htslib/samtools/bcftools, h5dump, the node native addons and the rust binaries load at runtime, without
+# packages, h5dump, the node native addons and the rust binaries load at runtime, without
 # the build toolchain and -dev packages of the os stage, which ppbase and the dev container image still have. The
 # recommended packages are not installed, which for r-base-core include r-base-dev and the compilers. The ppruntime,
 # ppserver and ppfull stages check that every binary and module resolves its shared libraries.
@@ -111,9 +110,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     hdf5-tools \
     # the same HDF5 soname that the rust binaries link, see the os stage
     libhdf5-310 \
-    # for bcftools, which is built with --enable-libgsl
-    libgsl28 \
-    libgslcblas0 \
     # runtime libs for ragg, which R/src uses instead of png() to draw the plots, and its systemfonts and
     # textshaping deps; the build-time headers are in the os stage's libfontconfig-dev/libfreetype-dev/etc.
     libfontconfig1 \
@@ -153,26 +149,6 @@ RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
 # Each of the stages below only depends on the os stage, so BuildKit builds them in parallel, and a change to one,
 # such as to python/requirements.txt, rebuilds only that stage. ppbase copies their outputs.
-
-FROM os AS hts
-
-ARG htsversion=1.24
-WORKDIR /tmp/hts
-# installed into / for the bcftools build, and into /staging for ppbase to copy; samtools, bgzip, and tabix are
-# not installed, since the server reads bam and bgzipped, tabix-indexed files in process, see server/src/bamFile.ts
-# and server/src/tabix.ts
-RUN curl -fL https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
-    cd htslib-${htsversion} && \
-    ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && \
-    make -j"$(nproc)" && make install && make install DESTDIR=/staging && \
-    rm /staging/usr/local/bin/bgzip /staging/usr/local/share/man/man1/bgzip.1 \
-        /staging/usr/local/bin/tabix /staging/usr/local/share/man/man1/tabix.1 && \
-    ldconfig
-RUN curl -fL https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
-    cd bcftools-${htsversion} && \
-    ./configure --enable-libgsl --with-htslib=system && \
-    make -j"$(nproc)" && make install DESTDIR=/staging && \
-    rm -f /staging/usr/local/bin/plot-vcfstats /staging/usr/local/bin/plot-ampliconstats /staging/usr/local/bin/roh-viz /staging/usr/local/bin/ref-cache
 
 FROM os AS rlib
 
@@ -225,7 +201,6 @@ ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
 # ordered from the least to the most often changed, since a changed COPY invalidates the cache of the later steps
-COPY --from=hts /staging/usr/local/ /usr/local/
 # update.packages() in install.pkgs.R may update the r-recommended packages in /usr/lib/R/library
 COPY --from=rlib /usr/lib/R/library/ /usr/lib/R/library/
 COPY --from=rlib /usr/local/lib/R/site-library/ /usr/local/lib/R/site-library/
@@ -298,22 +273,18 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
 ############
 
 # The base of the ppserver and ppfull images, which is not published: the osruntime libraries, and the same R,
-# python, node, htslib/samtools/bcftools and tool files as ppbase, without npm, the node headers, and the htslib
-# headers and static library. The app is installed in the ppserverdeps and ppfulldeps stages, on ppbase.
+# python, node and tool files as ppbase, without npm and the node headers. The app is installed in the ppserverdeps
+# and ppfulldeps stages, on ppbase.
 FROM osruntime AS ppruntime
 
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
-COPY --from=hts /staging/usr/local/bin/ /usr/local/bin/
-COPY --from=hts /staging/usr/local/lib/ /usr/local/lib/
-COPY --from=hts /staging/usr/local/libexec/ /usr/local/libexec/
 COPY --from=rlib /usr/lib/R/library/ /usr/lib/R/library/
 COPY --from=rlib /usr/local/lib/R/site-library/ /usr/local/lib/R/site-library/
 COPY --from=tools /home/root/pp/tools/ /home/root/pp/tools/
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
-RUN rm -rf /usr/local/lib/libhts.a /usr/local/lib/pkgconfig && \
-    ldconfig && \
+RUN ldconfig && \
     node -v
 COPY --from=py /opt/venv/ /opt/venv/
 ENV PATH="/opt/venv/bin:$PATH"
@@ -339,7 +310,7 @@ RUN echo "OS_UPDATES=$OS_UPDATES" && \
 COPY ./R/utils ./R/utils
 RUN Rscript R/utils/validate.pkgs.R
 RUN --mount=type=bind,source=checkSharedLibs.sh,target=/tmp/checkSharedLibs.sh sh /tmp/checkSharedLibs.sh \
-    /usr/local/bin /usr/local/lib /usr/local/libexec /usr/lib/R /usr/local/lib/R /opt/venv /home/root/pp/tools \
+    /usr/local/bin /usr/local/lib /usr/lib/R /usr/local/lib/R /opt/venv /home/root/pp/tools \
     /usr/bin/h5dump && \
     python3 -c 'import h5py, numpy, scipy.linalg, scipy.special'
 

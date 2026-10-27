@@ -5,8 +5,8 @@ of ProteinPaint, which the release images in `container/server` and `container/f
 
 | Target (image) | Contents |
 |---|---|
-| `ppbase` | the OS (Debian trixie), the build toolchain, R, Python, Node and npm, htslib/samtools/bcftools, and tools such as `straw` and `gfClient` |
-| `ppdepsruntime` (the `ppruntime` stage) | the runtime libraries and the same R, Python, Node, htslib and tool files as `ppbase`, without the app |
+| `ppbase` | the OS (Debian trixie), the build toolchain, R, Python, Node and npm, and tools such as `straw` and `gfClient` |
+| `ppdepsruntime` (the `ppruntime` stage) | the runtime libraries and the same R, Python, Node and tool files as `ppbase`, without the app |
 | `ppserver` | `ppdepsruntime` + the `@sjcrh/proteinpaint-server` package and `app-server.mjs` |
 | `ppfull` | `ppserver` + the `@sjcrh/proteinpaint-front` package, `app-full.mjs`, and `container/public` |
 
@@ -126,7 +126,6 @@ The `Dockerfile` stages are ordered and split so that the slow steps are rebuilt
 | Stage | Contents | Rebuilt when |
 |---|---|---|
 | `os` | the apt system libs, build toolchain, R, and python3 | the pinned base image or the apt package list changes |
-| `hts` | htslib, bcftools | `htsversion` changes |
 | `rlib` | the R packages, CRAN binaries from the Posit Package Manager, and the compiled Bioconductor packages | `R/utils` changes |
 | `py` | the python venv | `python/requirements.txt` changes |
 | `tools` | `straw` and `gfClient` | the download list changes |
@@ -134,7 +133,7 @@ The `Dockerfile` stages are ordered and split so that the slow steps are rebuilt
 | `osruntime` | the apt runtime libraries, R, python3, and `h5dump`, without the toolchain and `-dev` packages | the pinned base image or its apt package list changes |
 | `ppruntime` | copies the same files as `ppbase` onto `osruntime`, applies the Debian security updates, and checks that every binary and module resolves its shared libraries (`checkSharedLibs.sh`) | every day, which is a fast step |
 
-The `hts`, `rlib`, `py`, and `tools` stages only depend on `os`, and `osruntime` on the base image, so they are built in parallel. In CI, the cache
+The `rlib`, `py`, and `tools` stages only depend on `os`, and `osruntime` on the base image, so they are built in parallel. In CI, the cache
 of every stage is saved to `ghcr.io/stjude/ppbase:buildcache` (`PPDEPS_CACHE_REF` in `deps/build.sh`), so that
 a runner without a local cache reuses the last build's layers.
 
