@@ -60,6 +60,7 @@ tape('Should count samples once per cell and every variant value', test => {
 	counter.add(3, ann('Blank'), gv)
 	const pie = counter.build().get(3)!
 	test.equal(pie.n, 4, 'Should count each sample once')
+	test.equal(pie.termType, 'geneVariant', 'Should tell the client the term type of the slices')
 	const order = Object.keys(mclass)
 	const counts = { M: 3, F: 1, Blank: 1 }
 	const expected = [['WT', 1], ...Object.entries(counts).sort(([a], [b]) => order.indexOf(a) - order.indexOf(b))]

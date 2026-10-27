@@ -7,6 +7,7 @@ import {
 	INTEGER,
 	ISOFORM_EXPRESSION,
 	PSEUDOBULK,
+	SINGLECELL_CELLTYPE,
 	SSGSEA
 } from '#types'
 import { isNonDictionaryType } from './terms.js'
@@ -22,8 +23,16 @@ export const AGG_MATRIX_TERM_TYPES: string[] = [
 	ISOFORM_EXPRESSION,
 	SSGSEA,
 	DNA_METHYLATION,
-	GENE_VARIANT
+	GENE_VARIANT,
+	SINGLECELL_CELLTYPE
 ]
+
+/** True when a term of this type is one term that expands into a row or column for each of its observed values:
+ * dictionary terms (categories, bins) and the cell type of single cell data. The other types are one row or column
+ * per term. */
+export function expandsToValues(type: string): boolean {
+	return type == SINGLECELL_CELLTYPE || !isNonDictionaryType(type)
+}
 
 /** Term types accepted for rows. */
 export const AGG_MATRIX_ROW_TYPES: string[] = AGG_MATRIX_TERM_TYPES
@@ -90,7 +99,12 @@ export function validateAggMatrixAxis(axis: any, name: AxisName, allowEmpty = fa
 		if (!allowedTypes.includes(termType)) {
 			throw new Error(`${name} section '${section}' has unsupported term type '${termType}'`)
 		}
-		if (!isNonDictionaryType(termType)) {
+		if (termType == SINGLECELL_CELLTYPE) {
+			if (terms.length != 1) throw new Error(`${name} cell type section '${section}' must contain one term`)
+			if (!getAggMatrixTermId(terms[0].term)) {
+				throw new Error(`${name} section '${section}' has a ${termType} term without an identifier`)
+			}
+		} else if (!isNonDictionaryType(termType)) {
 			if (terms.length != 1) throw new Error(`${name} dictionary section '${section}' must contain one term`)
 		} else if (terms.some(tw => !getAggMatrixTermId(tw.term))) {
 			throw new Error(`${name} section '${section}' has a ${termType} term without an identifier`)
@@ -102,6 +116,17 @@ export function validateAggMatrixAxis(axis: any, name: AxisName, allowEmpty = fa
 export function validateAggMatrixAxes(rows: any, columns: any) {
 	validateAggMatrixAxis(rows, 'rows')
 	validateAggMatrixAxis(columns, 'columns')
+	const termTypes = (axis: any) => Object.values<any[]>(axis).flatMap(terms => terms.map(tw => tw.term.type))
+	/* The terms of cell type are cells. Every other supported term, pseudobulk included, is a value of a sample,
+	such as a patient. A matrix counts one kind of sample, so the two cannot be combined until cells can be
+	mapped to their samples. */
+	const allTypes = new Set<string>([...termTypes(rows), ...termTypes(columns)])
+	if (allTypes.has(SINGLECELL_CELLTYPE) && allTypes.size > 1) {
+		const others = [...allTypes].filter(type => type != SINGLECELL_CELLTYPE).join(', ')
+		throw new Error(
+			`${SINGLECELL_CELLTYPE} terms are cells and cannot be combined with sample-level terms (${others}) in an aggregate matrix`
+		)
+	}
 	const columnTypes = new Set(Object.values<any[]>(columns).flatMap(terms => terms.map(tw => tw.term.type)))
 	if (!columnTypes.has(PSEUDOBULK)) return
 	if (columnTypes.size > 1) {

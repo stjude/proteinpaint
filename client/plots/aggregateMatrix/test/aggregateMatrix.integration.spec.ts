@@ -17,7 +17,7 @@ Tests:
 	- Diagnosis group rows by age columns
 	- DNA methylation rows by sex columns
 	- Isoform expression rows by diagnosis group columns
-	- Gene variant rows by cell type columns
+	- Cell type rows by cell type columns
  */
 
 /*************************
@@ -235,6 +235,17 @@ tape('Gene variant rows by sex columns', function (test) {
 			rendered.rowLabels.length * rendered.colLabels.length,
 			'Should render a dot for every row and column'
 		)
+		const pies = rendered.mainDiv.querySelectorAll('.sjpp-ag-matrix-pie')
+		test.ok(pies.length > 0, 'Should render gene variant dots as pies')
+		test.ok(
+			[...pies].every((pie: any) => pie.querySelectorAll('.sjpp-ag-matrix-pie-slice').length > 0),
+			'Should render a slice in every pie'
+		)
+		test.equal(
+			rendered.mainDiv.querySelectorAll('.sjpp-ag-matrix-pie-legend').length,
+			1,
+			'Should render one shared legend for the pie slices'
+		)
 
 		// if (test['_ok']) aggregateMatrix.Inner.app.destroy()
 		test.end()
@@ -333,20 +344,25 @@ tape('Isoform expression rows by diagnosis group columns', function (test) {
 	)
 })
 
-tape('Gene variant rows by cell type columns', function (test) {
-	/* Testing only. The aggregate matrix does not accept cell type terms yet. The plot config is rejected
-	when the app starts, so no plot is created and nothing renders. This test documents that, and should
-	become a rendering test, like the others in this file, when cell type terms are supported.
-	The response with pies is tested by server/src/test/aggregateMatrix.request.integration.spec.ts. */
-	const cellType = { ...getScctTw(), q: {} }
+tape.only('Cell type rows by cell type columns', function (test) {
+	/* Cell type is the single cell cell type term of TermdbTest. It expands into one entry per cell type.
+	Its terms are cells, so they only combine with other cell type terms, not with sample-level terms such as
+	gene variant. The plot rejects that combination when the app starts, so nothing renders for it. */
 	test.throws(
-		() => validateAggMatrixAxes({ 'Gene variants': [tp53Variant, krasRegionVariant] }, { 'Cell type': [cellType] }),
-		/unsupported term type 'singleCellCellType'/,
-		'Should reject a cell type column until the matrix supports it'
+		() => validateAggMatrixAxes({ 'Gene variants': [tp53Variant] }, { 'Cell type': [{ ...getScctTw(), q: {} }] }),
+		/cannot be combined with sample-level terms/,
+		'Should reject a cell type column with gene variant rows'
 	)
-	test.doesNotThrow(
-		() => validateAggMatrixAxes({ 'Gene variants': [tp53Variant, krasRegionVariant] }, { Sex: [{ term: sex, q: {} }] }),
-		'Should accept the same gene variant rows with a supported column'
+	testMatrix(
+		test,
+		{ 'Cell type': [{ ...getScctTw(), q: {} }] },
+		{ 'Cell type again': [{ ...getScctTw(), q: {} }] },
+		{ gradientMethod: 'percent', sizeMethod: 'count' },
+		rendered => {
+			test.deepEqual(rendered.rowSections, ['Cell type'], 'Should render the cell type row section')
+			test.deepEqual(rendered.colSections, ['Cell type again'], 'Should render the cell type column section')
+			test.ok(rendered.rowLabels.length > 1, 'Should expand cell type into one row per cell type')
+			test.deepEqual(rendered.colLabels, rendered.rowLabels, 'Should expand both axes into the same cell types')
+		}
 	)
-	test.end()
 })

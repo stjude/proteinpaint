@@ -64,6 +64,8 @@ export type AggMatrixPie = {
 	radius: number
 	/** Ordered the same way in every pie */
 	slices: AggMatrixPieSlice[]
+	/** Term type of the slice term, such as geneVariant, when known. Tells the client what the slice keys mean. */
+	termType?: string
 }
 
 export type AxisTermEntry = { id: string; label: string }

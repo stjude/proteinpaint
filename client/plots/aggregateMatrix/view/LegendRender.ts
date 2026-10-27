@@ -7,6 +7,8 @@ import { validateMinMax } from '../settings/defaults.ts'
 export class LegendRender {
 	ag: AggregateMatrix
 	readonly xStart = 15
+	ag: AggregateMatrix
+	readonly xStart = 15
 
 	constructor(ag: AggregateMatrix) {
 		this.ag = ag
@@ -19,6 +21,44 @@ export class LegendRender {
 		const dotScaleSvg = div.append('svg').style('display', 'block')
 		this.renderColorScale(viewData.colorScale, settings, colorScaleSvg)
 		this.renderDotScaleRef(dotScaleSvg, settings)
+		if (viewData.pieLegend.entries.length) this.renderPieLegend(viewData.pieLegend, div)
+	}
+
+	/** One shared legend of the slice colors, as every pie uses the same colors and order */
+	renderPieLegend(legend: AggMatrixViewData['pieLegend'], div: any) {
+		const rowHeight = 18
+		const svg = div
+			.append('svg')
+			.attr('class', 'sjpp-ag-matrix-pie-legend')
+			.attr('data-testid', 'sjpp-ag-matrix-pie-legend')
+			.style('display', 'block')
+			.attr('width', 260)
+			.attr('height', 30 + legend.entries.length * rowHeight)
+		svg
+			.append('text')
+			.attr('x', this.xStart)
+			.attr('y', 20)
+			.style('font-weight', 'bold')
+			.style('font-size', '0.8em')
+			.text(legend.title)
+		legend.entries.forEach((entry, i) => {
+			const y = 30 + i * rowHeight
+			svg
+				.append('rect')
+				.attr('x', this.xStart)
+				.attr('y', y)
+				.attr('width', 12)
+				.attr('height', 12)
+				.attr('fill', entry.color)
+				.attr('stroke', '#999')
+				.attr('stroke-width', 0.5)
+			svg
+				.append('text')
+				.attr('x', this.xStart + 18)
+				.attr('y', y + 10)
+				.style('font-size', '0.8em')
+				.text(entry.label)
+		})
 	}
 
 	renderColorScale(colorScale, settings, svg) {

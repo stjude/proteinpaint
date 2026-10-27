@@ -340,6 +340,60 @@ tape('pies are returned only when a geneVariant term is on an axis', async test 
 	test.end()
 })
 
+tape('single cell cell type terms expand into one entry per cell type', async test => {
+	test.timeoutAfter(60000)
+	/* TermdbTest sample 2646 has single cell data. The cell type is the "Cell Type" column of its UMAP plot.
+	Cell type terms are cells, so they only combine with other cell type terms. The rejection of their
+	combination with sample-level terms is tested in server/src/aggregateMatrix/test/AggMatrixRoute.unit.spec.ts,
+	as every rejected request counts toward the server's limit on repeated errors. */
+	const cellType = (id: string) => ({
+		term: { type: 'singleCellCellType', id, name: 'Cell Type', sample: { sID: '2646' }, plot: 'UMAP' },
+		q: {}
+	})
+
+	const available = await post({ getAvailableMethods: true, columns: { 'Cell type': [cellType('CellType')] } })
+	test.deepEqual(
+		available.availableMethods?.map(m => m.id),
+		['percent', 'count'],
+		'should only offer methods that apply to a non-numeric term for cell type columns'
+	)
+
+	const res = await post({
+		rows: { 'Cell type': [cellType('CellType')] },
+		columns: { 'Cell type again': [cellType('CellTypeAgain')] },
+		gradientMethod: 'percent',
+		sizeMethod: 'count'
+	})
+	test.notOk(res.error, 'should not return an error for cell type rows x cell type columns')
+	const [rowSection] = res.axesLayout?.rows.sections || []
+	const [colSection] = res.axesLayout?.columns.sections || []
+	test.ok(rowSection?.terms.length > 1, 'should expand cell type rows into one row per cell type')
+	test.deepEqual(
+		colSection?.terms.map(term => term.id),
+		rowSection?.terms.map(term => term.id),
+		'should expand cell type columns into the same cell types'
+	)
+	test.ok(
+		rowSection?.terms.every(term => term.id && term.label === term.id),
+		'should identify each cell type entry by its cell type'
+	)
+	test.equal(res.data?.length, res.axesLayout.rows.rowCount, 'should return a data row for every cell type row')
+	test.ok(
+		res.data?.every(row => row.length == res.axesLayout.columns.colCount),
+		'should return a cell for every cell type column'
+	)
+	// a cell has one cell type, so cells only match when the row and the column are the same cell type
+	test.ok(
+		res.data?.every((row, i) => row.every((cell, j) => (i == j ? cell.sizeValue > 0 : cell.sizeValue === 0))),
+		'should only count cells where the row and column are the same cell type'
+	)
+	test.notOk(
+		res.data?.flat().some(cell => 'pie' in cell),
+		'should not return pies without a geneVariant term'
+	)
+	test.end()
+})
+
 tape('dictionary values are labeled by the dataset term', async test => {
 	test.timeoutAfter(30000)
 	// In TermdbTest, sex 1 is Male and 2 is Female

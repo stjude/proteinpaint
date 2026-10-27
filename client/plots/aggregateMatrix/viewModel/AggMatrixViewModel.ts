@@ -1,10 +1,18 @@
 import type { AggregateMatrix } from '../AggregateMatrix.ts'
 import { getMaxLabelWidth, capitalizeFirstLetter } from '#dom'
 import { scaleLinear } from 'd3-scale'
-import type { AggMatrixDot, AxisLayoutColumns, AxisLayoutRows, ValidAggMatrixResponse } from '#types'
+import { arc, pie } from 'd3-shape'
+import type { AggMatrixDot, AggMatrixPie, AxisLayoutColumns, AxisLayoutRows, ValidAggMatrixResponse } from '#types'
+import { GENE_VARIANT } from '#types'
+import { mclass } from '#shared/common.js'
 import type { AggregateMatrixSettings } from '../settings/Settings.ts'
 import { roundValue } from '#shared/roundValue.js'
-import type { AggMatrixViewData, AggMatrixDotPosition } from './ViewModelDataTypes.ts'
+import type {
+	AggMatrixViewData,
+	AggMatrixDotPosition,
+	AggMatrixPiePosition,
+	PieLegendEntry
+} from './ViewModelDataTypes.ts'
 
 export class AggMatrixViewModel {
 	ag: AggregateMatrix
@@ -79,7 +87,8 @@ export class AggMatrixViewModel {
 			.domain([data.sizeScale.min, data.sizeScale.max])
 			.range([settings.minDotSize, settings.maxDotSize])
 			.clamp(true)
-		this.getDotPositions(data.data, cellSize, settings)
+		this.getDotPositions(data.data, cellSize, settings, data.sampleType)
+		this.viewData.pieLegend = this.getPieLegend(data.data)
 	}
 
 	getSectionLabelLayout(sections: AxisLayoutRows['sections'], cellSize: number, measureSvg, isYaxis: boolean) {
@@ -146,6 +155,7 @@ export class AggMatrixViewModel {
 			rowSectionLines: [],
 			colSectionLines: [],
 			dotPositions: [],
+			pieLegend: { title: '', entries: [] },
 			colorScale: {
 				//TODO: If the user cannot set the min and max for color values,
 				// revert to colorScale = scale
@@ -256,7 +266,12 @@ export class AggMatrixViewModel {
 		}
 	}
 
-	getDotPositions(data: AggMatrixDot[][], cellSize: number, settings: AggregateMatrixSettings) {
+	getDotPositions(
+		data: AggMatrixDot[][],
+		cellSize: number,
+		settings: AggregateMatrixSettings,
+		sampleType?: ValidAggMatrixResponse['sampleType']
+	) {
 		const startX = this.hoziPad + this.maxRowLabelLgth
 		const startY = this.topPad
 
@@ -279,6 +294,7 @@ export class AggMatrixViewModel {
 					rowSection: dot.rowSection,
 					column: dot.column,
 					colSection: dot.colSection,
+					pie: dot.pie ? this.getPiePosition(dot.pie, settings) : undefined,
 					tipData: [
 						{
 							label: dot.rowSection,
@@ -300,11 +316,69 @@ export class AggMatrixViewModel {
 						}
 					]
 				} satisfies AggMatrixDotPosition
+				if (dot.pie) this.getPieTipData(dot.pie, sampleType).forEach(entry => dotPos.tipData.push(entry))
 				this.viewData.dotPositions.push(dotPos)
 				this.lastX += cellSize
 			}
 			this.lastX = startX
 			this.lastY = startY + (i + 1) * cellSize
 		}
+	}
+
+	/** Server sends default labels and colors for variant classes. The mclass of the client has the
+	 * mclassOverride of the launch arguments applied, so a variant class is described by it instead. */
+	describeSlice(slice: AggMatrixPie['slices'][number], termType?: string) {
+		if (termType == GENE_VARIANT && Object.prototype.hasOwnProperty.call(mclass, slice.key)) {
+			const { label, color } = mclass[slice.key]
+			return { label, color }
+		}
+		return { label: slice.label, color: slice.color }
+	}
+
+	/** Pie area is proportional to the number of samples. A pie is never smaller than the smallest dot. */
+	getPiePosition(data: AggMatrixPie, settings: AggregateMatrixSettings): AggMatrixPiePosition {
+		const radius = Math.max(settings.minDotSize, data.radius * settings.maxDotSize)
+		const arcs = pie<AggMatrixPie['slices'][number]>()
+			.sort(null)
+			.value(slice => slice.count)(data.slices)
+		const makePath = arc<any>().innerRadius(0).outerRadius(radius)
+		return {
+			radius,
+			n: data.n,
+			slices: arcs.map(a => ({
+				key: a.data.key,
+				count: a.data.count,
+				...this.describeSlice(a.data, data.termType),
+				path: makePath(a) || ''
+			}))
+		}
+	}
+
+	getPieTipData(data: AggMatrixPie, sampleType?: ValidAggMatrixResponse['sampleType']) {
+		const entries: AggMatrixDotPosition['tipData'] = [
+			{ label: capitalizeFirstLetter(sampleType?.plural_name || 'samples'), value: data.n }
+		]
+		for (const slice of data.slices) {
+			entries.push({ label: this.describeSlice(slice, data.termType).label, value: slice.count })
+		}
+		return entries
+	}
+
+	/** One entry for every slice that is in a pie, in order of first appearance */
+	getPieLegend(data: AggMatrixDot[][]): AggMatrixViewData['pieLegend'] {
+		const entries = new Map<string, PieLegendEntry>()
+		let termType: string | undefined
+		for (const row of data) {
+			for (const dot of row) {
+				if (!dot.pie) continue
+				termType ??= dot.pie.termType
+				for (const slice of dot.pie.slices) {
+					if (!entries.has(slice.key)) {
+						entries.set(slice.key, { key: slice.key, ...this.describeSlice(slice, dot.pie.termType) })
+					}
+				}
+			}
+		}
+		return { title: termType == GENE_VARIANT ? 'Variant class' : 'Category', entries: [...entries.values()] }
 	}
 }
