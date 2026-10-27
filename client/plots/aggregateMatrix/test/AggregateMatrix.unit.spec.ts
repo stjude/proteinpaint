@@ -7,6 +7,7 @@ Tests:
     - Rejected rows and columns 
     - Rejected methods
     - Bare terms are wrapped before validation
+    - Pie charts default to larger dot sizes
 */
 
 const tw = (type: string, id = type) => ({ term: { id, name: id, type } })
@@ -140,5 +141,46 @@ tape('Bare terms are wrapped before validation', function (test) {
 		'Should accept bare terms in getPlotConfig and wrap every one'
 	)
 	test.equal(plotConfig.columns['Cell type'][0].term.id, 'B', 'Should wrap bare column terms in getPlotConfig')
+	test.end()
+})
+
+tape('Pie charts default to larger dot sizes', function (test) {
+	const sizes = (cfg: any) => {
+		const { minDotSize, maxDotSize, dotInputMin, dotInputMax } = getPlotConfig(cfg).settings.aggregateMatrix
+		return { minDotSize, maxDotSize, dotInputMin, dotInputMax }
+	}
+	const pieSizes = { minDotSize: 40, maxDotSize: 100, dotInputMin: 20, dotInputMax: 300 }
+	const dotSizes = { minDotSize: 5, maxDotSize: 20, dotInputMin: 2, dotInputMax: 35 }
+	const gv = { Variants: [tw('geneVariant', 'TP53')] }
+	const sex = { Sex: [tw('categorical', 'sex')] }
+
+	test.deepEqual(sizes(config({ rows: gv, columns: sex })), pieSizes, 'Should use pie sizes with gene variant rows')
+	test.deepEqual(sizes(config({ rows: sex, columns: gv })), pieSizes, 'Should use pie sizes with gene variant columns')
+	test.deepEqual(
+		sizes(config({ rows: { Variants: [{ type: 'geneVariant', gene: 'TP53' }] }, columns: sex })),
+		pieSizes,
+		'Should use pie sizes when the terms are bare'
+	)
+	test.deepEqual(
+		sizes(config({ rows: sex, columns: sex })),
+		dotSizes,
+		'Should use dot sizes without a gene variant term'
+	)
+	test.deepEqual(
+		sizes(config({ rows: gv, columns: { Other: [tw('geneVariant', 'KRAS')] } })),
+		dotSizes,
+		'Should use dot sizes when every term is a gene variant'
+	)
+	test.deepEqual(
+		sizes(
+			config({
+				rows: gv,
+				columns: sex,
+				settings: { aggregateMatrix: { ...settings.aggregateMatrix, minDotSize: 50, maxDotSize: 120 } }
+			})
+		),
+		{ ...pieSizes, minDotSize: 50, maxDotSize: 120 },
+		'Should keep sizes set by the user'
+	)
 	test.end()
 })

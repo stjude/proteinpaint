@@ -7,7 +7,7 @@ import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
 import { Menu, formatHeaderText } from '#dom'
-import { validateAggMatrixAxes } from '#shared/aggregateMatrix.js'
+import { hasPieAxes, validateAggMatrixAxes } from '#shared/aggregateMatrix.js'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -102,7 +102,10 @@ export function getPlotConfig(opts: any) {
 	const config = {
 		hidePlotFilter: true,
 		settings: {
-			aggregateMatrix: getAggregateMatrixSettings(opts?.settings?.aggregateMatrix)
+			aggregateMatrix: getAggregateMatrixSettings(
+				opts?.settings?.aggregateMatrix,
+				hasPieAxes(opts?.rows, opts?.columns)
+			)
 		}
 	}
 

@@ -14,6 +14,7 @@ Tests:
 	- Test rendering of two genes vs single gene set
 	- Multiple sections and categories aggregate matrix
 	- Gene variant rows by sex columns
+	- Gene variant pies by diagnosis group columns
 	- Diagnosis group rows by age columns
 	- DNA methylation rows by sex columns
 	- Isoform expression rows by diagnosis group columns
@@ -288,6 +289,33 @@ function testMatrix(
 	})
 }
 
+tape('Gene variant pies by diagnosis group columns', function (test) {
+	// A gene variant term with a dictionary term makes a pie chart: one pie per row and column, one slice per variant class
+	testMatrix(
+		test,
+		{ 'Gene variants': [tp53Variant, krasRegionVariant] },
+		{ 'Diagnosis group': [diaggrp] },
+		{ gradientMethod: 'percent', sizeMethod: 'count' },
+		rendered => {
+			const pies = [...rendered.mainDiv.querySelectorAll('.sjpp-ag-matrix-pie')] as any[]
+			test.ok(pies.length > 0, 'Should render gene variant dots as pies')
+			const slices = [...rendered.mainDiv.querySelectorAll('.sjpp-ag-matrix-pie-slice')] as any[]
+			test.ok(slices.length >= pies.length, 'Should render at least one slice in every pie')
+			test.ok(
+				slices.every(slice => slice.getAttribute('d')?.startsWith('M') && slice.getAttribute('fill')),
+				'Should draw every slice as a path with a fill color'
+			)
+			const legend = rendered.mainDiv.querySelector('.sjpp-ag-matrix-pie-legend') as any
+			test.ok(legend?.textContent.includes('Variant class'), 'Should render the variant class legend')
+			const sizes = pies.map(pie => pie.getBoundingClientRect().width / 2)
+			test.ok(
+				sizes.every(radius => radius >= 39 && radius <= 101),
+				'Should draw pies with a radius between the default pie sizes of 40 and 100'
+			)
+		}
+	)
+})
+
 tape('Diagnosis group rows by age columns', function (test) {
 	// A numeric column makes mean available. Dictionary terms expand into their categories and bins.
 	testMatrix(
@@ -344,7 +372,7 @@ tape('Isoform expression rows by diagnosis group columns', function (test) {
 	)
 })
 
-tape.only('Cell type rows by cell type columns', function (test) {
+tape('Cell type rows by cell type columns', function (test) {
 	/* Cell type is the single cell cell type term of TermdbTest. It expands into one entry per cell type.
 	Its terms are cells, so they only combine with other cell type terms, not with sample-level terms such as
 	gene variant. The plot rejects that combination when the app starts, so nothing renders for it. */
