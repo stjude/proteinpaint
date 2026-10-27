@@ -12,6 +12,7 @@ import { get_bin_label } from '#shared/termdb.bins.js'
 import { getAggMatrixTermId, getAggMatrixTermLabel } from '#shared/aggregateMatrix.js'
 import { getData } from '../termdb.matrix.js'
 import { calculateAggregateMethod, calculateSampleBasedMethods } from './aggregateMethods.ts'
+import { PieCounter, mclassScheme } from './pieChartProcessing.ts'
 
 type ValueByRow = Record<string, number | null>
 type RowData = { id: string; label: string; section: string; tw: any; queryId: string }
@@ -132,7 +133,35 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	const numericMatches = new Uint32Array(cellCount)
 	const sums = new Float64Array(cellCount)
 	const cohortCount = Object.keys(response.samples).length
+	/* Pies apply automatically when a gene variant term is on one axis and another kind of term is on the other.
+	 * The gene variant entry supplies the slices; the other entry decides which samples are in the dot. */
+	const isGeneVariant = (source: AxisSource) => source.tw.term.type == GENE_VARIANT
+	const rowGv = rowSources.filter(isGeneVariant)
+	const rowOther = rowSources.filter(s => !isGeneVariant(s))
+	const colGv = columnSources.filter(isGeneVariant)
+	const colOther = columnSources.filter(s => !isGeneVariant(s))
+	const pieCounter =
+		(rowGv.length && colOther.length) || (colGv.length && rowOther.length) ? new PieCounter() : undefined
+	const geneVariantSlices = mclassScheme(mclass)
 	for (const sample of Object.values<any>(response.samples)) {
+		if (pieCounter) {
+			const indexes = (sources: AxisSource[], lookup: Map<string, number>, requireVariant = true) =>
+				new Set(resolveSampleEntryIndexes(sample, sources, lookup, requireVariant))
+			const rowGvIndexes = indexes(rowGv, rowLookup, false)
+			const colGvIndexes = indexes(colGv, columnLookup, false)
+			for (const rowIndex of rowGvIndexes) {
+				for (const columnIndex of indexes(colOther, columnLookup)) {
+					const annotation = sample[rows[rowIndex].source.queryId]
+					pieCounter.add(rowIndex * columns.length + columnIndex, annotation, geneVariantSlices)
+				}
+			}
+			for (const columnIndex of colGvIndexes) {
+				for (const rowIndex of indexes(rowOther, rowLookup)) {
+					const annotation = sample[columns[columnIndex].source.queryId]
+					pieCounter.add(rowIndex * columns.length + columnIndex, annotation, geneVariantSlices)
+				}
+			}
+		}
 		const rowIndexes = new Set(resolveSampleEntryIndexes(sample, rowSources, rowLookup))
 		const columnIndexes = new Set(resolveSampleEntryIndexes(sample, columnSources, columnLookup))
 		if (!columnIndexes.size) continue
@@ -152,6 +181,7 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 		}
 	}
 
+	const pies = pieCounter?.build()
 	let colorMin = Infinity
 	let colorMax = -Infinity
 	let sizeMin = Infinity
@@ -170,13 +200,15 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 				if (sizeValue < sizeMin) sizeMin = sizeValue
 				if (sizeValue > sizeMax) sizeMax = sizeValue
 			}
+			const pie = pies?.get(index)
 			return {
 				rowSection: row.section,
 				row: row.id,
 				colSection: column.section,
 				column: column.id,
 				colorValue,
-				sizeValue
+				sizeValue,
+				...(pie && { pie })
 			}
 		})
 	)
@@ -188,7 +220,8 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 		axesLayout: {
 			rows: makeAxisLayout(rows, 'row'),
 			columns: makeAxisLayout(columns, 'column')
-		}
+		},
+		...(pies && response.sampleType && { sampleType: response.sampleType })
 	}
 }
 
@@ -271,12 +304,17 @@ function makeEntryLookup(entries: ResolvedAxisEntry[]) {
 	return lookup
 }
 
-function resolveSampleEntryIndexes(sample: any, sources: AxisSource[], lookup: Map<string, number>) {
+function resolveSampleEntryIndexes(
+	sample: any,
+	sources: AxisSource[],
+	lookup: Map<string, number>,
+	requireVariant = true
+) {
 	const indexes: number[] = []
 	for (const source of sources) {
 		const annotation = sample[source.queryId]
 		if (!annotation) continue
-		if (source.tw.term.type == GENE_VARIANT && !hasVariant(annotation)) continue
+		if (requireVariant && source.tw.term.type == GENE_VARIANT && !hasVariant(annotation)) continue
 		for (const key of getAnnotationKeys(annotation, source.tw.term)) {
 			const index = lookup.get(`${source.queryId}\0${source.expand ? String(key) : ''}`)
 			if (index !== undefined) indexes.push(index)
