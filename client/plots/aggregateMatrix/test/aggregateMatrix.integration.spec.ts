@@ -1,7 +1,13 @@
 import tape from 'tape'
+import { validateAggMatrixAxes } from '#shared/aggregateMatrix.js'
 import * as helpers from '../../../test/front.helpers.js'
 import { getTermCopy } from '../../../test/testdata/termjson.ts'
-import { getGeneVariantTw, getIsoformExpCollectionFractionTw, getSsgseaTw } from '../../../test/testdata/data.ts'
+import {
+	getGeneVariantTw,
+	getIsoformExpCollectionFractionTw,
+	getScctTw,
+	getSsgseaTw
+} from '../../../test/testdata/data.ts'
 
 /*
 Tests:
@@ -11,6 +17,7 @@ Tests:
 	- Diagnosis group rows by age columns
 	- DNA methylation rows by sex columns
 	- Isoform expression rows by diagnosis group columns
+	- Gene variant rows by cell type columns
  */
 
 /*************************
@@ -324,4 +331,22 @@ tape('Isoform expression rows by diagnosis group columns', function (test) {
 			test.ok(rendered.colLabels.length > 1, 'Should expand diagnosis group into one column per category')
 		}
 	)
+})
+
+tape('Gene variant rows by cell type columns', function (test) {
+	/* Testing only. The aggregate matrix does not accept cell type terms yet. The plot config is rejected
+	when the app starts, so no plot is created and nothing renders. This test documents that, and should
+	become a rendering test, like the others in this file, when cell type terms are supported.
+	The response with pies is tested by server/src/test/aggregateMatrix.request.integration.spec.ts. */
+	const cellType = { ...getScctTw(), q: {} }
+	test.throws(
+		() => validateAggMatrixAxes({ 'Gene variants': [tp53Variant, krasRegionVariant] }, { 'Cell type': [cellType] }),
+		/unsupported term type 'singleCellCellType'/,
+		'Should reject a cell type column until the matrix supports it'
+	)
+	test.doesNotThrow(
+		() => validateAggMatrixAxes({ 'Gene variants': [tp53Variant, krasRegionVariant] }, { Sex: [{ term: sex, q: {} }] }),
+		'Should accept the same gene variant rows with a supported column'
+	)
+	test.end()
 })

@@ -265,6 +265,81 @@ tape('geneVariant terms only match samples with a variant', async test => {
 	test.end()
 })
 
+tape('pies are returned only when a geneVariant term is on an axis', async test => {
+	test.timeoutAfter(60000)
+	/* The pie of a dot counts every sample of the dot that has a value for the geneVariant term, wildtype and
+	not tested samples included, so n is at least the count of samples with a variant (sizeValue) */
+	const checkPies = (res, name: string) => {
+		test.notOk(res.error, `${name}: should not return an error`)
+		const cells = res.data?.flat() || []
+		const withPie = cells.filter(cell => cell.pie)
+		test.ok(withPie.length > 0, `${name}: should return pies`)
+		test.deepEqual(
+			res.sampleType && Object.keys(res.sampleType).includes('plural_name'),
+			true,
+			`${name}: should describe the sample type`
+		)
+		test.equal(
+			Math.max(...withPie.map(cell => cell.pie.radius)),
+			1,
+			`${name}: should give the largest pie a radius of 1`
+		)
+		for (const cell of withPie) {
+			const { n, radius, slices } = cell.pie
+			const label = `${name} ${cell.row}/${cell.column}`
+			test.ok(n >= cell.sizeValue, `${label}: n should include at least the samples with a variant`)
+			test.ok(radius > 0 && radius <= 1, `${label}: radius should be relative to the largest pie`)
+			test.ok(slices.length > 0, `${label}: should have slices`)
+			test.ok(
+				slices.every(s => s.count > 0 && s.key && s.label && typeof s.color == 'string' && s.color.length > 0),
+				`${label}: every slice should have a key, label, color, and count`
+			)
+			test.ok(
+				slices.reduce((sum, s) => sum + s.count, 0) >= n,
+				`${label}: slices should count at least one value for each sample`
+			)
+		}
+		const colorByKey = new Map<string, string>()
+		for (const { pie } of withPie) {
+			for (const s of pie.slices) {
+				const seen = colorByKey.get(s.key)
+				if (seen === undefined) colorByKey.set(s.key, s.color)
+				else test.equal(s.color, seen, `${name}: ${s.key} should have one color in every pie`)
+			}
+		}
+		const order = (pie: any) => pie.slices.map(s => s.key)
+		const first = order(withPie[0].pie)
+		test.ok(
+			withPie.every(({ pie }) => {
+				const keys = order(pie)
+				let at = -1
+				// keys of every pie must appear in the same relative order as in any other pie
+				return keys.every(k => {
+					const i = first.indexOf(k)
+					if (i == -1) return true
+					if (i < at) return false
+					at = i
+					return true
+				})
+			}),
+			`${name}: slices should keep one order in every pie`
+		)
+	}
+
+	const methods = { gradientMethod: 'percent', sizeMethod: 'count' }
+	checkPies(await post({ rows: kinds[4].axis, columns: kinds[0].axis, ...methods }), 'geneVariant rows')
+	checkPies(await post({ rows: kinds[0].axis, columns: kinds[4].axis, ...methods }), 'geneVariant columns')
+
+	const res = await post({ rows: kinds[0].axis, columns: kinds[2].axis, gradientMethod: 'mean', sizeMethod: 'percent' })
+	test.notOk(res.error, 'should not return an error without a geneVariant term')
+	test.notOk(
+		res.data?.flat().some(cell => 'pie' in cell),
+		'should not return pies without a geneVariant term'
+	)
+	test.notOk('sampleType' in res, 'should not describe a sample type without pies')
+	test.end()
+})
+
 tape('dictionary values are labeled by the dataset term', async test => {
 	test.timeoutAfter(30000)
 	// In TermdbTest, sex 1 is Male and 2 is Female
