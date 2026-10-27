@@ -34,6 +34,24 @@ export function expandsToValues(type: string): boolean {
 	return type == SINGLECELL_CELLTYPE || !isNonDictionaryType(type)
 }
 
+/** True when the matrix is drawn as pies: a gene variant term on one axis, and a term of another type on the other.
+ * The gene variant terms give the slices and the other terms decide which samples are in the pie.
+ * Accepts bare terms, as the plot config is read before its terms are wrapped, and does not validate. */
+export function hasPieAxes(rows: any, columns: any): boolean {
+	const types = (axis: any) =>
+		axis && typeof axis == 'object'
+			? Object.values<any>(axis).flatMap(terms =>
+					Array.isArray(terms) ? terms.map(item => item?.term?.type ?? item?.type) : []
+			  )
+			: []
+	const rowTypes = types(rows)
+	const colTypes = types(columns)
+	const hasOther = (list: any[]) => list.some(type => type && type != GENE_VARIANT)
+	return (
+		(rowTypes.includes(GENE_VARIANT) && hasOther(colTypes)) || (colTypes.includes(GENE_VARIANT) && hasOther(rowTypes))
+	)
+}
+
 /** Term types accepted for rows. */
 export const AGG_MATRIX_ROW_TYPES: string[] = AGG_MATRIX_TERM_TYPES
 
