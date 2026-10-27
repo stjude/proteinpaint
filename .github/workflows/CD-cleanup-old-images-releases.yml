@@ -31,7 +31,7 @@ jobs:
           echo "MAX_DELETIONS=$(jq -r '.maxImageDeletionsPerRun' "$CONFIG")" >> "$GITHUB_ENV"
           echo "VERSIONS_TO_RETAIN=$(jq -r '.VersionsToRetain' "$CONFIG")" >> "$GITHUB_ENV"
           echo "PACKAGES=$(jq -c '.packages' "$CONFIG")" >> "$GITHUB_ENV"
-
+          echo "INDEX_PACKAGES=$(jq -c '.IndexPackages' "$CONFIG")" >> "$GITHUB_ENV"
       - name: List release branches
         run: |
           BRANCH_PAGES=$(gh api repos/stjude/proteinpaint/branches --paginate)
@@ -47,7 +47,7 @@ jobs:
 
           for pkg in $(echo "$PACKAGES" | jq -r '.[]'); do #For every package, we pull the image versions and save it in a file under RUNNER_TEMP
             if ! gh api "orgs/stjude/packages/container/${pkg}/versions" --paginate \
-              --jq '[.[] | {package: "'"$pkg"'", id, created_at, tags: .metadata.container.tags}]' > "$RUNNER_TEMP/pkg.raw"; then 
+              --jq '[.[] | {package: "'"$pkg"'", id, created_at, name, tags: .metadata.container.tags}]' > "$RUNNER_TEMP/pkg.raw"; then 
               echo "::warning::package '$pkg' not found or API call failed - skipping"
               continue
             fi
@@ -59,6 +59,35 @@ jobs:
         env:
           GH_TOKEN: ${{secrets.PAT}}
       
+      - name: Build manifest groups
+        # ppclingen, ppfilesync, and proteinpaint%2Fppserver are built via docker/build-push-action with
+        # default provenance attestations, so their tagged versions are OCI image INDEXES referencing
+        # untagged child manifests (platform image + attestation) by digest. Deleting an untagged child
+        # that a kept parent still needs would break that parent, so we record parent/child relationships
+        # here to protect them together in "Reconcile manifest groups" below.
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+        run: |
+          GROUPS_FILE="$RUNNER_TEMP/groups.json"
+          : > "$GROUPS_FILE"
+
+          for pkg in $(echo "$INDEX_PACKAGES" | jq -r '.[]'); do
+            while read -r version; do
+              tag=$(echo "$version" | jq -r '.tags[0]')
+              digest=$(echo "$version" | jq -r '.name')
+
+              BEARER=$(curl -s -u "x:$GH_TOKEN" "https://ghcr.io/token?service=ghcr.io&scope=repository:stjude/${pkg}:pull" | jq -r .token)
+              MANIFEST=$(curl -s -H "Authorization: Bearer $BEARER" -H "Accept: application/vnd.oci.image.index.v1+json" "https://ghcr.io/v2/stjude/${pkg}/manifests/${tag}")
+
+              if echo "$MANIFEST" | jq -e '.mediaType == "application/vnd.oci.image.index.v1+json"' > /dev/null; then
+                CHILDREN=$(echo "$MANIFEST" | jq -c '[.manifests[].digest]')
+                echo "{\"parent\":\"$digest\",\"children\":$CHILDREN}" >> "$GROUPS_FILE"
+              fi
+            done < <(jq -c --arg pkg "$pkg" '.[] | select(.package == $pkg and (.tags | length > 0))' "$IMAGE_VERSIONS_FILE")
+          done
+
+          echo "GROUPS_FILE=$GROUPS_FILE" >> "$GITHUB_ENV"
+          
       - name: Compute images to be retained
         run: |
           PROTECTED_IDS=$(jq -c --argjson n "$VERSIONS_TO_RETAIN" '[group_by(.package)[] | sort_by(.created_at) | reverse | .[0:$n] | .[].id]' "$IMAGE_VERSIONS_FILE")
@@ -68,8 +97,8 @@ jobs:
 
       - name: Filter Packages
         run: |
-          ELIGIBLE_FILE="$RUNNER_TEMP/eligible.json"
-          : > "$ELIGIBLE_FILE"
+          VERDICTS_FILE="$RUNNER_TEMP/verdicts.json"
+          : > "$VERDICTS_FILE"
           NOW=$(date +%s)
 
           while read -r version; do #pulls one json object every iteration from the IMAGE_VERSIONS in the previous step
@@ -104,13 +133,33 @@ jobs:
               [ "$age_days" -lt "$MAX_AGE_DAYS" ] && keep=true #if age<MAX_AGE_DAYS, we keep it
             fi
             
-            if [ "$keep" = false ]; then #If it is still not marked to keep, 
-              echo "$version" >> "$ELIGIBLE_FILE"
-            fi
+            echo "$version" | jq -c --arg k "$keep" '. + {keep: ($k == "true")}' >> "$VERDICTS_FILE"
           done < <(jq -c '.[]' "$IMAGE_VERSIONS_FILE")
 
-          echo "ELIGIBLE_FILE=$ELIGIBLE_FILE" >> "$GITHUB_ENV" #Save images eligible for deletion in GITHUB_ENV
-        
+          # Every version's verdict is recorded here, not just the eligible ones - "Reconcile manifest
+          # groups" needs to see KEPT versions too, to know when a whole parent/child group must be protected.
+          echo "VERDICTS_FILE=$VERDICTS_FILE" >> "$GITHUB_ENV"
+
+      - name: Reconcile manifest groups
+        # If any member of a parent/child group (built above) is independently kept, protect every member
+        # of that group - this stops us from deleting a referenced child under a kept parent, or deleting
+        # a parent while leaving its children as newly-orphaned junk.
+        run: |
+          ELIGIBLE_FILE="$RUNNER_TEMP/eligible.json"
+
+          PROTECTED_DIGESTS=$(jq -n --slurpfile verdicts "$VERDICTS_FILE" --slurpfile groups "$GROUPS_FILE" '
+            ($verdicts | map(select(.keep) | .name)) as $kept_digests
+            | [
+                $groups[]
+                | select(([.parent] + .children) | any(. as $d | $kept_digests | index($d) != null))
+                | ([.parent] + .children)[]
+              ]
+          ')
+
+          jq -c --argjson protected "$PROTECTED_DIGESTS" 'select((.keep | not) and ((.name as $n | $protected | index($n)) == null))' "$VERDICTS_FILE" > "$ELIGIBLE_FILE"
+
+          echo "ELIGIBLE_FILE=$ELIGIBLE_FILE" >> "$GITHUB_ENV"
+
       - name: Throttle and Delete
         env:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
