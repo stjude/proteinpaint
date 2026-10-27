@@ -129,9 +129,9 @@ function getCharts(q, data) {
 		template: templateBar,
 		'=': {
 			idVal(row, _) {
-				const [chartId, chartVal] = idValFxns[q.term0.type](row.data, q.term0, q.term0_q, data, false)
-				const [seriesId, seriesVal] = idValFxns[q.term1.type](row.data, q.term1, q.term1_q, data, true)
-				const [dataId, dataVal] = idValFxns[q.term2.type](row.data, q.term2, q.term2_q, data, true)
+				const [chartId, chartVal] = idValFxns[q.term0.type](row.data, q.term0, q.term0_q, data)
+				const [seriesId, seriesVal] = idValFxns[q.term1.type](row.data, q.term1, q.term1_q, data)
+				const [dataId, dataVal] = idValFxns[q.term2.type](row.data, q.term2, q.term2_q, data)
 				return {
 					chartId,
 					chartVal,
@@ -189,7 +189,7 @@ function getCharts(q, data) {
 					const labels = q.term1_q.orderedLabels
 					result.cols.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
 				}
-				if (q.term2_q.orderedLabels) {
+				if (q.term2.orderedLabels) {
 					const labels = q.term2_q.orderedLabels
 					result.rows.sort((a, b) => labels.indexOf(a) - labels.indexOf(b))
 				}
@@ -235,6 +235,7 @@ function getCharts(q, data) {
 	]
 */
 function getCategoricalIdVal(d, term) {
+	console.log(d, term)
 	const id = 'id' in term ? d[term.id] : '-'
 	const value = 'id' in term && isNumeric(d[term.id]) ? +d[term.id] : 0
 	return [[id], value]
@@ -252,7 +253,7 @@ function getCategoricalIdVal(d, term) {
 		value: the annotation value for this term
 	]
 */
-function getNumericIdVal(d, term, q, rows, useKeys = false) {
+function getNumericIdVal(d, term, q, rows) {
 	if (!('id' in term) || !(term.id in d)) return [[], undefined]
 	if (!q.computed_bins) {
 		const summary: any = {}
@@ -264,47 +265,45 @@ function getNumericIdVal(d, term, q, rows, useKeys = false) {
 		})
 		const percentiles = () => summary
 		q.computed_bins = compute_bins(q, percentiles)
+		q.orderedLabels = q.computed_bins.map(d => d.label)
 	}
-	q.orderedLabels = useKeys
-		? q.computed_bins.map((_, index) => getNumericBinKey(index))
-		: q.computed_bins.map(d => d.label)
 	const v = d[term.id]
 	if (term.values && v in term.values && term.values[v].uncomputable) {
-		return [[useKeys ? String(v) : term.values[v].label], undefined]
+		return [[term.values[v].label], undefined]
 	}
 	// ignore non-numeric values like empty string, ""
 	// which may occur naturally in a csv/tab-delimited input
 	if (isNumeric(d[term.id])) {
-		const binIndex = getNumericBinIndex(+v, q.computed_bins)
-		return [binIndex < 0 ? [] : [useKeys ? getNumericBinKey(binIndex) : q.computed_bins[binIndex].label], v]
+		const ids: unknown[] = []
+		for (const b of q.computed_bins) {
+			if (b.startunbounded) {
+				if (v < b.stop) {
+					ids.push(b.label)
+				} else if (b.stopinclusive && v === b.stop) {
+					ids.push(b.label)
+				}
+			} else if (b.stopunbounded) {
+				// a bin should not be true for both b.startunbounded and b.stopunbounded,
+				// since that is not a finite bin
+				if (v > b.start) {
+					ids.push(b.label)
+				} else if (b.stopinclusive && v === b.start) {
+					ids.push(b.label)
+				}
+			} else if (
+				(v > b.start || (v === b.start && b.startinclusive)) &&
+				(v < b.stop || (v === b.stop && b.stopinclusive))
+			) {
+				ids.push(b.label)
+			}
+			// for numeric terms, may match the sample annotation to at most one chartId, seriesId, or dataId,
+			// so break the loop as soon as a matching id is found for a data row
+			// TODO: may allow exceptions later to have more than 1 matching id???
+			if (ids.length) break
+		}
+		return [ids, v]
 	}
 	return [[], undefined]
-}
-
-export function getNumericBinKey(index: number): string {
-	return `bin:${index}`
-}
-
-export function getNumericBinIndexFromKey(key: string | number, bins: any[] = []): number {
-	const match = /^bin:(\d+)$/.exec(String(key))
-	if (!match) return -1
-	const index = Number(match[1])
-	return index < bins.length ? index : -1
-}
-
-export function getNumericBinIndex(value: number, bins: any[]): number {
-	return bins.findIndex(bin => {
-		if (bin.startunbounded) {
-			return value < bin.stop || (bin.stopinclusive && value === bin.stop)
-		}
-		if (bin.stopunbounded) {
-			return value > bin.start || (bin.stopinclusive && value === bin.start)
-		}
-		return (
-			(value > bin.start || (value === bin.start && bin.startinclusive)) &&
-			(value < bin.stop || (value === bin.stop && bin.stopinclusive))
-		)
-	})
 }
 
 function getUndefinedIdVal() {

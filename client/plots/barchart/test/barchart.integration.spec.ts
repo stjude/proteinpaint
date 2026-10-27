@@ -16,7 +16,6 @@ import { getFilterItemByTag } from '#filter/filter'
 // import * as vocabData from '../../../termdb/test/vocabData'
 import { hideCategory } from '../barchart.events.js'
 import { rebaseGroupFilter } from '../../../mass/groups.js'
-import { getNumericBinKey } from '../barchart.data.ts'
 
 /*
 test sections
@@ -1224,13 +1223,8 @@ tape('series visibility - numeric', function (test) {
 		)
 		test.deepEqual(
 			barOrder.map(d => d.__data__.seriesId),
-			Array.from({ length: 6 }, (_, index) => getNumericBinKey(index)),
-			'should use stable bin keys in the expected order'
-		)
-		test.deepEqual(
-			barOrder.map(d => bar.settings.seriesKeyToLabel[d.__data__.seriesId]),
 			['<5000', '5000 to <10000', '10000 to <15000', '15000 to <20000', '20000 to <25000', '≥25000'],
-			'should render the expected bin labels'
+			'should render the bars in the expected order'
 		)
 	}
 
@@ -1263,7 +1257,7 @@ tape('series visibility - numeric', function (test) {
 	function triggerMenuClickToHide(barchart) {
 		/*const node =*/ barchart.Inner.dom.holder
 			.selectAll('.bars-cell-grp')
-			.filter(d => barchart.Inner.settings.seriesKeyToLabel[d.seriesId] == 'not exposed')
+			.filter(d => d.seriesId == 'not exposed')
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
 		barchart.Inner.app.tip.d
@@ -1754,14 +1748,17 @@ tape('click non-group bar to add filter', function (test) {
 				type: 'tvs',
 				tvs: {
 					term: config.term.term,
-					ranges: [currData.refs.bins[1][Number(String(clickedData.seriesId).slice('bin:'.length))]]
+					ranges: [currData.refs.bins[1].find(d => d.label == clickedData.seriesId)]
 				}
 			},
 			'should create a numeric term-value filter with a ranges key'
 		)
 		// config.term2.q is frozen
 		const q = JSON.parse(JSON.stringify(config.term2.q))
-		const t2ValKey = clickedData.dataId
+		const t2ValKey =
+			config.term2 &&
+			config.term2.term.values &&
+			Object.keys(config.term2.term.values).filter(key => config.term2.term.values[key].label == clickedData.dataId)[0]
 		test.deepEqual(
 			filter.lst[1],
 			{
@@ -1772,7 +1769,10 @@ tape('click non-group bar to add filter', function (test) {
 						values: [
 							{
 								key: t2ValKey !== undefined ? t2ValKey : clickedData.dataId,
-								label: barchart.Inner.settings.dataKeyToLabel[clickedData.dataId] ?? clickedData.dataId
+								label:
+									clickedData.dataId in config.term2.term.values
+										? config.term2.term.values[clickedData.dataId].label
+										: clickedData.dataId
 							}
 						]
 					},

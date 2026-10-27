@@ -25,7 +25,6 @@ import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { rebaseGroupFilter } from '../../mass/groups.js'
 import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
-import { getNumericBinIndexFromKey, getNumericBinKey } from './barchart.data.ts'
 
 export class Barchart extends PlotBase implements RxComponent {
 	static type = 'barchart'
@@ -462,12 +461,11 @@ export class Barchart extends PlotBase implements RxComponent {
 			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts, this.api?.getAbortSignal())
 			if (results.error) throw results
 			const data = results.data
+			this.charts = data.charts
 			this.setSampleType(results.sampleType)
 			this.bins = results.bins
 			if (results.chartid2dtterm) this.chartid2dtterm = results.chartid2dtterm
 			this.app.vocabApi.syncTermData(this.config, data, this.prevConfig)
-			this.normalizeResponseKeys(data)
-			this.charts = data.charts
 			this.currServerData = data
 			if (this.currServerData.refs && this.currServerData.refs.q) {
 				for (const q of this.currServerData.refs.q) {
@@ -505,65 +503,6 @@ export class Barchart extends PlotBase implements RxComponent {
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
 		return opts
-	}
-
-	normalizeResponseKeys(data) {
-		const normalizeKey = (key, termIndex) => {
-			const term = termIndex === 1 ? this.config.term : this.config.term2
-			if (!term || !isNumericTw(term) || key === undefined || key === null) return key
-			const keyString = String(key)
-			const bins = this.bins?.[termIndex] || []
-			if (getNumericBinIndexFromKey(keyString, bins) >= 0) return keyString
-			const binIndex = bins.findIndex(bin => bin.label === keyString)
-			if (binIndex >= 0) return getNumericBinKey(binIndex)
-			const value = Object.entries<any>(term.term.values || {}).find(
-				([, item]) => item.uncomputable && item.label === keyString
-			)
-			return value?.[0] ?? key
-		}
-
-		for (const chart of data.charts || []) {
-			for (const series of chart.serieses || []) {
-				series.seriesId = normalizeKey(series.seriesId, 1)
-				for (const item of series.data || []) {
-					if (this.config.term2) item.dataId = normalizeKey(item.dataId, 2)
-				}
-			}
-			for (const series of chart.dedupedSerieses || []) {
-				series.seriesId = normalizeKey(series.seriesId, 1)
-				for (const item of series.data || []) {
-					if (this.config.term2) item.dataId = normalizeKey(item.dataId, 2)
-				}
-			}
-		}
-
-		for (const chartTests of Object.values<any>(data.tests || {})) {
-			for (const test of chartTests) {
-				test.term1comparison = normalizeKey(test.term1comparison, 1)
-				for (const test2 of test.term2tests || []) {
-					if (this.config.term2) test2.term2id = normalizeKey(test2.term2id, 2)
-				}
-			}
-		}
-
-		const refs = data.refs
-		if (!refs) return
-		if (refs.cols) refs.cols = refs.cols.map(key => normalizeKey(key, 1))
-		if (refs.dedupCols) refs.dedupCols = refs.dedupCols.map(key => normalizeKey(key, 1))
-		if (this.config.term2 && refs.rows) refs.rows = refs.rows.map(key => normalizeKey(key, 2))
-		for (const [key, termIndex] of [
-			['col2name', 1],
-			['row2name', 2]
-		] as const) {
-			if (termIndex === 2 && !this.config.term2) continue
-			if (!refs[key]) continue
-			refs[key] = Object.fromEntries(
-				Object.entries<any>(refs[key]).map(([id, value]) => {
-					const normalizedId = normalizeKey(id, termIndex)
-					return [normalizedId, { ...value, name: normalizeKey(value.name, termIndex) }]
-				})
-			)
-		}
 	}
 
 	async getDescrStats() {
@@ -606,9 +545,6 @@ export class Barchart extends PlotBase implements RxComponent {
 			showStats: config.settings.barchart.showStats,
 			showAssociationTests: config.settings.barchart.showAssociationTests
 		}
-
-		this.settings.seriesKeyToLabel = this.getKeyToLabel(config.term, this.bins?.[1])
-		this.settings.dataKeyToLabel = this.getKeyToLabel(config.term2 || config.term, this.bins?.[config.term2 ? 2 : 1])
 
 		/* mayResetHidden() was added before to prevent showing empty chart due to automatic hiding uncomputable categories
 		this has following problems:
@@ -673,52 +609,32 @@ export class Barchart extends PlotBase implements RxComponent {
 	}
 
 	setExclude(term, term2) {
-		const seriesBins = this.bins?.[1] || []
-		const dataBins = this.bins?.[2] || []
+		// a non-numeric term.id is used directly as seriesId or dataId
 		this.settings.exclude.cols = Object.keys(term.q?.hiddenValues || {})
 			.filter(id => term.q.hiddenValues[id])
-			.map(id => this.getKeyFromLegacyBinLabel(id, seriesBins, term))
+			.map(id => {
+				return term.term.type == 'categorical'
+					? id
+					: this.settings.cols?.includes(id)
+					? id
+					: term.term.values[id]?.label
+					? term.term.values[id].label
+					: id
+			})
+
 		this.settings.exclude.rows = !term2?.q?.hiddenValues
 			? []
 			: Object.keys(term2.q.hiddenValues)
 					.filter(id => term2.q.hiddenValues[id])
-					.map(id => this.getKeyFromLegacyBinLabel(id, dataBins, term2))
-	}
-
-	getKeyToLabel(term, bins: { label: string }[] = []) {
-		const keyToLabel = Object.create(null)
-		for (const [key, value] of Object.entries<any>(term?.term?.values || {})) {
-			keyToLabel[key] = value.label ?? key
-		}
-		for (const [index, bin] of bins.entries()) {
-			keyToLabel[getNumericBinKey(index)] = bin.label
-		}
-		const groups =
-			term?.q?.type == 'custom-groupset'
-				? term.q.customset?.groups
-				: term?.q?.type == 'predefined-groupset'
-				? term.term.groupsetting?.lst?.[term.q.predefined_groupset_idx]?.groups
-				: []
-		for (const group of groups || []) keyToLabel[group.name] = group.name
-		for (const memberTerm of term?.term?.termlst || []) {
-			if (memberTerm.name) keyToLabel[memberTerm.name] = memberTerm.name
-			for (const [key, value] of Object.entries<any>(memberTerm.values || {})) {
-				keyToLabel[key] = value.label ?? key
-			}
-		}
-		return keyToLabel
-	}
-
-	getKeyFromLegacyBinLabel(key, bins: { label: string }[] = [], term) {
-		const binIndex = bins.findIndex(bin => bin.label === key)
-		if (binIndex >= 0) return getNumericBinKey(binIndex)
-		if (isNumericTw(term)) {
-			const value = Object.entries<any>(term.term.values || {}).find(
-				([, item]) => item.uncomputable && item.label === key
-			)
-			if (value) return value[0]
-		}
-		return key
+					.map(id =>
+						term2.term.type == 'categorical'
+							? id
+							: this.settings.rows?.includes(id)
+							? id
+							: term2.term.values[id]?.label
+							? term2.term.values[id].label
+							: id
+					)
 	}
 
 	processData(chartsData) {
@@ -743,16 +659,24 @@ export class Barchart extends PlotBase implements RxComponent {
 						: 1
 		this.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
 
+		const t1 = this.config.term
+		const t2 = this.config.term2
 		const chartsTests = chartsData.tests
 
 		//get term1 and term2 labels
 		for (const chartId in chartsTests) {
 			const chartTests = chartsTests[chartId]
 			for (const t1c of chartTests) {
-				t1c.term1Label = this.settings.seriesKeyToLabel[t1c.term1comparison] ?? t1c.term1comparison
+				const t1label =
+					t1.term.values && t1c.term1comparison in t1.term.values
+						? t1.term.values[t1c.term1comparison].label
+						: t1c.term1comparison
+				t1c.term1Label = t1label
 
 				for (const t2t of t1c.term2tests) {
-					t2t.term2Label = this.settings.dataKeyToLabel[t2t.term2id] ?? t2t.term2id
+					const t2label =
+						t2.term.values && t2t.term2id in t2.term.values ? t2.term.values[t2t.term2id].label : t2t.term2id
+					t2t.term2Label = t2label
 				}
 			}
 		}
@@ -814,7 +738,7 @@ export class Barchart extends PlotBase implements RxComponent {
 			}
 			chart.settings.colLabels = chart.visibleSerieses.map(series => {
 				const id = series.seriesId
-				const label = this.settings.seriesKeyToLabel[id] ?? id
+				const label = t1.term.values && id in t1.term.values ? t1.term.values[id].label : id
 				const ntotal =
 					t2 && t2.term.type == 'condition' && t2.q.value_by_computable_grade ? '' : `, n=${series.visibleTotal}`
 				return {
@@ -905,14 +829,11 @@ export class Barchart extends PlotBase implements RxComponent {
 				if (mt.values && dataId in mt.values) return mt.values[dataId].label
 			}
 		}
-		if (this.settings.dataKeyToLabel[dataId] !== undefined) return this.settings.dataKeyToLabel[dataId]
 		return dataId
 	}
 
 	getColor(chart, t, label, bins) {
 		if (!t.term) return
-		label =
-			(t === this.config.term ? this.settings.seriesKeyToLabel[label] : this.settings.dataKeyToLabel[label]) ?? label
 		if (t.q.type == 'predefined-groupset' || t.q.type == 'custom-groupset') {
 			const groupset =
 				t.q.type == 'predefined-groupset' ? t.term.groupsetting.lst[t.q.predefined_groupset_idx] : t.q.customset
@@ -1034,7 +955,7 @@ export class Barchart extends PlotBase implements RxComponent {
 									return sum + chart.serieses.filter(filter).reduce(reducer, 0)
 							  }, 0)
 					if (!total && !t2?.term?.type) return []
-					const label = this.settings.seriesKeyToLabel[collabel] ?? collabel
+					const label = t1.term.values && collabel in t1.term.values ? t1.term.values[collabel].label : collabel
 					const ntotal = total ? ', n=' + total : ''
 					return [
 						{
