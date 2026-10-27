@@ -9,8 +9,8 @@
 	   directory, the node install, the OS temp dir, and ./serverconfig.json entries, so that
 	   a path traversal bug in a server route cannot read or write files outside of those paths.
 	   Additional paths may be set as colon-separated PP_ALLOW_FS_READ and PP_ALLOW_FS_WRITE values.
-	   Child processes and worker threads are allowed, and WASI is denied, unless PP_ALLOW_CHILD_PROCESS,
-	   PP_ALLOW_WORKER or PP_ALLOW_WASI is set to 'true' or 'false', such as in an image without spawned tools.
+	   Child processes and worker threads are allowed, unless PP_ALLOW_CHILD_PROCESS or PP_ALLOW_WORKER is set
+	   to 'false', such as in an image without spawned tools. WASI is always denied.
 	   With serverconfig.json features.disableFileCache, no path is writable except the PP_ALLOW_FS_WRITE ones.
 
 	2. does not need read access to any credentials file: each <NAME>_CREDS env variable is set
@@ -190,13 +190,10 @@ export function getNodeConfig(ctx) {
 			'allow-fs-read': removeCoveredPaths(read),
 			'allow-fs-write': removeCoveredPaths(write),
 			// needed for tsx, esbuild, rust/python/R and other tools, but these are not restricted by the permission model;
-			// an image without those tools, which runs the rust wasm modules in-process instead, sets PP_ALLOW_CHILD_PROCESS=false,
-			// PP_ALLOW_WORKER=false and PP_ALLOW_WASI=true, see rust/index.js
+			// an image without those tools, which runs the rust wasm modules in-process instead, sets PP_ALLOW_CHILD_PROCESS=false
+			// and PP_ALLOW_WORKER=false; the wasm modules do not use node:wasi, so there is no allow-wasi option, see rust/index.js
 			'allow-child-process': getAllowValue('PP_ALLOW_CHILD_PROCESS', true, ctx),
 			'allow-worker': getAllowValue('PP_ALLOW_WORKER', true, ctx),
-			// the rust wasm modules, which get no preopened dir, since a WASI file access is not restricted by the
-			// permission model
-			'allow-wasi': getAllowValue('PP_ALLOW_WASI', false, ctx),
 			// needed for native modules such as sqlite, which are also not restricted by the permission model
 			'allow-addons': true
 		}
