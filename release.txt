@@ -1,1 +1,2 @@
-
+Features
+- Read bcf files in the server process, instead of with bcftools, which the server no longer requires

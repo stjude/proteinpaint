@@ -1,7 +1,6 @@
 import fs from 'fs'
 import net from 'net'
 import path from 'path'
-import { spawn } from 'child_process'
 import readline from 'readline'
 import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
@@ -27,8 +26,6 @@ export { readTabixLines, readTabixHeader, listTabixChrs }
 // the reads of a bigBed file, see bigbed.ts
 export { readBigbedLines, readBigbedByName, isBigbedFile }
 
-const { bcftools } = serverconfig
-
 /*********************** EXPORTED
 cache_index
 file_is_readable
@@ -42,7 +39,6 @@ write_tmpfile
 read_file
 file_not_exist
 file_not_readable
-get_lines_bigfile
 get_lines_txtfile
 get_header_tabix
 get_header_vcf
@@ -53,7 +49,6 @@ connect_db
 snpgtCacheFile
 snpgtSampleColumn
 bam_ifnochr
-spawnTool
 validateRglst
 ********************** INTERNAL
 */
@@ -86,7 +81,7 @@ export async function cache_index(gzurl, indexurl) {
 	const [e, protocol, body] = test_url(gzurl)
 	if (e) throw '.gz file URL error: ' + e
 	// some routes pass a request url to cache_index() without fileurl(), and the url is then fetched by
-	// spawned tools such as bcftools, so its host is checked here as well
+	// spawned tools such as straw, so its host is checked here as well
 	const gzHostErr = illegalUrlHost(gzurl)
 	if (gzHostErr) throw '.gz file URL error: ' + gzHostErr
 	// build cache directory using gz file url and do not include index portion
@@ -167,7 +162,7 @@ export function fileurl(req, checkWhiteList = true) {
 		if (file.includes('"') || file.includes("'")) return ['url must not contain single or double quotes']
 		// the url is turned into a cache dir path by cache_index()
 		if (file.split('/').includes('..')) return ['url must not contain ".." path segment']
-		// url goes into the argv of a spawned tool, such as bcftools, where a leading '-' would be parsed as an option
+		// url goes into the argv of a spawned tool, such as straw, where a leading '-' would be parsed as an option
 		if (file[0] == '-') return ['url must not start with "-"']
 		// a url is passed to spawned tools, which the node permission model does not restrict, so
 		// a bare local path such as /etc/x.bb would be read from outside tpmasterdir and allow-fs-read
@@ -314,7 +309,7 @@ for (const [ip, prefix] of [
 	  that resolves to a non-public ip address is not detected, so set serverconfig.urlHosts to fully
 	  prevent SSRF.
 	- an index url that is downloaded by download_index() has each redirect destination checked as well.
-	  A url that is fetched by a spawned tool, such as bcftools or straw, may still
+	  A url that is fetched by a spawned tool, such as straw, may still
 	  follow a redirect to a host that is not allowed, since these tools follow redirects internally;
 	  restrict the outbound network access of the server to fully prevent that.
 */
@@ -620,50 +615,6 @@ export async function get_header_vcf(file, dir) {
 }
 
 /*
-.isbcf: true
-	big file is bcf file and will use the "bcftools" command
-
-** isbcf must be true; a bgzip/tabix file is read with readTabixLines(), readTabixHeader(), or listTabixChrs(), and
-** listTabixChrs() also works on bcf files; a bam file is read with readBamRecords() of bamFile.ts
-
-.args: []
-	argument array for spawn, includes file path or url, and coordinate position
-	e.g.
-	- bcftools query
-
-.dir: cache dir for custom file, undefined for native file
-
-.callback(line, ps)
-	function to process the line
-	ps as the second arg so callback may choose to kill the process e.g. too many lines returned
-*/
-export function get_lines_bigfile({ args, callback, dir = null, isbcf = false }) {
-	if (!args) throw 'args is missing'
-	if (!Array.isArray(args)) throw 'args[] is not array'
-	if (args.length == 0) throw 'args[] empty array'
-	if (!callback) throw 'callback is missing'
-	if (typeof callback != 'function') throw 'callback() not a function'
-	// a tabix or bam file is read in process, see tabix.ts and bamFile.ts, which check each argument
-	if (!isbcf) throw 'get_lines_bigfile() is only for bcf files'
-	return new Promise((resolve, reject) => {
-		const ps = spawnTool(bcftools, args, { cwd: dir })
-		const rl = readline.createInterface({ input: ps.stdout })
-		const em = []
-		rl.on('line', line => callback(line, ps))
-		ps.stderr.on('data', d => em.push(d))
-		// e.g. a missing cwd; without a listener, the 'error' event would crash the process
-		ps.on('error', reject)
-		ps.on('close', () => {
-			const e = em.join('').trim()
-			if (e && !tabixnoterror(e)) {
-				reject(e)
-			}
-			resolve()
-		})
-	})
-}
-
-/*
 .args: []
 	file paths, each a full path or relative to dir; the lines of each file are passed to callback(line) in order
 */
@@ -797,10 +748,6 @@ export async function bam_ifnochr(file, genome, dir, withoutIndex) {
 	return common.contigNameNoChr(genome, await listBamChrs(file, dir, withoutIndex))
 }
 
-export function tabixnoterror(s) {
-	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
-}
-
 // get random integer between two values
 // both min and max are inclusive
 // used for creating test data for test scripts
@@ -824,16 +771,6 @@ genome is used for validating chr names. when routes are fixed, genome should be
 
 throws on any err. makes no return. may update q
 */
-// every bcftools spawn goes through here: an argument that starts with "-" and contains ":" is a
-// region built from a request chr (e.g. "-o/path:1-2"), which the tool would parse as an option
-// ponytail: catches region-shaped injection only; request values used as a whole argument must still be validated at the route
-export function spawnTool(bin, args, opts) {
-	for (const a of args) {
-		if (typeof a == 'string' && a[0] == '-' && a.includes(':')) throw 'invalid region argument'
-	}
-	return spawn(bin, args, opts)
-}
-
 // upper limits of a region's pixel width, the sum of the widths and the number of regions, which size
 // arrays and bins on the server; the regions of one request share a screen, so their widths add up to about its width
 const maxRglstWidth = 20000

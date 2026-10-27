@@ -75,7 +75,6 @@ if (process.env.PP_SERVERCONFIG_OVERRIDES) {
 // this default port may be overwritten when using a Docker container
 if (!serverconfig.port) serverconfig.port = process.env.PP_PORT || 3000
 // default binary cmd paths
-if (!serverconfig.bcftools) serverconfig.bcftools = 'bcftools'
 if (!serverconfig.hicstraw) serverconfig.hicstraw = 'straw'
 if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
 if (!serverconfig.gfServer) serverconfig.gfServer = 'gfServer'
@@ -293,7 +292,7 @@ if (serverconfig.debugmode) {
 		loosenCORS: 'would allow any origin to embed this server, bypassing serverconfig.allowedEmbedders[]',
 		// client rewrites the session embedder host/origin, defeating the cross-origin check in app.parseurl.js
 		overrideEmbedderHostInMassSession: 'would let a mass session file be opened from a mismatched embedder',
-		// skips the launch-time bcftools/R library validation
+		// skips the launch-time R library validation
 		skip_checkDependenciesAndVersions: 'prod must verify its dependencies at launch',
 		// writes request/response fixtures under publicDir, and is already gated on debugmode at runtime
 		cacheTestData: 'only writes test fixtures for the local test runner',
@@ -358,7 +357,7 @@ if (process.env.PP_MODE?.startsWith('container')) {
 		tpmasterdir: '/home/root/pp/tp',
 		cachedir: '/home/root/pp/cache',
 		hicstraw: '/home/root/pp/tools/straw'
-		// note that bcftools and similar binaries are
+		// note that Rscript and similar binaries are
 		// saved in the usual */bin/ paths so locating them
 		// is not needed when calling via Node child_process.spawn() or exec()
 	})

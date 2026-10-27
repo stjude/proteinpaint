@@ -35,7 +35,8 @@ import { server_init_db_queries, setSupportedChartTypes, findLoneTermByType } fr
 import { barchart_data } from './termdb.barchart.js'
 import { mayInitiateScatterplots } from '#routes/termdb.sampleScatter.ts'
 import { mayInitiateMatrixplots, mayInitiateNumericDictionaryTermplots } from './termdb.matrix.js'
-import { add_bcf_variant_filter } from './termdb.snp.js'
+import { getBcfInfoFilter } from './termdb.snp.js'
+import { readBcfRecords } from './bcf.ts'
 import { validate_correlationVolcano } from './routes/correlationVolcano.ts'
 import { validate_query_singleCell } from './singleCell/samplesRoute.ts'
 import { initAggregateMethods } from './aggregateMatrix/aggregateMethods.ts'
@@ -1095,42 +1096,26 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 		utils.validateRglst(param, genome)
 		const formatFilter = getFormatFilter(param)
 
-		let bcfpath = q._tk.file
-		const bcfArgs = [
-			'query',
-			bcfpath,
-			'-r',
-			// plus 1 to start, as rglst pos is 0-based, and bcf is 1-based
-			param.rglst
-				.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop)
-				.join(','),
-			'-f',
-			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\n'
-		]
-
 		const limitSamples = await mayLimitSamples(param, q._tk.samples, ds)
 		if (limitSamples && limitSamples.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
 			return []
 		}
-		if (param.variantFilter) {
-			add_bcf_variant_filter(param.variantFilter, bcfArgs)
-		}
 
 		const variantsNoSample = []
 
-		await utils.get_lines_bigfile({
-			isbcf: true,
-			args: bcfArgs,
+		await readBcfRecords({
+			file: q._tk.file,
 			dir: q._tk.dir,
-			callback: line => {
-				const l = line.split('\t')
-				const id = l[0],
-					chr = l[1],
-					pos = Number(l[2]),
-					refallele = l[3],
-					altalleles = l[4].split(','),
-					infoStr = l[5]
+			regions: bcfRegions(param.rglst, q._tk),
+			infoFilter: param.variantFilter ? getBcfInfoFilter(param.variantFilter) : undefined,
+			callback: record => {
+				const id = record.id,
+					chr = record.chr,
+					pos = record.pos,
+					refallele = record.ref,
+					altalleles = record.alts,
+					infoStr = record.info()
 				const m0 = { pos: pos - 1 } // temp obj, modified by compute_mclass()
 				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
 				// m0.mlst[] is set; each ele is an m{} per ALT
@@ -1143,7 +1128,7 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 					if (mayDropMbyInfoFilter(m, param)) continue // m is dropped due to info filter
 
 					/* m0.mlst.length>1 has multiple alt alleles
-					even if just one allele passes info filter, bcftools still returns the whole line
+					even if just one allele passes info filter, the bcf read still returns the whole record
 					thus must do this manual filter
 					*/
 					if (m0.mlst.length > 1 && mayDropMbyInfoFilter_2(m, param)) continue // remove param.variantFilter?.lst
@@ -1308,7 +1293,6 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	if (q._tk.format) {
 		for (const id in q._tk.format) {
 			if (id == 'GT') {
-				// may not need with bcftools
 				q._tk.format[id].isGT = true
 			}
 		}
@@ -1394,18 +1378,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 			bcfpath = q._tk.file || q._tk.url
 		}
 
-		const bcfArgs = [
-			'query',
-			bcfpath,
-			'-r',
-			// plus 1 to start, as rglst pos is 0-based, and bcf is 1-based
-			param.rglst
-				.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop)
-				.join(','),
-			'-f',
-			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\t%FORMAT\n'
-		]
-
+		let samples
 		const limitSamples = await mayLimitSamples(param, q._tk.samples, ds)
 		if (limitSamples) {
 			// is a valid set, parameter asks to filter samples
@@ -1415,32 +1388,29 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 				return []
 			}
 
-			const l = []
+			samples = []
 			for (const s of limitSamples) {
-				l.push(ds.cohort.termdb.q.id2sampleName(s))
+				samples.push(ds.cohort.termdb.q.id2sampleName(s))
 			}
-			bcfArgs.push('-s', l.join(','))
-		}
-
-		if (param.variantFilter) {
-			add_bcf_variant_filter(param.variantFilter, bcfArgs)
 		}
 
 		const variants = []
 
-		await utils.get_lines_bigfile({
-			isbcf: true,
-			args: bcfArgs,
+		await readBcfRecords({
+			file: bcfpath,
 			dir: q._tk.dir,
-			callback: line => {
-				const l = line.split('\t')
-				const id = l[0],
-					chr = l[1],
-					pos = Number(l[2]),
-					refallele = l[3],
-					altalleles = l[4].split(','),
-					infoStr = l[5]
-				// [6] is format fields, [7 and on] for samples
+			regions: bcfRegions(param.rglst, q._tk),
+			samples,
+			infoFilter: param.variantFilter ? getBcfInfoFilter(param.variantFilter) : undefined,
+			callback: record => {
+				const id = record.id,
+					chr = record.chr,
+					pos = record.pos,
+					refallele = record.ref,
+					altalleles = record.alts,
+					infoStr = record.info()
+				// the fields of the record, as bcftools query printed them with %FORMAT: [6] is format fields, [7 and on] for samples
+				let l
 
 				const m0 = { pos: pos - 1 } // temp obj, modified by compute_mclass()
 				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
@@ -1454,7 +1424,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 					if (mayDropMbyInfoFilter(m, param)) continue // m is dropped due to info filter
 
 					/* m0.mlst.length>1 has multiple alt alleles
-					even if just one allele passes info filter, bcftools still returns the whole line
+					even if just one allele passes info filter, the bcf read still returns the whole record
 					thus must do this manual filter
 					*/
 					if (m0.mlst.length > 1 && param.variantFilter?.lst && mayDropMbyInfoFilter_2(m, param)) continue
@@ -1466,6 +1436,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 					if (q._tk?.samples?.length) {
 						// vcf file has sample, must find out samples harboring this variant
 						// exclude samples using optional format filters
+						l ??= [id, chr, String(pos), refallele, altalleles.join(','), infoStr, ...record.format()]
 						addSamplesFromBcfLine(q, m, l, param.addFormatValues, ds, limitSamples, formatFilter)
 						if (!m.samples) {
 							// no sample found for this variant, when vcf has samples
@@ -1481,6 +1452,11 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		})
 		return variants
 	}
+}
+
+// the regions of a bcf read, where the 0-based rglst start is plus 1, as a bcf region is 1-based
+function bcfRegions(rglst, tk) {
+	return rglst.map(r => ({ chr: tk.nochr ? r.chr.replace('chr', '') : r.chr, start: r.start + 1, stop: r.stop }))
 }
 
 /*
@@ -1617,7 +1593,7 @@ function addSamplesFromBcfLine(q, m, l, addFormatValues, ds, limitSamples, forma
 	if (limitSamples) {
 		// header samples to point to this
 		// Not a bug! when sample filter is not applied, l[] contains whole vcf line going by the order of _tk.samples[]
-		// if filtering, "bcftools -s" returns only those samples in given order in l[]
+		// if filtering, the bcf read returns only those samples in given order in l[]
 		headerSamples = [...limitSamples].map(i => {
 			return { name: i }
 		})
