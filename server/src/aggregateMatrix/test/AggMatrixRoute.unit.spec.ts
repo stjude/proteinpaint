@@ -4,6 +4,7 @@ import { validTermdbAggregateMatrixRequest } from '../AggMatrixRoute.ts'
 /* test sections
 	- Should validate standard data requests
 	- Should validate available method requests
+	- Should validate cell type terms
 */
 
 const tw = (type: string, id = type) => ({ term: { id, name: id, type }, q: {} })
@@ -81,6 +82,61 @@ tape('Should validate available method requests', test => {
 	test.ok(
 		/unsupported term type/.test(message({ ...request, columns: { A: [tw('survival')] } })!),
 		'should reject unsupported column term types'
+	)
+	test.end()
+})
+
+tape('Should validate cell type terms', test => {
+	const cellType = tw('singleCellCellType', 'CellType')
+	const cellTypes = { 'Cell type': [cellType] }
+	test.equal(
+		message({ ...base, rows: cellTypes, columns: { 'Other cell type': [tw('singleCellCellType', 'Other')] } }),
+		undefined,
+		'should accept cell type terms on both axes, as they are all cells'
+	)
+	for (const [name, input] of [
+		['gene variant rows and cell type columns', { ...base, columns: cellTypes }],
+		['cell type rows and categorical columns', { ...base, rows: cellTypes }],
+		[
+			'cell type rows and gene expression columns',
+			{ ...base, rows: cellTypes, columns: { G: [tw('geneExpression', 'TP53')] } }
+		],
+		[
+			'cell type and gene variant sections in one axis',
+			{ ...base, rows: { ...cellTypes, ...base.rows }, columns: { Cells: [tw('singleCellCellType', 'Other')] } }
+		],
+		[
+			'cell type rows and pseudobulk columns',
+			{ ...base, rows: cellTypes, columns: { P: [{ term: { type: 'pseudobulk', id: 'B' }, q: {} }] } }
+		]
+	] as const) {
+		const error = message(input)!
+		test.ok(
+			/singleCellCellType terms are cells and cannot be combined with sample-level terms/.test(error),
+			`should reject ${name}: ${error}`
+		)
+	}
+	test.ok(
+		/geneVariant/.test(message({ ...base, columns: cellTypes })!),
+		'should name the sample-level term types in the error'
+	)
+	test.ok(
+		/cell type section 'A' must contain one term/.test(
+			message({ ...base, rows: cellTypes, columns: { A: [cellType, tw('singleCellCellType', 'Other')] } })!
+		),
+		'should allow one cell type term per section'
+	)
+	test.ok(
+		/without an identifier/.test(
+			message({ ...base, rows: cellTypes, columns: { A: [{ term: { type: 'singleCellCellType' }, q: {} }] } })!
+		),
+		'should require an identifier'
+	)
+	test.ok(
+		/must contain one term type/.test(
+			message({ ...base, rows: cellTypes, columns: { A: [cellType, tw('categorical', 'sex')] } })!
+		),
+		'should not mix cell type terms with other term types in a section'
 	)
 	test.end()
 })

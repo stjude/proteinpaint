@@ -1,4 +1,5 @@
 import type { AggMatrixPie } from '#types'
+import { GENE_VARIANT } from '#types'
 import { getColors } from '#shared/common.js'
 
 /** The most slices one pie may have. The smallest classes beyond this are folded into one "other" slice. */
@@ -13,6 +14,8 @@ export type SliceDef = { key: string; label: string; color: string }
 /** Decides which slices a term's annotation falls into, and how each slice looks.
  * The server is the only place that decides labels and colors, so the client needs nothing but the response. */
 export interface SliceScheme {
+	/** Term type of the slices, so the client knows what the keys mean. Absent when not known. */
+	termType?: string
 	/** The slice key of each value of an annotation. A sample with several values contributes every one of them. */
 	keysOf(annotation: any): string[]
 	/** Ordered definitions of the observed keys. Called once per chart, after every key is known, so a
@@ -30,6 +33,7 @@ export function mclassScheme(mclass: MclassLookup): SliceScheme {
 	const order = ['WT', ...keys.filter(k => k != 'WT')].filter(k => Object.hasOwn(mclass, k))
 	const known = new Set(order)
 	return {
+		termType: GENE_VARIANT,
 		keysOf(annotation) {
 			if (!Array.isArray(annotation?.values)) return []
 			const found: string[] = []
@@ -131,7 +135,8 @@ export class PieCounter {
 				else slices.push({ key: def.key, label: def.label, color: def.color, count })
 			}
 			if (other) slices.push({ key: OTHER_KEY, label: OTHER_LABEL, color: OTHER_COLOR, count: other })
-			pies.set(index, { n, radius: maxN > 0 ? Math.sqrt(n / maxN) : 0, slices })
+			const radius = maxN > 0 ? Math.sqrt(n / maxN) : 0
+			pies.set(index, { n, radius, slices, ...(scheme.termType && { termType: scheme.termType }) })
 		}
 		return pies
 	}

@@ -9,7 +9,7 @@ import { GENE_VARIANT, PSEUDOBULK } from '#types'
 import { mclass } from '#shared/common.js'
 import { isDictionaryType, isNumericTerm } from '#shared/terms.js'
 import { get_bin_label } from '#shared/termdb.bins.js'
-import { getAggMatrixTermId, getAggMatrixTermLabel } from '#shared/aggregateMatrix.js'
+import { expandsToValues, getAggMatrixTermId, getAggMatrixTermLabel } from '#shared/aggregateMatrix.js'
 import { getData } from '../termdb.matrix.js'
 import { calculateAggregateMethod, calculateSampleBasedMethods } from './aggregateMethods.ts'
 import { PieCounter, mclassScheme } from './pieChartProcessing.ts'
@@ -243,7 +243,7 @@ function makeAxisSources(axis: Record<string, any[]>, prefix: string): AxisSourc
 				section,
 				tw,
 				queryId: `agg_${prefix}_${sources.length}`,
-				expand: isDictionaryType(tw.term.type)
+				expand: expandsToValues(tw.term.type)
 			})
 		}
 	}
