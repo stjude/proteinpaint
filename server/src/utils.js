@@ -13,7 +13,7 @@ import pm from 'picomatch'
 import { readFastaRegion } from './fasta.ts'
 import { readTabixLines, readTabixHeader, listTabixChrs } from './tabix.ts'
 import { listBamChrs } from './bamFile.ts'
-import { readBigbedLines, readBigbedByName, isBigbedFile } from './bigbed.ts'
+import { readBigbedLines, readBigbedByteSize, readBigbedByName, isBigbedFile } from './bigbed.ts'
 import { parseJsonParam } from './routes/common.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
@@ -24,7 +24,7 @@ export { connect_db } from './sql.ts'
 // the reads of a bgzipped, tabix-indexed file, see tabix.ts
 export { readTabixLines, readTabixHeader, listTabixChrs }
 // the reads of a bigBed file, see bigbed.ts
-export { readBigbedLines, readBigbedByName, isBigbedFile }
+export { readBigbedLines, readBigbedByteSize, readBigbedByName, isBigbedFile }
 
 /*********************** EXPORTED
 cache_index
