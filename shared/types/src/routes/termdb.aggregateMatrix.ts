@@ -49,7 +49,8 @@ export type AggMatrixDot = {
 export type AggMatrixPieSlice = {
 	/** Category, bin, or variant class (mclass key) of this slice */
 	key: string
-	/** Decided by the server so the client needs no further lookup */
+	/** Decided by the server so the client needs no further lookup. For a gene variant class these are the
+	 * default mclass values; the client may remap them from `key` with its mclassOverride. */
 	label: string
 	color: string
 	/** Number of values in this slice. A sample with several values counts once per value. */
