@@ -352,6 +352,16 @@ tape('sunburst', function (test) {
 		new Set(['plot']),
 		'should filter plot terms by sample_type, not child_sample_types'
 	)
+	test.deepEqual(
+		isUsableTerm({ isleaf: false, child_types: ['float'], child_sample_types: [2] }, limited),
+		new Set(['branch']),
+		'should allow a branch when both child type and sample type are included'
+	)
+	test.deepEqual(
+		isUsableTerm({ isleaf: false, child_types: ['float'], child_sample_types: [3] }, limited),
+		new Set(),
+		'should reject a branch when its child sample types are not included'
+	)
 	test.end()
 })
 
