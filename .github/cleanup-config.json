@@ -4,5 +4,6 @@
     "maxReleaseDeletionsPerRun":1,
     "VersionsToRetain":5,
     "ReleasesToRetain":5,
-    "packages":["ppfull","ppserver","rust","ppbase","pp-irt","proteinpaint%2Fppserver","ppgdc","blat","ppclingen","ppfilesync"]
+    "packages":["ppfull","ppserver","rust","ppbase","pp-irt","proteinpaint%2Fppserver","ppgdc","blat","ppclingen","ppfilesync"],
+    "IndexPackages":["proteinpaint%2Fppserver","ppclingen","ppfilesync"]
 }
