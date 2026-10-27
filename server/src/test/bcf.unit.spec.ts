@@ -162,11 +162,15 @@ tape('the samples of a read', async test => {
 })
 
 tape('a file whose records span bgzf blocks and reads', async test => {
-	const bytes = readWindow.bytes
+	const { bytes, decodedBytes } = readWindow
 	try {
-		for (const windowBytes of [bytes, 1]) {
+		for (const [windowBytes, windowDecodedBytes, label] of [
+			[bytes, decodedBytes, ''],
+			[1, decodedBytes, ', with a read of the fewest blocks'],
+			[bytes, 1, ', with one block taken from each read']
+		] as const) {
 			readWindow.bytes = windowBytes
-			const label = windowBytes == 1 ? ', with a read of one block at a time' : ''
+			readWindow.decodedBytes = windowDecodedBytes
 			const lines = await read(blocks_bcf, [{ chr: 'chr1', start: 1, stop: 1000000 }], tgtLine)
 			test.equal(lines.length, 400, 'should read all records' + label)
 			test.equal(sha1(lines), '2700ecced85f18e50a9be7e870742d83547342a4', 'should read the records as bcftools' + label) // pragma: allowlist secret
@@ -186,6 +190,7 @@ tape('a file whose records span bgzf blocks and reads', async test => {
 		}
 	} finally {
 		readWindow.bytes = bytes
+		readWindow.decodedBytes = decodedBytes
 	}
 	const region = [{ chr: 'chr1', start: 1, stop: 1000000 }]
 	test.equal(

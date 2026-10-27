@@ -62,9 +62,10 @@ type OpenBcf = { header: BcfHeader; csi: CSI; handles: GenericFilehandle[] }
 const maxRegions = 1000
 const maxOpenFiles = 100
 const bcfIndex: IndexKind = { name: 'bcf', localPaths: f => [f + '.csi'], exts: ['.csi'] }
-/** the compressed bytes of a read of the chunk of a region, which is decompressed and decoded before the next read;
- * a test may change it */
-export const readWindow = { bytes: 2 ** 20 }
+/** the compressed bytes of a read of the chunk of a region, which is decompressed and decoded before the next read,
+ * and the decompressed bytes of the blocks that are taken from a read, since a block of the same byte repeated, such
+ * as of a genotype that most samples have, is about 100 bytes; a test may change them */
+export const readWindow = { bytes: 2 ** 20, decodedBytes: 2 ** 24 }
 /** the upper limit of the compressed and of the decompressed bytes of a bgzf block */
 const maxBgzfBlockBytes = 2 ** 16
 /** a virtual offset as a number, the block position times 2**16 plus the data position, is exact for a file of up to
@@ -278,6 +279,8 @@ async function scanChunk(
 		let length = carry.length
 		let off = 0
 		while (inChunk()) {
+			// the next read starts at a block that is not taken, and a record of the blocks that are is carried to it
+			if (blocks.length && length >= readWindow.decodedBytes) break
 			const size = blockSize(win, off)
 			if (size > win.length - off) break
 			let data = gunzipSync(win.subarray(off, off + size), { maxOutputLength: maxBgzfBlockBytes })
@@ -626,8 +629,9 @@ function readInt(buf: Buffer, off: number, type: number): number {
 
 /** the string of n chars at buf[off], up to a NUL, as htslib prints it */
 function charString(buf: Buffer, off: number, n: number): string {
-	let end = buf.indexOf(0, off)
-	if (end < 0 || end > off + n) end = off + n
+	// a value that is as long as the longest of its field has no NUL, so that the search is of its n chars only
+	let end = off
+	while (end < off + n && buf[end] !== 0) end++
 	return buf.toString('utf8', off, end)
 }
 
