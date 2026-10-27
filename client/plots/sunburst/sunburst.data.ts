@@ -86,7 +86,7 @@ export function selectionName(paths: TermSunNode[][], maxLen = 60): string {
  *  the deepest of their sample types (its ancestors, itself and its descendants), since no value maps
  *  between sibling types such as primary and PDX samples. Undefined (any type) when the dataset has one
  *  sample type or no other ring is below the top level. `sampleTypes` is termdbConfig.sampleTypes */
-export function allowedSampleTypes(otherTwLst: any[], sampleTypes?: { [id: string]: any }): string[] | undefined {
+export function allowedSampleTypes(otherTwLst: any[], sampleTypes?: { [id: string]: any }): number[] | undefined {
 	if (!sampleTypes || Object.keys(sampleTypes).length < 2) return
 	const parent = (t: string) => {
 		const p = sampleTypes[t]?.parent_id
@@ -105,5 +105,5 @@ export function allowedSampleTypes(otherTwLst: any[], sampleTypes?: { [id: strin
 	if (!below.length) return
 	const deepest = below.reduce((a, b) => (ancestors(b).length > ancestors(a).length ? b : a))
 	const descendants = Object.keys(sampleTypes).filter(t => ancestors(t).includes(deepest))
-	return [...ancestors(deepest), deepest, ...descendants]
+	return [...ancestors(deepest), deepest, ...descendants].map(Number)
 }

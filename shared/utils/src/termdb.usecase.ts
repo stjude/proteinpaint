@@ -314,11 +314,15 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 				/* term to mark the linked points by (e.g. CSF dots): only terms and branches of the point
 				samples' types (usecase.sampleTypes, from ds.queries.swimmer.pointSampleTypes). one marker has
 				one color, so multivalue is excluded; survival has no categories */
-				const types: string[] = usecase.sampleTypes || []
-				if (term.sample_type == null || !types.includes(String(term.sample_type))) return uses
 				const excluded = ['survival', 'multivalue']
-				if (graphableTypes.has(term.type) && !excluded.includes(term.type)) uses.add('plot')
-				if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
+				if (
+					graphableTypes.has(term.type) &&
+					!excluded.includes(term.type) &&
+					hasSampleType(term.sample_type, usecase.sampleTypes)
+				)
+					uses.add('plot')
+				if (hasAllowedChildTypes(child_types, excluded) && hasChildTypes(term.child_sample_types, usecase.sampleTypes))
+					uses.add('branch')
 				return uses
 			}
 			/* divide-by (term0). multivalue is allowed: a lane is drawn in each
@@ -335,10 +339,9 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 			usecase.sampleTypes, when given, limits the terms to those sample types (the rings' line of
 			descent, e.g. patient and primary sample): no value maps between sibling sample types */
 			const allowed = ['categorical', 'integer', 'float']
-			const types: string[] | undefined = usecase.sampleTypes
-			if (types && term.sample_type != null && !types.includes(String(term.sample_type))) return uses
-			if (allowed.includes(term.type)) uses.add('plot')
-			if (hasChildTypes(child_types, allowed)) uses.add('branch')
+			if (allowed.includes(term.type) && hasSampleType(term.sample_type, usecase.sampleTypes)) uses.add('plot')
+			if (hasChildTypes(child_types, allowed) && hasChildTypes(term.child_sample_types, usecase.sampleTypes))
+				uses.add('branch')
 			return uses
 		}
 
@@ -380,10 +383,22 @@ function hasNumericChild(child_types: string[]) {
 	return child_types.includes('float') || child_types.includes('integer')
 }
 
+// determine if term has at least one child type that is expected
 function hasChildTypes(child_types: string[], expected_types: string[]) {
-	for (const a of expected_types) {
-		if (child_types.includes(a)) return true
+	if (!child_types?.length) {
+		// term does not have child types
+		return false
 	}
+	if (!expected_types?.length) {
+		// no expected types
+		return true
+	}
+	return child_types.some(type => expected_types.includes(type))
+}
+
+function hasSampleType(sample_type: any, allowed: number[]) {
+	if (!allowed?.length) return true
+	return allowed.includes(Number(sample_type))
 }
 
 // every group of a samplelst term lists its samples in term.values[].list[]

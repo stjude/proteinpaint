@@ -168,12 +168,12 @@ tape('allowedSampleTypes()', test => {
 	test.equal(allowedSampleTypes([tw(2)], { 2: { name: 'sample' } }), undefined, 'Should not limit with one sample type')
 	test.equal(allowedSampleTypes([], sampleTypes), undefined, 'Should not limit with no other ring')
 	test.equal(allowedSampleTypes([tw(1), tw()], sampleTypes), undefined, 'Should not limit with patient rings only')
-	test.deepEqual(allowedSampleTypes([tw(1), tw(3)], sampleTypes), ['1', '3'], 'Should offer patient and PDX terms')
+	test.deepEqual(allowedSampleTypes([tw(1), tw(3)], sampleTypes), [1, 3], 'Should offer patient and PDX terms')
 	test.deepEqual(
 		allowedSampleTypes([tw(2)], sampleTypes),
-		['1', '2', '5'],
+		[1, 2, 5],
 		'Should offer the line of descent through primary samples'
 	)
-	test.deepEqual(allowedSampleTypes([tw(2), tw(5)], sampleTypes), ['2', '1', '5'], 'Should follow the deepest ring')
+	test.deepEqual(allowedSampleTypes([tw(2), tw(5)], sampleTypes), [2, 1, 5], 'Should follow the deepest ring')
 	test.end()
 })
