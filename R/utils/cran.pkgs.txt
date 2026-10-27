@@ -2,11 +2,11 @@ BiocManager
 cmprsk
 doParallel
 dplyr
-ggplot2
 jsonlite
 lmtest
 matrixStats
 ragg
-readr
 survival
 tidyr
+Matrix
+stringr
