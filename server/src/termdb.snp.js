@@ -1,13 +1,7 @@
-import fs from 'fs'
-import path from 'path'
 import * as utils from './utils.js'
 import * as termdbsql from './termdb.sql.js'
-import readline from 'readline'
-import serverconfig from './serverconfig.js'
 import { compute_mclass } from './vcf.mclass.js'
-
-// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
-const cachedir = serverconfig.cachedir
+import { readBcfRecords } from './bcf.ts'
 
 /*
 cache file has a header line, with one line per valid snp. columns: 
@@ -34,8 +28,6 @@ validateInputCreateCache_by_snptext
 validateInputCreateCache_by_coord
 */
 
-const bcfformat_snplst = '%CHROM\t%POS\t%REF\t%ALT[\t%TGT]\n'
-const bcfformat_snplocus = '%POS\t%ID\t%REF\t%ALT\t%INFO[\t%TGT]\n'
 const missing_gt = './.'
 const snplocusMaxVariantCount = 1000
 // upper limit of the lines of the snplst text, the same as the variants of a snplocus term
@@ -286,9 +278,8 @@ async function queryBcf(q, snps, ds) {
 	// do not filter on samples. write all samples to cache file
 	// (unless the number of samples is too high for that to become a problem)
 
-	// collect coordinates and bcf file paths that will be queried
-	const bcfs = new Set()
-	const coords = []
+	// collect the coordinates of each bcf file that will be queried
+	const file2regions = new Map()
 	for (const snp of snps) {
 		if (snp.invalid) continue
 
@@ -300,56 +291,45 @@ async function queryBcf(q, snps, ds) {
 			bcffile = tk.file || tk.url
 		}
 
-		bcfs.add(bcffile)
+		if (!file2regions.has(bcffile)) file2regions.set(bcffile, [])
 		const chr = tk.nochr ? snp.chr.replace('chr', '') : snp.chr
 		const pos = snp.pos + 1 // 0-based
-		const coord = chr + '\t' + pos
-		coords.push(coord)
+		file2regions.get(bcffile).push({ chr, start: pos, stop: pos })
 	}
 
-	// write coordinates, and bcf file paths to temp files for bcf query
-	const coordsfile = path.join(cachedir, await utils.write_tmpfile(coords.join('\n')))
-	const bcffiles = path.join(cachedir, await utils.write_tmpfile([...bcfs].join('\n')))
-
 	// query bcf files for snp coordinates and sample genotypes
-	await utils.get_lines_bigfile({
-		isbcf: true,
-		args: ['query', '-R', coordsfile, '-f', bcfformat_snplst, '-v', bcffiles],
-		dir: tk.dir,
-		callback: line => {
-			// chr, pos, ref, alt, '0/0', '0/0', '0/1', '1/1', ...
-			const l = line.split('\t')
-			const chr = (tk.nochr ? 'chr' : '') + l[0]
-			const pos = l[1]
-			const ref = l[2]
-			const alts = l[3].split(',')
+	for (const [file, regions] of file2regions) {
+		await readBcfRecords({
+			file,
+			dir: tk.dir,
+			regions,
+			callback: record => {
+				const chr = (tk.nochr ? 'chr' : '') + record.chr
+				const pos = record.pos
+				const ref = record.ref
+				const alts = record.alts
 
-			// find matching query snp
-			const snp = snps.find(snp => {
-				if (
-					snp.chr == chr &&
-					snp.pos === pos - 1 &&
-					snp.dbsnpRef == ref &&
-					snp.dbsnpAlts.some(allele => alts.includes(allele))
-				) {
-					return snp
-				}
-			})
-			if (!snp) return
+				// find matching query snp
+				const snp = snps.find(snp => {
+					if (
+						snp.chr == chr &&
+						snp.pos === pos - 1 &&
+						snp.dbsnpRef == ref &&
+						snp.dbsnpAlts.some(allele => alts.includes(allele))
+					) {
+						return snp
+					}
+				})
+				if (!snp) return
 
-			snp.referenceAllele = ref
-			snp.altAlleles = alts
+				snp.referenceAllele = ref
+				snp.altAlleles = alts
 
-			// determine sample genotypes
-			snp.gtlst = [] // same order as tk.samples
-			for (let i = 4; i < l.length; i++) {
-				snp.gtlst.push(l[i] == missing_gt ? '' : l[i])
+				// determine sample genotypes, '0/0', '0/1', '1/1', ...
+				snp.gtlst = record.tgt().map(gt => (gt == missing_gt ? '' : gt)) // same order as tk.samples
 			}
-		}
-	})
-
-	fs.unlink(coordsfile, () => {})
-	fs.unlink(bcffiles, () => {})
+		})
+	}
 
 	// write snp data to cache file
 	const lines = ['snpid\tchr\tpos\tref\talt\teff\t' + tk.samples.map(i => i.name).join('\t')]
@@ -397,12 +377,7 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 	}
 	if (!file) throw 'no bcf file'
 
-	const coord = (tk.nochr ? q.chr.replace('chr', '') : q.chr) + ':' + start + '-' + stop
-
-	const bcfargs = ['query', file, '-r', coord, '-f', bcfformat_snplocus]
-	if (q.variant_filter) {
-		add_bcf_variant_filter(q.variant_filter, bcfargs)
-	}
+	const region = { chr: tk.nochr ? q.chr.replace('chr', '') : q.chr, start, stop }
 
 	// result obj to return to client
 	const result = {
@@ -410,22 +385,22 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 	}
 
 	const lines = ['snpid\tchr\tpos\tref\talt\teff\t' + tk.samples.map(i => i.name).join('\t')]
-	await utils.get_lines_bigfile({
-		isbcf: true,
-		args: bcfargs,
+	await readBcfRecords({
+		file,
 		dir: tk.dir,
-		callback: (line, ps) => {
+		regions: [region],
+		infoFilter: q.variant_filter ? getBcfInfoFilter(q.variant_filter) : undefined,
+		callback: (record, stop) => {
 			if (result.snps.length >= snplocusMaxVariantCount) {
-				ps.kill()
+				stop()
 				result.reachedVariantLimit = true
 				return
 			}
 
-			const l = line.split('\t')
-			const pos = Number(l[0]) - 1 // vcf pos is 1-based, change to 0-based for pp use
-			const vcfId = l[1]
-			const refAllele = l[2]
-			const altAlleles = l[3].split(',')
+			const pos = record.pos - 1 // vcf pos is 1-based, change to 0-based for pp use
+			const vcfId = record.id
+			const refAllele = record.ref
+			const altAlleles = record.alts
 
 			// if valid vcf ID is avaialble, use it since it should be snp rsid
 			const snpid = vcfId && vcfId != '.' ? vcfId : pos + '.' + refAllele + '.' + altAlleles.join(',')
@@ -440,8 +415,8 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 				refAllele,
 				altAlleles,
 				variant,
-				l[4], // vcf INFO column
-				l[1] // vcf ID column
+				record.info(), // vcf INFO column
+				vcfId // vcf ID column
 			)
 
 			// !! quick fix !!
@@ -460,8 +435,8 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 				altAlleles.join(','),
 				'' // snplocus file does not have eff ale
 			]
-			for (let i = 5; i < l.length; i++) {
-				lst.push(l[i] == missing_gt ? '' : l[i])
+			for (const gt of record.tgt()) {
+				lst.push(gt == missing_gt ? '' : gt)
 			}
 			lines.push(lst.join('\t'))
 		}
@@ -476,30 +451,32 @@ export function makeCacheid(ds) {
 	return utils.snpgtCacheidPrefix(ds) + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
 }
 
-export function add_bcf_variant_filter(variant_filter, bcfargs) {
-	// on bcf expression https://samtools.github.io/bcftools/bcftools.html#expressions
+/*
+returns the conditions of a bcf read for the INFO fields of a variant filter, which a variant must all meet; a value
+of a categorical field is a number if it is numeric, as a bcftools expression compared it
+*/
+export function getBcfInfoFilter(variant_filter) {
 	const lst = []
 	// assumes variant_filter.type == 'tvslst'
 	for (const i of variant_filter.lst) {
 		if (i.tvs.values) {
-			const operator = i.tvs.isnot ? '!=' : '='
+			const op = i.tvs.isnot ? '!=' : '='
 			for (const v of i.tvs.values) {
-				const value = isNaN(v.key) ? `"${v.key}"` : Number(v.key)
-				lst.push(`INFO/${i.tvs.term.id}${operator}${value}`)
+				const value = isNaN(v.key) ? String(v.key) : Number(v.key)
+				lst.push({ key: i.tvs.term.id, op, value })
 			}
 		} else if (i.tvs.ranges) {
 			for (const range of i.tvs.ranges) {
 				if ('start' in range) {
-					lst.push(`INFO/${i.tvs.term.id} ${range.startinclusive ? '>=' : '>'} ${range.start}`)
+					lst.push({ key: i.tvs.term.id, op: range.startinclusive ? '>=' : '>', value: Number(range.start) })
 				}
 				if ('stop' in range) {
-					lst.push(`INFO/${i.tvs.term.id} ${range.stopinclusive ? '<=' : '<'} ${range.stop}`)
+					lst.push({ key: i.tvs.term.id, op: range.stopinclusive ? '<=' : '<', value: Number(range.stop) })
 				}
 			}
 		} else {
 			throw `unknown tvs spec for info_field: type=${i.type}, term.id=${i.tvs.term.id}`
 		}
 	}
-	if (lst.length == 0) return
-	bcfargs.push('-i', lst.join(' && '))
+	return lst
 }

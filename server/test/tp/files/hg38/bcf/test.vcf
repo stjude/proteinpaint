@@ -1,0 +1,23 @@
+##fileformat=VCFv4.2
+##contig=<ID=chr1,length=100000>
+##contig=<ID=chr2,length=100000>
+##FILTER=<ID=LowQual,Description="low quality">
+##INFO=<ID=AF,Number=A,Type=Float,Description="allele frequency">
+##INFO=<ID=CR,Number=1,Type=Float,Description="call rate">
+##INFO=<ID=AC,Number=A,Type=Integer,Description="allele count">
+##INFO=<ID=AN,Number=1,Type=Integer,Description="allele number">
+##INFO=<ID=QC,Number=A,Type=String,Description="qc of each allele">
+##INFO=<ID=NOTE,Number=1,Type=String,Description="note">
+##INFO=<ID=FLAG,Number=0,Type=Flag,Description="flag">
+##INFO=<ID=X,Number=.,Type=Float,Description="floats">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="genotype">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="depth">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="allele depths">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	s1	s2	s3	s4	s5	s6	s7	s8	s9	s10	s11	s12	s13	s14	s15	s16	s17
+chr1	100	rs1	A	G	.	PASS	AF=0.5;CR=1;AC=8;AN=34;QC=Good;FLAG	GT:DP:AD	0/0:10:10,0	0/1:12:6,6	1/1:9:0,9	./.:.:.	0|1:7:3,4	1:5:0,5	0/0:10:10,0	0/0:10:10,0	0/0:10:10,0	0/0:10:10,0	0/0:10:10,0	0/0:10:10,0	0/0:10:10,0	0/0:10:10,0	0/0:300:150,150	0/0:70000:35000,35000	1|0:8:4,4
+chr1	150	.	AT	A,ATT	.	.	AF=0.0001234,6.97e-05;CR=0.98;AC=1,.;AN=34;QC=Bad,.;NOTE=a note longer than fifteen chars	GT	0/1	0/2	1/2	./.	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	2|2	.|1
+chr1	200	.	GATCCCAGCACTTTGGGAGG	G	.	LowQual	AF=0.104617;AC=1;QC=Good	GT	0/1	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0
+chr1	210	rs2	C	T	.	.	AF=.;CR=.;AC=.;AN=.;QC=.	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0
+chr1	300	.	T	C	.	.	AF=0.0099999999;AC=300;AN=70000;X=0.104617,6.6072e-06,999999.4,999999.6,1234565,1234575,100000.5,1e-05,123.456789,0.1,2.5,-0.5,-0,3e+38,1.5e-10,0.00015,0.00009999999	GT	0/1	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0
+chr2	50	.	G	A	.	.	.	GT	0/0	./.	./.	./.	./.	./.	./.	./.	./.	./.	./.	./.	./.	./.	./.	./.	./.
+chr2	60	rs3	G	.	.	.	NOTE=ref only	GT	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0	0/0

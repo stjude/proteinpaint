@@ -331,15 +331,15 @@ tape('serverconfig: a polluted Object.prototype is not read as a top-level setti
 })
 
 tape('serverconfig: the prototype is removed before any setting is read or defaulted', async test => {
-	// bcftools is defaulted by serverconfig.js when not set, and is the executable path for spawned bcftools processes
-	Object.prototype.bcftools = '/zz-polluted'
+	// Rscript is defaulted by serverconfig.js when not set, and is the executable path for spawned Rscript processes
+	Object.prototype.Rscript = '/zz-polluted'
 	try {
 		const { default: config } = await import('../serverconfig.js?pollution=before-import')
 		test.equal(Object.getPrototypeOf(config), null, 'should have a null prototype')
-		test.equal(Object.hasOwn(config, 'bcftools'), true, 'should apply the default instead of using an inherited value')
-		test.notEqual(config.bcftools, '/zz-polluted', 'should not use the polluted bcftools')
+		test.equal(Object.hasOwn(config, 'Rscript'), true, 'should apply the default instead of using an inherited value')
+		test.notEqual(config.Rscript, '/zz-polluted', 'should not use the polluted Rscript')
 	} finally {
-		delete Object.prototype.bcftools
+		delete Object.prototype.Rscript
 	}
 	test.end()
 })

@@ -250,8 +250,7 @@ const otherOps: Record<string, { input: Record<string, unknown>; argv: string[];
 		argv: ['--vanilla', '-e', 'load(commandArgs(trailingOnly = TRUE)[1])', path.join(tp, 'files/a.RData')],
 		bad: { file: ["a'); system('ls'); ('", '/etc/passwd', path.join(tp, '../a.RData'), '-o'] }
 	},
-	vm_stat: { input: {}, argv: [], bad: {} },
-	'bcftools.version': { input: {}, argv: ['-v'], bad: {} }
+	vm_stat: { input: {}, argv: [], bad: {} }
 }
 
 tape('other ops: argv of valid inputs, and rejected values', test => {

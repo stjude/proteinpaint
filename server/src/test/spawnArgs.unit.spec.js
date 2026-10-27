@@ -11,8 +11,8 @@ import { getTestRoutes } from './testRoutes.js'
 import { init as onesampletkInit } from '../j2/onesampletk.ts'
 
 /*
-Specs for the request values that are passed as arguments to bcftools and other tools, or to the reads of
-tabix and bam files, which are in process, see tabix.ts and bamFile.ts.
+Specs for the request values that are passed as arguments to tools, or to the reads of tabix, bcf, and bam
+files, which are in process, see tabix.ts, bcf.ts, and bamFile.ts.
 
 The server starts these tools with spawn() and an argument array, so each request value reaches a tool
 as one literal argument. The test values below have special characters, such as $(...), backticks, ";",
@@ -120,7 +120,7 @@ function getGenome(genomefile = 'NA') {
 
 const rglst = () => [{ chr: 'chr1', start: 1, stop: 100, width: 100, x: 0 }]
 
-// routes that read the url and indexURL of a bam, tabix, or bigBed file, or pass them to bcftools
+// routes that read the url and indexURL of a bam, tabix, bcf, or bigBed file
 const urlRoutes = [
 	{ route: '/tkbam', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL, rglst: rglst() }) },
 	{ route: '/tabixheader', query: (url, indexURL) => ({ genome: 'hg38', url, indexURL }) },

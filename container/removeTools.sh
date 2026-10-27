@@ -59,6 +59,5 @@ bash -c true
 node -v
 python3 -c 'import ssl, numpy'
 Rscript -e 'stopifnot(capabilities("libcurl"))'
-bcftools --version | head -1
 h5dump --version
 perl -e 1

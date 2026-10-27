@@ -8,7 +8,6 @@ import { specs as h5dumpSpecs } from './h5dump.ts'
 import { specs as hicstrawSpecs } from './hicstraw.ts'
 import { specs as rscriptSpecs } from './rscript.ts'
 import { specs as systemSpecs } from './system.ts'
-import { specs as versionSpecs } from './versions.ts'
 
 /*
 Starts an external tool from a named operation and its input fields, instead of from an argv array.
@@ -76,7 +75,7 @@ const fileRoots: Readonly<Record<FileRoot, () => string>> = Object.freeze({
 })
 
 export const specs: Readonly<Record<string, ToolSpec>> = deepFreeze(
-	mergeSpecs([gfClientSpecs, h5dumpSpecs, hicstrawSpecs, rscriptSpecs, systemSpecs, versionSpecs])
+	mergeSpecs([gfClientSpecs, h5dumpSpecs, hicstrawSpecs, rscriptSpecs, systemSpecs])
 )
 /*
 The patterns that the string fields are checked with: a copy of each spec pattern, made when the specs are checked
