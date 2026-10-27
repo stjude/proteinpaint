@@ -10,10 +10,11 @@ Input data is streamed into the standard input of the rust binary.
 Standard output of the rust binary is returned.
 
 When the node permission model does not allow a child process, such as in an image without the rust binaries, a binary
-that has a wasm32-wasip1 module, see wasm/Cargo.toml, is run in this process with node:wasi instead, which requires
-the --allow-wasi permission. The module gets the input as its stdin and no preopened dir, so it has no other file
-system access, its stdin, stdout and stderr are in memory, so no file is written, no network, no env vars, and cannot start a process. A module runs synchronously, and blocks the event
-loop until it exits.
+that has a wasm32-wasip1 module, see wasm/Cargo.toml, is run in this process instead. It is instantiated with only
+the WASI functions in wasiImports(), not node:wasi, so that no --allow-wasi permission is needed: its stdin, stdout
+and stderr are in memory, and it has no other file, no env vars, no args, no network, and cannot start a process. A
+module that imports any other function does not instantiate. A module runs synchronously, and blocks the event loop
+until it exits.
 */
 
 // Import necessary modules
@@ -131,8 +132,7 @@ function getOutput(binfile, code, stdout, stderr, stdinError) {
 const wasmModules = new Map()
 
 // runs the wasm module of a binary in this process, with its stdin, stdout and stderr in memory, so that no file is
-// written, such as when the node permission model allows no write path; node:wasi only takes file descriptors for
-// these, so the fd_read and fd_write imports of fds 0, 1 and 2 are replaced instead
+// written, such as when the node permission model allows no write path
 async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	if (signal?.aborted) throw new Error(`run_rust('${binfile}'): aborted before start`)
 	if (typeof binfile != 'string' || !binaryName.test(binfile)) throw `invalid rust binary name`
@@ -153,33 +153,25 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 		wasmModules.set(binfile, compiled)
 	}
 	// the module is ready before a stream input is read, so that a failed setup does not leave the input being read
-	const [wasmModule, { WASI }] = await Promise.all([
-		wasmModules.get(binfile),
-		// imported only when used, since the import logs an experimental feature warning
-		import('node:wasi')
-	])
+	const wasmModule = await wasmModules.get(binfile)
 	if (signal?.aborted) throw new Error(`run_rust('${binfile}'): aborted`)
 	const input = await readInput(input_data, signal, binfile)
 	// a long input may still arrive after an abort
 	if (signal?.aborted) throw new Error(`run_rust('${binfile}'): aborted`)
 
-	// no preopens and no env
-	const wasi = new WASI({ version: 'preview1', args: [binfile, ...args], env: {}, returnOnExit: true })
 	const stdio = { stdin: Buffer.isBuffer(input) ? input : Buffer.from(input), offset: 0, stdout: [], stderr: [] }
-	const imports = wasi.getImportObject()
 	let memory
-	imports.wasi_snapshot_preview1 = {
-		...imports.wasi_snapshot_preview1,
-		...stdioImports(imports.wasi_snapshot_preview1, stdio, () => memory)
-	}
-	const instance = await WebAssembly.instantiate(wasmModule, imports)
+	// a module that imports any other function fails to instantiate, with a LinkError
+	const instance = await WebAssembly.instantiate(wasmModule, {
+		wasi_snapshot_preview1: wasiImports(stdio, () => memory)
+	})
 	memory = instance.exports.memory
-	let code
+	let code = 0
 	try {
-		code = wasi.start(instance)
+		instance.exports._start()
 	} catch (e) {
 		// a rust panic is a wasm trap, which throws instead of an exit code; the panic message is in stderr
-		code = `${e.message || e}`
+		code = e instanceof WasiExit ? e.code : `${e.message || e}`
 	}
 	return getOutput(
 		binfile,
@@ -189,28 +181,35 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	)
 }
 
+// thrown by proc_exit, to stop the module with its exit code
+class WasiExit {
+	constructor(code) {
+		this.code = code
+	}
+}
+
 const WASI_ESUCCESS = 0
 const WASI_EBADF = 8
+const WASI_ESPIPE = 70
 
-// the fd_read import reads fd 0 from stdio.stdin, and the fd_write import appends fds 1 and 2 to stdio.stdout and
-// stdio.stderr; an iovec is a {buf: u32 pointer, buf_len: u32} pair in the module memory, and the byte count is
-// written at the u32 pointer of the last argument. Other fds use the node:wasi imports, which find no open file
-// without a preopened dir.
-function stdioImports(wasiImports, stdio, getMemory) {
+// The WASI preview1 functions that the modules use: fd 0 is read from stdio.stdin, fds 1 and 2 are appended to
+// stdio.stdout and stdio.stderr, and there is no other fd and no env variable. An iovec is a {buf: u32 pointer,
+// buf_len: u32} pair in the module memory, and a result, such as a byte count, is written at the pointer of the last
+// argument.
+function wasiImports(stdio, getMemory) {
+	const view = () => new DataView(getMemory().buffer)
 	const iovecs = (iovs, iovsLen) => {
-		const view = new DataView(getMemory().buffer)
 		const lst = []
 		for (let i = 0; i < iovsLen; i++) {
 			const p = iovs + i * 8
-			lst.push(new Uint8Array(getMemory().buffer, view.getUint32(p, true), view.getUint32(p + 4, true)))
+			lst.push(new Uint8Array(getMemory().buffer, view().getUint32(p, true), view().getUint32(p + 4, true)))
 		}
 		return lst
 	}
-	const setCount = (ptr, n) => new DataView(getMemory().buffer).setUint32(ptr, n, true)
+	const isStdio = fd => fd === 0 || fd === 1 || fd === 2
 	return {
 		fd_read(fd, iovs, iovsLen, nreadPtr) {
-			if (fd > 2) return wasiImports.fd_read(fd, iovs, iovsLen, nreadPtr)
-			if (fd != 0) return WASI_EBADF
+			if (fd !== 0) return WASI_EBADF
 			let n = 0
 			for (const buf of iovecs(iovs, iovsLen)) {
 				const chunk = stdio.stdin.subarray(stdio.offset, stdio.offset + buf.length)
@@ -219,20 +218,38 @@ function stdioImports(wasiImports, stdio, getMemory) {
 				n += chunk.length
 				if (chunk.length < buf.length) break
 			}
-			setCount(nreadPtr, n)
+			view().setUint32(nreadPtr, n, true)
 			return WASI_ESUCCESS
 		},
 		fd_write(fd, iovs, iovsLen, nwrittenPtr) {
-			if (fd > 2) return wasiImports.fd_write(fd, iovs, iovsLen, nwrittenPtr)
-			if (fd == 0) return WASI_EBADF
+			if (fd !== 1 && fd !== 2) return WASI_EBADF
 			let n = 0
 			for (const buf of iovecs(iovs, iovsLen)) {
 				// a copy, since the module may reuse its buffer
 				;(fd == 1 ? stdio.stdout : stdio.stderr).push(Buffer.from(buf))
 				n += buf.length
 			}
-			setCount(nwrittenPtr, n)
+			view().setUint32(nwrittenPtr, n, true)
 			return WASI_ESUCCESS
+		},
+		// a 24-byte fdstat: filetype unknown, no flags, and only the read or write right
+		fd_fdstat_get(fd, statPtr) {
+			if (!isStdio(fd)) return WASI_EBADF
+			new Uint8Array(getMemory().buffer, statPtr, 24).fill(0)
+			// the fd_read right is bit 1, and the fd_write right is bit 6
+			view().setBigUint64(statPtr + 8, fd === 0 ? 1n << 1n : 1n << 6n, true)
+			return WASI_ESUCCESS
+		},
+		fd_seek: fd => (isStdio(fd) ? WASI_ESPIPE : WASI_EBADF),
+		fd_close: fd => (isStdio(fd) ? WASI_ESUCCESS : WASI_EBADF),
+		environ_sizes_get(countPtr, sizePtr) {
+			view().setUint32(countPtr, 0, true)
+			view().setUint32(sizePtr, 0, true)
+			return WASI_ESUCCESS
+		},
+		environ_get: () => WASI_ESUCCESS,
+		proc_exit(code) {
+			throw new WasiExit(code)
 		}
 	}
 }

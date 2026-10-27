@@ -241,26 +241,27 @@ test('router: the permission flags or config file flag are inserted where node o
 	}
 })
 
-test('the child process, worker and wasi permissions default to allowed, allowed and denied, and may be set from env or .env', () => {
+test('the child process and worker permissions default to allowed, may be set from env or .env, and wasi is always denied', () => {
 	const opts = (env, files = {}) => getNodeConfig(fakeContext({ env, files })).nodeOptions
 	const allows = o => [o['allow-child-process'], o['allow-worker'], o['allow-wasi']]
-	assert.deepEqual(allows(opts({})), [true, true, false])
+	assert.deepEqual(allows(opts({})), [true, true, undefined])
+	// there is no env variable to allow wasi
 	assert.deepEqual(allows(opts({ PP_ALLOW_CHILD_PROCESS: 'false', PP_ALLOW_WORKER: 'false', PP_ALLOW_WASI: 'true' })), [
 		false,
 		false,
-		true
+		undefined
 	])
-	assert.deepEqual(allows(opts({}, { '/app/.env': 'PP_ALLOW_CHILD_PROCESS=false' })), [false, true, false])
+	assert.deepEqual(allows(opts({}, { '/app/.env': 'PP_ALLOW_CHILD_PROCESS=false' })), [false, true, undefined])
 	// an explicitly empty env variable is the default, not the .env value
 	assert.deepEqual(allows(opts({ PP_ALLOW_CHILD_PROCESS: '' }, { '/app/.env': 'PP_ALLOW_CHILD_PROCESS=false' })), [
 		true,
 		true,
-		false
+		undefined
 	])
 	// a denied permission has no flag
 	const flags = permissionFlags({ nodeOptions: opts({ PP_ALLOW_CHILD_PROCESS: 'false', PP_ALLOW_WASI: 'true' }) })
-	assert.ok(!flags.includes('--allow-child-process'))
-	assert.ok(flags.includes('--allow-wasi') && flags.includes('--allow-worker'))
+	assert.ok(!flags.includes('--allow-child-process') && !flags.includes('--allow-wasi'))
+	assert.ok(flags.includes('--allow-worker'))
 	// an unknown value, such as a typo, must not silently allow the permission
 	for (const value of ['0', 'no', 'False'])
 		assert.throws(

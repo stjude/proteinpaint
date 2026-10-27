@@ -13,7 +13,7 @@ const wasmDir = path.join(rustDir, 'target/wasm/wasm32-wasip1/release')
 const hasModules = ['fisher', 'wilcoxon'].every(n => fs.existsSync(path.join(wasmDir, n + '.wasm')))
 
 // runs the checks code in a node process without the child process permission; returns its exit status and output
-function runChecks(checks, permissionFlags = ['--allow-wasi']) {
+function runChecks(checks, permissionFlags = []) {
 	const tmpdir = fs.realpathSync(os.tmpdir())
 	const code = `
 		import assert from 'node:assert/strict'
@@ -85,7 +85,7 @@ tape(
 			const input = [{ index: 0, n1: 605, n2: 2050, n3: 503, n4: 1895 }]
 			const out = JSON.parse(await run_rust('${name}', JSON.stringify({ input })))
 			assert.deepEqual(out.map(r => r.p_value), [0.12552895565046274])`,
-				['--allow-wasi', `--allow-fs-write=${wasmDir}`]
+				[`--allow-fs-write=${wasmDir}`]
 			)
 			test.equal(result.status, 0, result.stderr)
 			test.ok(result.stdout.includes('checks passed'), 'the checks ran')
@@ -96,11 +96,34 @@ tape(
 	}
 )
 
-tape('a wasm module requires the --allow-wasi permission', { skip: !hasModules }, test => {
-	const result = runChecks(
-		`await assert.rejects(run_rust('fisher', '{"input":[]}'), { code: 'ERR_ACCESS_DENIED' })`,
-		[]
-	)
+tape('each wasm module instantiates without the --allow-wasi permission', { skip: !hasModules }, test => {
+	const names = fs
+		.readdirSync(wasmDir)
+		.filter(f => f.endsWith('.wasm'))
+		.map(f => f.slice(0, -5))
+	// a module that instantiated runs, and handles or rejects the invalid input, instead of rejecting with a LinkError
+	const result = runChecks(`
+		for (const name of ${JSON.stringify(names)})
+			await run_rust(name, 'x').catch(e => assert.ok(!(e instanceof WebAssembly.LinkError), name + ': ' + e))`)
 	test.equal(result.status, 0, result.stderr)
+	test.ok(result.stdout.includes('checks passed'), 'the checks ran')
+	test.end()
+})
+
+tape('a wasm module that imports another WASI function does not instantiate', { skip: !hasModules }, test => {
+	const name = 'pp_test_other_import'
+	const modpath = path.join(wasmDir, name + '.wasm')
+	// a module whose only import is wasi_snapshot_preview1.path_open, as a function with no params and no results
+	const str = s => [s.length, ...Buffer.from(s)]
+	const imp = [1, ...str('wasi_snapshot_preview1'), ...str('path_open'), 0, 0]
+	const bytes = [0, 0x61, 0x73, 0x6d, 1, 0, 0, 0, 1, 4, 1, 0x60, 0, 0, 2, imp.length, ...imp]
+	fs.writeFileSync(modpath, Buffer.from(bytes))
+	try {
+		const result = runChecks(`await assert.rejects(run_rust('${name}', '{}'), WebAssembly.LinkError)`)
+		test.equal(result.status, 0, result.stderr)
+		test.ok(result.stdout.includes('checks passed'), 'the checks ran')
+	} finally {
+		fs.rmSync(modpath, { force: true })
+	}
 	test.end()
 })

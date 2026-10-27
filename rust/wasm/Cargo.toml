@@ -13,8 +13,9 @@
 # The macOS ar writes an archive index that the wasm linker cannot read, so a module would import the C functions,
 # such as pwilcox, instead of including them, and fail to instantiate: use llvm-ar, such as from `brew install llvm`.
 # The modules are in ../target/wasm, see .cargo/config.toml. run_rust() in ../index.js runs a module in the node
-# process, with node:wasi, when the node permission model does not allow a child process. A module must only use
-# stdin, stdout and stderr: it gets no preopened dir, since a WASI file access is not checked by the permission model.
+# process when the node permission model does not allow a child process. A module must only use stdin, stdout and
+# stderr, and no args or env variable: run_rust() gives it only those WASI functions, see wasiImports(), and a module
+# that imports another one, such as to open a file, does not instantiate.
 [package]
 name = "PP_rust_wasm"
 version = "0.1.0"
