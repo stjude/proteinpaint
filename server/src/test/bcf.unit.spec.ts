@@ -169,7 +169,7 @@ tape('a file whose records span bgzf blocks and reads', async test => {
 			const label = windowBytes == 1 ? ', with a read of one block at a time' : ''
 			const lines = await read(blocks_bcf, [{ chr: 'chr1', start: 1, stop: 1000000 }], tgtLine)
 			test.equal(lines.length, 400, 'should read all records' + label)
-			test.equal(sha1(lines), '2700ecced85f18e50a9be7e870742d83547342a4', 'should read the records as bcftools' + label)
+			test.equal(sha1(lines), '2700ecced85f18e50a9be7e870742d83547342a4', 'should read the records as bcftools' + label) // pragma: allowlist secret
 			const regions = [
 				{ chr: 'chr1', start: 12345, stop: 12345 },
 				{ chr: 'chr1', start: 1000, stop: 1100 },
@@ -177,10 +177,10 @@ tape('a file whose records span bgzf blocks and reads', async test => {
 			]
 			const some = await read(blocks_bcf, regions, tgtLine)
 			test.equal(some.length, 64, 'should read the records of regions' + label)
-			test.equal(sha1(some), 'e9d90e748d66a95303ba7d4bf22cf51b00bce4c5', 'should read the regions as bcftools' + label)
+			test.equal(sha1(some), 'e9d90e748d66a95303ba7d4bf22cf51b00bce4c5', 'should read the regions as bcftools' + label) // pragma: allowlist secret
 			test.equal(
 				sha1(await read(blocks_bcf, [{ chr: 'chr1', start: 5000, stop: 6000 }], tgtLine)),
-				'0dd24301076e10e70f1b2bcea3b24a65ddc140c6',
+				'0dd24301076e10e70f1b2bcea3b24a65ddc140c6', // pragma: allowlist secret
 				'should read a region inside the file' + label
 			)
 		}
@@ -190,12 +190,12 @@ tape('a file whose records span bgzf blocks and reads', async test => {
 	const region = [{ chr: 'chr1', start: 1, stop: 1000000 }]
 	test.equal(
 		sha1(await read(blocks_bcf, region, formatLine)),
-		'eac8dd821d2412c94b75c76ac1bf990129e19abf',
+		'eac8dd821d2412c94b75c76ac1bf990129e19abf', // pragma: allowlist secret
 		'should give the FORMAT fields of 600 samples, of a GT of int8 and a DP of int16'
 	)
 	test.equal(
 		sha1(await read(blocks_bcf, region, formatLine, { samples: ['S599', 'S0', 'S300'] })),
-		'af2828790ef51355e427c2c108a704384dcaa127',
+		'af2828790ef51355e427c2c108a704384dcaa127', // pragma: allowlist secret
 		'should give the FORMAT fields of samples'
 	)
 	test.end()
