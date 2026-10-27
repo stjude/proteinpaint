@@ -15,6 +15,7 @@ import { isNumericTw } from '#shared/terms.js'
 import { isFractionTw, getFractionTvsTerm } from '#shared/termCollection.js'
 import { negateTermLabel } from './barchart'
 import { getGroupFilterEntry, getGvGroupFilterEntry, getGroupFilterOfConditions, addNewGroup } from '#mass/groups'
+import { getNumericBinIndex, getNumericBinIndexFromKey, getNumericBinKey } from './barchart.data.ts'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -40,18 +41,20 @@ export default function getHandlers(self) {
 				percent = parseFloat(percent.toFixed(1))
 				const t1 = self.config.term.term
 				const t2 = self.config.term2 && self.config.term2.term
-				// const term1unit = t1.unit
-				const seriesLabel =
-					(t1.values && d.seriesId in t1.values ? t1.values[d.seriesId].label : d.seriesId) +
-					(t1.unit ? ' ' + t1.unit : '')
+				const seriesKeyLabel = self.settings.seriesKeyToLabel[d.seriesId] ?? d.seriesId
+				const seriesUncomputable =
+					t1.values && Object.values<any>(t1.values).some(v => v.label === seriesKeyLabel && v.uncomputable)
+				const seriesLabel = seriesKeyLabel + (t1.unit && !seriesUncomputable ? ' ' + t1.unit : '')
 				let dataLabel
 				if (t2) {
-					dataLabel =
-						(t2.values && d.dataId in t2.values ? t2.values[d.dataId].label : d.dataId) + (t2.unit ? ' ' + t2.unit : '')
+					const dataKeyLabel = self.settings.dataKeyToLabel[d.dataId] ?? d.dataId
+					const dataUncomputable =
+						t2.values && Object.values<any>(t2.values).some(v => v.label === dataKeyLabel && v.uncomputable)
+					dataLabel = dataKeyLabel + (t2.unit && !dataUncomputable ? ' ' + t2.unit : '')
 				} else if (self.hasMultiCategoryKeys) {
 					dataLabel = self.getCategoryKeyLabel(self.config.term, null, d.dataId)
 				} else {
-					dataLabel = d.dataId
+					dataLabel = self.settings.dataKeyToLabel[d.dataId] ?? d.dataId
 				}
 				const icon = !hasOverlay ? '' : swatchHtml(d.color)
 				const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${escapeHtml(seriesLabel)}</td></tr>`]
@@ -94,7 +97,7 @@ export default function getHandlers(self) {
 						// when term2 has only 2 visible categories, Col2 would be the other category instead of "not Col1"
 						const visibleTerm2CatsKeys = self.settings.rows.filter(row => !self.settings.exclude.rows.includes(row))
 						const visibleTerm2Labels = visibleTerm2CatsKeys
-							.map(catK => self.config.term2?.term?.values?.[catK]?.label)
+							.map(catK => self.settings.dataKeyToLabel[catK])
 							.filter(x => x != undefined)
 						if (visibleTerm2Labels?.length == 2)
 							negateTerm2Label = visibleTerm2Labels[0] == term2Label ? visibleTerm2Labels[1] : visibleTerm2Labels[0]
@@ -158,11 +161,7 @@ export default function getHandlers(self) {
 		},
 		barLabel: {
 			text: d => {
-				return 'label' in d
-					? d.label
-					: self.config.term.values && 'id' in d && d.id in self.config.term.values
-					? self.config.term.values[d.id].label
-					: d
+				return 'label' in d ? d.label : 'id' in d ? self.settings.seriesKeyToLabel[d.id] ?? d.id : d
 			},
 			click: self.opts.bar_click_override
 				? (event, d) => self.opts.bar_click_override(getTermValues(d, self))
@@ -250,10 +249,9 @@ export default function getHandlers(self) {
 
 function handleColorClick(d, self, color) {
 	const termNum = d.type == 'col' ? 'term' : 'term2'
+	const termIndex = termNum == 'term' ? 1 : 2
 	const term = self.config[termNum]
-	let dataId = d.dataId
-	if (term.term.values && !term.term.values?.[dataId])
-		for (const [key, value] of Object.entries(term.term.values)) if ((value as any).label == d.dataId) dataId = key
+	const dataId = d.type == 'col' ? d.id : d.dataId ?? d.id
 	if (term.term.values?.[dataId]) term.term.values[dataId].color = color
 	if (term.term.type == 'geneVariant') {
 		let groupset
@@ -271,12 +269,13 @@ function handleColorClick(d, self, color) {
 		term.q.customset = groupset
 	}
 	let binColored = null
-	if (self.bins[2].length > 0) {
-		//term index: term0: 0, term: 1, term2: 2
-		const binMatched = self.bins[2].find(bin => bin.label == d.dataId)
+	const termBins = self.bins[termIndex] || []
+	const binIndex = getNumericBinIndexFromKey(dataId, termBins)
+	if (binIndex >= 0) {
+		const binMatched = termBins[binIndex]
 		if (binMatched) {
 			binMatched.color = color
-			binColored = self.bins[2]
+			binColored = termBins
 		}
 	}
 	self.app.dispatch({
@@ -288,7 +287,7 @@ function handleColorClick(d, self, color) {
 				id: term.id,
 				isAtomic: true,
 				term: term.term,
-				q: getUpdatedQfromClick(d, term, d.isHidden, binColored)
+				q: getUpdatedQfromClick(d, term, d.isHidden, binColored, self)
 			}
 		}
 	})
@@ -369,18 +368,22 @@ export function hideCategory(d, self, isHidden) {
 
 				isAtomic: true,
 				term: term.term,
-				q: getUpdatedQfromClick(d, term, isHidden)
+				q: getUpdatedQfromClick(d, term, isHidden, null, self)
 			}
 		}
 	})
 }
 
-function getUpdatedQfromClick(d, term, isHidden = false, binColored = null) {
+function getUpdatedQfromClick(d, term, isHidden = false, binColored = null, self) {
+	const termIndex = d.type == 'col' ? 1 : 2
 	const label = 'id' in d ? d.id : d.type == 'col' ? d.seriesId : d.dataId
-	const valueId = term.term.values && Object.keys(term.term.values).find(id => term.term.values[id].label === label)
-	const id = !valueId ? label : valueId
+	const id = label
 	const q = JSON.parse(JSON.stringify(term.q))
 	if (!q.hiddenValues) q.hiddenValues = {}
+	const bins = self?.bins?.[termIndex] || []
+	const binIndex = getNumericBinIndexFromKey(id, bins)
+	if (binIndex >= 0) delete q.hiddenValues[bins[binIndex].label]
+	if (isNumericTw(term) && term.term.values?.[id]?.uncomputable) delete q.hiddenValues[term.term.values[id].label]
 	if (isHidden) q.hiddenValues[id] = 1
 	else delete q.hiddenValues[id]
 	if (binColored) q.binColored = binColored
@@ -395,13 +398,13 @@ function handle_click(event, self, chart) {
 	const term2 = self.config.term2 ? self.config.term2.term : null
 	const uncomp_term1 = term1.values ? Object.values(term1.values).map((v: any) => v.label) : []
 	const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map((v: any) => v.label) : []
-	const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
-	const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId || d.id) ? ' ' + term2.unit : ''
-	const seriesId = d.seriesId || d.id
-	const seriesLabel = (term1.values && seriesId in term1.values ? term1.values[seriesId].label : seriesId) + term1unit
-	const dataLabel =
-		(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
-		term2unit
+	const seriesId = d.seriesId ?? d.id
+	const seriesKeyLabel = self.settings.seriesKeyToLabel[seriesId] ?? seriesId
+	const dataKeyLabel = self.settings.dataKeyToLabel[d.dataId] ?? d.dataId ?? d.id
+	const term1unit = term1.unit && !uncomp_term1.includes(seriesKeyLabel) ? ' ' + term1.unit : ''
+	const term2unit = term2 && term2.unit && !uncomp_term2.includes(dataKeyLabel) ? ' ' + term2.unit : ''
+	const seriesLabel = seriesKeyLabel + term1unit
+	const dataLabel = dataKeyLabel + term2unit
 	const icon = !term2 ? '' : swatchHtml(d.color)
 	const header =
 		`<div style='padding:2px'><b>${escapeHtml(term1.name)}</b>: ${escapeHtml(seriesLabel)}</div>` +
@@ -409,7 +412,7 @@ function handle_click(event, self, chart) {
 			? `<div style='padding:2px'><b>${escapeHtml(term2.name)}</b>: ${escapeHtml(dataLabel)} ${icon}</div>`
 			: '')
 
-	const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
+	const data = d.seriesId !== undefined ? d : { seriesId: d.id, dataId: d.dataId }
 
 	const options: unknown[] = []
 	if (self.opts.bar_click_opts.includes('hide_bar')) {
@@ -430,7 +433,7 @@ function handle_click(event, self, chart) {
 								id: term.id,
 								isAtomic: true,
 								term: term.term,
-								q: getUpdatedQfromClick({ id: data.seriesId, type: 'col' }, term, true)
+								q: getUpdatedQfromClick({ id: data.seriesId, type: 'col' }, term, true, null, self)
 							}
 						}
 					})
@@ -454,7 +457,7 @@ function handle_click(event, self, chart) {
 							term2: {
 								isAtomic: true,
 								term: term2.term,
-								q: getUpdatedQfromClick({ id: data.dataId, type: 'row' }, term2, true)
+								q: getUpdatedQfromClick({ id: data.dataId, type: 'row' }, term2, true, null, self)
 							}
 						}
 					})
@@ -597,7 +600,8 @@ function getTvs(termIndex, value, self, geneVariant) {
 		bin of that fraction: filter by the bin range only. values[] is left out, the server
 		reads it as a brush on a single member term. The numerator/denominator selection
 		lives in q{} of the tw, but must be carried on the term of the standalone tvs. */
-		const bin = self.bins[termIndex]?.find(bin => bin.label == value)
+		const binIndex = getNumericBinIndexFromKey(value, self.bins[termIndex])
+		const bin = binIndex >= 0 ? self.bins[termIndex][binIndex] : self.bins[termIndex]?.find(bin => bin.label == value)
 		if (!bin) return null
 		return {
 			type: 'tvs',
@@ -621,12 +625,13 @@ function getTvs(termIndex, value, self, geneVariant) {
 		if (!group) throw 'group not found'
 		tvs.tvs.values = group.values
 	} else if (isNumericTw(term)) {
-		const bin = self.bins[termIndex]?.find(bin => bin.label == value)
+		const bins = self.bins[termIndex] || []
+		const binIndex = getNumericBinIndexFromKey(value, bins)
+		const bin = binIndex >= 0 ? bins[binIndex] : bins.find(bin => bin.label == value)
 		if (bin) {
 			tvs.tvs.ranges = [bin]
 		} else {
-			// uncomputable values are not in bins, and their bar id is the value label;
-			// the server reads a range with a value property as a special category
+			// uncomputable values are not in bins; their key identifies the special category
 			const entry = Object.entries<any>(term.term.values || {}).find(
 				([key, v]) => v.uncomputable && (v.label == value || key == value)
 			)
@@ -713,26 +718,28 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 		/** Don't show hidden values in the results
 		 * May not be caught in server request for custom variables
 		 * with user supplied keys */
-		if (self.config.term.q?.hiddenValues && self.config.term.q.hiddenValues[t1entry.value]) continue
+		if (isHiddenSampleValue(1, t1entry, self)) continue
 		let notRendered = false
 		const value = t1entry.value
+		const t1key = getSampleValueKey(1, t1entry, self)
 		if (termIsNumeric) {
-			row.push({ value: t1entry.key === seriesId ? roundValueAuto(value) : t1entry.key })
+			row.push({ value: t1key === seriesId ? roundValueAuto(value) : t1entry.key })
 		} else if (termIsGv) {
 			addGvRowVals(sample, self.config.term, row, termdbmclass)
 		} else {
-			row.push({ value: t1entry.key === seriesId ? value : t1entry.key })
+			row.push({ value: t1key === seriesId ? value : t1entry.key })
 		}
-		if (t1entry.key !== seriesId) notRendered = true
+		if (t1key !== seriesId) notRendered = true
 
 		if (self.config.term2) {
 			const t2entry = sample[self.config.term2.$id]
 			if (!t2entry) continue
 			//Don't show hidden values in the results
-			if (self.config.term2.q?.hiddenValues && self.config.term2.q.hiddenValues[t2entry.value]) continue
+			if (isHiddenSampleValue(2, t2entry, self)) continue
+			const t2key = getSampleValueKey(2, t2entry, self)
 			if (term2isNumeric) {
 				const value = roundValueAuto(t2entry.value)
-				row.push({ value: t2entry.key === dataId ? value : t2entry.key })
+				row.push({ value: t2key === dataId ? value : t2entry.key })
 			} else if (term2isGv) {
 				addGvRowVals(sample, self.config.term2, row, termdbmclass)
 			} else if (term2isSurv) {
@@ -741,10 +748,10 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 			} else {
 				const label = self.config.term2.term.values?.[t2entry.value]?.label
 				const value = label || t2entry.value
-				row.push({ value: t2entry.key === dataId ? value : t2entry.key })
+				row.push({ value: t2key === dataId ? value : t2entry.key })
 			}
 			// if the series/bar label is clicked, the overlay/dataId will not be provided for listSamples
-			if (dataId && t2entry.key !== dataId) notRendered = true
+			if (dataId && t2key !== dataId) notRendered = true
 		}
 		// for now, duplicating if block for term2 and term0
 		// TODO: use dom/summary/ListSamples.ts
@@ -872,12 +879,13 @@ async function getSamples(arg) {
 		if (!pass) continue
 		const t1entry = sample[self.config.term.$id]
 		if (!t1entry) continue
-		if (self.config.term.q?.hiddenValues && self.config.term.q.hiddenValues[t1entry.value]) continue
+		if (isHiddenSampleValue(1, t1entry, self)) continue
 		if (self.config.term2) {
 			const t2entry = sample[self.config.term2.$id]
 			if (!t2entry) continue
-			if (self.config.term2.q?.hiddenValues && self.config.term2.q.hiddenValues[t2entry.value]) continue
+			if (isHiddenSampleValue(2, t2entry, self)) continue
 		}
+
 		if (self.config.term0) {
 			const t0entry = sample[self.config.term0.$id]
 			if (!t0entry) continue
@@ -887,6 +895,30 @@ async function getSamples(arg) {
 		samples.push(sample)
 	}
 	return samples
+}
+
+function getSampleValueKey(termIndex: 1 | 2, entry: { key?: string; value?: unknown }, self: any) {
+	const term = termIndex === 1 ? self.config.term : self.config.term2
+	if (!isNumericTw(term)) return entry.key
+	const bins = self.bins?.[termIndex] || []
+	const keyBinIndex = bins.findIndex(bin => bin.label === entry.key)
+	if (keyBinIndex >= 0) return getNumericBinKey(keyBinIndex)
+	const valueBinIndex = getNumericBinIndex(Number(entry.value), bins)
+	if (valueBinIndex >= 0) return getNumericBinKey(valueBinIndex)
+	const uncomputableKey = Object.keys(term.term.values || {}).find(
+		key => term.term.values[key].uncomputable && Number(key) === Number(entry.value)
+	)
+	return uncomputableKey ?? entry.key
+}
+
+function isHiddenSampleValue(termIndex: 1 | 2, entry: { key?: string; value?: unknown }, self: any) {
+	const term = termIndex === 1 ? self.config.term : self.config.term2
+	const hiddenValues = term.q?.hiddenValues
+	if (!hiddenValues) return false
+	const key = getSampleValueKey(termIndex, entry, self)
+	return [key, entry.key, entry.value]
+		.filter((value): value is string | number => value !== undefined && value !== null)
+		.some(value => !!hiddenValues[String(value)])
 }
 
 /* The conditions that select the samples of a clicked bar, as filters to join: those of
@@ -1120,22 +1152,16 @@ function getTermValues(d, self) {
 	}
 
 	const t1 = self.config.term
-	const t1ValKey =
-		t1.term.values && Object.keys(t1.term.values).filter(key => t1.term.values[key].label === d.seriesId)[0]
-	const t1ValId = t1.term.values && t1ValKey in t1.term.values ? t1ValKey : d.seriesId
 	const t2 = self.config.term2
-	const t2ValKey =
-		t2 && t2.term.values && Object.keys(t2.term.values).filter(key => t2.term.values[key].label === d.dataId)[0]
-	const t2ValId = t2 && t2.term.values && t2ValKey in t2.term.values ? t2ValKey : d.dataId
 
 	for (const term of [t1, t2]) {
 		if (!term) continue
 		const i = term == t1 ? 1 : 2
-		const key = term == t1 ? t1ValId : t2ValId
-		if (!key) continue
+		const key = term == t1 ? d.seriesId : d.dataId
+		if (key === undefined || key === null || key === '') continue
 		// const q = term ? term.q : {}
 		const q = term.q //self.currServerData.refs.q[i]
-		const label = !term || !term.term.values ? key : key in term.term.values ? term.term.values[key].label : key
+		const label = i === 1 ? self.settings.seriesKeyToLabel[key] ?? key : self.settings.dataKeyToLabel[key] ?? key
 
 		if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
 			const groupset =
@@ -1164,8 +1190,7 @@ function getTermValues(d, self) {
 
 			if (term == t1 && t2 && term.term.id == t2.term.id) {
 				const q2 = t2.q
-				const term2Label =
-					t2.term.values && d.dataId in t2.term.values ? self.config.term2.values[d.dataId].label : d.dataId
+				const term2Label = self.settings.dataKeyToLabel[d.dataId] ?? d.dataId
 
 				termValues.push(
 					Object.assign(
@@ -1190,7 +1215,8 @@ function getTermValues(d, self) {
 				// not associated with numeric bins
 				termValues.push({ term: term.term, values: [{ key, label }] })
 			} else {
-				const range = bins.find(d => d.label == label || d.name == label)
+				const binIndex = getNumericBinIndexFromKey(key, bins)
+				const range = binIndex >= 0 ? bins[binIndex] : bins.find(d => d.label == label || d.name == label)
 				if (range) termValues.push({ term: term.term, ranges: [range] })
 				else if (term == t1) {
 					termValues.push({ term: term.term, ranges: [{ value: key }] })

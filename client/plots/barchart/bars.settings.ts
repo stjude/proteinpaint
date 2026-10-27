@@ -83,5 +83,7 @@ export const rendererSettings = JSON.stringify({
 		colgrps: [], // used when expanding a column group
 		rowgrps: []
 	},
+	seriesKeyToLabel: {},
+	dataKeyToLabel: {},
 	axisTitleFontSize: 16
 })

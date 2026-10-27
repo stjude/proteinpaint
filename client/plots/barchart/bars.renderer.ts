@@ -617,12 +617,14 @@ export default function barsRenderer(barsapp: any, holder: any) {
 	function addRowLabel(this: any, d) {
 		if (!this || d === undefined) return
 		const g = select(this).attr('transform', rowLabelTransform).style('opacity', 0)
+		console.log(d)
 		g.append('text')
 			.attr('x', 2) //hm.colw / 3)
 			.attr('text-anchor', 'end')
 			.attr('font-size', computed.rowfontsize + 'px')
 			.text(hm.handlers.barLabel.text)
-			.attr('data-testid', 'sjpp-row-label-' + d.id)
+			//do this for all places with datatestid
+			.attr('data-testid', 'sjpp-row-label-' + hm.handlers.barLabel.text({ id: d.id }))
 
 		g.transition().delay(hm.delay).duration(hm.duration).style('opacity', 1)
 	}
