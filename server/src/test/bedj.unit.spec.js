@@ -2,7 +2,7 @@ import tape from 'tape'
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '../serverconfig.js'
-import bedj_request_closure from '../bedj.js'
+import bedj_request_closure, { read_limits } from '../bedj.js'
 
 /*
 Specs for the /tkbedj route, client-supplied item list branch and plain text file branch.
@@ -12,12 +12,22 @@ test sections:
 - /tkbedj: gene region
 - /tkbedj: disableFeature_custombedjfile
 - /tkbedj: plain text file
+- /tkbedj: file item limit
+- /tkbedj: bigBed data limit
+- /tkbedj: coding exons of client-supplied items
+- /tkbedj: translation range
 */
 
 const maxBedItems = 1000
+const maxFileItems = 10_000
 const chrlen = 248956422
 const genomes = {
-	hg38: { name: 'hg38', chrlookup: { CHR1: { name: 'chr1', len: chrlen }, CHR2: { name: 'chr2', len: 242193529 } } }
+	hg38: {
+		name: 'hg38',
+		// get_fasta() returns Ns for the translated items
+		genomefile: 'NA',
+		chrlookup: { CHR1: { name: 'chr1', len: chrlen }, CHR2: { name: 'chr2', len: 242193529 } }
+	}
 }
 const handler = bedj_request_closure(genomes)
 
@@ -165,5 +175,127 @@ tape('/tkbedj: plain text file', async test => {
 	test.equal(e.error, 'file not found', 'should reject a missing file without its path')
 
 	fs.rmSync(filepath, { force: true })
+	test.end()
+})
+
+tape('/tkbedj: file item limit', async test => {
+	const file = `bedjSpec-limit-${process.pid}.txt`
+	const filepath = path.join(serverconfig.cachedir, 'bedj', file)
+	fs.mkdirSync(path.dirname(filepath), { recursive: true })
+	const lines = Array.from({ length: maxFileItems + 1 }, (_, i) => `chr1\t${i}\t${i + 1}`)
+	fs.writeFileSync(filepath, lines.join('\n') + '\n')
+	const query = o => send({ genome: 'hg38', isCache: true, file, getBED: 1, ...o })
+	try {
+		const under = await query({ getdata: 1, rglst: [{ chr: 'chr1', start: 0, stop: 10 }] })
+		test.equal(under.items?.length, 10, 'should return the items of a region with fewer items than the limit')
+
+		const rglst = [{ chr: 'chr1', start: 0, stop: maxFileItems + 1 }]
+		const data = await query({ getdata: 1, rglst })
+		test.ok(String(data.error).startsWith('Too many items'), 'should reject a data request over the limit')
+
+		const split = await query({
+			getdata: 1,
+			rglst: [
+				{ chr: 'chr1', start: 0, stop: maxFileItems / 2 + 1 },
+				{ chr: 'chr1', start: maxFileItems / 2 + 1, stop: maxFileItems + 1 }
+			]
+		})
+		test.ok(String(split.error).startsWith('Too many items'), 'should count the items over all regions')
+
+		const image = await query({
+			rglst: [{ ...rglst[0], width: 800 }],
+			width: 800,
+			stackheight: 12,
+			stackspace: 1,
+			regionspace: 10
+		})
+		test.equal(image.error, undefined, 'should not error for a track image over the limit')
+		test.ok(image.src && image.height == 12, 'should return a one-row image of a message over the limit')
+	} finally {
+		fs.rmSync(filepath, { force: true })
+	}
+	test.end()
+})
+
+tape('/tkbedj: bigBed data limit', async test => {
+	// files/hg38/bigbed/test.bb has 6 items on chr1, see bigbed.unit.spec.ts
+	const rglst = [{ chr: 'chr1', start: 0, stop: 1000, width: 800 }]
+	const query = o => send({ genome: 'hg38', file: 'files/hg38/bigbed/test.bb', rglst, ...o })
+	const image = { width: 800, stackheight: 12, stackspace: 1, regionspace: 10 }
+
+	const under = await query({ getdata: 1 })
+	test.equal(under.error, undefined, 'should not error under the limit')
+	test.equal(under.items?.length, 6, 'should return the items of a bigBed file under the limit')
+
+	const saved = read_limits.maxBigbedBytes
+	read_limits.maxBigbedBytes = 0
+	try {
+		const data = await query({ getdata: 1 })
+		test.ok(String(data.error).startsWith('Too much data'), 'should reject a data request over the limit')
+		test.ok(!String(data.error).includes('>'), 'should not give a number of items, which is not known')
+
+		const gm = await query({ getdata: 1, gmregion: { chr: 'chr1', start: 0, stop: 1000, width: 800 } })
+		test.ok(String(gm.error).startsWith('Too much data'), 'should reject a gene region over the limit')
+
+		const over = await query(image)
+		test.equal(over.error, undefined, 'should not error for a track image over the limit')
+		test.ok(over.src && over.height == 12, 'should return a one-row image of a message over the limit')
+	} finally {
+		read_limits.maxBigbedBytes = saved
+	}
+	test.end()
+})
+
+tape('/tkbedj: coding exons of client-supplied items', async test => {
+	const rglst = [{ chr: 'chr1', start: 0, stop: 1000 }]
+	const sendCoding = coding =>
+		send({ genome: 'hg38', getdata: 1, bedItems: [{ chr: 'chr1', start: 100, stop: 200, coding }], rglst })
+
+	const valid = await sendCoding([
+		[100, 150],
+		[160, 200]
+	])
+	test.equal(valid.error, undefined, 'should accept coding exons within the item')
+
+	const outside = await sendCoding([[50, 150]])
+	test.ok(String(outside.error).includes('not within item'), 'should reject a coding exon outside the item')
+
+	const reversed = await sendCoding([[150, 120]])
+	test.ok(String(reversed.error).includes('not within item'), 'should reject a coding exon that ends before it starts')
+
+	const repeated = await sendCoding(Array.from({ length: 3 }, () => [100, 200]))
+	test.ok(String(repeated.error).includes('longer than item'), 'should reject coding exons longer than the item')
+
+	const notArray = await sendCoding('100-200')
+	test.ok(String(notArray.error).includes('not array'), 'should reject coding that is not an array')
+
+	const notPair = await sendCoding([[100, 'x']])
+	test.ok(String(notPair.error).includes('invalid'), 'should reject a coding exon that is not integers')
+
+	test.end()
+})
+
+tape('/tkbedj: translation range', async test => {
+	const bedItems = [{ chr: 'chr1', start: 0, stop: 300, strand: '+', coding: [[0, 300]] }]
+	const render = (r, width) =>
+		send({
+			genome: 'hg38',
+			bedItems: structuredClone(bedItems),
+			rglst: [{ chr: 'chr1', ...r }],
+			width,
+			stackheight: 12,
+			stackspace: 1,
+			regionspace: 10,
+			translatecoding: 1
+		})
+
+	const fine = await render({ start: 0, stop: 300, width: 800 }, 800)
+	test.equal(fine.error, undefined, 'should not error')
+	test.ok(fine.mapaa?.length > 0, 'should translate at a resolution of under 3 bp per pixel')
+
+	const coarse = await render({ start: 0, stop: 300, width: 50 }, 1e9)
+	test.equal(coarse.error, undefined, 'should not error')
+	test.equal(coarse.mapaa, undefined, 'should not translate by the total width, but by the region widths')
+
 	test.end()
 })

@@ -116,6 +116,20 @@ const namepad = 10 // box no struct: [pad---name---pad]
 const packfull_cutoff = 400 //the number of items in the view range; below the cutoff will render in 'packfull' mode
 const onerow_minitemcount = 600 // number of items exceeding this amount will all be rendered in one row
 const returngmdata_maxCount = 50 // max number of items to return data to client
+// upper limit of the items read from a file over all regions, which is more than a track can usefully show,
+// for any kind of item; over it, the view range must be narrowed to show the items
+const maxFileItems = 10_000
+/* the limits of a read, which a test may change
+- maxBigbedBytes: upper limit of the compressed data read from a bigBed file over all regions, which is checked
+  against the index before the read, since a bigBed read keeps all items of a range in memory at once
+*/
+export const read_limits = { maxBigbedBytes: 5_000_000 }
+// upper limit of the total span of the items that are translated, which is the length of the genomic sequences read
+const maxTranslateBp = 20_000_000
+const tooManyItems = `Too many items in view range (>${maxFileItems}). Zoom in to see them.`
+// a bigBed read over read_limits.maxBigbedBytes is refused before any item is read, so the number of items
+// is not known
+const tooMuchData = 'Too much data in view range. Zoom in to see the items.'
 
 const defaultItemColor = '#2c9c96'
 
@@ -189,7 +203,14 @@ async function do_query(req, genomeobj) {
 	const categories = req.query.categories || null
 	const __isgene = req.query.__isgene
 
-	const items = filterItems(await getBEDitems(req, genomeobj, flag_gm, gmisoform), req)
+	const bedItems = await getBEDitems(req, genomeobj, flag_gm, gmisoform)
+	if (typeof bedItems == 'string') {
+		// the file has more items in the view range than are read, and bedItems is the message to show
+		if (req.query.getdata) throw bedItems
+		///////////////////////// exit ///////////////////
+		return await messageImage(bedItems, width, stackheight, req.query.devicePixelRatio)
+	}
+	const items = filterItems(bedItems, req)
 
 	if (req.query.getdata) {
 		///////////////////////// exit ///////////////////
@@ -197,17 +218,8 @@ async function do_query(req, genomeobj) {
 	}
 
 	if (items.length == 0) {
-		const { canvas, ctx } = makeCanvas(width, stackheight, req.query.devicePixelRatio)
-		ctx.font = stackheight + 'px Arial'
-		ctx.fillStyle = '#aaa'
-		ctx.textAlign = 'center'
-		ctx.textBaseline = 'middle'
-		ctx.fillText('No data in view range', width / 2, stackheight / 2)
 		///////////////////////// exit ///////////////////
-		return {
-			src: await canvasToURL(canvas),
-			height: stackheight
-		}
+		return await messageImage('No data in view range', width, stackheight, req.query.devicePixelRatio)
 	}
 
 	const thinpad = Math.ceil(stackheight / 4) - 1
@@ -300,8 +312,12 @@ async function do_query(req, genomeobj) {
 	}
 
 	const bpcount = req.query.rglst.reduce((a, b) => a + b.stop - b.start, 0)
-	const maytranslate = req.query.translatecoding && bpcount < width * 3
+	// the region widths, which validateRglst() bounds, and not .width, so that the translated range is bounded too
+	const rglstWidth = req.query.rglst.reduce((a, b) => a + b.width, 0)
+	const maytranslate = req.query.translatecoding && bpcount < rglstWidth * 3
 	const translateitem = []
+	// the bp of the genomic sequences read for translateitem[]
+	let translateBp = 0
 	// for measuring text only, the canvas to render is made once its height is known
 	let { canvas, ctx } = makeCanvas(10, 10)
 	ctx.font = 'bold ' + fontsize + 'px Arial'
@@ -375,7 +391,9 @@ async function do_query(req, genomeobj) {
 			stop: itemstoppx, //x2 coordinate position
 			stranded: item.strand != undefined
 		}
-		if (item.coding && maytranslate) {
+		if (item.coding && maytranslate && translateBp + item.stop - item.start <= maxTranslateBp) {
+			// an item past maxTranslateBp is shown as is, without its amino acids
+			translateBp += item.stop - item.start
 			item.willtranslate = true // so later the strand will not show
 			translateitem.push(item)
 		}
@@ -882,6 +900,7 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 			if (!j.chr) throw 'bedItems[].chr missing'
 			if (!Number.isInteger(j.start)) throw 'bedItems[].start not integer'
 			if (!Number.isInteger(j.stop)) throw 'bedItems[].stop not integer'
+			if (j.coding) checkCoding(j)
 			j.rglst = []
 			// duplicate following lines with elsewhere as chr equivalency check is needed here but not there
 			for (let i = 0; i < req.query.rglst.length; i++) {
@@ -926,11 +945,25 @@ async function getBEDitems(req, genomeobj, flag_gm, gmisoform) {
 	}
 
 	const regionitems = await query_file(req.query, tkfile, dir, flag_gm, gmisoform)
+	if (typeof regionitems == 'string') return regionitems
 	const items = []
 	for (const lst of regionitems) {
 		for (const i of lst) items.push(i)
 	}
 	return items
+}
+
+/* the coding exons of a client-supplied item must be within the item, and add up to no more than its span,
+as those of a gene do, since a translated item is read and translated for the bp of each coding exon */
+function checkCoding(j) {
+	if (!Array.isArray(j.coding)) throw 'bedItems[].coding not array'
+	let bp = 0
+	for (const e of j.coding) {
+		if (!Array.isArray(e) || !Number.isInteger(e[0]) || !Number.isInteger(e[1])) throw 'invalid bedItems[].coding[]'
+		if (e[0] < j.start || e[1] > j.stop || e[0] > e[1]) throw 'bedItems[].coding[] not within item'
+		bp += e[1] - e[0]
+	}
+	if (bp > j.stop - j.start) throw 'bedItems[].coding[] longer than item'
 }
 
 function filterItems(_items, req) {
@@ -966,6 +999,20 @@ function filterItems(_items, req) {
 		items.push(i)
 	}
 	return items
+}
+
+// a one-row track image of a message in place of the items
+async function messageImage(text, width, stackheight, devicePixelRatio) {
+	const { canvas, ctx } = makeCanvas(width, stackheight, devicePixelRatio)
+	ctx.font = stackheight + 'px Arial'
+	ctx.fillStyle = '#aaa'
+	ctx.textAlign = 'center'
+	ctx.textBaseline = 'middle'
+	ctx.fillText(text, width / 2, stackheight / 2)
+	return {
+		src: await canvasToURL(canvas),
+		height: stackheight
+	}
 }
 
 function bedj_may_mapisoform(lst, boxstart, boxstop, y, item) {
@@ -1033,10 +1080,27 @@ gmisoform=string
 output:
 
 array of objects, each object is one bed item
+or a message to show in place of the items, if the file has more than read_limits.maxBigbedBytes of bigBed data
+in the regions, or more than maxFileItems items
 */
 async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 	// if set, content is last bed file line with invalid json string in 4th column, to throw exception
 	let invalidJsonLine
+
+	if (q.fileType == 'bigbed') {
+		let bytes = 0
+		for (const r of flag_gm ? [flag_gm] : q.rglst) {
+			bytes += await utils.readBigbedByteSize(tkfile, r.chr, r.start, r.stop)
+		}
+		if (bytes > read_limits.maxBigbedBytes) return tooMuchData
+	}
+	// the lines read over all regions, and a callback of readBedLines() that ends the read when there are too many
+	let lineCount = 0
+	const countLine = stop => {
+		if (++lineCount <= maxFileItems) return true
+		stop()
+		return false
+	}
 
 	if (flag_gm) {
 		// query over the gene region, just one region
@@ -1044,6 +1108,8 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 
 		if (q.fileType == 'bigbed') {
 			const lines = await utils.readBigbedLines(tkfile, flag_gm.chr, flag_gm.start, flag_gm.stop)
+			lineCount += lines.length
+			if (lineCount > maxFileItems) return tooManyItems
 			for (const line of lines) {
 				const l = line.split('\t')
 
@@ -1072,7 +1138,8 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 				file: tkfile,
 				regions: [{ chr: flag_gm.chr, start: flag_gm.start, stop: flag_gm.stop }],
 				dir,
-				callback: line => {
+				callback: (line, stop) => {
+					if (!countLine(stop)) return
 					const l = line.split('\t')
 					let j = {}
 					if (q.getBED) {
@@ -1108,6 +1175,7 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 			})
 		}
 
+		if (lineCount > maxFileItems) return tooManyItems
 		if (invalidJsonLine) throw 'Line with invalid JSON: ' + invalidJsonLine
 
 		return [items] // nothing wrong
@@ -1122,6 +1190,8 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 
 		if (q.fileType == 'bigbed') {
 			const lines = await utils.readBigbedLines(tkfile, r.chr, r.start, r.stop)
+			lineCount += lines.length
+			if (lineCount > maxFileItems) return tooManyItems
 			for (const line of lines) {
 				const l = line.split('\t')
 
@@ -1142,7 +1212,8 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 				file: tkfile,
 				regions: [{ chr: r.chr, start: r.start, stop: r.stop }],
 				dir,
-				callback: line => {
+				callback: (line, stop) => {
+					if (!countLine(stop)) return
 					const l = line.split('\t')
 
 					// create one object for the bed item
@@ -1167,6 +1238,7 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 			})
 		}
 
+		if (lineCount > maxFileItems) return tooManyItems
 		regions.push(itemofthisregion)
 	}
 
@@ -1175,22 +1247,30 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 	return regions
 }
 
-/* reads the lines of a tabix-indexed file, or of a plain text file if fileType is "txt", see utils.readTabixLines() */
+/* reads the lines of a tabix-indexed file, or of a plain text file if fileType is "txt", see utils.readTabixLines();
+callback(line, stop) is called with each line, and stop() ends the read of all regions */
 async function readBedLines({ fileType, ...arg }) {
 	if (fileType != 'txt') return await utils.readTabixLines(arg)
-	for (const r of arg.regions) await readTextLines(arg.file, r, arg.callback)
+	for (const r of arg.regions) {
+		if (await readTextLines(arg.file, r, arg.callback)) return
+	}
 }
 
 /*
 Reads the lines of a plain text bed file that overlap region r, like a tabix query of the region. The file has no
 index, so it must be sorted by chr and start: the lines of a chr are together, by ascending start, in any order of
-chrs. The read stops at the first line that starts past the region, or that leaves the chr of the region.
+chrs. The read stops at the first line that starts past the region, or that leaves the chr of the region, or when
+callback(line, stop) calls stop(); returns true if stop() is called.
 */
 async function readTextLines(file, r, callback) {
 	// the same overlap as a tabix query of the region, see tabixRegion() in utils.js
 	const start = Math.max(0, Math.floor(Number(r.start))),
 		stop = Math.max(0, Math.ceil(Number(r.stop)))
-	let inChr = false
+	let inChr = false,
+		stopped = false
+	const stopRead = () => {
+		stopped = true
+	}
 	const input = fs.createReadStream(file)
 	try {
 		for await (const line of readline.createInterface({ input, crlfDelay: Infinity })) {
@@ -1204,11 +1284,13 @@ async function readTextLines(file, r, callback) {
 			inChr = true
 			// assumes that the lines are sorted by start, so no later line overlaps the region
 			if (Number(l[1]) >= stop) break
-			if (Number(l[2]) >= start) callback(line)
+			if (Number(l[2]) >= start) callback(line, stopRead)
+			if (stopped) break
 		}
 	} finally {
 		input.destroy()
 	}
+	return stopped
 }
 
 function strokearrow(ctx, strand, x, y, w, h) {

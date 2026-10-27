@@ -4,13 +4,14 @@ import http from 'http'
 import path from 'path'
 import type { AddressInfo } from 'net'
 import serverconfig from '#src/serverconfig.js'
-import { readBigbedLines, readBigbedByName, isBigbedFile } from '#src/bigbed.ts'
+import { readBigbedLines, readBigbedByteSize, readBigbedByName, isBigbedFile } from '#src/bigbed.ts'
 
 /*
 test sections:
 
 readBigbedLines(): the items of a range, as bigBedToBed prints them
 readBigbedByName(): the items of a name, as bigBedNamedItems prints them
+readBigbedByteSize(): the compressed bytes of a read
 isBigbedFile()
 rejected arguments
 a changed file is opened again
@@ -94,6 +95,16 @@ tape('readBigbedByName(): the items of a name, as bigBedNamedItems prints them',
 		/no index of the name field/,
 		'should reject a file without an index of the name field'
 	)
+	test.end()
+})
+
+tape('readBigbedByteSize(): the compressed bytes of a read', async test => {
+	test.ok((await readBigbedByteSize(bb, 'chr1', 0, 1000)) > 0, 'should size the data of a range with items')
+	test.ok((await readBigbedByteSize(bb, 'chr1', 40, 0)) > 0, 'should size the data to the chromosome end for end=0')
+	test.equal(await readBigbedByteSize(bb, 'chrX', 0, 10), 0, 'should size no data for a chromosome not in the file')
+	test.equal(await readBigbedByteSize(bb, 'chrX', 5, 0), 0, 'should size no data for end=0 of such a chromosome')
+	await rejects(test, () => readBigbedByteSize(bb, '-o', 0, 1), /invalid chr/, 'should reject an invalid chr')
+	await rejects(test, () => readBigbedByteSize(bb, 'chr1', -1, 1), /invalid start or end/, 'should reject a bad start')
 	test.end()
 })
 
