@@ -1,5 +1,4 @@
 edgeR
 rhdf5
-DMRcate
 GenomicRanges
 limma
