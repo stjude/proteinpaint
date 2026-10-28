@@ -292,7 +292,7 @@ function setNumberInput(opts) {
 				self.dom.inputs[settingsKey].property('value', value)
 				self.values[settingsKey] = value
 				// the out-of-range mark stays until the next edit, or until the setting changes otherwise
-				if (settingsKey in self.clampedValues && self.clampedValues[settingsKey] !== value) {
+				if (!(settingsKey in self.clampedValues) || self.clampedValues[settingsKey] !== value) {
 					delete self.clampedValues[settingsKey]
 					self.dom.inputs[settingsKey].style('background-color', null).attr('title', null)
 				}
