@@ -32,13 +32,13 @@ tape('number input: an out-of-range value is marked, and the value that is used 
 		callback: (v: number) => values.push(v)
 	})
 	api.main({ settings: { c: { k: 8 } } })
-	const input = holder.select('input')
+	const input = holder.select<HTMLInputElement>('input')
 	const type = (value: string, event: string) => {
 		input.property('value', value)
 		input.node()!.dispatchEvent(new Event(event))
 	}
 	// the inline style, which is set only for an out-of-range value
-	const isMarked = () => !!(input.node() as HTMLInputElement).style.backgroundColor
+	const isMarked = () => !!input.node()!.style.backgroundColor
 
 	type('40', 'input')
 	test.ok(isMarked(), 'a typed value above the max is marked')
