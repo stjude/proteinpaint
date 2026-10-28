@@ -1544,7 +1544,7 @@ function getPj(self) {
 				return (
 					scaleLinear()
 						// force x to start at 0 because first data point will always
-						// be at x=0 (see survival.R)
+						// be at x=0 (see rust/src/survival.rs)
 						.domain([0, Math.min(s.maxTimeToEvent || context.self.xMax, context.self.xMax)])
 						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 				)

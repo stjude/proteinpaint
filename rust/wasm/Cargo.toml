@@ -53,3 +53,7 @@ path = "../src/align.rs"
 [[bin]]
 name = "sv"
 path = "../src/sv.rs"
+
+[[bin]]
+name = "survival"
+path = "../src/survival.rs"
