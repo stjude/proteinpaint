@@ -9,9 +9,9 @@
 # rather than indexing the "(Mb)" formatted columns, because the number and
 # layout of "(Mb)" columns varies across R versions (e.g. newer R adds a
 # "limit (Mb)" column). The "max used" column name and the Ncells/Vcells row
-# names are stable. Cell sizes (56 / 8 bytes) match 64-bit R conventions and
-# mirror the conversion used in dmrcate_full.R. Wrapped in tryCatch so any
-# unexpected gc() shape returns NA instead of crashing the analysis.
+# names are stable. Cell sizes (56 / 8 bytes) match 64-bit R conventions.
+# Wrapped in tryCatch so any unexpected gc() shape returns NA instead of
+# crashing the analysis.
 mem_probe <- function() {
   tryCatch(
     {

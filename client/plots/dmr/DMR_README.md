@@ -1,7 +1,7 @@
 # DMR Analysis Pipeline
 
 Differential Methylation Region (DMR) analysis for probe-level methylation array data.
-Two backends are available: **Rust** (default, ~3s) and **R/DMRCate** (validation in debugmode only, ~30-60s).
+The analysis runs in Rust (`rust/src/dmrcate.rs`, ~3s a request).
 
 ## Which matrix a request runs on
 
@@ -14,8 +14,7 @@ The server picks the finest backing the dataset has, per chromosome (`server/src
 | `dnaMethylation.elements` | regulatory elements | fallback for a WGBS cohort with no CpG matrix. One row is a cCRE, so spacing is ~10kb and the client widens its default window and kernel to match (`settings/defaults.ts`). Values are M-values, so the server sends `mvalues:true` and the beta->M transform below is skipped |
 
 Element rows cannot resolve sub-element structure — cCREs are median 316bp/4 CpGs against DMRs
-of median 737bp/12 CpGs — so the element path is a fallback, not a substitute. The R backend
-reads the CpG layout only.
+of median 737bp/12 CpGs — so the element path is a fallback, not a substitute.
 
 ## Pipeline Overview
 
@@ -202,28 +201,10 @@ Peak memory: ~130-170 MB (dominated by the collected ProbeStats vectors for ~450
 }
 ```
 
-## R Validation Backend
+## Validation against R limma + DMRcate
 
-`R/src/dmrcate_full.R` implements the same pipeline using R/limma/DMRCate for validation.
-It runs synchronously (~30-60s) and produces identical output format.
-
-This backend is for development only. The server accepts `backend: 'r'` only when
-`serverconfig.debugmode` is true, and the DMR plot shows the backend toggle button only in
-debugmode. Outside debugmode the plot requests the Rust backend, also for a session that was saved
-with `backend: 'r'`. The R packages it needs, DMRcate and GenomicRanges, are not in
-`R/utils/bioconductor.pkgs.txt`, so the published ppbase/ppserver/ppfull images do not have
-them. To use it locally, install them in the R library the server uses:
-
-```
-Rscript -e 'BiocManager::install(c("DMRcate", "GenomicRanges"))'
-```
-
-If they are missing or do not load, `dmrcate_full.R` returns an error that names them.
-
-To compare backends, use the toggle button in the DMR plot UI. The server logs
-per-probe logFC and FDR values for both backends via `mayLog()`.
-
-### Validated results (4 loci, G3G4-2 vs G3G4-5, panMB dataset)
+The Rust implementation was validated against an R limma + DMRcate script, since removed along
+with the DMRcate dependency. 4 loci, G3G4-2 vs G3G4-5, panMB dataset:
 
 | Locus | Probes | DMRs | logFC match | FDR match |
 | --- | --- | --- | --- | --- |

@@ -15,8 +15,6 @@ export type DMRSettings = {
 	maxLoessRegion: number
 	/** Minimum number of probes required to show LOESS confidence intervals (default: 10) */
 	minProbesForCi: number
-	/** Backend engine: 'rust' (default) or 'r' (DMRCate) */
-	backend: 'rust' | 'r'
 	/** Maximum allowed region size in base pairs for DMR analysis (default: 5 Mb).
 	 *  The server also enforces a hard cap of 10 Mb as a safety net. */
 	maxRegionSize: number
