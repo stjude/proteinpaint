@@ -1166,17 +1166,25 @@ tape('chunkWilcoxonPairs: chunks by the number of values, in order, without an e
 	test.end()
 })
 
-tape('getPairwiseTestPlots: all plots, or the largest ones in their original order', function (test) {
-	const plot = (label: string, n: number) => ({ label, values: Array(n).fill(0) })
+tape('getPairwiseTestPlots: all visible plots, or the largest ones in their original order', function (test) {
+	const plot = (label: string, n: number, hidden = false) => ({ label, values: Array(n).fill(0), hidden })
 	const plots = [plot('a', 2), plot('b', 9), plot('c', 5), plot('d', 9), plot('e', 1)]
-	const labels = (max: number) => getPairwiseTestPlots(plots, p => p.values, max).map(p => p.label)
-	test.equal(
-		getPairwiseTestPlots(plots, p => p.values, 5),
-		plots,
-		'all plots when not more than the maximum'
-	)
-	test.deepEqual(labels(3), ['b', 'c', 'd'], 'the 3 largest, in their original order')
+	const get = (max: number, list = plots, isHidden?: (p: any) => boolean) =>
+		getPairwiseTestPlots(list, p => p.values, max, isHidden)
+	const labels = (r: { tested: any[] }) => r.tested.map(p => p.label)
+	test.deepEqual(get(5), { tested: plots, truncated: false }, 'all plots when not more than the maximum')
+	test.deepEqual(labels(get(3)), ['b', 'c', 'd'], 'the 3 largest, in their original order')
+	test.equal(get(3).truncated, true, 'truncated when plots are left out')
 	// b and d have the same size, and b is first
-	test.deepEqual(labels(1), ['b'], 'the first of the largest plots of the same size')
+	test.deepEqual(labels(get(1)), ['b'], 'the first of the largest plots of the same size')
+
+	// a hidden largest plot does not use up the limit, so the visible plots are still compared
+	const withHidden = [plot('big', 50, true), plot('x', 3), plot('y', 2)]
+	const r = get(2, withHidden, p => p.hidden)
+	test.deepEqual(labels(r), ['x', 'y'], 'the visible plots are tested, not the hidden largest one')
+	test.equal(r.truncated, false, 'not truncated, since no visible plot is left out')
+	const r2 = get(1, withHidden, p => p.hidden)
+	test.deepEqual(labels(r2), ['x'], 'the largest visible plot')
+	test.equal(r2.truncated, true, 'truncated, since a visible plot is left out')
 	test.end()
 })

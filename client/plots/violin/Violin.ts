@@ -13,6 +13,14 @@ import { getDefaultViolinSettings } from './settings/defaults'
 import type { ViolinSettings } from './settings/Settings'
 import type { ViolinRequest } from '#types'
 import { pairwiseTestGroupsLimit } from '#shared/pairwiseTests.js'
+/** a numeric termCollection tw, whose member terms the server makes into the overlay groups, except for a fraction
+ * tw, which has a single value per sample */
+function isExpandedTermCollection(tw: any): boolean {
+	return (
+		tw?.term?.type === 'termCollection' && tw.term.memberType === 'numeric' && tw.type !== 'TermCollectionTWFraction'
+	)
+}
+
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that 
 will have a single term and minimal features (i.e. no controls, legend, 
@@ -344,7 +352,8 @@ class ViolinPlot extends PlotBase implements RxComponent {
 				max: pairwiseTestGroupsLimit,
 				debounceInterval: 500,
 				processInput: (val: number) => Math.round(val),
-				getDisplayStyle: plot => (plot?.term2 ? 'table-row' : 'none')
+				// the server makes the groups of a numeric termCollection from its member terms
+				getDisplayStyle: plot => (plot?.term2 || isExpandedTermCollection(plot?.term) ? 'table-row' : 'none')
 			}
 		]
 
@@ -421,10 +430,7 @@ class ViolinPlot extends PlotBase implements RxComponent {
 	validateArgs(): ViolinRequest {
 		const { term, term2, term0 /*settings*/ } = this.config
 		const s = this.settings
-		const isNumericTermCollection =
-			term.term?.type === 'termCollection' &&
-			term.term?.memberType === 'numeric' &&
-			term.type !== 'TermCollectionTWFraction'
+		const isNumericTermCollection = isExpandedTermCollection(term)
 		// dslabel and genome are injected by vocabApi.getViolinBox
 		const arg: any = {
 			plotType: 'violin',

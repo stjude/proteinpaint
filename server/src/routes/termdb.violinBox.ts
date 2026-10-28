@@ -196,7 +196,7 @@ async function getViolin(
 	const result = setViolinResponse(valuesObject, data, q)
 
 	// wilcoxon test data to return to client
-	if (q.overlayTw) await getViolinWilcoxonData(result, q.maxPairwiseTestGroups)
+	if (q.overlayTw) await getViolinWilcoxonData(result, q.maxPairwiseTestGroups, q.overlayTw.q?.hiddenValues)
 
 	await createCanvasImg(q, result, ds)
 	result['descrStats'] = descrStats
@@ -389,10 +389,19 @@ async function createCanvasImg(
 }
 
 // compute pvalues using wilcoxon rank sum test
-export async function getViolinWilcoxonData(result: { [index: string]: any }, maxPairwiseTestGroups?: number) {
+export async function getViolinWilcoxonData(
+	result: { [index: string]: any },
+	maxPairwiseTestGroups?: number,
+	hiddenValues?: Record<string, unknown>
+) {
 	await runWilcoxonTests(
 		result.charts,
-		{ getGroupId: plot => plot.label, getGroupValues: plot => plot.values },
+		{
+			getGroupId: plot => plot.label,
+			getGroupValues: plot => plot.values,
+			// the same check as the violin renderer, which does not show a hidden plot or its comparisons
+			isHidden: plot => !!(hiddenValues && (plot.seriesId in hiddenValues || plot.label in hiddenValues))
+		},
 		'pvalues',
 		getMaxPairwiseTestGroups(maxPairwiseTestGroups)
 	)
@@ -630,7 +639,8 @@ async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }, maxPai
 		charts,
 		{
 			getGroupId: plot => plot.boxplot.label.replace(/, n=\d+$/, ''),
-			getGroupValues: plot => plot.tempValues
+			getGroupValues: plot => plot.tempValues,
+			isHidden: plot => !!plot.isHidden
 		},
 		'wilcoxon',
 		getMaxPairwiseTestGroups(maxPairwiseTestGroups)
@@ -689,31 +699,47 @@ export function chunkWilcoxonPairs(pairs: WilcoxonPair[], maxValues = wilcoxonCh
 	return chunks
 }
 
-/** the plots that are tested pairwise: all of them, or else the maxGroups plots with the most values, in their
- *  original order */
-export function getPairwiseTestPlots(plots: any[], getGroupValues: (plot: any) => number[], maxGroups: number) {
-	if (plots.length <= maxGroups) return plots
+/** the plots that are tested pairwise: the visible plots, or else the maxGroups visible plots with the most values,
+ *  in their original order; truncated is true when some visible plots are left out */
+export function getPairwiseTestPlots(
+	plots: any[],
+	getGroupValues: (plot: any) => number[],
+	maxGroups: number,
+	isHidden?: (plot: any) => boolean
+): { tested: any[]; truncated: boolean } {
+	const visible = isHidden ? plots.filter(p => !isHidden(p)) : plots
+	if (visible.length <= maxGroups) return { tested: visible, truncated: false }
 	// a stable sort, so that plots of the same size keep their order
 	const largest = new Set(
-		[...plots].sort((a, b) => getGroupValues(b).length - getGroupValues(a).length).slice(0, maxGroups)
+		[...visible].sort((a, b) => getGroupValues(b).length - getGroupValues(a).length).slice(0, maxGroups)
 	)
-	return plots.filter(p => largest.has(p))
+	return { tested: visible.filter(p => largest.has(p)), truncated: true }
 }
 
 /** Run Wilcoxon rank-sum tests for all pairwise plot comparisons within each chart.
  *  Accessors allow reuse for both violin (label/values) and box (boxplot.label/tempValues) plots.
- *  A chart with more than maxGroups plots has the tests of its largest plots only, and a pairwiseTestMessage that
- *  says so. */
+ *  Hidden plots are not tested, and do not count toward maxGroups: a chart with more than maxGroups visible plots
+ *  has the tests of its largest visible plots only, and a pairwiseTestMessage that says so. */
 export async function runWilcoxonTests(
 	charts: Record<string, any>,
-	accessors: { getGroupId: (plot: any) => string; getGroupValues: (plot: any) => number[] },
+	accessors: {
+		getGroupId: (plot: any) => string
+		getGroupValues: (plot: any) => number[]
+		isHidden?: (plot: any) => boolean
+	},
 	resultKey: string,
 	maxGroups: number
 ): Promise<void> {
 	for (const chart of Object.values(charts)) {
-		if (!chart.plots?.length || chart.plots.length < 2) continue
-		const plots = getPairwiseTestPlots(chart.plots, accessors.getGroupValues, maxGroups)
-		if (plots.length < chart.plots.length) chart.pairwiseTestMessage = pairwiseTestMessage(maxGroups)
+		// the hidden plots stay in chart.plots, such as for the legend
+		const { tested: plots, truncated } = getPairwiseTestPlots(
+			chart.plots || [],
+			accessors.getGroupValues,
+			maxGroups,
+			accessors.isHidden
+		)
+		if (plots.length < 2) continue
+		if (truncated) chart.pairwiseTestMessage = pairwiseTestMessage(maxGroups)
 		const numPlots = plots.length
 
 		const wilcoxInput: WilcoxonPair[] = []
