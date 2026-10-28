@@ -101,7 +101,8 @@ export class ChartsDataMapper {
 			chartData[chart.chartId] = {
 				plotDim: plotDim,
 				plots: this.setPlotData(chart, config, this.settings, incrPad),
-				wilcoxon: chart?.wilcoxon || null
+				wilcoxon: chart?.wilcoxon || null,
+				pairwiseTestMessage: chart?.pairwiseTestMessage
 			}
 		}
 		return chartData

@@ -242,6 +242,14 @@ export default function setViolinRenderer(self: any) {
 			.append('div')
 			.style('font-weight', 'bold')
 			.text(pvalues.length > 0 ? "Group comparisons (Wilcoxon's rank sum test)" : '')
+		if (chart.pairwiseTestMessage)
+			tableHolder
+				.append('div')
+				.attr('class', 'sjpp-pairwise-test-message')
+				.style('font-size', '0.9em')
+				.style('opacity', 0.8)
+				.style('margin', '3px 0')
+				.text(chart.pairwiseTestMessage)
 
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
 		const rows = pvalues

@@ -50,7 +50,7 @@ export class ChartRender {
 		if (chart.wilcoxon && dom.assocTableDiv) {
 			//add text and background color to the association table div
 			//for display mode
-			new AssociationTableRender(dom.assocTableDiv, chart.wilcoxon)
+			new AssociationTableRender(dom.assocTableDiv, chart.wilcoxon, chart.pairwiseTestMessage)
 		}
 	}
 

@@ -636,7 +636,7 @@ async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }) {
  **********************************************************/
 
 // the default maximum number of plots in a chart for which the pairwise Wilcoxon tests are computed
-export const defaultMaxPairwiseTestGroups = 20
+export const defaultMaxPairwiseTestGroups = 30
 // the pairs of a chart are tested in chunks of about this many values, with a yield to the event loop between
 // chunks, so that other requests are not delayed for long
 export const wilcoxonChunkValues = 100_000
@@ -674,9 +674,21 @@ export function chunkWilcoxonPairs(pairs: WilcoxonPair[], maxValues = wilcoxonCh
 	return chunks
 }
 
+/** the plots that are tested pairwise: all of them, or else the maxGroups plots with the most values, in their
+ *  original order */
+export function getPairwiseTestPlots(plots: any[], getGroupValues: (plot: any) => number[], maxGroups: number) {
+	if (plots.length <= maxGroups) return plots
+	// a stable sort, so that plots of the same size keep their order
+	const largest = new Set(
+		[...plots].sort((a, b) => getGroupValues(b).length - getGroupValues(a).length).slice(0, maxGroups)
+	)
+	return plots.filter(p => largest.has(p))
+}
+
 /** Run Wilcoxon rank-sum tests for all pairwise plot comparisons within each chart.
  *  Accessors allow reuse for both violin (label/values) and box (boxplot.label/tempValues) plots.
- *  A chart with more plots than getMaxPairwiseTestGroups() has no test results. */
+ *  A chart with more plots than getMaxPairwiseTestGroups() has the tests of its largest plots only, and a
+ *  pairwiseTestMessage that says so. */
 export async function runWilcoxonTests(
 	charts: Record<string, any>,
 	accessors: { getGroupId: (plot: any) => string; getGroupValues: (plot: any) => number[] },
@@ -684,21 +696,20 @@ export async function runWilcoxonTests(
 ): Promise<void> {
 	const maxGroups = getMaxPairwiseTestGroups()
 	for (const chart of Object.values(charts)) {
-		const numPlots = chart.plots?.length
-		if (!numPlots || numPlots < 2) continue
-		if (numPlots > maxGroups) {
-			mayLog(`skipped the pairwise Wilcoxon tests of ${numPlots} plots, more than ${maxGroups}`)
-			continue
-		}
+		if (!chart.plots?.length || chart.plots.length < 2) continue
+		const plots = getPairwiseTestPlots(chart.plots, accessors.getGroupValues, maxGroups)
+		if (plots.length < chart.plots.length)
+			chart.pairwiseTestMessage = `Pair-wise computations stopped at ${maxGroups} groups ordered by group size descending`
+		const numPlots = plots.length
 
 		const wilcoxInput: WilcoxonPair[] = []
 
 		for (let i = 0; i < numPlots; i++) {
-			const group1_id = accessors.getGroupId(chart.plots[i])
-			const group1_values = accessors.getGroupValues(chart.plots[i])
+			const group1_id = accessors.getGroupId(plots[i])
+			const group1_values = accessors.getGroupValues(plots[i])
 			for (let j = i + 1; j < numPlots; j++) {
-				const group2_id = accessors.getGroupId(chart.plots[j])
-				const group2_values = accessors.getGroupValues(chart.plots[j])
+				const group2_id = accessors.getGroupId(plots[j])
+				const group2_values = accessors.getGroupValues(plots[j])
 				wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 			}
 		}

@@ -20,7 +20,7 @@ import {
 	getMaxPairwiseTestGroups,
 	defaultMaxPairwiseTestGroups,
 	chunkWilcoxonPairs,
-	runWilcoxonTests
+	getPairwiseTestPlots
 } from '../termdb.violinBox.ts'
 import {
 	mockTerm1$id,
@@ -1126,14 +1126,14 @@ tape('expandNumericTermCollection: expanded data works with parseValues', functi
 })
 
 tape('getMaxPairwiseTestGroups: the default, a valid value, and an invalid value', function (test) {
-	test.equal(defaultMaxPairwiseTestGroups, 20, 'the default is 20')
-	test.equal(getMaxPairwiseTestGroups({}), 20, 'the default when not set')
-	test.equal(getMaxPairwiseTestGroups(undefined), 20, 'the default without features')
+	test.equal(defaultMaxPairwiseTestGroups, 30, 'the default is 30')
+	test.equal(getMaxPairwiseTestGroups({}), 30, 'the default when not set')
+	test.equal(getMaxPairwiseTestGroups(undefined), 30, 'the default without features')
 	test.equal(getMaxPairwiseTestGroups({ maxPairwiseTestGroups: 5 }), 5, 'a set value')
 	for (const value of [1, 0, -3, 2.5, '10', null, true])
 		test.equal(
 			getMaxPairwiseTestGroups({ maxPairwiseTestGroups: value }),
-			20,
+			defaultMaxPairwiseTestGroups,
 			`the default for ${JSON.stringify(value)}`
 		)
 	test.end()
@@ -1155,10 +1155,17 @@ tape('chunkWilcoxonPairs: chunks by the number of values, in order, without an e
 	test.end()
 })
 
-tape('runWilcoxonTests: a chart with more plots than the maximum has no test results', async function (test) {
-	const plots = Array.from({ length: defaultMaxPairwiseTestGroups + 1 }, (_, i) => ({ label: 'p' + i, values: [i] }))
-	const charts: any = { c: { plots } }
-	await runWilcoxonTests(charts, { getGroupId: p => p.label, getGroupValues: p => p.values }, 'pvalues')
-	test.equal(charts.c.pvalues, undefined, 'no pvalues')
+tape('getPairwiseTestPlots: all plots, or the largest ones in their original order', function (test) {
+	const plot = (label: string, n: number) => ({ label, values: Array(n).fill(0) })
+	const plots = [plot('a', 2), plot('b', 9), plot('c', 5), plot('d', 9), plot('e', 1)]
+	const labels = (max: number) => getPairwiseTestPlots(plots, p => p.values, max).map(p => p.label)
+	test.equal(
+		getPairwiseTestPlots(plots, p => p.values, 5),
+		plots,
+		'all plots when not more than the maximum'
+	)
+	test.deepEqual(labels(3), ['b', 'c', 'd'], 'the 3 largest, in their original order')
+	// b and d have the same size, and b is first
+	test.deepEqual(labels(1), ['b'], 'the first of the largest plots of the same size')
 	test.end()
 })
