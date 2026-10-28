@@ -36,14 +36,15 @@ type PvalueTerm = {
 	q: { mode?: string; hiddenValues?: Record<string, number> }
 }
 
+/** the tw of the violin groups, whose q.hiddenValues are the hidden plots: term2 when term is the continuous term
+ * of the violins, as the server makes the overlay from it, see validateArgs() in Violin.ts, or else term, such as a
+ * numeric termCollection whose members are the groups */
+export function getGroupTw<T extends { q?: { mode?: string } }>(t1: T, t2?: T): T {
+	return t2 && t1?.q?.mode === 'continuous' ? t2 : t1
+}
+
 export function getVisiblePvalues(chart: any, t1: PvalueTerm, t2?: PvalueTerm) {
-	const termNum =
-		t2?.term.type === 'condition' ||
-		t2?.term.type === 'samplelst' ||
-		t2?.term.type === 'categorical' ||
-		((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
-			? t2
-			: t1
+	const termNum = getGroupTw(t1, t2)
 
 	return (chart.pvalues || []).filter((arr: any[]) =>
 		arr.every(
@@ -78,13 +79,7 @@ export default function setViolinRenderer(self: any) {
 		const t2 = self.config.term2
 
 		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
-		const termNum: TermWrapper =
-			t2?.term.type === 'condition' ||
-			t2?.term.type === 'samplelst' ||
-			t2?.term.type === 'categorical' ||
-			((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
-				? t2
-				: t1
+		const termNum: TermWrapper = getGroupTw(t1, t2)
 		// the hidden plots by label, the same as the server, which does not test them pairwise
 		;(termNum as any).q.hiddenValues = getViolinHiddenValues(termNum)
 

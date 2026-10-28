@@ -9,7 +9,7 @@ import {
 	testRowsToTSV
 } from '#dom'
 import { isSingleCellTerm } from '#shared'
-import { getVisiblePvalues } from './violin.renderer'
+import { getVisiblePvalues, getGroupTw } from './violin.renderer'
 
 type MenuOption = {
 	label: string
@@ -83,7 +83,7 @@ export function setInteractivity(self: any) {
 		if (!t2) return // when no term 2 do not show options on the sole violin label
 		if (isSingleCellTerm(self.config.term.term)) return // is sc data, none of the options below work, thus disable
 
-		const label = t1.q.mode === 'continuous' ? 'term2' : 'term'
+		const label = getGroupTw(t1, t2) === t2 ? 'term2' : 'term'
 		const options: MenuOption[] = []
 		if (this.app.getState().nav.header_mode !== 'only_buttons')
 			options.push({
@@ -276,13 +276,7 @@ export function setInteractivity(self: any) {
 				const d = target?.__data__
 				if (d?.isHidden !== true || d?.isClickable !== true) return
 				event.stopPropagation()
-				const termNum =
-					t2?.term.type === 'condition' ||
-					t2?.term.type === 'samplelst' ||
-					t2?.term.type === 'categorical' ||
-					((t2?.term.type === 'float' || t2?.term.type === 'integer') && self.config.term?.q.mode === 'continuous')
-						? 'term2'
-						: 'term'
+				const termNum = getGroupTw(self.config.term, t2) === t2 ? 'term2' : 'term'
 				const config = structuredClone(self.config)
 				const term = config[termNum]
 				if (!t2 || !term) return
