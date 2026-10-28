@@ -91,3 +91,7 @@ path="src/cerno.rs"
 [[bin]]
 name="dmrcate"
 path="src/dmrcate.rs"
+
+[[bin]]
+name="survival"
+path="src/survival.rs"

@@ -6,7 +6,6 @@ Run test script as follows (from 'server/'):
 	cd ~/sjpp && npx tsx proteinpaint/server/utils/test/Rscripts.spec.js
 
 Active tests:
-	- survival.R
 	- corr.R pearson
 	- corr.R spearman
 	- corr.R kendall
@@ -142,58 +141,6 @@ tape('km.R', async function (test) {
 
 */
 
-/**
- * Test for survival.R
- * This test runs the survival analysis R script and verifies its output
- * matches the expected results while handling floating-point precision differences.
- *
- * The test:
- * 1. Reads the input JSON containing survival data
- * 2. Runs the R script with this input data
- * 3. Compares the output with the expected results after normalizing precision
- */
-tape('survival.R', async function (test) {
-	test.timeoutAfter(5000)
-	test.plan(1)
-
-	// Read input JSON file
-	const inJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/survival_input.json'), {
-		encoding: 'utf8'
-	})
-
-	// Run the R script
-	const Rout = await run_R('survival.R', inJson, [])
-
-	// Get expected output
-	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/survival_output.json'), {
-		encoding: 'utf8'
-	})
-
-	// Parse both outputs
-	let out = JSON.parse(Rout)
-	let exp = JSON.parse(expJson)
-
-	// Round values to avoid precision issues
-	out = roundEstimates(out)
-	exp = roundEstimates(exp)
-
-	// Test if they match
-	test.deepEqual(out, exp, 'survival analysis results should match expected output')
-	test.end()
-
-	// Function to round estimate values to fixed number of digits
-	function roundEstimates(data, digits = 10) {
-		if (!data.estimates) throw 'estimates missing'
-		const estimates = data.estimates.map(x => {
-			x.surv = Number.isFinite(x.surv) ? Number(x.surv.toFixed(digits)) : x.surv
-			x.upper = Number.isFinite(x.upper) ? Number(x.upper.toFixed(digits)) : x.upper
-			x.lower = Number.isFinite(x.lower) ? Number(x.lower.toFixed(digits)) : x.lower
-			return x
-		})
-		data.estimates = estimates
-		return data
-	}
-})
 /**
 // cuminc.R tests
 tape('cuminc.R', async function (test) {
