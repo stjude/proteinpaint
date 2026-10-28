@@ -235,7 +235,6 @@ function getCharts(q, data) {
 	]
 */
 function getCategoricalIdVal(d, term) {
-	console.log(d, term)
 	const id = 'id' in term ? d[term.id] : '-'
 	const value = 'id' in term && isNumeric(d[term.id]) ? +d[term.id] : 0
 	return [[id], value]
