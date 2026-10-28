@@ -22,6 +22,7 @@ import { isNumericTerm, isNumericTw } from '#shared/terms.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { mayLog } from '#src/helpers.ts'
+import serverconfig from '#src/serverconfig.js'
 import { kernelDensity } from '#src/utils/density.ts'
 
 export const payload: RoutePayload = {
@@ -634,18 +635,63 @@ async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }) {
  * Functions used in both box plot and violin plot routes *
  **********************************************************/
 
+// the default maximum number of plots in a chart for which the pairwise Wilcoxon tests are computed
+export const defaultMaxPairwiseTestGroups = 20
+// the pairs of a chart are tested in chunks of about this many values, with a yield to the event loop between
+// chunks, so that other requests are not delayed for long
+export const wilcoxonChunkValues = 100_000
+
+type WilcoxonPair = { group1_id: string; group1_values: number[]; group2_id: string; group2_values: number[] }
+
+/** the maximum number of plots in a chart for which the pairwise tests are computed, from
+ *  serverconfig.features.maxPairwiseTestGroups, an integer of at least 2, or else the default */
+export function getMaxPairwiseTestGroups(features = serverconfig.features): number {
+	const value = features?.maxPairwiseTestGroups
+	if (value === undefined) return defaultMaxPairwiseTestGroups
+	if (Number.isInteger(value) && value >= 2) return value
+	mayLog(
+		`invalid serverconfig.features.maxPairwiseTestGroups=${JSON.stringify(
+			value
+		)}, using ${defaultMaxPairwiseTestGroups}`
+	)
+	return defaultMaxPairwiseTestGroups
+}
+
+/** splits the pairs into chunks of about maxValues values each; a pair with more values is a chunk by itself,
+ *  and no chunk is empty */
+export function chunkWilcoxonPairs(pairs: WilcoxonPair[], maxValues = wilcoxonChunkValues): WilcoxonPair[][] {
+	const chunks: WilcoxonPair[][] = []
+	let n = 0
+	for (const pair of pairs) {
+		const size = pair.group1_values.length + pair.group2_values.length
+		if (!chunks.length || (n > 0 && n + size > maxValues)) {
+			chunks.push([])
+			n = 0
+		}
+		chunks[chunks.length - 1].push(pair)
+		n += size
+	}
+	return chunks
+}
+
 /** Run Wilcoxon rank-sum tests for all pairwise plot comparisons within each chart.
- *  Accessors allow reuse for both violin (label/values) and box (boxplot.label/tempValues) plots. */
-async function runWilcoxonTests(
+ *  Accessors allow reuse for both violin (label/values) and box (boxplot.label/tempValues) plots.
+ *  A chart with more plots than getMaxPairwiseTestGroups() has no test results. */
+export async function runWilcoxonTests(
 	charts: Record<string, any>,
 	accessors: { getGroupId: (plot: any) => string; getGroupValues: (plot: any) => number[] },
 	resultKey: string
 ): Promise<void> {
+	const maxGroups = getMaxPairwiseTestGroups()
 	for (const chart of Object.values(charts)) {
 		const numPlots = chart.plots?.length
 		if (!numPlots || numPlots < 2) continue
+		if (numPlots > maxGroups) {
+			mayLog(`skipped the pairwise Wilcoxon tests of ${numPlots} plots, more than ${maxGroups}`)
+			continue
+		}
 
-		const wilcoxInput: { group1_id: string; group1_values: number[]; group2_id: string; group2_values: number[] }[] = []
+		const wilcoxInput: WilcoxonPair[] = []
 
 		for (let i = 0; i < numPlots; i++) {
 			const group1_id = accessors.getGroupId(chart.plots[i])
@@ -656,7 +702,12 @@ async function runWilcoxonTests(
 				wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 			}
 		}
-		const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
+		const wilcoxOutput: any[] = []
+		for (const chunk of chunkWilcoxonPairs(wilcoxInput)) {
+			// lets other requests run between chunks, and before the first one, since a wasm module blocks the event loop
+			await new Promise(resolve => setImmediate(resolve))
+			wilcoxOutput.push(...JSON.parse(await run_rust('wilcoxon', JSON.stringify(chunk))))
+		}
 		chart[resultKey] = []
 		for (const test of wilcoxOutput) {
 			if (test.pvalue == null || test.pvalue == 'null') {

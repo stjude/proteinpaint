@@ -1,1 +1,2 @@
-
+Features
+- Compute the pairwise Wilcoxon tests of a violin or box plot chart only when it has at most 20 plots, or the number set by serverconfig.features.maxPairwiseTestGroups, and in chunks of pairs
