@@ -30,7 +30,8 @@ export function getBoxPlotMockData() {
 		rowSpace: 10,
 		useDefaultSettings: true,
 		removeOutliers: false,
-		showAssocTests: true
+		showAssocTests: true,
+		maxPairwiseTestGroups: 8
 	}
 
 	//term: agedx && overlay: sex

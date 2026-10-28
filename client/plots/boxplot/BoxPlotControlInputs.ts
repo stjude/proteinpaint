@@ -2,6 +2,7 @@ import { renderTerm1Label } from '../controls'
 import { getT0T2defaultQ } from '../summaryQ.ts'
 import { isNumTermCollection } from '#shared/terms.js'
 import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
+import { pairwiseTestGroupsLimit } from '#shared/pairwiseTests.js'
 
 export function setBoxPlotControlInputs(state: any, app: any, opts: any, getCharts: any, useDefaultSettings: boolean) {
 	const controlLabels = state.config.controlLabels
@@ -174,6 +175,19 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			getDisplayStyle: plot => {
 				return plot?.term2 ? '' : 'none'
 			}
+		},
+		{
+			label: 'Pairwise test groups',
+			title: `The most groups, the largest ones, that get the pairwise Wilcoxon tests, from 2 to ${pairwiseTestGroupsLimit}`,
+			type: 'number',
+			chartType: 'boxplot',
+			settingsKey: 'maxPairwiseTestGroups',
+			step: 1,
+			min: 2,
+			max: pairwiseTestGroupsLimit,
+			debounceInterval: 500,
+			processInput: (val: number) => Math.round(val),
+			getDisplayStyle: plot => (plot?.term2 ? '' : 'none')
 		}
 	]
 

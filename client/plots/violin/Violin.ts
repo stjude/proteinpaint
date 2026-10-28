@@ -12,17 +12,18 @@ import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
 import { getDefaultViolinSettings } from './settings/defaults'
 import type { ViolinSettings } from './settings/Settings'
 import type { ViolinRequest } from '#types'
+import { pairwiseTestGroupsLimit } from '#shared/pairwiseTests.js'
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that 
 will have a single term and minimal features (i.e. no controls, legend, 
 labels, brushing, transitions, etc.)
 */
 
-class ViolinPlot extends PlotBase implements RxComponent{
+class ViolinPlot extends PlotBase implements RxComponent {
 	static type = 'violin'
 
 	type: string
-	dom!: { 
+	dom!: {
 		hovertip: Menu
 		clicktip: Menu
 		sampletabletip: Menu
@@ -331,6 +332,19 @@ class ViolinPlot extends PlotBase implements RxComponent{
 				settingsKey: 'showAssociationTests',
 				boxLabel: 'Yes',
 				getDisplayStyle: plot => (plot.term2 ? 'table-row' : 'none')
+			},
+			{
+				label: 'Pairwise test groups',
+				title: `The most groups, the largest ones, that get the pairwise Wilcoxon tests, from 2 to ${pairwiseTestGroupsLimit}`,
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'maxPairwiseTestGroups',
+				step: 1,
+				min: 2,
+				max: pairwiseTestGroupsLimit,
+				debounceInterval: 500,
+				processInput: (val: number) => Math.round(val),
+				getDisplayStyle: plot => (plot?.term2 ? 'table-row' : 'none')
 			}
 		]
 
@@ -405,7 +419,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 	}
 
 	validateArgs(): ViolinRequest {
-		const { term, term2, term0, /*settings*/ } = this.config
+		const { term, term2, term0 /*settings*/ } = this.config
 		const s = this.settings
 		const isNumericTermCollection =
 			term.term?.type === 'termCollection' &&
@@ -424,6 +438,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 			isLogScale: s.isLogScale,
 			ticks: s.ticks,
 			orderByMedian: s.orderByMedian,
+			maxPairwiseTestGroups: s.maxPairwiseTestGroups,
 			filter: this.state.termfilter.filter
 		}
 
@@ -461,7 +476,7 @@ class ViolinPlot extends PlotBase implements RxComponent{
 		}
 
 		if (term0 && !isNumericTermCollection) arg.divideTw = term0
-		return arg satisfies ViolinRequest ? arg : (arg as any)
+		return (arg satisfies ViolinRequest) ? arg : (arg as any)
 	}
 }
 

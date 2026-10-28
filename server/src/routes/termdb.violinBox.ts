@@ -23,6 +23,7 @@ import { boxplot_getvalue } from '#shared/boxplot.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
+import { defaultMaxPairwiseTestGroups, pairwiseTestGroupsLimit, pairwiseTestMessage } from '#shared/pairwiseTests.js'
 import { kernelDensity } from '#src/utils/density.ts'
 
 export const payload: RoutePayload = {
@@ -68,6 +69,9 @@ export function init({ genomes }) {
 			}
 			if (q.overlayTw) arg.terms.push(q.overlayTw)
 			if (q.divideTw) arg.terms.push(q.divideTw)
+
+			// an invalid request value is refused before the data is fetched
+			getMaxPairwiseTestGroups(q.maxPairwiseTestGroups)
 
 			const data = await getData(arg, ds)
 			if (!data) throw new Error('getData() returns nothing')
@@ -192,7 +196,7 @@ async function getViolin(
 	const result = setViolinResponse(valuesObject, data, q)
 
 	// wilcoxon test data to return to client
-	if (q.overlayTw) await getViolinWilcoxonData(result)
+	if (q.overlayTw) await getViolinWilcoxonData(result, q.maxPairwiseTestGroups)
 
 	await createCanvasImg(q, result, ds)
 	result['descrStats'] = descrStats
@@ -385,11 +389,12 @@ async function createCanvasImg(
 }
 
 // compute pvalues using wilcoxon rank sum test
-export async function getViolinWilcoxonData(result: { [index: string]: any }) {
+export async function getViolinWilcoxonData(result: { [index: string]: any }, maxPairwiseTestGroups?: number) {
 	await runWilcoxonTests(
 		result.charts,
 		{ getGroupId: plot => plot.label, getGroupValues: plot => plot.values },
-		'pvalues'
+		'pvalues',
+		getMaxPairwiseTestGroups(maxPairwiseTestGroups)
 	)
 }
 
@@ -519,7 +524,7 @@ async function processBoxPlotData(data: ValidGetDataResponse, q: BoxRequest, des
 
 	const bins = buildBins(q.tw, data, overlayTw, divideTw)
 
-	if (q.showAssocTests && overlayTw) await getBoxPlotWilcoxonData(charts)
+	if (q.showAssocTests && overlayTw) await getBoxPlotWilcoxonData(charts, q.maxPairwiseTestGroups)
 	//quick fix to not return values to the client
 	//will fix when addressing issues with descriptive stats and other logic errs
 	Object.keys(charts).forEach(c => charts[c].plots.forEach(p => delete p.tempValues))
@@ -620,14 +625,15 @@ export function setUncomputableValues(values: Record<string, number>) {
 	} else return null
 }
 
-async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }) {
+async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }, maxPairwiseTestGroups?: number) {
 	await runWilcoxonTests(
 		charts,
 		{
 			getGroupId: plot => plot.boxplot.label.replace(/, n=\d+$/, ''),
 			getGroupValues: plot => plot.tempValues
 		},
-		'wilcoxon'
+		'wilcoxon',
+		getMaxPairwiseTestGroups(maxPairwiseTestGroups)
 	)
 }
 
@@ -635,20 +641,29 @@ async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }) {
  * Functions used in both box plot and violin plot routes *
  **********************************************************/
 
-// the default maximum number of plots in a chart for which the pairwise Wilcoxon tests are computed
-export const defaultMaxPairwiseTestGroups = 8
 // the pairs of a chart are tested in chunks of about this many values, with a yield to the event loop between
 // chunks, so that other requests are not delayed for long
 export const wilcoxonChunkValues = 100_000
 
 type WilcoxonPair = { group1_id: string; group1_values: number[]; group2_id: string; group2_values: number[] }
 
-/** the maximum number of plots in a chart for which the pairwise tests are computed, from
- *  serverconfig.features.maxPairwiseTestGroups, an integer of at least 2, or else the default */
-export function getMaxPairwiseTestGroups(features = serverconfig.features): number {
+const isValidMaxGroups = (n: unknown) =>
+	Number.isInteger(n) && (n as number) >= 2 && (n as number) <= pairwiseTestGroupsLimit
+
+/** the maximum number of plots in a chart for which the pairwise tests are computed: the request value, which must
+ *  be an integer from 2 to pairwiseTestGroupsLimit, or else serverconfig.features.maxPairwiseTestGroups, which must
+ *  be in the same range, or else the default */
+export function getMaxPairwiseTestGroups(requested?: unknown, features = serverconfig.features): number {
+	if (requested !== undefined && requested !== null) {
+		// a GET request may have the value as a string
+		const n = typeof requested == 'string' && requested.trim() !== '' ? Number(requested) : requested
+		if (!isValidMaxGroups(n))
+			throw new Error(`invalid maxPairwiseTestGroups, must be an integer from 2 to ${pairwiseTestGroupsLimit}`)
+		return n as number
+	}
 	const value = features?.maxPairwiseTestGroups
 	if (value === undefined) return defaultMaxPairwiseTestGroups
-	if (Number.isInteger(value) && value >= 2) return value
+	if (isValidMaxGroups(value)) return value
 	mayLog(
 		`invalid serverconfig.features.maxPairwiseTestGroups=${JSON.stringify(
 			value
@@ -687,19 +702,18 @@ export function getPairwiseTestPlots(plots: any[], getGroupValues: (plot: any) =
 
 /** Run Wilcoxon rank-sum tests for all pairwise plot comparisons within each chart.
  *  Accessors allow reuse for both violin (label/values) and box (boxplot.label/tempValues) plots.
- *  A chart with more plots than getMaxPairwiseTestGroups() has the tests of its largest plots only, and a
- *  pairwiseTestMessage that says so. */
+ *  A chart with more than maxGroups plots has the tests of its largest plots only, and a pairwiseTestMessage that
+ *  says so. */
 export async function runWilcoxonTests(
 	charts: Record<string, any>,
 	accessors: { getGroupId: (plot: any) => string; getGroupValues: (plot: any) => number[] },
-	resultKey: string
+	resultKey: string,
+	maxGroups: number
 ): Promise<void> {
-	const maxGroups = getMaxPairwiseTestGroups()
 	for (const chart of Object.values(charts)) {
 		if (!chart.plots?.length || chart.plots.length < 2) continue
 		const plots = getPairwiseTestPlots(chart.plots, accessors.getGroupValues, maxGroups)
-		if (plots.length < chart.plots.length)
-			chart.pairwiseTestMessage = `Pair-wise computations stopped at ${maxGroups} groups ordered by group size descending`
+		if (plots.length < chart.plots.length) chart.pairwiseTestMessage = pairwiseTestMessage(maxGroups)
 		const numPlots = plots.length
 
 		const wilcoxInput: WilcoxonPair[] = []
