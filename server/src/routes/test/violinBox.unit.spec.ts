@@ -16,7 +16,11 @@ import {
 	setUncomputableValues,
 	divideValues,
 	expandNumericTermCollection,
-	getDescrStatsByTerm
+	getDescrStatsByTerm,
+	getMaxPairwiseTestGroups,
+	defaultMaxPairwiseTestGroups,
+	chunkWilcoxonPairs,
+	runWilcoxonTests
 } from '../termdb.violinBox.ts'
 import {
 	mockTerm1$id,
@@ -1118,5 +1122,43 @@ tape('expandNumericTermCollection: expanded data works with parseValues', functi
 	test.deepEqual(plot2values.get('Drug A').sort(), [1.5, 4.0], 'Drug A should have values from both samples')
 	test.deepEqual(plot2values.get('Drug B').sort(), [2.5, 5.0], 'Drug B should have values from both samples')
 	test.deepEqual(plot2values.get('Drug C').sort(), [3.5, 6.0], 'Drug C should have values from both samples')
+	test.end()
+})
+
+tape('getMaxPairwiseTestGroups: the default, a valid value, and an invalid value', function (test) {
+	test.equal(defaultMaxPairwiseTestGroups, 20, 'the default is 20')
+	test.equal(getMaxPairwiseTestGroups({}), 20, 'the default when not set')
+	test.equal(getMaxPairwiseTestGroups(undefined), 20, 'the default without features')
+	test.equal(getMaxPairwiseTestGroups({ maxPairwiseTestGroups: 5 }), 5, 'a set value')
+	for (const value of [1, 0, -3, 2.5, '10', null, true])
+		test.equal(
+			getMaxPairwiseTestGroups({ maxPairwiseTestGroups: value }),
+			20,
+			`the default for ${JSON.stringify(value)}`
+		)
+	test.end()
+})
+
+tape('chunkWilcoxonPairs: chunks by the number of values, in order, without an empty chunk', function (test) {
+	const pair = (id: string, n: number) => ({
+		group1_id: id,
+		group1_values: Array(n).fill(1),
+		group2_id: id + 'b',
+		group2_values: Array(n).fill(2)
+	})
+	test.deepEqual(chunkWilcoxonPairs([]), [], 'no chunk for no pairs')
+	const pairs = [pair('a', 3), pair('b', 3), pair('c', 3), pair('d', 20), pair('e', 1)]
+	const ids = chunkWilcoxonPairs(pairs, 12).map(c => c.map(p => p.group1_id))
+	// 6 values per pair for a-c, so two fit in 12; d has more than 12 values and is a chunk by itself
+	test.deepEqual(ids, [['a', 'b'], ['c'], ['d'], ['e']], 'the expected chunks')
+	test.deepEqual(chunkWilcoxonPairs(pairs, 12).flat(), pairs, 'the chunks have all of the pairs, in order')
+	test.end()
+})
+
+tape('runWilcoxonTests: a chart with more plots than the maximum has no test results', async function (test) {
+	const plots = Array.from({ length: defaultMaxPairwiseTestGroups + 1 }, (_, i) => ({ label: 'p' + i, values: [i] }))
+	const charts: any = { c: { plots } }
+	await runWilcoxonTests(charts, { getGroupId: p => p.label, getGroupValues: p => p.values }, 'pvalues')
+	test.equal(charts.c.pvalues, undefined, 'no pvalues')
 	test.end()
 })
