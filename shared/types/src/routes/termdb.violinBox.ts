@@ -117,6 +117,8 @@ export type ViolinResponseChart = {
 	chartId: string
 	plots: ViolinPlotEntry[]
 	pvalues?: PValueEntries[][]
+	/** set when pvalues are of the largest plots only */
+	pairwiseTestMessage?: string
 }
 
 export type ViolinResponse = {
@@ -157,6 +159,8 @@ export type BoxPlotChartEntry = {
 	plots: BoxPlotEntry[]
 	sampleCount: number
 	wilcoxon?: [{ value: string }, { value: string }, { html: string }][]
+	/** set when wilcoxon is of the largest plots only */
+	pairwiseTestMessage?: string
 }
 
 export type BoxPlotResponse = {
