@@ -67,6 +67,13 @@ tape('number input: an out-of-range value is marked, and the value that is used 
 	api.main({ settings: { c: { k: 12 } } })
 	test.notOk(isMarked(), 'the mark is cleared when the setting changes otherwise')
 
+	// a typed out-of-range value is replaced by a render of the setting, such as after an undo
+	type('50', 'input')
+	test.ok(isMarked(), 'a typed value above the max is marked')
+	api.main({ settings: { c: { k: 12 } } })
+	test.notOk(isMarked(), 'the mark of a typed value is cleared when the setting is rendered')
+	test.equal(input.attr('title'), null, 'and its title is cleared')
+
 	type('1', 'change')
 	await sleep(20)
 	test.deepEqual(values, [30, 2], 'the min is used for a value below it')
