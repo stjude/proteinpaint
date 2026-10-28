@@ -1,5 +1,6 @@
 import type { BoxPlotSettings } from './Settings'
 import { plotColor } from '#shared/common.js'
+import { defaultMaxPairwiseTestGroups } from '#shared/pairwiseTests.js'
 
 export function getDefaultBoxplotSettings(app, overrides = {}) {
 	const defaults: BoxPlotSettings = {
@@ -13,7 +14,8 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		rowHeight: 50,
 		rowSpace: 15,
 		removeOutliers: false,
-		showAssocTests: true
+		showAssocTests: true,
+		maxPairwiseTestGroups: defaultMaxPairwiseTestGroups
 	}
 	return Object.assign(defaults, overrides)
 }

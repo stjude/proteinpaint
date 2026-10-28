@@ -30,4 +30,6 @@ export type BoxPlotSettings = {
 	removeOutliers: boolean
 	/** If true, show association tests table */
 	showAssocTests: boolean
+	/** the most groups, the largest ones, that get the pairwise Wilcoxon tests */
+	maxPairwiseTestGroups: number
 }

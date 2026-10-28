@@ -38,6 +38,7 @@ Violin plots use the shared `termdb/violinBox` route. The response has `descrSta
 - `orderByMedian`: Sort violins by median value.
 - `showStats`: Show descriptive-statistics legend sections.
 - `showAssociationTests`: Show the pairwise Wilcoxon table.
+- `maxPairwiseTestGroups`: The most groups, the largest ones, that get the pairwise Wilcoxon tests, from 2 to 30 (default: 8).
 - `medianColor`, `medianLength`, `medianThickness`: Median-marker appearance.
 - `svgw`, `axisHeight`, `rightMargin`, `rowSpace`, and `ticks`: Chart dimensions and axis layout.
 

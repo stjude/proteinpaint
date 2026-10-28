@@ -18,7 +18,6 @@ import {
 	expandNumericTermCollection,
 	getDescrStatsByTerm,
 	getMaxPairwiseTestGroups,
-	defaultMaxPairwiseTestGroups,
 	chunkWilcoxonPairs,
 	getPairwiseTestPlots
 } from '../termdb.violinBox.ts'
@@ -35,6 +34,7 @@ import {
 	getMockTermCollectionQ,
 	getMockTermCollectionData
 } from './mockViolinBoxData.ts'
+import { defaultMaxPairwiseTestGroups, pairwiseTestGroupsLimit } from '#shared/pairwiseTests.js'
 
 /**
  * Tests
@@ -1125,16 +1125,27 @@ tape('expandNumericTermCollection: expanded data works with parseValues', functi
 	test.end()
 })
 
-tape('getMaxPairwiseTestGroups: the default, a valid value, and an invalid value', function (test) {
+tape('getMaxPairwiseTestGroups: the request value, else the serverconfig value, else the default', function (test) {
 	test.equal(defaultMaxPairwiseTestGroups, 8, 'the default is 8')
-	test.equal(getMaxPairwiseTestGroups({}), 8, 'the default when not set')
-	test.equal(getMaxPairwiseTestGroups(undefined), 8, 'the default without features')
-	test.equal(getMaxPairwiseTestGroups({ maxPairwiseTestGroups: 5 }), 5, 'a set value')
-	for (const value of [1, 0, -3, 2.5, '10', null, true])
+	test.equal(pairwiseTestGroupsLimit, 30, 'the limit is 30')
+	test.equal(getMaxPairwiseTestGroups(undefined, {}), 8, 'the default when neither is set')
+	test.equal(getMaxPairwiseTestGroups(undefined, undefined), 8, 'the default without features')
+	test.equal(getMaxPairwiseTestGroups(undefined, { maxPairwiseTestGroups: 5 }), 5, 'the serverconfig value')
+	test.equal(getMaxPairwiseTestGroups(12, { maxPairwiseTestGroups: 5 }), 12, 'the request value over serverconfig')
+	test.equal(getMaxPairwiseTestGroups('30', {}), 30, 'a GET request value as a string, at the limit')
+	test.equal(getMaxPairwiseTestGroups(2, {}), 2, 'the lowest value')
+	for (const value of [31, 1, 0, -3, 2.5, '', 'x', true, [8]])
+		test.throws(
+			() => getMaxPairwiseTestGroups(value, {}),
+			/invalid maxPairwiseTestGroups, must be an integer from 2 to 30/,
+			`a request value of ${JSON.stringify(value)} is refused`
+		)
+	// an operator mistake falls back to the default, instead of failing every request
+	for (const value of [31, 1, 2.5, '10', null, true])
 		test.equal(
-			getMaxPairwiseTestGroups({ maxPairwiseTestGroups: value }),
+			getMaxPairwiseTestGroups(undefined, { maxPairwiseTestGroups: value }),
 			defaultMaxPairwiseTestGroups,
-			`the default for ${JSON.stringify(value)}`
+			`the default for a serverconfig value of ${JSON.stringify(value)}`
 		)
 	test.end()
 })
