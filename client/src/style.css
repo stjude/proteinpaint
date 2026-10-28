@@ -206,6 +206,16 @@ by normalize.css are covered here
     border-radius: 5px;
 }
 
+/* a notice that a result is partial, such as when some groups are left out */
+.sja_warnbar {
+    position: relative;
+    padding: 3px 8px;
+    background-color: rgba(230, 160, 0, .12);
+    color: rgba(140, 90, 0, .95);
+    border: solid 1px rgba(230, 160, 0, .35);
+    border-radius: 5px;
+}
+
 
 
 .sja_inset_a {

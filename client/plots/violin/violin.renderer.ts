@@ -245,10 +245,9 @@ export default function setViolinRenderer(self: any) {
 		if (chart.pairwiseTestMessage)
 			tableHolder
 				.append('div')
-				.attr('class', 'sjpp-pairwise-test-message')
+				.attr('class', 'sja_warnbar sjpp-pairwise-test-message')
 				.style('font-size', '0.9em')
-				.style('opacity', 0.8)
-				.style('margin', '3px 0')
+				.style('margin', '5px 0')
 				.text(chart.pairwiseTestMessage)
 
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
