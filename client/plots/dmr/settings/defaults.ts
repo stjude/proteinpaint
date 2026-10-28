@@ -33,7 +33,6 @@ export function getDefaultDMRSettings(opts: any): DMRSettings {
 		},
 		maxLoessRegion: 250_000,
 		minProbesForCi: 10,
-		backend: 'rust' as const,
 		maxRegionSize: 5_000_000
 	}
 

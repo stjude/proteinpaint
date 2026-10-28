@@ -6,13 +6,9 @@ export class DmrModel {
 	private config: DmrConfig
 	private vocab: { genome: string; dslabel: string }
 
-	/** the server accepts the R backend only in debugmode, see termdb.dmr.ts */
-	private debug: boolean
-
-	constructor(config: DmrConfig, vocab: { genome: string; dslabel: string }, debug = false) {
+	constructor(config: DmrConfig, vocab: { genome: string; dslabel: string }) {
 		this.config = config
 		this.vocab = vocab
-		this.debug = debug
 	}
 
 	async fetchDmr(chr: string, start: number, stop: number, signal?: AbortSignal): Promise<TermdbDmrResponse> {
@@ -37,8 +33,6 @@ export class DmrModel {
 				devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : 1,
 				maxLoessRegion: settings.dmr.maxLoessRegion,
 				colors: settings.dmr.colors,
-				// a session saved in debugmode may carry backend 'r', and the toggle to undo it is hidden
-				backend: this.debug ? settings.dmr.backend : 'rust',
 				element_type: this.config.elementType
 			}
 		}) as Promise<TermdbDmrResponse>

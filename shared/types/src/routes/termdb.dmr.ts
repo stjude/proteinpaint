@@ -30,8 +30,6 @@ export type TermdbDmrRequest = {
 	maxLoessRegion?: number
 	/** Group/DMR colors for server-side track rendering */
 	colors?: { group1: string; group2: string; hyper: string; hypo: string }
-	/** Backend engine: 'rust' (genome-wide eBayes, default) or 'r' (DMRCate via cached limma) */
-	backend?: 'rust' | 'r'
 	/** Which element matrix to analyze on a dataset with no CpG-level matrix, e.g. the class the
 	 * volcano was showing. Ignored when the dataset has a CpG matrix, which is always finer. */
 	element_type?: string
@@ -82,7 +80,7 @@ export type DmrDiagnostic = {
 	start_memory_mb?: number
 	/** Total elapsed time in milliseconds */
 	elapsed_ms?: number
-	/** Server-rendered track PNG as data URI (Rust backend only) */
+	/** Server-rendered track PNG as data URI */
 	track_png?: string | null
 }
 
