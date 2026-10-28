@@ -971,7 +971,7 @@ async function parseRoutput(
 				if (type == 'univariate' || type == 'multivariate') (obj as any).type = type
 				analysisResult.data.splinePlots.push(obj)
 				fs.unlink(file, err => {
-					if (err) throw err
+					if (err) console.log(err)
 				})
 			}
 		}
