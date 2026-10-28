@@ -660,7 +660,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		})
 	}
 
-	/** protein × cohort log2FC-z heatmap, clustered on both axes (via server hclust.R) */
+	/** protein × cohort log2FC-z heatmap, clustered on both axes (via server rust hclust) */
 	renderHeatmap(hm: any) {
 		if (!hm) {
 			this.dom.body.append('div').style('padding', '12px').style('color', '#a00').text('Heatmap unavailable.')

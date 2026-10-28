@@ -1,6 +1,6 @@
 import path from 'path'
 import fs from 'fs'
-import { run_R } from '@sjcrh/proteinpaint-r'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import type { RoutePayload, RouteApi, GeneRankingRequest, GeneRankingResponse } from '#types'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
@@ -212,8 +212,8 @@ async function handleCluster(q: any, res): Promise<void> {
 	// per-column z-score ignoring nulls (so missing cells don't bias the column mean/sd)
 	const zMatrix = zscorePerColumnIgnoringNull(keptRows, col_names.length)
 
-	// NA cells imputed to 0 (= column mean after z-score) so the R hclust.R pipeline stays intact.
-	const matrixForR: number[][] = zMatrix.map(row => row.map(v => (v === null ? 0 : (v as number))))
+	// NA cells imputed to 0 (= column mean after z-score) for clustering
+	const matrixForCluster: number[][] = zMatrix.map(row => row.map(v => (v === null ? 0 : (v as number))))
 
 	const clusterMethod = q.clusterMethod || 'average'
 	const distanceMethod = q.distanceMethod || 'euclidean'
@@ -221,24 +221,23 @@ async function handleCluster(q: any, res): Promise<void> {
 	if (!distanceMethodLst.find(i => i.value == distanceMethod)) throw 'Invalid distance method'
 
 	const inputData = {
-		matrix: matrixForR,
+		matrix: matrixForCluster,
 		row_names: keptNames,
 		col_names,
 		cluster_method: clusterMethod,
-		distance_method: distanceMethod,
-		plot_image: false
+		distance_method: distanceMethod
 	}
 
-	const Routput = JSON.parse(await run_R('hclust.R', JSON.stringify(inputData)))
+	const hclust = JSON.parse(await run_rust('hclust', JSON.stringify(inputData)))
 
-	const rowOrderIdx: number[] = Routput.RowOrder.map((row: { name: string }) => keptNames.indexOf(row.name))
+	const rowOrderIdx: number[] = hclust.row.order.map((row: { name: string }) => keptNames.indexOf(row.name))
 	const orderedMatrix: (number | null)[][] = rowOrderIdx.map(i => zMatrix[i])
 
 	res.send({
 		row: {
-			merge: Routput.RowMerge,
-			height: Routput.RowHeight,
-			order: Routput.RowOrder,
+			merge: hclust.row.merge,
+			height: hclust.row.height,
+			order: hclust.row.order,
 			inputOrder: keptNames
 		},
 		usedRowNames: keptNames,

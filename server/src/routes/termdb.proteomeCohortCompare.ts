@@ -4,6 +4,7 @@ import type { RouteApi, RoutePayload } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import serverconfig from '#src/serverconfig.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasProteomeDs } from './termdb.proteome.ts'
 import { parseJsonParam } from './common.ts'
@@ -143,7 +144,7 @@ type Hclust = {
 /**
  * Build the protein × cohort log2FC-z heatmap: rows = proteins that are a DAP (|z|≥zThresh &
  * FDR≤fdrThresh) in ≥1 cohort, capped at the top `maxRows` by variance of z across cohorts;
- * both axes clustered by run_R('hclust.R') — the same engine hierCluster uses. z/fc/fdr are
+ * both axes clustered by run_rust('hclust') — the same engine hierCluster uses. z/fc/fdr are
  * returned reordered by the dendrogram leaf order.
  */
 async function buildHeatmap(
@@ -195,14 +196,13 @@ async function buildHeatmap(
 			row_names: rowNames,
 			col_names: colIds,
 			cluster_method: 'average',
-			distance_method: 'euclidean',
-			plot_image: false
+			distance_method: 'euclidean'
 		}
-		const R = JSON.parse(await run_R('hclust.R', JSON.stringify(inputData)))
-		rowOrderIdx = R.RowOrder.map((o: { name: string }) => rowNames.indexOf(o.name))
-		colOrderIdx = R.ColOrder.map((o: { name: string }) => colIds.indexOf(o.name))
-		rowDendrogram = { merge: R.RowMerge, height: R.RowHeight, order: R.RowOrder, inputOrder: rowNames }
-		colDendrogram = { merge: R.ColumnMerge, height: R.ColumnHeight, order: R.ColOrder, inputOrder: colIds }
+		const hclust = JSON.parse(await run_rust('hclust', JSON.stringify(inputData)))
+		rowOrderIdx = hclust.row.order.map((o: { name: string }) => rowNames.indexOf(o.name))
+		colOrderIdx = hclust.col.order.map((o: { name: string }) => colIds.indexOf(o.name))
+		rowDendrogram = { ...hclust.row, inputOrder: rowNames }
+		colDendrogram = { ...hclust.col, inputOrder: colIds }
 	}
 
 	const reorder = (mat: number[][]) => rowOrderIdx.map(r => colOrderIdx.map(c => mat[r][c]))
