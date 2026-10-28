@@ -1,16 +1,18 @@
-import tape from 'tape'
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
-import { spawnSync } from 'child_process'
+import tape from "tape"
+import fs from "fs"
+import os from "os"
+import path from "path"
+import { spawnSync } from "child_process"
 
 /* run_rust() runs a wasm module in the node process when the permission model does not allow a child process.
 The checks run in a node process with that permission model, see runChecks() below. The modules are built with the
 command in wasm/Cargo.toml, and these tests are skipped without them. */
 
-const rustDir = path.join(import.meta.dirname, '..')
-const wasmDir = path.join(rustDir, 'target/wasm/wasm32-wasip1/release')
-const hasModules = ['fisher', 'wilcoxon'].every(n => fs.existsSync(path.join(wasmDir, n + '.wasm')))
+const rustDir = path.join(import.meta.dirname, "..")
+const wasmDir = path.join(rustDir, "target/wasm/wasm32-wasip1/release")
+const hasModules = ["fisher", "wilcoxon"].every((n) =>
+	fs.existsSync(path.join(wasmDir, n + ".wasm"))
+)
 
 // runs the checks code in a node process without the child process permission; returns its exit status and output
 function runChecks(checks, permissionFlags = []) {
@@ -18,21 +20,29 @@ function runChecks(checks, permissionFlags = []) {
 	const code = `
 		import assert from 'node:assert/strict'
 		import { Readable } from 'node:stream'
-		import { run_rust } from ${JSON.stringify(path.join(rustDir, 'index.js'))}
+		import { run_rust } from ${JSON.stringify(path.join(rustDir, "index.js"))}
 		${checks}
 		console.log('checks passed')`
 	// no write path, since a module's stdin, stdout and stderr are in memory
-	const args = ['--permission', `--allow-fs-read=${rustDir}`, `--allow-fs-read=${tmpdir}`]
-	return spawnSync(process.execPath, [...args, ...permissionFlags, '--input-type=module', '-e', code], {
-		encoding: 'utf8',
-		env: { ...process.env, TMPDIR: tmpdir }
-	})
+	const args = [
+		"--permission",
+		`--allow-fs-read=${rustDir}`,
+		`--allow-fs-read=${tmpdir}`,
+	]
+	return spawnSync(
+		process.execPath,
+		[...args, ...permissionFlags, "--input-type=module", "-e", code],
+		{
+			encoding: "utf8",
+			env: { ...process.env, TMPDIR: tmpdir },
+		}
+	)
 }
 
 tape(
-	'run_rust runs a wasm module in the node process when a child process is not allowed',
+	"run_rust runs a wasm module in the node process when a child process is not allowed",
 	{ skip: !hasModules },
-	test => {
+	(test) => {
 		const result = runChecks(`
 		const input = [
 			{ index: 0, n1: 605, n2: 2050, n3: 503, n4: 1895 },
@@ -60,19 +70,19 @@ tape(
 		await assert.rejects(run_rust('fisher', stalled, [], { signal: controller.signal }), /run_rust\\('fisher'\\): aborted$/)
 		assert.ok(stalled.destroyed, 'the stalled input is destroyed')`)
 		test.equal(result.status, 0, result.stderr)
-		test.ok(result.stdout.includes('checks passed'), 'the checks ran')
+		test.ok(result.stdout.includes("checks passed"), "the checks ran")
 		test.end()
 	}
 )
 
 tape(
-	'a module that does not compile rejects before a stream input is read, and is compiled again by a later call',
+	"a module that does not compile rejects before a stream input is read, and is compiled again by a later call",
 	{ skip: !hasModules },
-	test => {
+	(test) => {
 		// a module name that no binary has, which the checks replace with a module that compiles
-		const name = 'pp_test_invalid_module'
-		const modpath = path.join(wasmDir, name + '.wasm')
-		fs.writeFileSync(modpath, 'not a wasm module')
+		const name = "pp_test_invalid_module"
+		const modpath = path.join(wasmDir, name + ".wasm")
+		fs.writeFileSync(modpath, "not a wasm module")
 		try {
 			const result = runChecks(
 				`
@@ -81,14 +91,16 @@ tape(
 			await assert.rejects(run_rust('${name}', stalled), WebAssembly.CompileError)
 			assert.equal(stalled.readableDidRead, false, 'the stream input is not read')
 			const fs = await import('node:fs')
-			fs.copyFileSync(${JSON.stringify(path.join(wasmDir, 'fisher.wasm'))}, ${JSON.stringify(modpath)})
+			fs.copyFileSync(${JSON.stringify(
+				path.join(wasmDir, "fisher.wasm")
+			)}, ${JSON.stringify(modpath)})
 			const input = [{ index: 0, n1: 605, n2: 2050, n3: 503, n4: 1895 }]
 			const out = JSON.parse(await run_rust('${name}', JSON.stringify({ input })))
 			assert.deepEqual(out.map(r => r.p_value), [0.12552895565046274])`,
 				[`--allow-fs-write=${wasmDir}`]
 			)
 			test.equal(result.status, 0, result.stderr)
-			test.ok(result.stdout.includes('checks passed'), 'the checks ran')
+			test.ok(result.stdout.includes("checks passed"), "the checks ran")
 		} finally {
 			fs.rmSync(modpath, { force: true })
 		}
@@ -96,34 +108,77 @@ tape(
 	}
 )
 
-tape('each wasm module instantiates without the --allow-wasi permission', { skip: !hasModules }, test => {
-	const names = fs
-		.readdirSync(wasmDir)
-		.filter(f => f.endsWith('.wasm'))
-		.map(f => f.slice(0, -5))
-	// a module that instantiated runs, and handles or rejects the invalid input, instead of rejecting with a LinkError
-	const result = runChecks(`
-		for (const name of ${JSON.stringify(names)})
-			await run_rust(name, 'x').catch(e => assert.ok(!(e instanceof WebAssembly.LinkError), name + ': ' + e))`)
-	test.equal(result.status, 0, result.stderr)
-	test.ok(result.stdout.includes('checks passed'), 'the checks ran')
-	test.end()
-})
-
-tape('a wasm module that imports another WASI function does not instantiate', { skip: !hasModules }, test => {
-	const name = 'pp_test_other_import'
-	const modpath = path.join(wasmDir, name + '.wasm')
-	// a module whose only import is wasi_snapshot_preview1.path_open, as a function with no params and no results
-	const str = s => [s.length, ...Buffer.from(s)]
-	const imp = [1, ...str('wasi_snapshot_preview1'), ...str('path_open'), 0, 0]
-	const bytes = [0, 0x61, 0x73, 0x6d, 1, 0, 0, 0, 1, 4, 1, 0x60, 0, 0, 2, imp.length, ...imp]
-	fs.writeFileSync(modpath, Buffer.from(bytes))
-	try {
-		const result = runChecks(`await assert.rejects(run_rust('${name}', '{}'), WebAssembly.LinkError)`)
+tape(
+	"each wasm module instantiates without the --allow-wasi permission",
+	{ skip: !hasModules },
+	(test) => {
+		const names = fs
+			.readdirSync(wasmDir)
+			.filter((f) => f.endsWith(".wasm"))
+			.map((f) => f.slice(0, -5))
+		// each module instantiates, runs, and reports the invalid input
+		const result = runChecks(`
+		for (const name of ${JSON.stringify(names)}) {
+			const out = await run_rust(name, 'x')
+			assert.ok(out.startsWith('Incorrect json:'), name + ': ' + out)
+		}`)
 		test.equal(result.status, 0, result.stderr)
-		test.ok(result.stdout.includes('checks passed'), 'the checks ran')
-	} finally {
-		fs.rmSync(modpath, { force: true })
+		test.ok(result.stdout.includes("checks passed"), "the checks ran")
+		test.end()
 	}
-	test.end()
-})
+)
+
+tape(
+	"a wasm module that imports another function does not instantiate",
+	{ skip: !hasModules },
+	(test) => {
+		const name = "pp_test_other_import"
+		const modpath = path.join(wasmDir, name + ".wasm")
+		// a module whose only import is the given function, with no params and no results: another WASI function, or the
+		// name of an inherited property at either level of the import object; a missing import module is a TypeError
+		const str = (s) => [s.length, ...Buffer.from(s)]
+		const moduleBytes = (mod, field) => {
+			const imp = [1, ...str(mod), ...str(field), 0, 0]
+			return Buffer.from([
+				0,
+				0x61,
+				0x73,
+				0x6d,
+				1,
+				0,
+				0,
+				0,
+				1,
+				4,
+				1,
+				0x60,
+				0,
+				0,
+				2,
+				imp.length,
+				...imp,
+			])
+		}
+		try {
+			for (const [mod, field, error] of [
+				["wasi_snapshot_preview1", "path_open", "WebAssembly.LinkError"],
+				["wasi_snapshot_preview1", "toString", "WebAssembly.LinkError"],
+				["wasi_snapshot_preview1", "hasOwnProperty", "WebAssembly.LinkError"],
+				["constructor", "call", "TypeError"],
+			]) {
+				fs.writeFileSync(modpath, moduleBytes(mod, field))
+				const result = runChecks(
+					`await assert.rejects(run_rust('${name}', '{}'), ${error})`
+				)
+				test.equal(result.status, 0, `${mod}.${field}: ${result.stderr}`)
+				test.ok(
+					result.stdout.includes("checks passed"),
+					`${mod}.${field}: the checks ran`
+				)
+			}
+		} finally {
+			fs.rmSync(modpath, { force: true })
+		}
+		test.end()
+	}
+)
