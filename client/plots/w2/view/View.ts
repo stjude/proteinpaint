@@ -130,7 +130,8 @@ export class View {
 
 		const [w, h] = meta.slide_dimensions // level-0 slide size in px
 		// server origin for tile URLs ('' when same-origin); trailing slashes trimmed
-		const host = (sessionStorage.getItem('hostURL') || (window as any).testHost || '').replace(/\/+$/, '')
+		let host = sessionStorage.getItem('hostURL') || (window as any).testHost || ''
+		while (host.endsWith('/')) host = host.slice(0, -1)
 
 		const source = new Zoomify({
 			// {z}/{x}/{y} hit wsitiles/tile; the unused {TileGroup} token only satisfies
