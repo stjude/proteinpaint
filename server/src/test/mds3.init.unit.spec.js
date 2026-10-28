@@ -11,7 +11,8 @@ import {
 	mayFilterByMaf,
 	mayValidateBcfMafFilter,
 	setFile,
-	svfusionByNameGetter_file
+	svfusionByNameGetter_file,
+	plotSampleGenomeQuantification
 } from '../mds3.init.js'
 import { toBreakpointPos } from '../svfusion.breakpoint.ts'
 import serverconfig from '../serverconfig.js'
@@ -3300,6 +3301,25 @@ test('filterByItem: rejects a tvs origin on a dt that is not origin-split', t =>
 		[true, true],
 		'an unrestricted filter does not require an origin'
 	)
+})
+
+test('plotSampleGenomeQuantification: bounds devicePixelRatio', t => {
+	t.throws(
+		() => plotSampleGenomeQuantification('/nonexistent', {}, { min: 0, max: 1 }, 999),
+		/devicePixelRatio out of bound/,
+		'rejects an oversized devicePixelRatio before rendering'
+	)
+	t.throws(
+		() => plotSampleGenomeQuantification('/nonexistent', {}, { min: 0, max: 1 }, 0),
+		/devicePixelRatio out of bound/,
+		'rejects a devicePixelRatio of 0'
+	)
+	t.throws(
+		() => plotSampleGenomeQuantification('/nonexistent', {}, { min: 0, max: 1 }, 'a'),
+		/devicePixelRatio out of bound/,
+		'rejects a devicePixelRatio that is not a number'
+	)
+	t.end()
 })
 
 // a custom groupset of one group, filtering the snvindel dt by the given origins
