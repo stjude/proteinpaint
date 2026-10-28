@@ -27,7 +27,7 @@ export default function (genomes) {
 // upper limits of the request's image size; makeCanvas() further lowers the pixel ratio of a large image
 const maxWidth = 20000
 const maxBarHeight = 2000
-const maxPixelRatio = 5
+export const maxPixelRatio = 5
 
 export function validateCanvasSize(q) {
 	if (!Number.isFinite(q.barheight)) throw 'invalid barheight'
