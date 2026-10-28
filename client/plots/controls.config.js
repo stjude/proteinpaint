@@ -180,7 +180,9 @@ function setNumberInput(opts) {
 				.html(opts.label),
 			inputs: {}
 		},
-		values: {}
+		values: {},
+		// the value of each input that was used instead of an out-of-range value, by settingsKey
+		clampedValues: {}
 	}
 
 	if (!opts.inputs) {
@@ -201,6 +203,23 @@ function setNumberInput(opts) {
 		opts.debounceInterval ||
 		('debounceInterval' in opts.parent?.app.opts ? opts.parent?.app.opts.debounceInterval : 100)
 	for (const input of opts.inputs) {
+		const hasMin = ![undefined, null].includes(input.min)
+		const hasMax = ![undefined, null].includes(input.max)
+		const range =
+			hasMin && hasMax ? `from ${input.min} to ${input.max}` : hasMin ? `at least ${input.min}` : `at most ${input.max}`
+		const isInRange = value => (!hasMin || value >= input.min) && (!hasMax || value <= input.max)
+		// an out-of-range value has a red background, and a title that says why
+		function markInput(message = '') {
+			self.dom.inputs[input.settingsKey]
+				.style('background-color', message ? 'rgba(255, 0, 0, 0.25)' : null)
+				.attr('title', message || null)
+		}
+		function checkTypedValue() {
+			delete self.clampedValues[input.settingsKey]
+			const typed = self.dom.inputs[input.settingsKey].property('value')
+			markInput(typed === '' || isInRange(Number(typed)) ? '' : `The value must be ${range}`)
+		}
+
 		let dispatchTimer
 		function debouncedDispatch(noDispatch = false) {
 			if (dispatchTimer) clearTimeout(dispatchTimer)
@@ -208,9 +227,16 @@ function setNumberInput(opts) {
 		}
 
 		function dispatchChange() {
-			let value = Number(self.dom.inputs[input.settingsKey].property('value'))
-			if (![undefined, null].includes(input.max) && input.max < value) value = input.max
-			if (![undefined, null].includes(input.min) && input.min > value) value = input.min
+			const typed = Number(self.dom.inputs[input.settingsKey].property('value'))
+			let value = typed
+			if (hasMax && input.max < value) value = input.max
+			if (hasMin && input.min > value) value = input.min
+			if (value !== typed) {
+				// shows the value that is used, since the setting may not change, such as when it is already the max
+				self.dom.inputs[input.settingsKey].property('value', value)
+				self.clampedValues[input.settingsKey] = value
+				markInput(`${typed} is not allowed, the value must be ${range}: ${value} is used instead`)
+			}
 			if (opts.callback) opts.callback(value)
 			else {
 				opts.app.dispatch({
@@ -243,6 +269,7 @@ function setNumberInput(opts) {
 				.attr('max', 'max' in input ? input.max : null) // same
 				.attr('step', input.step || opts.step || null) //step gives the amount by which user can increment
 				.style('width', (input.width || opts.width || 100) + 'px')
+				.on('input', checkTypedValue)
 				.on('keyup', event => {
 					const valueChanged =
 						self.values[opts.settingsKey] !== Number(self.dom.inputs[input.settingsKey].property('value'))
@@ -264,6 +291,11 @@ function setNumberInput(opts) {
 				const value = plot.settings[opts.chartType][settingsKey]
 				self.dom.inputs[settingsKey].property('value', value)
 				self.values[settingsKey] = value
+				// the out-of-range mark stays until the next edit, or until the setting changes otherwise
+				if (settingsKey in self.clampedValues && self.clampedValues[settingsKey] !== value) {
+					delete self.clampedValues[settingsKey]
+					self.dom.inputs[settingsKey].style('background-color', null).attr('title', null)
+				}
 			}
 		}
 	}
