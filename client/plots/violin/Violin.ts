@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { controlsInit, renderTerm1Label } from '../controls'
 import { getT0T2defaultQ } from '../summaryQ.ts'
-import setViolinRenderer from './violin.renderer'
+import setViolinRenderer, { isExpandedTermCollection } from './violin.renderer'
 import { htmlLegend, Menu, setDescrStatsByTerm } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
@@ -13,14 +13,6 @@ import { getDefaultViolinSettings } from './settings/defaults'
 import type { ViolinSettings } from './settings/Settings'
 import type { ViolinRequest } from '#types'
 import { pairwiseTestGroupsLimit } from '#shared/pairwiseTests.js'
-/** a numeric termCollection tw, whose member terms the server makes into the overlay groups, except for a fraction
- * tw, which has a single value per sample */
-function isExpandedTermCollection(tw: any): boolean {
-	return (
-		tw?.term?.type === 'termCollection' && tw.term.memberType === 'numeric' && tw.type !== 'TermCollectionTWFraction'
-	)
-}
-
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that 
 will have a single term and minimal features (i.e. no controls, legend, 
@@ -339,7 +331,7 @@ class ViolinPlot extends PlotBase implements RxComponent {
 				chartType: 'violin',
 				settingsKey: 'showAssociationTests',
 				boxLabel: 'Yes',
-				getDisplayStyle: plot => (plot.term2 ? 'table-row' : 'none')
+				getDisplayStyle: plot => (plot.term2 || isExpandedTermCollection(plot.term) ? 'table-row' : 'none')
 			},
 			{
 				label: 'Pairwise test groups',

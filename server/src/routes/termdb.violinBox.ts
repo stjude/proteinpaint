@@ -24,6 +24,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 import { defaultMaxPairwiseTestGroups, pairwiseTestGroupsLimit, pairwiseTestMessage } from '#shared/pairwiseTests.js'
+import { getViolinHiddenValues } from '#shared/violinHiddenValues.js'
 import { kernelDensity } from '#src/utils/density.ts'
 
 export const payload: RoutePayload = {
@@ -196,7 +197,11 @@ async function getViolin(
 	const result = setViolinResponse(valuesObject, data, q)
 
 	// wilcoxon test data to return to client
-	if (q.overlayTw) await getViolinWilcoxonData(result, q.maxPairwiseTestGroups, q.overlayTw.q?.hiddenValues)
+	// the hidden groups are of the term that the violin renderer uses: the termCollection, whose members are the groups
+	// of the overlay that expandNumericTermCollection() makes, or else the overlay term
+	const groupTw =
+		q.tw.term.type === 'termCollection' && (q.tw as any).type !== 'TermCollectionTWFraction' ? q.tw : q.overlayTw
+	if (q.overlayTw) await getViolinWilcoxonData(result, q.maxPairwiseTestGroups, groupTw)
 
 	await createCanvasImg(q, result, ds)
 	result['descrStats'] = descrStats
@@ -392,15 +397,16 @@ async function createCanvasImg(
 export async function getViolinWilcoxonData(
 	result: { [index: string]: any },
 	maxPairwiseTestGroups?: number,
-	hiddenValues?: Record<string, unknown>
+	groupTw?: any
 ) {
+	const hidden = getViolinHiddenValues(groupTw)
 	await runWilcoxonTests(
 		result.charts,
 		{
 			getGroupId: plot => plot.label,
 			getGroupValues: plot => plot.values,
 			// the same check as the violin renderer, which does not show a hidden plot or its comparisons
-			isHidden: plot => !!(hiddenValues && (plot.seriesId in hiddenValues || plot.label in hiddenValues))
+			isHidden: plot => !!hidden[plot.label]
 		},
 		'pvalues',
 		getMaxPairwiseTestGroups(maxPairwiseTestGroups)
