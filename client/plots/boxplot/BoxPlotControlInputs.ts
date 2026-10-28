@@ -187,7 +187,13 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			max: pairwiseTestGroupsLimit,
 			debounceInterval: 500,
 			processInput: (val: number) => Math.round(val),
-			getDisplayStyle: plot => (plot?.term2 ? '' : 'none')
+			getDisplayStyle: plot =>
+				plot?.term2 ||
+				(plot?.term?.term?.type === 'termCollection' &&
+					plot.term.term.memberType === 'numeric' &&
+					plot.term.type !== 'TermCollectionTWFraction')
+					? ''
+					: 'none'
 		}
 	]
 
