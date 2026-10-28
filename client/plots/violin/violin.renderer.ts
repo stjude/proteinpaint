@@ -7,6 +7,7 @@ import { rgb } from 'd3-color'
 import { format as d3format } from 'd3-format'
 import { isSingleCellTerm } from '#shared'
 import type { TermWrapper, ViolinResponse, ViolinResponseChart } from '#types'
+import { getViolinHiddenValues } from '#shared/violinHiddenValues.js'
 import { getValueConversionFactor, toUserUnit } from '#shared/helpers.js'
 
 // const minSampleSize = 5 // a group below cutoff will not render a violin plot
@@ -61,6 +62,14 @@ function getNumericTerm(t1: TermWrapper, t2?: TermWrapper) {
 	return (t2 as any)?.q?.mode === 'continuous' ? (t2 as any).term : (t1 as any)?.term
 }
 
+/** a numeric termCollection tw, whose member terms the server makes into the overlay groups, except for a fraction
+ * tw, which has a single value per sample */
+export function isExpandedTermCollection(tw: any): boolean {
+	return (
+		tw?.term?.type === 'termCollection' && tw.term.memberType === 'numeric' && tw.type !== 'TermCollectionTWFraction'
+	)
+}
+
 export default function setViolinRenderer(self: any) {
 	self.render = function () {
 		const settings = self.config.settings.violin
@@ -76,19 +85,8 @@ export default function setViolinRenderer(self: any) {
 			((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
 				? t2
 				: t1
-		if (!(termNum as any)?.q.hiddenValues) (termNum as any).q.hiddenValues = {}
-
-		if ((termNum as any)?.term?.values) {
-			for (const [k, val] of Object.entries((termNum as any).term.values)) {
-				const v = val as { label: string; uncomputable?: boolean }
-				if (v.uncomputable) {
-					if ((termNum as any).q.hiddenValues[k]) {
-						;(termNum as any).q.hiddenValues[v.label] = 1
-						delete (termNum as any).q.hiddenValues[k]
-					}
-				}
-			}
-		}
+		// the hidden plots by label, the same as the server, which does not test them pairwise
+		;(termNum as any).q.hiddenValues = getViolinHiddenValues(termNum)
 
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
 		self.dom.violinDiv.selectAll('*').remove()
@@ -228,8 +226,8 @@ export default function setViolinRenderer(self: any) {
 		const t1 = self.config.term
 		const t2 = self.config.term2
 
-		if (!t2) {
-			// no term2, no table to show
+		if (!t2 && !isExpandedTermCollection(t1)) {
+			// no term2, and no overlay that the server makes from the members of a termCollection: no table to show
 			tableHolder.style('display', 'none')
 			return
 		}
