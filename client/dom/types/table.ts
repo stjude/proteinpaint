@@ -178,4 +178,11 @@ export type TableArgs = {
 		/** called when the user changes page or page size */
 		onChange?: (state: { currentPage: number; pageSize: number }) => void
 	}
+	/** When set, a last row below the data rows, with one cell that spans all of the columns, such as a note
+	 * that the rows are truncated. It stays the last row after a sort or a page change. */
+	footerRow?: {
+		text: string
+		/** class of the cell, such as 'sja_warnbar' */
+		className?: string
+	}
 }

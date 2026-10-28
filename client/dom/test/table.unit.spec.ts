@@ -704,3 +704,42 @@ tape('pagination: Next/Previous buttons change the page', test => {
 	if ((test as any)._ok) holder.remove()
 	test.end()
 })
+
+tape('\n', test => {
+	test.comment('-***- dom/table - footerRow -***-')
+	test.end()
+})
+
+tape('footerRow: a last row with one cell that spans all of the columns, also after a page change', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+
+	renderTable({
+		div: holder,
+		columns: paginationColumns,
+		rows: makePaginatedRows(25),
+		pagination: { pageSize: 10 },
+		footerRow: { text: 'rows are truncated', className: 'sja_warnbar' }
+	} as any)
+
+	const footer = () => holder.select('table tfoot td')
+	test.equal(footer().text(), 'rows are truncated', 'the footer row has the text')
+	test.equal(footer().attr('class'), 'sja_warnbar', 'the footer cell has the class')
+	// the line number column and the 2 data columns
+	test.equal(footer().attr('colspan'), '3', 'the footer cell spans all of the columns')
+	findPagerButton(holder, 'Next')!.click()
+	test.equal(holder.selectAll('table tfoot tr').size(), 1, 'the footer row is still there after a page change')
+	test.equal(holder.selectAll('table tbody tr').size(), 10, 'the data rows are in the tbody')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('footerRow: no tfoot without footerRow', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	renderTable({ div: holder, columns: paginationColumns, rows: makePaginatedRows(3) } as any)
+	test.equal(holder.selectAll('table tfoot').size(), 0, 'no tfoot')
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
