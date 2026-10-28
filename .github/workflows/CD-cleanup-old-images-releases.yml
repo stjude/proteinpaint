@@ -32,6 +32,7 @@ jobs:
           echo "VERSIONS_TO_RETAIN=$(jq -r '.VersionsToRetain' "$CONFIG")" >> "$GITHUB_ENV"
           echo "PACKAGES=$(jq -c '.packages' "$CONFIG")" >> "$GITHUB_ENV"
           echo "INDEX_PACKAGES=$(jq -c '.IndexPackages' "$CONFIG")" >> "$GITHUB_ENV"
+
       - name: List release branches
         run: |
           BRANCH_PAGES=$(gh api repos/stjude/proteinpaint/branches --paginate)
@@ -76,14 +77,19 @@ jobs:
               tag=$(echo "$version" | jq -r '.tags[0]')
               digest=$(echo "$version" | jq -r '.name')
 
-              BEARER=$(curl -s -u "x:$GH_TOKEN" "https://ghcr.io/token?service=ghcr.io&scope=repository:stjude/${pkg}:pull" | jq -r .token)
-              MANIFEST=$(curl -s -H "Authorization: Bearer $BEARER" -H "Accept: application/vnd.oci.image.index.v1+json" "https://ghcr.io/v2/stjude/${pkg}/manifests/${tag}")
-
+              if ! BEARER=$(curl -fsS -u "x:$GH_TOKEN" "https://ghcr.io/token?service=ghcr.io&scope=repository:stjude/${pkg}:pull" | jq -er '.token // empty');then
+                echo "No valid bearer"
+              continue;
+              fi
+              if ! MANIFEST=$(curl -fsS -H "Authorization: Bearer $BEARER" -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.list.v2+json" "https://ghcr.io/v2/stjude/${pkg}/manifests/${digest}"); then
+                echo "::warning::manifest fetch failed for $pkg@$digest - skipping"
+                continue
+              fi
               if echo "$MANIFEST" | jq -e '.mediaType == "application/vnd.oci.image.index.v1+json"' > /dev/null; then
                 CHILDREN=$(echo "$MANIFEST" | jq -c '[.manifests[].digest]')
                 echo "{\"parent\":\"$digest\",\"children\":$CHILDREN}" >> "$GROUPS_FILE"
               fi
-            done < <(jq -c --arg pkg "$pkg" '.[] | select(.package == $pkg and (.tags | length > 0))' "$IMAGE_VERSIONS_FILE")
+            done < <(jq -c --arg pkg "$pkg" '.[] | select(.package == $pkg)' "$IMAGE_VERSIONS_FILE")
           done
 
           echo "GROUPS_FILE=$GROUPS_FILE" >> "$GITHUB_ENV"
@@ -161,11 +167,33 @@ jobs:
           echo "ELIGIBLE_FILE=$ELIGIBLE_FILE" >> "$GITHUB_ENV"
 
       - name: Throttle and Delete
+        # Each eligible item is either standalone, or part of a parent/child group recorded in GROUPS_FILE.
+        # A whole group counts as ONE slot against MAX_DELETIONS (not one slot per member), so the cap can
+        # never select part of a group and leave the rest behind - that would break the surviving members.
         env:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
-          BATCH=$(jq -sc "sort_by(.created_at)[0:$MAX_DELETIONS]" "$ELIGIBLE_FILE")
+          BATCH=$(jq -c --slurpfile eligible "$ELIGIBLE_FILE" --slurpfile groups "$GROUPS_FILE" --argjson n "$MAX_DELETIONS" -n '
+            ($eligible | map({(.name): .}) | add) as $by_digest #by_digest is a lookup table so we can fetch an eligible item's full record by its digest
+            | ($groups | map(.parent)) as $parent_digests #every digest that is some group's parent
+            | ($groups | map(.children[])) as $child_digests #$parent_digests/$child_digests are flat lists used to identify which eligible items are standalone
+            | (
+                [
+                  $groups[] #one selection unit per group - only groups whose parent actually shows up in ELIGIBLE_FILE (reconciliation already guarantees the whole group is eligible together)
+                  | select($by_digest[.parent] != null)
+                  | {date: $by_digest[.parent].created_at, items: ([.parent] + .children | map($by_digest[.]))} #items = [parent, then children] in that order, so deletion below naturally does parent-first
+                ]
+                + #combine the group units with every standalone (ungrouped) eligible item, each as its own one-item unit
+                [
+                  $eligible[]
+                  | select(.name as $n | ($parent_digests | index($n)) == null and ($child_digests | index($n)) == null) #keep only items that are neither a parent nor a child of any group
+                  | {date: .created_at, items: [.]}
+                ]
+              )
+            | sort_by(.date)[0:$n] #sort ALL units (groups and standalones alike) oldest first, and take only MAX_DELETIONS of them - a group here still only costs one slot
+            | [.[].items[]] #flatten the selected units back into one flat list of items to actually delete
+          ')
 
           while read -r item; do
             package=$(echo "$item" | jq -r '.package')
