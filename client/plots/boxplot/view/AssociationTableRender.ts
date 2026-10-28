@@ -12,20 +12,12 @@ export class AssociationTableRender {
 			.style('font-weight', '600')
 			.style('text-align', 'center')
 
-		if (message)
-			wrapper
-				.append('div')
-				.attr('class', 'sja_warnbar sjpp-pairwise-test-message')
-				.text(message)
-				.style('font-size', '0.9em')
-				.style('text-align', 'center')
-				.style('margin-top', '5px')
-
 		const tableDiv = wrapper.append('div').style('margin-top', '5px')
 		renderTable({
 			div: tableDiv,
 			columns: [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-Value' }],
-			rows: data
+			rows: data,
+			footerRow: message ? { text: message, className: 'sja_warnbar' } : undefined
 		})
 	}
 }
