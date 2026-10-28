@@ -87,7 +87,6 @@ fn run(input: &str) -> Result<String, String> {
         return Err("no survival data".to_string());
     }
 
-    let mut times: Vec<f64> = Vec::with_capacity(observations.len());
     for o in &observations {
         if !o.time.is_finite() {
             return Err(format!("invalid time: {}", o.time));
@@ -95,9 +94,7 @@ fn run(input: &str) -> Result<String, String> {
         if o.status != 0.0 && o.status != 1.0 {
             return Err(format!("invalid status: {}", o.status));
         }
-        times.push(o.time);
     }
-    fix_times(&mut times);
 
     let labels: Vec<String> = observations
         .iter()
@@ -109,16 +106,23 @@ fn run(input: &str) -> Result<String, String> {
     let mut samples: Vec<Vec<Sample>> = vec![Vec::new(); series.len()];
     for (i, o) in observations.iter().enumerate() {
         let k = series.iter().position(|s| *s == labels[i]).unwrap();
-        samples[k].push((times[i], o.status == 1.0));
+        samples[k].push((o.time, o.status == 1.0));
     }
     for s in samples.iter_mut() {
         s.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
     }
 
+    // the R script that this replaces took the estimates of a series from survfit() of the first pair of series that
+    // has it, so the times of a series are fixed with those of the first series, or of the second series for the first
     let z = normal_quantile(0.975, 0.0, 1.0, true, false);
     let mut estimates: Vec<Estimate> = Vec::new();
-    for (k, s) in series.iter().enumerate() {
-        estimates.extend(kaplan_meier(s, &samples[k], z));
+    if series.len() == 1 {
+        estimates.extend(kaplan_meier(&series[0], &fix_series_times(&[&samples[0]])[0], z));
+    } else {
+        for (k, s) in series.iter().enumerate() {
+            let fixed = fix_series_times(&[&samples[0], &samples[k.max(1)]]);
+            estimates.extend(kaplan_meier(s, &fixed[k.min(1)], z));
+        }
     }
 
     let mut tests: Option<Vec<Test>> = None;
@@ -127,10 +131,11 @@ fn run(input: &str) -> Result<String, String> {
         let mut lst: Vec<Test> = Vec::new();
         for i in 0..series.len() {
             for j in (i + 1)..series.len() {
+                let fixed = fix_series_times(&[&samples[i], &samples[j]]);
                 lst.push(Test {
                     series1: series[i].clone(),
                     series2: series[j].clone(),
-                    pvalue: format_r(signif(logrank_pvalue(&samples[i], &samples[j]), 2)),
+                    pvalue: format_r(signif(logrank_pvalue(&fixed[0], &fixed[1]), 2)),
                 });
             }
         }
@@ -201,6 +206,19 @@ fn fix_times(times: &mut [f64]) {
         let i = cuts.partition_point(|c| c <= t);
         *t = cuts[i - 1];
     }
+}
+
+// copies of the samples of the given series, with the times fixed over the samples of only these series, as survfit()
+// and survdiff() in R fix the times of the data that they are given, so that another series cannot change the ties;
+// the copies stay sorted by time, since a fixed time is never greater than the next fixed time
+fn fix_series_times(series: &[&[Sample]]) -> Vec<Vec<Sample>> {
+    let mut times: Vec<f64> = series.iter().flat_map(|s| s.iter().map(|x| x.0)).collect();
+    fix_times(&mut times);
+    let mut times = times.into_iter();
+    series
+        .iter()
+        .map(|s| s.iter().map(|x| (times.next().unwrap(), x.1)).collect())
+        .collect()
 }
 
 // the Kaplan-Meier estimates of a series, with samples sorted by time, as survfit() in R, at each unique time of an
