@@ -15,12 +15,11 @@ export class AssociationTableRender {
 		if (message)
 			wrapper
 				.append('div')
-				.attr('class', 'sjpp-pairwise-test-message')
+				.attr('class', 'sja_warnbar sjpp-pairwise-test-message')
 				.text(message)
 				.style('font-size', '0.9em')
-				.style('opacity', 0.8)
 				.style('text-align', 'center')
-				.style('margin-top', '3px')
+				.style('margin-top', '5px')
 
 		const tableDiv = wrapper.append('div').style('margin-top', '5px')
 		renderTable({
