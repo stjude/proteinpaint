@@ -636,7 +636,7 @@ async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }) {
  **********************************************************/
 
 // the default maximum number of plots in a chart for which the pairwise Wilcoxon tests are computed
-export const defaultMaxPairwiseTestGroups = 30
+export const defaultMaxPairwiseTestGroups = 8
 // the pairs of a chart are tested in chunks of about this many values, with a yield to the event loop between
 // chunks, so that other requests are not delayed for long
 export const wilcoxonChunkValues = 100_000

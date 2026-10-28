@@ -1126,9 +1126,9 @@ tape('expandNumericTermCollection: expanded data works with parseValues', functi
 })
 
 tape('getMaxPairwiseTestGroups: the default, a valid value, and an invalid value', function (test) {
-	test.equal(defaultMaxPairwiseTestGroups, 30, 'the default is 30')
-	test.equal(getMaxPairwiseTestGroups({}), 30, 'the default when not set')
-	test.equal(getMaxPairwiseTestGroups(undefined), 30, 'the default without features')
+	test.equal(defaultMaxPairwiseTestGroups, 8, 'the default is 8')
+	test.equal(getMaxPairwiseTestGroups({}), 8, 'the default when not set')
+	test.equal(getMaxPairwiseTestGroups(undefined), 8, 'the default without features')
 	test.equal(getMaxPairwiseTestGroups({ maxPairwiseTestGroups: 5 }), 5, 'a set value')
 	for (const value of [1, 0, -3, 2.5, '10', null, true])
 		test.equal(
