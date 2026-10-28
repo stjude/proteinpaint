@@ -18,27 +18,27 @@ until it exits.
 */
 
 // Import necessary modules
-import fs from 'fs'
-import path from 'path'
-import { spawn } from 'child_process'
-import { Readable } from 'stream'
+import fs from "fs"
+import path from "path"
+import { spawn } from "child_process"
+import { Readable } from "stream"
 
 const __dirname = import.meta.dirname // set __dirname for consistency with cjs code
 
 // a child process is allowed without the permission model
-const useWasm = process.permission ? !process.permission.has('child') : false
+const useWasm = process.permission ? !process.permission.has("child") : false
 
 // Check if rust binary directory, or else the wasm module directory, exists and is not empty. The rust binaries are
 // optional, so that a missing one does not stop the server: a run_rust() call of it fails with the spawn error, or the
 // missing wasm module error, instead.
-const binaryDir = path.join(__dirname, '/target/release/')
-const wasmDir = path.join(__dirname, '/target/wasm/wasm32-wasip1/release/')
+const binaryDir = path.join(__dirname, "/target/release/")
+const wasmDir = path.join(__dirname, "/target/wasm/wasm32-wasip1/release/")
 {
 	const dir = useWasm ? wasmDir : binaryDir
 	if (!fs.existsSync(dir) || !fs.readdirSync(dir).length)
 		console.warn(
 			`WARNING: missing or empty rust ${
-				useWasm ? 'wasm module' : 'binary'
+				useWasm ? "wasm module" : "binary"
 			} directory='${dir}', requests that need rust will fail`
 		)
 }
@@ -49,7 +49,7 @@ const binaryName = /^[A-Za-z0-9_][A-Za-z0-9_-]*$/
 export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 	if (useWasm) return run_wasm(binfile, input_data, args, { signal })
 	return new Promise((resolve, reject) => {
-		const binpath = path.join(__dirname, '/target/release/', binfile)
+		const binpath = path.join(__dirname, "/target/release/", binfile)
 
 		if (signal?.aborted) {
 			reject(new Error(`run_rust('${binfile}'): aborted before start`))
@@ -67,8 +67,8 @@ export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 					reject(new Error(`run_rust('${binfile}'): aborted`))
 				}
 			}
-			signal.addEventListener('abort', onAbort, { once: true })
-			ps.on('close', () => signal.removeEventListener('abort', onAbort))
+			signal.addEventListener("abort", onAbort, { once: true })
+			ps.on("close", () => signal.removeEventListener("abort", onAbort))
 		}
 
 		/* A child that dies before reading its input -- missing binary, dynamic-loader failure,
@@ -82,7 +82,7 @@ export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 		Recorded rather than rejected here, because ps.on('close') fires immediately after with the
 		child's exit code and stderr, which is the actual cause; EPIPE on its own says nothing useful. */
 		let stdinError
-		ps.stdin.on('error', err => {
+		ps.stdin.on("error", (err) => {
 			stdinError = err
 		})
 
@@ -91,19 +91,25 @@ export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 		} catch (error) {
 			ps.kill()
 			let errmsg = error
-			if (stderr.length) errmsg += `killed run_rust('${binfile}'), stderr: ${stderr.join('').trim()}`
+			if (stderr.length)
+				errmsg += `killed run_rust('${binfile}'), stderr: ${stderr
+					.join("")
+					.trim()}`
 			reject(errmsg)
 		}
 
-		ps.stdout.on('data', data => stdout.push(data))
-		ps.stderr.on('data', data => stderr.push(data))
-		ps.on('error', err => {
-			if (stderr.length) console.log(`run_rust('${binfile}') ps.on('error') stderr:`, stderr)
+		ps.stdout.on("data", (data) => stdout.push(data))
+		ps.stderr.on("data", (data) => stderr.push(data))
+		ps.on("error", (err) => {
+			if (stderr.length)
+				console.log(`run_rust('${binfile}') ps.on('error') stderr:`, stderr)
 			reject(err)
 		})
-		ps.on('close', code => {
+		ps.on("close", (code) => {
 			try {
-				resolve(getOutput(binfile, code, stdout.join(''), stderr.join(''), stdinError))
+				resolve(
+					getOutput(binfile, code, stdout.join(""), stderr.join(""), stdinError)
+				)
 			} catch (e) {
 				reject(e)
 			}
@@ -113,7 +119,8 @@ export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 
 // returns the stdout of a binary or wasm module that exited, or throws a message with its stderr
 function getOutput(binfile, code, stdout, stderr, stdinError) {
-	if (code !== 0) throw `spawned '${binfile}' exited with a non-zero status and this stderr:\n${stderr}`
+	if (code !== 0)
+		throw `spawned '${binfile}' exited with a non-zero status and this stderr:\n${stderr}`
 	if (stderr.length) {
 		// handle rust stderr
 		throw `run_rust('${binfile}') emitted standard error\n stderr: ${stderr.trim()}`
@@ -121,10 +128,12 @@ function getOutput(binfile, code, stdout, stderr, stdinError) {
 	if (stdinError) {
 		// exited cleanly but never read all of its input, so it did not act on the full request:
 		// the stdout it did produce is computed from a truncated payload, not a valid result
-		throw `run_rust('${binfile}'): could not write input, ${stdinError.message || stdinError}`
+		throw `run_rust('${binfile}'): could not write input, ${
+			stdinError.message || stdinError
+		}`
 	}
 	// When bigfile is not found, the promise should be rejected with message given below
-	if (stdout.includes('Cannot read bigWig file')) throw stdout
+	if (stdout.includes("Cannot read bigWig file")) throw stdout
 	return stdout
 }
 
@@ -134,16 +143,18 @@ const wasmModules = new Map()
 // runs the wasm module of a binary in this process, with its stdin, stdout and stderr in memory, so that no file is
 // written, such as when the node permission model allows no write path
 async function run_wasm(binfile, input_data, args, { signal } = {}) {
-	if (signal?.aborted) throw new Error(`run_rust('${binfile}'): aborted before start`)
-	if (typeof binfile != 'string' || !binaryName.test(binfile)) throw `invalid rust binary name`
-	const modpath = path.join(wasmDir, binfile + '.wasm')
+	if (signal?.aborted)
+		throw new Error(`run_rust('${binfile}'): aborted before start`)
+	if (typeof binfile != "string" || !binaryName.test(binfile))
+		throw `invalid rust binary name`
+	const modpath = path.join(wasmDir, binfile + ".wasm")
 	if (!wasmModules.has(binfile)) {
 		if (!fs.existsSync(modpath)) {
 			// the details are only logged, and the response has a neutral error
 			console.warn(
 				`run_rust('${binfile}'): no wasm module, and the node permission model does not allow a child process`
 			)
-			throw 'this server build does not support this data computation request'
+			throw "this server build does not support this data computation request"
 		}
 		const compiled = WebAssembly.compile(fs.readFileSync(modpath))
 		// a failed compile is not cached, so that a later call compiles the module again
@@ -159,12 +170,19 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	// a long input may still arrive after an abort
 	if (signal?.aborted) throw new Error(`run_rust('${binfile}'): aborted`)
 
-	const stdio = { stdin: Buffer.isBuffer(input) ? input : Buffer.from(input), offset: 0, stdout: [], stderr: [] }
+	const stdio = {
+		stdin: Buffer.isBuffer(input) ? input : Buffer.from(input),
+		offset: 0,
+		stdout: [],
+		stderr: [],
+	}
 	let memory
-	// a module that imports any other function fails to instantiate, with a LinkError
-	const instance = await WebAssembly.instantiate(wasmModule, {
-		wasi_snapshot_preview1: wasiImports(stdio, () => memory)
+	// a module that imports any other function fails to instantiate, with a LinkError; both levels of the import
+	// object have no prototype, so that an import name cannot resolve to an inherited property, such as toString
+	const imports = Object.assign(Object.create(null), {
+		wasi_snapshot_preview1: wasiImports(stdio, () => memory),
 	})
+	const instance = await WebAssembly.instantiate(wasmModule, imports)
 	memory = instance.exports.memory
 	let code = 0
 	try {
@@ -176,8 +194,8 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	return getOutput(
 		binfile,
 		code,
-		Buffer.concat(stdio.stdout).toString('utf8'),
-		Buffer.concat(stdio.stderr).toString('utf8')
+		Buffer.concat(stdio.stdout).toString("utf8"),
+		Buffer.concat(stdio.stderr).toString("utf8")
 	)
 }
 
@@ -202,17 +220,26 @@ function wasiImports(stdio, getMemory) {
 		const lst = []
 		for (let i = 0; i < iovsLen; i++) {
 			const p = iovs + i * 8
-			lst.push(new Uint8Array(getMemory().buffer, view().getUint32(p, true), view().getUint32(p + 4, true)))
+			lst.push(
+				new Uint8Array(
+					getMemory().buffer,
+					view().getUint32(p, true),
+					view().getUint32(p + 4, true)
+				)
+			)
 		}
 		return lst
 	}
-	const isStdio = fd => fd === 0 || fd === 1 || fd === 2
-	return {
+	const isStdio = (fd) => fd === 0 || fd === 1 || fd === 2
+	return Object.assign(Object.create(null), {
 		fd_read(fd, iovs, iovsLen, nreadPtr) {
 			if (fd !== 0) return WASI_EBADF
 			let n = 0
 			for (const buf of iovecs(iovs, iovsLen)) {
-				const chunk = stdio.stdin.subarray(stdio.offset, stdio.offset + buf.length)
+				const chunk = stdio.stdin.subarray(
+					stdio.offset,
+					stdio.offset + buf.length
+				)
 				buf.set(chunk)
 				stdio.offset += chunk.length
 				n += chunk.length
@@ -240,8 +267,8 @@ function wasiImports(stdio, getMemory) {
 			view().setBigUint64(statPtr + 8, fd === 0 ? 1n << 1n : 1n << 6n, true)
 			return WASI_ESUCCESS
 		},
-		fd_seek: fd => (isStdio(fd) ? WASI_ESPIPE : WASI_EBADF),
-		fd_close: fd => (isStdio(fd) ? WASI_ESUCCESS : WASI_EBADF),
+		fd_seek: (fd) => (isStdio(fd) ? WASI_ESPIPE : WASI_EBADF),
+		fd_close: (fd) => (isStdio(fd) ? WASI_ESUCCESS : WASI_EBADF),
 		environ_sizes_get(countPtr, sizePtr) {
 			view().setUint32(countPtr, 0, true)
 			view().setUint32(sizePtr, 0, true)
@@ -250,26 +277,28 @@ function wasiImports(stdio, getMemory) {
 		environ_get: () => WASI_ESUCCESS,
 		proc_exit(code) {
 			throw new WasiExit(code)
-		}
-	}
+		},
+	})
 }
 
 // collects a stream input; an abort stops a stream that does not end, and destroys it, as the native path ends the
 // input of the killed process
 async function readInput(input_data, signal, binfile) {
-	if (typeof input_data == 'string' || Buffer.isBuffer(input_data)) return input_data
+	if (typeof input_data == "string" || Buffer.isBuffer(input_data))
+		return input_data
 	const stream = Readable.from(input_data)
 	const onAbort = () => {
 		const err = new Error(`run_rust('${binfile}'): aborted`)
 		stream.destroy(err)
-		if (typeof input_data?.destroy == 'function') input_data.destroy()
+		if (typeof input_data?.destroy == "function") input_data.destroy()
 	}
-	signal?.addEventListener('abort', onAbort, { once: true })
+	signal?.addEventListener("abort", onAbort, { once: true })
 	try {
 		const chunks = []
-		for await (const chunk of stream) chunks.push(typeof chunk == 'string' ? Buffer.from(chunk) : chunk)
+		for await (const chunk of stream)
+			chunks.push(typeof chunk == "string" ? Buffer.from(chunk) : chunk)
 		return Buffer.concat(chunks)
 	} finally {
-		signal?.removeEventListener('abort', onAbort)
+		signal?.removeEventListener("abort", onAbort)
 	}
 }
