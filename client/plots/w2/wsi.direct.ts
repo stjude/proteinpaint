@@ -167,7 +167,8 @@ export async function init(
 
 		const [w, h] = meta.slide_dimensions // level-0 slide size in px
 		// server origin for tile URLs ('' when same-origin); trailing slashes trimmed
-		const host = (sessionStorage.getItem('hostURL') || (window as any).testHost || '').replace(/\/+$/, '')
+		let host = sessionStorage.getItem('hostURL') || (window as any).testHost || ''
+		while (host.endsWith('/')) host = host.slice(0, -1)
 
 		// z-planes of a 3D OME-TIFF stack (meta.planes = 1 for 2D slides);
 		// start on the middle plane, matching the server's default
