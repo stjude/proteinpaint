@@ -60,6 +60,7 @@
     "@types/semver": "^7.7.1",
     "@typescript-eslint/eslint-plugin": "^8.13.0",
     "babel-loader": "^8.2.2",
+    "buffer": "^6.0.3",
     "css-loader": "^6.7.1",
     "d3": "^7.6.1",
     "d3-beeswarm": "0.0.4",
