@@ -1,6 +1,5 @@
 import type { RoutePayload, RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse } from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { run_R } from '@sjcrh/proteinpaint-r'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import { resolveMethylationMatrix, resolveGroupNames, admitDmrcateJobs } from '#src/utils/methylationMatrix.ts'
@@ -34,11 +33,6 @@ function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const q: TermdbDmrRequest = req.query
-			const useR = q.backend === 'r'
-			/* The R backend is a validation path for comparing against the Rust implementation, not a
-			production feature: its DMRcate and GenomicRanges dependencies are not in R/utils/*.pkgs.txt,
-			so the published images do not have them. Gated on debugmode, like the client toggle. */
-			if (useR && !serverconfig.debugmode) throw new Error('The R backend is not available.')
 			const genome = genomes[q.genome]
 			if (!genome) throw 'unknown genome'
 			const ds = genome.datasets?.[q.dslabel]
@@ -46,7 +40,7 @@ function init({ genomes }) {
 			const dm = ds.queries?.dnaMethylation
 			if (!dm) throw new Error('This dataset does not support DNA methylation region analysis.')
 
-			const { matrixFile, mvalues, useElement, eligible } = resolveMethylationMatrix(ds, q.chr, q.element_type)
+			const { matrixFile, mvalues, eligible } = resolveMethylationMatrix(ds, q.chr, q.element_type)
 
 			// a group may be defined by a filter
 			const [list1, list2] = await resolveGroupPair(q, ds)
@@ -68,17 +62,12 @@ function init({ genomes }) {
 				)
 
 			const { group1, group2 } = await resolveGroupNames(list1, list2, eligible, ds, q.__protected__)
-			/* Checked after id-to-name resolution, which is where a group actually shrinks: the R
-			backend does not check and, handed fewer than three, filters every probe and reports "too
-			few probes genome-wide", which misdiagnoses a sample problem as a data problem. */
+			// checked after id-to-name resolution, which is where a group actually shrinks
 			if (group1.length < 3 || group2.length < 3)
 				throw new Error(
 					`Each group needs at least 3 samples with methylation data (got ${group1.length} and ${group2.length}).`
 				)
 
-			// dmrcate_full.R reads the CpG layout only (chrom_lengths attribute, meta/probe/probeID)
-			if (useR && useElement)
-				throw new Error('The R backend does not read element-level methylation matrices. Use the Rust backend.')
 			const dmrInput = {
 				probe_h5_file: matrixFile,
 				mvalues,
@@ -98,38 +87,21 @@ function init({ genomes }) {
 				colors: q.colors
 			}
 
-			/* ponytail: the R backend (debugmode only) is not measured, so it is not admitted; give it its own cost if
-			it is ever offered outside debugmode */
-			const releaseMemory = useR
-				? () => {}
-				: await admitDmrcateJobs(
-						'DMR region',
-						[matrixFile],
-						1,
-						'Server memory is too low to analyze this region right now. Try again later.'
-				  )
+			const releaseMemory = await admitDmrcateJobs(
+				'DMR region',
+				[matrixFile],
+				1,
+				'Server memory is too low to analyze this region right now. Try again later.'
+			)
 			const time1 = Date.now()
 			let result
 			try {
-				result = useR
-					? JSON.parse(await run_R('dmrcate_full.R', JSON.stringify(dmrInput)))
-					: JSON.parse(await run_rust('dmrcate', JSON.stringify(dmrInput)))
+				result = JSON.parse(await run_rust('dmrcate', JSON.stringify(dmrInput)))
 			} finally {
 				releaseMemory()
 			}
-			mayLog(`DMR analysis (${useR ? 'R' : 'Rust'}) time:`, formatElapsedTime(Date.now() - time1))
+			mayLog('DMR analysis time:', formatElapsedTime(Date.now() - time1))
 			if (result.error) throw new Error(result.error)
-
-			// Debug: log per-probe stats for R vs Rust comparison. Will remove once confident in Rust implementation.
-			if (result.diagnostic?.probes) {
-				const p = result.diagnostic.probes
-				mayLog(
-					`${useR ? 'R' : 'Rust'} probes logFC:`,
-					p.logFC,
-					'fdr:',
-					p.fdr?.map((f: number) => f.toExponential(4))
-				)
-			}
 
 			res.send({
 				status: 'ok',
