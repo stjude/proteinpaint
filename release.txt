@@ -1,2 +1,1 @@
-Features
-- Compute the pairwise Wilcoxon tests of a violin or box plot chart for its largest plots only, 8 by default: the number is a control menu input, from 2 to 30, sent as maxPairwiseTestGroups in the request; serverconfig.features.maxPairwiseTestGroups sets the default of a request without it. A message in the last row of the table says when plots are left out. The tests run in chunks of pairs
+
