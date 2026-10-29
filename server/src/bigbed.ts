@@ -39,19 +39,14 @@ file: the full path of a local file, or a url
 start, end: 0-based and half-open, where an end of 0 is the end of the chromosome
 */
 export async function readBigbedLines(file: string, chr: string, start: number, end: number): Promise<string[]> {
-	if (typeof chr != 'string' || !chrPattern.test(chr)) throw 'invalid chr'
-	if (!isCoord(start) || !isCoord(end)) throw 'invalid start or end'
+	checkRange(chr, start, end)
 	const f = await openBigbedFile(file)
 	let features
 	try {
-		if (end == 0) {
-			// an end of 0 is the end of the chromosome, as bigBedToBed reads it
-			const { refsByName, refsByNumber } = await f.bb.getHeader()
-			if (!Object.hasOwn(refsByName, chr)) return []
-			end = refsByNumber[refsByName[chr]].length
-		}
-		// the range is one base wider on each side, so that an item without a base at its start or end is read
-		features = await f.bb.getFeatures(chr, Math.max(0, start - 1), end + 1)
+		const range = await readRange(f, chr, start, end)
+		if (!range) return []
+		end = range.end
+		features = await f.bb.getFeatures(chr, range.readStart, range.readEnd)
 	} catch (e) {
 		throw libraryErrorText(e)
 	}
@@ -61,6 +56,32 @@ export async function readBigbedLines(file: string, chr: string, start: number, 
 			lines.push(bedLine(chr, i.start, i.end, i.rest))
 	}
 	return lines
+}
+
+/** returns the compressed bytes of the data blocks that readBigbedLines() reads for a range, from the index only,
+so that a read of too many items can be refused before it starts */
+export async function readBigbedByteSize(file: string, chr: string, start: number, end: number): Promise<number> {
+	checkRange(chr, start, end)
+	const f = await openBigbedFile(file)
+	try {
+		const range = await readRange(f, chr, start, end)
+		if (!range) return 0
+		return await f.bb.getRegionByteSize(chr, range.readStart, range.readEnd)
+	} catch (e) {
+		throw libraryErrorText(e)
+	}
+}
+
+/** returns the range of a read, with an end of 0 as the end of the chromosome, or null for a chromosome not in the
+file; the range that is read is one base wider on each side, so that an item without a base at its start or end is read */
+async function readRange(f: OpenFile, chr: string, start: number, end: number) {
+	if (end == 0) {
+		// an end of 0 is the end of the chromosome, as bigBedToBed reads it
+		const { refsByName, refsByNumber } = await f.bb.getHeader()
+		if (!Object.hasOwn(refsByName, chr)) return null
+		end = refsByNumber[refsByName[chr]].length
+	}
+	return { end, readStart: Math.max(0, start - 1), readEnd: end + 1 }
 }
 
 /** returns the bed lines of the items that have a name, by the extra index of the name field, as bigBedNamedItems */
@@ -93,6 +114,11 @@ export async function isBigbedFile(file: string): Promise<boolean> {
 /** a bed line as bigBedToBed prints it, where an item of a bed3 file has no rest */
 function bedLine(chr: string, start: number, end: number, rest: string | undefined) {
 	return `${chr}\t${start}\t${end}${rest ? '\t' + rest : ''}`
+}
+
+function checkRange(chr: unknown, start: unknown, end: unknown) {
+	if (typeof chr != 'string' || !chrPattern.test(chr)) throw 'invalid chr'
+	if (!isCoord(start) || !isCoord(end)) throw 'invalid start or end'
 }
 
 function isCoord(v: unknown): v is number {
