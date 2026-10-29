@@ -3,6 +3,7 @@ import type { BaseTerm } from './terms/term.ts'
 import type { CategoryKey } from './terms/termCollection.ts'
 import type { TermdbSingleCellSamplesRequest, CountsFilePreview } from './index.ts'
 import type { AggregateMethodOption } from './routes/termdb.aggregateMatrix.ts'
+import type { BreakpointRange } from './filter.ts'
 /*** General usage types ***/
 type FileObj = {
 	file: string
@@ -407,7 +408,55 @@ so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig canno
 	shown?: boolean
 }
 
+/** q.eventImages{} of a termdb/mds3 request, identifies the svfusion event to list or load images for */
+export type SvFusionEventImagesArg = {
+	/** event of the track, by ssm_id and its breakend on the gene in view */
+	ssm_id?: string
+	chr?: string
+	pos?: number
+	/** optional, limits to samples whose partner breakpoint is in range */
+	range?: BreakpointRange | null
+	/** or event of one sample by its breakpoint pair, as in the disco plot; 0-based positions as in the svfusion file */
+	pair?: {
+		sample: string
+		dt: number
+		chrA: string
+		posA: number
+		strandA?: string
+		chrB: string
+		posB: number
+		strandB?: string
+	}
+	/** omit to list the images; a listed file name to load one image */
+	file?: string
+}
+
+export type EventImageGroup = {
+	/** breakpoint pair of the images */
+	label: string
+	images: { file: string; label: string }[]
+}
+
+/** .eventImages{} of the termdb/mds3 response, .groups[] when listing, .src when loading one image */
+export type SvFusionEventImagesResult = {
+	groups?: EventImageGroup[]
+	src?: string
+}
+
 type SvFusion = {
+	/** Optional PNG reports associated with each source event's mattr attribute.
+	 * The folder is relative to tpmasterdir and is never sent to the client. */
+	eventImages?: {
+		/** shown as the title of the image buttons */
+		label: string
+		/** required unless get() is supplied */
+		folder?: string
+		/** key of the event mattr{} whose value is the image file prefix; required unless get() is supplied */
+		attrKey?: string
+		/** added by validate_query_svfusionEventImages() if not supplied by ds.
+		 * q{} is the termdb/mds3 request with track filters, and q.eventImages{} identifies the event */
+		get?: (q: any) => Promise<SvFusionEventImagesResult>
+	}
 	byrange?: {
 		/** gz BED file path for sv fusion data: chr \t start \t stop \t {}
 		will only contain events with coordinates in both breakpoints

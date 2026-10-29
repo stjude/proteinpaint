@@ -251,6 +251,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.svfusion) {
 		q2.svfusion = { dtLst: q.svfusion.dtLst }
+		if (q.svfusion.eventImages) {
+			q2.svfusion.eventImages = { label: q.svfusion.eventImages.label }
+		}
 	}
 	if (q.cnv) {
 		q2.cnv = {}

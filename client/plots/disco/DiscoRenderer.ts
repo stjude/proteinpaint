@@ -2,17 +2,22 @@ import type IRenderer from './IRenderer.ts'
 import type ViewModel from './viewmodel/ViewModel.ts'
 import type LegendRenderer from './legend/LegendRenderer.ts'
 import type { RingType } from './ring/RingType.ts'
-import FusionRenderer from './fusion/FusionRenderer.ts'
+import FusionRenderer, { type FusionContext } from './fusion/FusionRenderer.ts'
 
 export class DiscoRenderer {
 	private renders: Map<RingType, IRenderer>
 	private legendRenderer: LegendRenderer
 	private fusionRenderer: FusionRenderer
 
-	constructor(renders: Map<RingType, IRenderer>, legendRenderer: LegendRenderer, genome: any) {
+	constructor(
+		renders: Map<RingType, IRenderer>,
+		legendRenderer: LegendRenderer,
+		genome: any,
+		fusionContext: FusionContext = {}
+	) {
 		this.renders = renders
 		this.legendRenderer = legendRenderer
-		this.fusionRenderer = new FusionRenderer(genome)
+		this.fusionRenderer = new FusionRenderer(genome, fusionContext)
 	}
 
 	render(holder: any, viewModel: ViewModel, onCnvSourceSelect: (index: number) => void) {

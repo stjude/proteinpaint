@@ -66,6 +66,9 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 			genome: genomeObj
 		}
 
+		const eventImages = termdbConfig.queries.svfusion?.eventImages
+		if (eventImages) disco_arg.eventImages = { label: eventImages.label }
+
 		if (data.alternativeDataByDt) {
 			disco_arg.alternativeDataByDt = data.alternativeDataByDt
 		}

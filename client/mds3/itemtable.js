@@ -2,6 +2,7 @@ import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv, dtitd, bplen, dt2label } 
 import { init_sampletable, getSamples, displaySampleTable } from './sampletable'
 import { appear, renderTable, table2col, makeSsmLink, isoformPairRangeSelect } from '#dom'
 import { dofetch3 } from '#common/dofetch'
+import { eventImageRow } from './eventImages'
 
 /*
 when there's just one item, print a vertical 2-col table to show details
@@ -515,18 +516,20 @@ async function table_svfusion(arg, table) {
 	// todo: support chimeric read fraction on each break end
 	const [c1, c2] = table.addRow()
 	c1.text('Break points')
+	const updateImages = eventImageRow(arg, table)
 
 	// m.pairlstIdx is the side of the pair on the gene in view, thus the partner is the other side
 	const partnerSide = m.pairlstIdx == 0 ? 'b' : 'a'
 	if (m.pairlst[0][partnerSide]?.breakpoints) {
 		/* the samples of this event break at multiple positions of the partner gene (see
 		mayUpdatePairlst() in mds3.load.js); chart them and let user pick which to show */
-		await makeBreakpointChart(arg, m, partnerSide, graphDiv, c2)
+		await makeBreakpointChart(arg, m, partnerSide, graphDiv, c2, updateImages)
 	} else {
 		await makeSvgraph(m, graphDiv, arg.block)
 		for (const pair of m.pairlst) {
 			printSvPair(pair, c2.append('div'))
 		}
+		await updateImages?.(null)
 	}
 }
 
@@ -541,7 +544,7 @@ clearing the range shows all breakpoints and samples. the most frequent breakpoi
 
 m.pairlst[0][partnerSide].breakpoints[] is required; see mayUpdatePairlst() in mds3.load.js
 */
-async function makeBreakpointChart(arg, m, partnerSide, div, breakpointCell) {
+async function makeBreakpointChart(arg, m, partnerSide, div, breakpointCell, updateImages) {
 	const selfSide = partnerSide == 'a' ? 'b' : 'a'
 	const self = m.pairlst[0][selfSide] // point on the gene in view
 	const partner = m.pairlst[0][partnerSide]
@@ -593,6 +596,7 @@ async function makeBreakpointChart(arg, m, partnerSide, div, breakpointCell) {
 		try {
 			// breakpoints[] are all on the partner chr, the chr of the range
 			const inRange = range ? breakpoints.filter(b => b.pos >= range.start && b.pos <= range.stop) : breakpoints
+			const imagesUpdated = updateImages?.(range)
 
 			breakpointCell.selectAll('*').remove()
 			if (!inRange.length)
@@ -629,6 +633,7 @@ async function makeBreakpointChart(arg, m, partnerSide, div, breakpointCell) {
 			}
 
 			await renderSampleTable(token)
+			await imagesUpdated
 		} catch (e) {
 			// nothing awaits a selection made in the chart; report in place rather than leaving an unhandled rejection
 			if (token == latest) breakpointCell.text('Error: ' + (e.message || e))

@@ -41,7 +41,9 @@ mayInitSkewer
 	setSkewerMode
 mayInitCnv
 mayaddGetter_m2csq
+mayaddGetter_eventImages
 mayInit_variant2samples
+	addSampleFilterParameters
 configPanel
 _load
 
@@ -175,6 +177,7 @@ export async function makeTk(tk, block) {
 
 	await mayInit_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
+	mayaddGetter_eventImages(tk, block)
 
 	mayInitSkewer(tk) // tk.skewer{} may be added
 
@@ -619,6 +622,69 @@ function mayaddGetter_m2csq(tk, block) {
 	}
 }
 
+/* to add tk.mds.queries.svfusion.eventImages.get(), returns {groups[]} or {src} of one image
+arg{}
+	.m{} svfusion event, lists its images
+	.range{} optional, limits to samples whose partner breakpoint is in range
+	.file optional, loads this listed image instead
+	.tid2value{} optional, from the sample summary of a clicked item
+uses the same sample filters as variant2samples, so that only images of samples shown in the track are available
+*/
+export function mayaddGetter_eventImages(tk, block) {
+	const eventImages = tk.mds.queries?.svfusion?.eventImages
+	if (!eventImages) return
+	eventImages.get = async arg => {
+		const { m, range, file } = arg
+		const body = {
+			genome: block.genome.name,
+			dslabel: tk.mds.label,
+			eventImages: { ssm_id: m.ssm_id, chr: m.chr, pos: m.pos, range, file }
+		}
+		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		addSampleFilterParameters(tk, body, headers, arg.tid2value)
+		const data = await dofetch3('termdb/mds3', { body, headers }, { serverData: tk.cache })
+		if (data.error) throw data.error
+		if (!data.eventImages) throw 'result error'
+		return data.eventImages
+	}
+}
+
+/* add the request parameters and headers that filter samples by the track, shared by variant2samples and eventImages
+par{} request body
+headers{} request headers
+tid2value{} optional, from the sample summary of a clicked item
+*/
+function addSampleFilterParameters(tk, par, headers, tid2value) {
+	if (tk.set_id) par.set_id = tk.set_id
+	if (tk.token) headers['X-Auth-Token'] = tk.token
+	if (tk.filter0) par.filter0 = tk.filter0
+	if (tk.filterObj) par.filterObj = tk.filterObj
+	if (tid2value) par.tid2value = tid2value
+
+	// add in parameters that will filter samples
+	par.skewerRim = tk.mds.queries.snvindel?.skewerRim
+
+	if (tk.legend?.formatFilter) {
+		// add format fields to filter samples
+		const filter = {}
+		for (const k in tk.legend.formatFilter) {
+			if (tk.legend.formatFilter[k].hiddenvalues.size) {
+				filter[k] = [...tk.legend.formatFilter[k].hiddenvalues]
+			}
+		}
+		if (Object.keys(filter).length) {
+			par.formatFilter = filter
+		}
+	}
+
+	{
+		const lst = []
+		if (tk.legend?.mclass?.hiddenvalues?.size) for (const c of tk.legend.mclass.hiddenvalues) lst.push(c)
+		for (const c of tk.hiddenMclassDt) lst.push(c)
+		if (lst.length) par.hiddenmclasslst = JSON.stringify(lst) // lst contains mixture of mclass(str) and dt(int), pass json array instead of comma-joined string
+	}
+}
+
 /* to add tk.mds.variant2samples.get()
 with different implementation for client/server-based data sources
 
@@ -756,11 +822,7 @@ function addV2Sgetter_native(tk, block) {
 		}
 
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-		if (tk.set_id) par.set_id = tk.set_id
-		if (tk.token) headers['X-Auth-Token'] = tk.token
-		if (tk.filter0) par.filter0 = tk.filter0
-		if (tk.filterObj) par.filterObj = tk.filterObj
-		if (arg.tid2value) par.tid2value = arg.tid2value
+		addSampleFilterParameters(tk, par, headers, arg.tid2value)
 
 		// supply list of terms based on querytype
 		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
@@ -775,29 +837,6 @@ function addV2Sgetter_native(tk, block) {
 			if (tk.mds.variant2samples.twLst) par.twLst = tk.mds.variant2samples.twLst
 		} else {
 			throw 'unknown querytype'
-		}
-
-		// add in parameters that will filter samples
-		par.skewerRim = tk.mds.queries.snvindel?.skewerRim
-
-		if (tk.legend?.formatFilter) {
-			// add format fields to filter samples
-			const filter = {}
-			for (const k in tk.legend.formatFilter) {
-				if (tk.legend.formatFilter[k].hiddenvalues.size) {
-					filter[k] = [...tk.legend.formatFilter[k].hiddenvalues]
-				}
-			}
-			if (Object.keys(filter).length) {
-				par.formatFilter = filter
-			}
-		}
-
-		{
-			const lst = []
-			if (tk.legend?.mclass?.hiddenvalues?.size) for (const c of tk.legend.mclass.hiddenvalues) lst.push(c)
-			for (const c of tk.hiddenMclassDt) lst.push(c)
-			if (lst.length) par.hiddenmclasslst = JSON.stringify(lst) // lst contains mixture of mclass(str) and dt(int), pass json array instead of comma-joined string
 		}
 
 		const data = await dofetch3('termdb/mds3', { body: par, headers }, { serverData: tk.cache })

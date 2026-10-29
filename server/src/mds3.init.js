@@ -8,6 +8,7 @@ import { makeCanvas, canvasToURL } from './canvas.ts'
 import { maxPixelRatio } from './bw.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { toBreakpointPos, isSelfBreakpointInRange, isPartnerBreakpointInRange } from './svfusion.breakpoint.ts'
+import { validate_query_svfusionEventImages } from './svfusion.eventImages.ts'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
@@ -636,6 +637,9 @@ export async function validate_cumburden(ds) {
 function copy_queries(ds, dscopy) {
 	if (!ds.queries) return
 	const copy = {}
+	if (ds.queries.svfusion?.eventImages) {
+		copy.svfusion = { eventImages: { label: ds.queries.svfusion.eventImages.label } }
+	}
 
 	if (ds.queries.singleSampleMutation) {
 		copy.singleSampleMutation = {
@@ -1683,6 +1687,7 @@ async function validate_query_svfusion(ds, genome) {
 		await setFile(q.byname, 'svfusion.byname')
 		q.byname.get = await svfusionByNameGetter_file(ds, genome)
 	}
+	validate_query_svfusionEventImages(ds, genome)
 }
 
 async function validate_query_cnv(ds, genome) {
