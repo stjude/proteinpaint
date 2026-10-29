@@ -172,7 +172,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 		div
 			.append('div')
 			.classed('sjpp-htmlLegend', true)
-			.attr('data-testid', 'sjpp-htmlLegend-' + (d?.testIdSuffix ?? ''))
+			.attr('data-testid', 'sjpp-htmlLegend-' + (d.isHidden ? 'hidden-' : '') + (d?.testIdSuffix ?? ''))
 			.style('display', 'inline-block')
 			.style('margin-left', d.svg ? '1px' : '3px')
 			.style('cursor', handleCursor(d))
