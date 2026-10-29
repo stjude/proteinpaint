@@ -1,6 +1,6 @@
 import { getData } from '#src/termdb.matrix.js'
 import { getTwByIndex, getTwBins } from '#src/termdb.twFromRequest.ts'
-import { run_R } from '@sjcrh/proteinpaint-r'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { TermTypes } from '#types'
 import type { RouteApi, RoutePayload } from '#types'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
@@ -128,18 +128,12 @@ export async function get_survival(q: any, ds: any) {
 
 		for (const chartId in byChartSeries) {
 			const chartData = byChartSeries[chartId]
-			const survival_data = JSON.parse(await run_R('survival.R', JSON.stringify(chartData)))
+			const survival_data = JSON.parse(await run_rust('survival', JSON.stringify(chartData)))
 			for (const obj of survival_data.estimates) {
-				for (const key in obj) {
-					if (key == 'series') {
-						obj[key] = obj[key] == '*' ? '' : obj[key]
-					} else {
-						obj[key] = Number(obj[key])
-					}
-				}
+				// lower and upper are null where surv is 0
 				final_data.case.push([
 					chartId,
-					obj.series,
+					obj.series == '*' ? '' : obj.series,
 					obj.time,
 					obj.surv,
 					obj.lower,
