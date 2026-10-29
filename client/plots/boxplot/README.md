@@ -46,6 +46,7 @@ Box plot settings are controlled via the settings object:
 - `isVertical`: Plot orientation (default: false/horizontal)
 - `isLogScale`: Use log scale for axis (default: false)
 - `orderByMedian`: Order plots by median value (default: false)
+- `maxPairwiseTestGroups`: The most groups, the largest ones, that get the pairwise Wilcoxon tests, from 2 to 30 (default: 8)
 - `removeOutliers`: Remove outliers from analysis (default: false)
 - `displayMode`: Visual theme ('default', 'filled', 'dark')
 - `color`: Default box plot color

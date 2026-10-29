@@ -49,7 +49,8 @@ export function renderTable({
 	afterRender,
 	allowRestoreRowOrder = false,
 	restoreButtonInFooter = false,
-	pagination
+	pagination,
+	footerRow
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -252,6 +253,27 @@ export function renderTable({
 	}
 
 	const tbody = table.append('tbody')
+
+	if (footerRow) {
+		// one cell for all of the columns: the line number, radio button and actions columns, and the data columns
+		const numColumns =
+			(showLines ? 1 : 0) +
+			((buttons || noButtonCallback) && !noRadioBtn ? 1 : 0) +
+			(columnButtons?.length ? 1 : 0) +
+			columns.length
+		// sticky like the header, so that it is seen without scrolling to the last row
+		const td = table
+			.append('tfoot')
+			.style('position', 'sticky')
+			.style('bottom', '0')
+			.style('background-color', 'white')
+			.append('tr')
+			.append('td')
+			.attr('colspan', numColumns)
+			.attr('data-testid', 'sjpp-table-footer-row')
+			.text(footerRow.text)
+		if (footerRow.className) td.attr('class', footerRow.className)
+	}
 
 	// Pagination state (only used when `pagination` is set)
 	const pageSizeOptions = pagination?.pageSizeOptions || [10, 25, 50, 100]

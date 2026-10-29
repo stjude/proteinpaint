@@ -43,7 +43,8 @@ export class Model {
 			orderByMedian: this.settings.orderByMedian,
 			isLogScale: this.settings.isLogScale,
 			removeOutliers: this.settings.removeOutliers,
-			showAssocTests: this.settings.showAssocTests
+			showAssocTests: this.settings.showAssocTests,
+			maxPairwiseTestGroups: this.settings.maxPairwiseTestGroups
 		}
 		// Server creates a synthetic overlay for numeric termCollection,
 		// so don't send term2/term0 — they would be overwritten

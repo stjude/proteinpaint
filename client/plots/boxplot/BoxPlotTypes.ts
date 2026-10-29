@@ -55,6 +55,8 @@ export type FormattedBoxPlotChartsEntry = {
 	plotDim: PlotDimensions
 	plots: FormattedPlotEntry[]
 	wilcoxon: [{ value: string }, { value: string }, { html: string }][]
+	/** set when wilcoxon is of the largest plots only */
+	pairwiseTestMessage?: string
 }
 
 /** Processed box plot obj with dimensions needs for

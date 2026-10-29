@@ -21,6 +21,9 @@ type CommonProps = {
 	currentGeneNames?: string[]
 	/** if true, use log scale; if false or undefined, use linear scale */
 	isLogScale?: boolean
+	/** the most plots of a chart that get the pairwise Wilcoxon tests, its largest ones; an integer from 2 to 30,
+	 * see shared/utils/src/pairwiseTests.ts. Default is serverconfig.features.maxPairwiseTestGroups, or else 8. */
+	maxPairwiseTestGroups?: number
 }
 
 /** Request type for violin plots with required violin-specific parameters */
@@ -117,6 +120,8 @@ export type ViolinResponseChart = {
 	chartId: string
 	plots: ViolinPlotEntry[]
 	pvalues?: PValueEntries[][]
+	/** set when pvalues are of the largest plots only */
+	pairwiseTestMessage?: string
 }
 
 export type ViolinResponse = {
@@ -157,6 +162,8 @@ export type BoxPlotChartEntry = {
 	plots: BoxPlotEntry[]
 	sampleCount: number
 	wilcoxon?: [{ value: string }, { value: string }, { html: string }][]
+	/** set when wilcoxon is of the largest plots only */
+	pairwiseTestMessage?: string
 }
 
 export type BoxPlotResponse = {

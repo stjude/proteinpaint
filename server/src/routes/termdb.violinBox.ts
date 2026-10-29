@@ -22,6 +22,9 @@ import { isNumericTerm, isNumericTw } from '#shared/terms.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { mayLog } from '#src/helpers.ts'
+import serverconfig from '#src/serverconfig.js'
+import { defaultMaxPairwiseTestGroups, pairwiseTestGroupsLimit, pairwiseTestMessage } from '#shared/pairwiseTests.js'
+import { getViolinHiddenValues } from '#shared/violinHiddenValues.js'
 import { kernelDensity } from '#src/utils/density.ts'
 
 export const payload: RoutePayload = {
@@ -67,6 +70,9 @@ export function init({ genomes }) {
 			}
 			if (q.overlayTw) arg.terms.push(q.overlayTw)
 			if (q.divideTw) arg.terms.push(q.divideTw)
+
+			// an invalid request value is refused before the data is fetched
+			getMaxPairwiseTestGroups(q.maxPairwiseTestGroups)
 
 			const data = await getData(arg, ds)
 			if (!data) throw new Error('getData() returns nothing')
@@ -191,7 +197,11 @@ async function getViolin(
 	const result = setViolinResponse(valuesObject, data, q)
 
 	// wilcoxon test data to return to client
-	if (q.overlayTw) await getViolinWilcoxonData(result)
+	// the hidden groups are of the term that the violin renderer uses: the termCollection, whose members are the groups
+	// of the overlay that expandNumericTermCollection() makes, or else the overlay term
+	const groupTw =
+		q.tw.term.type === 'termCollection' && (q.tw as any).type !== 'TermCollectionTWFraction' ? q.tw : q.overlayTw
+	if (q.overlayTw) await getViolinWilcoxonData(result, q.maxPairwiseTestGroups, groupTw)
 
 	await createCanvasImg(q, result, ds)
 	result['descrStats'] = descrStats
@@ -384,11 +394,22 @@ async function createCanvasImg(
 }
 
 // compute pvalues using wilcoxon rank sum test
-export async function getViolinWilcoxonData(result: { [index: string]: any }) {
+export async function getViolinWilcoxonData(
+	result: { [index: string]: any },
+	maxPairwiseTestGroups?: number,
+	groupTw?: any
+) {
+	const hidden = getViolinHiddenValues(groupTw)
 	await runWilcoxonTests(
 		result.charts,
-		{ getGroupId: plot => plot.label, getGroupValues: plot => plot.values },
-		'pvalues'
+		{
+			getGroupId: plot => plot.label,
+			getGroupValues: plot => plot.values,
+			// the same check as the violin renderer, which does not show a hidden plot or its comparisons
+			isHidden: plot => !!hidden[plot.label]
+		},
+		'pvalues',
+		getMaxPairwiseTestGroups(maxPairwiseTestGroups)
 	)
 }
 
@@ -518,7 +539,7 @@ async function processBoxPlotData(data: ValidGetDataResponse, q: BoxRequest, des
 
 	const bins = buildBins(q.tw, data, overlayTw, divideTw)
 
-	if (q.showAssocTests && overlayTw) await getBoxPlotWilcoxonData(charts)
+	if (q.showAssocTests && overlayTw) await getBoxPlotWilcoxonData(charts, q.maxPairwiseTestGroups)
 	//quick fix to not return values to the client
 	//will fix when addressing issues with descriptive stats and other logic errs
 	Object.keys(charts).forEach(c => charts[c].plots.forEach(p => delete p.tempValues))
@@ -619,14 +640,16 @@ export function setUncomputableValues(values: Record<string, number>) {
 	} else return null
 }
 
-async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }) {
+async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }, maxPairwiseTestGroups?: number) {
 	await runWilcoxonTests(
 		charts,
 		{
 			getGroupId: plot => plot.boxplot.label.replace(/, n=\d+$/, ''),
-			getGroupValues: plot => plot.tempValues
+			getGroupValues: plot => plot.tempValues,
+			isHidden: plot => !!plot.isHidden
 		},
-		'wilcoxon'
+		'wilcoxon',
+		getMaxPairwiseTestGroups(maxPairwiseTestGroups)
 	)
 }
 
@@ -634,29 +657,114 @@ async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }) {
  * Functions used in both box plot and violin plot routes *
  **********************************************************/
 
+// the pairs of a chart are tested in chunks of about this many values, with a yield to the event loop between
+// chunks, so that other requests are not delayed for long
+export const wilcoxonChunkValues = 100_000
+
+type WilcoxonPair = { group1_id: string; group1_values: number[]; group2_id: string; group2_values: number[] }
+
+const isValidMaxGroups = (n: unknown) =>
+	Number.isInteger(n) && (n as number) >= 2 && (n as number) <= pairwiseTestGroupsLimit
+
+/** the maximum number of plots in a chart for which the pairwise tests are computed: the request value, which must
+ *  be an integer from 2 to pairwiseTestGroupsLimit, or else serverconfig.features.maxPairwiseTestGroups, which must
+ *  be in the same range, or else the default */
+export function getMaxPairwiseTestGroups(requested?: unknown, features = serverconfig.features): number {
+	if (requested !== undefined && requested !== null) {
+		// a GET request may have the value as a string
+		const n = typeof requested == 'string' && requested.trim() !== '' ? Number(requested) : requested
+		if (!isValidMaxGroups(n))
+			throw new Error(`invalid maxPairwiseTestGroups, must be an integer from 2 to ${pairwiseTestGroupsLimit}`)
+		return n as number
+	}
+	const value = features?.maxPairwiseTestGroups
+	if (value === undefined) return defaultMaxPairwiseTestGroups
+	if (isValidMaxGroups(value)) return value
+	mayLog(
+		`invalid serverconfig.features.maxPairwiseTestGroups=${JSON.stringify(
+			value
+		)}, using ${defaultMaxPairwiseTestGroups}`
+	)
+	return defaultMaxPairwiseTestGroups
+}
+
+/** splits the pairs into chunks of about maxValues values each; a pair with more values is a chunk by itself,
+ *  and no chunk is empty */
+export function chunkWilcoxonPairs(pairs: WilcoxonPair[], maxValues = wilcoxonChunkValues): WilcoxonPair[][] {
+	const chunks: WilcoxonPair[][] = []
+	let n = 0
+	for (const pair of pairs) {
+		const size = pair.group1_values.length + pair.group2_values.length
+		if (!chunks.length || (n > 0 && n + size > maxValues)) {
+			chunks.push([])
+			n = 0
+		}
+		chunks[chunks.length - 1].push(pair)
+		n += size
+	}
+	return chunks
+}
+
+/** the plots that are tested pairwise: the visible plots, or else the maxGroups visible plots with the most values,
+ *  in their original order; truncated is true when some visible plots are left out */
+export function getPairwiseTestPlots(
+	plots: any[],
+	getGroupValues: (plot: any) => number[],
+	maxGroups: number,
+	isHidden?: (plot: any) => boolean
+): { tested: any[]; truncated: boolean } {
+	const visible = isHidden ? plots.filter(p => !isHidden(p)) : plots
+	if (visible.length <= maxGroups) return { tested: visible, truncated: false }
+	// a stable sort, so that plots of the same size keep their order
+	const largest = new Set(
+		[...visible].sort((a, b) => getGroupValues(b).length - getGroupValues(a).length).slice(0, maxGroups)
+	)
+	return { tested: visible.filter(p => largest.has(p)), truncated: true }
+}
+
 /** Run Wilcoxon rank-sum tests for all pairwise plot comparisons within each chart.
- *  Accessors allow reuse for both violin (label/values) and box (boxplot.label/tempValues) plots. */
-async function runWilcoxonTests(
+ *  Accessors allow reuse for both violin (label/values) and box (boxplot.label/tempValues) plots.
+ *  Hidden plots are not tested, and do not count toward maxGroups: a chart with more than maxGroups visible plots
+ *  has the tests of its largest visible plots only, and a pairwiseTestMessage that says so. */
+export async function runWilcoxonTests(
 	charts: Record<string, any>,
-	accessors: { getGroupId: (plot: any) => string; getGroupValues: (plot: any) => number[] },
-	resultKey: string
+	accessors: {
+		getGroupId: (plot: any) => string
+		getGroupValues: (plot: any) => number[]
+		isHidden?: (plot: any) => boolean
+	},
+	resultKey: string,
+	maxGroups: number
 ): Promise<void> {
 	for (const chart of Object.values(charts)) {
-		const numPlots = chart.plots?.length
-		if (!numPlots || numPlots < 2) continue
+		// the hidden plots stay in chart.plots, such as for the legend
+		const { tested: plots, truncated } = getPairwiseTestPlots(
+			chart.plots || [],
+			accessors.getGroupValues,
+			maxGroups,
+			accessors.isHidden
+		)
+		if (plots.length < 2) continue
+		if (truncated) chart.pairwiseTestMessage = pairwiseTestMessage(maxGroups)
+		const numPlots = plots.length
 
-		const wilcoxInput: { group1_id: string; group1_values: number[]; group2_id: string; group2_values: number[] }[] = []
+		const wilcoxInput: WilcoxonPair[] = []
 
 		for (let i = 0; i < numPlots; i++) {
-			const group1_id = accessors.getGroupId(chart.plots[i])
-			const group1_values = accessors.getGroupValues(chart.plots[i])
+			const group1_id = accessors.getGroupId(plots[i])
+			const group1_values = accessors.getGroupValues(plots[i])
 			for (let j = i + 1; j < numPlots; j++) {
-				const group2_id = accessors.getGroupId(chart.plots[j])
-				const group2_values = accessors.getGroupValues(chart.plots[j])
+				const group2_id = accessors.getGroupId(plots[j])
+				const group2_values = accessors.getGroupValues(plots[j])
 				wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 			}
 		}
-		const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
+		const wilcoxOutput: any[] = []
+		for (const chunk of chunkWilcoxonPairs(wilcoxInput)) {
+			// lets other requests run between chunks, and before the first one, since a wasm module blocks the event loop
+			await new Promise(resolve => setImmediate(resolve))
+			wilcoxOutput.push(...JSON.parse(await run_rust('wilcoxon', JSON.stringify(chunk))))
+		}
 		chart[resultKey] = []
 		for (const test of wilcoxOutput) {
 			if (test.pvalue == null || test.pvalue == 'null') {

@@ -16,7 +16,10 @@ import {
 	setUncomputableValues,
 	divideValues,
 	expandNumericTermCollection,
-	getDescrStatsByTerm
+	getDescrStatsByTerm,
+	getMaxPairwiseTestGroups,
+	chunkWilcoxonPairs,
+	getPairwiseTestPlots
 } from '../termdb.violinBox.ts'
 import {
 	mockTerm1$id,
@@ -31,6 +34,7 @@ import {
 	getMockTermCollectionQ,
 	getMockTermCollectionData
 } from './mockViolinBoxData.ts'
+import { defaultMaxPairwiseTestGroups, pairwiseTestGroupsLimit } from '#shared/pairwiseTests.js'
 
 /**
  * Tests
@@ -1118,5 +1122,69 @@ tape('expandNumericTermCollection: expanded data works with parseValues', functi
 	test.deepEqual(plot2values.get('Drug A').sort(), [1.5, 4.0], 'Drug A should have values from both samples')
 	test.deepEqual(plot2values.get('Drug B').sort(), [2.5, 5.0], 'Drug B should have values from both samples')
 	test.deepEqual(plot2values.get('Drug C').sort(), [3.5, 6.0], 'Drug C should have values from both samples')
+	test.end()
+})
+
+tape('getMaxPairwiseTestGroups: the request value, else the serverconfig value, else the default', function (test) {
+	test.equal(defaultMaxPairwiseTestGroups, 8, 'the default is 8')
+	test.equal(pairwiseTestGroupsLimit, 30, 'the limit is 30')
+	test.equal(getMaxPairwiseTestGroups(undefined, {}), 8, 'the default when neither is set')
+	test.equal(getMaxPairwiseTestGroups(undefined, undefined), 8, 'the default without features')
+	test.equal(getMaxPairwiseTestGroups(undefined, { maxPairwiseTestGroups: 5 }), 5, 'the serverconfig value')
+	test.equal(getMaxPairwiseTestGroups(12, { maxPairwiseTestGroups: 5 }), 12, 'the request value over serverconfig')
+	test.equal(getMaxPairwiseTestGroups('30', {}), 30, 'a GET request value as a string, at the limit')
+	test.equal(getMaxPairwiseTestGroups(2, {}), 2, 'the lowest value')
+	for (const value of [31, 1, 0, -3, 2.5, '', 'x', true, [8]])
+		test.throws(
+			() => getMaxPairwiseTestGroups(value, {}),
+			/invalid maxPairwiseTestGroups, must be an integer from 2 to 30/,
+			`a request value of ${JSON.stringify(value)} is refused`
+		)
+	// an operator mistake falls back to the default, instead of failing every request
+	for (const value of [31, 1, 2.5, '10', null, true])
+		test.equal(
+			getMaxPairwiseTestGroups(undefined, { maxPairwiseTestGroups: value }),
+			defaultMaxPairwiseTestGroups,
+			`the default for a serverconfig value of ${JSON.stringify(value)}`
+		)
+	test.end()
+})
+
+tape('chunkWilcoxonPairs: chunks by the number of values, in order, without an empty chunk', function (test) {
+	const pair = (id: string, n: number) => ({
+		group1_id: id,
+		group1_values: Array(n).fill(1),
+		group2_id: id + 'b',
+		group2_values: Array(n).fill(2)
+	})
+	test.deepEqual(chunkWilcoxonPairs([]), [], 'no chunk for no pairs')
+	const pairs = [pair('a', 3), pair('b', 3), pair('c', 3), pair('d', 20), pair('e', 1)]
+	const ids = chunkWilcoxonPairs(pairs, 12).map(c => c.map(p => p.group1_id))
+	// 6 values per pair for a-c, so two fit in 12; d has more than 12 values and is a chunk by itself
+	test.deepEqual(ids, [['a', 'b'], ['c'], ['d'], ['e']], 'the expected chunks')
+	test.deepEqual(chunkWilcoxonPairs(pairs, 12).flat(), pairs, 'the chunks have all of the pairs, in order')
+	test.end()
+})
+
+tape('getPairwiseTestPlots: all visible plots, or the largest ones in their original order', function (test) {
+	const plot = (label: string, n: number, hidden = false) => ({ label, values: Array(n).fill(0), hidden })
+	const plots = [plot('a', 2), plot('b', 9), plot('c', 5), plot('d', 9), plot('e', 1)]
+	const get = (max: number, list = plots, isHidden?: (p: any) => boolean) =>
+		getPairwiseTestPlots(list, p => p.values, max, isHidden)
+	const labels = (r: { tested: any[] }) => r.tested.map(p => p.label)
+	test.deepEqual(get(5), { tested: plots, truncated: false }, 'all plots when not more than the maximum')
+	test.deepEqual(labels(get(3)), ['b', 'c', 'd'], 'the 3 largest, in their original order')
+	test.equal(get(3).truncated, true, 'truncated when plots are left out')
+	// b and d have the same size, and b is first
+	test.deepEqual(labels(get(1)), ['b'], 'the first of the largest plots of the same size')
+
+	// a hidden largest plot does not use up the limit, so the visible plots are still compared
+	const withHidden = [plot('big', 50, true), plot('x', 3), plot('y', 2)]
+	const r = get(2, withHidden, p => p.hidden)
+	test.deepEqual(labels(r), ['x', 'y'], 'the visible plots are tested, not the hidden largest one')
+	test.equal(r.truncated, false, 'not truncated, since no visible plot is left out')
+	const r2 = get(1, withHidden, p => p.hidden)
+	test.deepEqual(labels(r2), ['x'], 'the largest visible plot')
+	test.equal(r2.truncated, true, 'truncated, since a visible plot is left out')
 	test.end()
 })
