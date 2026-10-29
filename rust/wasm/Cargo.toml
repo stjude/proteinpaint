@@ -58,3 +58,7 @@ path = "../src/sv.rs"
 [[bin]]
 name = "survival"
 path = "../src/survival.rs"
+
+[[bin]]
+name = "hclust"
+path = "../src/hclust.rs"
