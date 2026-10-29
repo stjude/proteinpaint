@@ -14,7 +14,7 @@ import {
 	mclassitd
 } from '#shared/common.js'
 import { summarize_mclass } from '#shared/mds3tk.js'
-import { plotWiggle } from './bw.js'
+import { plotWiggle, validateCanvasSize } from './bw.js'
 import { maySetMapParent2Children } from './termdb.matrix.js'
 import { parseJsonParam } from './routes/common.ts'
 
@@ -85,7 +85,7 @@ function init_q(req) {
 	return query
 }
 
-async function finalize_result(q, ds, result) {
+export async function finalize_result(q, ds, result) {
 	const sampleSet = new Set() // collects sample ids if present in data points
 
 	if (result.skewer) {
@@ -135,6 +135,8 @@ async function finalize_result(q, ds, result) {
 				name: 'loss',
 				ncolor: q.cnvDensity.ncolor
 			}
+			validateCanvasSize(q1)
+			validateCanvasSize(q2)
 			let bothMax = 0 // max for both gain and loss
 			for (const [i, r] of q.rglst.entries()) {
 				const [dgain, dloss] = getCnvDensity(result.cnv.cnvs, r)

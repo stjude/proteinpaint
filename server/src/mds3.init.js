@@ -5,6 +5,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { scaleLinear } from 'd3-scale'
 import { makeCanvas, canvasToURL } from './canvas.ts'
+import { maxPixelRatio } from './bw.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { toBreakpointPos, isSelfBreakpointInRange, isPartnerBreakpointInRange } from './svfusion.breakpoint.ts'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
@@ -2656,8 +2657,10 @@ async function validate_query_singleSampleGenomeQuantification(ds, genome) {
 	}
 }
 
-function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio = 1) {
+export function plotSampleGenomeQuantification(file, genome, control, devicePixelRatio = 1) {
 	devicePixelRatio = Number(devicePixelRatio)
+	if (!Number.isFinite(devicePixelRatio) || devicePixelRatio <= 0 || devicePixelRatio > maxPixelRatio)
+		throw 'devicePixelRatio out of bound'
 	const axisHeight = 200,
 		ypad = 20,
 		xpad = 20,

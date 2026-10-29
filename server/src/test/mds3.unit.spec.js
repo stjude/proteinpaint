@@ -1,11 +1,12 @@
 import tape from 'tape'
-import { load_driver, mayUpdatePairlst } from '../mds3.load.js'
-import { dtsv, dtfusionrna, dtsnvindel } from '#shared/common.js'
+import { load_driver, mayUpdatePairlst, finalize_result } from '../mds3.load.js'
+import { dtsv, dtfusionrna, dtsnvindel, mclasscnvgain } from '#shared/common.js'
 
 /* test sections
 
 load_driver()
 mayUpdatePairlst()
+finalize_result()
 */
 
 tape('\n', function (test) {
@@ -121,6 +122,25 @@ tape('mayUpdatePairlst()', test => {
 			mayUpdatePairlst(m)
 			test.equal(JSON.stringify(m.pairlst), before, 'left as is with ' + JSON.stringify(Object.keys(overrides)))
 		}
+	}
+
+	test.end()
+})
+
+tape('finalize_result() bounds cnv density canvas size', async function (test) {
+	const q = {
+		rglst: [{ chr: '1', start: 0, stop: 1000, width: 100 }],
+		cnvDensity: { width: 999999999, barheight: 100 },
+		devicePixelRatio: 1
+	}
+	const bigDs = { queries: { cnv: { densityViewCutoff: 0 } } }
+	const result = { cnv: { cnvs: [{ class: mclasscnvgain, start: 10, stop: 20 }] } }
+
+	try {
+		await finalize_result(q, bigDs, result)
+		test.fail('should have thrown on an oversized cnvDensity.width')
+	} catch (e) {
+		test.ok(/width out of bound/.test(e), 'rejects an oversized cnvDensity.width before rendering')
 	}
 
 	test.end()
