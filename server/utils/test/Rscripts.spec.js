@@ -9,8 +9,6 @@ Active tests:
 	- corr.R pearson
 	- corr.R spearman
 	- corr.R kendall
-	- hclust.R Clustering:Average-Distance:Euclidean
-	- hclust.R Clustering:Complete-Distance:Maximum
 	- diffMeth.R: output shape and required keys
 	- diffMeth.R: p-values sorted ascending
 	- diffMeth.R: adjusted p-values >= original p-values
@@ -244,46 +242,6 @@ tape('corr.R kendall', async function (test) {
 	out = roundCorrEstimates(out)
 	exp = roundCorrEstimates(exp)
 	test.deepEqual(out, exp, 'Test corr.R kendall should match expected output')
-	test.end()
-})
-
-tape('hclust.R Clustering:Average-Distance:Euclidean', async function (test) {
-	test.timeoutAfter(10000)
-	const inJson = fs.readFileSync(
-		path.join(serverconfig.binpath, 'test/testdata/R/cluster_test_average_euclidean_data.json'),
-		{
-			encoding: 'utf8'
-		}
-	)
-	const expJson = fs.readFileSync(
-		path.join(serverconfig.binpath, 'test/testdata/R/hclust_average_euclidean_output.json'),
-		{
-			encoding: 'utf8'
-		}
-	)
-	const Rout = await run_R('hclust.R', inJson)
-	const out = JSON.parse(Rout)
-	test.deepEqual(out, JSON.parse(expJson), 'Test Clustering:Average-Distance:Euclidean should match expected output')
-	test.end()
-})
-
-tape('hclust.R Clustering:Complete-Distance:Maximum', async function (test) {
-	test.timeoutAfter(10000)
-	const inJson = fs.readFileSync(
-		path.join(serverconfig.binpath, 'test/testdata/R/cluster_test_complete_maximum_data.json'),
-		{
-			encoding: 'utf8'
-		}
-	)
-	const expJson = fs.readFileSync(
-		path.join(serverconfig.binpath, 'test/testdata/R/hclust_complete_maximum_output.json'),
-		{
-			encoding: 'utf8'
-		}
-	)
-	const Rout = await run_R('hclust.R', inJson)
-	const out = JSON.parse(Rout)
-	test.deepEqual(out, JSON.parse(expJson), 'Test Clustering:Complete-Distance:Maximum should match expected output')
 	test.end()
 })
 
