@@ -160,6 +160,11 @@ export async function get_survival(q: any, ds: any) {
 				!orderedLabels ? undefined : (a, b) => orderedLabels.indexOf(a) - orderedLabels.indexOf(b)
 			)
 		}
+		if (final_data.tests) {
+			for (const chartId in final_data.tests) {
+				final_data.tests[chartId] = orderTests(final_data.tests[chartId], final_data.refs.orderedKeys.series)
+			}
+		}
 		return final_data
 	} catch (e: any) {
 		if (e?.stack) console.log(e.stack)
@@ -215,6 +220,21 @@ export function getTermData(d: any, tw: any) {
 		return v?.key || 'Missing data'
 	}
 	return v?.key
+}
+
+/** the log-rank tests of a chart in the order of its series, as the pairs of combn() of that
+ *  order, so that the p-value table follows the bin or value order of the overlay term
+ *  instead of the label sort order of the rust module. A series that is not in the order is
+ *  kept after the others, in the order of the rust module. */
+export function orderTests(tests: Array<{ series1: string; series2: string; pvalue: string }>, seriesOrder: any[]) {
+	const order = seriesOrder.map(String)
+	const rank = (s: string) => {
+		const i = order.indexOf(String(s))
+		return i == -1 ? order.length : i
+	}
+	return tests
+		.map(t => (rank(t.series1) > rank(t.series2) ? { ...t, series1: t.series2, series2: t.series1 } : t))
+		.sort((a, b) => rank(a.series1) - rank(b.series1) || rank(a.series2) - rank(b.series2))
 }
 
 /** the order of the series or chart keys supplied by a stratification term: the labels of
