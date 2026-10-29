@@ -8,7 +8,7 @@ returns update(range), to list the images of the event limited to samples whose 
 or all samples when range is null; or undefined when the ds has no event images
 */
 export function eventImageRow(arg, table) {
-	const eventImages = arg.tk.mds.queries?.svfusion?.eventImages
+	const eventImages = arg.tk.mds.eventImages
 	if (!eventImages?.get) return
 	const [key, cell] = table.addRow()
 	key.text(eventImages.label)

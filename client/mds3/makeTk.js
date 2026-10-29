@@ -622,7 +622,8 @@ function mayaddGetter_m2csq(tk, block) {
 	}
 }
 
-/* to add tk.mds.queries.svfusion.eventImages.get(), returns {groups[]} or {src} of one image
+/* if termdbConfig.queries.svfusion.eventImages{} is present, add tk.mds.eventImages{label, get()}
+get() returns {groups[]} or {src} of one image
 arg{}
 	.m{} svfusion event, lists its images
 	.range{} optional, limits to samples whose partner breakpoint is in range
@@ -631,9 +632,11 @@ arg{}
 uses the same sample filters as variant2samples, so that only images of samples shown in the track are available
 */
 export function mayaddGetter_eventImages(tk, block) {
-	const eventImages = tk.mds.queries?.svfusion?.eventImages
-	if (!eventImages) return
-	eventImages.get = async arg => {
+	const cfg = tk.mds.termdbConfig?.queries?.svfusion?.eventImages
+	if (!cfg) return
+	// keep termdbConfig as plain server data, and add the getter to tk.mds instead
+	tk.mds.eventImages = { label: cfg.label }
+	tk.mds.eventImages.get = async arg => {
 		const { m, range, file } = arg
 		const body = {
 			genome: block.genome.name,

@@ -4,7 +4,7 @@ import os from 'os'
 import path from 'path'
 import { validate_query_svfusionEventImages } from '../svfusion.eventImages.ts'
 import { mds3_request_closure } from '../mds3.load.js'
-import { client_copy } from '../mds3.init.js'
+import { addNonDictionaryQueries } from '../routes/termdb.config.ts'
 import { dtfusionrna, dtsv } from '#shared/common.js'
 
 const prefix1 = 'GENE1_exon1_100-__GENE2_exon2_200+'
@@ -269,8 +269,9 @@ tape('event reports: client capability', t => {
 		label: 'test',
 		queries: { svfusion: { eventImages: { folder: '/data/private', attrKey: 'imagePrefix', label: 'Event reports' } } }
 	}
-	const copy = client_copy(ds)
-	t.deepEqual(copy.queries.svfusion, { eventImages: { label: 'Event reports' } }, 'only exposes the label')
+	const c: any = {}
+	addNonDictionaryQueries(c, ds as any, {})
+	t.deepEqual(c.queries.svfusion.eventImages, { label: 'Event reports' }, 'only exposes the label')
 	t.end()
 })
 

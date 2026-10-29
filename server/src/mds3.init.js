@@ -637,9 +637,6 @@ export async function validate_cumburden(ds) {
 function copy_queries(ds, dscopy) {
 	if (!ds.queries) return
 	const copy = {}
-	if (ds.queries.svfusion?.eventImages) {
-		copy.svfusion = { eventImages: { label: ds.queries.svfusion.eventImages.label } }
-	}
 
 	if (ds.queries.singleSampleMutation) {
 		copy.singleSampleMutation = {

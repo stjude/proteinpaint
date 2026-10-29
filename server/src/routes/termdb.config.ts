@@ -227,7 +227,7 @@ function addMatrixplots(c, ds) {
  * @param ds Entire dataset configuration from ds file. ds.queries{} contains diverse query types covering genomic, molecular, imaging etc
  * @param genome Genome obj.
  */
-function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
+export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	const q = ds.queries
 	if (!q) return
 	// this ds supports genomic query methods
