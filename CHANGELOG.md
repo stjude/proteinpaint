@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Removed unused Python code
+
+
 ## 2.224.1
 
 Features:
