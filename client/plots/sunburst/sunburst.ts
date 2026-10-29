@@ -143,7 +143,7 @@ class Sunburst extends PlotBase implements RxComponent {
 	}
 
 	/** a ring term pill; `sampleTypes` limits the terms it offers (see allowedSampleTypes) */
-	async ringPill(holder: any, callback: (tw: any) => void, sampleTypes?: number[], placeholder?: string) {
+	async ringPill(holder: any, callback: (tw: any) => void, sampleTypes?: string[], placeholder?: string) {
 		return await termsettingInit({
 			holder,
 			vocabApi: this.app.vocabApi,

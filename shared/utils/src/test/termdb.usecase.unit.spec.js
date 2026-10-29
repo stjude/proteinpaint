@@ -227,57 +227,47 @@ tape('summaryInput term0', test => {
 })
 
 tape('swimmer pointTerm', test => {
-	const usecase = { target: 'swimmer', detail: 'pointTerm', sampleTypes: [4] }
+	const usecase = { target: 'swimmer', detail: 'pointTerm', sampleTypes: ['4'] }
 	const uses = term => isUsableTerm(term, usecase)
 	test.deepEqual(
-		uses({ type: 'categorical', isleaf: true, sample_type: 4, child_sample_types: [4] }),
+		uses({ type: 'categorical', isleaf: true, sample_type: '4' }),
 		new Set(['plot']),
 		'should allow a categorical term of a point sample type'
 	)
 	test.deepEqual(
-		uses({ type: 'float', isleaf: true, sample_type: '4', child_sample_types: [4] }),
+		uses({ type: 'float', isleaf: true, sample_type: 4 }),
 		new Set(['plot']),
-		'should allow a numeric term with a numeric-string sample type'
+		'should allow a numeric term of a point sample type, also with a numeric sample_type'
 	)
 	test.deepEqual(
-		uses({ type: 'multivalue', isleaf: true, sample_type: 4, child_sample_types: [4] }),
+		uses({ type: 'multivalue', isleaf: true, sample_type: '4' }),
 		new Set(),
 		'should not allow a multivalue term, a marker has one color'
 	)
 	test.deepEqual(
-		uses({ type: 'categorical', isleaf: true, sample_type: 5, child_sample_types: [4] }),
-		new Set(),
-		'should filter terms by their own sample type'
-	)
-	test.deepEqual(
-		uses({ type: 'survival', isleaf: true, sample_type: 4, child_sample_types: [4] }),
+		uses({ type: 'survival', isleaf: true, sample_type: '4' }),
 		new Set(),
 		'should not allow a survival term'
 	)
 	test.deepEqual(
-		uses({ type: 'categorical', isleaf: true, sample_type: 2, child_sample_types: [2] }),
+		uses({ type: 'categorical', isleaf: true, sample_type: '2' }),
 		new Set(),
 		'should not allow a term of another sample type'
 	)
 	test.deepEqual(
-		uses({ type: 'categorical', isleaf: true, sample_type: 4, child_sample_types: [] }),
-		new Set(['plot']),
-		'should allow a plot term with a matching sample type even without child sample types'
+		uses({ type: 'categorical', isleaf: true }),
+		new Set(),
+		'should not allow a term without a sample type'
 	)
 	test.deepEqual(
-		uses({
-			isleaf: false,
-			sample_type: 4,
-			child_types: ['categorical', 'float'],
-			child_sample_types: [4]
-		}),
+		uses({ isleaf: false, sample_type: '4', child_types: ['categorical', 'float'] }),
 		new Set(['branch']),
 		'should allow a branch of a point sample type'
 	)
 	test.deepEqual(
-		uses({ isleaf: false, sample_type: 4, child_types: ['categorical'], child_sample_types: [1] }),
+		uses({ isleaf: false, sample_type: '1', child_types: ['categorical'] }),
 		new Set(),
-		'should filter branches by child sample types'
+		'should not allow a branch of another sample type'
 	)
 	test.deepEqual(
 		isUsableTerm({ type: 'categorical', isleaf: true, sample_type: '2' }, { target: 'swimmer', detail: 'term0' }),
@@ -322,7 +312,7 @@ tape('sunburst', function (test) {
 	for (const type of ['multivalue', 'condition', 'survival', 'geneVariant', 'samplelst'])
 		test.deepEqual(isUsableTerm({ type, isleaf: true }, usecase), new Set(), `should not allow a ${type} ring`)
 	test.deepEqual(
-		isUsableTerm({ isleaf: false, child_types: ['survival', 'float'], child_sample_types: [2] }, usecase),
+		isUsableTerm({ isleaf: false, child_types: ['survival', 'float'] }, usecase),
 		new Set(['branch']),
 		'should allow a branch with a categorical or numeric child'
 	)
@@ -331,36 +321,21 @@ tape('sunburst', function (test) {
 		new Set(),
 		'should not allow a branch without a categorical or numeric child'
 	)
-	const limited = { target: 'sunburst', sampleTypes: [1, 2] }
+	const limited = { target: 'sunburst', sampleTypes: ['1', '2'] }
 	test.deepEqual(
-		isUsableTerm({ type: 'categorical', isleaf: true, sample_type: 2, child_sample_types: [2] }, limited),
+		isUsableTerm({ type: 'categorical', isleaf: true, sample_type: 2 }, limited),
 		new Set(['plot']),
 		'should allow a term of a given sample type'
 	)
 	test.deepEqual(
-		isUsableTerm({ type: 'categorical', isleaf: true, sample_type: 3, child_sample_types: [3] }, limited),
+		isUsableTerm({ type: 'categorical', isleaf: true, sample_type: 3 }, limited),
 		new Set(),
 		'should not allow a term of another sample type'
 	)
 	test.deepEqual(
 		isUsableTerm({ type: 'categorical', isleaf: true }, limited),
-		new Set(),
-		'should not allow a term without a sample type'
-	)
-	test.deepEqual(
-		isUsableTerm({ type: 'categorical', isleaf: true, sample_type: 2, child_sample_types: [3] }, limited),
 		new Set(['plot']),
-		'should filter plot terms by sample_type, not child_sample_types'
-	)
-	test.deepEqual(
-		isUsableTerm({ isleaf: false, child_types: ['float'], child_sample_types: [2] }, limited),
-		new Set(['branch']),
-		'should allow a branch when both child type and sample type are included'
-	)
-	test.deepEqual(
-		isUsableTerm({ isleaf: false, child_types: ['float'], child_sample_types: [3] }, limited),
-		new Set(),
-		'should reject a branch when its child sample types are not included'
+		'should allow a term without a sample type'
 	)
 	test.end()
 })

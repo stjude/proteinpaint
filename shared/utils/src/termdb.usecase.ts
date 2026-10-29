@@ -96,7 +96,7 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 			// and as divide-by (term0), where each chart is a self-contained subset
 			const excluded = usecase.detail == 'term2' ? ['survival', 'multivalue'] : ['survival']
 			if (term.type && !excluded.includes(term.type)) uses.add('plot')
-			if (hasAllowedChildTypes({ child_types, excluded_types: excluded })) uses.add('branch')
+			if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
 			return uses
 		}
 
@@ -105,7 +105,7 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 				// same overlay exclusion as the barchart/violin/boxplot/summary case above
 				const excluded = usecase.detail === 'term2' ? ['survival', 'multivalue'] : ['survival']
 				if (term.type && !excluded.includes(term.type)) uses.add('plot')
-				if (hasAllowedChildTypes({ child_types, excluded_types: excluded })) uses.add('branch')
+				if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
 				return uses
 			} else {
 				if (graphableTypes.has(term.type)) uses.add('plot')
@@ -206,13 +206,7 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 				// which would place it on multiple incidence curves and invalidate group comparison
 				if (term.type && term.type != 'condition' && term.type != 'survival' && term.type != 'multivalue')
 					uses.add('plot')
-				if (
-					hasAllowedChildTypes({
-						child_types,
-						excluded_types: ['condition', 'survival', 'multivalue']
-					})
-				)
-					uses.add('branch')
+				if (hasAllowedChildTypes(child_types, ['condition', 'survival', 'multivalue'])) uses.add('branch')
 				return uses
 			}
 			return uses
@@ -227,7 +221,7 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 				// multivalue is excluded: overlapping group membership would place a sample
 				// on multiple survival curves and invalidate group comparison
 				if (term.type && term.type != 'survival' && term.type != 'multivalue') uses.add('plot')
-				if (hasAllowedChildTypes({ child_types, excluded_types: ['survival', 'multivalue'] })) uses.add('branch')
+				if (hasAllowedChildTypes(child_types, ['survival', 'multivalue'])) uses.add('branch')
 				return uses
 			}
 			return uses
@@ -242,7 +236,7 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 				if (usecase.regressionType == 'logistic') {
 					// multivalue is excluded: overlapping group membership cannot define a binary outcome
 					if (term.type && term.type != 'survival' && term.type != 'multivalue') uses.add('plot')
-					if (hasAllowedChildTypes({ child_types, excluded_types: ['survival', 'multivalue'] })) uses.add('branch')
+					if (hasAllowedChildTypes(child_types, ['survival', 'multivalue'])) uses.add('branch')
 					return uses
 				} else if (usecase.regressionType == 'cox') {
 					if (term.type == 'condition' || term.type == 'survival') uses.add('plot')
@@ -265,8 +259,7 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 				}
 				if (term.type == 'float' || term.type == 'integer' || term.type == 'categorical' || term.type == 'samplelst')
 					uses.add('plot')
-				if (hasAllowedChildTypes({ child_types, included_types: ['categorical', 'float', 'integer'] }))
-					uses.add('branch')
+				if (hasChildTypes(child_types, ['categorical', 'float', 'integer'])) uses.add('branch')
 				return uses
 			}
 			return uses
@@ -321,29 +314,18 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 				/* term to mark the linked points by (e.g. CSF dots): only terms and branches of the point
 				samples' types (usecase.sampleTypes, from ds.queries.swimmer.pointSampleTypes). one marker has
 				one color, so multivalue is excluded; survival has no categories */
+				const types: string[] = usecase.sampleTypes || []
+				if (term.sample_type == null || !types.includes(String(term.sample_type))) return uses
 				const excluded = ['survival', 'multivalue']
-				if (
-					graphableTypes.has(term.type) &&
-					!excluded.includes(term.type) &&
-					hasSampleType(term.sample_type, usecase.sampleTypes)
-				)
-					uses.add('plot')
-				if (
-					hasAllowedChildTypes({
-						child_types,
-						child_sample_types: term.child_sample_types,
-						excluded_types: excluded,
-						included_sample_types: usecase.sampleTypes
-					})
-				)
-					uses.add('branch')
+				if (graphableTypes.has(term.type) && !excluded.includes(term.type)) uses.add('plot')
+				if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
 				return uses
 			}
 			/* divide-by (term0). multivalue is allowed: a lane is drawn in each
 			of its patient's groups. survival is excluded, as it has no categories to divide by */
 			const excluded = ['survival']
 			if (graphableTypes.has(term.type) && !excluded.includes(term.type)) uses.add('plot')
-			if (hasAllowedChildTypes({ child_types, excluded_types: excluded })) uses.add('branch')
+			if (hasAllowedChildTypes(child_types, excluded)) uses.add('branch')
 			return uses
 		}
 
@@ -353,16 +335,10 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 			usecase.sampleTypes, when given, limits the terms to those sample types (the rings' line of
 			descent, e.g. patient and primary sample): no value maps between sibling sample types */
 			const allowed = ['categorical', 'integer', 'float']
-			if (allowed.includes(term.type) && hasSampleType(term.sample_type, usecase.sampleTypes)) uses.add('plot')
-			if (
-				hasAllowedChildTypes({
-					child_types,
-					child_sample_types: term.child_sample_types,
-					included_types: allowed,
-					included_sample_types: usecase.sampleTypes
-				})
-			)
-				uses.add('branch')
+			const types: string[] | undefined = usecase.sampleTypes
+			if (types && term.sample_type != null && !types.includes(String(term.sample_type))) return uses
+			if (allowed.includes(term.type)) uses.add('plot')
+			if (hasChildTypes(child_types, allowed)) uses.add('branch')
 			return uses
 		}
 
@@ -383,47 +359,31 @@ export function isUsableTerm(term: any, _usecase: any, termdbConfig?: any, ds?: 
 	}
 }
 
-// determine if term has valid child types/child sample types
-function hasAllowedChildTypes(arg: {
-	child_types?: string[]
-	child_sample_types?: number[]
-	included_types?: string[]
-	excluded_types?: string[]
-	included_sample_types?: number[]
-	excluded_sample_types?: number[]
-}) {
-	const {
-		child_types,
-		child_sample_types,
-		included_types,
-		excluded_types,
-		included_sample_types,
-		excluded_sample_types
-	} = arg
-	const hasTypeCriteria = child_types?.length || included_types?.length || excluded_types?.length
-	const hasSampleTypeCriteria =
-		child_sample_types?.length || included_sample_types?.length || excluded_sample_types?.length
-	if (!hasTypeCriteria && !hasSampleTypeCriteria) return false
-	if (hasTypeCriteria && !hasAllowedChildValues(child_types, included_types, excluded_types)) return false
-	if (hasSampleTypeCriteria && !hasAllowedChildValues(child_sample_types, included_sample_types, excluded_sample_types))
+// determine if the term has at least one child type that
+// is not excluded
+function hasAllowedChildTypes(child_types: string[], excluded_types: string[]) {
+	if (!child_types.length) {
+		// term does not have children
 		return false
-	return true
-}
-
-function hasAllowedChildValues<T>(child_values?: T[], included_values?: T[], excluded_values?: T[]) {
-	if (!child_values?.length) return false
-	return child_values.some(
-		value => (!included_values?.length || included_values.includes(value)) && !excluded_values?.includes(value)
-	)
+	}
+	if (!excluded_types?.length) {
+		// no excluded types
+		return true
+	}
+	if (child_types.some(type => !excluded_types.includes(type))) {
+		// at least one child type is not excluded
+		return true
+	}
 }
 
 function hasNumericChild(child_types: string[]) {
 	return child_types.includes('float') || child_types.includes('integer')
 }
 
-function hasSampleType(sample_type: any, allowed: number[]) {
-	if (!allowed?.length) return true
-	return allowed.includes(Number(sample_type))
+function hasChildTypes(child_types: string[], expected_types: string[]) {
+	for (const a of expected_types) {
+		if (child_types.includes(a)) return true
+	}
 }
 
 // every group of a samplelst term lists its samples in term.values[].list[]

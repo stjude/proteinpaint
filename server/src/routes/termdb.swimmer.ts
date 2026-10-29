@@ -361,7 +361,7 @@ export async function validate_query_swimmer(ds: any) {
 	const notPatient: string[] = []
 	const unknownPointSamples: string[] = []
 	// sample types and events of the point samples of markBy events, for the client's "mark by" term picker
-	const pointSampleTypes = new Set<number>()
+	const pointSampleTypes = new Set<string>()
 	const pointSampleEvents = new Set<string>()
 	for (const [sample, d] of bySample) {
 		const sampleId = sampleName2id(sample)
@@ -385,7 +385,7 @@ export async function validate_query_swimmer(ds: any) {
 				p.sampleId = id
 				if (q.events?.[p.event]?.markBy) {
 					const type = id2sampleType(id)
-					if (type != null) pointSampleTypes.add(type)
+					if (type != null) pointSampleTypes.add(String(type))
 					pointSampleEvents.add(p.event)
 				}
 			}

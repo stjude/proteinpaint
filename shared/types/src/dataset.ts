@@ -534,10 +534,10 @@ export type SwimmerQuery = {
 	/** event key (e.g. "Death") that terminates a lane; a lane with this event ends at its time,
 	otherwise at its latest event or interval end */
 	terminalEvent?: string
-	/** set at server launch by validate_query_swimmer(): sample types (sample_types.id) of the point samples
-	(pointFile 4th column, e.g. CSF) of events with markBy:true. the
+	/** set at server launch by validate_query_swimmer(): sample types (sample_types.id, as strings like
+	term.sample_type) of the point samples (pointFile 4th column, e.g. CSF) of events with markBy:true. the
 	client lists only terms of these types to mark the linked points by. unset hides the "mark by" control */
-	pointSampleTypes?: number[]
+	pointSampleTypes?: string[]
 	/** set at server launch: keys of the markBy events that have point samples (e.g. CSF), for the control
 	label */
 	pointSampleEvents?: string[]
