@@ -670,7 +670,7 @@ function addHiddenValues(term: TermWrapper, legendGrps: LegendGroup[], headingSt
 	for (const key of Object.keys(term.q.hiddenValues || {})) {
 		items.push({
 			text: `${key}`,
-			testIdSuffix: `hidden-${key}`,
+			testIdSuffix: `${key}`,
 			noIcon: true,
 			/** Need to specify that this is a hidden value for
 			 * text styling in the legend and  a plot for
