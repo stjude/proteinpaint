@@ -1,6 +1,6 @@
 import type { RouteApi, RoutePayload } from '#types'
 import path from 'path'
-import { run_R } from '@sjcrh/proteinpaint-r'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import type {
 	TermdbClusterRequestGeneExpression,
 	TermdbClusterRequestIsoformExpression,
@@ -240,8 +240,7 @@ async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000)
 		row_names: [] as string[], // genes
 		col_names: [...sampleSet].slice(0, numCases) as string[], // samples
 		cluster_method: q.clusterMethod as string,
-		distance_method: q.distanceMethod as string,
-		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
+		distance_method: q.distanceMethod as string
 	}
 
 	// compose "data{}" into a matrix
@@ -255,10 +254,10 @@ async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000)
 	}
 
 	if (inputData.matrix.length == 0) throw 'Clustering matrix is empty'
-	const Routput = JSON.parse(await run_R('hclust.R', JSON.stringify(inputData)))
+	const hclust = JSON.parse(await run_rust('hclust', JSON.stringify(inputData)))
 
-	const row_names_index: number[] = Routput.RowOrder.map(row => inputData.row_names.indexOf(row.name)) // sorted rows. value is array index in input data
-	const col_names_index: number[] = Routput.ColOrder.map(col => inputData.col_names.indexOf(col.name)) // sorted columns, value is array index from input array
+	const row_names_index: number[] = hclust.row.order.map(row => inputData.row_names.indexOf(row.name)) // sorted rows. value is array index in input data
+	const col_names_index: number[] = hclust.col.order.map(col => inputData.col_names.indexOf(col.name)) // sorted columns, value is array index from input array
 
 	// generated sorted matrix based on row/col clustering order
 	const output_matrix: number[][] = []
@@ -272,15 +271,15 @@ async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000)
 
 	return {
 		row: {
-			merge: Routput.RowMerge,
-			height: Routput.RowHeight,
-			order: Routput.RowOrder,
+			merge: hclust.row.merge,
+			height: hclust.row.height,
+			order: hclust.row.order,
 			inputOrder: inputData.row_names
 		},
 		col: {
-			merge: Routput.ColumnMerge,
-			height: Routput.ColumnHeight,
-			order: Routput.ColOrder,
+			merge: hclust.col.merge,
+			height: hclust.col.height,
+			order: hclust.col.order,
 			inputOrder: inputData.col_names
 		},
 		matrix: output_matrix
