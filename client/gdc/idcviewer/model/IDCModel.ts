@@ -54,7 +54,9 @@ export class IDCModel {
 	#GDC_API: string
 
 	constructor(GDC_API?: string) {
-		this.#GDC_API = (GDC_API || 'https://api.gdc.cancer.gov').replace(/\/+$/, '')
+		let api = GDC_API || 'https://api.gdc.cancer.gov'
+		while (api.endsWith('/')) api = api.slice(0, -1)
+		this.#GDC_API = api
 	}
 
 	/** Load the IDC parquet mapping, falling back through versioned archives if "current" is unavailable or invalid. */
