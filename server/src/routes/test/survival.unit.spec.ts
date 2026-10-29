@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getTermData, get_survival } from '../termdb.survival.ts'
+import { getTermData, get_survival, orderTests } from '../termdb.survival.ts'
 import { getTwByIndex } from '#src/termdb.twFromRequest.ts'
 
 /**
@@ -7,6 +7,7 @@ import { getTwByIndex } from '#src/termdb.twFromRequest.ts'
  *  - getTermData()
  *  - the $id that this route keys its sample data by
  *  - get_survival() request validation
+ *  - orderTests()
  *
  * The reassembly of a posted term wrapper is covered by termdb.twFromRequest.unit.spec.ts
  */
@@ -150,5 +151,64 @@ tape('get_survival: rejects a non-survival term1 without term2', async function 
 tape('get_survival: rejects a term posted without a $id', async function (test) {
 	const result = await get_survival({ ds: mockDs, term1_id: survivalTerm.id }, mockDs)
 	test.equal(result.error, 'term1 is missing $id', 'Should not serve a request whose data key is unknown')
+	test.end()
+})
+
+/**************
+ orderTests
+***************/
+
+tape('orderTests: orders the tests by the bin order of the overlay', function (test) {
+	// as the rust module orders the series by label
+	const tests = [
+		{ series1: '7 to 12', series2: '<7', pvalue: '0.1' },
+		{ series1: '7 to 12', series2: '>12', pvalue: '0.2' },
+		{ series1: '<7', series2: '>12', pvalue: '0.3' }
+	]
+	test.deepEqual(
+		orderTests(tests, ['<7', '7 to 12', '>12']),
+		[
+			{ series1: '<7', series2: '7 to 12', pvalue: '0.1' },
+			{ series1: '<7', series2: '>12', pvalue: '0.3' },
+			{ series1: '7 to 12', series2: '>12', pvalue: '0.2' }
+		],
+		'Should give the pairs in the order of combn() over the bin order, with series1 before series2'
+	)
+	test.end()
+})
+
+tape('orderTests: matches number series keys to the string series of the tests', function (test) {
+	const tests = [
+		{ series1: '1', series2: '2', pvalue: '0.1' },
+		{ series1: '1', series2: '10', pvalue: '0.2' },
+		{ series1: '2', series2: '10', pvalue: '0.3' }
+	]
+	test.deepEqual(
+		orderTests(tests, [10, 2, 1]).map(t => [t.series1, t.series2]),
+		[
+			['10', '2'],
+			['10', '1'],
+			['2', '1']
+		],
+		'Should order by the series keys'
+	)
+	test.end()
+})
+
+tape('orderTests: keeps a series that is not in the order after the others', function (test) {
+	const tests = [
+		{ series1: 'A', series2: 'B', pvalue: '0.1' },
+		{ series1: 'A', series2: 'C', pvalue: '0.2' },
+		{ series1: 'B', series2: 'C', pvalue: '0.3' }
+	]
+	test.deepEqual(
+		orderTests(tests, ['C', 'B']).map(t => [t.series1, t.series2]),
+		[
+			['C', 'B'],
+			['C', 'A'],
+			['B', 'A']
+		],
+		'Should put the unknown series last'
+	)
 	test.end()
 })
