@@ -3,7 +3,6 @@ import fs from 'fs'
 import { promisify } from 'node:util'
 import child_process from 'node:child_process'
 import { context } from 'esbuild'
-import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 import { getCodeText } from './emitImports.mjs'
 import postcss from 'postcss'
 import escapeFix from './postcss-escape-fix.mjs'
@@ -16,12 +15,7 @@ const entryPoints = ['./src/app.js']
 if (ENV != 'prod') entryPoints.push(`./test/internals-${ENV}.js`)
 const outdir = process.env.BUNDLE_OUTDIR || path.join(__dirname, ENV == 'test' ? '../public/bin/test' : './dist')
 
-const libReplacers =
-	ENV == 'dev'
-		? [nodeLibToBrowser()]
-		: ENV == 'test'
-		? [polyfillNode(), nodeLibToBrowser()]
-		: [excludeSpecFiles(), nodeLibToBrowser()]
+const libReplacers = ENV == 'dev' || ENV == 'test' ? [nodeLibToBrowser()] : [excludeSpecFiles(), nodeLibToBrowser()]
 
 const ctx = await context({
 	entryPoints,
