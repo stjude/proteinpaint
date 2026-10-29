@@ -70,7 +70,7 @@
     "@sjcrh/proteinpaint-types": "2.224.0",
     "@types/express": "^5.0.0",
     "@types/express-session": "^1.18.1",
-    "better-sqlite3": "^12.4.1",
+    "better-sqlite3": "^13.0.3",
     "body-parser": "^1.15.2",
     "compression": "^1.6.2",
     "cookie-parser": "^1.4.5",
