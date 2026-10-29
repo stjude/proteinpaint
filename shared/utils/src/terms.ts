@@ -751,7 +751,6 @@ export function getTwSampleTypes(tw: any, ds: any): TwSampleTypes {
 			return { sampleTypes: term.parentTerm.sampleTypes }
 		}
 	}
-	const defaultSampleTypes = getDefaultSampleTypes(ds)
 	if (ds.cohort.termdb.term2SampleType.has(term.id)) {
 		const sampleType = ds.cohort.termdb.term2SampleType.get(term.id)
 		if (Number.isInteger(sampleType)) {
@@ -772,7 +771,12 @@ export function getTwSampleTypes(tw: any, ds: any): TwSampleTypes {
 			return Number.isInteger(sampleType) ? { sampleTypes: [sampleType] } : {}
 		}
 	}
-	return { sampleTypes: defaultSampleTypes }
+	// use default sample types
+	// define term.sampleTypeLabel here to prevent building label based
+	// on the default sample types, which may be many sample types (see
+	// getSampleData() in server/src/termdb.matrix.ts)
+	term.sampleTypeLabel = ''
+	return { sampleTypes: getDefaultSampleTypes(ds) }
 }
 
 // default sample types will be all non-root sample types

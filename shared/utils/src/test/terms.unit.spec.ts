@@ -8,6 +8,7 @@ import {
 	getGvQueryKey,
 	getOriginLabel,
 	getGvLabelSuffix,
+	getTwSampleTypes,
 	matchesGvQueryEntry,
 	internGvQueryEntry,
 	isSingleCellTerm,
@@ -600,5 +601,21 @@ tape('getGvLabelSuffix()', t => {
 		' (Normals)',
 		'Should tolerate a q that carries no origin label'
 	)
+	t.end()
+})
+
+tape('getTwSampleTypes()', t => {
+	const term = { id: 'term', type: 'geneExpression', sampleTypeLabel: 'Custom label' }
+	const ds = {
+		cohort: {
+			termdb: {
+				sampleTypes: { 1: { parent_id: 0 }, 2: { parent_id: 1 } },
+				term2SampleType: new Map()
+			}
+		}
+	}
+
+	t.deepEqual(getTwSampleTypes({ term }, ds), { sampleTypes: [1, 2] }, 'Should use default sample types')
+	t.equal(term.sampleTypeLabel, '', 'Should clear the sample type label when using defaults')
 	t.end()
 })
