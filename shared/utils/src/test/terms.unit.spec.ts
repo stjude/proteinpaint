@@ -8,6 +8,7 @@ import {
 	getGvQueryKey,
 	getOriginLabel,
 	getGvLabelSuffix,
+	getTwSampleTypes,
 	matchesGvQueryEntry,
 	internGvQueryEntry,
 	isSingleCellTerm,
@@ -600,5 +601,178 @@ tape('getGvLabelSuffix()', t => {
 		' (Normals)',
 		'Should tolerate a q that carries no origin label'
 	)
+	t.end()
+})
+
+tape('getTwSampleTypes(): missing term', t => {
+	for (const tw of [undefined, null, {}, { term: undefined }, { term: null }]) {
+		t.deepEqual(getTwSampleTypes(tw, undefined), {}, 'Should return no sample types without a term')
+	}
+	t.end()
+})
+
+tape('getTwSampleTypes(): user-defined sample types', t => {
+	for (const sampleTypes of [[1, 2], []]) {
+		const term = {
+			id: 'term',
+			type: 'dtsnvindel',
+			sampleTypes,
+			sampleTypeLabel: 'Custom label',
+			parentTerm: { sampleTypes: [3] }
+		}
+		const ds = { cohort: { termdb: { term2SampleType: new Map([['term', 4]]) } } }
+
+		t.deepEqual(getTwSampleTypes({ term }, ds), { sampleTypes }, 'Should prioritize user-defined sample types')
+		t.equal(term.sampleTypeLabel, 'Custom label', 'Should preserve the user-defined label')
+	}
+	t.end()
+})
+
+tape('getTwSampleTypes(): parent sample types', t => {
+	for (const type of dtTermTypes) {
+		for (const sampleTypes of [[1, 2], []]) {
+			const term = { id: 'term', type, parentTerm: { sampleTypes }, sampleTypeLabel: 'Parent label' }
+			const ds = { cohort: { termdb: { term2SampleType: new Map([['term', 3]]) } } }
+
+			t.deepEqual(getTwSampleTypes({ term }, ds), { sampleTypes }, `Should prioritize parent sample types for ${type}`)
+			t.equal(term.sampleTypeLabel, 'Parent label', 'Should preserve the label when using parent sample types')
+		}
+	}
+	t.end()
+})
+
+tape('getTwSampleTypes(): dataset mappings', t => {
+	for (const sampleType of [0, 2]) {
+		const ds = { cohort: { termdb: { term2SampleType: new Map([['term', sampleType]]) } } }
+		for (const term of [
+			{ id: 'term', type: 'geneExpression', parentTerm: { sampleTypes: [3] }, sampleTypeLabel: 'Mapped label' },
+			{ id: 'term', type: 'dtsnvindel', parentTerm: {}, sampleTypeLabel: 'Mapped label' },
+			{ id: 'term', type: 'samplelst', values: {}, sampleTypeLabel: 'Mapped label' }
+		]) {
+			t.deepEqual(
+				getTwSampleTypes({ term }, ds),
+				{ sampleTypes: [sampleType] },
+				`Should use the dataset mapping for ${term.type}`
+			)
+			t.equal(term.sampleTypeLabel, 'Mapped label', 'Should preserve the label when using a dataset mapping')
+		}
+	}
+	for (const childSampleTypes of [[2, 3], []]) {
+		const term = { id: 'term', type: 'geneExpression' }
+		const ds = {
+			cohort: { termdb: { term2SampleType: new Map([['term', { sampleType: 0, childSampleTypes }]]) } }
+		}
+		t.deepEqual(
+			getTwSampleTypes({ term }, ds),
+			{ sampleTypes: [0], childSampleTypes },
+			'Should return both the mapped sample type and its child sample types'
+		)
+	}
+	for (const sampleType of [undefined, null, false, '', '2', 1.5, NaN]) {
+		const ds = { cohort: { termdb: { term2SampleType: new Map([['term', sampleType]]) } } }
+		t.deepEqual(
+			getTwSampleTypes({ term: { id: 'term' } }, ds),
+			{},
+			`Should return no sample types for invalid mapping ${String(sampleType)}`
+		)
+	}
+	t.end()
+})
+
+tape('getTwSampleTypes(): invalid object mappings', t => {
+	for (const sampleType of [{}, { sampleType: '1' }, { sampleType: 1.5 }, []]) {
+		const ds = { cohort: { termdb: { term2SampleType: new Map([['term', sampleType]]) } } }
+		t.throws(
+			() => getTwSampleTypes({ term: { id: 'term' } }, ds),
+			/sampleType\.sampleType is non-numeric/,
+			'Should reject a missing or non-integer sample type'
+		)
+	}
+	for (const childSampleTypes of [undefined, null, '2', {}]) {
+		const ds = {
+			cohort: { termdb: { term2SampleType: new Map([['term', { sampleType: 1, childSampleTypes }]]) } }
+		}
+		t.throws(
+			() => getTwSampleTypes({ term: { id: 'term' } }, ds),
+			/sampleType\.childSampleTypes is not array/,
+			'Should reject missing or non-array child sample types'
+		)
+	}
+	t.end()
+})
+
+tape('getTwSampleTypes(): sample lists', t => {
+	for (const [sampleId, mappedId] of [
+		[123, 123],
+		['123', 123],
+		['sample-a', 'sample-a'],
+		['0', '0']
+	]) {
+		for (const sampleType of [0, 2, undefined, null, '2', 1.5]) {
+			const term = {
+				id: 'term',
+				type: 'samplelst',
+				values: {
+					first: { list: [{ sampleId }, { sampleId: 'ignored' }] },
+					second: { list: [{ sampleId: 'ignored' }] }
+				},
+				sampleTypeLabel: 'List label'
+			}
+			const ds = {
+				cohort: { termdb: { term2SampleType: new Map() } },
+				sampleId2Type: new Map([
+					[mappedId, sampleType],
+					['ignored', 3]
+				])
+			}
+
+			t.deepEqual(
+				getTwSampleTypes({ term }, ds),
+				Number.isInteger(sampleType) ? { sampleTypes: [sampleType] } : {},
+				`Should resolve the first sample ID ${JSON.stringify(sampleId)} with mapping ${String(sampleType)}`
+			)
+			t.equal(term.sampleTypeLabel, 'List label', 'Should preserve the label when resolving a sample ID')
+		}
+	}
+	t.end()
+})
+
+tape('getTwSampleTypes(): defaults', t => {
+	const term = { id: 'term', type: 'geneExpression', sampleTypeLabel: 'Custom label' }
+	const ds = {
+		cohort: {
+			termdb: {
+				sampleTypes: {
+					0: { parent_id: null },
+					1: { parent_id: 0 },
+					2: { parent_id: 1 },
+					3: {},
+					4: { parent_id: '0' }
+				},
+				term2SampleType: new Map()
+			}
+		}
+	}
+
+	t.deepEqual(getTwSampleTypes({ term }, ds), { sampleTypes: [1, 2] }, 'Should use default sample types')
+	t.equal(term.sampleTypeLabel, '', 'Should clear the sample type label when using defaults')
+	const dtTerm = { type: 'dtsnvindel', parentTerm: {}, sampleTypeLabel: 'Custom label' }
+	t.deepEqual(
+		getTwSampleTypes({ term: dtTerm }, ds),
+		{ sampleTypes: [1, 2] },
+		'Should use defaults when a data-type term has no parent sample types or dataset mapping'
+	)
+	t.equal(dtTerm.sampleTypeLabel, '', 'Should clear the data-type term label when using defaults')
+	for (const list of [[], [{}], [{ sampleId: null }], [{ sampleId: '' }], [{ sampleId: 0 }]]) {
+		const sampleTerm = { type: 'samplelst', values: { group: { list } }, sampleTypeLabel: 'List label' }
+		t.deepEqual(
+			getTwSampleTypes({ term: sampleTerm }, ds),
+			{ sampleTypes: [1, 2] },
+			'Should use defaults when the sample list has no truthy first sample ID'
+		)
+		t.equal(sampleTerm.sampleTypeLabel, '', 'Should clear the sample list label when using defaults')
+	}
+	const emptyDs = { cohort: { termdb: { sampleTypes: {}, term2SampleType: new Map() } } }
+	t.deepEqual(getTwSampleTypes({ term }, emptyDs), { sampleTypes: [] }, 'Should support no default sample types')
 	t.end()
 })
