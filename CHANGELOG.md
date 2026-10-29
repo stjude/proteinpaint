@@ -4,7 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## 2.224.1
 
+Features:
+- After the server starts listening, its routes, middlewares, settings, and request handling are locked, so that none can be added or replaced
+- When a child process is not allowed, the fisher and wilcoxon rust code runs in the server process as a wasm module, with its input and output in memory
+- When a child process is not allowed, a dataset query that needs an HDF5, python, or R tool to validate is removed with a warning, instead of failing the dataset init
+- Add serverconfig.features.disableFileCache, so that the server writes no file
+- Add serverconfig.features.disableFeature_hictk, so that the hicdata, hicgenome, and hicstat routes are not set up
+- Add serverconfig.features.disableFeature_custombedjfile, so that a bedj track reads only the track files of a genome
+- Move the remaining server routes into route modules; the mds3 track requests termdb/mds3 instead of mds3
+
 Fixes:
+- More checks of request parameters, and route responses have a private Cache-Control header
 - bump dompurify to 3.4.17 to resolve a dependabot alert
 
 
