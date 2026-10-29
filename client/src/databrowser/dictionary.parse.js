@@ -229,7 +229,10 @@ export function parseDictionary(input) {
 
 				// pass additional properties to term obj
 				if (cols[unitIndex] != null) terms[id].unit = cols[unitIndex]
-				if (cols[sampleTypeIndex] != null) terms[id].sample_type = cols[sampleTypeIndex]
+				if (cols[sampleTypeIndex] != null) {
+					terms[id].sample_type = Number(cols[sampleTypeIndex])
+					if (!Number.isInteger(terms[id].sample_type)) throw `Invalid sample_type '${terms[id].sample_type}'`
+				}
 				if (cols[additionalAttrIndexes]) {
 					/* file has additional attribute JSON column, and this line has value for it;
 					directly assign json properties to the term object, no need to nest in "term.attributes{}"

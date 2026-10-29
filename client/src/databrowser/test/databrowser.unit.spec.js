@@ -589,6 +589,26 @@ tape('add additional attributes to term', function (test) {
 	test.end()
 })
 
+tape('sample_type is parsed as an integer', function (test) {
+	const tsv = [
+		`variable\ttype\tcategories\tlevel_1\tsample_type`,
+		`term\tcategorical\t{"1":{"label":"Yes"}}\tRoot\t4`
+	].join('\n')
+	const results = parseDictionary(tsv)
+	const term = results.terms.find(i => i.id == 'term')
+	test.equal(term.sample_type, 4, 'sample_type should be numeric')
+	test.end()
+})
+
+tape('invalid sample_type is rejected', function (test) {
+	const tsv = [
+		`variable\ttype\tcategories\tlevel_1\tsample_type`,
+		`term\tcategorical\t{"1":{"label":"Yes"}}\tRoot\t4.5`
+	].join('\n')
+	test.throws(() => parseDictionary(tsv), /Invalid sample_type '4\.5'/, 'sample_type must be an integer')
+	test.end()
+})
+
 /*********************
 Data Dictionary tests
 *********************/

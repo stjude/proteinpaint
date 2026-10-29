@@ -47,6 +47,8 @@ export function server_init_db_queries(ds) {
 		const columns = listTableColumns(cn, table)
 		ds.cohort.db.tableColumns[table as string] = columns
 	}
+	const hasChildSampleTypes = ds.cohort.db.tableColumns.subcohort_terms?.includes('child_sample_types')
+	const childSampleTypesField = hasChildSampleTypes ? sql`s.child_sample_types` : sql`NULL AS child_sample_types`
 	const schema_tables = [
 		'cohorts',
 		'sampleidmap',
@@ -307,8 +309,8 @@ export function server_init_db_queries(ds) {
 	}
 
 	{
-		const sql = cn.prepare(
-			`SELECT id, name, jsondata, s.included_types, s.child_types
+		const sqlQuery = cn.prepare(
+			sql`SELECT id, name, jsondata, s.included_types, s.child_types, ${childSampleTypesField}
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE parent_id is null
@@ -321,13 +323,15 @@ export function server_init_db_queries(ds) {
 			let re
 			if (cache.has(cacheId)) re = cache.get(cacheId)
 			else {
-				const tmp = sql.all(cohortStr)
+				const tmp = sqlQuery.all(cohortStr)
 				re = tmp.map(i => {
 					const t = JSON.parse(i.jsondata)
 					t.id = i.id
 					t.name = i.name || t.name
 					t.included_types = i.included_types ? i.included_types.split(',') : ['TO-DO-PLACEHOLDER']
 					t.child_types = i.child_types ? i.child_types.split(',') : []
+					if (hasChildSampleTypes)
+						t.child_sample_types = i.child_sample_types ? i.child_sample_types.split(',').map(Number) : []
 					return t
 				})
 				cache.set(cacheId, re)
@@ -407,8 +411,8 @@ export function server_init_db_queries(ds) {
 		- sql statement with a JOINCLAUSE substring to be replaced with cohort value, if applicable, or removed otherwise
 	*/
 	{
-		const sql = cn.prepare(
-			`SELECT id, name, type, jsondata, s.included_types, s.child_types 
+		const sqlQuery = cn.prepare(
+			sql`SELECT id, name, type, jsondata, s.included_types, s.child_types, ${childSampleTypesField}
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? 
 			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
@@ -422,7 +426,7 @@ export function server_init_db_queries(ds) {
 			let re: any = undefined
 			if (cache.has(cacheId)) re = cache.get(cacheId)
 			else {
-				const tmp = sql.all([cohortStr, id])
+				const tmp = sqlQuery.all([cohortStr, id])
 				if (tmp) {
 					re = tmp.map(i => {
 						const j = JSON.parse(i.jsondata)
@@ -430,6 +434,8 @@ export function server_init_db_queries(ds) {
 						j.name = i.name || j.name
 						j.included_types = i.included_types ? i.included_types.split(',') : []
 						j.child_types = i.child_types ? i.child_types.split(',') : []
+						if (hasChildSampleTypes)
+							j.child_sample_types = i.child_sample_types ? i.child_sample_types.split(',').map(Number) : []
 						return j
 					})
 				}

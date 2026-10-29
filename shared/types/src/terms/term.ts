@@ -35,6 +35,7 @@ export type BaseTerm = {
 	name: string
 	type: string
 	child_types?: string[]
+	child_sample_types?: number[]
 	hashtmldetail?: boolean
 	included_types?: string[]
 	isleaf?: boolean
