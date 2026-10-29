@@ -1,6 +1,6 @@
 #Unit test image for ProteinPaint (server+Python workspaces).
 
-# Pull the published deps base (whole environment: Node and npm, /opt/venv Python and pip, R, bcftools, and the build
+# Pull the published deps base (whole environment: Node and npm, /opt/venv Python and pip, R, and the build
 # toolchain) from GHCR. The ppserver and ppfull images are not used here, since they have no npm, pip, or toolchain.
 FROM ghcr.io/stjude/ppbase:latest
 

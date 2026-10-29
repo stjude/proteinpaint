@@ -6,7 +6,6 @@ import * as common from '#shared/common.js'
 import * as vcf from '#shared/vcf.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 
-// const bcftools = serverconfig.bcftools
 // const hicstraw = serverconfig.hicstraw
 
 /* returns the header lines (-H) or chromosome names (-l) of a tabix file as one string, like the tabix output that

@@ -230,7 +230,7 @@ const maxBcfHeaderLength = 16 * 2 ** 20
 const maxBgzfBlockBytes = 2 ** 16
 
 /** returns the header text of a bcf file, from its first bgzf blocks */
-async function readBcfHeaderText(fh: GenericFilehandle): Promise<string> {
+export async function readBcfHeaderText(fh: GenericFilehandle): Promise<string> {
 	const readSize = 2 ** 20
 	let data = Buffer.alloc(0)
 	let buf = Buffer.alloc(0)

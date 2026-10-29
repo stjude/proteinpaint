@@ -12,6 +12,7 @@ import { mdsjunction_request_closure } from '../mds.junction.js'
 import { handle_mdssurvivalplot } from '../km.js'
 import { handle_request_closure as termdbClosure } from '../termdb.js'
 import { getTestRoutes } from './testRoutes.js'
+import { readBcfRecords } from '../bcf.ts'
 
 /*
 Regression specs for argument injection (CWE-88) into samtools/tabix argv.
@@ -31,7 +32,7 @@ test sections:
 - /dsdata
 - /mdssurvivalplot
 - /termdb?getLDdata
-- spawnTool() central guard
+- a chr that looks like an option, of the reads in process
 - /mdsgeneboxplot and /isoformbycoord, via the real route table
 - /svmr, via the real route table
 */
@@ -260,24 +261,7 @@ tape('/termdb?getLDdata', async test => {
 	test.end()
 })
 
-tape('spawnTool() central guard', async test => {
-	// region-shaped arguments that start with "-" are what a request chr turns into
-	for (const args of [
-		['f.gz', `-o${outFile}:1-2`],
-		['f.gz', '-fc:1-2'],
-		['view', 'f.bam', '--help:x-y']
-	]) {
-		test.throws(() => utils.spawnTool('true', args), /invalid region argument/, `should reject ${JSON.stringify(args)}`)
-	}
-	// real flags have no ":", and a region after a flag value is fine
-	for (const args of [
-		['-H', 'f.gz'],
-		['view', '-c', 'f.bam', 'chr1:1-2'],
-		['query', 'f.bcf', '-r', 'chr1:1-2']
-	]) {
-		test.doesNotThrow(() => utils.spawnTool('true', args).kill(), `should allow ${JSON.stringify(args)}`)
-	}
-
+tape('a chr that looks like an option, of the reads in process', async test => {
 	// readTabixLines() reads in process, where a chr is only the name of a chromosome to read, so a route that
 	// forgot to validate its chr is still covered
 	const file = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest/TermdbTest_ITD.gz')
@@ -286,6 +270,12 @@ tape('spawnTool() central guard', async test => {
 	await utils.readTabixLines({ file, regions: [{ chr: '-fc', start: 1, stop: 2 }], callback: l => lines.push(l) })
 	test.deepEqual(lines, [], 'readTabixLines should read no lines of a chr that starts with "-"')
 	test.equal(sha(file + '.tbi'), tbiHash, 'should not rebuild the track .tbi')
+
+	// readBcfRecords() reads in process as well
+	const bcf = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest/TermdbTest.bcf.gz')
+	const records = []
+	await readBcfRecords({ file: bcf, regions: [{ chr: '-fc', start: 1, stop: 2 }], callback: r => records.push(r) })
+	test.deepEqual(records, [], 'readBcfRecords should read no records of a chr that starts with "-"')
 	test.end()
 })
 

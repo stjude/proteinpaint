@@ -232,7 +232,7 @@ tape('a bcf file, and get_header_bcf()', async test => {
 		test,
 		() => read(bcf, [{ chr: '1', start: 0, stop: 0 }]),
 		/bcf file is not supported/,
-		'should reject the lines of a bcf file, which bcftools reads'
+		'should reject the lines of a bcf file, which bcf.ts reads'
 	)
 	test.end()
 })

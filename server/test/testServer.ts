@@ -51,7 +51,7 @@ function getBaseConfig() {
 			}
 		],
 		features: {
-			// the R packages and bcftools that this startup check requires are not needed by
+			// the R packages that this startup check requires are not needed by
 			// request tests; the TermdbTest dataset still requires h5dump to load
 			skip_checkDependenciesAndVersions: true
 		},

@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Read bcf files in the server process, instead of with bcftools, which the server no longer requires
+
 Fixes:
 - Removed unused Python code
 

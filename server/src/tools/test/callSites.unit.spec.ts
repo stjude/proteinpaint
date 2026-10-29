@@ -332,31 +332,16 @@ tape('getAvailableMemoryMB()', async test => {
 tape('checkDependenciesAndVersions()', async test => {
 	// run_R() starts Rscript by name, to check the R packages
 	standIns.add('Rscript')
-	const bcftools = standIns.add('bcftools', `echo 'bcftools 1.24'`)
-	const oldBcftools = standIns.add('bcftools1.9', `echo 'bcftools 1.9'`)
 	const features = serverconfig.features
 	const skip = features.skip_checkDependenciesAndVersions
 	delete features.skip_checkDependenciesAndVersions
 	standIns.prependPath()
 	try {
-		await withConfig('bcftools', bcftools, async () => {
-			const deps = await checkDependenciesAndVersions(serverconfig)
-			test.deepEqual(standIns.calls('bcftools'), [['-v']], 'should run bcftools -v')
-			test.deepEqual(deps, { R: true, bcftools: true }, 'should find R and bcftools usable')
-		})
-		await withConfig('bcftools', oldBcftools, async () => {
-			const deps = await checkDependenciesAndVersions(serverconfig)
-			test.equal(deps.bcftools, false, 'should not throw and find a bcftools version that is too old not usable')
-		})
-		await withConfig('bcftools', path.join(standIns.dir, 'missing-bcftools'), async () => {
-			const deps = await checkDependenciesAndVersions(serverconfig)
-			test.equal(deps.bcftools, false, 'should not throw and find a missing bcftools not usable')
-		})
+		let deps = await checkDependenciesAndVersions(serverconfig)
+		test.deepEqual(deps, { R: true }, 'should find R usable')
 		standIns.add('Rscript', `echo 'there is no package called jsonlite' >&2; exit 1`)
-		await withConfig('bcftools', bcftools, async () => {
-			const deps = await checkDependenciesAndVersions(serverconfig)
-			test.deepEqual(deps, { R: false, bcftools: true }, 'should not throw and find R that fails its check not usable')
-		})
+		deps = await checkDependenciesAndVersions(serverconfig)
+		test.deepEqual(deps, { R: false }, 'should not throw and find R that fails its check not usable')
 	} finally {
 		standIns.restorePath()
 		if (skip !== undefined) features.skip_checkDependenciesAndVersions = skip

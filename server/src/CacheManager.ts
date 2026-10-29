@@ -40,7 +40,7 @@ const typeDefaults: { [T in CacheRegistryItem['type']]: EvictionOpts } = {
 	url: { maxAge: day * 30, skipMs: halfDay }
 }
 
-/* index files that cache_index downloads, or that bcftools downloads into its cwd;
+/* index files that cache_index downloads;
 .tmp is a partial download that was left by an interrupted server, which is not used again */
 const urlIndexExtensions = new Set(['.tbi', '.csi', '.bai', '.crai', '.tmp'])
 
