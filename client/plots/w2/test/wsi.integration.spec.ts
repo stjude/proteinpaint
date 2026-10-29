@@ -556,3 +556,180 @@ tape('fixed-sample plain-WSI mode renders the pinned sample without the spatial 
 		test.end()
 	}
 })
+
+tape('fit moveend suppressed during initial build; subsequent zoom still triggers updateMode', test => {
+	test.timeoutAfter(30000)
+
+	// Instrument the page BEFORE the viewer initializes. The legend alone
+	// cannot prove a build survived the fit's moveend: without the
+	// suppression guard, that moveend cancels the build via a modeGeneration
+	// bump and starts a replacement — firstBuild is already false, so the
+	// replacement skips the fit, completes, and renders an identical legend.
+	//
+	// The probe: hold the annotations response open so the fit's moveend
+	// deterministically lands while annotations are in flight, then count
+	// what starts during that window:
+	// - wsitiles/cellcount: every updateMode's first request — a new one
+	//   after annotations began means the moveend spawned a replacement
+	// - wsitiles/annotations: a second request IS the replacement build
+	//
+	// The wrapper stays DORMANT during the first render: the page's very
+	// first layout of this plot fires extra legitimate moveends (OL's
+	// initial-render moveend plus a container-resize one while the sandbox
+	// settles), each of which lawfully restarts updateMode — counting there
+	// is meaningless. The probe is armed for a SECOND, fresh viewer init
+	// (via a settings dispatch) in the already-settled layout, where the
+	// only moveend after the fit is the fit's own.
+	const nativeFetch = window.fetch
+	let armed = false
+	let cellcountStarts = 0
+	let annotationsStarts = 0
+	let cellcountAtFirstAnnotations = -1
+	const reqLog: string[] = [] // dumped only on failure
+	window.fetch = function (...args: Parameters<typeof fetch>) {
+		const url = String(args[0] instanceof Request ? args[0].url : args[0])
+		if (!armed) return nativeFetch.apply(window, args)
+		if (url.includes('wsitiles/')) {
+			const bbox = (url.match(/bbox=([^&]*)/) || [])[1] || ''
+			reqLog.push(`${Math.round(performance.now())}ms ${url.split('?')[0].split('wsitiles/')[1]} bbox=${bbox}`)
+		}
+		if (url.includes('wsitiles/cellcount')) cellcountStarts++
+		if (url.includes('wsitiles/annotations')) {
+			annotationsStarts++
+			if (cellcountAtFirstAnnotations < 0) cellcountAtFirstAnnotations = cellcountStarts
+			// 1500ms: far longer than the one or two frames the fit's moveend
+			// needs to fire, far shorter than the test timeout
+			return new Promise(r => setTimeout(r, 1500)).then(() => nativeFetch.apply(window, args))
+		}
+		return nativeFetch.apply(window, args)
+	}
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' },
+					settings: {
+						wsi: {
+							geneExpression: 'PTPRC',
+							showCellTypes: true,
+							showGeneExpression: false,
+							annotationLevel: 0,
+							// a height no other test uses: dofetch3's module-level cache
+							// is shared by every spec bundled into this page, and another
+							// test zooming the SAME plot at the SAME viewport size seeds
+							// it with this test's exact cellcount/annotations URLs — a
+							// cache hit skips fetch() entirely, bypassing the wrapper
+							// above and the performance-timeline proof below.
+							viewerHeight: '437px'
+						}
+					}
+				}
+			]
+		},
+		wsi: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(wsi) {
+		wsi.on('postRender.test', null)
+		try {
+			const dom = wsi.Inner.dom
+
+			// Phase 1: first render at 437px — just let the layout settle.
+			await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
+			const [legend] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-typelegend"]')
+			test.ok(legend, 'initial build completed')
+			let [loading] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-loading"]')
+			await waitForCondition(
+				() => (loading as HTMLElement).style.display === 'none',
+				'loading settled after initial build'
+			)
+
+			// Phase 2: arm the probe and trigger a FRESH viewer init via a
+			// settings change in the now-settled layout. The new height also
+			// makes every URL unique (dofetch3's page-wide cache would
+			// otherwise serve repeats without ever reaching the wrapper).
+			// In this quiet init the surviving buildVector performs the fit
+			// (any build cancelled by OL's initial-render moveend dies before
+			// consuming firstBuild), so during the held-open annotations
+			// window the fit's own moveend is the only possible event — the
+			// guard must swallow it, leaving the request counts frozen.
+			armed = true
+			await wsi.Inner.app.dispatch({
+				type: 'plot_edit',
+				id: wsi.Inner.id,
+				config: { settings: { wsi: { viewerHeight: '438px' } } }
+			})
+			await waitForCondition(
+				() => !dom.viewer.node().contains(legend),
+				'old viewer torn down by the settings re-render'
+			)
+			const [legend2] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-typelegend"]')
+			test.ok(legend2, 're-rendered build completed')
+
+			// the regression assertions: with the guard, the fit's moveend is
+			// swallowed, so NOTHING new starts while annotations are held open.
+			// Without it, the moveend starts a replacement updateMode (a new
+			// cellcount) whose buildVector re-fetches annotations.
+			test.equal(annotationsStarts, 1, 'exactly one annotations request — the fit did not spawn a replacement build')
+			test.equal(
+				cellcountStarts,
+				cellcountAtFirstAnnotations,
+				'no updateMode started while annotations were in flight — the fit moveend was suppressed'
+			)
+			if (annotationsStarts !== 1 || cellcountStarts !== cellcountAtFirstAnnotations)
+				test.comment(`armed-phase requests: ${JSON.stringify(reqLog)}`)
+
+			// stop delaying before the navigation phase below
+			armed = false
+			window.fetch = nativeFetch
+			;[loading] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-loading"]')
+			await waitForCondition(
+				() => (loading as HTMLElement).style.display === 'none',
+				'loading settled after the re-rendered build'
+			)
+
+			// The suppression must be one-shot: a later, user-driven moveend
+			// has to reach updateMode. Every non-suppressed moveend fetches
+			// wsitiles/cellcount for the new viewport (tiles never hit that
+			// endpoint), so a fresh cellcount entry in the performance
+			// resource timeline is unambiguous proof the event was handled.
+			// (A full boundaries refetch can't be forced through the UI here:
+			// the initial fetch covered the padded whole-slide bbox, and OL
+			// clamps every reachable view inside it.)
+			performance.setResourceTimingBufferSize(1000)
+			performance.clearResourceTimings()
+			const [zoomIn] = await waitForSelector(dom.viewer.node(), '.ol-zoom-in')
+			;(zoomIn as HTMLElement).click()
+
+			await waitForCondition(
+				() => performance.getEntriesByType('resource').some(e => e.name.includes('wsitiles/cellcount')),
+				'cellcount fetched for the zoomed viewport'
+			)
+			test.pass('zoom moveend reached updateMode — suppression was one-shot, navigation resumed')
+
+			// and the viewer settles cleanly after that updateMode
+			await waitForCondition(
+				() => (loading as HTMLElement).style.display === 'none',
+				'loading settled after the post-zoom updateMode'
+			)
+			test.equal(
+				dom.viewer.node().querySelectorAll('div[data-testid="sjpp-wsi-typelegend"]').length,
+				1,
+				'type legend still present after the zoom'
+			)
+
+			if (test['_ok']) wsi.Inner.app.destroy()
+		} catch (e) {
+			test.fail(`fit moveend suppression test error: ${e}`)
+		} finally {
+			window.fetch = nativeFetch // never leave the delaying wrapper installed for later specs
+		}
+		test.end()
+	}
+})
