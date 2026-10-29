@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Leave out two changes of 2.224.2 from this patch release: the child_sample_types of branch terms, and the move of the cardsjson and isoformbycoord code into route modules
+
+
 ## 2.224.2
 
 Fixes:
