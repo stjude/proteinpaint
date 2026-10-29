@@ -175,8 +175,8 @@ jobs:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
           BATCH=$(jq -c --slurpfile eligible "$ELIGIBLE_FILE" --slurpfile groups "$GROUPS_FILE" --argjson n "$MAX_DELETIONS" -n '
-            ($eligible | map({(.name): .}) | add) as $by_digest #by_digest is a lookup table so we can fetch an eligible item's full record by its digest
-            | ($groups | map(.parent)) as $parent_digests #every digest that is some group's parent
+            ($eligible | map({(.name): .}) | add) as $by_digest #by_digest is a lookup table so we can fetch an eligible item full record by its digest
+            | ($groups | map(.parent)) as $parent_digests #every digest that is a group parent
             | ($groups | map(.children[])) as $child_digests #$parent_digests/$child_digests are flat lists used to identify which eligible items are standalone
             | (
                 [
