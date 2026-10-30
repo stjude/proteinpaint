@@ -112,13 +112,15 @@ export function skewer_make(tk, block) {
 			Object.keys(mclass).forEach(v => (tk.shapes[v] = 'filledCircle'))
 		}
 	}
-
+	console.log(ss.data)
 	ss.selection = ss.g
 		.selectAll()
 		.data(ss.data)
 		.enter()
 		.append('g')
 		.attr('class', 'sja_skg')
+		.attr('extended', d => d.showmode)
+		.attr('data-testid', d => 'sjpp-mds3skewer-' + d.mlst.map(mItem => mItem.mname).join('-'))
 		.each(function (d) {
 			d.skewer = this
 		})
@@ -655,12 +657,14 @@ export function unfold_glyph(newlst, tk, block) {
 		this quick fix allows to show rims for such
 		*/
 		const set = tk.skewer.selection.filter(d => expanded.has(d.x0))
+		set.attr('extended', modeshow)
 		set.selectAll('.sja_aa_discrim').attr('fill-opacity', 1).attr('stroke-opacity', 1)
 	}
 
 	if (folded.size) {
 		// vertical extending
 		const set = tk.skewer.selection.filter(d => folded.has(d.x0))
+		set.attr('extended', modeshow)
 		set
 			.transition()
 			.duration(dur)
@@ -904,6 +908,7 @@ export function fold_glyph(lst, tk) {
 		d.y = skewer_sety(d, tk)
 	}
 	const set = tk.skewer.selection.filter(d => hash.has(d.x0))
+	set.attr('extended', modefold)
 	set
 		.transition()
 		.duration(dur)
