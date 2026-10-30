@@ -287,6 +287,9 @@ export async function runDmrBatch(
 		element_type: q.element_type ?? null,
 		mask: { sources: [...appliedNames].sort(), overlapFrac },
 		background: !!q.backgroundCorrection,
+		/* how dmrcate reads the values (read counts, betas or M-values), from the dataset's platform and element unit:
+		changing either changes the model, with the files unchanged */
+		values: dmrcateValues(first),
 		files: fingerprint([...[...resolved.values()].map(r => r.matrixFile), ...maskFiles, genome?.genedb?.dbfile])
 	}
 

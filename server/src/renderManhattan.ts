@@ -419,10 +419,13 @@ async function renderManhattanPoints_actual(req: ManhattanPointsRequest): Promis
 		// the full range
 		const maxY = ys.reduce((a, b) => (Number.isFinite(b) && b > a ? b : a), 0) || 1
 		for (const idx of infIndices) ys[idx] = maxY
+		// a q of 0 drawn at the top is drawn at a cap, whatever the setting
+		hasCappedPoints = infIndices.length > 0
 		top = maxY
 	} else if (ys.length > 0) {
 		const maxY = ys.reduce((a, b) => (b > a ? b : a), -Infinity)
-		hasCappedPoints = maxY > logCutoff
+		// a q of 0 parked at the cap below is capped too, though its placeholder of 0 is not above anything
+		hasCappedPoints = maxY > logCutoff || infIndices.length > 0
 		for (const idx of infIndices) ys[idx] = yCap
 		if (maxY > yCap) {
 			for (let i = 0; i < ys.length; i++) if (ys[i] > yCap) ys[i] = yCap

@@ -22,10 +22,10 @@ export const DEFAULT_MIN_CPGS = 5
 
 /** Whether a DMR's Δβ clears the volcano's Min Δβ, the one test behind the scan's counts, Manhattan, browser track
  * and gene links and the region view's gray DMRs: strictly above the floor, as the volcano renderer classifies
- * |x| > cutoff, so a DMR exactly at it is counted nowhere. No floor (0 or absent) counts every DMR with a Δβ; one with
- * none (no covered cell in a group) has no measured effect and clears no floor. */
+ * |x| > cutoff, so a DMR exactly at it is counted nowhere -- at a floor of 0 (or none) too, where a Δβ of exactly 0
+ * is not counted. One with no Δβ (no covered cell in a group) has no measured effect and clears no floor. */
 export function clearsMinDeltaBeta(deltaBeta: number | null | undefined, minDeltaBeta: number | undefined): boolean {
-	return deltaBeta != null && (!minDeltaBeta || Math.abs(deltaBeta) > minDeltaBeta)
+	return deltaBeta != null && Math.abs(deltaBeta) > (minDeltaBeta || 0)
 }
 
 export type DiffMethRequest = {

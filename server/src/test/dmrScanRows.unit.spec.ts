@@ -344,6 +344,10 @@ tape('minDeltaBeta: DMRs under the floor stay in the rows but are not counted, t
 	t.equal(dmrBedjLines(p, 5, 0.1).trim().split('\n').length, 1, 'the browser track holds the shown DMR only')
 	const atFloor = dmrScanToRows(payload([dmr({ delta_beta_mean: 0.1 })]), { chromosomes: ['chr1'], minDeltaBeta: 0.1 })
 	t.equal(atFloor.scan.shown, 0, 'a DMR exactly at the floor is not counted, as the volcano calls |Δβ| > cutoff')
+	const zero = dmrScanToRows(payload([dmr({ delta_beta_mean: 0 }), dmr({ start: 5000, stop: 6000 })]), {
+		chromosomes: ['chr1']
+	})
+	t.equal(zero.scan.shown, 1, 'at no floor too: a Δβ of exactly 0 is not counted, as the volcano calls |Δβ| > 0')
 	t.end()
 })
 

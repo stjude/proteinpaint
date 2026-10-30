@@ -170,6 +170,7 @@ tape('renderManhattanPoints: when every q is 0, the dots sit at a nonzero cap, n
 	})
 	const p = Object.fromEntries(r.plot_data.points.map(p => [p.id, p]))
 	test.ok(r.plot_data.y_max > 1, 'the axis reaches past 1')
+	test.ok(r.plot_data.has_capped_points, 'and is marked capped, since the dots sit at a cap, not at their value')
 	test.ok(p.hyper.pixel_y < CANVAS_H / 4, 'the hyper dot is near the top')
 	test.ok(p.hypo.pixel_y > (CANVAS_H * 3) / 4, 'the hypo dot is near the bottom')
 	test.end()
