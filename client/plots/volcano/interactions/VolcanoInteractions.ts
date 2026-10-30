@@ -335,6 +335,8 @@ export class VolcanoInteractions {
 			backgroundCorrection: !!scan.backgroundCorrection,
 			// the scan drops DMRs with fewer CpGs; the region view drops them too
 			minCpgs: scan.minCpgs,
+			// and the DMRs without its y-axis statistic
+			yAxis: scan.yAxis,
 			/* the cohort filter the scan request sent, which resolves a filter-defined group that carries none
 			of its own; a different cohort would be a different run */
 			filter0: termfilter.filter0,

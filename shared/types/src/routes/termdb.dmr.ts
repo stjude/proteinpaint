@@ -1,6 +1,7 @@
 import type { Filter } from '../filter.ts'
 import type { SampleFilterGroup } from '../terms/samplelst.ts'
 import type { TermdbDmrBatchSuccessResponse } from './termdb.dmrBatch.ts'
+import type { DmrScanYAxis } from './termdb.diffMeth.ts'
 
 export type TermdbDmrRequest = {
 	genome: string
@@ -38,6 +39,9 @@ export type TermdbDmrRequest = {
 	backgroundCorrection?: boolean
 	/** That scan's CpG floor: DMRs from fewer CpGs are left out, as the scan leaves them out. Absent = 1 */
 	minCpgs?: number
+	/** That scan's y-axis statistic: DMRs without it are left out, as the scan leaves them out. Absent =
+	 * min_smoothed_fdr; ignored with backgroundCorrection, whose background p is the one then */
+	yAxis?: DmrScanYAxis
 	filter?: Filter
 	__protected__?: any
 }

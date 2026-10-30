@@ -91,6 +91,14 @@ export function init({ genomes }) {
 						? /* rows omit unscored DMRs under the correction, so none plotted does not mean
 						none met the floor */
 						  `None of the ${result.scan.kept.toLocaleString()} DMRs meeting the CpG floor could be scored against matched background. Turn off the background correction to see them.`
+						: result.scan.withoutStatistic
+						? // the same for a y-axis statistic the run could not compute for any of them
+						  `None of the ${result.scan.kept.toLocaleString()} DMRs meeting the CpG floor has a ${
+								result.scan.yAxis
+						  } value. Choose another Y axis to see them.`
+						: result.scan.kept
+						? // every kept DMR lacked a Δβ (a group with no covered cell), so none can be plotted
+						  `None of the ${result.scan.kept.toLocaleString()} DMRs meeting the CpG floor has a measurable Δβ.`
 						: 'The scan called no DMRs that met the CpG floor.'
 				)
 

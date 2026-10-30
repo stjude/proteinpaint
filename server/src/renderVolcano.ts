@@ -126,7 +126,7 @@ export async function renderVolcano<T extends DataEntry>(
 	const t0 = Date.now()
 
 	// One pass: extract fc, p, find the smallest non-zero p so rows with p == 0
-	// can be capped at -log10(minNonZeroP) (matches the client's overlay math).
+	// can be drawn at a finite height; see zeroY below.
 	type Pt = { fc: number; p: number; y: number; significant: boolean }
 	const points: Pt[] = new Array(rows.length)
 	let minNonZeroP = Infinity
@@ -170,14 +170,16 @@ export async function renderVolcano<T extends DataEntry>(
 		if (xOffset !== 0) for (const pt of points) pt.fc -= xOffset
 	}
 
+	/* p = 0 (an underflow, e.g. DMRcate's region statistics) is as significant as a p can be, so it passes any p cutoff
+	and is drawn at the top of the data: the smallest non-zero p's height, or the cutoff's when that is higher, so a dot
+	called significant never sits under the cutoff it passed. The client places dots by the pixel_y returned here. */
+	const zeroY = Math.max(-Math.log10(minNonZeroP), pValueCutoff)
+
 	// Classify + compute y; track axis extents in the same pass.
 	let xAbsMax = 0
 	let yMaxData = 0
 	for (const pt of points) {
-		const pForY = pt.p <= 0 ? minNonZeroP : pt.p
-		pt.y = -Math.log10(pForY)
-		/* p = 0 (an underflow, e.g. DMRcate's region statistics) is as significant as a p can be: it is drawn at the
-		cap, but passes any p cutoff, which the cap itself may not */
+		pt.y = pt.p <= 0 ? zeroY : -Math.log10(pt.p)
 		pt.significant = (pt.p <= 0 || pt.y > pValueCutoff) && Math.abs(pt.fc) > foldChangeCutoff
 		if (Math.abs(pt.fc) > xAbsMax) xAbsMax = Math.abs(pt.fc)
 		if (pt.y > yMaxData) yMaxData = pt.y

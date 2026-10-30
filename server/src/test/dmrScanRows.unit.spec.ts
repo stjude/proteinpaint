@@ -346,3 +346,16 @@ tape('minDeltaBeta: DMRs under the floor stay in the rows but are not counted, t
 	t.equal(atFloor.scan.shown, 0, 'a DMR exactly at the floor is not counted, as the volcano calls |Δβ| > cutoff')
 	t.end()
 })
+
+tape('a DMR with no Δβ is left out of the rows, counts and track, and counted on its own', t => {
+	const p = payload([
+		dmr({ delta_beta_mean: 0.3 }),
+		dmr({ start: 5000, stop: 6000, delta_beta_mean: null, delta_beta_max: null, direction: 'hypo' })
+	])
+	const { rows, scan } = dmrScanToRows(p, { chromosomes: ['chr1'] })
+	t.equal(rows.length, 1, 'not on the volcano at Δβ 0')
+	t.deepEqual([scan.kept, scan.shown, scan.withoutDeltaBeta], [2, 1, 1], 'kept, but not shown, at no floor either')
+	t.deepEqual([scan.hyper, scan.hypo], [1, 0], 'and not counted by its fallback direction')
+	t.equal(dmrBedjLines(p, 5).trim().split('\n').length, 1, 'nor on the browser track')
+	t.end()
+})

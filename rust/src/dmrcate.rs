@@ -14,9 +14,9 @@
 //               locally from the run's constants, so every CpG reads exactly as it did in the run.
 //   background  + "background_regions": mean delta-beta per window, no model.
 //
-// A matrix is either a CpG matrix (beta plus read depth per cell) or an element matrix (promoters,
-// cCREs) holding M-values ("mvalues": true) or betas ("element_betas": true). See read_rows for what
-// each contributes.
+// A matrix holds betas with read depth per cell (a WGBS CpG matrix), M-values ("mvalues": true, an
+// element matrix), or betas alone ("betas": true, an array's CpG matrix or an element matrix of
+// betas). See read_rows for what each contributes.
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use hdf5::File;
@@ -579,14 +579,15 @@ occur nearly always. Profiling put a quarter of a chromosome's runtime in log2; 
 expression, looked up. */
 const LR_TABLE: usize = 256;
 
-/// What a matrix file holds. An element matrix has no read depth, so either unit is fitted unweighted
-/// on the M-value scale, as cpg.annotate() fits it.
+/// What a matrix file holds. Without read depth either unit is fitted unweighted on the M-value
+/// scale, as cpg.annotate() fits array and element data.
 #[derive(Clone, Copy, PartialEq)]
 enum Values {
-    /// a CpG matrix: betas, with read depth in depth/values
+    /// a WGBS CpG matrix: betas, with read depth in depth/values
     Counts,
     MValues,
-    /// an element matrix of betas, taken to M-values clamped to [0.001, 0.999] for the fit
+    /// betas with no depth (an array, or an element matrix), taken to M-values clamped to
+    /// [0.001, 0.999] for the fit
     Betas,
 }
 struct LogRatio(Vec<f64>);
@@ -623,8 +624,8 @@ So that is what is fitted here, over EVERY requested sample. A sample with no re
 0/0 cell and contributes d = 0, as it does upstream (all.cov = FALSE); a CpG with no reads in any
 requested sample is dropped, as upstream drops it.
 
-An element matrix is cpg.annotate()'s case instead: lmFit on the M-values (stored, or from stored
-betas), where a missing cell is NA and simply absent, so the group sizes vary by row. `model` false skips the fit and keeps
+A matrix with no read depth (element, or array) is cpg.annotate()'s case instead: lmFit on the
+M-values (stored, or from stored betas), where a missing cell is NA and simply absent, so the group sizes vary by row. `model` false skips the fit and keeps
 only the display means, for the background mode. */
 fn read_rows(
     file: &File,
@@ -1529,10 +1530,10 @@ fn main() {
         bail!("Missing required parameters: matrices, case and control");
     }
     // Set by the server from the ds config entry, never by the client: an element matrix stores
-    // M-values or betas where a CpG matrix stores betas and read depth.
+    // M-values, betas alone, or betas with read depth.
     let values = if p["mvalues"].as_bool().unwrap_or(false) {
         Values::MValues
-    } else if p["element_betas"].as_bool().unwrap_or(false) {
+    } else if p["betas"].as_bool().unwrap_or(false) {
         Values::Betas
     } else {
         Values::Counts
@@ -1855,7 +1856,7 @@ mod tests {
     }
 
     #[test]
-    fn a_beta_element_matrix_is_fitted_on_clamped_m_values_with_no_depth() {
+    fn a_beta_matrix_is_fitted_on_clamped_m_values_with_no_depth() {
         // 2 elements x 4 samples (2 case, 2 control); no depth/values, which a CpG matrix would need
         let path = std::env::temp_dir().join(format!("dmrcate-betas-{}.h5", std::process::id()));
         let file = File::create(&path).unwrap();

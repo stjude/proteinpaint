@@ -625,7 +625,8 @@ export class VolcanoViewModel {
 			// not on the volcano: no evidence to plot, rather than evidence of no change
 			...(s.withoutStatistic
 				? [{ label: `DMRs with no ${this.pValueLabel} (not plotted)`, value: s.withoutStatistic }]
-				: [])
+				: []),
+			...(s.withoutDeltaBeta ? [{ label: 'DMRs with no Δβ (not plotted or counted)', value: s.withoutDeltaBeta }] : [])
 		]
 		if (s.width)
 			rows.push({

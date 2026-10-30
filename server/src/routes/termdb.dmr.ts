@@ -1,4 +1,7 @@
-import type { RoutePayload, RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse } from '#types'
+import type { RoutePayload, RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse, DmrScanYAxis } from '#types'
+import { DMR_SCAN_Y_AXES } from '#types'
+
+type Dmr = TermdbDmrSuccessResponse['dmrs'][number]
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
@@ -122,10 +125,11 @@ function init({ genomes }) {
 			if (!run.constants) throw new Error('This DMR run predates region views; run the scan again.')
 			// the scan's CpG floor: a DMR the scan dropped is not drawn as one it counted
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
-			/* and with the background correction, a DMR with too little matched background to score: the volcano
-			leaves it out of its rows */
-			const plotted = (d: { no_cpgs: number; bgP?: number }) =>
-				d.no_cpgs >= minCpgs && (!q.backgroundCorrection || d.bgP != null)
+			/* nor any other DMR the volcano leaves out of its rows: one with no Δβ, and one without the plotted
+			statistic -- the background p under the correction, else the scan's y axis */
+			const yAxis: DmrScanYAxis = DMR_SCAN_Y_AXES.includes(q.yAxis as DmrScanYAxis) ? q.yAxis! : 'min_smoothed_fdr'
+			const plotted = (d: Dmr) =>
+				d.no_cpgs >= minCpgs && d.delta_beta_mean != null && (q.backgroundCorrection ? d.bgP : d[yAxis]) != null
 			const dmrInput = {
 				matrices: [{ file: matrixFile, chrs: [q.chr] }],
 				...dmrcateValues(matrix),

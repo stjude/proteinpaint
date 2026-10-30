@@ -76,8 +76,10 @@ export function dmrScanToRows(
 	which intergenic space cannot match, so "not testable this way" must stay distinguishable
 	from "not significant". */
 	/* Likewise a DMR whose chosen statistic the run could not compute (null): it has no evidence to plot, which is not
-	the evidence of no change a p of 1 would claim. Counted, as withoutStatistic. */
-	const plotted = kept.filter(d => (opts.backgroundCorrection ? d.bgP : d[yAxis]) != null)
+	the evidence of no change a p of 1 would claim. Counted, as withoutStatistic. And one with no Δβ, which has no
+	effect to plot: counted as withoutDeltaBeta, and left out of `shown` by clearsMinDeltaBeta too. */
+	const measured = kept.filter(d => d.delta_beta_mean != null)
+	const plotted = measured.filter(d => (opts.backgroundCorrection ? d.bgP : d[yAxis]) != null)
 
 	const rows: DiffMethEntry[] = plotted.map(d => {
 		/* y is the region statistic the reader picked. The default, the minimum smoothed FDR, is what
@@ -98,9 +100,9 @@ export function dmrScanToRows(
 			start: d.start,
 			stop: d.stop,
 			/* Delta-beta, the effect a reader interprets; DMRcate's own meandiff/maxdiff are logit2 and
-			stay on the DMR. A region with no covered cell in one group has none and plots at 0. */
-			delta_beta: d.delta_beta_mean ?? 0,
-			fold_change: d.delta_beta_max ?? 0,
+			stay on the DMR. Both are set: a DMR with no Δβ is not among the rows. */
+			delta_beta: d.delta_beta_mean!,
+			fold_change: d.delta_beta_max!,
 			// one p per DMR: DMRcate's HMFDR, or the empirical p against matched background
 			original_p_value: p,
 			adjusted_p_value: p,
@@ -141,9 +143,10 @@ export function dmrScanToRows(
 		minDeltaBeta,
 		shown: shown.length,
 		yAxis,
-		...(!opts.backgroundCorrection && plotted.length < kept.length
-			? { withoutStatistic: kept.length - plotted.length }
+		...(!opts.backgroundCorrection && plotted.length < measured.length
+			? { withoutStatistic: measured.length - plotted.length }
 			: {}),
+		...(measured.length < kept.length ? { withoutDeltaBeta: kept.length - measured.length } : {}),
 		hyper,
 		hypo: shown.length - hyper,
 		...(widths.length ? { width: { median: q(0.5), q1: q(0.25), q3: q(0.75) } } : {}),

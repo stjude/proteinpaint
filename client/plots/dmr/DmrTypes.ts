@@ -1,6 +1,6 @@
 import type { Elem } from '../../types/d3'
 import type { DMRSettings } from './settings/Settings'
-import type { DmrDiagnostic, SampleFilterGroup } from '#types'
+import type { DmrDiagnostic, DmrScanYAxis, SampleFilterGroup } from '#types'
 
 /** Config shape passed via plot_create from VolcanoInteractions */
 export type DmrConfig = {
@@ -18,6 +18,7 @@ export type DmrConfig = {
 	/** That scan's background correction and CpG floor; see TermdbDmrRequest */
 	backgroundCorrection?: boolean
 	minCpgs?: number
+	yAxis?: DmrScanYAxis
 	/** The app's cohort filter when that scan ran; see TermdbDmrRequest.filter0 */
 	filter0?: any
 	/** Mean reads per CpG of each group in that scan, so the view can say when a DMR may be read depth */

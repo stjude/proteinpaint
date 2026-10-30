@@ -2,7 +2,7 @@ import { resolveElementQuery } from '../../routes/termdb.diffMeth.ts'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { buildGroupValues, isFilterGroup } from '#src/utils/sampleGroups.ts'
 import serverconfig from '#src/serverconfig.js'
-import { getAvailableMemoryMB, admitRun, type MemoryCost } from '#src/utils/memory.ts'
+import { getAvailableMemoryMB, admitRun, estimatePeakMB, type MemoryCost } from '#src/utils/memory.ts'
 import { getH5shape } from '#src/utils/h5samples.ts'
 import { mapConcurrent } from '#src/utils/concurrencyLimiter.ts'
 
@@ -18,6 +18,10 @@ export type ResolvedMatrix = {
 	mvalues: boolean
 	/** resolved to an element matrix rather than a CpG one */
 	useElement: boolean
+	/** the matrix carries per-cell read depth (depth/values), which dmrcate's sequencing model needs: a CpG matrix of
+	 * a dataset declaring platform 'wgbs'. An array's CpG matrix (.file) holds betas alone, as does any element
+	 * matrix. */
+	hasDepth: boolean
 	/** sample names eligible for the contrast, with the dataset's exclusions already applied */
 	eligible: Set<string>
 }
@@ -73,11 +77,10 @@ function resolveElementEntry(ds: any, elementType: string | undefined): any {
 	return dm.elements?.promoter?.file ? dm.elements.promoter : dm.promoter?.file ? dm.promoter : undefined
 }
 
-/** How dmrcate reads a resolved matrix (see rust/src/dmrcate.rs): an element matrix of M-values or of betas, neither
- * with read depth, or a CpG matrix of betas with depth. `mvalues` alone cannot tell a beta element matrix from a CpG
- * one. */
-export function dmrcateValues(m: Pick<ResolvedMatrix, 'mvalues' | 'useElement'>) {
-	return { mvalues: m.mvalues, element_betas: m.useElement && !m.mvalues }
+/** How dmrcate reads a resolved matrix (see rust/src/dmrcate.rs): M-values, betas with read depth (WGBS), or betas
+ * alone (an array, or an element matrix of betas). `mvalues` alone cannot tell the last two apart. */
+export function dmrcateValues(m: Pick<ResolvedMatrix, 'mvalues' | 'hasDepth'>) {
+	return { mvalues: m.mvalues, betas: !m.mvalues && !m.hasDepth }
 }
 
 /* Which samples can take part in a methylation contrast, for the whole analysis rather than for one
@@ -132,7 +135,7 @@ export function resolveMethylationMatrix(ds: any, chr: string, elementType: stri
 	chromosome in hand. An element-matrix fit reads that matrix's own samples; anything CpG-backed
 	is intersected, which is what eligibleMethylationSamples does. */
 	const eligible = useElement ? elementEntry.allSampleSet : eligibleMethylationSamples(ds, elementType)
-	return { matrixFile, mvalues, useElement, eligible }
+	return { matrixFile, mvalues, useElement, hasDepth: !useElement && dm.platform == 'wgbs', eligible }
 }
 
 /* Which of these chromosomes a genome-wide analysis may fan out over, on a dataset whose CpG matrix
@@ -295,8 +298,10 @@ export async function admitDmrcateJobs(
 	concurrency: number,
 	refusal: string
 ): Promise<() => void> {
+	// the costliest by the whole estimate, not by rows alone: a wide matrix's read buffer can outweigh a long one's rows
+	const cost1 = (s: number[]) => estimatePeakMB(DMRCATE_MEMORY, { rows: s[0], cols: s[1] })
 	const largest = (await Promise.all([...new Set(files)].map(matrixShape)))
-		.sort((a, b) => b[0] - a[0])
+		.sort((a, b) => cost1(b) - cost1(a))
 		.slice(0, concurrency)
 	const cost = { baseMB: DMRCATE_MEMORY.baseMB * largest.length, perUnitMB: DMRCATE_MEMORY.perUnitMB }
 	const units = { rows: largest.reduce((n, s) => n + s[0], 0), cols: largest.reduce((n, s) => n + s[1], 0) }
