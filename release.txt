@@ -1,1 +1,11 @@
+Features:
+- The DMR scan calls DMRs in one genome-wide DMRcate run, which matches DMRcate 3.6.0. Choosing a chromosome filters the cached run, so switching chromosomes no longer refits the scan
+- The DMR scan's y axis can show min smoothed FDR (the default), HMFDR, Stouffer, or Fisher
+- The DMR scan applies the volcano's Min Δβ to its counts, Manhattan plot, browser track, and gene links. In the region view, DMRs below it are drawn in gray
+- A region view opened from the scan shows the same DMRs as the volcano
+- Long DMR runs show an elapsed-time counter while loading
+- The Groups menu no longer has a separate DNA methylation "Region (DMR) Analysis" option; open a region from a DMR scan hit instead
 
+Fixes:
+- DMRs with p = 0 are counted as significant and drawn at the top of the volcano
+- DMRs with no Δβ are left out of the scan's rows and counts
