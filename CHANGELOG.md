@@ -17,6 +17,7 @@ Features:
 - The Groups menu no longer has a separate DNA methylation "Region (DMR) Analysis" option; open a region from a DMR scan hit instead
 - The DMR scan hides its expression follow-ups on a dataset without RNA-seq gene counts
 - A DMR analysis is stopped after 5 minutes, with a message saying what to change; serverconfig.dmrcateTimeoutMs sets another limit
+- Support displaying SAK reports as PNG on lollipop and disco plots
 
 Fixes:
 - Removed unused Python code
