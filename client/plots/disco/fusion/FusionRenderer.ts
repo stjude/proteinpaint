@@ -5,15 +5,21 @@ import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider.ts'
 import { table2col } from '#dom/table2col'
 import { dofetch3 } from '#common/dofetch'
+import { renderEventImages } from '#dom/eventImages'
 import type { ClientGenome } from '../../../types/clientGenome.ts'
 
-// dynamically load svgraph when user clicks on a fusion arc
+export type FusionContext = {
+	dslabel?: string
+	eventImages?: { label: string }
+}
 
 export default class FusionRenderer {
 	private genome: ClientGenome
+	private context: FusionContext
 
-	constructor(genome: ClientGenome) {
+	constructor(genome: ClientGenome, context: FusionContext = {}) {
 		this.genome = genome
+		this.context = context
 	}
 
 	render(holder: any, fusions: Array<Fusion>, opacity = 1) {
@@ -28,10 +34,9 @@ export default class FusionRenderer {
 		const ribbon = d3.ribbon().radius(radius)
 		const ribbons = holder.selectAll('.chord').data(fusions)
 
-		//Used in the fusion elems (i.e. ribbons) mouse and click events
 		const menu = MenuProvider.create()
 		const createTooltip = this.createTooltip.bind(this)
-		const genome = this.genome
+		const showEvents = this.showEvents.bind(this)
 
 		ribbons
 			.enter()
@@ -47,21 +52,18 @@ export default class FusionRenderer {
 			.style('opacity', opacity)
 			.each(function (this: any, d: Fusion) {
 				const path = d3.select(this)
-				//Create a new tooltip for each fusion arc
-				//Allows the graph to presist whilst allowing
-				//the user to see tooltips on other elemenets
+				// Keep the clicked graph open independently of hover tooltips.
 				const tip = MenuProvider.create()
 
-				path.on('click', async function (event: MouseEvent) {
+				path.on('click', function (event: MouseEvent) {
+					menu.clear().hide()
 					tip.clear().show(event.x, event.y)
-					const div = tip.d.append('div')
-					await makeSvgraph(d, div, genome)
+					showEvents(tip.d.append('div'), getOverlappingFusions(fusions, d))
 				})
 			})
-			.on('mouseover', async function (mouseEvent: MouseEvent, fusion: Fusion) {
-				//TODO: Add note to user "click to see fusion graph"?
+			.on('mouseover', function (mouseEvent: MouseEvent, fusion: Fusion) {
 				const table = table2col({ holder: menu.d })
-				createTooltip(table, fusion)
+				createTooltip(table, getOverlappingFusions(fusions, fusion))
 				menu.show(mouseEvent.x, mouseEvent.y)
 			})
 			.on('mouseout', () => {
@@ -70,31 +72,99 @@ export default class FusionRenderer {
 			})
 	}
 
-	createTooltip(table: any, fusion: Fusion) {
+	createTooltip(table: any, events: Fusion[]) {
 		{
 			const [td1, td2] = table.addRow()
 			td1.text('Data type')
 			td2.append('span').style('margin-left', '5px').text('Fusion transcript')
 		}
-		{
-			const positionInChromosomeSource = fusion.source.positionInChromosome
-			const positionInChromosomeTarget = fusion.target.positionInChromosome
-
+		for (const fusion of events) {
 			const [td1, td2] = table.addRow()
 			td1.text('Position')
-			td2
-				.append('span')
-				.style('margin-left', '5px')
-				.text(
-					` ${fusion.source.gene || ''} ${positionInChromosomeSource.chromosome}:${
-						positionInChromosomeSource.position
-					} ${fusion.source.strand === '+' ? 'forward' : 'reverse'} > ` +
-						` ${fusion.target.gene || ''} ${positionInChromosomeTarget.chromosome}:${
-							positionInChromosomeTarget.position
-						} ${fusion.target.strand === '+' ? 'forward' : 'reverse'} `
-				)
+			td2.append('span').style('margin-left', '5px').text(fusionText(fusion))
 		}
 	}
+
+	showEvents(holder: any, events: Fusion[]) {
+		if (events.length == 1) return this.showEvent(holder, events[0])
+		holder.selectAll('*').remove()
+		holder
+			.append('div')
+			.style('padding', '5px')
+			.style('font-size', '0.85em')
+			.style('opacity', 0.7)
+			.text(`${events.length} fusion events, select one:`)
+		for (const fusion of events) {
+			holder
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.attr('data-testid', 'sjpp-disco-fusion-option')
+				.text(fusionText(fusion))
+				.on('click', () => this.showEvent(holder, fusion, () => this.showEvents(holder, events)))
+		}
+	}
+
+	async showEvent(holder: any, fusion: Fusion, back?: () => void) {
+		holder.selectAll('*').remove()
+		if (back) {
+			holder
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.style('display', 'inline-block')
+				.text('« All events')
+				.on('click', back)
+		}
+		holder.append('div').style('padding', '5px').text(fusionText(fusion))
+		const graph = holder.append('div')
+		if (this.context.eventImages && this.context.dslabel && fusion.eventImage) {
+			const section = holder.append('div').attr('data-testid', 'sjpp-disco-event-images').style('margin', '10px 5px')
+			section.append('div').style('font-weight', 'bold').text(this.context.eventImages!.label)
+			// not awaited, so that the fusion graph is rendered without waiting for the image list
+			this.showEventImages(section, fusion)
+		}
+		try {
+			await makeSvgraph(fusion, graph, this.genome)
+		} catch (e: any) {
+			graph.text('Error: ' + (e.message || e))
+		}
+	}
+
+	private async showEventImages(section: any, fusion: Fusion) {
+		const content = section.append('div').text('Loading...')
+		try {
+			const body = { genome: this.genome.name, dslabel: this.context.dslabel, eventImage: fusion.eventImage }
+			const data = await dofetch3('termdb/mds3/eventImage', { body })
+			if (data.error) throw data.error
+			const images = data.images
+			if (!Array.isArray(images)) throw 'images[] not array from return'
+			if (!images.length) return section.remove()
+			renderEventImages(content, images)
+		} catch (e: any) {
+			content.text('Error: ' + (e.message || e))
+		}
+	}
+}
+
+function fusionText(fusion: Fusion) {
+	return `${sideText(fusion.source)} > ${sideText(fusion.target)}`
+}
+
+function sideText(side: Fusion['source']) {
+	const p = side.positionInChromosome
+	return `${side.gene || ''} ${p.chromosome}:${p.position} ${side.strand === '+' ? 'forward' : 'reverse'}`
+}
+
+/** fusions drawn on top of the given one, i.e. both ribbon ends overlap in either orientation */
+export function getOverlappingFusions(fusions: Fusion[], fusion: Fusion) {
+	if (!fusion.target) return [fusion]
+	const overlaps = (x, y) => x.startAngle < y.endAngle && y.startAngle < x.endAngle
+	return fusions.filter(
+		f =>
+			f == fusion ||
+			(f.target &&
+				((overlaps(f.source, fusion.source) && overlaps(f.target, fusion.target)) ||
+					(overlaps(f.source, fusion.target) && overlaps(f.target, fusion.source))))
+	)
 }
 
 async function makeSvgraph(fusion: Fusion, div: any, genome: ClientGenome) {

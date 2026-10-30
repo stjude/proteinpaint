@@ -8,6 +8,7 @@ import { makeCanvas, canvasToURL } from './canvas.ts'
 import { maxPixelRatio } from './bw.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { toBreakpointPos, isSelfBreakpointInRange, isPartnerBreakpointInRange } from './svfusion.breakpoint.ts'
+import { validate_query_svfusionEventImages } from '#routes/termdb.mds3.eventImage.ts'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
@@ -1683,6 +1684,7 @@ async function validate_query_svfusion(ds, genome) {
 		await setFile(q.byname, 'svfusion.byname')
 		q.byname.get = await svfusionByNameGetter_file(ds, genome)
 	}
+	validate_query_svfusionEventImages(ds)
 }
 
 async function validate_query_cnv(ds, genome) {
@@ -2999,6 +3001,11 @@ async function svfusionByRangeGetter_file(ds, genome) {
 					// encode mname in case it has comma and will break v2s code when splitting by comma
 					const ssm_id = [j.dt, r.chr, pos, strand, pairlstIdx, encodeURIComponent(mname)].join(ssmIdFieldsSeparator)
 
+					/* optional image file prefix of this event, see svfusion.eventImages{}. as ssm_id omits the partner
+					breakpoint, rows of one ssm_id can break at different partner positions and carry different prefixes;
+					the sample keeps its own, so that mayUpdatePairlst() in mds3.load.js can assign them per partner breakpoint */
+					const eventImage = ds.queries.svfusion.eventImages ? j.mattr?.eventImage : undefined
+
 					let sampleObj // optional sample of this event; if valid, will be inserted into m.samples[]
 					if (j.sample) {
 						// has sample, prepare the sample obj
@@ -3022,6 +3029,7 @@ async function svfusionByRangeGetter_file(ds, genome) {
 							*/
 							_pairlst: pairlst
 						}
+						if (eventImage) sampleObj.eventImage = eventImage
 
 						if (j.mattr) {
 							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
@@ -3042,7 +3050,7 @@ async function svfusionByRangeGetter_file(ds, genome) {
 						}
 					}
 					if (!key2variants.has(ssm_id)) {
-						key2variants.set(ssm_id, {
+						const j0 = {
 							ssm_id,
 							dt: j.dt,
 							class: j.class,
@@ -3053,9 +3061,13 @@ async function svfusionByRangeGetter_file(ds, genome) {
 							mname,
 							pairlst, // if this key corresponds multiple events, add initial pairlst to allow showing svgraph without additional query to get other breakpoints
 							samples: []
-						})
+						}
+						key2variants.set(ssm_id, j0)
 					}
-					if (sampleObj) key2variants.get(ssm_id).samples.push(sampleObj)
+					const m = key2variants.get(ssm_id)
+					// from the first row that has it, as the first row of the event may lack it
+					if (eventImage && !m.eventImage) m.eventImage = eventImage
+					if (sampleObj) m.samples.push(sampleObj)
 				}
 			})
 		}

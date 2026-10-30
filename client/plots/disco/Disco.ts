@@ -252,7 +252,11 @@ export default class Disco extends PlotBase implements RxComponent {
 			const discoRenderer = new DiscoRenderer(
 				this.getRingRenderers(this.viewModel.settings, this.viewModel, this.discoInteractions.geneClickListener),
 				legendRenderer,
-				this.app.opts.state.args.genome
+				this.app.opts.state.args.genome,
+				{
+					dslabel: this.app.opts.state.vocab.dslabel,
+					eventImages: this.app.opts.state.args.eventImages
+				}
 			)
 
 			discoRenderer.render(this.svgDiv, this.viewModel, this.onCnvSourceSelect)

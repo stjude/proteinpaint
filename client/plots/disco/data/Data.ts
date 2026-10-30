@@ -36,4 +36,6 @@ export default interface Data {
 	readonly posB: number
 	readonly strandA: string
 	readonly strandB: string
+	/** optional image file prefix of a sv/fusion event, see svfusion.eventImages of the ds */
+	readonly eventImage?: string
 }
