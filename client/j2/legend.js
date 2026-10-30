@@ -64,6 +64,10 @@ function update_type(tk) {
 
 	for (const [t, c] of [...type2count].sort((i, j) => j[1] - i[1])) {
 		// { k, count }
+		if (!JTypes[t]) {
+			console.log(`unknown splice junction event: '${t}'`)
+			continue
+		}
 		printCategory({
 			holder: tk.legend.type.holder,
 			key: t,
