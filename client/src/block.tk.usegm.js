@@ -505,6 +505,7 @@ block:
 								.attr('x', boxstart + (dstart - cdsstart) * block.exonsf)
 								.attr('width', Math.max(1, (dstop - dstart) * block.exonsf))
 								.attr('height', h)
+								.attr('data-testid', 'sjpp-track-domain-' + domain.description)
 								.attr('fill', domain.color)
 						}
 					}
@@ -999,13 +1000,13 @@ async function domainlegend(tk, block) {
 			}
 		}
 	]
-
 	const legendRows = tk.td_legend
 		.selectAll('div')
 		.data(domainTypes)
 		.enter()
 		.append('div')
 		.classed('sjpp-domain-legend-item', true)
+		.attr('data-testid', d => 'sjpp-domain-legend-' + d.description)
 		.style('margin', block.legend.vpad + ' 0px 8px 0px')
 
 	legendRows.append('span').style('padding', '5px 0px').style('margin-right', '10px')
@@ -1024,6 +1025,7 @@ async function domainlegend(tk, block) {
 	const name = clickableRow
 		.append('span')
 		.text(d => d.name)
+		.attr('data-testid', d => 'sjpp-domain-legend-label')
 		.style('text-decoration', d => (block.usegm.domain_hidden[d.key] ? 'line-through' : 'none'))
 		.style('color', default_text_color)
 		.style('margin-right', '10px')

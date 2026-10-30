@@ -7,8 +7,8 @@ The route of the mds3 track, formerly /mds3. The handler is in mds3.load.js.
 
 const payload: RoutePayload = {
 	init,
-	request: { typeId: 'any' },
-	response: { typeId: 'any' }
+	request: { typeId: 'TermdbMds3Request' },
+	response: { typeId: 'TermdbMds3Response' }
 }
 
 export const api: RouteApi = {
