@@ -4,7 +4,7 @@ import { GRIN2_MEMORY } from '#src/grin2/main.ts'
 import { DE_MEMORY } from '#src/routes/termdb.DE.ts'
 import { TOPVE_MEMORY } from '#src/routes/termdb.topVariablyExpressedGenes.ts'
 import { DM_MEMORY } from '../../../routes/termdb.diffMeth.ts'
-import { DMRCATE_MEMORY } from '#src/utils/methylationMatrix.ts'
+import { DMRCATE_MEMORY, DMRCATE_REGION_MEMORY } from '#src/utils/methylationMatrix.ts'
 
 /*
 Every memory cost must be at or above the peak of each real run it was measured on, so that a cost changed later
@@ -141,6 +141,13 @@ tape('DM routes (dmrcate)', test => {
 		estimatePeakMB(DMRCATE_MEMORY, { rows: 0, cols: 10000 }) - DMRCATE_MEMORY.baseMB >= 114,
 		'a wide matrix reserves its read buffer'
 	)
+	// a region view: one window of MMRF chr1 (1,304,718 rows x 415 columns, 200 selected), [label, peak MB]
+	for (const [label, peak] of [
+		['100 kb', 43],
+		['5 Mb', 64],
+		['densest 10 Mb, 76,344 CpGs', 90]
+	] as [string, number][])
+		covers(test, `region ${label}`, estimatePeakMB(DMRCATE_REGION_MEMORY, { rows: 1304718, cols: 415 }), peak)
 	test.end()
 })
 

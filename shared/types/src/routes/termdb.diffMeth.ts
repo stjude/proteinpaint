@@ -141,17 +141,18 @@ export type DmrScanSummary = {
 	/** kept DMRs left out of the rows, counts, track and gene set because they have no Δβ (no covered cell in a
 	 * group), so no effect to plot or a direction to count them by; absent when none */
 	withoutDeltaBeta?: number
-	/** direction split of the kept DMRs */
+	/** direction split of the shown DMRs: kept, and at or above minDeltaBeta */
 	hyper: number
 	hypo: number
-	/** width quantiles (bp) of the kept DMRs; absent when none were kept */
+	/** width quantiles (bp) of the shown DMRs; absent when none were shown */
 	width?: { median: number; q1: number; q3: number }
 	globalMethylation?: TermdbDmrBatchSuccessResponse['globalMethylation']
 	regionMask?: { sources: string[]; overlapFrac: number; dmrsDropped: number }
-	/** present when the correction ran. `scored` and `significant` count the kept DMRs; `unscored`
-	 * kept DMRs had no background in their stratum and are not among the rows */
+	/** present when the correction ran. `scored` and `significant` count the shown DMRs; `unscored`
+	 * shown DMRs had no background in their stratum and are not among the rows. `windows` is over the
+	 * whole run, also when `chromosomes` is one chromosome of it */
 	backgroundCorrection?: { windows: number; scored: number; unscored: number; significant: number; matchedOn: string[] }
-	/** genes under kept hypomethylated gene-body DMRs -- the set the expression test
+	/** genes under shown hypomethylated gene-body DMRs -- the set the expression test
 	 * (termdb/dmrGeneDE) runs on. With the background correction on, a region must also beat its
 	 * matched background (p<0.05), which makes this the stricter of two readings rather than the
 	 * only one. Absent when no DMR qualifies. */

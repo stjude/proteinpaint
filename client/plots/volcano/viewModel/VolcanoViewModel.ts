@@ -613,8 +613,12 @@ export class VolcanoViewModel {
 	thresholds -- and over the same set of DMRs (those meeting the CpG floor), so no two lines here
 	have different denominators. The counts the thresholds select are the three rows above. */
 	setScanStats(s: DmrScanSummary) {
+		// what DMRcate ran over, of which the rows may show one chromosome
+		const run = s.runChromosomes || s.chromosomes
 		const rows: { label: string; value: number | string }[] = [
-			{ label: 'Chromosomes scanned', value: s.chromosomes.length },
+			{ label: 'Chromosomes scanned', value: run.length },
+			// the counts below are over the chromosome shown, the run's genome-wide facts say so in their labels
+			...(s.chromosomes.length < run.length ? [{ label: 'Chromosomes shown', value: s.chromosomes.join(', ') }] : []),
 			{ label: 'CpGs analyzed', value: s.totalProbesAnalyzed },
 			{ label: 'DMRs called', value: s.called },
 			{ label: `DMRs with ${s.minCpgs}+ CpGs`, value: s.kept },
@@ -650,7 +654,6 @@ export class VolcanoViewModel {
 			const [g1, g2] = this.config.samplelst?.groups?.map((g: any) => g.name) || ['group 1', 'group 2']
 			/* Named for what DMRcate ran over, which these are measured on: the whole genome, even when
 			the volcano shows one chromosome of it. */
-			const run = s.runChromosomes || s.chromosomes
 			const one = run.length == 1 ? run[0] : null
 			const meanLabel = (g: string) => (one ? `${g} mean β on ${one}` : `${g} genome-wide mean β`)
 			rows.push(
@@ -672,15 +675,21 @@ export class VolcanoViewModel {
 					{ label: `${g2} mean reads per CpG`, value: dk.toFixed(2) }
 				)
 				const ratio = Math.max(dc, dk) / Math.min(dc, dk)
-				if (ratio > DEPTH_RATIO_WARN)
+				if (ratio > DEPTH_RATIO_WARN) {
+					const deeper = dk > dc ? g2 : g1
+					// a group with no reads has no ratio to state
+					const differ = Number.isFinite(ratio)
+						? `${deeper} has ${ratio.toFixed(1)}× the reads per CpG`
+						: `Only ${deeper} has reads`
+					// with no Min Δβ, every DMR is counted, so the remedy is to set one
+					const floor = s.minDeltaBeta
+						? `only those with |Δβ| > ${s.minDeltaBeta} are counted.`
+						: 'set Min Δβ to count only DMRs whose beta moved.'
 					rows.push({
 						label: '⚠ Read depth differs between groups',
-						value: `${dk > dc ? g2 : g1} has ${ratio.toFixed(
-							1
-						)}× the reads per CpG. DMRcate calls DMRs from read-count ratios that shift with depth, so DMRs with little beta change may reflect depth rather than methylation; only those with |Δβ| > ${
-							s.minDeltaBeta
-						} are counted.`
+						value: `${differ}. DMRcate calls DMRs from read-count ratios that shift with depth, so DMRs with little beta change may reflect depth rather than methylation; ${floor}`
 					})
+				}
 			}
 		}
 		/* A survival rate is only readable against its denominator, and the unscored are not a
@@ -689,7 +698,10 @@ export class VolcanoViewModel {
 		const bc = s.backgroundCorrection
 		if (bc) {
 			rows.push(
-				{ label: 'Intergenic background windows sampled', value: bc.windows },
+				{
+					label: `Intergenic background windows sampled${s.chromosomes.length < run.length ? ' (whole run)' : ''}`,
+					value: bc.windows
+				},
 				{ label: `DMRs scored against background (matched on ${bc.matchedOn.join(' and ')})`, value: bc.scored },
 				{ label: 'DMRs unscored: stratum too thin (not plotted)', value: bc.unscored },
 				{

@@ -18,7 +18,7 @@ const evictionKeys = ['maxAge', 'maxSize', 'skipMs', 'moveTo', 'fileExtensions']
 
 /* .type of a cacheRegistry entry
 - compute: JSON results written by utils/cacheOrRecompute.ts; must have maxPending, the cap on concurrent
-  computes of distinct cacheIds, which is the only field cacheOrRecompute reads
+  computes of distinct cacheIds (a cache hit is not counted), which is the only field cacheOrRecompute reads
 - file: files written by their own route; must have fileExtensions, so that only the cached files are evicted
 - session: saved user data written by the massSession route
 - url: index files of remote tracks, cached by cache_index in utils.js under <url protocol>/<url body>/; the entry name
@@ -82,9 +82,8 @@ export const cacheRegistry = {
 	gdcCounts: { type: 'compute', maxPending: 200 },
 	/* the sample ids that the filter of a sample group selects, see resolveGroups() in utils/sampleGroups.ts.
 	one small entry per group filter, read by every request that carries such a group, so this is many quick
-	lookups rather than a few heavy computes. cacheOrRecompute counts a lookup against maxPending before it
-	reads the file, so a cache hit takes a slot too: the cap is sized for concurrent chart requests, not for
-	concurrent computes. a list is cheap to recompute, and a short maxAge bounds how long one outlives a
+	lookups rather than a few heavy computes. a cache hit takes no slot of maxPending, only a lookup that
+	resolves the filter does. a list is cheap to recompute, and a short maxAge bounds how long one outlives a
 	change of the data it was resolved from; a cache read does not update the file mtime. */
 	samplelst: { type: 'compute', maxPending: 200, maxAge: day },
 	// saved sessions; a deployer may set maxAge: 0 to disable the /massSession and /sessionIds routes

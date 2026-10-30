@@ -1,6 +1,15 @@
 import type { Filter } from '../filter.ts'
 import type { SampleFilterGroup } from '../terms/samplelst.ts'
 
+/** The range of each DMRcate tuning parameter that a request may set: the volcano's controls
+ * (client/plots/volcano/VolcanoControlInputs.ts) stay within these, and C >= 0.2 is DMRcate's own
+ * requirement. The server refuses a value outside them. */
+export const DMRCATE_PARAM_RANGES = {
+	lambda: { min: 50, max: 100_000 },
+	C: { min: 0.2, max: 50 },
+	fdr_cutoff: { min: 0.0001, max: 0.5 }
+} as const
+
 /** Call DMRs across many regions in one request — a whole differential-methylation hit list
  * rather than one clicked element. See server/src/routes/termdb.dmrBatch.ts for why this is a
  * route and not a client loop. */

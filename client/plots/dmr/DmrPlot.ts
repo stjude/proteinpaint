@@ -7,7 +7,10 @@ import { DmrViewModel } from './viewModel/DmrViewModel.ts'
 import { DmrView } from './view/DmrView.ts'
 import { startElapsedTimer } from '#dom'
 
-const LOADING_TEXT = 'Running DMR analysis\u2026'
+/* Says why a wait can be long: a view on a comparison whose genome-wide run is not cached, such as a saved
+session's, runs it first */
+const LOADING_TEXT =
+	'Running DMR analysis\u2026 A comparison not yet cached first runs DMRcate over the whole genome, which can take minutes.'
 
 class DmrPlot extends PlotBase implements RxComponent {
 	static type = 'dmr'

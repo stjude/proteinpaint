@@ -83,8 +83,6 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		.enter()
 		.append('div')
 		.attr('aria-label', (d: OptionEntry) => d.title)
-		// shown on hover anywhere in the option; the input below carries it too, as its description on focus
-		.attr('title', (d: OptionEntry) => d.title || null)
 		//.style('display', opts.styles.display)
 		.style('padding', opts.styles.padding)
 
@@ -107,7 +105,6 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		.style('vertical-align', opts.styles && 'vertical-align' in opts.styles ? opts.styles['vertical-align'] : '')
 		.style('margin-top', '2px')
 		.style('margin-right', 0)
-		.attr('title', (d: OptionEntry) => d.title || null)
 		.property('checked', (d: OptionEntry) => d?.checked)
 		.property('disabled', (d: OptionEntry) => !!d.disabled)
 	if (opts.options.find(i => i.testid)) {

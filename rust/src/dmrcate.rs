@@ -184,9 +184,16 @@ fn log_gamma_upper_cf(a: f64, x: f64) -> f64 {
 
 /// Log chi-squared survival function: returns log P(X > x) for X ~ chi^2(df).
 /// Uses statrs gamma_ur for moderate tails, continued fraction in log space
-/// for extreme tails. Matches R's pchisq(x, df, lower.tail=FALSE, log.p=TRUE).
+/// for extreme tails. Matches R's pchisq(x, df, lower.tail=FALSE, log.p=TRUE), including at the
+/// edges: NaN in is NaN out, and x = +Inf has p = 0, so log p = -Inf.
 fn log_chisq_sf(x: f64, df: f64) -> f64 {
-    if x <= 0.0 || !x.is_finite() {
+    if x.is_nan() || df.is_nan() {
+        return f64::NAN;
+    }
+    if x == f64::INFINITY {
+        return f64::NEG_INFINITY;
+    }
+    if x <= 0.0 {
         return 0.0; // log(1) = 0
     }
     let a = df / 2.0;
@@ -200,10 +207,74 @@ fn log_chisq_sf(x: f64, df: f64) -> f64 {
     log_gamma_upper_cf(a, z)
 }
 
+/// How far the kernel reaches either side of a row, in bp: 5 sigma, where sigma = lambda / C.
+/// A float too large for i64 saturates, so the reach is then the whole chromosome.
+fn kernel_reach(lambda: f64, c: f64) -> i64 {
+    (5.0 * lambda / c) as i64
+}
+
+/// The kernel's work over one chromosome's sorted positions: the rows in every row's window,
+/// summed, found with the same two pointers the kernel walks. Linear in the rows, so it is cheap to
+/// know before smoothing what smoothing would cost.
+fn kernel_work(pos: impl Fn(usize) -> i64, n: usize, max_d: i64) -> u64 {
+    let (mut l, mut r, mut work) = (0usize, 0usize, 0u64);
+    for i in 0..n {
+        let p = pos(i);
+        while r < n && pos(r).saturating_sub(p) <= max_d {
+            r += 1;
+        }
+        while l < n && p.saturating_sub(pos(l)) > max_d {
+            l += 1;
+        }
+        work += (r - l) as u64;
+    }
+    work
+}
+
+/* The most rows a kernel window may hold on average over a run. The smoothing is
+O(rows x rows in window), so a small C or a large lambda brings it toward quadratic over a chromosome;
+this bounds the kernel's work at a fixed multiple of the rows. Measured on every row of the real
+matrices (2026-10-30), the mean rows per window is 72.3 for the DISCOVER WGBS CpG matrix (26.6M rows)
+and 36.1 for MMRF's (16.4M) at the defaults lambda 1000, C 2; for element matrices at their default
+lambda 50,000, C 2 it is 16-49, and at most 808 (DISCOVER cCREs) at lambda 100,000, C 0.2. 1000 is
+about 14 times the densest default and keeps every element matrix within it at any lambda and C the
+server accepts. */
+const MAX_ROWS_PER_WINDOW: f64 = 1000.0;
+
+/// Refuses a kernel whose work, summed over the rows, would exceed MAX_ROWS_PER_WINDOW per row.
+fn check_kernel_work(work: u64, rows: usize, lambda: f64, c: f64) -> Result<(), String> {
+    if work as f64 > MAX_ROWS_PER_WINDOW * rows.max(1) as f64 {
+        return Err(format!(
+            "the smoothing window (lambda / C = {} / {}) is too wide for this matrix: a window would hold {:.0} rows on average, over the limit of {}. Lower lambda or raise C.",
+            lambda,
+            c,
+            work as f64 / rows.max(1) as f64,
+            MAX_ROWS_PER_WINDOW
+        ));
+    }
+    Ok(())
+}
+
+/// The bounds on the DMR tuning parameters, checked before anything is read. dmrcate() itself
+/// requires C >= 0.2; a lambda that is not a positive number gives no kernel, and an FDR cutoff
+/// outside (0, 1] selects nothing or everything.
+fn check_params(lambda: f64, c: f64, fdr_cut: f64) -> Result<(), String> {
+    if !(lambda.is_finite() && lambda > 0.0) {
+        return Err(format!("lambda must be a positive number, not {}", lambda));
+    }
+    if !(c.is_finite() && c >= 0.2) {
+        return Err(format!("C must be at least 0.2, as DMRcate requires, not {}", c));
+    }
+    if !(fdr_cut > 0.0 && fdr_cut <= 1.0) {
+        return Err(format!("fdr_cutoff must be above 0 and at most 1, not {}", fdr_cut));
+    }
+    Ok(())
+}
+
 /// Kernel smoothing returning LOG p-values (not p-values) to avoid underflow.
 fn kernel_smooth_log(pos: &[i64], t: &[f64], lambda: f64, c: f64) -> Vec<f64> {
     let sigma = lambda / c;
-    let max_d = (5.0 * sigma) as i64;
+    let max_d = kernel_reach(lambda, c);
     let two_s2 = 2.0 * sigma * sigma;
     let (n, mut l, mut r) = (pos.len(), 0usize, 0usize);
     let mut out = Vec::with_capacity(n);
@@ -409,8 +480,15 @@ fn std_normal() -> Normal {
 
 /// Upper tail of Student's t at t >= 0, as R's pt(-t, df) computes it -- including R's switch to
 /// a normal approximation above 4e5 degrees of freedom, which is where a run whose prior df is
-/// infinite lands (the moderated df is then the pooled residual df).
+/// infinite lands (the moderated df is then the pooled residual df). A NaN t or df, or a df that
+/// is not positive, is NaN, as in R; statrs would panic on a NaN t.
 fn pt_upper(t: f64, df: f64) -> f64 {
+    if t.is_nan() || df.is_nan() || df <= 0.0 {
+        return f64::NAN;
+    }
+    if t == f64::INFINITY {
+        return 0.0;
+    }
     if df > 4e5 {
         let v = 1.0 / (4.0 * df);
         return std_normal().sf(t * (1.0 - v) / (1.0 + t * t * 2.0 * v).sqrt());
@@ -420,9 +498,6 @@ fn pt_upper(t: f64, df: f64) -> f64 {
 
 /// R's pchisq(x, df, lower.tail = FALSE), on the linear scale as DMRcate computes it.
 fn chisq_sf(x: f64, df: f64) -> f64 {
-    if x == f64::INFINITY {
-        return 0.0;
-    }
     log_chisq_sf(x, df).exp()
 }
 
@@ -496,6 +571,159 @@ fn fit_f_dist_by(n: usize, x: impl Fn(usize) -> f64, df1: impl Fn(usize) -> f64)
     }
 }
 
+/// R's optimize(): Brent's fmin as R's optimize.c has it, step for step, with a non-finite value
+/// of f taken as the largest double, as R's wrapper takes it.
+fn brent_fmin(ax: f64, bx: f64, tol: f64, mut f: impl FnMut(f64) -> f64) -> f64 {
+    let mut f = |x: f64| {
+        let v = f(x);
+        if v.is_finite() { v } else { f64::MAX }
+    };
+    let c = (3.0 - 5f64.sqrt()) * 0.5;
+    let eps = f64::EPSILON.sqrt();
+    let (mut a, mut b) = (ax, bx);
+    let mut v = a + c * (b - a);
+    let (mut w, mut x) = (v, v);
+    let (mut d, mut e) = (0.0f64, 0.0f64);
+    let mut fx = f(x);
+    let (mut fv, mut fw) = (fx, fx);
+    let tol3 = tol / 3.0;
+    loop {
+        let xm = (a + b) * 0.5;
+        let tol1 = eps * x.abs() + tol3;
+        let t2 = tol1 * 2.0;
+        if (x - xm).abs() <= t2 - (b - a) * 0.5 {
+            break;
+        }
+        let (mut p, mut q, mut r) = (0.0, 0.0, 0.0);
+        if e.abs() > tol1 {
+            // fit a parabola
+            r = (x - w) * (fx - fv);
+            q = (x - v) * (fx - fw);
+            p = (x - v) * q - (x - w) * r;
+            q = (q - r) * 2.0;
+            if q > 0.0 {
+                p = -p;
+            } else {
+                q = -q;
+            }
+            r = e;
+            e = d;
+        }
+        if p.abs() >= (q * 0.5 * r).abs() || p <= q * (a - x) || p >= q * (b - x) {
+            // a golden-section step
+            e = if x < xm { b - x } else { a - x };
+            d = c * e;
+        } else {
+            // a parabolic-interpolation step, kept away from the ends
+            d = p / q;
+            let u = x + d;
+            if u - a < t2 || b - u < t2 {
+                d = if x >= xm { -tol1 } else { tol1 };
+            }
+        }
+        // and away from x
+        let u = if d.abs() >= tol1 {
+            x + d
+        } else if d > 0.0 {
+            x + tol1
+        } else {
+            x - tol1
+        };
+        let fu = f(u);
+        if fu <= fx {
+            if u < x {
+                b = x;
+            } else {
+                a = x;
+            }
+            v = w;
+            w = x;
+            x = u;
+            fv = fw;
+            fw = fx;
+            fx = fu;
+        } else {
+            if u < x {
+                a = u;
+            } else {
+                b = u;
+            }
+            if fu <= fw || w == x {
+                v = w;
+                fv = fw;
+                w = u;
+                fw = fu;
+            } else if fu <= fv || v == x || v == w {
+                v = u;
+                fv = fu;
+            }
+        }
+    }
+    x
+}
+
+/* limma's fitFDistUnequalDF1, without a covariate or robustness: the prior's scale and df by
+maximum likelihood, which squeezeVar uses instead of fitFDist when the rows' residual df differ --
+as they do in an element or array matrix with missing cells. A NaN variance, or a df under 0.01, takes
+no part (limma gives it prior weight 0). Like fit_f_dist_by it reads the values through accessors and
+holds one copy of them, for the median; each likelihood evaluation is one more pass over the rows.
+Returns NaN for both when fewer than two variances are positive, where limma gives NA. */
+fn fit_f_dist_unequal_df1_by(n: usize, x: impl Fn(usize) -> f64, df1: impl Fn(usize) -> f64) -> (f64, f64) {
+    let used = |i: usize| x(i).is_finite() && df1(i) >= 0.01;
+    let mut xi: Vec<f64> = (0..n).filter(|&i| used(i) && x(i) > 0.0).map(|i| x(i)).collect();
+    let ni = xi.len();
+    if ni < 2 {
+        return (f64::NAN, f64::NAN);
+    }
+    let h = ni / 2;
+    let mut m = *xi.select_nth_unstable_by(h, |a, b| a.partial_cmp(b).unwrap()).1;
+    if ni % 2 == 0 {
+        m = (m + xi[..h].iter().copied().fold(f64::NEG_INFINITY, f64::max)) / 2.0;
+    }
+    drop(xi);
+    let floor = 1e-12 * m;
+    let xpos = |i: usize| x(i).max(floor);
+    let logmdigamma = |a: f64| a.ln() - digamma(a);
+    /* The rows take few distinct df, so the terms that depend on df alone are summed once per df:
+    (d1 = df / 2, rows with it, logmdigamma(d1), 1 / trigamma(d1)). */
+    let mut by_df: Vec<(f64, f64, f64, f64)> = Vec::new();
+    let mut last = usize::MAX;
+    let (mut ew, mut wsum) = (0.0, 0.0);
+    for i in (0..n).filter(|&i| used(i)) {
+        let d1 = df1(i) / 2.0;
+        if last == usize::MAX || by_df[last].0 != d1 {
+            last = match by_df.iter().position(|g| g.0 == d1) {
+                Some(k) => k,
+                None => {
+                    by_df.push((d1, 0.0, logmdigamma(d1), 1.0 / trigamma(d1)));
+                    by_df.len() - 1
+                }
+            };
+        }
+        let g = &mut by_df[last];
+        g.1 += 1.0;
+        ew += g.3 * (xpos(i).ln() + g.2);
+        wsum += g.3;
+    }
+    let emean = ew / wsum;
+    let minus_twice_loglik = |par: f64| {
+        let d2 = par / (1.0 - par);
+        let d2s20 = d2 * (emean - logmdigamma(d2)).exp();
+        let mut s = 0.0;
+        for i in (0..n).filter(|&i| used(i)) {
+            let d1 = df1(i) / 2.0;
+            s -= (d1 + d2) * (d1 * xpos(i) / d2s20).ln_1p();
+        }
+        for &(d1, cnt, _, _) in &by_df {
+            s += cnt * (-d1 * d2s20.ln() + ln_gamma(d1 + d2) - ln_gamma(d2));
+        }
+        -2.0 * s
+    };
+    let par = brent_fmin(0.5, 0.9998, f64::EPSILON.powf(0.25), minus_twice_loglik);
+    let d2 = par / (1.0 - par);
+    ((emean - logmdigamma(d2)).exp(), 2.0 * d2)
+}
+
 /* Running per-group methylation level, on the beta scale, accumulated over every value read. This
 is the cohort's GLOBAL level -- not a property of any region -- and it tells a reader how much of a
 region result is just the whole genome moving. */
@@ -534,7 +762,8 @@ struct Cpg {
     /// observations per group: every requested sample for a CpG matrix, finite cells for an element one
     n_case: u16,
     n_ctrl: u16,
-    /// case minus control mean of d -- upstream's per-CpG `diff`, the limma logFC
+    /// case minus control mean of d (or of the M-value), the limma logFC -- upstream's per-CpG `diff`
+    /// for a read-count matrix; for an M-value fit upstream's diff is the beta-scale delta_beta()
     log_fc: f64,
     /// residual variance of the two-group fit; the moderated t once moderate() has run
     s2: f64,
@@ -566,6 +795,9 @@ struct Genome {
     cpgs: Vec<Cpg>,
     chroms: Vec<Chrom>,
     global: GlobalBeta,
+    /// the rows were fitted on M-values (an array or element matrix), so a DMR's meandiff and
+    /// maxdiff are on the beta scale, as cpg.annotate() reports its diff
+    beta_diff: bool,
 }
 
 /// One matrix file and the chromosomes of the run that it holds.
@@ -745,8 +977,12 @@ fn read_rows(
                         d.push(v);
                     }
                 }
-                // lmFit leaves a row without both groups, or without a residual df, unestimated
-                if dc.is_empty() || dk.is_empty() || dc.len() + dk.len() < 3 {
+                /* lmFit cannot estimate the group effect of a row that lacks a whole group, so it is
+                left out. (limma would still count that row's intercept-only variance, on n - 1 df,
+                toward the prior; it is not counted here.) A row with one value per group has no
+                residual df, and limma keeps it: squeezeVar zeroes its variance, so it takes the
+                prior's, with df.total = df0. moderate() does the same. */
+                if dc.is_empty() || dk.is_empty() {
                     continue;
                 }
             }
@@ -771,18 +1007,38 @@ fn read_rows(
     Ok(gb)
 }
 
-/// The two-group linear model: (case mean - control mean, pooled residual variance).
+/// The two-group linear model: (case mean - control mean, pooled residual variance). With no
+/// residual df (one value per group) the variance is NaN, as lmFit leaves sigma NA.
 fn two_group(case: &[f64], ctrl: &[f64]) -> (f64, f64) {
     let mc = case.iter().sum::<f64>() / case.len() as f64;
     let mk = ctrl.iter().sum::<f64>() / ctrl.len() as f64;
     let ss = case.iter().map(|&x| (x - mc).powi(2)).sum::<f64>() + ctrl.iter().map(|&x| (x - mk).powi(2)).sum::<f64>();
-    (mc - mk, ss / (case.len() + ctrl.len() - 2) as f64)
+    let df = (case.len() + ctrl.len()).saturating_sub(2);
+    (mc - mk, if df > 0 { ss / df as f64 } else { f64::NAN })
 }
 
 /// Column index of each named sample in this file; a name the file lacks is skipped.
 fn sample_columns(samples: &[String], names: &[&str]) -> Vec<usize> {
     let smap: HashMap<&str, usize> = samples.iter().enumerate().map(|(i, s)| (s.as_str(), i)).collect();
     names.iter().filter_map(|s| smap.get(s).copied()).collect()
+}
+
+/// The case and control columns of a matrix, refusing a matrix that holds no sample of a group,
+/// or more of one than a row's u16 group size can count.
+fn group_columns(
+    file: &str,
+    samples: &[String],
+    cases: &[&str],
+    ctrls: &[&str],
+) -> Result<(Vec<usize>, Vec<usize>), String> {
+    let (ci, ki) = (sample_columns(samples, cases), sample_columns(samples, ctrls));
+    if ci.is_empty() || ki.is_empty() {
+        return Err(format!("{}: no case or no control sample in this matrix", file));
+    }
+    if ci.len() > u16::MAX as usize || ki.len() > u16::MAX as usize {
+        return Err(format!("{}: a group has more than {} samples", file, u16::MAX));
+    }
+    Ok((ci, ki))
 }
 
 /// Every chromosome of the job that this file holds, in the file's order, read into the genome.
@@ -797,11 +1053,7 @@ fn read_matrix(
 ) -> Result<(), String> {
     let file = File::open(&job.file).map_err(|e| format!("HDF5 open {}: {}", job.file, e))?;
     let meta = read_h5_metadata(&file)?;
-    let ci = sample_columns(&meta.samples, cases);
-    let ki = sample_columns(&meta.samples, ctrls);
-    if ci.is_empty() || ki.is_empty() {
-        return Err(format!("{}: no case or no control sample in this matrix", job.file));
-    }
+    let (ci, ki) = group_columns(&job.file, &meta.samples, cases, ctrls)?;
     let mut pfx = 0usize;
     for (name, &n) in meta.chr_names.iter().zip(&meta.chr_rows) {
         if job.chrs.iter().any(|c| c == name) {
@@ -854,6 +1106,7 @@ fn read_genome(
         cpgs: Vec::with_capacity(rows),
         chroms: Vec::new(),
         global: GlobalBeta::default(),
+        beta_diff: values != Values::Counts,
     };
     let lr = LogRatio::new();
     for job in jobs {
@@ -869,21 +1122,43 @@ struct Prior {
     df_cap: f64,
 }
 
-fn ebayes(cpgs: &[Cpg]) -> Prior {
+/* eBayes' prior, with squeezeVar's choice of estimator: when every row with residual df has the
+same df -- every CpG matrix, or a matrix with no missing cell -- limma's moment estimate (fitFDist);
+when they differ, its likelihood estimate (fitFDistUnequalDF1). Fails as eBayes stops: when no row
+has a residual df, and when the prior cannot be estimated. */
+fn ebayes(cpgs: &[Cpg]) -> Result<Prior, String> {
     let df_cap = cpgs.iter().map(|c| c.df()).sum::<f64>();
+    if df_cap == 0.0 {
+        return Err("No residual degrees of freedom: every row has one value per group".into());
+    }
     // squeezeVar leaves fewer than 3 variances unmoderated
     if cpgs.len() < 3 {
-        return Prior {
+        return Ok(Prior {
             s20: f64::NAN,
             df0: 0.0,
             df_cap,
-        };
+        });
     }
-    let (s20, df0) = fit_f_dist_by(cpgs.len(), |i| cpgs[i].s2, |i| cpgs[i].df());
-    Prior { s20, df0, df_cap }
+    let (mut lo, mut hi) = (f64::INFINITY, f64::NEG_INFINITY);
+    for d in cpgs.iter().map(|c| c.df()).filter(|&d| d > 0.0) {
+        lo = lo.min(d);
+        hi = hi.max(d);
+    }
+    // squeezeVar zeroes the variance of a row with no residual df before fitting
+    let var = |i: usize| if cpgs[i].df() == 0.0 { 0.0 } else { cpgs[i].s2 };
+    let (s20, df0) = if lo == hi {
+        fit_f_dist_by(cpgs.len(), var, |i| cpgs[i].df())
+    } else {
+        fit_f_dist_unequal_df1_by(cpgs.len(), var, |i| cpgs[i].df())
+    };
+    if df0.is_nan() {
+        return Err("Could not estimate the prior df: too few rows have a positive residual variance".into());
+    }
+    Ok(Prior { s20, df0, df_cap })
 }
 
-/// eBayes then topTable for one row: (moderated t, two-sided p).
+/// eBayes then topTable for one row: (moderated t, two-sided p). A row with no residual df takes
+/// the prior's variance, as squeezeVar's zeroed variance gives it.
 fn moderate(c: &Cpg, pr: &Prior) -> (f64, f64) {
     let df = c.df();
     let s2post = if pr.df0 == 0.0 {
@@ -891,7 +1166,8 @@ fn moderate(c: &Cpg, pr: &Prior) -> (f64, f64) {
     } else if pr.df0.is_infinite() {
         pr.s20
     } else {
-        (df * c.s2 + pr.df0 * pr.s20) / (df + pr.df0)
+        let s2 = if df == 0.0 { 0.0 } else { c.s2 };
+        (df * s2 + pr.df0 * pr.s20) / (df + pr.df0)
     };
     let t = c.log_fc / c.su() / s2post.sqrt();
     (t, 2.0 * pt_upper(t.abs(), (df + pr.df0).min(pr.df_cap)))
@@ -934,8 +1210,10 @@ impl Constants {
             "nsig": self.nsig
         })
     }
+    /// None when the constants are missing or could not have come from a run: a negative prior or
+    /// df, or a cut that is not a probability.
     fn from_json(v: &Value) -> Option<Self> {
-        Some(Constants {
+        let c = Constants {
             prior: Prior {
                 s20: v["s20"].as_f64().unwrap_or(f64::NAN),
                 df0: v["df0"].as_f64().unwrap_or(f64::INFINITY),
@@ -945,7 +1223,15 @@ impl Constants {
             smoothed_raw_cut: v["smoothed_raw_cut"].as_f64(),
             smoothed_fdr_cut: v["smoothed_fdr_cut"].as_f64(),
             nsig: v["nsig"].as_u64().unwrap_or(0) as usize,
-        })
+        };
+        let prob = |x: Option<f64>| x.map_or(true, |x| (0.0..=1.0).contains(&x));
+        let ok = !(c.prior.s20 < 0.0)
+            && c.prior.df0 >= 0.0
+            && c.prior.df_cap >= 0.0
+            && prob(c.ind_p_cut)
+            && prob(c.smoothed_raw_cut)
+            && prob(c.smoothed_fdr_cut);
+        if ok { Some(c) } else { None }
     }
 }
 
@@ -959,15 +1245,28 @@ struct Segment {
 
 /* dmrcate() after the annotation: kernel test per chromosome, BH of the smoothed p over the whole
 run, the adaptive cutoff, segmentation, region-wise statistics and their corrections, the CpG floor.
-Returns the DMRs, per-row individual significance, and the constants. */
+Returns the DMRs, per-row individual significance, and the constants; or an error, before any
+smoothing, when the prior cannot be estimated or the kernel's work would exceed its bound. */
 fn call_dmrs(
     g: &mut Genome,
     fdr_cut: f64,
     lambda: f64,
     c_param: f64,
     min_cpgs: usize,
-) -> (Vec<Dmr>, Vec<bool>, Constants) {
-    let prior = ebayes(&g.cpgs);
+) -> Result<(Vec<Dmr>, Vec<bool>, Constants), String> {
+    // chrom_of below holds a chromosome's index in a u16
+    if g.chroms.len() > u16::MAX as usize + 1 {
+        return Err(format!("a run takes at most {} chromosomes", u16::MAX as usize + 1));
+    }
+    let max_d = kernel_reach(lambda, c_param);
+    let work: u64 = g
+        .chroms
+        .iter()
+        .filter(|ch| ch.hi - ch.lo >= 2)
+        .map(|ch| kernel_work(|i| g.cpgs[ch.lo + i].pos as i64, ch.hi - ch.lo, max_d))
+        .sum();
+    check_kernel_work(work, g.cpgs.len(), lambda, c_param)?;
+    let prior = ebayes(&g.cpgs)?;
     let mut p = vec![0.0f64; g.cpgs.len()];
     for (i, c) in g.cpgs.iter_mut().enumerate() {
         let (t, pv) = moderate(c, &prior);
@@ -1007,7 +1306,7 @@ fn call_dmrs(
     };
     // dmrcate() stops here: "returned no significant CpGs, hence there are no DMRs"
     if nsig == 0 {
-        return (vec![], ind_sig, cons);
+        return Ok((vec![], ind_sig, cons));
     }
     // sort(fdr)[nsig]: `order` runs from the largest smoothed p down, and BH is monotone in it
     let pcut = fdr[order[order.len() - nsig.min(order.len())] as usize];
@@ -1023,7 +1322,7 @@ fn call_dmrs(
     drop(raw);
     let segs = segment(&chrom_of, &sig, &g.cpgs, lambda);
     let dmrs = region_stats(&segs, g, &p, &fdr, min_cpgs);
-    (dmrs, ind_sig, cons)
+    Ok((dmrs, ind_sig, cons))
 }
 
 /* dmrcate()'s segmentation: the significant rows, split wherever the next one is on another
@@ -1083,6 +1382,10 @@ struct Dmr {
     hmfdr: Option<f64>,
     #[serde(rename = "Fisher")]
     fisher: Option<f64>,
+    /// the per-row diff of largest magnitude and the mean diff over the span. The diff is upstream's:
+    /// for a CpG matrix of read counts the limma logFC of d, as sequencing.annotate() reports it;
+    /// for an array or element matrix the beta-scale group difference, as cpg.annotate() reports it
+    /// (it fits the M-values but takes diff from a fit of the betas)
     maxdiff: f64,
     meandiff: f64,
     delta_beta_max: Option<f64>,
@@ -1094,7 +1397,9 @@ struct Dmr {
 Stouffer, harmonic-mean and Fisher combinations of the raw per-CpG p-values -- each BH-corrected
 across every region built, the ones under the CpG floor included -- and the largest and mean
 per-CpG diff. Then the floor. Delta-beta is not upstream's: it is the display effect, carried
-beside upstream's logit2 diff. */
+beside upstream's diff. For an array or element matrix the two are the same group difference of
+betas (lmFit's logFC on the betas is the difference of the group means over the observed cells), so
+diff is the display delta-beta there. */
 fn region_stats(segs: &[Segment], g: &Genome, p: &[f64], fdr: &[f64], min_cpgs: usize) -> Vec<Dmr> {
     let nrm = std_normal();
     let len = |s: &Segment| (s.hi - s.lo + 1) as f64;
@@ -1117,7 +1422,8 @@ fn region_stats(segs: &[Segment], g: &Genome, p: &[f64], fdr: &[f64], min_cpgs: 
         .filter(|(_, s)| s.hi - s.lo + 1 >= min_cpgs)
         .map(|(a, s)| {
             let span = &g.cpgs[s.lo..=s.hi];
-            let meandiff = span.iter().map(|c| c.log_fc).sum::<f64>() / len(s);
+            let diff = |c: &Cpg| if g.beta_diff { c.delta_beta() } else { c.log_fc };
+            let meandiff = span.iter().map(diff).sum::<f64>() / len(s);
             let (mut dn, mut dsum, mut dmax) = (0usize, 0.0, f64::NAN);
             for d in span.iter().map(|c| c.delta_beta()).filter(|d| d.is_finite()) {
                 dn += 1;
@@ -1135,7 +1441,7 @@ fn region_stats(segs: &[Segment], g: &Genome, p: &[f64], fdr: &[f64], min_cpgs: 
                 stouffer: fin(stouffer[a]),
                 hmfdr: fin(hmfdr[a]),
                 fisher: fin(fisher[a]),
-                maxdiff: max_abs(span.iter().map(|c| c.log_fc)),
+                maxdiff: max_abs(span.iter().map(diff)),
                 meandiff,
                 delta_beta_max: fin(dmax),
                 delta_beta_mean: if dn > 0 { Some(dsum / dn as f64) } else { None },
@@ -1543,6 +1849,9 @@ fn main() {
     let c_param = p["C"].as_f64().unwrap_or(2.0);
     // dmrcate()'s min.cpgs
     let min_cpgs = p["min_cpgs"].as_u64().unwrap_or(2) as usize;
+    if let Err(e) = check_params(lambda, c_param, fdr_cut) {
+        bail!("{}", e);
+    }
     let diagnostic = |n: usize| {
         json!({
             "total_probes_analyzed": n,
@@ -1586,7 +1895,10 @@ fn main() {
     if g.cpgs.len() < 3 {
         bail!("Too few probes after filtering ({})", g.cpgs.len());
     }
-    let (dmrs, ind_sig, cons) = call_dmrs(&mut g, fdr_cut, lambda, c_param, min_cpgs);
+    let (dmrs, ind_sig, cons) = match call_dmrs(&mut g, fdr_cut, lambda, c_param, min_cpgs) {
+        Ok(r) => r,
+        Err(e) => bail!("{}", e),
+    };
 
     let chroms: HashMap<&str, usize> = g.chroms.iter().enumerate().map(|(i, c)| (c.name.as_str(), i)).collect();
     // DMRs by chromosome, in position order, so a window's are one contiguous run
@@ -1677,6 +1989,28 @@ struct ScanOut<'a> {
     diagnostic: Value,
 }
 
+/// The half-open range of `starts` (one chromosome's sorted row starts) that a region view reads:
+/// the region and the kernel's reach either side of it, plus 1 bp. Saturating, so no lambda, C or
+/// region coordinate overflows it; at worst it is the whole chromosome.
+fn region_read_range(starts: &[i64], qstart: i64, qstop: i64, lambda: f64, c: f64) -> (usize, usize) {
+    let margin = kernel_reach(lambda, c).saturating_add(1);
+    (
+        starts.partition_point(|&s| s < qstart.saturating_sub(margin)),
+        starts.partition_point(|&s| s <= qstop.saturating_add(margin)),
+    )
+}
+
+/// Each row's moderated p and kernel-smoothed p, recomputed from a run's prior.
+fn recompute(cpgs: &[Cpg], prior: &Prior, lambda: f64, c: f64) -> (Vec<f64>, Vec<f64>) {
+    let (t, ind_p): (Vec<f64>, Vec<f64>) = cpgs.iter().map(|x| moderate(x, prior)).unzip();
+    let raw = if cpgs.len() >= 2 {
+        smooth(cpgs, &t, lambda, c)
+    } else {
+        vec![1.0; cpgs.len()]
+    };
+    (ind_p, raw)
+}
+
 /* One region of a run already made: its rows recomputed from the run's constants, the run's DMRs
 that overlap it, and the per-CpG means, LOESS and track a region view draws. The kernel only
 reaches 5 sigma, so reading that margin either side makes every smoothed value in the region the
@@ -1692,7 +2026,7 @@ fn region_mode(
     diagnostic: &dyn Fn(usize) -> Value,
 ) {
     let Some(cons) = Constants::from_json(&p["constants"]) else {
-        bail!("region mode needs the run's constants");
+        bail!("region mode needs the run's constants, as a scan reports them");
     };
     let (qchr, qstart, qstop) = (
         p["region"]["chr"].as_str().unwrap_or(""),
@@ -1710,19 +2044,20 @@ fn region_mode(
         Ok(m) => m,
         Err(e) => bail!("{}", e),
     };
-    let (ci, ki) = (
-        sample_columns(&meta.samples, cases),
-        sample_columns(&meta.samples, ctrls),
-    );
+    let (ci, ki) = match group_columns(&job.file, &meta.samples, cases, ctrls) {
+        Ok(c) => c,
+        Err(e) => bail!("{}", e),
+    };
     let Some(k) = meta.chr_names.iter().position(|c| c == qchr) else {
         bail!("{} is not in the matrix", qchr);
     };
     let lo_chr: usize = meta.chr_rows[..k].iter().sum();
     let hi_chr = lo_chr + meta.chr_rows[k];
-    let margin = (5.0 * lambda / c_param).floor() as i64 + 1;
-    let blk = &meta.starts[lo_chr..hi_chr];
-    let lo = lo_chr + blk.partition_point(|&s| s < qstart - margin);
-    let hi = lo_chr + blk.partition_point(|&s| s <= qstop + margin);
+    if hi_chr > meta.starts.len() {
+        bail!("{}: the chromosome row counts exceed the rows of meta/start", job.file);
+    }
+    let (lo, hi) = region_read_range(&meta.starts[lo_chr..hi_chr], qstart, qstop, lambda, c_param);
+    let (lo, hi) = (lo_chr + lo, lo_chr + hi);
     let mut cpgs = Vec::new();
     if let Err(e) = read_rows(
         &file,
@@ -1738,13 +2073,14 @@ fn region_mode(
     ) {
         bail!("{}", e);
     }
-    let t: Vec<f64> = cpgs.iter().map(|c| moderate(c, &cons.prior).0).collect();
-    let ind_p: Vec<f64> = cpgs.iter().map(|c| moderate(c, &cons.prior).1).collect();
-    let raw = if cpgs.len() >= 2 {
-        smooth(&cpgs, &t, lambda, c_param)
-    } else {
-        vec![1.0; cpgs.len()]
-    };
+    /* The same bound on the kernel's work as a run's, against the rows of the whole chromosome: a
+    region is a slice of one, so a region of ordinary size passes whenever its run did, and only a
+    region close to a whole chromosome at a window too wide for it is refused. */
+    let work = kernel_work(|i| cpgs[i].pos as i64, cpgs.len(), kernel_reach(lambda, c_param));
+    if let Err(e) = check_kernel_work(work, meta.chr_rows[k], lambda, c_param) {
+        bail!("{}", e);
+    }
+    let (ind_p, raw) = recompute(&cpgs, &cons.prior, lambda, c_param);
     let a = cpgs.partition_point(|c| (c.pos as i64) < qstart);
     let b = cpgs.partition_point(|c| (c.pos as i64) <= qstop);
     let inr = &cpgs[a..b];
@@ -2028,6 +2364,7 @@ mod tests {
                 hi: 5,
             }],
             global: GlobalBeta::default(),
+            beta_diff: false,
         };
         let p = [0.01, 0.5, 0.2, 0.04, 0.3];
         let fdr = [1e-9, 1e-3, 1e-4, 1e-8, 1e-6];
@@ -2042,5 +2379,318 @@ mod tests {
         let hm = 4.0 / (1.0 / 0.01 + 1.0 / 0.5 + 1.0 / 0.2 + 1.0 / 0.04);
         let want = (hm * 2.0f64).min(0.3);
         assert!((d[0].hmfdr.unwrap() - want).abs() < 1e-15, "{:?}", d[0].hmfdr);
+        // an M-value fit reports diff on the beta scale, as cpg.annotate() does
+        let g = Genome { beta_diff: true, ..g };
+        let d = region_stats(&segs, &g, &p, &fdr, 2);
+        let db = 0.6f32 as f64 - 0.2f32 as f64;
+        assert_eq!((d[0].meandiff, d[0].maxdiff), (db, db));
+    }
+
+    /* 30 rows x 8 samples (4 case, 4 control) of M-values, about 10% missing, so the residual df
+    differ between rows; the last row has one value per group. Made in R 4.5.1 with set.seed(7),
+    limma 3.64.0:
+      fit <- eBayes(lmFit(y, model.matrix(~group)))   # group: 4 case then 4 control, control first level
+    N is NA. */
+    const N: f64 = f64::NAN;
+    const UNEQUAL_DF: [[f64; 8]; 30] = [
+        [4.74, 0.95, 2.09, 3.96, -1.87, -0.43, 2.63, 0.02],
+        [0.56, 2.86, 2.19, 1.23, 1.88, 1.32, 2.79, -1.95],
+        [1.17, 2.13, 2.65, 2.74, 0.83, -1.09, 1.36, -0.80],
+        [1.51, 1.91, 2.85, 2.28, -0.21, -0.25, -0.23, -0.69],
+        [0.84, 1.50, 2.38, 3.02, 0.88, 0.81, 0.57, -1.08],
+        [-1.14, -0.67, 1.33, -0.69, 1.84, -0.96, -0.65, 1.79],
+        [0.90, 1.20, 0.92, 1.34, 0.61, -1.91, 1.27, -0.16],
+        [-0.14, -1.33, 1.38, -1.85, 0.04, 1.42, 0.51, N],
+        [0.18, -0.17, 1.51, -0.53, -1.76, N, -2.18, -1.24],
+        [2.63, 0.38, 0.84, -0.18, 1.22, -0.01, -0.83, -0.53],
+        [0.43, 1.46, 0.52, 0.62, -0.71, 0.41, -2.32, -0.24],
+        [3.26, -0.84, -1.11, 0.71, 0.97, N, 1.45, -1.52],
+        [2.74, N, -0.74, -0.10, 1.04, 0.01, -0.33, 1.14],
+        [N, -1.57, -1.04, -1.41, 0.44, 0.89, -1.31, 0.57],
+        [2.28, -0.47, -1.97, 0.37, 1.36, 1.25, -0.12, N],
+        [0.56, -0.48, -1.59, -1.92, -0.91, -0.38, 0.43, N],
+        [N, 1.62, -1.07, 1.19, 0.53, 0.39, -1.06, -0.02],
+        [-0.37, 0.71, -0.67, 1.23, 1.10, 0.82, -0.07, -0.95],
+        [-0.01, 0.12, -0.07, N, 0.32, 0.38, -0.70, -0.48],
+        [1.19, 1.12, 2.91, 0.14, N, -2.30, 0.77, -2.28],
+        [N, -0.32, 0.41, -0.51, -1.75, -2.81, 2.43, 1.17],
+        [0.85, -0.01, 0.01, 0.55, -1.05, 0.58, 1.03, -0.62],
+        [N, 0.44, 0.04, 0.77, 0.20, 1.41, -0.03, 0.02],
+        [-1.67, 2.05, -0.47, 0.73, 0.25, -1.55, 0.72, -0.31],
+        [N, 0.87, N, -1.07, 0.58, 0.74, N, N],
+        [0.22, 0.58, -0.37, 1.85, -0.09, 0.31, -1.41, -1.77],
+        [0.90, -1.88, -0.42, N, N, 0.87, N, -0.02],
+        [0.71, 0.38, -0.37, 1.32, N, 1.59, 0.46, 0.03],
+        [-1.18, 0.20, -2.14, 1.18, 0.41, 0.18, -1.68, 0.00],
+        [1.37, N, N, N, -0.81, N, N, N],
+    ];
+
+    /// Rows fitted the way read_rows fits a matrix without depth: a missing cell is absent.
+    fn fitted(rows: &[[f64; 8]]) -> Vec<Cpg> {
+        rows.iter()
+            .enumerate()
+            .map(|(i, r)| {
+                let dc: Vec<f64> = r[..4].iter().copied().filter(|v| v.is_finite()).collect();
+                let dk: Vec<f64> = r[4..].iter().copied().filter(|v| v.is_finite()).collect();
+                let (log_fc, s2) = two_group(&dc, &dk);
+                Cpg {
+                    pos: 100 * (i as u32 + 1),
+                    n_case: dc.len() as u16,
+                    n_ctrl: dk.len() as u16,
+                    log_fc,
+                    s2,
+                    beta_ctrl: f32::NAN,
+                    beta_case: f32::NAN,
+                }
+            })
+            .collect()
+    }
+
+    fn close(got: f64, want: f64, rel: f64) -> bool {
+        (got - want).abs() <= rel * want.abs()
+    }
+
+    #[test]
+    fn unequal_residual_df_take_limmas_likelihood_estimate_of_the_prior() {
+        let cpgs = fitted(&UNEQUAL_DF);
+        let pr = ebayes(&cpgs).unwrap();
+        // fit$df.prior, fit$s2.prior
+        assert!(
+            close(pr.df0, 25.477641192214342, 1e-8) && close(pr.s20, 1.2470368330277424, 1e-8),
+            "df0 {} s20 {}",
+            pr.df0,
+            pr.s20
+        );
+        // eBayes(..., legacy = TRUE), the moment estimate, differs: the switch is what matters
+        let (s20, df0) = fit_f_dist_by(cpgs.len(), |i| cpgs[i].s2, |i| cpgs[i].df());
+        assert!(
+            close(df0, 25.378768580888803, 1e-8) && close(s20, 1.2665413106822778, 1e-8),
+            "legacy df0 {} s20 {}",
+            df0,
+            s20
+        );
+        // fit$t[i, 2], fit$p.value[i, 2], fit$df.total[i]; row 30 has no residual df and takes the prior
+        for (i, t, p, df_total) in [
+            (0, 3.1543416318405892, 0.0035265621090346659, 31.477641192214342),
+            (1, 0.80451747645135585, 0.42713299909099012, 31.477641192214342),
+            (29, 1.3803901612238507, 0.17945873417632563, 25.477641192214342),
+        ] {
+            let (gt, gp) = moderate(&cpgs[i], &pr);
+            let gdf = (cpgs[i].df() + pr.df0).min(pr.df_cap);
+            assert!(
+                close(gt, t, 1e-8) && close(gp, p, 1e-7) && close(gdf, df_total, 1e-8),
+                "row {}: t {} p {} df.total {}",
+                i + 1,
+                gt,
+                gp,
+                gdf
+            );
+        }
+    }
+
+    #[test]
+    fn equal_residual_df_keep_the_moment_estimate() {
+        // the same matrix with no missing cell: every df is 6, so squeezeVar takes fitFDist
+        let complete: Vec<[f64; 8]> = UNEQUAL_DF[..29]
+            .iter()
+            .map(|r| r.map(|v| if v.is_finite() { v } else { 0.25 }))
+            .collect();
+        let cpgs = fitted(&complete);
+        let pr = ebayes(&cpgs).unwrap();
+        let (s20, df0) = fit_f_dist_by(cpgs.len(), |i| cpgs[i].s2, |i| cpgs[i].df());
+        assert_eq!((pr.s20, pr.df0), (s20, df0));
+    }
+
+    #[test]
+    fn a_row_with_one_value_per_group_is_kept_and_one_lacking_a_group_is_not() {
+        let path = std::env::temp_dir().join(format!("dmrcate-onepergroup-{}.h5", std::process::id()));
+        let file = File::create(&path).unwrap();
+        let mval = ndarray::arr2(&[
+            [1.5f32, f32::NAN, -0.5, f32::NAN],
+            [f32::NAN, f32::NAN, 0.5, 0.25],
+            [1.0, 2.0, 0.0, 0.5],
+        ]);
+        file.create_group("beta")
+            .unwrap()
+            .new_dataset_builder()
+            .with_data(&mval)
+            .create("values")
+            .unwrap();
+        let mut out = Vec::new();
+        read_rows(
+            &file,
+            0,
+            3,
+            &[100, 200, 300],
+            &[0, 1],
+            &[2, 3],
+            Values::MValues,
+            true,
+            &LogRatio::new(),
+            &mut out,
+        )
+        .unwrap();
+        std::fs::remove_file(&path).ok();
+        assert_eq!(out.iter().map(|c| c.pos).collect::<Vec<_>>(), vec![100, 300]);
+        assert_eq!((out[0].df(), out[0].log_fc), (0.0, 2.0));
+        assert!(out[0].s2.is_nan(), "lmFit leaves sigma NA with no residual df");
+    }
+
+    #[test]
+    fn no_residual_df_or_no_prior_is_an_error_or_nan_never_a_panic() {
+        let one_each = fitted(&[[1.0, N, N, N, 0.0, N, N, N]; 4]);
+        assert!(ebayes(&one_each).is_err(), "eBayes stops with no residual df");
+        // a region view carrying a prior with no scale: NaN, not a panic in the t distribution
+        let pr = Prior {
+            s20: f64::NAN,
+            df0: 4.0,
+            df_cap: 24.0,
+        };
+        let (t, p) = moderate(&fitted(&UNEQUAL_DF[..1])[0], &pr);
+        assert!(t.is_nan() && p.is_nan());
+        assert!(pt_upper(f64::NAN, 5.0).is_nan() && pt_upper(2.0, f64::NAN).is_nan() && pt_upper(2.0, 0.0).is_nan());
+        assert_eq!(pt_upper(f64::INFINITY, 5.0), 0.0);
+        // pnorm(-3) at an infinite df
+        assert!(close(pt_upper(3.0, f64::INFINITY), 0.0013498980316300946, 1e-9));
+        assert!(two_group(&[1.0], &[]).1.is_nan(), "one value in all has no df");
+    }
+
+    #[test]
+    fn chisq_tail_edges_match_r() {
+        // pchisq(Inf, 3, lower.tail = FALSE, log.p = TRUE) is -Inf; NA stays NA; 0 has p = 1
+        assert_eq!(log_chisq_sf(f64::INFINITY, 3.0), f64::NEG_INFINITY);
+        assert_eq!(chisq_sf(f64::INFINITY, 3.0), 0.0);
+        assert!(log_chisq_sf(f64::NAN, 3.0).is_nan() && log_chisq_sf(2.0, f64::NAN).is_nan());
+        assert_eq!(log_chisq_sf(0.0, 3.0), 0.0);
+        // a row with an infinite t smooths to p = 0 around it, not to p = 1
+        let p = kernel_smooth_log(&[100, 200, 300], &[1.0, f64::INFINITY, 1.0], 1000.0, 2.0);
+        assert!(p.iter().all(|&v| v == f64::NEG_INFINITY), "{:?}", p);
+    }
+
+    #[test]
+    fn tuning_parameters_are_bounded() {
+        assert!(check_params(1000.0, 2.0, 0.05).is_ok());
+        assert!(check_params(50000.0, 0.2, 1.0).is_ok());
+        for (l, c, f) in [
+            (0.0, 2.0, 0.05),
+            (-5.0, 2.0, 0.05),
+            (f64::INFINITY, 2.0, 0.05),
+            (f64::NAN, 2.0, 0.05),
+            (1000.0, 0.19, 0.05),
+            (1000.0, f64::NAN, 0.05),
+            (1000.0, f64::INFINITY, 0.05),
+            (1000.0, 2.0, 0.0),
+            (1000.0, 2.0, 1.5),
+            (1000.0, 2.0, f64::NAN),
+        ] {
+            assert!(check_params(l, c, f).is_err(), "lambda {} C {} fdr {}", l, c, f);
+        }
+    }
+
+    #[test]
+    fn the_kernels_work_is_bounded() {
+        // rows 10 bp apart, reach 25 bp: 3 rows a window inside, 2 at the ends
+        let pos: Vec<i64> = (0..10).map(|i| i * 10).collect();
+        assert_eq!(kernel_work(|i| pos[i], pos.len(), 10), 3 * 8 + 2 * 2);
+        assert_eq!(kernel_work(|i| pos[i], pos.len(), 0), 10);
+        assert_eq!(kernel_work(|i| pos[i], pos.len(), i64::MAX), 100);
+        // 4,000 rows 1 bp apart at the default lambda and C: each window holds about 4,000 rows
+        let mut g = Genome {
+            cpgs: (0..4000).map(|i| cpg(i, 0.0, 1.0)).collect(),
+            chroms: vec![Chrom {
+                name: "chr1".into(),
+                lo: 0,
+                hi: 4000,
+            }],
+            global: GlobalBeta::default(),
+            beta_diff: false,
+        };
+        let e = call_dmrs(&mut g, 0.05, 1000.0, 2.0, 2)
+            .err()
+            .expect("refused before smoothing");
+        assert!(e.contains("too wide"), "{}", e);
+        // a narrow enough window is accepted
+        assert!(call_dmrs(&mut g, 0.05, 100.0, 2.0, 2).is_ok());
+    }
+
+    /* A region view recomputes a window of a run from the run's constants alone. Every row it
+    reports must read as the run read it: the same individual significance, and the same smoothed
+    significance -- which the run defines on the smoothed FDR and the region view on the raw
+    smoothed p, through the cut the run carried. */
+    #[test]
+    fn a_region_recomputed_from_the_constants_reproduces_the_run() {
+        let mut seed = 12345u64;
+        let mut rnd = || {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            (seed >> 11) as f64 / (1u64 << 53) as f64
+        };
+        let mut pos = 0u32;
+        let cpgs: Vec<Cpg> = (0..600)
+            .map(|i| {
+                pos += 50 + (rnd() * 100.0) as u32;
+                let effect = if (200..260).contains(&i) || (400..404).contains(&i) {
+                    4.0
+                } else {
+                    0.0
+                };
+                cpg(pos, effect + rnd() - 0.5, 0.5 + rnd())
+            })
+            .collect();
+        let (lambda, c) = (1000.0, 2.0);
+        let mut g = Genome {
+            cpgs: cpgs.clone(),
+            chroms: vec![Chrom {
+                name: "chr1".into(),
+                lo: 0,
+                hi: cpgs.len(),
+            }],
+            global: GlobalBeta::default(),
+            beta_diff: false,
+        };
+        let (dmrs, ind_sig, cons) = call_dmrs(&mut g, 0.05, lambda, c, 2).unwrap();
+        assert!(!dmrs.is_empty() && ind_sig.iter().any(|&s| s) && ind_sig.iter().any(|&s| !s));
+        // the run's smoothed significance, as dmrcate() defines it: smoothed FDR at or below its cut
+        let (_, full_raw) = recompute(&cpgs, &cons.prior, lambda, c);
+        let run_sig: Vec<bool> = bh_adjust(&full_raw)
+            .iter()
+            .map(|&f| f <= cons.smoothed_fdr_cut.unwrap())
+            .collect();
+        assert!(run_sig.iter().any(|&s| s) && run_sig.iter().any(|&s| !s));
+        let starts: Vec<i64> = cpgs.iter().map(|c| c.pos as i64).collect();
+        let last = *starts.last().unwrap();
+        for (qstart, qstop) in [
+            (0, 3000),
+            (starts[190], starts[270]),
+            (starts[395], starts[410]),
+            (last - 2000, last + 5000),
+        ] {
+            let (lo, hi) = region_read_range(&starts, qstart, qstop, lambda, c);
+            let (ind_p, raw) = recompute(&cpgs[lo..hi], &cons.prior, lambda, c);
+            let (a, b) = (
+                lo + starts[lo..hi].partition_point(|&s| s < qstart),
+                lo + starts[lo..hi].partition_point(|&s| s <= qstop),
+            );
+            assert!(b > a);
+            for i in a..b {
+                let j = i - lo;
+                assert_eq!(raw[j], full_raw[i], "row {}: the margin holds the whole kernel", i);
+                assert_eq!(ind_p[j] <= cons.ind_p_cut.unwrap(), ind_sig[i], "row {} individual", i);
+                assert_eq!(
+                    raw[j] <= cons.smoothed_raw_cut.unwrap(),
+                    run_sig[i],
+                    "row {} smoothed",
+                    i
+                );
+            }
+        }
+        // the margin saturates rather than overflowing: at worst the whole chromosome is read
+        assert_eq!(
+            region_read_range(&starts, i64::MIN, i64::MAX, 1e300, 0.2),
+            (0, starts.len())
+        );
+        assert_eq!(
+            region_read_range(&starts, 10_000, 10_000, f64::MAX, 0.2),
+            (0, starts.len())
+        );
     }
 }

@@ -2,6 +2,7 @@ import { resolveElementQuery } from '../../routes/termdb.diffMeth.ts'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { buildGroupValues, isFilterGroup } from '#src/utils/sampleGroups.ts'
 import serverconfig from '#src/serverconfig.js'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getAvailableMemoryMB, admitRun, estimatePeakMB, type MemoryCost } from '#src/utils/memory.ts'
 import { getH5shape } from '#src/utils/h5samples.ts'
 import { mapConcurrent } from '#src/utils/concurrencyLimiter.ts'
@@ -276,6 +277,44 @@ export const DMRCATE_MEMORY: MemoryCost = {
 	perUnitMB: { rows: 0.00008, cols: (2000 * 6) / 1048576 }
 }
 
+/** The longest one request's dmrcate runs may take, in ms: 5 minutes, since an analysis any longer does not fit an
+ * interactive portal. A genome-wide scan takes about a minute on MMRF (16.4M CpGs) and DISCOVER (26.6M). A deployment
+ * may set serverconfig.dmrcateTimeoutMs, as it sets dmrBatchConcurrency. */
+export const DMRCATE_TIMEOUT_MS = Number(serverconfig.dmrcateTimeoutMs) || 5 * 60_000
+
+/** A deadline for a request's dmrcate runs, to pass to each runDmrcate() of the request, so that a scan and its
+ * background run share one limit rather than taking one each */
+export function dmrcateDeadline(): AbortSignal {
+	return AbortSignal.timeout(DMRCATE_TIMEOUT_MS)
+}
+
+/** Runs dmrcate on this input and returns its output, killing the process at the deadline: a run that is stopped
+ * fails with a message ending in `hint`, what the user can change to make the analysis smaller. Stopped rather than
+ * left running, since the run holds a slot of the DMR compute pool and its memory reservation until it ends. */
+export async function runDmrcate(input: object, hint: string, deadline = dmrcateDeadline()): Promise<string> {
+	try {
+		return await run_rust('dmrcate', JSON.stringify(input), [], { signal: deadline })
+	} catch (e) {
+		if (!deadline.aborted) throw e
+		const minutes = Math.round(DMRCATE_TIMEOUT_MS / 60_000)
+		throw new Error(
+			`The DMR analysis was stopped after ${minutes} minute${
+				minutes == 1 ? '' : 's'
+			}, the limit for one analysis. ${hint}`
+		)
+	}
+}
+
+/** Peak memory of one dmrcate region-mode run (termdb/dmr, the region view), by the rows and columns of the matrix file
+ * it reads: it reads every row's position (8 bytes each) to find the window, then fits only the window's rows, which
+ * the server's 10 Mb cap on a region bounds, so the base covers them. Measured 2026-10-30 on MMRF chr1 (1,304,718 rows
+ * x 415 columns, 200 selected) as max RSS: 43 MB for 100 kb, 64 MB for 5 Mb, 90 MB for its densest 10 Mb (76,344
+ * CpGs). */
+export const DMRCATE_REGION_MEMORY: MemoryCost = {
+	baseMB: 100,
+	perUnitMB: { rows: 0.00001, cols: DMRCATE_MEMORY.perUnitMB.cols }
+}
+
 /** [rows, columns] of a methylation matrix file, from the header of its beta/values, read once per file: the files do
  * not change while the server runs */
 const fileShapes = new Map<string, Promise<number[]>>()
@@ -306,6 +345,13 @@ export async function admitDmrcateJobs(
 	const cost = { baseMB: DMRCATE_MEMORY.baseMB * largest.length, perUnitMB: DMRCATE_MEMORY.perUnitMB }
 	const units = { rows: largest.reduce((n, s) => n + s[0], 0), cols: largest.reduce((n, s) => n + s[1], 0) }
 	return admitRun(label, cost, units, await getAvailableMemoryMB(), refusal)
+}
+
+/** Admits one dmrcate region-mode run on this matrix file (DMRCATE_REGION_MEMORY), reserving its memory until the
+ * returned release is called */
+export async function admitDmrcateRegion(file: string, refusal: string): Promise<() => void> {
+	const [rows, cols] = await matrixShape(file)
+	return admitRun('DMR region', DMRCATE_REGION_MEMORY, { rows, cols }, await getAvailableMemoryMB(), refusal)
 }
 
 /** Admits one dmrcate run over all of these matrix files -- a DMR scan, which reads every file in one process, one

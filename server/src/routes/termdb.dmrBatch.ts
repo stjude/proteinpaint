@@ -1,5 +1,5 @@
 import type { RoutePayload, RouteApi, TermdbDmrBatchRequest, TermdbDmrBatchSuccessResponse } from '#types'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { DMRCATE_PARAM_RANGES } from '#types'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime, sampleLimitAlert } from '#shared'
@@ -11,7 +11,9 @@ import {
 	eligibleMethylationSamples,
 	validateChromosomes,
 	admitDmrcateRun,
-	dmrcateValues
+	dmrcateValues,
+	dmrcateDeadline,
+	runDmrcate
 } from '#src/utils/methylationMatrix.ts'
 import {
 	resolveExcludeBeds,
@@ -27,7 +29,7 @@ import {
 	scoreAgainstBackground,
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
-import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { cacheOrRecompute, generateHash } from '#src/utils/cacheOrRecompute.ts'
 import { sampleFilterScope, resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import fs from 'fs'
 import { genomes } from '#src/initGenomesDs.js'
@@ -129,7 +131,9 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 // 9: masked DMRs kept per window, with the sources that masked them, for the region view
 // 10: a DMR's direction is the sign of its delta-beta, not of DMRcate's logit-scale meandiff;
 // global methylation carries each group's mean read depth
-const CACHE_VERSION = 10
+// 11: element and array matrices with missing values take limma's prior for unequal residual df, and their DMRs'
+// meandiff/maxdiff are on the beta scale
+const CACHE_VERSION = 11
 
 /* Fingerprint the data files a result was computed from.
  *
@@ -152,6 +156,15 @@ export function fingerprint(files: string[]) {
 		})
 }
 
+/** A DMRcate parameter as a number within DMRCATE_PARAM_RANGES, or an error naming the range */
+export function inRange(name: keyof typeof DMRCATE_PARAM_RANGES, v: unknown): number {
+	const { min, max } = DMRCATE_PARAM_RANGES[name]
+	const n = Number(v)
+	if (v == null || v === '' || !Number.isFinite(n) || n < min || n > max)
+		throw new Error(`DMRcate ${name} must be a number from ${min} to ${max}.`)
+	return n
+}
+
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -170,7 +183,9 @@ function init({ genomes }) {
  * them to the same renderer every other class goes through. */
 export async function runDmrBatch(
 	q: TermdbDmrBatchRequest,
-	genomes: any
+	genomes: any,
+	/** chr: return only this chromosome's windows, held in memory (see chrViews); the region view's request */
+	opts: { chr?: string } = {}
 ): Promise<{ payload: TermdbDmrBatchSuccessResponse; cacheId: string }> {
 	const genome = genomes[q.genome]
 	if (!genome) throw 'unknown genome'
@@ -266,9 +281,9 @@ export async function runDmrBatch(
 	and one leaving it out (the scan) share one cached run. An element matrix's rows sit ~10 kb apart
 	against a CpG's ~100 bp, so the CpG-scale kernel would smooth nothing there: its default is the
 	client's 50 kb (client/plots/dmr/settings/defaults.ts). */
-	const lambda = q.lambda ?? (first.useElement ? ELEMENT_SCALE_LAMBDA : 1000)
-	const C = q.C ?? 2
-	const fdr_cutoff = q.fdr_cutoff ?? 0.05
+	const lambda = inRange('lambda', q.lambda ?? (first.useElement ? ELEMENT_SCALE_LAMBDA : 1000))
+	const C = inRange('C', q.C ?? 2)
+	const fdr_cutoff = inRange('fdr_cutoff', q.fdr_cutoff ?? 0.05)
 
 	const cacheKey = {
 		v: CACHE_VERSION,
@@ -299,6 +314,14 @@ export async function runDmrBatch(
 	request arriving twice concurrently is deduplicated to one compute by cacheOrRecompute,
 	so a demo and a colleague clicking along cost one scan, not two. */
 	const scope = sampleFilterScope(q, ds)
+	const viewKey = opts.chr ? `${generateHash(cacheKey, scope)}:${opts.chr}` : ''
+	const held = viewKey ? chrViews.get(viewKey) : undefined
+	if (held) {
+		// most recently used last, so the oldest is the one dropped
+		chrViews.delete(viewKey)
+		chrViews.set(viewKey, held)
+		return held
+	}
 	const { result: payload, cacheId } = await cacheOrRecompute<typeof cacheKey, TermdbDmrBatchSuccessResponse>({
 		computeArgument: cacheKey,
 		cacheScope: scope,
@@ -346,18 +369,24 @@ export async function runDmrBatch(
 			const releaseMemory = await admitDmrcateRun(
 				`DMR ${scanning ? 'scan' : 'batch'}`,
 				[...files.keys()],
-				'Server memory is too low to run this DMR scan right now. Try again later, or scan one chromosome.'
+				'Server memory is too low to run this DMR scan right now. Try again later.'
 			)
+			// the run and its background run share one limit; a one-chromosome scan is the genome-wide run too
+			const deadline = dmrcateDeadline()
+			const tooLong = `Compare smaller groups${
+				q.backgroundCorrection ? ', or turn off the background drift correction' : ''
+			}.`
 			let result: any
 			try {
 				result = JSON.parse(
-					await run_rust(
-						'dmrcate',
-						JSON.stringify({
+					await runDmrcate(
+						{
 							...input,
 							windows: chrEntriesAll.flatMap(([chr, ws]) => ws.map(w => ({ chr, start: w.start, stop: w.stop }))),
 							bin_bp: q.binMethylation ? METHYLATION_BIN_BP : 0
-						})
+						},
+						tooLong,
+						deadline
 					)
 				)
 				if (result.error) throw new Error(result.error)
@@ -453,9 +482,10 @@ export async function runDmrBatch(
 							.map(m => ({ ...m, chrs: m.chrs.filter(c => drawn.has(c)) }))
 							.filter(m => m.chrs.length)
 						const bgRes = JSON.parse(
-							await run_rust(
-								'dmrcate',
-								JSON.stringify({ ...input, matrices, background_regions: draws.flatMap(d => d.windows) })
+							await runDmrcate(
+								{ ...input, matrices, background_regions: draws.flatMap(d => d.windows) },
+								tooLong,
+								deadline
 							)
 						)
 						if (bgRes.error) throw new Error(bgRes.error)
@@ -556,5 +586,20 @@ export async function runDmrBatch(
 		}
 	})
 	mayLog(`DMR ${scanning ? 'scan' : 'batch'} served ${cacheId} in`, formatElapsedTime(Date.now() - time1))
-	return { payload, cacheId }
+	if (!viewKey) return { payload, cacheId }
+	const view = {
+		payload: { ...payload, regions: payload.regions.filter(r => r.chr == opts.chr), binMethylation: undefined },
+		cacheId
+	}
+	chrViews.set(viewKey, view)
+	if (chrViews.size > MAX_CHR_VIEWS) chrViews.delete(chrViews.keys().next().value!)
+	return view
 }
+
+/* One chromosome of a cached run, by cacheId and chromosome, for the region view: every pan and zoom asks
+for the run again, and reading it from the cache file means parsing the whole genome's DMRs (~110 MB of JSON
+for a genome-wide MMRF or DISCOVER run) each time. One chromosome's DMRs are a few MB, so a handful are held,
+least recently used dropped first. The cacheId names the data files' fingerprint, so a rebuilt matrix is a
+new entry rather than a stale one. */
+const chrViews = new Map<string, { payload: TermdbDmrBatchSuccessResponse; cacheId: string }>()
+const MAX_CHR_VIEWS = 8

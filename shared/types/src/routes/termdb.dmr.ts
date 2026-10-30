@@ -33,7 +33,8 @@ export type TermdbDmrRequest = {
 	/** Group/DMR colors for server-side track rendering */
 	colors?: { group1: string; group2: string; hyper: string; hypo: string }
 	/** The chromosomes of the DMRcate run this view is a window on: a region opened from a scan names
-	 * the scan's, so it shows the DMRs the volcano drew. Absent, or not covering chr = the whole genome. */
+	 * the scan's, so it shows the DMRs the volcano drew. Absent = the whole genome; a list without chr is
+	 * refused, since that region was not in the run. */
 	scanChromosomes?: string[]
 	/** That scan's background correction, which is in its run's cache key, so the view finds the run */
 	backgroundCorrection?: boolean

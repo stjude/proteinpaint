@@ -6,17 +6,20 @@ import { getDefaultDMRSettings } from '../settings/defaults'
 Tests:
 	A DMR under the scan's Min Δβ is drawn gray and labeled, and a note says why, with the read depths
 	A masked DMR is labeled with its mask, with its own note
-	No depth sentence when the groups' depths are close
+	No depth sentence when the groups' depths are close, or when one group has no reads
+	A view saved with no scan says its DMRs come from the default genome-wide run
 */
 
 const dmr = (start: number, delta_beta_mean: number, direction = 'hyper') =>
 	({ chr: 'chr1', start, stop: start + 1000, no_cpgs: 20, min_smoothed_fdr: 1e-20, delta_beta_mean, direction } as any)
 
-function vm(readDepth?: { control: number; case: number }, masked: any[] = []) {
+function vm(readDepth?: { control: number; case: number }, masked: any[] = [], scanChromosomes = ['chr1']) {
 	const config: any = {
 		group1Name: 'NM Background',
 		group2Name: 'ATRT SHH',
 		readDepth,
+		// opened from a scan, unless a test passes none
+		scanChromosomes,
 		settings: { dmr: getDefaultDMRSettings({ settings: { minDeltaBeta: 0.1 } }) }
 	}
 	return new DmrViewModel(
@@ -56,8 +59,20 @@ tape('A masked DMR is labeled with its mask and gets its own note', test => {
 	test.end()
 })
 
-tape('No depth sentence when the groups are close in depth', test => {
-	const v = vm({ control: 2, case: 2.4 })
-	test.notOk(v.notes[0].includes('reads per CpG'), 'only the Min Δβ explanation')
+tape('No depth sentence when the groups are close in depth, or when one group has no reads', test => {
+	test.notOk(vm({ control: 2, case: 2.4 }).notes[0].includes('reads per CpG'), 'only the Min Δβ explanation')
+	test.notOk(vm({ control: 0, case: 2.4 }).notes[0].includes('reads per CpG'), 'no ratio of a group with no reads')
+	test.end()
+})
+
+tape('A view saved with no scan says its DMRs come from the default genome-wide run', test => {
+	test.ok(
+		vm(undefined, [], []).notes.some(n => n.startsWith('This view was saved before region views were opened')),
+		'a view with no scan chromosomes gets the note'
+	)
+	test.notOk(
+		vm().notes.some(n => n.startsWith('This view was saved')),
+		'a view opened from a scan does not'
+	)
 	test.end()
 })

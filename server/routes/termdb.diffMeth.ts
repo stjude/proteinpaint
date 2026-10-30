@@ -336,8 +336,7 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	try {
 		// the view's DMRs only, so a one-chromosome scan's track holds that chromosome's
 		const viewKey = view === payload ? 'all' : chromosomes.join('_')
-		scan.bedjFile = await writeDmrBedjFile(
-			`dmr-${cacheId}-${viewKey}-${scan.minCpgs}-${scan.minDeltaBeta}.txt`,
+		scan.bedjFile = await writeDmrBedjFile(`dmr-${cacheId}-${viewKey}-${scan.minCpgs}-${scan.minDeltaBeta}.txt`, () =>
 			dmrBedjLines(view, scan.minCpgs, scan.minDeltaBeta)
 		)
 	} catch (e: any) {
@@ -620,8 +619,8 @@ async function runDmFresh(
 
 /** Writes the DMRs as a plain text bedj file in the "bedj" cache subdir, made by CacheManager on startup, which a
  * block track reads with isCache:true, and returns the file name. The name keys the content, so an existing file is
- * reused. */
-export async function writeDmrBedjFile(name: string, text: string): Promise<string> {
+ * reused, and its text, a line per DMR of the genome, is only built when the file is written. */
+export async function writeDmrBedjFile(name: string, text: () => string): Promise<string> {
 	const file = path.join(cachedir, 'bedj', name)
 	if (fs.existsSync(file)) {
 		// the subdir is swept by mtime, so touch on reuse: a result that is still in use is not swept
@@ -632,7 +631,7 @@ export async function writeDmrBedjFile(name: string, text: string): Promise<stri
 	// written under a unique name and renamed into place, so a concurrent read never sees a partial file
 	const tmp = path.join(path.dirname(file), `.tmp-${randomUUID()}-${name}`)
 	try {
-		await fs.promises.writeFile(tmp, text)
+		await fs.promises.writeFile(tmp, text())
 		await fs.promises.rename(tmp, file)
 	} finally {
 		await fs.promises.rm(tmp, { force: true })

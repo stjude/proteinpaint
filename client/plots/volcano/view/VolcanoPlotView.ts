@@ -615,7 +615,7 @@ export class VolcanoPlotView {
 				getActions: d => [
 					{
 						label: 'Genome browser',
-						onClick: async () => await this.interactions.launchScanGenomeBrowser(region(d), this.viewData.scan!)
+						onClick: async () => await this.interactions.launchMethylationGenomeBrowser(region(d), this.viewData.scan!)
 					}
 				],
 				getRowKey: d => label(d),
@@ -914,12 +914,13 @@ export class VolcanoPlotView {
 			},
 			{
 				/* A scan has already called every DMR: the browser shows them from the cache, beside
-				the genes and cCREs, with no per-CpG detail. The region view below adds that detail. */
+				the genes and cCREs, with no per-CpG detail; the region view below adds that detail. An
+				element-class hit (promoter, cCRE) opens on the genes and cCREs around it. */
 				label: 'Genome browser',
-				isVisible: () => termType === tt.DNA_METHYLATION && !!this.viewData.scan,
+				isVisible: () => termType === tt.DNA_METHYLATION,
 				onClick: async () => {
 					const dm = d as DataPointEntry & { chr: string; start: number; stop: number }
-					await interactions.launchScanGenomeBrowser(dm, this.viewData.scan!)
+					await interactions.launchMethylationGenomeBrowser(dm, this.viewData.scan)
 				}
 			},
 			{
@@ -932,7 +933,8 @@ export class VolcanoPlotView {
 			{
 				/* The region view on a scan's DMR only. An element-class hit (promoter, cCRE) comes from a
 				per-element test; the region view draws DMRcate's de novo calls, which need not agree with it,
-				and showing one under the other mixes two analyses. The violin and the browser serve elements. */
+				and showing one under the other mixes two analyses. The violin and the browser above serve
+				elements. */
 				label: 'Differentially Methylated Region (DMR) Analysis',
 				isVisible: () => termType === tt.DNA_METHYLATION && !!this.viewData.scan,
 				onClick: async () => {

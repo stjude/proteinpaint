@@ -23,6 +23,7 @@ debugmode emits one write log and one read log per cache cycle
 timing logs are silent when debugmode is off
 pool gates DISTINCT keys, not same-key attachers
 distinct key beyond the cap rejects with CACHE_BUSY and status 429
+a cache hit is served while the pool is full
 client retry works once a slot frees (no negative caching of busy state)
 cacheFilePath rejects ids that don't match the 32-hex shape
 cacheOrRecompute rejects an unknown cacheSubdir with a helpful error
@@ -49,6 +50,11 @@ function cleanup() {
 	// rmSync with force:true is a silent no-op if the file is already gone
 	// (e.g., a sibling test cleaned it up, or a test bailed before write).
 	for (const f of writtenFiles.splice(0)) fs.rmSync(f, { force: true })
+}
+
+/** Lets the cache reads of the computes just started miss, so each holds its slot of the pool */
+function poolFilled() {
+	return new Promise(r => setTimeout(r, 20))
 }
 
 tape('\n', t => {
@@ -398,6 +404,8 @@ tape('distinct key beyond the cap rejects with CACHE_BUSY and status 429', async
 	})
 
 	const inflight = Array.from({ length: cap }, (_, i) => cacheOrRecompute(slowOpts(i)))
+	// a compute takes its slot after its cache read misses
+	await poolFilled()
 
 	let busyErr: any
 	try {
@@ -411,6 +419,34 @@ tape('distinct key beyond the cap rejects with CACHE_BUSY and status 429', async
 	t.equal(busyErr.code, 'CACHE_BUSY', 'busy error carries code CACHE_BUSY')
 	t.match(busyErr.message, /Cache compute pool is full/, 'busy message identifies a busy cache pool')
 	t.match(busyErr.message, /try again shortly/i, 'busy message tells the client to retry')
+
+	await Promise.all(inflight)
+	cleanup()
+	t.end()
+})
+
+tape('a cache hit is served while the pool is full', async t => {
+	ensureSubdir()
+	const tag = crypto.randomBytes(8).toString('hex')
+	const cap = cacheRegistry.de.maxPending
+
+	const slowOpts = (n: number) => ({
+		computeArgument: { tag, n, kind: 'pool-hit' },
+		cacheSubdir: 'de' as const,
+		computeFresh: async ({ cacheId }: { cacheId: string }) => {
+			trackCachePath(cacheId)
+			await new Promise(r => setTimeout(r, 80))
+			return { kind: 'TEST', tag, n }
+		}
+	})
+
+	// cached before the pool fills
+	await cacheOrRecompute(slowOpts(cap + 1))
+	const inflight = Array.from({ length: cap }, (_, i) => cacheOrRecompute(slowOpts(i)))
+	await poolFilled()
+
+	const hit = await cacheOrRecompute(slowOpts(cap + 1))
+	t.equal((hit.result as any).n, cap + 1, 'the cached result is returned, not a CACHE_BUSY error')
 
 	await Promise.all(inflight)
 	cleanup()
@@ -433,6 +469,7 @@ tape('client retry works once a slot frees (no negative caching of busy state)',
 	})
 
 	const inflight = Array.from({ length: cap }, (_, i) => cacheOrRecompute(slowOpts(i)))
+	await poolFilled()
 
 	// First attempt of the (cap+1)th distinct request — should reject.
 	let firstAttemptErr: any

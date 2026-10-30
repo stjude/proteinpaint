@@ -79,7 +79,8 @@ export class DmrViewModel {
 				`changes between the groups (${one ? `Δβ ${signed(below[0].delta_beta_mean)}` : 'each'} under the ` +
 				`volcano's minimum of ${floor}), so the volcano does not count ${one ? 'it' : 'them'}.`
 			const d = config.readDepth
-			if (d && Math.max(d.control, d.case) / Math.min(d.control, d.case) > 1.5) {
+			// a group with no reads has no ratio to state
+			if (d && Math.min(d.control, d.case) > 0 && Math.max(d.control, d.case) / Math.min(d.control, d.case) > 1.5) {
 				const [deep, shallow, dv, sv] = d.case > d.control ? [g2, g1, d.case, d.control] : [g1, g2, d.control, d.case]
 				text +=
 					` In this comparison ${deep} has ${(dv / sv).toFixed(1)}× the reads per CpG of ${shallow} (${dv.toFixed(
@@ -100,6 +101,14 @@ export class DmrViewModel {
 			)
 		}
 		if (!showDots) notes.push('Zoom in to see per-CpG dots.')
+		/* A view saved before region views were opened from a scan names no scan, so the server windows the
+		genome-wide run at its defaults, which need not be the DMRs the view showed when it was saved. */
+		if (!config.scanChromosomes?.length)
+			notes.push(
+				'This view was saved before region views were opened from a DMR scan. Its DMRs come from DMRcate run over ' +
+					'the whole genome at default settings, with no minimum CpG count or Min Δβ, so they can differ from those ' +
+					'it showed when saved. Open the region from a DMR scan to match the scan.'
+			)
 		return notes
 	}
 

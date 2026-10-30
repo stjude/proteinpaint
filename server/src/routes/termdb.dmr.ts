@@ -2,15 +2,15 @@ import type { RoutePayload, RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse
 import { DMR_SCAN_Y_AXES } from '#types'
 
 type Dmr = TermdbDmrSuccessResponse['dmrs'][number]
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import {
 	resolveMethylationMatrix,
 	resolveGroupNames,
-	admitDmrcateJobs,
+	admitDmrcateRegion,
 	dmrcateValues,
-	eligibleMethylationSamples
+	eligibleMethylationSamples,
+	runDmrcate
 } from '#src/utils/methylationMatrix.ts'
 import { resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import { formatElapsedTime } from '#shared'
@@ -120,7 +120,9 @@ function init({ genomes }) {
 					backgroundCorrection: !!q.backgroundCorrection,
 					__protected__: q.__protected__
 				},
-				genomes
+				genomes,
+				// this chromosome only, held in memory after the first request, so a pan or zoom does not parse the genome
+				{ chr: q.chr }
 			)
 			if (!run.constants) throw new Error('This DMR run predates region views; run the scan again.')
 			// the scan's CpG floor: a DMR the scan dropped is not drawn as one it counted
@@ -149,16 +151,14 @@ function init({ genomes }) {
 				colors: q.colors
 			}
 
-			const releaseMemory = await admitDmrcateJobs(
-				'DMR region',
-				[matrixFile],
-				1,
+			const releaseMemory = await admitDmrcateRegion(
+				matrixFile,
 				'Server memory is too low to analyze this region right now. Try again later.'
 			)
 			const time1 = Date.now()
 			let result
 			try {
-				result = JSON.parse(await run_rust('dmrcate', JSON.stringify(dmrInput)))
+				result = JSON.parse(await runDmrcate(dmrInput, 'Try a smaller region.'))
 			} finally {
 				releaseMemory()
 			}
@@ -169,7 +169,8 @@ function init({ genomes }) {
 			const maskedDmrs = run.regions
 				.filter(r => r.chr == q.chr)
 				.flatMap(r => r.masked || [])
-				.filter(d => d.start < q.stop && d.stop > q.start && d.no_cpgs >= minCpgs)
+				// inclusive, as dmrcate's region mode selects the drawn DMRs, so the two agree at the window's edges
+				.filter(d => d.start <= q.stop && d.stop >= q.start && d.no_cpgs >= minCpgs)
 			res.send({
 				status: 'ok',
 				dmrs: result.dmrs,

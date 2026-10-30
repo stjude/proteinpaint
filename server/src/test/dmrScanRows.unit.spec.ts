@@ -16,6 +16,8 @@ summarizeProfile: quantiles and moved-fraction of the genome-wide binned profile
 coarsenProfile: probe-weighted re-binning for display
 dmrBedjLines: the plain text bedj file of the kept DMRs
 y follows the requested region statistic, the smoothed FDR by default
+restrictScanPayload: a chromosome view keeps the run calls and counts only its own
+restrictScanPayload keeps the facts of the whole run, which the client labels as such
 */
 
 /** The scan reaches the volcano only through this mapping, so a mistake here is a wrong figure
@@ -328,6 +330,24 @@ tape('restrictScanPayload: a chromosome view keeps the run calls and counts only
 		[['chr2'], ['chr1', 'chr2']],
 		'the view and the run are both named'
 	)
+	t.end()
+})
+
+tape('restrictScanPayload keeps the facts of the whole run, which the client labels as such', t => {
+	const globalMethylation = { controlMeanBeta: 0.5, caseMeanBeta: 0.52, shift: 0.02, valuesCounted: 9 }
+	const backgroundCorrection = { windows: 400, scored: 0, unscored: 0, significant: 0, matchedOn: ['width'] }
+	const resources = { workers: 1, wallMs: 60000 }
+	const run: any = payload([dmr({ chr: 'chr1' }), dmr({ chr: 'chr2', start: 5000, stop: 6000 })], {
+		globalMethylation,
+		backgroundCorrection,
+		resources,
+		constants: { lambda: 1000, C: 2, fdr_cutoff: 0.05 }
+	})
+	const view = restrictScanPayload(run, ['chr2'])
+	t.deepEqual(view.globalMethylation, globalMethylation, 'global methylation is the run, measured genome-wide')
+	t.equal(view.backgroundCorrection!.windows, 400, 'background windows are sampled over the run')
+	t.deepEqual(view.resources, resources, 'the cost is the run')
+	t.deepEqual(view.constants, run.constants, 'the constants a region view needs are the run')
 	t.end()
 })
 

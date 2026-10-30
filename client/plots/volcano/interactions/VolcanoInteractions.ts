@@ -328,7 +328,8 @@ export class VolcanoInteractions {
 				lambda: k?.lambda ?? s.lambda,
 				C: k?.C ?? s.C,
 				fdr_cutoff: k?.fdr_cutoff ?? s.fdrCutoff,
-				minDeltaBeta: s.deltaBetaCutoff
+				// the floor the scan's counts were made with, which the control may since have left
+				minDeltaBeta: scan.minDeltaBeta
 			},
 			scanChromosomes: scan.runChromosomes,
 			// also in the run's cache key, so the region finds the scan's run rather than refitting it
@@ -361,12 +362,14 @@ export class VolcanoInteractions {
 	at), so the track is an ordinary file tk: the browser reads whatever region is in view from it,
 	including after the reader types another position into the search box. Opened on the DMR with
 	room either side. */
-	async launchScanGenomeBrowser(d: { chr: string; start: number; stop: number }, scan: DmrScanSummary) {
+	/** A genome browser on a methylation hit: a scan's DMR, with the scan's DMRs as a track, or an element-class hit
+	 * (promoter, cCRE), with the genes and cCREs around it and no DMR track, since no DMRs were called */
+	async launchMethylationGenomeBrowser(d: { chr: string; start: number; stop: number }, scan?: DmrScanSummary) {
 		const tracks: any[] = []
 		// the regulatory context the region view also switches on, by the genome's own declaration
 		const ccre = (this.app.opts.genome?.tracks || []).find((t: any) => t.name == CCRE_TRACK_NAME)
 		if (ccre) tracks.push(structuredClone(ccre))
-		if (scan.bedjFile) {
+		if (scan?.bedjFile) {
 			tracks.push({
 				type: 'bedj',
 				name: 'Scan DMRs',

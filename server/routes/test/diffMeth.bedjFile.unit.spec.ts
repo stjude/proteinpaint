@@ -26,14 +26,20 @@ tape('writeDmrBedjFile', async test => {
 	fs.mkdirSync(dir, { recursive: true })
 	fs.rmSync(file, { force: true })
 
-	test.equal(await writeDmrBedjFile(name, text), name, 'returns the cache file name it was given')
+	test.equal(await writeDmrBedjFile(name, () => text), name, 'returns the cache file name it was given')
 	test.equal(fs.readFileSync(file, 'utf8'), text, 'writes the text as is in the bedj cache dir')
 
 	const before = fs.statSync(file)
 	// a past mtime, so that the touch is seen even when the two calls are within the same millisecond
 	const past = new Date(before.mtimeMs - 60000)
 	fs.utimesSync(file, past, past)
-	test.equal(await writeDmrBedjFile(name, 'other text'), name, 'a second call returns the same file')
+	let built = false
+	const other = () => {
+		built = true
+		return 'other text'
+	}
+	test.equal(await writeDmrBedjFile(name, other), name, 'a second call returns the same file')
+	test.notOk(built, 'without building the text of a file that exists')
 	const after = fs.statSync(file)
 	// a rewrite renames a fresh temp file into place, which would change the inode; a touch does not
 	test.equal(after.ino, before.ino, 'and does not rewrite it')

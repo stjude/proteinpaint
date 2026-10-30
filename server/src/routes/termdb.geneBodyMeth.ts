@@ -1,5 +1,4 @@
 import type { RouteApi, RoutePayload } from '#types'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
@@ -11,6 +10,8 @@ import {
 	eligibleMethylationSamples,
 	validateChromosomes,
 	admitDmrcateJobs,
+	dmrcateDeadline,
+	runDmrcate,
 	dmrcateValues,
 	runJobPool
 } from '#src/utils/methylationMatrix.ts'
@@ -150,7 +151,8 @@ function init({ genomes }) {
 /** Bump when a change here alters the deltas for an unchanged request. */
 // 2: corrected mode added; raw entries carry corrected:false in the key
 // 3: one cohort for all chromosomes; major chromosomes only; one locus per gene symbol
-const CACHE_VERSION = 3
+// 4: dmrcate reads background regions without the model, so a body keeps CpGs the model drops, such as zero variance
+const CACHE_VERSION = 4
 
 /* Mean delta-beta over every gene body, keyed by gene symbol -- one signed number per gene across
 the whole genome. This is the gene-level reading of a methylation scan: a DMR list has many regions
@@ -283,6 +285,8 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 		CONCURRENCY,
 		'Server memory is too low to compare gene-body methylation right now. Try again later.'
 	)
+	// one limit for the request's runs, which run CONCURRENCY at a time
+	const deadline = dmrcateDeadline()
 	try {
 		await runJobPool(jobList, CONCURRENCY, async jobChrs => {
 			const matrix = resolveMethylationMatrix(ds, jobChrs[0], q.element_type)
@@ -313,9 +317,8 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 				parts.push({ chr, bodies, windows })
 			}
 			const out = JSON.parse(
-				await run_rust(
-					'dmrcate',
-					JSON.stringify({
+				await runDmrcate(
+					{
 						matrices: [{ file: matrix.matrixFile, chrs: jobChrs }],
 						...dmrcateValues(matrix),
 						background_regions: parts.flatMap(p => [
@@ -324,7 +327,9 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 						]),
 						case: group2.join(','),
 						control: group1.join(',')
-					})
+					},
+					'Compare smaller groups.',
+					deadline
 				)
 			)
 			if (out.error) throw new Error(`${jobChrs.join(',')}: ${out.error}`)
