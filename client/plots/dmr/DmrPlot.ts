@@ -5,6 +5,12 @@ import { getDefaultDMRSettings } from './settings/defaults.ts'
 import { DmrModel } from './model/DmrModel.ts'
 import { DmrViewModel } from './viewModel/DmrViewModel.ts'
 import { DmrView } from './view/DmrView.ts'
+import { startElapsedTimer } from '#dom'
+
+/* Says why a wait can be long: a view on a comparison whose genome-wide run is not cached, such as a saved
+session's, runs it first */
+const LOADING_TEXT =
+	'Running DMR analysis\u2026 A comparison not yet cached first runs DMRcate over the whole genome, which can take minutes.'
 
 class DmrPlot extends PlotBase implements RxComponent {
 	static type = 'dmr'
@@ -13,6 +19,8 @@ class DmrPlot extends PlotBase implements RxComponent {
 	declare dom: DmrDom
 	blockInstance: InstanceType<any> | null = null
 	analyzedRegion: { chr: string; start: number; stop: number } | null = null
+	/** counts the requests that showed the loading text; see showLoading() */
+	private loadingRequest = 0
 	view!: DmrView
 	private model!: DmrModel
 	private genomeObj: any
@@ -33,7 +41,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			loadingOverlay,
 			error: opts.holder.append('div'),
 			note: opts.holder.append('div'),
-			loading: opts.holder.append('div').text('Running DMR analysis\u2026'),
+			loading: opts.holder.append('div').style('display', 'none'),
 			diagnosticPanel: opts.holder.append('div').style('display', 'none')
 		}
 		this.view = new DmrView(this.dom)
@@ -76,6 +84,8 @@ class DmrPlot extends PlotBase implements RxComponent {
 		if (a && coordsChanged) {
 			// New coordinates — re-fetch and update tracks in place
 			this.view.showOverlay()
+			// a pan onto another chromosome can wait on a fresh DMRcate run, so it gets the timer too
+			const hideLoading = this.showLoading()
 
 			try {
 				checkRegionSize(stop - start, config.settings.dmr.maxRegionSize)
@@ -90,7 +100,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 
 				this.view.updateTracks(vm.viewData, this.blockInstance)
 				this.view.updateLegend(this.blockInstance, vm.viewData.legendRows)
-				this.view.showLoessNote(!vm.viewData.showDots)
+				this.view.showNotes(vm.viewData.notes)
 				this.view.clearDiagnostics()
 				if (vm.viewData.diagnostic)
 					this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
@@ -98,12 +108,14 @@ class DmrPlot extends PlotBase implements RxComponent {
 				if (this.app.isAbortError(e)) return
 				this.view.hideOverlay()
 				throw e
+			} finally {
+				hideLoading()
 			}
 			this.view.hideOverlay()
 		} else {
 			// First render, or same coordinates with changed settings (e.g. a settings change) — full build
 			this.dom.holder.selectAll('*').remove()
-			this.dom.loading.style('display', 'block')
+			const hideLoading = this.showLoading()
 			this.blockInstance = null
 
 			try {
@@ -124,15 +136,27 @@ class DmrPlot extends PlotBase implements RxComponent {
 					rglst => this.onBlockCoordinateChange(rglst)
 				)
 				this.view.renderLegend(this.blockInstance, vm.viewData.legendRows)
-				this.view.showLoessNote(!vm.viewData.showDots)
+				this.view.showNotes(vm.viewData.notes)
 				if (vm.viewData.diagnostic)
 					this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
 			} catch (e: unknown) {
 				if (this.app.isAbortError(e)) return
-				this.dom.loading.style('display', 'none')
 				throw e
+			} finally {
+				hideLoading()
 			}
-			this.dom.loading.style('display', 'none')
+		}
+	}
+
+	/** Shows the loading text with its elapsed timer. The returned cleanup stops this request's timer and hides the text
+	 * only when no newer request has shown it since: an aborted request ending late must not hide a newer one's. */
+	private showLoading(): () => void {
+		const request = ++this.loadingRequest
+		this.dom.loading.style('display', 'block')
+		const stopTimer = startElapsedTimer(this.dom.loading, LOADING_TEXT)
+		return () => {
+			stopTimer()
+			if (request == this.loadingRequest) this.dom.loading.style('display', 'none')
 		}
 	}
 

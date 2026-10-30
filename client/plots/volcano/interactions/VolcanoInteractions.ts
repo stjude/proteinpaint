@@ -1,6 +1,6 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { groupColors } from '../groupColors'
-import { getGroupForRegion } from '#mass/groups'
+import { getGroupForRegion, withOthersGroup } from '#mass/groups'
 import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI, sayerror } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
@@ -13,6 +13,7 @@ import { elementNoun } from '../promoterLabel'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { dofetch3 } from '#common/dofetch'
 import { getGroupColors } from '../colors'
+import { downloadManhattanSvg } from '#plots/manhattan/manhattan.ts'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -88,14 +89,30 @@ export class VolcanoInteractions {
 
 	download(termType: string) {
 		this.dom.actionsTip.clear().showunder(this.dom.controls.select('div').node())
+		// a DMR scan draws its Manhattan and methylation profile beside the volcano; each saves on its own
+		const manhattan = this.dom.holder.select('#sjpp-volcano-scanManhattan > svg').node() as SVGSVGElement | null
+		const profile = this.dom.holder
+			.select('[data-testid="sjpp-volcano-methylationProfile"] svg')
+			.node() as SVGSVGElement | null
 		const opts = [
 			{
-				text: 'Download plot',
+				text: manhattan ? 'Download volcano plot' : 'Download plot',
 				callback: () => {
 					const svg = this.dom.holder.select('svg').node() as Node
 					to_svg(svg, `Differential ${termType} analysis volcano`, { apply_dom_styles: true })
 				}
 			},
+			...(manhattan
+				? [{ text: 'Download DMR plot', callback: () => downloadManhattanSvg(manhattan, 'DMR scan Manhattan') }]
+				: []),
+			...(profile
+				? [
+						{
+							text: 'Download methylation profile',
+							callback: () => downloadManhattanSvg(profile, 'DMR scan methylation profile')
+						}
+				  ]
+				: []),
 			{
 				// DAP volcanoes report a single FDR rather than a p-value.
 				text: termType === PROTEOME_DAP ? 'Download FDR table' : 'Download p-value table',
@@ -277,14 +294,11 @@ export class VolcanoInteractions {
 		})
 	}
 
-	/** When clicking on a DM data point, dispatches a DMR plot that runs DMRCate
-	 * analysis and renders a genome browser Block with DMR regions on their own
-	 * track. */
-	async launchDmr(
-		d: { chr: string; start: number; stop: number; promoterId?: string },
-		/** DMR-plot settings to override, e.g. pad: 0 for a region that is already its own context */
-		dmrSettings: Record<string, any> = {}
-	) {
+	/** Opens the region view on a DMR of a scan: a window on the scan's own DMRcate run -- its
+	 * chromosomes, lambda, C and FDR -- so it draws the DMRs the volcano drew, from the cache. Takes the
+	 * scan rather than a region alone so it cannot be opened from an element class, whose hits come
+	 * from another test: a per-element comparison that DMRcate's de novo calls need not agree with. */
+	async launchDmr(d: { chr: string; start: number; stop: number }, scan: DmrScanSummary) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 
 		/* Shared with the batch drill-down's launcher so the two cannot drift. Absent colours are
@@ -292,24 +306,49 @@ export class VolcanoInteractions {
 		used to substitute was neither chosen nor legible next to the hyper/hypo bars. */
 		const colors = groupColors(config)
 
-		const label = d.promoterId || `${d.chr}:${d.start}-${d.stop}`
+		const s = config.settings.volcano
+		/* The groups as the scan request sent them: the state's "others" group is an {in:false} placeholder
+		repeating the first group's samples, which would compare the group with itself and miss the scan's
+		cached run. */
+		const termfilter = this.app.getState().termfilter
+		const groups = withOthersGroup(config.samplelst.groups, termfilter)
+		// the parameters the scan's run used, defaults filled in server-side, so the region windows that run
+		const k = scan.dmrcate
 		const dmrConfig: any = {
 			chartType: 'dmr',
-			headerText: `DMR: ${label}`,
+			headerText: `DMR: ${d.chr}:${d.start}-${d.stop}`,
 			coordinateOverride: { chr: d.chr, start: d.start, stop: d.stop },
 			// the samples of each group, or the filter of a group that is defined by one
-			group1: getGroupForRegion(config.samplelst.groups[0]),
-			group2: getGroupForRegion(config.samplelst.groups[1]),
-			group1Name: config.samplelst.groups[0].name,
-			group2Name: config.samplelst.groups[1].name,
-			/* Which element matrix to drill into, for a dataset whose methylation is element-level
-			only. The server ignores it when the dataset has a CpG-level matrix, which is finer. The
-			scan is not a matrix, so a region opened from a scan names none and the server picks. */
-			elementType:
-				config?.settings?.volcano?.elementType == DMR_SCAN_ELEMENT_TYPE
-					? undefined
-					: config?.settings?.volcano?.elementType,
-			settings: { colors, ...dmrSettings }
+			group1: getGroupForRegion(groups[0]),
+			group2: getGroupForRegion(groups[1]),
+			group1Name: groups[0].name,
+			group2Name: groups[1].name,
+			settings: {
+				colors,
+				lambda: k?.lambda ?? s.lambda,
+				C: k?.C ?? s.C,
+				fdr_cutoff: k?.fdr_cutoff ?? s.fdrCutoff,
+				// the floor the scan's counts were made with, which the control may since have left
+				minDeltaBeta: scan.minDeltaBeta
+			},
+			scanChromosomes: scan.runChromosomes,
+			// also in the run's cache key, so the region finds the scan's run rather than refitting it
+			backgroundCorrection: !!scan.backgroundCorrection,
+			// the scan drops DMRs with fewer CpGs; the region view drops them too
+			minCpgs: scan.minCpgs,
+			// and the DMRs without its y-axis statistic
+			yAxis: scan.yAxis,
+			/* the cohort filter the scan request sent, which resolves a filter-defined group that carries none
+			of its own; a different cohort would be a different run */
+			filter0: termfilter.filter0,
+			...(scan.globalMethylation?.controlMeanDepth != null && scan.globalMethylation?.caseMeanDepth != null
+				? {
+						readDepth: {
+							control: scan.globalMethylation.controlMeanDepth,
+							case: scan.globalMethylation.caseMeanDepth
+						}
+				  }
+				: {})
 		}
 
 		this.app.dispatch({
@@ -323,12 +362,14 @@ export class VolcanoInteractions {
 	at), so the track is an ordinary file tk: the browser reads whatever region is in view from it,
 	including after the reader types another position into the search box. Opened on the DMR with
 	room either side. */
-	async launchScanGenomeBrowser(d: { chr: string; start: number; stop: number }, scan: DmrScanSummary) {
+	/** A genome browser on a methylation hit: a scan's DMR, with the scan's DMRs as a track, or an element-class hit
+	 * (promoter, cCRE), with the genes and cCREs around it and no DMR track, since no DMRs were called */
+	async launchMethylationGenomeBrowser(d: { chr: string; start: number; stop: number }, scan?: DmrScanSummary) {
 		const tracks: any[] = []
 		// the regulatory context the region view also switches on, by the genome's own declaration
 		const ccre = (this.app.opts.genome?.tracks || []).find((t: any) => t.name == CCRE_TRACK_NAME)
 		if (ccre) tracks.push(structuredClone(ccre))
-		if (scan.bedjFile) {
+		if (scan?.bedjFile) {
 			tracks.push({
 				type: 'bedj',
 				name: 'Scan DMRs',
@@ -348,6 +389,8 @@ export class VolcanoInteractions {
 			type: 'plot_create',
 			config: {
 				chartType: 'genomeBrowser',
+				// a coordinate with no gene: genomic mode, whatever mode the dataset defaults the browser to
+				blockIsProteinMode: false,
 				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - pad), stop: d.stop + pad },
 				tracks
 			}
@@ -373,6 +416,8 @@ export class VolcanoInteractions {
 			type: 'plot_create',
 			config: {
 				chartType: 'genomeBrowser',
+				// as for a scan DMR: a coordinate with no gene opens in genomic mode
+				blockIsProteinMode: false,
 				// cluster start/stop are the 1-based exon boundaries; the junctions are already 0-based
 				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - 1 - pad), stop: d.stop + pad },
 				tracks: [

@@ -1,5 +1,7 @@
 import type { Filter } from '../filter.ts'
 import type { SampleFilterGroup } from '../terms/samplelst.ts'
+import type { TermdbDmrBatchSuccessResponse } from './termdb.dmrBatch.ts'
+import type { DmrScanYAxis } from './termdb.diffMeth.ts'
 
 export type TermdbDmrRequest = {
 	genome: string
@@ -30,9 +32,17 @@ export type TermdbDmrRequest = {
 	maxLoessRegion?: number
 	/** Group/DMR colors for server-side track rendering */
 	colors?: { group1: string; group2: string; hyper: string; hypo: string }
-	/** Which element matrix to analyze on a dataset with no CpG-level matrix, e.g. the class the
-	 * volcano was showing. Ignored when the dataset has a CpG matrix, which is always finer. */
-	element_type?: string
+	/** The chromosomes of the DMRcate run this view is a window on: a region opened from a scan names
+	 * the scan's, so it shows the DMRs the volcano drew. Absent = the whole genome; a list without chr is
+	 * refused, since that region was not in the run. */
+	scanChromosomes?: string[]
+	/** That scan's background correction, which is in its run's cache key, so the view finds the run */
+	backgroundCorrection?: boolean
+	/** That scan's CpG floor: DMRs from fewer CpGs are left out, as the scan leaves them out. Absent = 1 */
+	minCpgs?: number
+	/** That scan's y-axis statistic: DMRs without it are left out, as the scan leaves them out. Absent =
+	 * min_smoothed_fdr; ignored with backgroundCorrection, whose background p is the one then */
+	yAxis?: DmrScanYAxis
 	filter?: Filter
 	__protected__?: any
 }
@@ -66,13 +76,17 @@ export type DmrDiagnostic = {
 		positions: number[]
 		mean_group1: (number | null)[]
 		mean_group2: (number | null)[]
-		fdr: number[]
+		/** individually significant in the run: per-CpG BH-adjusted p < fdr_cutoff */
+		sig: boolean[]
+		/** kept by the run's adaptive cutoff on the kernel-smoothed FDR, which is what DMRs are built from */
+		smoothed_sig: boolean[]
+		/** DMRcate's per-CpG diff: the limma logFC, logit2 for WGBS */
 		logFC: (number | null)[]
 	}
 	probe_spacings: number[]
 	/** LOESS smoothed curves with 95% CI for both groups */
 	loess?: DmrLoessCurves
-	/** Total probes analyzed genome-wide for eBayes */
+	/** Total probes in the run the region is a window on */
 	total_probes_analyzed?: number
 	/** Peak RSS memory in MB */
 	peak_memory_mb?: number
@@ -86,25 +100,10 @@ export type DmrDiagnostic = {
 
 export type TermdbDmrSuccessResponse = {
 	status: 'ok'
-	dmrs: {
-		chr: string
-		start: number
-		stop: number
-		/** Number of CpG sites in this DMR */
-		no_cpgs: number
-		/** Minimum FDR from the kernel-smoothed estimate across the region */
-		min_smoothed_fdr: number
-		/** Harmonic mean of individual CpG FDR-corrected p-values */
-		HMFDR: number
-		/** Maximum methylation difference (beta-scale) within the DMR */
-		maxdiff: number
-		/** Mean methylation difference across the DMR */
-		meandiff: number
-		/** hyper = case hypermethylated relative to control; hypo = opposite */
-		direction: 'hyper' | 'hypo'
-		/** Comma-separated gene symbols overlapping the DMR */
-		overlapping_genes?: string | null
-	}[]
+	/** the run's DMRs that overlap the region */
+	dmrs: TermdbDmrBatchSuccessResponse['regions'][number]['dmrs']
+	/** the run's DMRs in the region that the artifact mask dropped, with the sources that cover them */
+	maskedDmrs?: NonNullable<TermdbDmrBatchSuccessResponse['regions'][number]['masked']>
 	/** Diagnostic data: per-CpG probe means and statistics */
 	diagnostic?: DmrDiagnostic
 }

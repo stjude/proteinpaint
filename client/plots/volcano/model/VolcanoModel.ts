@@ -5,8 +5,8 @@ import type { DiffSpliceRequest } from '#types'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGroupColors, toHex } from '../colors'
-import { DMRCATE_DEFAULTS } from '../settings/defaults'
-import { getOthersGroup } from '#mass/groups'
+import { DMRCATE_DEFAULTS, onDeltaBetaAxis } from '../settings/defaults'
+import { withOthersGroup } from '#mass/groups'
 // import type { Volcano } from '../Volcano'
 
 export class VolcanoModel {
@@ -130,7 +130,11 @@ export class VolcanoModel {
 						scan: {
 							...(this.settings.scanChromosome ? { chromosome: this.settings.scanChromosome } : {}),
 							backgroundCorrection: !!this.settings.backgroundCorrection,
+							// display only: the rows are rebuilt from the cached scan on every request
+							yAxis: this.settings.scanYAxis,
 							minCpgs: this.settings.minCpgs,
+							// display only, like yAxis: what the scan counts, not what it runs
+							minDeltaBeta: this.settings.deltaBetaCutoff,
 							profileBinBp: this.settings.profileBinBp,
 							// only when changed: an explicit default would orphan every cached scan
 							...(this.settings.lambda != DMRCATE_DEFAULTS.lambda ? { lambda: this.settings.lambda } : {}),
@@ -191,7 +195,7 @@ export class VolcanoModel {
 		other term types always fall through to fold_change. The cutoff sent must be in the units
 		of the field sent -- otherwise the server draws threshold lines that do not correspond to
 		what it classified. */
-		const useDeltaBeta = this.termType === tt.DNA_METHYLATION && this.settings.xAxis == 'delta_beta'
+		const useDeltaBeta = onDeltaBetaAxis(this.termType, this.settings)
 		const render: VolcanoRenderRequest = {
 			significanceThresholds: {
 				pValueCutoff: this.settings.pValue,
@@ -201,7 +205,11 @@ export class VolcanoModel {
 			...(useDeltaBeta ? { xField: 'delta_beta' as const } : {}),
 			// Tied to the delta-beta axis: the control that sets it is only offered for
 			// methylation, and centering a log2 fold-change axis is a different conversation.
-			...(useDeltaBeta && this.settings.centerDeltaBeta ? { centerX: true } : {}),
+			/* Not on a scan, whose control is hidden but whose setting survives a switch from an element
+			class: the scan counts, Manhattan and track use raw Δβ, and a centered volcano would disagree. */
+			...(useDeltaBeta && this.settings.centerDeltaBeta && this.settings.elementType != DMR_SCAN_ELEMENT_TYPE
+				? { centerX: true }
+				: {}),
 			pixelWidth: this.settings.width,
 			pixelHeight: this.settings.height,
 			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),
@@ -269,13 +277,7 @@ export class VolcanoModel {
 	 * it stands for: the filter of the app without the samples of the other group, which the server
 	 * resolves. */
 	setOthersGroup(samplelst) {
-		const i = samplelst.groups.findIndex(g => !g.in)
-		if (i == -1) return
-		const samplesGroup = samplelst.groups.find(g => g.in)
-		samplelst.groups[i] = getOthersGroup(
-			{ name: samplelst.groups[i].name, values: samplesGroup.values },
-			this.app.getState().termfilter
-		)
+		samplelst.groups = withOthersGroup(samplelst.groups, this.app.getState().termfilter)
 	}
 
 	/** A group that the server resolved from a filter lists no sample here. Keep the number of its

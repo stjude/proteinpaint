@@ -148,6 +148,34 @@ tape('renderManhattanPoints: signed y is symmetric about zero and the top N by |
 	test.end()
 })
 
+tape('renderManhattanPoints: when every q is 0, the dots sit at a nonzero cap, not on the line', async test => {
+	test.timeoutAfter(5000)
+	/* A DMR scan whose statistic underflows to 0 for every DMR: each y is ±Infinity. Placeholders of 0 made the cap 0 and
+	drew every dot on the zero line, as if no DMR had any evidence. */
+	const r = await renderManhattanPoints({
+		chrSizes,
+		plotWidth: 1004,
+		plotHeight: 404,
+		devicePixelRatio: 1,
+		pngDotRadius: 2,
+		maxCappedPoints: 5,
+		hardCap: 200,
+		binSize: 10,
+		signed: true,
+		interactive: 10,
+		points: [
+			{ chrom: 'chr1', pos: 1e6, y: Infinity, color: '#e66101', id: 'hyper' },
+			{ chrom: 'chr13', pos: 2e6, y: -Infinity, color: '#5e81f4', id: 'hypo' }
+		]
+	})
+	const p = Object.fromEntries(r.plot_data.points.map(p => [p.id, p]))
+	test.ok(r.plot_data.y_max > 1, 'the axis reaches past 1')
+	test.ok(r.plot_data.has_capped_points, 'and is marked capped, since the dots sit at a cap, not at their value')
+	test.ok(p.hyper.pixel_y < CANVAS_H / 4, 'the hyper dot is near the top')
+	test.ok(p.hypo.pixel_y > (CANVAS_H * 3) / 4, 'the hypo dot is near the bottom')
+	test.end()
+})
+
 tape('renderManhattanPoints: the top N ranks by |y| before capping, so points above the cap do not tie', async test => {
 	test.timeoutAfter(5000)
 	/* Every point here is above the hard cap of 200, so all are drawn at the cap. Ranked on the

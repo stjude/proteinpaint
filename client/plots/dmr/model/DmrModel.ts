@@ -33,7 +33,11 @@ export class DmrModel {
 				devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : 1,
 				maxLoessRegion: settings.dmr.maxLoessRegion,
 				colors: settings.dmr.colors,
-				element_type: this.config.elementType
+				scanChromosomes: this.config.scanChromosomes,
+				backgroundCorrection: this.config.backgroundCorrection,
+				minCpgs: this.config.minCpgs,
+				yAxis: this.config.yAxis,
+				filter0: this.config.filter0
 			}
 		}) as Promise<TermdbDmrResponse>
 	}

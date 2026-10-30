@@ -1,6 +1,6 @@
 import type { Elem } from '../../types/d3'
 import type { DMRSettings } from './settings/Settings'
-import type { DmrDiagnostic, SampleFilterGroup } from '#types'
+import type { DmrDiagnostic, DmrScanYAxis, SampleFilterGroup } from '#types'
 
 /** Config shape passed via plot_create from VolcanoInteractions */
 export type DmrConfig = {
@@ -13,9 +13,16 @@ export type DmrConfig = {
 	group1Name?: string
 	group2Name?: string
 	settings: { dmr: DMRSettings }
-	/** Element class the volcano was showing, which picks the matrix to analyze on a dataset
-	 * with no CpG-level one. Ignored server-side when a CpG matrix exists. */
-	elementType?: string
+	/** The chromosomes of the scan this view was opened from; see TermdbDmrRequest.scanChromosomes */
+	scanChromosomes?: string[]
+	/** That scan's background correction and CpG floor; see TermdbDmrRequest */
+	backgroundCorrection?: boolean
+	minCpgs?: number
+	yAxis?: DmrScanYAxis
+	/** The app's cohort filter when that scan ran; see TermdbDmrRequest.filter0 */
+	filter0?: any
+	/** Mean reads per CpG of each group in that scan, so the view can say when a DMR may be read depth */
+	readDepth?: { control: number; case: number }
 	/** Set by onBlockCoordinateChange when user pans/zooms the genome browser */
 	coordinateOverride?: { chr: string; start: number; stop: number }
 }
@@ -38,6 +45,8 @@ export type BedItem = {
 	start: number
 	stop: number
 	color: string
+	/** drawn on the item by the bedj track when it fits */
+	name?: string
 }
 
 export type LegendItem = {
@@ -62,4 +71,6 @@ export type DmrViewData = {
 	showLoess: boolean
 	/** Whether individual per-CpG dots are shown (false for large regions) */
 	showDots: boolean
+	/** plain sentences shown under the plot: what the gray DMRs are, when to zoom in */
+	notes: string[]
 }

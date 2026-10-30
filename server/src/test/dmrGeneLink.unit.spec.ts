@@ -6,12 +6,12 @@ const idx = buildTssIndex([
 	{ name: 'A', chr: 'chr1', start: 10_000, stop: 50_000, strand: '+' },
 	{ name: 'B', chr: 'chr1', start: 60_000, stop: 100_000, strand: '-' }
 ])
-const dmr = (start: number, stop: number, meandiff = -0.2, no_cpgs = 10) => ({
+const dmr = (start: number, stop: number, delta_beta_mean = -0.2, no_cpgs = 10) => ({
 	chr: 'chr1',
 	start,
 	stop,
 	no_cpgs,
-	meandiff,
+	delta_beta_mean,
 	min_smoothed_fdr: 1e-5
 })
 
@@ -42,6 +42,19 @@ tape('linkDmrsToGenes keeps the strongest DMR per gene and context', t => {
 	t.equal(links.length, 1)
 	t.equal(links[0].nDmrs, 2, 'the 2-CpG DMR is below the floor')
 	t.equal(links[0].dmr.deltaBeta, 0.3)
+	t.end()
+})
+
+tape('linkDmrsToGenes skips DMRs with no Δβ or under the Δβ floor', t => {
+	const links = linkDmrsToGenes(
+		[dmr(20_000, 21_000, null as any), dmr(30_000, 31_000, 0.05), dmr(40_000, 41_000, -0.2)],
+		idx,
+		5,
+		0.1
+	)
+	t.equal(links.length, 1)
+	t.equal(links[0].nDmrs, 1, 'only the DMR at or above the floor links')
+	t.equal(links[0].dmr.deltaBeta, -0.2, 'a null Δβ does not block a finite one from being the strongest')
 	t.end()
 })
 

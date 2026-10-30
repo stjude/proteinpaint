@@ -342,11 +342,31 @@ export function plotManhattan(
 		interactions.attach()
 	}
 
-	// Add chromosome labels
-	if (data.plotData.chrom_data) {
+	// One chromosome: a position axis in Mb, since a lone chromosome label says nothing about where
+	const chroms = Object.entries(data.plotData.chrom_data || {}) as [string, any][]
+	const oneChrom = chroms.length == 1 ? chroms[0] : undefined
+	if (oneChrom) {
+		const [, chromData] = oneChrom
+		const xAxisG = svg
+			.append('g')
+			.attr(
+				'transform',
+				`translate(${settings.yAxisX + settings.yAxisSpace},${
+					settings.yAxisY + settings.plotHeight + 2 * settings.pngDotRadius
+				})`
+			)
+			.call(
+				d3axis
+					.axisBottom(xScale.copy().domain(xScale.domain().map(v => (v - chromData.start) / 1e6)))
+					.ticks(8)
+					.tickSizeOuter(0)
+			)
+		axisstyle({ axis: xAxisG, color: settings.axisColor, fontsize: settings.fontSize + 2 })
+	} else if (data.plotData.chrom_data) {
+		// Add chromosome labels
 		const chromLabelY = settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY + 10
 
-		Object.entries(data.plotData.chrom_data).forEach(([chrom, chromData]: [string, any]) => {
+		chroms.forEach(([chrom, chromData]) => {
 			const chromLabel = chrom.replace('chr', '')
 
 			// Skip chrM
@@ -370,11 +390,15 @@ export function plotManhattan(
 	svg
 		.append('text')
 		.attr('x', settings.yAxisX + settings.yAxisSpace + (settings.plotWidth + 2 * settings.pngDotRadius) / 2)
-		.attr('y', settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY + settings.xAxisLabelPad)
+		.attr(
+			'y',
+			// below the Mb tick labels, which the chromosome names it replaces did not have
+			settings.plotHeight + 2 * settings.pngDotRadius + settings.yAxisY + settings.xAxisLabelPad + (oneChrom ? 14 : 0)
+		)
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${settings.fontSize + 4}px`)
 		.attr('fill', 'black')
-		.text('Chromosomes')
+		.text(oneChrom ? `${oneChrom[0]} position (Mb)` : 'Chromosomes')
 
 	// Add title
 	const title = svg
@@ -398,23 +422,11 @@ export function plotManhattan(
 			width: 16,
 			height: 16,
 			title: 'Download Manhattan plot',
-			handler: () => {
-				// Clone the SVG to avoid modifying the displayed version
-				const svgNode = svg.node() as SVGSVGElement
-				const clone = svgNode.cloneNode(true) as SVGSVGElement
-
-				// Get the bounding box of all content
-				const bbox = svgNode.getBBox()
-
-				// Set the clone's dimensions to match the full content
-				clone.setAttribute('width', bbox.width.toString())
-				clone.setAttribute('height', bbox.height.toString())
-				clone.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`)
-
-				to_svg(clone, `manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`, {
-					apply_dom_styles: true
-				})
-			}
+			handler: () =>
+				downloadManhattanSvg(
+					svg.node() as SVGSVGElement,
+					`manhattan_plot_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`
+				)
 		})
 	}
 
@@ -463,4 +475,15 @@ export function plotManhattan(
 		})
 	}
 	return handle
+}
+
+/** Save a Manhattan svg cropped to its drawn content: the svg reserves room below the plot for a
+ * legend that may be absent. Clones it so the displayed plot is left as it is. */
+export function downloadManhattanSvg(svgNode: SVGSVGElement, fileName: string) {
+	const clone = svgNode.cloneNode(true) as SVGSVGElement
+	const bbox = svgNode.getBBox()
+	clone.setAttribute('width', bbox.width.toString())
+	clone.setAttribute('height', bbox.height.toString())
+	clone.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`)
+	to_svg(clone, fileName, { apply_dom_styles: true })
 }

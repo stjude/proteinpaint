@@ -1,11 +1,12 @@
 import tape from 'tape'
 import { VolcanoModel } from '../model/VolcanoModel'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
-import { getSampleNum } from '../settings/defaults'
+import { getSampleNum, onDeltaBetaAxis } from '../settings/defaults'
 
 /* Tests:
     - setOthersGroup
     - setGroupSizes
+    - onDeltaBetaAxis
 */
 
 /** the filter of the app */
@@ -115,5 +116,20 @@ tape('getSampleNum() counts the samples of groups that list them or that are def
 		7,
 		'should add the listed samples and the sample count of a group defined by a filter'
 	)
+	test.end()
+})
+
+tape('onDeltaBetaAxis()', function (test) {
+	const dm = tt.DNA_METHYLATION
+	test.ok(onDeltaBetaAxis(dm, { xAxis: 'delta_beta', elementType: 'promoter' }), 'methylation on its default axis')
+	test.notOk(
+		onDeltaBetaAxis(dm, { xAxis: 'fold_change', elementType: 'promoter' }),
+		'an element class keeps a saved axis'
+	)
+	test.ok(
+		onDeltaBetaAxis(dm, { xAxis: 'fold_change', elementType: 'dmr_scan' }),
+		'a DMR scan is on Δβ whatever axis a saved config carries'
+	)
+	test.notOk(onDeltaBetaAxis(tt.GENE_EXPRESSION, { xAxis: 'delta_beta' }), 'only methylation has a Δβ axis')
 	test.end()
 })

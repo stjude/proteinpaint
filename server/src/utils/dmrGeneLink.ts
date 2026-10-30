@@ -1,3 +1,5 @@
+import { clearsMinDeltaBeta } from '#types'
+
 /* Link a scan's DMRs to the genes they could regulate, and read each link against expression.
 
 A DMR's `genes` (dmrGenes.ts) are the genes whose SPAN it overlaps, which misses the case that
@@ -18,7 +20,15 @@ export const PROMOTER_PAD = 2000
 export type GeneModel = { name: string; chr: string; start: number; stop: number; strand: string }
 export type TssIndex = Map<string, { tss: number[]; genes: GeneModel[]; maxSpan: number }>
 
-type Dmr = { chr: string; start: number; stop: number; no_cpgs: number; meandiff: number; min_smoothed_fdr: number }
+type Dmr = {
+	chr: string
+	start: number
+	stop: number
+	no_cpgs: number
+	/** the display Δβ; the scan's meandiff is logit2 */
+	delta_beta_mean: number | null
+	min_smoothed_fdr: number
+}
 
 export type GeneLink = {
 	gene: string
@@ -72,18 +82,20 @@ export function genesForDmr(idx: TssIndex, d: { chr: string; start: number; stop
 	return [...out].reverse().map(([gene, context]) => ({ gene, context }))
 }
 
-/** One link per gene and context, from every DMR meeting the CpG floor. */
-export function linkDmrsToGenes(dmrs: Dmr[], idx: TssIndex, minCpgs: number): GeneLink[] {
+/** One link per gene and context, from every DMR meeting the CpG floor and the |Δβ| floor. A DMR with no Δβ (no
+ * covered cell in one group) has no measurable effect and links nothing. */
+export function linkDmrsToGenes(dmrs: Dmr[], idx: TssIndex, minCpgs: number, minDeltaBeta = 0): GeneLink[] {
 	const links = new Map<string, GeneLink>()
 	for (const d of dmrs) {
-		if (d.no_cpgs < minCpgs) continue
+		if (d.no_cpgs < minCpgs || d.delta_beta_mean == null || !clearsMinDeltaBeta(d.delta_beta_mean, minDeltaBeta))
+			continue
 		for (const { gene, context } of genesForDmr(idx, d)) {
 			const key = `${gene}\t${context}`
 			const dmr = {
 				chr: d.chr,
 				start: d.start,
 				stop: d.stop,
-				deltaBeta: d.meandiff,
+				deltaBeta: d.delta_beta_mean,
 				cpgs: d.no_cpgs,
 				fdr: d.min_smoothed_fdr
 			}
@@ -91,7 +103,7 @@ export function linkDmrsToGenes(dmrs: Dmr[], idx: TssIndex, minCpgs: number): Ge
 			if (!l) links.set(key, { gene, context, dmr, nDmrs: 1 })
 			else {
 				l.nDmrs++
-				if (Math.abs(d.meandiff) > Math.abs(l.dmr.deltaBeta)) l.dmr = dmr
+				if (Math.abs(dmr.deltaBeta) > Math.abs(l.dmr.deltaBeta)) l.dmr = dmr
 			}
 		}
 	}

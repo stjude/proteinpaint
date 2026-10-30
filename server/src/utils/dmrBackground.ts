@@ -141,7 +141,8 @@ function stratumOf(nProbes: number, width: number): string {
  * p      = fraction of that background at least as extreme, with a +1 pseudocount so a DMR can
  *          never be reported at p=0 -- the resolution floor is 1/(n+1), not zero. */
 export function scoreAgainstBackground(
-	dmrs: { no_cpgs: number; start: number; stop: number; meandiff: number }[],
+	// delta-beta, the scale the background windows are measured on; DMRcate's meandiff is logit2
+	dmrs: { no_cpgs: number; start: number; stop: number; delta_beta_mean: number | null }[],
 	background: { n_probes: number; start: number; stop: number; delta: number | null }[]
 ): { scored: (Scored | null)[]; strataUsed: number; unscored: number } {
 	const byStratum = new Map<string, number[]>()
@@ -159,12 +160,12 @@ export function scoreAgainstBackground(
 	const scored = dmrs.map(d => {
 		const k = stratumOf(d.no_cpgs, d.stop - d.start)
 		const bg = byStratum.get(k)
-		if (!bg || bg.length < MIN_BG) {
+		if (!bg || bg.length < MIN_BG || d.delta_beta_mean == null) {
 			unscored++
 			return null
 		}
 		const mean = bg.reduce((a, b) => a + b, 0) / bg.length
-		const obs = d.meandiff
+		const obs = d.delta_beta_mean
 		/* One-sided in the direction of the EXCESS, relative to the stratum mean rather than to zero:
 		how often does background drift at least this far past its own mean on that side? Taking the
 		tail from the raw sign meant a +0.01 DMR over a +0.05 background -- excess -0.04 -- was tested

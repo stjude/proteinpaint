@@ -10,7 +10,7 @@ import type { DEFullResponse, DmrScanSummary } from '#types'
 import { bplen } from '#shared/common.js'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getSampleNum } from '../settings/defaults'
+import { getSampleNum, SCAN_Y_AXIS_OPTIONS, onDeltaBetaAxis } from '../settings/defaults'
 import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { getGroupColors } from '../colors'
 import { DATermTypes as tt, enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
@@ -22,6 +22,9 @@ function shortenGroupName(name: string) {
 	if (name.length >= 25) return name.substring(0, 20) + '...'
 	return name
 }
+
+/** Group read depths further apart than this get a warning in a scan's Statistics */
+const DEPTH_RATIO_WARN = 1.5
 
 export class VolcanoViewModel {
 	config: any
@@ -175,7 +178,11 @@ export class VolcanoViewModel {
 	 * the hover rows and the multi-hit table cannot disagree. */
 	setPValueLabel(settings: ValidatedVolcanoSettings): string {
 		if (this.termType == tt.PROTEOME_DAP) return 'FDR'
-		if (this.scan) return this.scan.backgroundCorrection ? 'p vs matched background' : 'smoothed FDR'
+		if (this.scan)
+			return this.scan.backgroundCorrection
+				? 'p vs matched background'
+				: // a scan from before the choice existed plotted the smoothed FDR
+				  SCAN_Y_AXIS_OPTIONS.find(o => o.value == (this.scan!.yAxis ?? 'min_smoothed_fdr'))!.label
 		return `${settings.pValueType} p-value`
 	}
 
@@ -469,7 +476,7 @@ export class VolcanoViewModel {
 			const x =
 				this.termType == tt.JUNCTION
 					? (d as any).delta_psi
-					: this.termType == tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
+					: onDeltaBetaAxis(this.termType, this.settings)
 					? (d as any).delta_beta - (this.response.data.xOffset ?? 0)
 					: d.fold_change
 			if (controlColor && caseColor) d.color = x > 0 ? caseColor : controlColor
@@ -511,7 +518,7 @@ export class VolcanoViewModel {
 			parts.push(`element class: ${s.elementType || 'promoter'}`)
 			// Which effect size the run was thresholded on. Two exports with the same p cutoff but
 			// different axes are not comparable, and nothing else in the line would reveal it.
-			parts.push(`x axis: ${s.xAxis === 'delta_beta' ? 'delta-beta' : 'log2(fold-change)'}`)
+			parts.push(`x axis: ${onDeltaBetaAxis(this.termType, s) ? 'delta-beta' : 'log2(fold-change)'}`)
 			/* Which reading the counts came from. Two runs of the same contrast give different
 			hyper:hypo ratios depending on this one flag, so a file without it cannot be told
 			apart from the other run. Records the offset too, since it is a result in itself. */
@@ -540,7 +547,7 @@ export class VolcanoViewModel {
 
 		// Name the effect-size measure the cutoff was applied to, not just its number — the
 		// threshold moves to deltaBetaCutoff when the axis does, and "0.1" alone is ambiguous.
-		const onDeltaBeta = this.termType == tt.DNA_METHYLATION && s.xAxis === 'delta_beta'
+		const onDeltaBeta = onDeltaBetaAxis(this.termType, s)
 		// splicing is always thresholded on delta-PSI; it never displays a log2 fold change
 		const effect =
 			this.termType == tt.JUNCTION
@@ -606,13 +613,24 @@ export class VolcanoViewModel {
 	thresholds -- and over the same set of DMRs (those meeting the CpG floor), so no two lines here
 	have different denominators. The counts the thresholds select are the three rows above. */
 	setScanStats(s: DmrScanSummary) {
+		// what DMRcate ran over, of which the rows may show one chromosome
+		const run = s.runChromosomes || s.chromosomes
 		const rows: { label: string; value: number | string }[] = [
-			{ label: 'Chromosomes scanned', value: s.chromosomes.length },
+			{ label: 'Chromosomes scanned', value: run.length },
+			// the counts below are over the chromosome shown, the run's genome-wide facts say so in their labels
+			...(s.chromosomes.length < run.length ? [{ label: 'Chromosomes shown', value: s.chromosomes.join(', ') }] : []),
 			{ label: 'CpGs analyzed', value: s.totalProbesAnalyzed },
 			{ label: 'DMRs called', value: s.called },
 			{ label: `DMRs with ${s.minCpgs}+ CpGs`, value: s.kept },
+			// what the rows below, the Manhattan and the browser track count
+			...(s.minDeltaBeta ? [{ label: `… and |Δβ| > ${s.minDeltaBeta}`, value: s.shown }] : []),
 			{ label: 'Hypermethylated', value: s.hyper },
-			{ label: 'Hypomethylated', value: s.hypo }
+			{ label: 'Hypomethylated', value: s.hypo },
+			// not on the volcano: no evidence to plot, rather than evidence of no change
+			...(s.withoutStatistic
+				? [{ label: `DMRs with no ${this.pValueLabel} (not plotted)`, value: s.withoutStatistic }]
+				: []),
+			...(s.withoutDeltaBeta ? [{ label: 'DMRs with no Δβ (not plotted or counted)', value: s.withoutDeltaBeta }] : [])
 		]
 		if (s.width)
 			rows.push({
@@ -634,9 +652,9 @@ export class VolcanoViewModel {
 		const gm = s.globalMethylation
 		if (gm) {
 			const [g1, g2] = this.config.samplelst?.groups?.map((g: any) => g.name) || ['group 1', 'group 2']
-			/* Named for what was scanned. One chromosome makes these chromosome-wide numbers, and
-			"genome-wide" would overstate every one of them. */
-			const one = s.chromosomes.length == 1 ? s.chromosomes[0] : null
+			/* Named for what DMRcate ran over, which these are measured on: the whole genome, even when
+			the volcano shows one chromosome of it. */
+			const one = run.length == 1 ? run[0] : null
 			const meanLabel = (g: string) => (one ? `${g} mean β on ${one}` : `${g} genome-wide mean β`)
 			rows.push(
 				{ label: meanLabel(g1), value: gm.controlMeanBeta.toFixed(4) },
@@ -646,6 +664,33 @@ export class VolcanoViewModel {
 					value: `${gm.shift >= 0 ? '+' : ''}${gm.shift.toFixed(4)}`
 				}
 			)
+			/* Read depth by group. DMRcate's sequencing model compares log-ratios with a pseudocount, which
+			pulls shallow samples toward 0: where one group has more reads, it differs with no change in
+			methylation, and DMRs with little beta change can be depth rather than biology. */
+			const dc = gm.controlMeanDepth,
+				dk = gm.caseMeanDepth
+			if (dc != null && dk != null) {
+				rows.push(
+					{ label: `${g1} mean reads per CpG`, value: dc.toFixed(2) },
+					{ label: `${g2} mean reads per CpG`, value: dk.toFixed(2) }
+				)
+				const ratio = Math.max(dc, dk) / Math.min(dc, dk)
+				if (ratio > DEPTH_RATIO_WARN) {
+					const deeper = dk > dc ? g2 : g1
+					// a group with no reads has no ratio to state
+					const differ = Number.isFinite(ratio)
+						? `${deeper} has ${ratio.toFixed(1)}× the reads per CpG`
+						: `Only ${deeper} has reads`
+					// with no Min Δβ, every DMR is counted, so the remedy is to set one
+					const floor = s.minDeltaBeta
+						? `only those with |Δβ| > ${s.minDeltaBeta} are counted.`
+						: 'set Min Δβ to count only DMRs whose beta moved.'
+					rows.push({
+						label: '⚠ Read depth differs between groups',
+						value: `${differ}. DMRcate calls DMRs from read-count ratios that shift with depth, so DMRs with little beta change may reflect depth rather than methylation; ${floor}`
+					})
+				}
+			}
 		}
 		/* A survival rate is only readable against its denominator, and the unscored are not a
 		random sample -- they are the widest and most CpG-dense regions, which intergenic space
@@ -653,7 +698,10 @@ export class VolcanoViewModel {
 		const bc = s.backgroundCorrection
 		if (bc) {
 			rows.push(
-				{ label: 'Intergenic background windows sampled', value: bc.windows },
+				{
+					label: `Intergenic background windows sampled${s.chromosomes.length < run.length ? ' (whole run)' : ''}`,
+					value: bc.windows
+				},
 				{ label: `DMRs scored against background (matched on ${bc.matchedOn.join(' and ')})`, value: bc.scored },
 				{ label: 'DMRs unscored: stratum too thin (not plotted)', value: bc.unscored },
 				{

@@ -2,7 +2,8 @@ import { roundValue } from '#shared/roundValue.js'
 // the sample limits of a run, shared with the server, which enforces them
 import { maxSampleCutoff, sampleLimitAlert } from '#shared'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
-import { DEFAULT_MIN_CPGS } from '#types'
+import { DEFAULT_MIN_CPGS, DMR_SCAN_ELEMENT_TYPE } from '#types'
+import type { DmrScanYAxis } from '#types'
 import type {
 	ValidatedVolcanoSettings,
 	GEVolcanoSettings,
@@ -17,7 +18,44 @@ export const DMRCATE_DEFAULTS = { lambda: 1000, C: 2, fdrCutoff: 0.05 }
 /** Tooltip of the scan's background correction, shown by the volcano's control and by the
  * pre-analysis panel (mass/groups.js). */
 export const BACKGROUND_CORRECTION_TITLE =
-	'Score each DMR against width- and CpG-density-matched intergenic background instead of against zero, so the y axis asks "did this region move MORE than a region like it drifts" rather than "did it move". On a cohort whose whole genome shifts, the two questions have different answers -- on MMRF NSD2-high the hyper:hypo direction inverts. DMRs whose stratum holds too little background to score are counted in Statistics but not plotted. Makes the scan take 1.5 to 2 times as long.'
+	'Score each DMR against intergenic regions of similar width and CpG density instead of against zero. The y axis then asks "did this region move more than comparable background did" rather than "did it move". The two questions agree unless methylation shifts across the whole genome between the groups; when it does, they can disagree, even on whether a region is hyper- or hypomethylated. DMRs with too little matched background to score are counted in Statistics but not plotted. The scan takes longer with this on.'
+
+/** The scan's y-axis choices: DMRcate's region statistics, in the order the menu lists them, with what
+ * each measures in plain words for the option's tooltip. Checked against DMRcate 3.6.0's dmrcate(): it
+ * calls DMRs from the smoothed FDR and orders them by its minimum; Stouffer, HMFDR and Fisher are
+ * computed from the region's raw per-CpG p-values, BH-adjusted across regions, and only reported. */
+export const SCAN_Y_AXIS_OPTIONS: { value: DmrScanYAxis; label: string; title: string }[] = [
+	{
+		value: 'min_smoothed_fdr',
+		label: 'Min smoothed FDR',
+		title:
+			"What DMRcate uses: it calls DMRs from the smoothed FDR and ranks them by this minimum. The strongest evidence at any point in the region, after each CpG's test is pooled with its neighbors'. Pooling makes it extremely small for strong regions, so many dots crowd the top of the plot."
+	},
+	{
+		value: 'HMFDR',
+		label: 'HMFDR',
+		title:
+			"Reported by DMRcate for every DMR, but not used to call or rank them. The harmonic mean of the separate tests of the region's CpGs, corrected for the number of regions: driven by the clearest CpGs, it does not grow just because a region is long, and stays valid when neighboring CpGs move together."
+	},
+	{
+		value: 'Stouffer',
+		label: 'Stouffer',
+		title:
+			"Reported by DMRcate for every DMR, but not used to call or rank them. Averages the evidence across all the region's CpGs, whichever direction each moved, corrected for the number of regions: it rewards regions where most CpGs differ rather than a few, and grows with the number of CpGs."
+	},
+	{
+		value: 'Fisher',
+		label: 'Fisher',
+		title:
+			'Reported by DMRcate for every DMR, but not used to call or rank them. Adds up the evidence of every CpG in the region, weighted toward the strongest, corrected for the number of regions: a few very clear CpGs can carry it, and since it treats neighboring CpGs as independent it reads strongest of the four.'
+	}
+]
+
+/** Whether the volcano's x is Δβ, with deltaBetaCutoff as its cutoff: the methylation default, and always for a DMR
+ * scan, whose counts, Manhattan and track use mean Δβ and its Min Δβ floor, whatever xAxis a saved config carries. */
+export function onDeltaBetaAxis(termType: string, s: { xAxis?: string; elementType?: string }): boolean {
+	return termType == tt.DNA_METHYLATION && (s.xAxis == 'delta_beta' || s.elementType == DMR_SCAN_ELEMENT_TYPE)
+}
 
 /*********** Set default settings per termType ***********/
 export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedVolcanoSettings {
@@ -83,13 +121,15 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	clears. */
 	defaults.deltaBetaCutoff = 0.1
 	/* DMR scan. Whole genome by default: a scan of one chromosome answers "what happened here", the
-	whole genome "where did anything happen", which is the question the mode exists for, and the
-	per-chromosome fit is the price either way. Correction off because it changes what the numbers
-	MEAN (a region that moved vs one that moved more than its matched background drifts) -- on MMRF
-	NSD2-high the direction inverts -- so it is a second reading to switch to. The CpG floor is
+	whole genome "where did anything happen", which is the question the mode exists for, and the run
+	DMRcate's genome-wide prior and corrections are made for. Correction off because it changes what the numbers
+	MEAN (a region that moved vs one that moved more than its matched background drifts) -- under a
+	genome-wide shift the direction can invert -- so it is a second reading to switch to. The CpG floor is
 	DEFAULT_MIN_CPGS, shared with the server fallback so both mean the same untouched scan. */
 	defaults.scanChromosome = ''
 	defaults.backgroundCorrection = false
+	// what the scan plotted before the choice existed
+	defaults.scanYAxis = 'min_smoothed_fdr'
 	defaults.minCpgs = DEFAULT_MIN_CPGS
 	defaults.lambda = DMRCATE_DEFAULTS.lambda
 	defaults.C = DMRCATE_DEFAULTS.C

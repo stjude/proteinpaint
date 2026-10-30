@@ -1,11 +1,14 @@
 import tape from 'tape'
-import { mergeWindows, buildScanRegions } from '#src/routes/termdb.dmrBatch.ts'
+import { mergeWindows, buildScanRegions, inRange } from '#src/routes/termdb.dmrBatch.ts'
+import { runDmrcate } from '#src/utils/methylationMatrix.ts'
 
 /*
 test sections:
 
 mergeWindows: overlapping and abutting windows collapse, members are tracked, chromosomes stay separate
 mergeWindows: input order does not matter; disjoint windows survive intact
+inRange: a DMRcate parameter outside its range is refused
+runDmrcate: a run past its deadline fails with the limit and what to change
 */
 
 /** Unit tests for the batch DMR route's window merging. This is the piece with real branching,
@@ -65,5 +68,38 @@ tape('buildScanRegions turns chromosome names into whole-chromosome regions', t 
 	/* An unknown name must fail loudly. Returning nothing would produce an empty scan that looks
 	like "no DMRs on that chromosome" rather than "that chromosome does not exist". */
 	t.throws(() => buildScanRegions(genome, ['chr99']), /chr99/, 'an unknown chromosome names itself in the error')
+	t.end()
+})
+
+tape('inRange: a DMRcate parameter outside its range is refused', t => {
+	t.equal(inRange('lambda', 1000), 1000, 'the default lambda')
+	t.equal(inRange('C', '2'), 2, 'a number sent as text')
+	t.equal(inRange('C', 0.2), 0.2, "DMRcate's own minimum C")
+	for (const [name, v] of [
+		['C', 0.1],
+		['C', 0],
+		['C', -2],
+		['lambda', 1e9],
+		['lambda', Infinity],
+		['fdr_cutoff', 0],
+		['fdr_cutoff', 0.9],
+		['lambda', 'abc'],
+		['C', null]
+	] as [any, any][])
+		t.throws(() => inRange(name, v), /must be a number from/, `${name} ${v} is refused`)
+	t.end()
+})
+
+tape('runDmrcate: a run past its deadline fails with the limit and what to change', async t => {
+	// a deadline that has already passed, so the run is stopped before it starts
+	const message = await runDmrcate({}, 'Compare smaller groups.', AbortSignal.abort()).then(
+		() => '',
+		e => e.message
+	)
+	t.equal(
+		message,
+		'The DMR analysis was stopped after 5 minutes, the limit for one analysis. Compare smaller groups.',
+		'names the limit and the hint'
+	)
 	t.end()
 })

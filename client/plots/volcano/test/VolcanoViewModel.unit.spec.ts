@@ -534,7 +534,21 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 		} as any,
 		{ ...settings, backgroundCorrection: false } as any
 	)
-	test.equal(plain.viewData.pValueLabel, 'smoothed FDR', 'uncorrected, the p is DMRcate’s smoothed FDR')
+	test.equal(
+		plain.viewData.pValueLabel,
+		'Min smoothed FDR',
+		'uncorrected and naming no statistic, the p is DMRcate’s smoothed FDR'
+	)
+	const hm = new VolcanoViewModel(
+		{ ...mockConfig, termType: 'dnaMethylation' } as any,
+		{
+			...mockResponse,
+			scan: { ...scan, backgroundCorrection: undefined, yAxis: 'HMFDR' },
+			data: { ...mockResponse.data, dots: [scanDot] as any }
+		} as any,
+		{ ...settings, backgroundCorrection: false, scanYAxis: 'HMFDR' } as any
+	)
+	test.equal(hm.viewData.pValueLabel, 'HMFDR', 'a chosen statistic names the y axis')
 	test.notOk(
 		plain.pValueTable.columns.some(c => c.label == 'Excess Δβ'),
 		'and there is no excess column'

@@ -18,7 +18,7 @@ const evictionKeys = ['maxAge', 'maxSize', 'skipMs', 'moveTo', 'fileExtensions']
 
 /* .type of a cacheRegistry entry
 - compute: JSON results written by utils/cacheOrRecompute.ts; must have maxPending, the cap on concurrent
-  computes of distinct cacheIds, which is the only field cacheOrRecompute reads
+  computes of distinct cacheIds (a cache hit is not counted), which is the only field cacheOrRecompute reads
 - file: files written by their own route; must have fileExtensions, so that only the cached files are evicted
 - session: saved user data written by the massSession route
 - url: index files of remote tracks, cached by cache_index in utils.js under <url protocol>/<url body>/; the entry name
@@ -59,15 +59,13 @@ export const cacheRegistry = {
 	dm: { type: 'compute', maxPending: 5 },
 	// differential splicing; each job is an edgeR or leafcutter run over every cluster in the h5
 	ds: { type: 'compute', maxPending: 2 },
-	/* DMR scans. Lower than the analyses above because each pending job is not one process: it
-	fans out to `serverconfig.dmrBatchConcurrency` rust invocations (default 2), each holding one
-	chromosome's matrix at ~0.5GB and saturating a core. Total concurrent rust processes is
-	maxPending x dmrBatchConcurrency, so a deployer raising either must consider the other -- at 2
-	and 2 that is 4 processes and ~2GB, which is the ceiling a 4-core deployment can absorb.
-	Identical requests still share one compute through the in-flight dedup in cacheOrRecompute, so
-	several users running the SAME scan cost one. */
+	/* DMR scans. Lower than the analyses above because each pending job is one single-threaded rust
+	process over the whole genome, a core and ~1-2 GB each (DMRCATE_MEMORY), with the Node work around
+	it; 2 pending leaves the rest of a 4-core deployment to every other request. Identical requests still share one compute through the
+	in-flight dedup in cacheOrRecompute, so several users running the SAME scan cost one. */
 	dmr: { type: 'compute', maxPending: 2 },
-	// per-gene gene-body methylation deltas for a contrast; same fan-out as a scan, same ceiling
+	/* per-gene gene-body methylation deltas for a contrast: `serverconfig.dmrBatchConcurrency` rust
+	invocations (default 2) per job, one matrix file each */
 	geneBodyMeth: { type: 'compute', maxPending: 2 },
 	gsea: { type: 'compute', maxPending: 5 },
 	grin2: { type: 'compute', maxPending: 5 },
@@ -84,9 +82,8 @@ export const cacheRegistry = {
 	gdcCounts: { type: 'compute', maxPending: 200 },
 	/* the sample ids that the filter of a sample group selects, see resolveGroups() in utils/sampleGroups.ts.
 	one small entry per group filter, read by every request that carries such a group, so this is many quick
-	lookups rather than a few heavy computes. cacheOrRecompute counts a lookup against maxPending before it
-	reads the file, so a cache hit takes a slot too: the cap is sized for concurrent chart requests, not for
-	concurrent computes. a list is cheap to recompute, and a short maxAge bounds how long one outlives a
+	lookups rather than a few heavy computes. a cache hit takes no slot of maxPending, only a lookup that
+	resolves the filter does. a list is cheap to recompute, and a short maxAge bounds how long one outlives a
 	change of the data it was resolved from; a cache read does not update the file mtime. */
 	samplelst: { type: 'compute', maxPending: 200, maxAge: day },
 	// saved sessions; a deployer may set maxAge: 0 to disable the /massSession and /sessionIds routes

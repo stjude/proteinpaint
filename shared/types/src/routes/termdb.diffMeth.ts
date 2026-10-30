@@ -5,6 +5,12 @@ import type { DmrRunResources, TermdbDmrBatchSuccessResponse } from './termdb.dm
  * the genome (termdb/dmrBatch scan mode) instead of testing a pre-annotated element class. Not a
  * key into ds.queries.dnaMethylation.elements; termdb.config.ts lists it among elementTypes when
  * the dataset has a matrix the region analysis can run on. */
+/** DMRcate's region-level statistics, each BH-adjusted across regions: the smallest smoothed FDR of the
+ * region's CpGs (what DMRcate calls regions by), and three combinations of the region's raw per-CpG
+ * p-values -- harmonic mean, Stouffer and Fisher. */
+export const DMR_SCAN_Y_AXES = ['min_smoothed_fdr', 'HMFDR', 'Stouffer', 'Fisher'] as const
+export type DmrScanYAxis = (typeof DMR_SCAN_Y_AXES)[number]
+
 export const DMR_SCAN_ELEMENT_TYPE = 'dmr_scan'
 
 /** Default CpG floor, shared because the client seeds its control with it and the server falls
@@ -13,6 +19,14 @@ export const DMR_SCAN_ELEMENT_TYPE = 'dmr_scan'
  * -- a coin flip -- where 10+ CpG calls run 58% hyper. Five keeps 86% of calls and all of the
  * structure. Not part of any cache key: the floor is applied to a cached scan's DMRs. */
 export const DEFAULT_MIN_CPGS = 5
+
+/** Whether a DMR's Δβ clears the volcano's Min Δβ, the one test behind the scan's counts, Manhattan, browser track
+ * and gene links and the region view's gray DMRs: strictly above the floor, as the volcano renderer classifies
+ * |x| > cutoff, so a DMR exactly at it is counted nowhere -- at a floor of 0 (or none) too, where a Δβ of exactly 0
+ * is not counted. One with no Δβ (no covered cell in a group) has no measured effect and clears no floor. */
+export function clearsMinDeltaBeta(deltaBeta: number | null | undefined, minDeltaBeta: number | undefined): boolean {
+	return deltaBeta != null && Math.abs(deltaBeta) > (minDeltaBeta || 0)
+}
 
 export type DiffMethRequest = {
 	/** Discriminator tag. Matches the `kind` field on `DmCacheResult` and
@@ -46,6 +60,12 @@ export type DiffMethRequest = {
 		 * backgroundCorrection); the volcano's p then becomes that empirical p and DMRs whose
 		 * stratum held too little background are left out of the rows */
 		backgroundCorrection?: boolean
+		/** the region statistic the volcano's y (and the scan Manhattan's) plots; ignored with
+		 * backgroundCorrection, whose empirical p is the y then. Absent = min_smoothed_fdr */
+		yAxis?: DmrScanYAxis
+		/** the volcano's Min Δβ: DMRs with a |Δβ| no larger stay on the volcano, as not significant, but are
+		 * not counted, nor drawn on the Manhattan or the browser track. Absent = 0 */
+		minDeltaBeta?: number
 		/** drop DMRs called from fewer CpGs than this before rendering; absent = DEFAULT_MIN_CPGS */
 		minCpgs?: number
 		/** display width of the methylome-wide profile's bins, in bp. Several native bins are
@@ -99,23 +119,40 @@ export type DiffMethFullResponse = {
 export type DmrScanSummary = {
 	/** chromosomes scanned, in genome order */
 	chromosomes: string[]
+	/** the chromosomes DMRcate ran over: the whole genome (less the sex chromosomes when excluded),
+	 * of which `chromosomes` is the view. A region view opened from the scan windows this run. */
+	runChromosomes: string[]
+	/** the DMRcate parameters that run used, defaults filled in, which a region view must match */
+	dmrcate?: { lambda: number; C: number; fdr_cutoff: number }
 	totalProbesAnalyzed: number
 	/** DMRs the scan called, before any filtering here */
 	called: number
 	/** the minCpgs that was applied, and how many DMRs met it */
 	minCpgs: number
 	kept: number
-	/** direction split of the kept DMRs */
+	/** the |Δβ| floor applied, and how many kept DMRs met it: what the counts below, the Manhattan, the
+	 * browser track and the gene-body set are over */
+	minDeltaBeta: number
+	shown: number
+	/** the region statistic the rows' p is, when not the background p; what the client labels the y axis */
+	yAxis: DmrScanYAxis
+	/** kept DMRs left out of the rows because the run could not compute their yAxis statistic; absent when none */
+	withoutStatistic?: number
+	/** kept DMRs left out of the rows, counts, track and gene set because they have no Δβ (no covered cell in a
+	 * group), so no effect to plot or a direction to count them by; absent when none */
+	withoutDeltaBeta?: number
+	/** direction split of the shown DMRs: kept, and at or above minDeltaBeta */
 	hyper: number
 	hypo: number
-	/** width quantiles (bp) of the kept DMRs; absent when none were kept */
+	/** width quantiles (bp) of the shown DMRs; absent when none were shown */
 	width?: { median: number; q1: number; q3: number }
-	globalMethylation?: { controlMeanBeta: number; caseMeanBeta: number; shift: number; valuesCounted: number }
+	globalMethylation?: TermdbDmrBatchSuccessResponse['globalMethylation']
 	regionMask?: { sources: string[]; overlapFrac: number; dmrsDropped: number }
-	/** present when the correction ran. `scored` and `significant` count the kept DMRs; `unscored`
-	 * kept DMRs had no background in their stratum and are not among the rows */
+	/** present when the correction ran. `scored` and `significant` count the shown DMRs; `unscored`
+	 * shown DMRs had no background in their stratum and are not among the rows. `windows` is over the
+	 * whole run, also when `chromosomes` is one chromosome of it */
 	backgroundCorrection?: { windows: number; scored: number; unscored: number; significant: number; matchedOn: string[] }
-	/** genes under kept hypomethylated gene-body DMRs -- the set the expression test
+	/** genes under shown hypomethylated gene-body DMRs -- the set the expression test
 	 * (termdb/dmrGeneDE) runs on. With the background correction on, a region must also beat its
 	 * matched background (p<0.05), which makes this the stricter of two readings rather than the
 	 * only one. Absent when no DMR qualifies. */
@@ -175,7 +212,17 @@ export type DmrScanSummary = {
 	 * -log10 of the q the volcano plots; the N most significant per direction carry pixel
 	 * coordinates and are interactive. Rendered per request, after the cache, because it depends
 	 * on the client's pixel ratio. */
-	manhattan?: { png: string; plotData: any; interactive: number; plotWidth: number; plotHeight: number }
+	manhattan?: {
+		png: string
+		plotData: any
+		interactive: number
+		plotWidth: number
+		plotHeight: number
+		/** the radius the PNG was drawn at, which the hover layer must match */
+		dotRadius: number
+		/** filled rather than open circles: a one-chromosome scan, where dots are few enough to fill */
+		filled: boolean
+	}
 }
 
 export type DiffMethResponse = DiffMethPreAnalysisResponse | DiffMethFullResponse
@@ -226,6 +273,8 @@ export type DiffMethEntry = DataEntry & {
 	 * background correction ran, the observed delta-beta minus the matched drift. */
 	no_cpgs?: number
 	excess?: number
+	/** DMR-scan rows only: the least kernel-smoothed FDR in the region, which DMRcate called it by */
+	min_smoothed_fdr?: number
 }
 
 /** What diffMeth.R actually tested, as opposed to what was asked for. Emitted by the R script

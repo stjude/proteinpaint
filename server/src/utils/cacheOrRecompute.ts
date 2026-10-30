@@ -102,21 +102,27 @@ export async function cacheOrRecompute<TArgs, TResult>(
 		)
 	}
 	const cap = entry.maxPending
-	const inUse = pendingCount.get(cacheSubdir) ?? 0
-	if (inUse >= cap) throw makeBusyError()
 
+	/* Only a compute takes a slot of the pool: a cache hit is a file read, and counting it would refuse a
+	request for a result already on disk whenever the pool is busy with other computes. The slot is taken
+	after the read, synchronously with the check, so the count cannot overshoot the cap. */
 	const work = (async (): Promise<CacheOrRecomputeResult<TResult>> => {
 		const cached = disableFileCache ? null : await tryReadJson<TResult>(file)
 		if (cached !== null) return { result: cached, cacheId, cacheFilePath: file }
-		const fresh = await computeFresh({ cacheId })
-		if (!disableFileCache && opts.shouldPersist?.(fresh) !== false) await writeJsonCache(file, fresh)
-		return { result: fresh, cacheId, cacheFilePath: file }
+		const inUse = pendingCount.get(cacheSubdir) ?? 0
+		if (inUse >= cap) throw makeBusyError()
+		pendingCount.set(cacheSubdir, inUse + 1)
+		try {
+			const fresh = await computeFresh({ cacheId })
+			if (!disableFileCache && opts.shouldPersist?.(fresh) !== false) await writeJsonCache(file, fresh)
+			return { result: fresh, cacheId, cacheFilePath: file }
+		} finally {
+			pendingCount.set(cacheSubdir, (pendingCount.get(cacheSubdir) ?? 1) - 1)
+		}
 	})()
 	pending.set(dedupKey, work)
-	pendingCount.set(cacheSubdir, inUse + 1)
 	return work.finally(() => {
 		pending.delete(dedupKey)
-		pendingCount.set(cacheSubdir, (pendingCount.get(cacheSubdir) ?? 1) - 1)
 	}) as Promise<CacheOrRecomputeResult<TResult>>
 }
 

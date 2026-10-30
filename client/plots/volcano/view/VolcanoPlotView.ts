@@ -6,6 +6,7 @@ import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
+import { onDeltaBetaAxis } from '../settings/defaults'
 import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { plotManhattan, manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
@@ -135,7 +136,9 @@ export class VolcanoPlotView {
 		without it the DMR's own smoothed FDR is the evidence -- both are answerable questions, and
 		gating the button on the correction made the uncorrected scan a dead end. */
 		const gb = this.viewData.scan?.geneBodyLoss
-		if (gb?.genes.length) {
+		// both expression buttons below run DE, which needs the dataset's gene counts
+		const hasExpression = !!this.interactions.app.vocabApi.termdbConfig?.queries?.rnaseqGeneCount
+		if (hasExpression && gb?.genes.length) {
 			this.addActionButton(
 				`Expression of ${gb.genes.length.toLocaleString()} gene-body loss genes`,
 				[tt.DNA_METHYLATION],
@@ -149,7 +152,7 @@ export class VolcanoPlotView {
 					)
 			)
 		}
-		if (this.viewData.scan?.cacheId) {
+		if (hasExpression && this.viewData.scan?.cacheId) {
 			this.addActionButton('Genes, expression and literature', [tt.DNA_METHYLATION], () =>
 				dmrGeneLinkPanel(
 					this.dom.actionsTip,
@@ -327,7 +330,7 @@ export class VolcanoPlotView {
 		if (this.termType === tt.JUNCTION) {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
 			this.volcanoDom.xAxisLabel.text(this.viewData.deltaPsiAxisLabel || 'ΔPSI (case − control)')
-		} else if (this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta') {
+		} else if (onDeltaBetaAxis(this.termType, this.settings)) {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
 			/* Prefer the group-named form built by the view model ("Δβ (NSD2 Higher − NSD2 Lower)"):
 			case/control are slot names, so the role-based wording does not say which direction a
@@ -485,7 +488,8 @@ export class VolcanoPlotView {
 				original_p_value: d.p,
 				adjusted_p_value: d.p,
 				no_cpgs: d.no_cpgs,
-				excess: d.excess
+				excess: d.excess,
+				min_smoothed_fdr: d.min_smoothed_fdr
 			} as any)
 		// the case group, whose direction the colours name; the scan carries the groups it ran on
 		const g2 = this.viewData.scan!.matchedSamplelst?.groups?.[1]?.name || 'case group'
@@ -501,20 +505,24 @@ export class VolcanoPlotView {
 				...manhattanLayoutDefaults,
 				plotWidth: manhattan!.plotWidth,
 				plotHeight: manhattan!.plotHeight,
+				// the radius the PNG was drawn at; see the profile below. Absent from older cached scans
+				pngDotRadius: manhattan!.dotRadius ?? manhattanLayoutDefaults.pngDotRadius,
 				// the server already picked N per direction; the client must not re-cap by |y|
 				interactiveDotsCap: manhattan!.plotData.points.length,
 				maxTooltipGenes: this.settings.maxTooltipGenes,
-				legendItemWidth: 130
+				legendItemWidth: 130,
+				// saved from the volcano's download menu, with the profile under it
+				showDownload: false
 			},
 			undefined,
 			{
 				// names the chromosome when that is all the scan covered, rather than "the genome"
 				title: `DMRs along ${this.scanSpan()}, direction in ${g2} (top ${manhattan!.interactive.toLocaleString()} per direction interactive)`,
 				// short, because it runs down a 300 px axis: the legend and title say what the sign means
-				yAxisLabel: `±log₁₀(${this.viewData.pValueLabel.replace('smoothed ', '')})`,
+				yAxisLabel: `±log₁₀(${this.viewData.pValueLabel})`,
 				legend: [
-					{ label: 'Hypermethylated', color: HYPER_COLOR, hollow: true },
-					{ label: 'Hypomethylated', color: HYPO_COLOR, hollow: true }
+					{ label: 'Hypermethylated', color: HYPER_COLOR, hollow: !manhattan!.filled },
+					{ label: 'Hypomethylated', color: HYPO_COLOR, hollow: !manhattan!.filled }
 				],
 				itemNoun: 'DMR',
 				renderSingleHoverTooltip: (d, container) => {
@@ -607,7 +615,7 @@ export class VolcanoPlotView {
 				getActions: d => [
 					{
 						label: 'Genome browser',
-						onClick: async () => await this.interactions.launchScanGenomeBrowser(region(d), this.viewData.scan!)
+						onClick: async () => await this.interactions.launchMethylationGenomeBrowser(region(d), this.viewData.scan!)
 					}
 				],
 				getRowKey: d => label(d),
@@ -802,7 +810,7 @@ export class VolcanoPlotView {
 
 	/** Multi-hit hover table for differential splicing: one row per intron cluster. */
 	private get onDeltaBeta() {
-		return this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
+		return onDeltaBetaAxis(this.termType, this.settings)
 	}
 
 	private buildSpliceMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
@@ -906,13 +914,13 @@ export class VolcanoPlotView {
 			},
 			{
 				/* A scan has already called every DMR: the browser shows them from the cache, beside
-				the genes and cCREs, where the region view would re-fit the chromosome to draw the same
-				track. The region view stays for the element classes, whose hits are not yet DMRs. */
+				the genes and cCREs, with no per-CpG detail; the region view below adds that detail. An
+				element-class hit (promoter, cCRE) opens on the genes and cCREs around it. */
 				label: 'Genome browser',
-				isVisible: () => termType === tt.DNA_METHYLATION && !!this.viewData.scan,
+				isVisible: () => termType === tt.DNA_METHYLATION,
 				onClick: async () => {
 					const dm = d as DataPointEntry & { chr: string; start: number; stop: number }
-					await interactions.launchScanGenomeBrowser(dm, this.viewData.scan!)
+					await interactions.launchMethylationGenomeBrowser(dm, this.viewData.scan)
 				}
 			},
 			{
@@ -923,22 +931,15 @@ export class VolcanoPlotView {
 				}
 			},
 			{
-				label: 'DMR analysis',
-				isVisible: () => termType === tt.DNA_METHYLATION && !this.viewData.scan,
+				/* The region view on a scan's DMR only. An element-class hit (promoter, cCRE) comes from a
+				per-element test; the region view draws DMRcate's de novo calls, which need not agree with it,
+				and showing one under the other mixes two analyses. The violin and the browser above serve
+				elements. */
+				label: 'Differentially Methylated Region (DMR) Analysis',
+				isVisible: () => termType === tt.DNA_METHYLATION && !!this.viewData.scan,
 				onClick: async () => {
-					const dm = d as DataPointEntry & {
-						chr: string
-						start: number
-						stop: number
-						promoter_id?: string
-						gene_name?: string
-					}
-					await interactions.launchDmr({
-						chr: dm.chr,
-						start: dm.start,
-						stop: dm.stop,
-						promoterId: dm.promoter_id
-					})
+					const dm = d as DataPointEntry & { chr: string; start: number; stop: number }
+					await interactions.launchDmr({ chr: dm.chr, start: dm.start, stop: dm.stop }, this.viewData.scan!)
 				}
 			},
 			{
@@ -978,6 +979,10 @@ export class VolcanoPlotView {
 		if (this.viewData.singlePValue) {
 			// DAP carries a single FDR, a scan a single p; both are stored in original_p_value
 			addTooltipRow(table, this.viewData.pValueLabel, roundValueAuto(d.original_p_value))
+			// a scan DMR's call statistic, beside the one it is plotted by when that is another
+			const sfdr = (d as any).min_smoothed_fdr
+			if (sfdr != null && (this.viewData.scan?.yAxis ?? 'min_smoothed_fdr') != 'min_smoothed_fdr')
+				addTooltipRow(table, 'Min smoothed FDR', roundValueAuto(sfdr))
 		} else {
 			addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
 			if (d.adjusted_p_value != undefined) addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))

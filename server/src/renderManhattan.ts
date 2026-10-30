@@ -406,7 +406,11 @@ async function renderManhattanPoints_actual(req: ManhattanPointsRequest): Promis
 	// units at this plot height, so a dot on the cap is drawn whole whatever the scale. The Rust
 	// port padded by the radius in -log10 units, which is about the right number of pixels on a
 	// 0..200 axis and half that on a signed one, where the top row of dots was cut in half.
-	const yCap = calculateDynamicYCap(ys, maxCappedPoints, logCutoff, hardCap, binSize)
+	let yCap = calculateDynamicYCap(ys, maxCappedPoints, logCutoff, hardCap, binSize)
+	/* With no finite y above 0 (every row q = 0, or the rest q = 1) the walk returns that largest finite y, 0, and the
+	zero-q rows would be parked on the baseline as if they had no evidence. Park them at the default cutoff instead,
+	which is the hard cap when no row is finite. */
+	if (infIndices.length && yCap <= 0) yCap = logCutoff
 	// the stroke of an open circle reaches half a pixel past the radius
 	const edgePx = dotRadius + (req.hollow ? 1 : 0)
 	let top: number // the largest plotted |y|, plus headroom
@@ -415,10 +419,13 @@ async function renderManhattanPoints_actual(req: ManhattanPointsRequest): Promis
 		// the full range
 		const maxY = ys.reduce((a, b) => (Number.isFinite(b) && b > a ? b : a), 0) || 1
 		for (const idx of infIndices) ys[idx] = maxY
+		// a q of 0 drawn at the top is drawn at a cap, whatever the setting
+		hasCappedPoints = infIndices.length > 0
 		top = maxY
 	} else if (ys.length > 0) {
 		const maxY = ys.reduce((a, b) => (b > a ? b : a), -Infinity)
-		hasCappedPoints = maxY > logCutoff
+		// a q of 0 parked at the cap below is capped too, though its placeholder of 0 is not above anything
+		hasCappedPoints = maxY > logCutoff || infIndices.length > 0
 		for (const idx of infIndices) ys[idx] = yCap
 		if (maxY > yCap) {
 			for (let i = 0; i < ys.length; i++) if (ys[i] > yCap) ys[i] = yCap

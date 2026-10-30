@@ -1,5 +1,5 @@
 import { getCompInit } from '#rx'
-import { Menu, GeneSetEditUI, renderTable, table2col, sayerror, make_radios, addGeneSearchbox } from '#dom'
+import { Menu, GeneSetEditUI, renderTable, table2col, sayerror, make_radios } from '#dom'
 import {
 	filterInit,
 	getNormalRoot,
@@ -753,68 +753,6 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					tip,
 					termType: TermTypes.JUNCTION,
 					self
-				})
-			})
-	}
-
-	/* Region (DMR) analysis off the same two groups. The volcano reaches this by clicking a hit,
-	which supplies the region; here the user names one instead, for the case where the region of
-	interest is already known and the genome-wide scan is not the point.
-
-	Gated on regionAnalysis, which termdb.config.ts emits only when the dataset has a matrix the
-	region view can run on -- otherwise this offers an analysis that errors on submit. */
-	if (dmQuery?.regionAnalysis) {
-		const itemDiv = div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.attr('data-testid', 'sjpp-dmr-option')
-			.text(`${termType2label(TermTypes.DNA_METHYLATION)} Region (DMR) Analysis`)
-			.on('click', async () => {
-				const groups = []
-				for (const group of samplelstTW.q.groups) {
-					if (!groupHasSamples(group)) throw 'group does not contain samples for differential analysis'
-					/* "One group vs everyone else" arrives as a second group with in:false whose values repeat
-					the first group's -- a placeholder. The region route takes a group literally, so send the
-					group that the placeholder stands for, or the first group is compared with itself. */
-					groups.push(group.in === false ? getOthersGroup(group, self.state.termfilter) : { ...group })
-				}
-				if (groups.length != 2) throw 'exactly 2 groups are required for region analysis'
-				// the picker's colours, as the volcano's launcher carries them (groupColors)
-				const colors = {}
-				const c1 = samplelstTW.term.values?.[groups[0].name]?.color
-				const c2 = samplelstTW.term.values?.[groups[1].name]?.color
-				if (c1) colors.group1 = c1
-				if (c2) colors.group2 = c2
-
-				const tip = self.tip2
-				tip.clear().showunderoffset(itemDiv.node())
-				const row = tip.d.append('div').style('padding', '5px')
-				row.append('div').style('margin-bottom', '5px').text('Region to analyze:')
-				const geneSearch = addGeneSearchbox({
-					row,
-					genome: self.app.opts.genome,
-					tip: new Menu({ padding: '0px' }),
-					callback: () => {
-						if (!geneSearch.chr) throw new Error('A valid gene or position is required')
-						tip.hide()
-						self.app.dispatch({
-							type: 'plot_create',
-							config: {
-								chartType: 'dmr',
-								headerText: `DMR: ${
-									geneSearch.geneSymbol || `${geneSearch.chr}:${geneSearch.start}-${geneSearch.stop}`
-								}`,
-								coordinateOverride: { chr: geneSearch.chr, start: geneSearch.start, stop: geneSearch.stop },
-								// same shape the volcano hands over; the server resolves ids to sample names,
-								// and the filter of a group that is defined by one
-								group1: getGroupForRegion(groups[0]),
-								group2: getGroupForRegion(groups[1]),
-								group1Name: groups[0].name,
-								group2Name: groups[1].name,
-								...(Object.keys(colors).length ? { settings: { dmr: { colors } } } : {})
-							}
-						})
-					}
 				})
 			})
 	}
@@ -1760,6 +1698,15 @@ export function getOthersGroup(group, termfilter) {
 	const others = { name: group.name, in: true, filter: filterJoin([notListed, termfilter.filter]) }
 	if (termfilter.filter0 !== undefined) others.filter0 = termfilter.filter0
 	return others
+}
+
+/* The groups of a two-group analysis as its request sends them: an in:false placeholder replaced by the group that
+it stands for (getOthersGroup). Shared so that the volcano's request and the region view opened from it send the
+same groups, which the region view needs to find the volcano's cached DMR run.
+termfilter: {filter, filter0} of the app state */
+export function withOthersGroup(groups, termfilter) {
+	const samplesGroup = groups.find(g => g.in)
+	return groups.map(g => (g.in ? g : getOthersGroup({ name: g.name, values: samplesGroup.values }, termfilter)))
 }
 
 /* A samplelst tw whose groups are each defined by a filter.

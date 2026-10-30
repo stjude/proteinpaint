@@ -1,5 +1,11 @@
 import tape from 'tape'
-import { dmrScanToRows, summarizeProfile, coarsenProfile, dmrBedjLines } from '#src/utils/dmrScanRows.ts'
+import {
+	dmrScanToRows,
+	restrictScanPayload,
+	summarizeProfile,
+	coarsenProfile,
+	dmrBedjLines
+} from '#src/utils/dmrScanRows.ts'
 
 /*
 test sections:
@@ -9,6 +15,9 @@ corrected: unscored DMRs leave the rows but stay counted; the correction adds a 
 summarizeProfile: quantiles and moved-fraction of the genome-wide binned profile
 coarsenProfile: probe-weighted re-binning for display
 dmrBedjLines: the plain text bedj file of the kept DMRs
+y follows the requested region statistic, the smoothed FDR by default
+restrictScanPayload: a chromosome view keeps the run calls and counts only its own
+restrictScanPayload keeps the facts of the whole run, which the client labels as such
 */
 
 /** The scan reaches the volcano only through this mapping, so a mistake here is a wrong figure
@@ -22,8 +31,8 @@ const dmr = (o: Partial<any>) => ({
 	no_cpgs: 10,
 	min_smoothed_fdr: 1e-10,
 	HMFDR: 1e-300,
-	maxdiff: 0.3,
-	meandiff: 0.2,
+	delta_beta_max: 0.3,
+	delta_beta_mean: 0.2,
 	direction: 'hyper',
 	...o
 })
@@ -54,8 +63,8 @@ tape('uncorrected scan: CpG floor, one p per row, summary counts', t => {
 		dmr({
 			start: 15_000_000,
 			stop: 15_003_000,
-			meandiff: -0.1,
-			maxdiff: -0.2,
+			delta_beta_mean: -0.1,
+			delta_beta_max: -0.2,
 			direction: 'hypo',
 			inGeneBody: true,
 			bodyGenes: ['LOSS'],
@@ -72,7 +81,7 @@ tape('uncorrected scan: CpG floor, one p per row, summary counts', t => {
 	t.equal(rows[0].gene_name, 'A, B', 'genes are joined for the Gene(s) column')
 	t.equal(rows[0].delta_beta, 0.2, 'x is the mean delta-beta')
 	t.equal(rows[0].fold_change, 0.3, 'fold_change carries the peak delta-beta, same sign')
-	t.equal(rows[0].original_p_value, 1e-10, 'p is the smoothed FDR')
+	t.equal(rows[0].original_p_value, 1e-10, "p is DMRcate's min smoothed FDR by default")
 	t.equal(rows[0].adjusted_p_value, 1e-10, 'and is the same under either p-value type')
 	t.deepEqual(scan.width, { median: 3000, q1: 1000, q3: 3000 }, 'width quantiles over kept DMRs')
 	t.equal(scan.resources, undefined, 'a result computed before cost accounting carries no resources')
@@ -118,7 +127,7 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 				start: 1000,
 				stop: 2000,
 				direction: 'hypo',
-				meandiff: -0.2,
+				delta_beta_mean: -0.2,
 				bgP: 0.01,
 				excess: -0.15,
 				inGeneBody: true,
@@ -126,11 +135,19 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 				genes: ['LOSS']
 			}),
 			// hypo, beats background, but only clips a promoter -> not in the set
-			dmr({ start: 3000, stop: 4000, direction: 'hypo', meandiff: -0.2, bgP: 0.01, genes: ['PROMOTER_ONLY'] }),
+			dmr({ start: 3000, stop: 4000, direction: 'hypo', delta_beta_mean: -0.2, bgP: 0.01, genes: ['PROMOTER_ONLY'] }),
 			// hyper in a gene body -> not a loss
 			dmr({ start: 5000, stop: 6000, bgP: 0.01, inGeneBody: true, genes: ['GAIN'] }),
 			// hypo in a gene body but not significant
-			dmr({ start: 7000, stop: 8000, direction: 'hypo', meandiff: -0.2, bgP: 0.4, inGeneBody: true, genes: ['NS'] }),
+			dmr({
+				start: 7000,
+				stop: 8000,
+				direction: 'hypo',
+				delta_beta_mean: -0.2,
+				bgP: 0.4,
+				inGeneBody: true,
+				genes: ['NS']
+			}),
 			// unscored: no bgP
 			dmr({ start: 9000, stop: 60000, no_cpgs: 900 })
 		],
@@ -227,14 +244,14 @@ tape('dmrBedjLines', t => {
 			{
 				chr: 'chr1',
 				dmrs: [
-					dmr({ start: 2000, stop: 2500, meandiff: 0.21, no_cpgs: 8, genes: ['AAA'] }),
+					dmr({ start: 2000, stop: 2500, delta_beta_mean: 0.21, no_cpgs: 8, genes: ['AAA'] }),
 					// out of order on purpose: bedj.js stops reading a plain text file past the region in view
-					dmr({ start: 900, stop: 1000, meandiff: -0.3, no_cpgs: 6, direction: 'hypo' }),
+					dmr({ start: 900, stop: 1000, delta_beta_mean: -0.3, no_cpgs: 6, direction: 'hypo' }),
 					// under the floor
-					dmr({ start: 3000, stop: 3100, meandiff: 0.5, no_cpgs: 2 })
+					dmr({ start: 3000, stop: 3100, delta_beta_mean: 0.5, no_cpgs: 2 })
 				]
 			},
-			{ chr: 'chr2', dmrs: [dmr({ chr: 'chr2', start: 10, stop: 99, meandiff: 0.1, no_cpgs: 5 })] }
+			{ chr: 'chr2', dmrs: [dmr({ chr: 'chr2', start: 10, stop: 99, delta_beta_mean: 0.1, no_cpgs: 5 })] }
 		]
 	}
 	const lines = dmrBedjLines(p, 5).trim().split('\n')
@@ -250,5 +267,119 @@ tape('dmrBedjLines', t => {
 		'column 4 is the bedj item: hover label and the category the legend counts'
 	)
 	t.equal(dmrBedjLines({ regions: [] } as any, 5), '', 'a scan with no calls makes an empty file, not a stray newline')
+	t.end()
+})
+
+tape('y follows the requested region statistic, the smoothed FDR by default', t => {
+	const p = payload([dmr({ HMFDR: 0.003, Stouffer: 0.02, Fisher: null, min_smoothed_fdr: 1e-40 })])
+	const y = (yAxis?: string) => {
+		const { rows, scan } = dmrScanToRows(p, { chromosomes: ['chr1'], yAxis })
+		return [rows[0].original_p_value, scan.yAxis]
+	}
+	t.deepEqual(y(), [1e-40, 'min_smoothed_fdr'], 'default: the smoothed FDR DMRcate calls regions by')
+	t.deepEqual(y('HMFDR'), [0.003, 'HMFDR'])
+	t.deepEqual(y('Stouffer'), [0.02, 'Stouffer'])
+	const fisher = dmrScanToRows(p, { chromosomes: ['chr1'], yAxis: 'Fisher' })
+	t.deepEqual(
+		[fisher.rows.length, fisher.scan.withoutStatistic, fisher.scan.kept],
+		[0, 1, 1],
+		'a statistic the run could not compute leaves the DMR off the rows, counted, rather than at p = 1'
+	)
+	t.notOk(dmrScanToRows(p, { chromosomes: ['chr1'] }).scan.withoutStatistic, 'absent when every DMR has it')
+	t.deepEqual(y('no_cpgs'), [1e-40, 'min_smoothed_fdr'], 'anything else from the request gets the default')
+	t.equal(
+		dmrScanToRows(p, { chromosomes: ['chr1'] }).rows[0].min_smoothed_fdr,
+		1e-40,
+		'the smoothed FDR rides along for the tooltip'
+	)
+	t.end()
+})
+
+tape('restrictScanPayload: a chromosome view keeps the run calls and counts only its own', t => {
+	const run: any = payload([dmr({ chr: 'chr1' }), dmr({ chr: 'chr2', start: 5000, stop: 6000 })], {
+		regionMask: { sources: ['Segmental duplications'], overlapFrac: 0.5, dmrsDropped: 3 },
+		binMethylation: {
+			binBp: 100000,
+			bins: [
+				{ chr: 'chr1', start: 0, n_probes: 5, control: 0.5, case: 0.6 },
+				{ chr: 'chr2', start: 0, n_probes: 5, control: 0.5, case: 0.6 }
+			]
+		}
+	})
+	// one window per chromosome, the second with masked DMRs and its own probe count
+	run.regions = [
+		{ ...run.regions[0], chr: 'chr1', n_probes: 100, dmrs: [run.regions[0].dmrs[0]] },
+		{ ...run.regions[0], chr: 'chr2', n_probes: 40, dmrs: [run.regions[0].dmrs[1]], masked: [{}, {}] }
+	]
+	const view = restrictScanPayload(run, ['chr2'])
+	t.deepEqual(
+		view.regions.map(r => r.chr),
+		['chr2'],
+		'only the chosen chromosome'
+	)
+	t.equal(view.totalProbesAnalyzed, 40, 'CpGs counted on the chosen chromosome')
+	t.equal(view.regionMask!.dmrsDropped, 2, 'masked DMRs counted on the chosen chromosome')
+	t.deepEqual(
+		view.binMethylation!.bins.map(b => b.chr),
+		['chr2'],
+		'profile bins of the chosen chromosome'
+	)
+	const { scan } = dmrScanToRows(view, { chromosomes: ['chr2'], runChromosomes: ['chr1', 'chr2'] })
+	t.deepEqual(
+		[scan.chromosomes, scan.runChromosomes],
+		[['chr2'], ['chr1', 'chr2']],
+		'the view and the run are both named'
+	)
+	t.end()
+})
+
+tape('restrictScanPayload keeps the facts of the whole run, which the client labels as such', t => {
+	const globalMethylation = { controlMeanBeta: 0.5, caseMeanBeta: 0.52, shift: 0.02, valuesCounted: 9 }
+	const backgroundCorrection = { windows: 400, scored: 0, unscored: 0, significant: 0, matchedOn: ['width'] }
+	const resources = { workers: 1, wallMs: 60000 }
+	const run: any = payload([dmr({ chr: 'chr1' }), dmr({ chr: 'chr2', start: 5000, stop: 6000 })], {
+		globalMethylation,
+		backgroundCorrection,
+		resources,
+		constants: { lambda: 1000, C: 2, fdr_cutoff: 0.05 }
+	})
+	const view = restrictScanPayload(run, ['chr2'])
+	t.deepEqual(view.globalMethylation, globalMethylation, 'global methylation is the run, measured genome-wide')
+	t.equal(view.backgroundCorrection!.windows, 400, 'background windows are sampled over the run')
+	t.deepEqual(view.resources, resources, 'the cost is the run')
+	t.deepEqual(view.constants, run.constants, 'the constants a region view needs are the run')
+	t.end()
+})
+
+tape('minDeltaBeta: DMRs under the floor stay in the rows but are not counted, tracked or gene-set', t => {
+	const p = payload([
+		dmr({ delta_beta_mean: 0.3, direction: 'hyper' }),
+		dmr({ start: 5000, stop: 6000, delta_beta_mean: -0.01, direction: 'hypo', inGeneBody: true, bodyGenes: ['G'] })
+	])
+	const { rows, scan } = dmrScanToRows(p, { chromosomes: ['chr1'], minDeltaBeta: 0.1 })
+	t.equal(rows.length, 2, 'both on the volcano, where its own threshold shows the second as not significant')
+	t.deepEqual([scan.kept, scan.shown, scan.minDeltaBeta], [2, 1, 0.1], 'kept by CpGs, shown by |Δβ|')
+	t.deepEqual([scan.hyper, scan.hypo], [1, 0], 'counts are over the shown DMRs')
+	t.notOk(scan.geneBodyLoss, 'a gene-body loss region under the floor gives no gene set')
+	t.equal(dmrBedjLines(p, 5, 0.1).trim().split('\n').length, 1, 'the browser track holds the shown DMR only')
+	const atFloor = dmrScanToRows(payload([dmr({ delta_beta_mean: 0.1 })]), { chromosomes: ['chr1'], minDeltaBeta: 0.1 })
+	t.equal(atFloor.scan.shown, 0, 'a DMR exactly at the floor is not counted, as the volcano calls |Δβ| > cutoff')
+	const zero = dmrScanToRows(payload([dmr({ delta_beta_mean: 0 }), dmr({ start: 5000, stop: 6000 })]), {
+		chromosomes: ['chr1']
+	})
+	t.equal(zero.scan.shown, 1, 'at no floor too: a Δβ of exactly 0 is not counted, as the volcano calls |Δβ| > 0')
+	t.end()
+})
+
+tape('a DMR with no Δβ is left out of the rows, counts and track, and counted on its own', t => {
+	const p = payload([
+		dmr({ delta_beta_mean: 0.3 }),
+		dmr({ start: 5000, stop: 6000, delta_beta_mean: null, delta_beta_max: null, direction: 'hypo' })
+	])
+	const { rows, scan } = dmrScanToRows(p, { chromosomes: ['chr1'] })
+	t.equal(rows.length, 1, 'not on the volcano at Δβ 0')
+	t.deepEqual([scan.kept, scan.shown, scan.withoutDeltaBeta], [2, 1, 1], 'kept, but not shown, at no floor either')
+	t.deepEqual([scan.hyper, scan.hypo], [1, 0], 'and not counted by its fallback direction')
+	t.equal(dmrBedjLines(p, 5).trim().split('\n').length, 1, 'nor on the browser track')
 	t.end()
 })

@@ -1,5 +1,4 @@
 import type { RouteApi, RoutePayload } from '#types'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
@@ -11,6 +10,9 @@ import {
 	eligibleMethylationSamples,
 	validateChromosomes,
 	admitDmrcateJobs,
+	dmrcateDeadline,
+	runDmrcate,
+	dmrcateValues,
 	runJobPool
 } from '#src/utils/methylationMatrix.ts'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
@@ -28,9 +30,6 @@ import {
 } from '#src/utils/dmrBackground.ts'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
-
-// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
-const cachedir = serverconfig.cachedir
 
 /* Is gene-body methylation loss a cause of reduced transcription, or a footprint of it?
 
@@ -152,7 +151,8 @@ function init({ genomes }) {
 /** Bump when a change here alters the deltas for an unchanged request. */
 // 2: corrected mode added; raw entries carry corrected:false in the key
 // 3: one cohort for all chromosomes; major chromosomes only; one locus per gene symbol
-const CACHE_VERSION = 3
+// 4: dmrcate reads background regions without the model, so a body keeps CpGs the model drops, such as zero variance
+const CACHE_VERSION = 4
 
 /* Mean delta-beta over every gene body, keyed by gene symbol -- one signed number per gene across
 the whole genome. This is the gene-level reading of a methylation scan: a DMR list has many regions
@@ -269,11 +269,10 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 	// the exclusion needs the gene index; built once, not per chromosome
 	const geneIdx = q.corrected ? buildGeneIndex(genome) : null
 	const CONCURRENCY = Math.max(1, Number(serverconfig.dmrBatchConcurrency) || 2)
-	/* One rust invocation per MATRIX FILE, as dmrBatch groups its jobs. Every invocation opens and fits
-	its whole file: with per-chromosome shards a job is one chromosome, but a dataset backed by one
-	genome-wide matrix would otherwise reload and refit that file once per chromosome. Rust returns
-	background regions in input order, so each chromosome's results are sliced back by offset, and
-	the fit is the same either way, so no value changes. */
+	/* One rust invocation per MATRIX FILE. Every invocation reads its whole file: with per-chromosome
+	shards a job is one chromosome, but a dataset backed by one genome-wide matrix would otherwise
+	reload that file once per chromosome. Rust returns background regions in input order, so each
+	chromosome's results are sliced back by offset, and no value depends on the grouping. */
 	const jobs = new Map<string, string[]>()
 	for (const chr of chrs) {
 		const file = resolveMethylationMatrix(ds, chr, q.element_type).matrixFile
@@ -286,9 +285,11 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 		CONCURRENCY,
 		'Server memory is too low to compare gene-body methylation right now. Try again later.'
 	)
+	// one limit for the request's runs, which run CONCURRENCY at a time
+	const deadline = dmrcateDeadline()
 	try {
 		await runJobPool(jobList, CONCURRENCY, async jobChrs => {
-			const { matrixFile, mvalues } = resolveMethylationMatrix(ds, jobChrs[0], q.element_type)
+			const matrix = resolveMethylationMatrix(ds, jobChrs[0], q.element_type)
 			/* Corrected: intergenic windows width-matched to the gene bodies ride along in the same
 			rust call, after each chromosome's bodies, so one fit serves both. Same sampler and seed rule
 			as the scan, so the two corrections are the same correction. */
@@ -316,24 +317,19 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 				parts.push({ chr, bodies, windows })
 			}
 			const out = JSON.parse(
-				await run_rust(
-					'dmrcate',
-					JSON.stringify({
-						probe_h5_file: matrixFile,
-						mvalues,
-						cachedir,
-						genome: q.genome,
-						chr: jobChrs[0],
-						start: 0,
-						stop: 0,
-						regions: [],
+				await runDmrcate(
+					{
+						matrices: [{ file: matrix.matrixFile, chrs: jobChrs }],
+						...dmrcateValues(matrix),
 						background_regions: parts.flatMap(p => [
 							...p.bodies.map(b => ({ chr: p.chr, start: b.start, stop: b.stop })),
 							...p.windows
 						]),
 						case: group2.join(','),
 						control: group1.join(',')
-					})
+					},
+					'Compare smaller groups.',
+					deadline
 				)
 			)
 			if (out.error) throw new Error(`${jobChrs.join(',')}: ${out.error}`)
@@ -354,7 +350,7 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 						.map((b: any, j: number) => ({ j, b }))
 						.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
 					const { scored } = scoreAgainstBackground(
-						measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, meandiff: b.delta })),
+						measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, delta_beta_mean: b.delta })),
 						chrWindows
 					)
 					measured.forEach(({ j }, k) => {
