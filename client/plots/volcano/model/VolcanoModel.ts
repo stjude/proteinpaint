@@ -5,7 +5,7 @@ import type { DiffSpliceRequest } from '#types'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGroupColors, toHex } from '../colors'
-import { DMRCATE_DEFAULTS } from '../settings/defaults'
+import { DMRCATE_DEFAULTS, onDeltaBetaAxis } from '../settings/defaults'
 import { withOthersGroup } from '#mass/groups'
 // import type { Volcano } from '../Volcano'
 
@@ -195,7 +195,7 @@ export class VolcanoModel {
 		other term types always fall through to fold_change. The cutoff sent must be in the units
 		of the field sent -- otherwise the server draws threshold lines that do not correspond to
 		what it classified. */
-		const useDeltaBeta = this.termType === tt.DNA_METHYLATION && this.settings.xAxis == 'delta_beta'
+		const useDeltaBeta = onDeltaBetaAxis(this.termType, this.settings)
 		const render: VolcanoRenderRequest = {
 			significanceThresholds: {
 				pValueCutoff: this.settings.pValue,

@@ -18,6 +18,6 @@ export type DMRSettings = {
 	/** Maximum allowed region size in base pairs for DMR analysis (default: 5 Mb).
 	 *  The server also enforces a hard cap of 10 Mb as a safety net. */
 	maxRegionSize: number
-	/** The scan's Min Δβ: DMRs with a smaller |Δβ| are drawn gray, as the scan does not count them (default 0) */
+	/** The scan's Min Δβ: DMRs with a |Δβ| no larger are drawn gray, as the scan does not count them (default 0) */
 	minDeltaBeta: number
 }

@@ -6,6 +6,7 @@ import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
+import { onDeltaBetaAxis } from '../settings/defaults'
 import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { plotManhattan, manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
@@ -329,7 +330,7 @@ export class VolcanoPlotView {
 		if (this.termType === tt.JUNCTION) {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
 			this.volcanoDom.xAxisLabel.text(this.viewData.deltaPsiAxisLabel || 'ΔPSI (case − control)')
-		} else if (this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta') {
+		} else if (onDeltaBetaAxis(this.termType, this.settings)) {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
 			/* Prefer the group-named form built by the view model ("Δβ (NSD2 Higher − NSD2 Lower)"):
 			case/control are slot names, so the role-based wording does not say which direction a
@@ -809,7 +810,7 @@ export class VolcanoPlotView {
 
 	/** Multi-hit hover table for differential splicing: one row per intron cluster. */
 	private get onDeltaBeta() {
-		return this.termType === tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
+		return onDeltaBetaAxis(this.termType, this.settings)
 	}
 
 	private buildSpliceMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {

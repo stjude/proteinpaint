@@ -1,3 +1,5 @@
+import { clearsMinDeltaBeta } from '#types'
+
 /* Link a scan's DMRs to the genes they could regulate, and read each link against expression.
 
 A DMR's `genes` (dmrGenes.ts) are the genes whose SPAN it overlaps, which misses the case that
@@ -85,7 +87,8 @@ export function genesForDmr(idx: TssIndex, d: { chr: string; start: number; stop
 export function linkDmrsToGenes(dmrs: Dmr[], idx: TssIndex, minCpgs: number, minDeltaBeta = 0): GeneLink[] {
 	const links = new Map<string, GeneLink>()
 	for (const d of dmrs) {
-		if (d.no_cpgs < minCpgs || d.delta_beta_mean == null || Math.abs(d.delta_beta_mean) < minDeltaBeta) continue
+		if (d.no_cpgs < minCpgs || d.delta_beta_mean == null || !clearsMinDeltaBeta(d.delta_beta_mean, minDeltaBeta))
+			continue
 		for (const { gene, context } of genesForDmr(idx, d)) {
 			const key = `${gene}\t${context}`
 			const dmr = {

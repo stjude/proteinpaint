@@ -176,7 +176,9 @@ export async function renderVolcano<T extends DataEntry>(
 	for (const pt of points) {
 		const pForY = pt.p <= 0 ? minNonZeroP : pt.p
 		pt.y = -Math.log10(pForY)
-		pt.significant = pt.y > pValueCutoff && Math.abs(pt.fc) > foldChangeCutoff
+		/* p = 0 (an underflow, e.g. DMRcate's region statistics) is as significant as a p can be: it is drawn at the
+		cap, but passes any p cutoff, which the cap itself may not */
+		pt.significant = (pt.p <= 0 || pt.y > pValueCutoff) && Math.abs(pt.fc) > foldChangeCutoff
 		if (Math.abs(pt.fc) > xAbsMax) xAbsMax = Math.abs(pt.fc)
 		if (pt.y > yMaxData) yMaxData = pt.y
 	}

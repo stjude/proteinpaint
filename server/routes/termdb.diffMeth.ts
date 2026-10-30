@@ -3,7 +3,7 @@ import fs from 'fs'
 import { randomUUID } from 'crypto'
 import serverconfig from '#src/serverconfig.js'
 import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, DmrScanSummary } from '#types'
-import { DMR_SCAN_ELEMENT_TYPE } from '#types'
+import { DMR_SCAN_ELEMENT_TYPE, clearsMinDeltaBeta } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
 import {
 	dmrScanToRows,
@@ -16,7 +16,8 @@ import {
 	resolveGroupNames,
 	matchedSamplelst,
 	matchedSamplelstForResponse,
-	eligibleMethylationSamples
+	eligibleMethylationSamples,
+	validateChromosomes
 } from '#src/utils/methylationMatrix.ts'
 import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -115,7 +116,7 @@ export function init({ genomes }) {
 				}
 				output.scan.manhattan = await renderScanManhattan(
 					// the counted DMRs: those under the Min Δβ stay on the volcano only
-					result.promoterRows.filter(r => Math.abs(r.delta_beta ?? 0) >= (result.scan!.minDeltaBeta || 0)),
+					result.promoterRows.filter(r => clearsMinDeltaBeta(r.delta_beta, result.scan!.minDeltaBeta)),
 					result.scan.chromosomes,
 					genomes[q.genome],
 					q.volcanoRender?.devicePixelRatio
@@ -240,9 +241,14 @@ chrM is left out -- 16.5 kb of circular DNA that is not CpG-island methylated ca
 -- and chrY stays, because on a mixed-sex cohort an empty chrY is a result rather than an omission,
 unless the sex chromosomes were excluded. */
 export function scanChromosomes(req: DiffMethRequest, genome: any): string[] {
-	let chromosomes: string[] = req.scan?.chromosome
-		? [req.scan.chromosome]
-		: (genome.majorchrorder as string[]).filter(c => c != 'chrM' && c != 'chrMT')
+	const all = (genome.majorchrorder as string[]).filter(c => c != 'chrM' && c != 'chrMT')
+	let chromosomes = all
+	if (req.scan?.chromosome) {
+		/* the genome's own name for it ('1' and 'CHR1' are chr1), so the view filters the run's regions and names its
+		track file by it; and only one the genome-wide run covers, or the view is empty */
+		chromosomes = validateChromosomes(genome, [req.scan.chromosome])
+		if (!all.includes(chromosomes[0])) throw new Error(`${chromosomes[0]} is not among the scanned chromosomes.`)
+	}
 	if (req.exclude_sex_chr) chromosomes = chromosomes.filter(c => !/^chr[XY]$/i.test(c))
 	if (!chromosomes.length) throw new Error('No chromosomes left to scan.')
 	return chromosomes

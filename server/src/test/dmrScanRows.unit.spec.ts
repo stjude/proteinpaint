@@ -277,7 +277,13 @@ tape('y follows the requested region statistic, the smoothed FDR by default', t 
 	t.deepEqual(y(), [1e-40, 'min_smoothed_fdr'], 'default: the smoothed FDR DMRcate calls regions by')
 	t.deepEqual(y('HMFDR'), [0.003, 'HMFDR'])
 	t.deepEqual(y('Stouffer'), [0.02, 'Stouffer'])
-	t.deepEqual(y('Fisher'), [1, 'Fisher'], 'a statistic the run could not compute plots as 1')
+	const fisher = dmrScanToRows(p, { chromosomes: ['chr1'], yAxis: 'Fisher' })
+	t.deepEqual(
+		[fisher.rows.length, fisher.scan.withoutStatistic, fisher.scan.kept],
+		[0, 1, 1],
+		'a statistic the run could not compute leaves the DMR off the rows, counted, rather than at p = 1'
+	)
+	t.notOk(dmrScanToRows(p, { chromosomes: ['chr1'] }).scan.withoutStatistic, 'absent when every DMR has it')
 	t.deepEqual(y('no_cpgs'), [1e-40, 'min_smoothed_fdr'], 'anything else from the request gets the default')
 	t.equal(
 		dmrScanToRows(p, { chromosomes: ['chr1'] }).rows[0].min_smoothed_fdr,
@@ -336,5 +342,7 @@ tape('minDeltaBeta: DMRs under the floor stay in the rows but are not counted, t
 	t.deepEqual([scan.hyper, scan.hypo], [1, 0], 'counts are over the shown DMRs')
 	t.notOk(scan.geneBodyLoss, 'a gene-body loss region under the floor gives no gene set')
 	t.equal(dmrBedjLines(p, 5, 0.1).trim().split('\n').length, 1, 'the browser track holds the shown DMR only')
+	const atFloor = dmrScanToRows(payload([dmr({ delta_beta_mean: 0.1 })]), { chromosomes: ['chr1'], minDeltaBeta: 0.1 })
+	t.equal(atFloor.scan.shown, 0, 'a DMR exactly at the floor is not counted, as the volcano calls |Δβ| > cutoff')
 	t.end()
 })

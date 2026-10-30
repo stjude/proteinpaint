@@ -10,7 +10,7 @@ import type { DEFullResponse, DmrScanSummary } from '#types'
 import { bplen } from '#shared/common.js'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getSampleNum, SCAN_Y_AXIS_OPTIONS } from '../settings/defaults'
+import { getSampleNum, SCAN_Y_AXIS_OPTIONS, onDeltaBetaAxis } from '../settings/defaults'
 import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { getGroupColors } from '../colors'
 import { DATermTypes as tt, enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
@@ -476,7 +476,7 @@ export class VolcanoViewModel {
 			const x =
 				this.termType == tt.JUNCTION
 					? (d as any).delta_psi
-					: this.termType == tt.DNA_METHYLATION && this.settings.xAxis === 'delta_beta'
+					: onDeltaBetaAxis(this.termType, this.settings)
 					? (d as any).delta_beta - (this.response.data.xOffset ?? 0)
 					: d.fold_change
 			if (controlColor && caseColor) d.color = x > 0 ? caseColor : controlColor
@@ -518,7 +518,7 @@ export class VolcanoViewModel {
 			parts.push(`element class: ${s.elementType || 'promoter'}`)
 			// Which effect size the run was thresholded on. Two exports with the same p cutoff but
 			// different axes are not comparable, and nothing else in the line would reveal it.
-			parts.push(`x axis: ${s.xAxis === 'delta_beta' ? 'delta-beta' : 'log2(fold-change)'}`)
+			parts.push(`x axis: ${onDeltaBetaAxis(this.termType, s) ? 'delta-beta' : 'log2(fold-change)'}`)
 			/* Which reading the counts came from. Two runs of the same contrast give different
 			hyper:hypo ratios depending on this one flag, so a file without it cannot be told
 			apart from the other run. Records the offset too, since it is a result in itself. */
@@ -547,7 +547,7 @@ export class VolcanoViewModel {
 
 		// Name the effect-size measure the cutoff was applied to, not just its number — the
 		// threshold moves to deltaBetaCutoff when the axis does, and "0.1" alone is ambiguous.
-		const onDeltaBeta = this.termType == tt.DNA_METHYLATION && s.xAxis === 'delta_beta'
+		const onDeltaBeta = onDeltaBetaAxis(this.termType, s)
 		// splicing is always thresholded on delta-PSI; it never displays a log2 fold change
 		const effect =
 			this.termType == tt.JUNCTION
@@ -619,9 +619,13 @@ export class VolcanoViewModel {
 			{ label: 'DMRs called', value: s.called },
 			{ label: `DMRs with ${s.minCpgs}+ CpGs`, value: s.kept },
 			// what the rows below, the Manhattan and the browser track count
-			...(s.minDeltaBeta ? [{ label: `… and |Δβ| ≥ ${s.minDeltaBeta}`, value: s.shown }] : []),
+			...(s.minDeltaBeta ? [{ label: `… and |Δβ| > ${s.minDeltaBeta}`, value: s.shown }] : []),
 			{ label: 'Hypermethylated', value: s.hyper },
-			{ label: 'Hypomethylated', value: s.hypo }
+			{ label: 'Hypomethylated', value: s.hypo },
+			// not on the volcano: no evidence to plot, rather than evidence of no change
+			...(s.withoutStatistic
+				? [{ label: `DMRs with no ${this.pValueLabel} (not plotted)`, value: s.withoutStatistic }]
+				: [])
 		]
 		if (s.width)
 			rows.push({
@@ -672,7 +676,7 @@ export class VolcanoViewModel {
 						label: '⚠ Read depth differs between groups',
 						value: `${dk > dc ? g2 : g1} has ${ratio.toFixed(
 							1
-						)}× the reads per CpG. DMRcate calls DMRs from read-count ratios that shift with depth, so DMRs with little beta change may reflect depth rather than methylation; only those with |Δβ| ≥ ${
+						)}× the reads per CpG. DMRcate calls DMRs from read-count ratios that shift with depth, so DMRs with little beta change may reflect depth rather than methylation; only those with |Δβ| > ${
 							s.minDeltaBeta
 						} are counted.`
 					})

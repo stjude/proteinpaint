@@ -122,6 +122,10 @@ function init({ genomes }) {
 			if (!run.constants) throw new Error('This DMR run predates region views; run the scan again.')
 			// the scan's CpG floor: a DMR the scan dropped is not drawn as one it counted
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
+			/* and with the background correction, a DMR with too little matched background to score: the volcano
+			leaves it out of its rows */
+			const plotted = (d: { no_cpgs: number; bgP?: number }) =>
+				d.no_cpgs >= minCpgs && (!q.backgroundCorrection || d.bgP != null)
 			const dmrInput = {
 				matrices: [{ file: matrixFile, chrs: [q.chr] }],
 				...dmrcateValues(matrix),
@@ -134,7 +138,7 @@ function init({ genomes }) {
 				dmrs: run.regions
 					.filter(r => r.chr == q.chr)
 					.flatMap(r => r.dmrs)
-					.filter(d => d.no_cpgs >= minCpgs),
+					.filter(plotted),
 				blockWidth: q.blockWidth,
 				devicePixelRatio: q.devicePixelRatio,
 				maxLoessRegion: q.maxLoessRegion,

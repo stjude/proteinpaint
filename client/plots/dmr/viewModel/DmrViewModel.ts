@@ -9,6 +9,7 @@ const signed = (v: number | null | undefined) => `${(v ?? 0) >= 0 ? '+' : ''}${(
 /** a DMR whose |Δβ| is under the scan's Min Δβ */
 const BELOW_FLOOR_COLOR = '#d9d9d9'
 import type { TermdbDmrSuccessResponse, DmrDiagnostic } from '#types'
+import { clearsMinDeltaBeta } from '#types'
 import type { DmrConfig, BedItem, LegendRow, DmrViewData } from '../DmrTypes.ts'
 
 export class DmrViewModel {
@@ -68,7 +69,7 @@ export class DmrViewModel {
 	private buildNotes(config: DmrConfig, dmrResult: TermdbDmrSuccessResponse, showDots: boolean): string[] {
 		const notes: string[] = []
 		const floor = config.settings.dmr.minDeltaBeta || 0
-		const below = dmrResult.dmrs.filter(d => Math.abs(d.delta_beta_mean ?? 0) < floor)
+		const below = dmrResult.dmrs.filter(d => !clearsMinDeltaBeta(d.delta_beta_mean, floor))
 		if (below.length) {
 			const g1 = config.group1Name || 'group 1'
 			const g2 = config.group2Name || 'group 2'
@@ -155,7 +156,7 @@ export class DmrViewModel {
 		const rows: LegendRow[] = [{ label: 'Per-CpG Means', items: meansItems }]
 		// Only show DMR legend entries for what is drawn: directions among the counted DMRs, then the gray ones
 		const floor = config.settings.dmr.minDeltaBeta || 0
-		const counted = dmrs.filter(d => Math.abs(d.delta_beta_mean ?? 0) >= floor)
+		const counted = dmrs.filter(d => clearsMinDeltaBeta(d.delta_beta_mean, floor))
 		const hasHyper = counted.some(d => d.direction === 'hyper')
 		const hasHypo = counted.some(d => d.direction === 'hypo')
 		const below = dmrs.length > counted.length
@@ -312,7 +313,7 @@ export class DmrViewModel {
 		const floor = settings.dmr.minDeltaBeta || 0
 		const items = dmrResult.dmrs.map(dmr => {
 			// under the scan's Min Δβ: called, but not counted by the scan
-			if (Math.abs(dmr.delta_beta_mean ?? 0) < floor)
+			if (!clearsMinDeltaBeta(dmr.delta_beta_mean, floor))
 				return {
 					chr: dmr.chr,
 					start: dmr.start,

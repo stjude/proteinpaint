@@ -2,7 +2,7 @@ import { roundValue } from '#shared/roundValue.js'
 // the sample limits of a run, shared with the server, which enforces them
 import { maxSampleCutoff, sampleLimitAlert } from '#shared'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
-import { DEFAULT_MIN_CPGS } from '#types'
+import { DEFAULT_MIN_CPGS, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import type { DmrScanYAxis } from '#types'
 import type {
 	ValidatedVolcanoSettings,
@@ -41,7 +41,7 @@ export const SCAN_Y_AXIS_OPTIONS: { value: DmrScanYAxis; label: string; title: s
 		value: 'Stouffer',
 		label: 'Stouffer',
 		title:
-			"Reported by DMRcate for every DMR, but not used to call or rank them. Averages the evidence across all the region's CpGs, corrected for the number of regions: it rewards regions where most CpGs moved the same way, and grows with the number of CpGs."
+			"Reported by DMRcate for every DMR, but not used to call or rank them. Averages the evidence across all the region's CpGs, whichever direction each moved, corrected for the number of regions: it rewards regions where most CpGs differ rather than a few, and grows with the number of CpGs."
 	},
 	{
 		value: 'Fisher',
@@ -50,6 +50,12 @@ export const SCAN_Y_AXIS_OPTIONS: { value: DmrScanYAxis; label: string; title: s
 			'Reported by DMRcate for every DMR, but not used to call or rank them. Adds up the evidence of every CpG in the region, weighted toward the strongest, corrected for the number of regions: a few very clear CpGs can carry it, and since it treats neighboring CpGs as independent it reads strongest of the four.'
 	}
 ]
+
+/** Whether the volcano's x is Δβ, with deltaBetaCutoff as its cutoff: the methylation default, and always for a DMR
+ * scan, whose counts, Manhattan and track use mean Δβ and its Min Δβ floor, whatever xAxis a saved config carries. */
+export function onDeltaBetaAxis(termType: string, s: { xAxis?: string; elementType?: string }): boolean {
+	return termType == tt.DNA_METHYLATION && (s.xAxis == 'delta_beta' || s.elementType == DMR_SCAN_ELEMENT_TYPE)
+}
 
 /*********** Set default settings per termType ***********/
 export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedVolcanoSettings {

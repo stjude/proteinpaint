@@ -273,6 +273,15 @@ tape('minNonZeroPValue: smallest positive p (zeros capped), all-zero falls back 
 	t.end()
 })
 
+tape('p == 0 passes a p cutoff that the cap it is drawn at would not', async t => {
+	// -log10 cutoff 4 against a smallest positive p of 0.001: the zero is drawn at y=3 but is still significant
+	const req = makeReq({ significanceThresholds: { pValueCutoff: 4, pValueType: 'adjusted', foldChangeCutoff: 0.3 } })
+	const out = await renderVolcano([row(2, 0), row(2, 0.001), row(0.1, 0)], req)
+	t.equal(out.totalSignificantRows, 1, 'only the zero-p row past the fold-change cutoff is significant')
+	t.equal(out.dots[0].adjusted_p_value, 0, 'and it is that row')
+	t.end()
+})
+
 tape("pValueType 'original' classifies and sorts on original_p_value", async t => {
 	// A: significant only by original p; B: significant only by adjusted p.
 	const A = row(2, 0.0001, { gene_name: 'A' })

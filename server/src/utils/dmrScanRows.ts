@@ -1,5 +1,5 @@
 import type { DiffMethEntry, DmrScanSummary, DmrScanYAxis, TermdbDmrBatchSuccessResponse } from '#types'
-import { DEFAULT_MIN_CPGS, DMR_SCAN_Y_AXES } from '#types'
+import { DEFAULT_MIN_CPGS, DMR_SCAN_Y_AXES, clearsMinDeltaBeta } from '#types'
 
 /* Turn a DMR scan (termdb/dmrBatch) into rows the differential-methylation volcano can render,
 plus the whole-scan summary its Statistics panel shows.
@@ -69,21 +69,22 @@ export function dmrScanToRows(
 	nor put in the gene set: where the groups differ in read depth, DMRcate's pseudocount log-ratio
 	calls DMRs with no beta change (DISCOVER CSF: 87% of calls moved beta by less than 0.1). */
 	const minDeltaBeta = Math.max(0, Number(opts.minDeltaBeta) || 0)
-	const shown = kept.filter(d => Math.abs(d.delta_beta_mean ?? 0) >= minDeltaBeta)
+	const shown = kept.filter(d => clearsMinDeltaBeta(d.delta_beta_mean, minDeltaBeta))
 	/* With the correction on, the plotted p IS the background p, so a DMR whose stratum held too
 	little background to score has no y coordinate and is left out of the rows. Counted as
 	unscored rather than silently dropped: those are the widest and most CpG-dense regions,
 	which intergenic space cannot match, so "not testable this way" must stay distinguishable
 	from "not significant". */
-	const plotted = opts.backgroundCorrection ? kept.filter(d => d.bgP != null) : kept
+	/* Likewise a DMR whose chosen statistic the run could not compute (null): it has no evidence to plot, which is not
+	the evidence of no change a p of 1 would claim. Counted, as withoutStatistic. */
+	const plotted = kept.filter(d => (opts.backgroundCorrection ? d.bgP : d[yAxis]) != null)
 
 	const rows: DiffMethEntry[] = plotted.map(d => {
 		/* y is the region statistic the reader picked. The default, the minimum smoothed FDR, is what
 		DMRcate calls regions by, but kernel pooling makes it astronomically small (1e-22 to below
 		double precision on DISCOVER chr17), so dots crowd the top of the axis; HMFDR, Stouffer and
-		Fisher combine the region's raw per-CpG p-values and spread out from 0. A statistic the run
-		could not compute (null) plots as 1. */
-		const p = opts.backgroundCorrection ? d.bgP! : d[yAxis] ?? 1
+		Fisher combine the region's raw per-CpG p-values and spread out from 0. */
+		const p = (opts.backgroundCorrection ? d.bgP : d[yAxis])!
 		const id = `${d.chr}:${d.start}-${d.stop}`
 		const genes = d.genes?.length
 			? d.genes.join(', ') + (d.genesTruncated ? ` +${d.genesTruncated - d.genes.length} more` : '')
@@ -140,6 +141,9 @@ export function dmrScanToRows(
 		minDeltaBeta,
 		shown: shown.length,
 		yAxis,
+		...(!opts.backgroundCorrection && plotted.length < kept.length
+			? { withoutStatistic: kept.length - plotted.length }
+			: {}),
 		hyper,
 		hypo: shown.length - hyper,
 		...(widths.length ? { width: { median: q(0.5), q1: q(0.25), q3: q(0.75) } } : {}),
@@ -256,7 +260,7 @@ export function dmrBedjLines(payload: TermdbDmrBatchSuccessResponse, minCpgs: nu
 	// lines contiguous and ascending by start; any chr order will do
 	const dmrs = (payload.regions || [])
 		.flatMap(r => r.dmrs || [])
-		.filter(d => d.no_cpgs >= minCpgs && Math.abs(d.delta_beta_mean ?? 0) >= minDeltaBeta)
+		.filter(d => d.no_cpgs >= minCpgs && clearsMinDeltaBeta(d.delta_beta_mean, minDeltaBeta))
 	dmrs.sort((a, b) => (a.chr == b.chr ? a.start - b.start : a.chr < b.chr ? -1 : 1))
 	// 4th column is the bedj item as JSON; category drives both the fill and the block legend
 	const lines = dmrs.map(d => {

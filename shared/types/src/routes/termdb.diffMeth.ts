@@ -20,6 +20,13 @@ export const DMR_SCAN_ELEMENT_TYPE = 'dmr_scan'
  * structure. Not part of any cache key: the floor is applied to a cached scan's DMRs. */
 export const DEFAULT_MIN_CPGS = 5
 
+/** Whether a DMR's Δβ clears the volcano's Min Δβ, the one test behind the scan's counts, Manhattan, browser track
+ * and gene links and the region view's gray DMRs: strictly above the floor, as the volcano renderer classifies
+ * |x| > cutoff, so a DMR exactly at it is counted nowhere. No floor (0 or absent) counts every DMR. */
+export function clearsMinDeltaBeta(deltaBeta: number | null | undefined, minDeltaBeta: number | undefined): boolean {
+	return !minDeltaBeta || Math.abs(deltaBeta ?? 0) > minDeltaBeta
+}
+
 export type DiffMethRequest = {
 	/** Discriminator tag. Matches the `kind` field on `DmCacheResult` and
 	 * lets the GSEA route tell a snapshot DM request apart from a snapshot
@@ -55,7 +62,7 @@ export type DiffMethRequest = {
 		/** the region statistic the volcano's y (and the scan Manhattan's) plots; ignored with
 		 * backgroundCorrection, whose empirical p is the y then. Absent = min_smoothed_fdr */
 		yAxis?: DmrScanYAxis
-		/** the volcano's Min Δβ: DMRs with a smaller |Δβ| stay on the volcano, as not significant, but are
+		/** the volcano's Min Δβ: DMRs with a |Δβ| no larger stay on the volcano, as not significant, but are
 		 * not counted, nor drawn on the Manhattan or the browser track. Absent = 0 */
 		minDeltaBeta?: number
 		/** drop DMRs called from fewer CpGs than this before rendering; absent = DEFAULT_MIN_CPGS */
@@ -128,6 +135,8 @@ export type DmrScanSummary = {
 	shown: number
 	/** the region statistic the rows' p is, when not the background p; what the client labels the y axis */
 	yAxis: DmrScanYAxis
+	/** kept DMRs left out of the rows because the run could not compute their yAxis statistic; absent when none */
+	withoutStatistic?: number
 	/** direction split of the kept DMRs */
 	hyper: number
 	hypo: number
