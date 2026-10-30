@@ -3001,6 +3001,11 @@ async function svfusionByRangeGetter_file(ds, genome) {
 					// encode mname in case it has comma and will break v2s code when splitting by comma
 					const ssm_id = [j.dt, r.chr, pos, strand, pairlstIdx, encodeURIComponent(mname)].join(ssmIdFieldsSeparator)
 
+					/* optional image file prefix of this event, see svfusion.eventImages{}. as ssm_id omits the partner
+					breakpoint, rows of one ssm_id can break at different partner positions and carry different prefixes;
+					the sample keeps its own, so that mayUpdatePairlst() in mds3.load.js can assign them per partner breakpoint */
+					const eventImage = ds.queries.svfusion.eventImages ? j.mattr?.eventImage : undefined
+
 					let sampleObj // optional sample of this event; if valid, will be inserted into m.samples[]
 					if (j.sample) {
 						// has sample, prepare the sample obj
@@ -3024,6 +3029,7 @@ async function svfusionByRangeGetter_file(ds, genome) {
 							*/
 							_pairlst: pairlst
 						}
+						if (eventImage) sampleObj.eventImage = eventImage
 
 						if (j.mattr) {
 							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
@@ -3056,13 +3062,12 @@ async function svfusionByRangeGetter_file(ds, genome) {
 							pairlst, // if this key corresponds multiple events, add initial pairlst to allow showing svgraph without additional query to get other breakpoints
 							samples: []
 						}
-						if (ds.queries.svfusion.eventImages && j.mattr?.eventImage) {
-							// images are associated with event. even if .mattr was supposed for sample-level event properties, because mattr.eventImage is used, now will add image value to j0
-							j0.eventImageValue = j.mattr.eventImage
-						}
 						key2variants.set(ssm_id, j0)
 					}
-					if (sampleObj) key2variants.get(ssm_id).samples.push(sampleObj)
+					const m = key2variants.get(ssm_id)
+					// from the first row that has it, as the first row of the event may lack it
+					if (eventImage && !m.eventImage) m.eventImage = eventImage
+					if (sampleObj) m.samples.push(sampleObj)
 				}
 			})
 		}

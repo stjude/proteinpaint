@@ -8,8 +8,8 @@ import { imageSize } from './utils/imageSize.ts'
 images of sv/fusion events, see ds.queries.svfusion.eventImages{}
 
 an event may carry an image file prefix as its optional "eventImage" value: in the mattr{} of the svfusion
-file, which svfusionByRangeGetter_file() attaches to a track event as m.eventImageValue, or on the event in
-the singleSampleMutation data of a sample. the images of the event are the png files in eventImages.folder
+file, which svfusionByRangeGetter_file() attaches to a track event as m.eventImage (or to each of its partner
+breakpoints, see mayUpdatePairlst() in mds3.load.js), or on the event in the singleSampleMutation data of a sample. the images of the event are the png files in eventImages.folder
 that start with the prefix followed by "_"
 
 the getter is called by load_driver() in mds3.load.js for termdb/mds3 requests with q.eventImage

@@ -169,8 +169,10 @@ m.pairlst[] only holds the breakpoints of the first sample read.
 when they do, replace .pos/.strand of the partner point with .breakpoints[], so that client can tell the event
 has multiple partner breakpoints and chart them, rather than any consumer printing an arbitrary one as if it
 were the only one. the point becomes:
-	{ chr, name, breakpoints:[ {chr, pos, strand, samplecount}, ... ] } sorted by samplecount descending
+	{ chr, name, breakpoints:[ {chr, pos, strand, samplecount, eventImage}, ... ] } sorted by samplecount descending
 .samplecount counts events; a sample with events at two partner breakpoints is counted at both.
+.eventImage is the optional image file prefix of the breakpoint, from the first of its samples that has one;
+then m.eventImage is deleted, as it is of an arbitrary one of the breakpoints
 an event whose samples all break at the same position of the partner gene is left as is.
 
 must be called before m.samples[] is deleted, as it reads the per-sample breakpoints in m.samples[]._pairlst
@@ -190,7 +192,9 @@ export function mayUpdatePairlst(m) {
 		if (!p || !Number.isFinite(p.pos)) continue
 		const key = p.chr + '.' + p.pos + '.' + p.strand
 		if (!key2bp.has(key)) key2bp.set(key, { chr: p.chr, pos: p.pos, strand: p.strand, samplecount: 0 })
-		key2bp.get(key).samplecount++
+		const bp = key2bp.get(key)
+		bp.samplecount++
+		if (s.eventImage && !bp.eventImage) bp.eventImage = s.eventImage
 	}
 	if (key2bp.size < 2) return
 
@@ -204,6 +208,7 @@ export function mayUpdatePairlst(m) {
 		breakpoints: [...key2bp.values()].sort((i, j) => j.samplecount - i.samplecount)
 	}
 	m.pairlst = [pair]
+	delete m.eventImage
 }
 
 // todo unit test

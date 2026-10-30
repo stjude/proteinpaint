@@ -59,6 +59,36 @@ tape('mayUpdatePairlst()', test => {
 	}
 
 	{
+		const withImage = (id, partner, eventImage) => Object.assign(makeSample(id, partner), { eventImage })
+		const single = makeM([makeSample(1, tp53(7674289)), withImage(2, tp53(7674289), 'img1')], { eventImage: 'img1' })
+		mayUpdatePairlst(single)
+		test.equal(single.eventImage, 'img1', 'single partner breakpoint: m.eventImage is kept')
+
+		const m = makeM(
+			[
+				makeSample(1, tp53(7674289)), // first sample of a breakpoint lacks the prefix
+				withImage(2, tp53(7674289), 'img1'),
+				withImage(3, tp53(7674915), 'img2'),
+				withImage(4, tp53(7674915), 'img3'), // later prefix of the same breakpoint is not used
+				makeSample(5, tp53(7674915)),
+				makeSample(6, tp53(1)) // breakpoint without prefix
+			],
+			{ eventImage: 'img1' }
+		)
+		mayUpdatePairlst(m)
+		test.deepEqual(
+			m.pairlst[0].a.breakpoints.map(b => [b.pos, b.eventImage]),
+			[
+				[7674915, 'img2'],
+				[7674289, 'img1'],
+				[1, undefined]
+			],
+			'multiple partner breakpoints: each breakpoint has the prefix of the first of its samples that has one'
+		)
+		test.notOk('eventImage' in m, 'multiple partner breakpoints: m.eventImage is deleted')
+	}
+
+	{
 		const samples = [
 			makeSample(1, tp53(7674289)),
 			makeSample(2, tp53(7674915)),
