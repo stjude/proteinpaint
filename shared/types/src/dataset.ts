@@ -3,6 +3,7 @@ import type { BaseTerm } from './terms/term.ts'
 import type { CategoryKey } from './terms/termCollection.ts'
 import type { TermdbSingleCellSamplesRequest, CountsFilePreview } from './index.ts'
 import type { AggregateMethodOption } from './routes/termdb.aggregateMatrix.ts'
+import type { TermdbMds3EventImageRequest, EventImage } from './routes/termdb.mds3.eventImage.ts'
 /*** General usage types ***/
 type FileObj = {
 	file: string
@@ -407,18 +408,6 @@ so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig canno
 	shown?: boolean
 }
 
-export type EventImage = {
-	/** from the file name, after the image file prefix of the event */
-	label: string
-	/** png data url */
-	src: string
-}
-
-/** .eventImages{} of the response of a termdb/mds3 request with .eventImage, the image file prefix of a svfusion event */
-export type SvFusionEventImagesResult = {
-	images: EventImage[]
-}
-
 type SvFusion = {
 	/** Optional PNG reports of events. An event may carry the image file prefix as its optional "eventImage" value,
 	 * in the mattr{} of the svfusion file, or on the event in the singleSampleMutation data.
@@ -430,8 +419,8 @@ type SvFusion = {
 		/** required unless get() is supplied */
 		folder?: string
 		/** added by validate_query_svfusionEventImages() if not supplied by ds.
-		 * q{} is the termdb/mds3 request, and q.eventImage is the image file prefix of the event */
-		get?: (q: any) => Promise<SvFusionEventImagesResult>
+		 * q{} is the termdb/mds3/eventImage request, and q.eventImage is the image file prefix of the event */
+		get?: (q: TermdbMds3EventImageRequest) => Promise<{ images: EventImage[] }>
 	}
 	byrange?: {
 		/** gz BED file path for sv fusion data: chr \t start \t stop \t {}

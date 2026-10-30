@@ -5,7 +5,7 @@ import type { Button, Elem } from '../types/d3'
 renders the images of an event as buttons, clicking one shows the image as an inline preview below the buttons
 
 holder: d3 element, contents are replaced
-images[]: {label, src}, from the eventImage query of termdb/mds3
+images[]: {label, src}, from the termdb/mds3/eventImage route
 */
 export function renderEventImages(holder: Elem, images: EventImage[]) {
 	holder.text('')

@@ -133,9 +133,9 @@ export default class FusionRenderer {
 		const content = section.append('div').text('Loading...')
 		try {
 			const body = { genome: this.genome.name, dslabel: this.context.dslabel, eventImage: fusion.eventImage }
-			const data = await dofetch3('termdb/mds3', { body })
+			const data = await dofetch3('termdb/mds3/eventImage', { body })
 			if (data.error) throw data.error
-			const images = data.eventImages?.images
+			const images = data.images
 			if (!Array.isArray(images)) throw 'images[] not array from return'
 			if (!images.length) return section.remove()
 			renderEventImages(content, images)
