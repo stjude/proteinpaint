@@ -56,7 +56,7 @@ test('FusionMapper.map() should return an array of Fusion objects', t => {
 	)
 	t.deepEqual([fusions[0].source.strand, fusions[0].target.strand], ['-', '+'], 'preserves both breakpoint strands')
 	t.deepEqual(
-		fusions.map(f => f.eventImageValue),
+		fusions.map(f => f.eventImage),
 		['gene1_gene2', undefined],
 		'preserves the optional event image value'
 	)

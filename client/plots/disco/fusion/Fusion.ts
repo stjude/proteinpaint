@@ -8,8 +8,8 @@ export default class Fusion implements Ribbon {
 	count: number
 	endpts: string
 	dt: number
-	/** image file prefix of the event, from its eventImage value */
-	eventImageValue?: string
+	/** optional image file prefix of the event */
+	eventImage?: string
 
 	constructor(
 		source: FusionSubgroup,
@@ -18,7 +18,7 @@ export default class Fusion implements Ribbon {
 		count: number,
 		endpts: string,
 		dt: number,
-		eventImageValue?: string
+		eventImage?: string
 	) {
 		this.source = source
 		this.target = target
@@ -26,6 +26,6 @@ export default class Fusion implements Ribbon {
 		this.count = count
 		this.endpts = endpts
 		this.dt = dt
-		this.eventImageValue = eventImageValue
+		this.eventImage = eventImage
 	}
 }

@@ -116,7 +116,7 @@ export default class FusionRenderer {
 		}
 		holder.append('div').style('padding', '5px').text(fusionText(fusion))
 		const graph = holder.append('div')
-		if (this.context.eventImages && this.context.dslabel && fusion.eventImageValue) {
+		if (this.context.eventImages && this.context.dslabel && fusion.eventImage) {
 			const section = holder.append('div').attr('data-testid', 'sjpp-disco-event-images').style('margin', '10px 5px')
 			section.append('div').style('font-weight', 'bold').text(this.context.eventImages!.label)
 			// not awaited, so that the fusion graph is rendered without waiting for the image list
@@ -132,7 +132,7 @@ export default class FusionRenderer {
 	private async showEventImages(section: any, fusion: Fusion) {
 		const content = section.append('div').text('Loading...')
 		try {
-			const body = { genome: this.genome.name, dslabel: this.context.dslabel, eventImage: fusion.eventImageValue }
+			const body = { genome: this.genome.name, dslabel: this.context.dslabel, eventImage: fusion.eventImage }
 			const data = await dofetch3('termdb/mds3', { body })
 			if (data.error) throw data.error
 			const images = data.eventImages?.images

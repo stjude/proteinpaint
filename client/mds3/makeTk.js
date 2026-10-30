@@ -623,15 +623,16 @@ function mayaddGetter_m2csq(tk, block) {
 }
 
 /* if termdbConfig.queries.svfusion.eventImages{} is present, add tk.mds.eventImages{label, get()}
-get(eventImageValue) returns {images[]}, all images of a svfusion event by its m.eventImageValue, each with png data
+get(eventImage) returns {images[]}, all images of an image file prefix, each with png data. the prefix is
+m.eventImage of a svfusion event, or .eventImage of one of its partner breakpoints (see mayUpdatePairlst())
 */
 export function mayaddGetter_eventImages(tk, block) {
 	const cfg = tk.mds.termdbConfig?.queries?.svfusion?.eventImages
 	if (!cfg) return
 	// keep termdbConfig as plain server data, and add the getter to tk.mds instead
 	tk.mds.eventImages = { label: cfg.label }
-	tk.mds.eventImages.get = async eventImageValue => {
-		const body = { genome: block.genome.name, dslabel: tk.mds.label, eventImage: eventImageValue }
+	tk.mds.eventImages.get = async eventImage => {
+		const body = { genome: block.genome.name, dslabel: tk.mds.label, eventImage }
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (tk.token) headers['X-Auth-Token'] = tk.token
 		const data = await dofetch3('termdb/mds3', { body, headers }, { serverData: tk.cache })
