@@ -7,9 +7,21 @@ All notable changes to this project will be documented in this file.
 Features:
 - Read bcf files in the server process, instead of with bcftools, which the server no longer requires
 - Compute the pairwise Wilcoxon tests of a violin or box plot chart for its largest plots only, 8 by default: the number is a control menu input, from 2 to 30, sent as maxPairwiseTestGroups in the request; serverconfig.features.maxPairwiseTestGroups sets the default of a request without it. A message in the last row of the table says when plots are left out. The tests run in chunks of pairs
+- The DMR scan calls DMRs in one genome-wide DMRcate run, which matches DMRcate 3.6.0. Choosing a chromosome filters the cached run, so switching chromosomes no longer refits the scan, but the first scan of a comparison, even of one chromosome, waits for the genome-wide run
+- The DMR scan's y axis can show min smoothed FDR (the default), HMFDR, Stouffer, or Fisher
+- The DMR scan applies the volcano's Min Δβ to its counts, Manhattan plot, browser track, and gene links. In the region view, DMRs below it and DMRs in artifact-prone regions are drawn in gray, with a note saying why
+- The DMR scan's Statistics list each group's mean reads per CpG, with a warning when they differ by more than 1.5×
+- The DMR scan's Manhattan plot and methylation profile can be downloaded, and a scan of one chromosome has a position axis in Mb
+- A region view opened from the scan shows the same DMRs as the volcano, and shows an elapsed-time counter while loading
+- Genome browsers opened from a methylation or splicing volcano open in genomic mode; promoter and cCRE hits open the genome browser instead of a region view
+- The Groups menu no longer has a separate DNA methylation "Region (DMR) Analysis" option; open a region from a DMR scan hit instead
+- The DMR scan hides its expression follow-ups on a dataset without RNA-seq gene counts
+- A DMR analysis is stopped after 5 minutes, with a message saying what to change; serverconfig.dmrcateTimeoutMs sets another limit
 
 Fixes:
 - Removed unused Python code
+- DMRs with p = 0 are counted as significant and drawn at the top of the volcano
+- DMRs with no Δβ are left out of the scan's rows and counts
 
 
 ## 2.224.1
