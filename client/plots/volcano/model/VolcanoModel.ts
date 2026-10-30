@@ -130,7 +130,11 @@ export class VolcanoModel {
 						scan: {
 							...(this.settings.scanChromosome ? { chromosome: this.settings.scanChromosome } : {}),
 							backgroundCorrection: !!this.settings.backgroundCorrection,
+							// display only: the rows are rebuilt from the cached scan on every request
+							yAxis: this.settings.scanYAxis,
 							minCpgs: this.settings.minCpgs,
+							// display only, like yAxis: what the scan counts, not what it runs
+							minDeltaBeta: this.settings.deltaBetaCutoff,
 							profileBinBp: this.settings.profileBinBp,
 							// only when changed: an explicit default would orphan every cached scan
 							...(this.settings.lambda != DMRCATE_DEFAULTS.lambda ? { lambda: this.settings.lambda } : {}),

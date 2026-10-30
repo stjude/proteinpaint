@@ -132,10 +132,10 @@ export class DmrView {
 			probes.positions.length > 1
 				? probes.positions.length / ((probes.positions[probes.positions.length - 1] - probes.positions[0]) / 1000)
 				: 0
-		const sigFdrCount = probes.fdr.filter(f => f < fdr_cutoff).length
+		const sigFdrCount = probes.sig.filter(Boolean).length
 		const minDeltaBeta = 0.05
-		const sigDualCount = probes.fdr.filter((f, i) => {
-			if (f >= fdr_cutoff) return false
+		const sigDualCount = probes.sig.filter((s, i) => {
+			if (!s) return false
 			const m1 = probes.mean_group1[i]
 			const m2 = probes.mean_group2[i]
 			if (m1 == null || m2 == null) return false
@@ -175,16 +175,17 @@ export class DmrView {
 		this.dom.diagnosticPanel.style('display', 'none')
 	}
 
-	showLoessNote(show: boolean) {
+	/** The view model's notes, one line each, under the plot */
+	showNotes(notes: string[]) {
 		this.dom.note.selectAll('*').remove()
-		if (show) {
+		for (const text of notes)
 			this.dom.note
 				.append('div')
-				.attr('class', 'sjpp-loess-note')
-				.style('color', '#888')
-				.style('font-size', '.8em')
+				.attr('class', 'sjpp-dmr-note')
+				.style('color', '#666')
+				.style('font-size', '.85em')
 				.style('padding', '4px 0')
-				.text('Zoom in to see per-CpG dots.')
-		}
+				.style('max-width', '900px')
+				.text(text)
 	}
 }

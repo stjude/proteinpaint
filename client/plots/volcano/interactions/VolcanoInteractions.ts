@@ -13,6 +13,7 @@ import { elementNoun } from '../promoterLabel'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { dofetch3 } from '#common/dofetch'
 import { getGroupColors } from '../colors'
+import { downloadManhattanSvg } from '#plots/manhattan/manhattan.ts'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -88,14 +89,30 @@ export class VolcanoInteractions {
 
 	download(termType: string) {
 		this.dom.actionsTip.clear().showunder(this.dom.controls.select('div').node())
+		// a DMR scan draws its Manhattan and methylation profile beside the volcano; each saves on its own
+		const manhattan = this.dom.holder.select('#sjpp-volcano-scanManhattan > svg').node() as SVGSVGElement | null
+		const profile = this.dom.holder
+			.select('[data-testid="sjpp-volcano-methylationProfile"] svg')
+			.node() as SVGSVGElement | null
 		const opts = [
 			{
-				text: 'Download plot',
+				text: manhattan ? 'Download volcano plot' : 'Download plot',
 				callback: () => {
 					const svg = this.dom.holder.select('svg').node() as Node
 					to_svg(svg, `Differential ${termType} analysis volcano`, { apply_dom_styles: true })
 				}
 			},
+			...(manhattan
+				? [{ text: 'Download DMR plot', callback: () => downloadManhattanSvg(manhattan, 'DMR scan Manhattan') }]
+				: []),
+			...(profile
+				? [
+						{
+							text: 'Download methylation profile',
+							callback: () => downloadManhattanSvg(profile, 'DMR scan methylation profile')
+						}
+				  ]
+				: []),
 			{
 				// DAP volcanoes report a single FDR rather than a p-value.
 				text: termType === PROTEOME_DAP ? 'Download FDR table' : 'Download p-value table',
@@ -277,14 +294,11 @@ export class VolcanoInteractions {
 		})
 	}
 
-	/** When clicking on a DM data point, dispatches a DMR plot that runs DMRCate
-	 * analysis and renders a genome browser Block with DMR regions on their own
-	 * track. */
-	async launchDmr(
-		d: { chr: string; start: number; stop: number; promoterId?: string },
-		/** DMR-plot settings to override, e.g. pad: 0 for a region that is already its own context */
-		dmrSettings: Record<string, any> = {}
-	) {
+	/** Opens the region view on a DMR of a scan: a window on the scan's own DMRcate run -- its
+	 * chromosomes, lambda, C and FDR -- so it draws the DMRs the volcano drew, from the cache. Takes the
+	 * scan rather than a region alone so it cannot be opened from an element class, whose hits come
+	 * from another test: a per-element comparison that DMRcate's de novo calls need not agree with. */
+	async launchDmr(d: { chr: string; start: number; stop: number }, scan: DmrScanSummary) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 
 		/* Shared with the batch drill-down's launcher so the two cannot drift. Absent colours are
@@ -292,24 +306,26 @@ export class VolcanoInteractions {
 		used to substitute was neither chosen nor legible next to the hyper/hypo bars. */
 		const colors = groupColors(config)
 
-		const label = d.promoterId || `${d.chr}:${d.start}-${d.stop}`
+		const s = config.settings.volcano
 		const dmrConfig: any = {
 			chartType: 'dmr',
-			headerText: `DMR: ${label}`,
+			headerText: `DMR: ${d.chr}:${d.start}-${d.stop}`,
 			coordinateOverride: { chr: d.chr, start: d.start, stop: d.stop },
 			// the samples of each group, or the filter of a group that is defined by one
 			group1: getGroupForRegion(config.samplelst.groups[0]),
 			group2: getGroupForRegion(config.samplelst.groups[1]),
 			group1Name: config.samplelst.groups[0].name,
 			group2Name: config.samplelst.groups[1].name,
-			/* Which element matrix to drill into, for a dataset whose methylation is element-level
-			only. The server ignores it when the dataset has a CpG-level matrix, which is finer. The
-			scan is not a matrix, so a region opened from a scan names none and the server picks. */
-			elementType:
-				config?.settings?.volcano?.elementType == DMR_SCAN_ELEMENT_TYPE
-					? undefined
-					: config?.settings?.volcano?.elementType,
-			settings: { colors, ...dmrSettings }
+			settings: { colors, lambda: s.lambda, C: s.C, fdr_cutoff: s.fdrCutoff, minDeltaBeta: s.deltaBetaCutoff },
+			scanChromosomes: scan.runChromosomes,
+			...(scan.globalMethylation?.controlMeanDepth != null && scan.globalMethylation?.caseMeanDepth != null
+				? {
+						readDepth: {
+							control: scan.globalMethylation.controlMeanDepth,
+							case: scan.globalMethylation.caseMeanDepth
+						}
+				  }
+				: {})
 		}
 
 		this.app.dispatch({
@@ -348,6 +364,8 @@ export class VolcanoInteractions {
 			type: 'plot_create',
 			config: {
 				chartType: 'genomeBrowser',
+				// a coordinate with no gene: genomic mode, whatever mode the dataset defaults the browser to
+				blockIsProteinMode: false,
 				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - pad), stop: d.stop + pad },
 				tracks
 			}
@@ -373,6 +391,8 @@ export class VolcanoInteractions {
 			type: 'plot_create',
 			config: {
 				chartType: 'genomeBrowser',
+				// as for a scan DMR: a coordinate with no gene opens in genomic mode
+				blockIsProteinMode: false,
 				// cluster start/stop are the 1-based exon boundaries; the junctions are already 0-based
 				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - 1 - pad), stop: d.stop + pad },
 				tracks: [

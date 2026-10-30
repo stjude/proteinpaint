@@ -1,3 +1,5 @@
+import type { DmrScanYAxis } from '#types'
+
 export type DefaultVolcanoSettings = {
 	/** Default color for significant data points. */
 	defaultSignColor: string
@@ -70,6 +72,8 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	/** DMR scan only: score each DMR against matched intergenic background, so the y axis asks
 	 * "moved more than a region like it drifts" rather than "moved at all". */
 	backgroundCorrection: boolean
+	/** DMR scan only: the region statistic on the y axis, when not background-corrected */
+	scanYAxis: DmrScanYAxis
 	/** DMR scan only: drop DMRs called from fewer CpGs than this. */
 	minCpgs: number
 	/** DMR scan only: DMRcate lambda, the kernel bandwidth and max gap between chained CpGs, bp. */

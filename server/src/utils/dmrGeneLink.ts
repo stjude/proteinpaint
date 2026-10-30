@@ -18,7 +18,15 @@ export const PROMOTER_PAD = 2000
 export type GeneModel = { name: string; chr: string; start: number; stop: number; strand: string }
 export type TssIndex = Map<string, { tss: number[]; genes: GeneModel[]; maxSpan: number }>
 
-type Dmr = { chr: string; start: number; stop: number; no_cpgs: number; meandiff: number; min_smoothed_fdr: number }
+type Dmr = {
+	chr: string
+	start: number
+	stop: number
+	no_cpgs: number
+	/** the display Δβ; the scan's meandiff is logit2 */
+	delta_beta_mean: number | null
+	min_smoothed_fdr: number
+}
 
 export type GeneLink = {
 	gene: string
@@ -83,7 +91,7 @@ export function linkDmrsToGenes(dmrs: Dmr[], idx: TssIndex, minCpgs: number): Ge
 				chr: d.chr,
 				start: d.start,
 				stop: d.stop,
-				deltaBeta: d.meandiff,
+				deltaBeta: d.delta_beta_mean ?? NaN,
 				cpgs: d.no_cpgs,
 				fdr: d.min_smoothed_fdr
 			}
@@ -91,7 +99,7 @@ export function linkDmrsToGenes(dmrs: Dmr[], idx: TssIndex, minCpgs: number): Ge
 			if (!l) links.set(key, { gene, context, dmr, nDmrs: 1 })
 			else {
 				l.nDmrs++
-				if (Math.abs(d.meandiff) > Math.abs(l.dmr.deltaBeta)) l.dmr = dmr
+				if (Math.abs(dmr.deltaBeta) > Math.abs(l.dmr.deltaBeta)) l.dmr = dmr
 			}
 		}
 	}

@@ -1,6 +1,6 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
-import { BACKGROUND_CORRECTION_TITLE } from './settings/defaults'
+import { BACKGROUND_CORRECTION_TITLE, SCAN_Y_AXIS_OPTIONS } from './settings/defaults'
 import {
 	PROTEOME_DAP,
 	DNA_METHYLATION,
@@ -273,7 +273,7 @@ export class VolcanoControlInputs {
 					...this.chromosomes.filter(c => c != 'chrM' && c != 'chrMT').map(c => ({ value: c, label: c }))
 				],
 				title:
-					'Call DMRs de novo across the whole genome, or across one chromosome. A whole-genome scan takes about 1 minute the first time, or about 1.5 to 2 minutes with the background drift correction, and is cached after that.'
+					'Show the DMRs called de novo across the whole genome, or only those on one chromosome. DMRs are always called over the whole genome, because DMRcate calibrates its cutoff over every CpG tested: one chromosome run alone calls different DMRs. The first scan of a comparison can take a minute or more on a large cohort, longer with the background drift correction; it is cached, so switching chromosomes after that is quick.'
 			},
 			{
 				label: 'Correct for background drift',
@@ -285,6 +285,17 @@ export class VolcanoControlInputs {
 				title: BACKGROUND_CORRECTION_TITLE
 			},
 			{
+				label: 'Y axis',
+				type: 'radio',
+				chartType: 'volcano',
+				settingsKey: 'scanYAxis',
+				title:
+					'Which region statistic the volcano and the DMR plot put on the y axis. DMRcate calls DMRs with the min smoothed FDR; it reports the other three for each DMR. Hover over an option for what it measures.',
+				// the background correction plots its own p, so there is nothing to choose then
+				getDisplayStyle: (plot: any) => (isScan(plot) && !plot.settings.volcano.backgroundCorrection ? '' : 'none'),
+				options: SCAN_Y_AXIS_OPTIONS
+			},
+			{
 				label: 'Min CpGs per DMR',
 				type: 'number',
 				chartType: 'volcano',
@@ -293,7 +304,7 @@ export class VolcanoControlInputs {
 				min: 1,
 				max: 1000,
 				title:
-					'Drop DMRs called from fewer CpGs. Two-CpG calls carry the largest effect sizes and no direction (51.5% hyper on MMRF chr1, a coin flip, against 58% for 10+ CpG calls), so a Δβ-sorted table would lead with the rows that mean least. Applied to the cached scan, so changing it redraws rather than refits.'
+					'Drop DMRs called from fewer CpGs. DMRs of only two or three CpGs tend to carry the largest effect sizes but the least reliable direction, so a Δβ-sorted table would lead with the rows that mean least. Applied to the cached scan, so changing it redraws rather than refits.'
 			},
 			/* DMRcate's region-shape knobs. Unlike the CpG floor these change the fit's output, so each
 			one refits the scan (and gets its own cache entry). */
@@ -307,7 +318,7 @@ export class VolcanoControlInputs {
 				max: 100_000,
 				step: 50,
 				title:
-					'DMRcate lambda. Two things at once: the width of the Gaussian kernel that smooths per-CpG statistics along the genome, and the largest gap allowed between significant CpGs chained into one DMR. Larger values merge nearby signal into fewer, wider DMRs and recover broad domains; smaller values split them into narrow, focal regions. DMRcate recommends 1000 bp for CpG-resolution data. Changing it refits the scan (about 1 minute genome-wide, or about 1.5 to 2 with the background drift correction).'
+					'DMRcate lambda. Two things at once: the width of the Gaussian kernel that smooths per-CpG statistics along the genome, and the largest gap allowed between significant CpGs chained into one DMR. Larger values merge nearby signal into fewer, wider DMRs and recover broad domains; smaller values split them into narrow, focal regions. DMRcate recommends 1000 bp for CpG-resolution data. Changing it refits the scan.'
 			},
 			{
 				label: 'DMR kernel scaling C',
@@ -372,7 +383,7 @@ export class VolcanoControlInputs {
 				boxLabel: '',
 				// the scan honours it too: scanChromosomes() drops chrX/chrY from a whole-genome scan
 				title:
-					'Drop chrX and chrY (promoters, elements, or whole chromosomes from a DMR scan). Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable. On a scan, autosomal DMRs are unchanged (each chromosome is fitted on its own); gene links and gene set enrichment lose the X-linked genes.'
+					'Drop chrX and chrY (promoters, elements, or whole chromosomes from a DMR scan). Recommended for mixed-sex cohorts — X-inactivation makes chrX methylation strongly sex-dependent, so a sex-imbalanced comparison reports sex rather than the grouping variable. On a scan this also shifts the autosomal DMRs slightly, since the DMRcate prior and its multiple-testing corrections are genome-wide; gene links and gene set enrichment lose the X-linked genes.'
 			},
 			{
 				label: 'Center Δβ on median',

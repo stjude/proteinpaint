@@ -12,16 +12,16 @@ export type TermdbDmrBatchRequest = {
 	group1: { sampleId: number | string }[] | SampleFilterGroup
 	group2: { sampleId: number | string }[] | SampleFilterGroup
 	filter0?: any
-	/** Windows to call DMRs in. Overlapping windows are merged before analysis.
-	 * Ignored when scanChromosomes is given. */
+	/** Windows to report DMRs in, from a run over the chromosomes they are on. Overlapping windows
+	 * are merged first. Ignored when scanChromosomes is given. */
 	regions?: { chr: string; start: number; stop: number }[]
 	/** Scan these chromosomes end to end instead of supplying windows — an unbiased DMR scan
 	 * rather than a drill-down of a hit list.
 	 *
-	 * Affordable because the model fit is already chromosome-wide and the kernel smoothing is a
-	 * sliding window (linear in CpGs, not quadratic), so scanning a whole chromosome costs barely
-	 * more than drilling a few windows on it. Measured on MMRF: chr20 (362k CpGs) in ~3s, all 23
-	 * chromosomes (16.4M CpGs) in ~131s, yielding 149,341 DMRs.
+	 * Either way the request is one DMRcate run over every CpG of the chromosomes it names (see
+	 * rust/src/dmrcate.rs), so a scan costs little more than drilling windows on the same
+	 * chromosomes. Measured 2026-10-28: DISCOVER chr17 (1.1M CpGs) in ~3s and its whole genome
+	 * (26.6M CpGs, 214,978 DMRs) in ~65s; MMRF's genome (16.4M CpGs) in ~50s.
 	 *
 	 * One chromosome is comfortably interactive; a whole genome is a background job. The
 	 * per-region size cap does not apply to these, by construction. */
@@ -59,21 +59,6 @@ export type TermdbDmrBatchRequest = {
 	 * cohort with a large global shift the second question is answered yes almost everywhere.
 	 * Costs a second rust invocation per chromosome. */
 	backgroundCorrection?: boolean
-	/** How the per-CpG fit weights its observations. 'none' is an unweighted fit on clamped beta
-	 * logits. When absent the default depends on the dataset: 'counts' for one declaring
-	 * dnaMethylation.platform 'wgbs', 'none' otherwise -- and the choice changes every fitted value
-	 * and p-value.
-	 *
-	 * 'counts' is the model DMRcate publishes for WGBS (Peters 2021, Nucleic Acids Research
-	 * 49:e109): the value is a log ratio of the methylated and unmethylated read counts, and an
-	 * observation is weighted by the inverse of its total variance, biological plus read-level.
-	 * It requires a matrix carrying depth/values -- build_cpg_matrix.py writes it -- and the
-	 * binary errors rather than falling back if it is missing.
-	 *
-	 * 'counts+sample' multiplies in a per-sample factor as well, limma's array weights
-	 * (Ritchie 2006), for a cohort whose samples differ in how much they scatter. Estimated from
-	 * a capped subset of probes, so it costs a few percent of runtime rather than minutes. */
-	weights?: 'none' | 'counts' | 'counts+sample'
 	filter?: Filter
 	__protected__?: any
 }
@@ -105,10 +90,23 @@ export type TermdbDmrBatchSuccessResponse = {
 			start: number
 			stop: number
 			no_cpgs: number
+			/** DMRcate's region-wise statistics (dmrcate() in the Bioconductor package): the least
+			 * kernel-smoothed FDR in the region, then the Stouffer, harmonic-mean and Fisher combinations
+			 * of its raw per-CpG p-values, each BH-adjusted across every region the run built */
 			min_smoothed_fdr: number
-			HMFDR: number
+			Stouffer: number | null
+			HMFDR: number | null
+			Fisher: number | null
+			/** DMRcate's largest and mean per-CpG difference, in its own units: the limma logFC of the
+			 * log2 methylated/unmethylated read ratio for WGBS (logit2), of the M-value for an element matrix */
 			maxdiff: number
 			meandiff: number
+			/** The same two on the beta scale -- case minus control group mean beta, over the CpGs of the
+			 * region. Not DMRcate's: carried for display, as the effect a reader interprets. */
+			delta_beta_max: number | null
+			delta_beta_mean: number | null
+			/** the sign of delta_beta_mean, which every figure plots; meandiff's when no cell is covered.
+			 * Not meandiff's otherwise: its pseudocount log-ratio follows read depth where groups differ in it */
 			direction: 'hyper' | 'hypo'
 			/** Genes whose span overlaps the DMR, in genomic order. Absent when none overlap or the
 			 * genome has no gene2coord table. Capped -- see genesTruncated. */
@@ -131,6 +129,9 @@ export type TermdbDmrBatchSuccessResponse = {
 			 * never mistaken for the whole set. */
 			genesTruncated?: number
 		}[]
+		/** DMRs the artifact mask dropped from dmrs, each with the mask sources that cover it. Not
+		 * counted or plotted by the scan; the region view draws them as masked. */
+		masked?: (TermdbDmrBatchSuccessResponse['regions'][number]['dmrs'][number] & { maskedBy: string[] })[]
 		/** true when this chromosome fell back to the element matrix, so one "probe" is a
 		 * regulatory element rather than a CpG and the widths are not base-resolution */
 		elementResolution: boolean
@@ -148,9 +149,19 @@ export type TermdbDmrBatchSuccessResponse = {
 		/** case - control, on the beta scale */
 		shift: number
 		valuesCounted: number
+		/** mean reads per CpG of each group, over every cell of the CpGs the model read; absent for an
+		 * element matrix. Where they differ, DMRcate's pseudocount log-ratio differs with no change in
+		 * methylation, so DMRs with little beta change may be depth rather than biology. */
+		controlMeanDepth?: number
+		caseMeanDepth?: number
 	}
-	/** chromosomes touched — the number of model fits performed, which is what the cost scales with */
+	/** chromosomes in the run */
 	chromosomes: number
+	/** What a region view needs to recompute any region of this run exactly as the run saw it
+	 * (termdb/dmr, rust/src/dmrcate.rs): the eBayes prior, the raw-p cuts that BH and the adaptive
+	 * cutoff amount to, and the parameters the run used, which a region view must match. Absent on
+	 * results cached before runs were genome-wide. */
+	constants?: DmrRunConstants
 	totalProbesAnalyzed: number
 	/** Matched-background outcome. Present whenever the correction ran. `unscored` is the count
 	 * whose stratum held too little background to estimate from -- reported so a survival rate is
@@ -186,13 +197,30 @@ export type TermdbDmrBatchSuccessResponse = {
 	}
 }
 
+export type DmrRunConstants = {
+	s20: number | null
+	/** null is an infinite prior df */
+	df0: number | null
+	df_cap: number
+	/** largest raw p among individually significant CpGs; null when there were none */
+	ind_p_cut: number | null
+	/** largest smoothed raw p, and the smoothed FDR, that the adaptive cutoff kept; null when nothing was */
+	smoothed_raw_cut: number | null
+	smoothed_fdr_cut: number | null
+	/** individually significant CpGs, the number the adaptive cutoff matches */
+	nsig: number
+	lambda: number
+	C: number
+	fdr_cutoff: number
+}
+
 /** What one run of the route cost, measured while it ran. Stored with the cached result, so a
  * cached answer reports the cost of the run that produced it, not of serving it. Read this to size
  * a deployment: memory is per worker and scales with the chromosome, CPU is one core per worker. */
 export type DmrRunResources = {
-	/** worker processes run at once (serverconfig.dmrBatchConcurrency) */
+	/** dmrcate processes run at once: one, which reads every chromosome of the run */
 	workers: number
-	/** threads one worker uses; the dmrcate binary is single-threaded */
+	/** threads that process uses, reading matrix files concurrently */
 	threadsPerWorker: number
 	wallMs: number
 	/** largest resident set any one worker reached, MB */

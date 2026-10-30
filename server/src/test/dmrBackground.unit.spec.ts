@@ -67,8 +67,8 @@ tape('scoreAgainstBackground reports excess over the stratum mean', t => {
 	// 40 background windows in one stratum, all drifting +0.05
 	const background = Array.from({ length: 40 }, () => ({ n_probes: 10, start: 0, stop: 1000, delta: 0.05 }))
 	const dmrs = [
-		{ no_cpgs: 10, start: 0, stop: 1000, meandiff: 0.2 },
-		{ no_cpgs: 10, start: 0, stop: 1000, meandiff: 0.05 }
+		{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 0.2 },
+		{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 0.05 }
 	]
 	const { scored } = scoreAgainstBackground(dmrs, background)
 	t.ok(Math.abs(scored[0]!.excess - 0.15) < 1e-9, 'a +0.20 DMR over +0.05 drift has excess +0.15')
@@ -86,7 +86,7 @@ tape('scoreAgainstBackground tests the tail the excess points to, not the raw si
 		stop: 1000,
 		delta: 0.04 + (i % 3) * 0.01
 	}))
-	const { scored } = scoreAgainstBackground([{ no_cpgs: 10, start: 0, stop: 1000, meandiff: 0.01 }], background)
+	const { scored } = scoreAgainstBackground([{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 0.01 }], background)
 	t.ok(scored[0]!.excess < 0, 'the excess is negative')
 	t.equal(scored[0]!.p, 1 / 41, 'and no background fell as low, so the lower tail gives the floor, not p = 1')
 	t.end()
@@ -104,7 +104,7 @@ tape('buildExclusion cannot build an intergenic background without gene spans', 
 
 tape('scoreAgainstBackground never reports p = 0', t => {
 	const background = Array.from({ length: 100 }, (_, i) => ({ n_probes: 10, start: 0, stop: 1000, delta: i / 1000 }))
-	const { scored } = scoreAgainstBackground([{ no_cpgs: 10, start: 0, stop: 1000, meandiff: 99 }], background)
+	const { scored } = scoreAgainstBackground([{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 99 }], background)
 	t.ok(scored[0]!.p > 0, 'an unreachable observation still gets the floor, not zero')
 	t.equal(scored[0]!.p, 1 / 101, 'which is 1/(n+1)')
 	t.end()
@@ -114,7 +114,7 @@ tape('a thin stratum yields no score rather than a bad one', t => {
 	// only 5 background windows -- too few to estimate a mean or a tail
 	const background = Array.from({ length: 5 }, () => ({ n_probes: 10, start: 0, stop: 1000, delta: 0.05 }))
 	const { scored, unscored, strataUsed } = scoreAgainstBackground(
-		[{ no_cpgs: 10, start: 0, stop: 1000, meandiff: 0.2 }],
+		[{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 0.2 }],
 		background
 	)
 	t.equal(scored[0], null, 'unscored rather than scored against 5 windows')
@@ -129,7 +129,7 @@ tape('background with no usable delta is ignored', t => {
 		{ n_probes: 0, start: 0, stop: 1000, delta: 0.9 },
 		{ n_probes: 10, start: 0, stop: 1000, delta: null }
 	]
-	const { scored } = scoreAgainstBackground([{ no_cpgs: 10, start: 0, stop: 1000, meandiff: 0.2 }], background)
+	const { scored } = scoreAgainstBackground([{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 0.2 }], background)
 	t.ok(Math.abs(scored[0]!.excess - 0.15) < 1e-9, 'a probe-less window and a null delta do not move the mean')
 	t.ok(BG_WINDOWS_PER_CHR > 0, 'the per-chromosome sample size is set')
 	t.end()

@@ -160,9 +160,8 @@ export function requireCpgShards(ds: any, chromosomes: string[], route: string):
 /* A caller-supplied chromosome list, bounded by the genome's own chromosome set and deduplicated,
 returned in the genome's order.
 
-Every route taking one of these fans out to one rust invocation per entry, each holding a
-chromosome's matrix and saturating a core, and none of them caps the list: a request naming one
-chromosome five thousand times was five thousand full fits, and because a cache key built from the
+Every route taking one of these reads each entry's matrix in full, and none of them caps the list:
+a request naming one chromosome five thousand times was five thousand full reads, and because a cache key built from the
 raw list is unique per multiset it was five thousand fits every time it was sent. Deduplicating
 before anything is built from the list is what makes the cost proportional to the genome rather
 than to the request.
@@ -256,13 +255,12 @@ export async function resolveGroupNames(
 	return { group1: g1.names, group2: g2.names }
 }
 
-/** Peak memory of one rust dmrcate run (the DMR scan, termdb/dmr, geneBodyMeth), by the rows of the matrix file it
- * fits. dmrcate streams the values in 1,000-row chunks, so neither the samples in the file nor those selected count:
- * its memory is the file's per-row metadata and results. Measured on the MMRF CpG shards (220,433 to 1,304,718 rows x
- * 415 samples; 20, 100 and 400 selected; a whole-chromosome scan and a 5 Mb region, which also fits the whole shard),
- * 2026-10-20, as the process's peak footprint and max RSS, and set at or above every run. The Node server rose ~1 MB
- * during a genome-wide scan. */
-export const DMRCATE_MEMORY: MemoryCost = { baseMB: 30, perUnitMB: { rows: 0.0004 } }
+/** Peak memory of one rust dmrcate run (the DMR scan, termdb/dmr, geneBodyMeth), by the rows of the matrix files it
+ * reads. dmrcate streams the values in 2,000-row chunks, so neither the samples in a file nor those selected count:
+ * its memory is a few numbers per row kept for the genome-wide steps. Measured 2026-10-28 on one-, two- and
+ * all-chromosome scans of DISCOVER (26.6M CpGs, 125 selected) and MMRF (16.4M CpGs, 200 of 415 selected), as max RSS,
+ * and set at or above every run. */
+export const DMRCATE_MEMORY: MemoryCost = { baseMB: 60, perUnitMB: { rows: 0.00008 } }
 
 /** Rows of a methylation matrix file, from the header of its beta/values, read once per file: the files do not
  * change while the server runs */
@@ -289,6 +287,13 @@ export async function admitDmrcateJobs(
 	const largest = (await Promise.all([...new Set(files)].map(matrixRows))).sort((a, b) => b - a).slice(0, concurrency)
 	const cost = { baseMB: DMRCATE_MEMORY.baseMB * largest.length, perUnitMB: DMRCATE_MEMORY.perUnitMB }
 	return admitRun(label, cost, { rows: largest.reduce((sum, r) => sum + r, 0) }, await getAvailableMemoryMB(), refusal)
+}
+
+/** Admits one dmrcate run over all of these matrix files -- a DMR scan, which reads every file in one process and holds
+ * a few numbers per row of each -- reserving its memory until the returned release is called. */
+export async function admitDmrcateRun(label: string, files: string[], refusal: string): Promise<() => void> {
+	const rows = (await Promise.all([...new Set(files)].map(matrixRows))).reduce((sum, r) => sum + r, 0)
+	return admitRun(label, DMRCATE_MEMORY, { rows }, await getAvailableMemoryMB(), refusal)
 }
 
 /** Runs `run` on each job, `concurrency` at a time (mapConcurrent), and settles only once every job it started has

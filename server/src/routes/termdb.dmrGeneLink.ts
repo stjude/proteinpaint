@@ -72,8 +72,10 @@ function init({ genomes }) {
 			if (scan.genome !== q.genome || scan.dslabel !== q.dslabel || (scan.scope || '') !== sampleFilterScope(q, ds))
 				throw new Error('This scan does not belong to the requested dataset; rerun it first.')
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
+			// the run is genome-wide; a scan showing some chromosomes asks for those alone
+			const view = Array.isArray(q.chromosomes) ? new Set(q.chromosomes) : null
 			const links = linkDmrsToGenes(
-				(scan.regions || []).flatMap((r: any) => r.dmrs || []),
+				(scan.regions || []).filter((r: any) => !view || view.has(r.chr)).flatMap((r: any) => r.dmrs || []),
 				getTssIndex(genome),
 				minCpgs
 			)

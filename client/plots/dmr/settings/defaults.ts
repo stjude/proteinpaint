@@ -33,7 +33,8 @@ export function getDefaultDMRSettings(opts: any): DMRSettings {
 		},
 		maxLoessRegion: 250_000,
 		minProbesForCi: 10,
-		maxRegionSize: 5_000_000
+		maxRegionSize: 5_000_000,
+		minDeltaBeta: 0
 	}
 
 	// Deep-merge colors so hyper/hypo defaults are preserved

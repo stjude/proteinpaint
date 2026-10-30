@@ -29,9 +29,6 @@ import {
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
-// a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
-const cachedir = serverconfig.cachedir
-
 /* Is gene-body methylation loss a cause of reduced transcription, or a footprint of it?
 
 Gene-body methylation is laid down BY transcription: Pol II carries SETD2, which deposits H3K36me3
@@ -269,11 +266,10 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 	// the exclusion needs the gene index; built once, not per chromosome
 	const geneIdx = q.corrected ? buildGeneIndex(genome) : null
 	const CONCURRENCY = Math.max(1, Number(serverconfig.dmrBatchConcurrency) || 2)
-	/* One rust invocation per MATRIX FILE, as dmrBatch groups its jobs. Every invocation opens and fits
-	its whole file: with per-chromosome shards a job is one chromosome, but a dataset backed by one
-	genome-wide matrix would otherwise reload and refit that file once per chromosome. Rust returns
-	background regions in input order, so each chromosome's results are sliced back by offset, and
-	the fit is the same either way, so no value changes. */
+	/* One rust invocation per MATRIX FILE. Every invocation reads its whole file: with per-chromosome
+	shards a job is one chromosome, but a dataset backed by one genome-wide matrix would otherwise
+	reload that file once per chromosome. Rust returns background regions in input order, so each
+	chromosome's results are sliced back by offset, and no value depends on the grouping. */
 	const jobs = new Map<string, string[]>()
 	for (const chr of chrs) {
 		const file = resolveMethylationMatrix(ds, chr, q.element_type).matrixFile
@@ -319,14 +315,8 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 				await run_rust(
 					'dmrcate',
 					JSON.stringify({
-						probe_h5_file: matrixFile,
+						matrices: [{ file: matrixFile, chrs: jobChrs }],
 						mvalues,
-						cachedir,
-						genome: q.genome,
-						chr: jobChrs[0],
-						start: 0,
-						stop: 0,
-						regions: [],
 						background_regions: parts.flatMap(p => [
 							...p.bodies.map(b => ({ chr: p.chr, start: b.start, stop: b.stop })),
 							...p.windows
@@ -354,7 +344,7 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 						.map((b: any, j: number) => ({ j, b }))
 						.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
 					const { scored } = scoreAgainstBackground(
-						measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, meandiff: b.delta })),
+						measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, delta_beta_mean: b.delta })),
 						chrWindows
 					)
 					measured.forEach(({ j }, k) => {

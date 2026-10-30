@@ -5,7 +5,13 @@ import serverconfig from '#src/serverconfig.js'
 import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, DmrScanSummary } from '#types'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
-import { dmrScanToRows, summarizeProfile, coarsenProfile, dmrBedjLines } from '#src/utils/dmrScanRows.ts'
+import {
+	dmrScanToRows,
+	restrictScanPayload,
+	summarizeProfile,
+	coarsenProfile,
+	dmrBedjLines
+} from '#src/utils/dmrScanRows.ts'
 import {
 	resolveGroupNames,
 	matchedSamplelst,
@@ -108,7 +114,9 @@ export function init({ genomes }) {
 					delete output.scan.binMethylation
 				}
 				output.scan.manhattan = await renderScanManhattan(
-					result.promoterRows,
+					// the counted DMRs: those under the Min Δβ stay on the volcano only
+					result.promoterRows.filter(r => Math.abs(r.delta_beta ?? 0) >= (result.scan!.minDeltaBeta || 0)),
+					result.scan.chromosomes,
 					genomes[q.genome],
 					q.volcanoRender?.devicePixelRatio
 				)
@@ -264,6 +272,9 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	stays -- on a mixed-sex cohort an empty chrY track is a result rather than an omission -- unless
 	the sex chromosomes were excluded, which applies here as it does to an element class. */
 	const chromosomes = scanChromosomes(req, genome)
+	/* DMRcate always runs over the whole genome; a chromosome choice only picks what is shown (see
+	restrictScanPayload). One run, cached, serves every chromosome of a contrast. */
+	const runChromosomes = scanChromosomes({ ...req, scan: { ...req.scan, chromosome: undefined } }, genome)
 
 	const { payload, cacheId } = await runDmrBatch(
 		{
@@ -271,7 +282,7 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 			dslabel: req.dslabel,
 			group1: groups[0].values,
 			group2: groups[1].values,
-			scanChromosomes: chromosomes,
+			scanChromosomes: runChromosomes,
 			backgroundCorrection: !!req.scan?.backgroundCorrection,
 			// the genome-wide profile: the metric the methylome literature compares cohorts with
 			binMethylation: true,
@@ -291,10 +302,14 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 		ds,
 		req.__protected__
 	)
-	const { rows, scan } = dmrScanToRows(payload, {
+	const view = chromosomes.length < runChromosomes.length ? restrictScanPayload(payload, chromosomes) : payload
+	const { rows, scan } = dmrScanToRows(view, {
 		chromosomes,
+		runChromosomes,
 		minCpgs: req.scan?.minCpgs,
-		backgroundCorrection: !!req.scan?.backgroundCorrection
+		backgroundCorrection: !!req.scan?.backgroundCorrection,
+		yAxis: req.scan?.yAxis,
+		minDeltaBeta: req.scan?.minDeltaBeta
 	})
 	scan.matchedSamplelst = matchedSamplelstForResponse(
 		req.samplelst.groups,
@@ -305,7 +320,10 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	track is optional -- the browser opens without it -- so a failed write (unwritable cachedir,
 	full disk) is logged and dropped rather than failing the whole analysis. */
 	try {
-		scan.bedjFile = await writeDmrBedjFile(`dmr-${cacheId}-${scan.minCpgs}.txt`, dmrBedjLines(payload, scan.minCpgs))
+		scan.bedjFile = await writeDmrBedjFile(
+			`dmr-${cacheId}-${scan.minCpgs}-${scan.minDeltaBeta}.txt`,
+			dmrBedjLines(payload, scan.minCpgs, scan.minDeltaBeta)
+		)
 	} catch (e: any) {
 		console.error('DMR scan: bedj cache write failed, browser track unavailable:', e?.message || e)
 	}
@@ -328,19 +346,33 @@ function positiveOrUndefined(v: unknown): number | undefined {
  * PNG; only these carry pixel coordinates. */
 const SCAN_INTERACTIVE_PER_SIDE = 1000
 
+/* Dots on both scan figures. Genome-wide, 120,000 DMRs and 29,000 bins need small dots, and open
+circles so overlaps still read; one chromosome holds a few thousand, which read better large and
+filled, and at one size so the two figures look like one. */
+function scanDotStyle(chromosomes: string[], genomeRadius: number) {
+	const filled = chromosomes.length == 1
+	return { filled, dotRadius: filled ? 3 : genomeRadius }
+}
+
+/* The x axis of both scan figures: only the chromosomes the scan covered, so a one-chromosome
+scan fills the plot instead of drawing as a sliver among 23 empty chromosomes. */
+function scanChrSizes(chromosomes: string[], genome: any): Record<string, number> {
+	return Object.fromEntries(chromosomes.map(c => [c, genome.majorchr[c]]))
+}
+
 /* Where the DMRs are, along the whole genome: hyper above the line, hypo below, height = evidence,
--log10 of the q the volcano plots (DMRcate's smoothed FDR, or corrected the empirical p against
+-log10 of the q the volcano plots (DMRcate's HMFDR, or corrected the empirical p against
 matched background), capped as GRIN2 caps it so a few extreme regions do not flatten the rest.
 Drawn from EVERY kept row rather than the volcano's capped dots, which would draw the wrong picture
 of 120,000 regions. Fixed size rather than the volcano's, because this figure is read as a strip
 under the volcano at whatever width the volcano has. */
 async function renderScanManhattan(
 	rows: DiffMethEntry[],
+	chromosomes: string[],
 	genome: any,
 	devicePixelRatio?: number
 ): Promise<NonNullable<DmrScanSummary['manhattan']>> {
-	const chrSizes: Record<string, number> = {}
-	for (const c of genome.majorchrorder as string[]) if (c != 'chrM' && c != 'chrMT') chrSizes[c] = genome.majorchr[c]
+	const chrSizes = scanChrSizes(chromosomes, genome)
 	const points = rows.map(r => {
 		const p = r.original_p_value
 		// a q of 0 is the most significant thing there is and is parked at the cap
@@ -356,29 +388,31 @@ async function renderScanManhattan(
 			fold_change: r.fold_change,
 			p,
 			no_cpgs: r.no_cpgs,
+			min_smoothed_fdr: r.min_smoothed_fdr,
 			gene_name: r.gene_name,
 			...(r.excess != null ? { excess: r.excess } : {})
 		}
 	})
 	const plotWidth = 1000
 	const plotHeight = 300
+	const { filled, dotRadius } = scanDotStyle(chromosomes, 2)
 	const { png, plot_data } = await renderManhattanPoints({
 		points,
 		chrSizes,
 		plotWidth,
 		plotHeight,
 		devicePixelRatio: devicePixelRatio || 1,
-		pngDotRadius: 2,
+		pngDotRadius: dotRadius,
 		// the GRIN2 defaults: raise the cap only when more than 5 dots would sit on it
 		maxCappedPoints: 5,
 		hardCap: 200,
 		binSize: 10,
 		interactive: SCAN_INTERACTIVE_PER_SIDE,
 		signed: true,
-		// open circles, as the volcano above draws the same DMRs
-		hollow: true
+		// open circles genome-wide, as the volcano draws the same DMRs; see scanDotStyle
+		hollow: !filled
 	})
-	return { png, plotData: plot_data, interactive: SCAN_INTERACTIVE_PER_SIDE, plotWidth, plotHeight }
+	return { png, plotData: plot_data, interactive: SCAN_INTERACTIVE_PER_SIDE, plotWidth, plotHeight, dotRadius, filled }
 }
 
 /* The genome-wide methylation profile: mean beta per group in 100 kb bins, drawn as the per-bin
@@ -400,8 +434,7 @@ function renderMethylationProfile(
 	if (!scan.binMethylation?.bins.length) return undefined
 	// the reader's chosen display width, or the native one; see coarsenProfile
 	const bm = coarsenProfile(scan.binMethylation, profileBinBp)
-	const chrSizes: Record<string, number> = {}
-	for (const c of genome.majorchrorder as string[]) if (c != 'chrM' && c != 'chrMT') chrSizes[c] = genome.majorchr[c]
+	const chrSizes = scanChrSizes(scan.chromosomes, genome)
 	/* Only what the tooltip cannot derive: the bin's span is binBp from its pos, and with capping
 	off the plotted y IS the difference. 2,000 interactive bins carry these, so a field that can be
 	recomputed on the client is payload for nothing. */
@@ -419,8 +452,8 @@ function renderMethylationProfile(
 	})
 	const plotWidth = 1000
 	const plotHeight = 160
-	// 1 px: at 100 kb there are ~30,000 bins, and a 2 px dot makes the genome one solid band
-	const dotRadius = 1
+	// 1 px genome-wide: at 100 kb there are ~30,000 bins, and a 2 px dot makes the genome one solid band
+	const { dotRadius } = scanDotStyle(scan.chromosomes, 1)
 	return renderManhattanPoints({
 		points,
 		chrSizes,

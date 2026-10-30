@@ -10,7 +10,7 @@ import type { DEFullResponse, DmrScanSummary } from '#types'
 import { bplen } from '#shared/common.js'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getSampleNum } from '../settings/defaults'
+import { getSampleNum, SCAN_Y_AXIS_OPTIONS } from '../settings/defaults'
 import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { getGroupColors } from '../colors'
 import { DATermTypes as tt, enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
@@ -22,6 +22,9 @@ function shortenGroupName(name: string) {
 	if (name.length >= 25) return name.substring(0, 20) + '...'
 	return name
 }
+
+/** Group read depths further apart than this get a warning in a scan's Statistics */
+const DEPTH_RATIO_WARN = 1.5
 
 export class VolcanoViewModel {
 	config: any
@@ -175,7 +178,11 @@ export class VolcanoViewModel {
 	 * the hover rows and the multi-hit table cannot disagree. */
 	setPValueLabel(settings: ValidatedVolcanoSettings): string {
 		if (this.termType == tt.PROTEOME_DAP) return 'FDR'
-		if (this.scan) return this.scan.backgroundCorrection ? 'p vs matched background' : 'smoothed FDR'
+		if (this.scan)
+			return this.scan.backgroundCorrection
+				? 'p vs matched background'
+				: // a scan from before the choice existed plotted the smoothed FDR
+				  SCAN_Y_AXIS_OPTIONS.find(o => o.value == (this.scan!.yAxis ?? 'min_smoothed_fdr'))!.label
 		return `${settings.pValueType} p-value`
 	}
 
@@ -611,6 +618,8 @@ export class VolcanoViewModel {
 			{ label: 'CpGs analyzed', value: s.totalProbesAnalyzed },
 			{ label: 'DMRs called', value: s.called },
 			{ label: `DMRs with ${s.minCpgs}+ CpGs`, value: s.kept },
+			// what the rows below, the Manhattan and the browser track count
+			...(s.minDeltaBeta ? [{ label: `… and |Δβ| ≥ ${s.minDeltaBeta}`, value: s.shown }] : []),
 			{ label: 'Hypermethylated', value: s.hyper },
 			{ label: 'Hypomethylated', value: s.hypo }
 		]
@@ -646,6 +655,27 @@ export class VolcanoViewModel {
 					value: `${gm.shift >= 0 ? '+' : ''}${gm.shift.toFixed(4)}`
 				}
 			)
+			/* Read depth by group. DMRcate's sequencing model compares log-ratios with a pseudocount, which
+			pulls shallow samples toward 0: where one group has more reads, it differs with no change in
+			methylation, and DMRs with little beta change can be depth rather than biology. */
+			const dc = gm.controlMeanDepth,
+				dk = gm.caseMeanDepth
+			if (dc != null && dk != null) {
+				rows.push(
+					{ label: `${g1} mean reads per CpG`, value: dc.toFixed(2) },
+					{ label: `${g2} mean reads per CpG`, value: dk.toFixed(2) }
+				)
+				const ratio = Math.max(dc, dk) / Math.min(dc, dk)
+				if (ratio > DEPTH_RATIO_WARN)
+					rows.push({
+						label: '⚠ Read depth differs between groups',
+						value: `${dk > dc ? g2 : g1} has ${ratio.toFixed(
+							1
+						)}× the reads per CpG. DMRcate calls DMRs from read-count ratios that shift with depth, so DMRs with little beta change may reflect depth rather than methylation; only those with |Δβ| ≥ ${
+							s.minDeltaBeta
+						} are counted.`
+					})
+			}
 		}
 		/* A survival rate is only readable against its denominator, and the unscored are not a
 		random sample -- they are the widest and most CpG-dense regions, which intergenic space

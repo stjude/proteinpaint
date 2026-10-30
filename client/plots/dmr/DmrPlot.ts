@@ -5,6 +5,9 @@ import { getDefaultDMRSettings } from './settings/defaults.ts'
 import { DmrModel } from './model/DmrModel.ts'
 import { DmrViewModel } from './viewModel/DmrViewModel.ts'
 import { DmrView } from './view/DmrView.ts'
+import { startElapsedTimer } from '#dom'
+
+const LOADING_TEXT = 'Running DMR analysis\u2026'
 
 class DmrPlot extends PlotBase implements RxComponent {
 	static type = 'dmr'
@@ -33,7 +36,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			loadingOverlay,
 			error: opts.holder.append('div'),
 			note: opts.holder.append('div'),
-			loading: opts.holder.append('div').text('Running DMR analysis\u2026'),
+			loading: opts.holder.append('div').style('display', 'none'),
 			diagnosticPanel: opts.holder.append('div').style('display', 'none')
 		}
 		this.view = new DmrView(this.dom)
@@ -76,6 +79,9 @@ class DmrPlot extends PlotBase implements RxComponent {
 		if (a && coordsChanged) {
 			// New coordinates — re-fetch and update tracks in place
 			this.view.showOverlay()
+			// a pan onto another chromosome can wait on a fresh DMRcate run, so it gets the timer too
+			this.dom.loading.style('display', 'block')
+			const stopTimer = startElapsedTimer(this.dom.loading, LOADING_TEXT)
 
 			try {
 				checkRegionSize(stop - start, config.settings.dmr.maxRegionSize)
@@ -90,7 +96,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 
 				this.view.updateTracks(vm.viewData, this.blockInstance)
 				this.view.updateLegend(this.blockInstance, vm.viewData.legendRows)
-				this.view.showLoessNote(!vm.viewData.showDots)
+				this.view.showNotes(vm.viewData.notes)
 				this.view.clearDiagnostics()
 				if (vm.viewData.diagnostic)
 					this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
@@ -98,12 +104,16 @@ class DmrPlot extends PlotBase implements RxComponent {
 				if (this.app.isAbortError(e)) return
 				this.view.hideOverlay()
 				throw e
+			} finally {
+				stopTimer()
+				this.dom.loading.style('display', 'none')
 			}
 			this.view.hideOverlay()
 		} else {
 			// First render, or same coordinates with changed settings (e.g. a settings change) — full build
 			this.dom.holder.selectAll('*').remove()
 			this.dom.loading.style('display', 'block')
+			const stopTimer = startElapsedTimer(this.dom.loading, LOADING_TEXT)
 			this.blockInstance = null
 
 			try {
@@ -124,15 +134,16 @@ class DmrPlot extends PlotBase implements RxComponent {
 					rglst => this.onBlockCoordinateChange(rglst)
 				)
 				this.view.renderLegend(this.blockInstance, vm.viewData.legendRows)
-				this.view.showLoessNote(!vm.viewData.showDots)
+				this.view.showNotes(vm.viewData.notes)
 				if (vm.viewData.diagnostic)
 					this.view.renderDiagnostics(vm.viewData.diagnostic, vm.viewData.dmrs!, config.settings.dmr.fdr_cutoff)
 			} catch (e: unknown) {
 				if (this.app.isAbortError(e)) return
-				this.dom.loading.style('display', 'none')
 				throw e
+			} finally {
+				stopTimer()
+				this.dom.loading.style('display', 'none')
 			}
-			this.dom.loading.style('display', 'none')
 		}
 	}
 

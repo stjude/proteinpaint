@@ -6,12 +6,12 @@ const idx = buildTssIndex([
 	{ name: 'A', chr: 'chr1', start: 10_000, stop: 50_000, strand: '+' },
 	{ name: 'B', chr: 'chr1', start: 60_000, stop: 100_000, strand: '-' }
 ])
-const dmr = (start: number, stop: number, meandiff = -0.2, no_cpgs = 10) => ({
+const dmr = (start: number, stop: number, delta_beta_mean = -0.2, no_cpgs = 10) => ({
 	chr: 'chr1',
 	start,
 	stop,
 	no_cpgs,
-	meandiff,
+	delta_beta_mean,
 	min_smoothed_fdr: 1e-5
 })
 

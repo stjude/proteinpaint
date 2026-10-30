@@ -34,6 +34,8 @@ export async function dmrGeneLinkPanel(
 				dslabel: vocab.dslabel,
 				cacheId: scan.cacheId,
 				minCpgs: scan.minCpgs,
+				// the run is genome-wide; the volcano may be showing a part of it
+				chromosomes: scan.chromosomes,
 				/* The cohort the scan compared, expanded and matched server-side. The plot state's list can still
 				hold a "Not in" group as {in:false} carrying the included group's values, which DE reads as two
 				overlapping groups. */

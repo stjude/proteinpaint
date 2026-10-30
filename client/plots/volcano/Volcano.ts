@@ -2,7 +2,7 @@ import type { MassState, BasePlotConfig } from '#mass/types/mass'
 import { getCompInit, copyMerge, type RxComponent, type AppApi, type ComponentApi } from '#rx'
 import { PlotBase } from '../PlotBase'
 import { fillTermWrapper } from '#termsetting'
-import { Menu, sayerror } from '#dom'
+import { Menu, sayerror, startElapsedTimer } from '#dom'
 import { controlsInit } from '../controls'
 import { getDefaultVolcanoSettings, validateVolcanoSettings } from './settings/defaults'
 import type { VolcanoOpts, VolcanoDom } from './VolcanoTypes'
@@ -13,7 +13,7 @@ import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
 import { GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION, DMR_SCAN_ELEMENT_TYPE } from '#types'
-import { uiLabel, formatElapsedTime } from '#shared'
+import { uiLabel } from '#shared'
 
 /* Below this many samples in the smaller group, the wilcoxon p-values are worth a caveat.
 rust/src/stats_functions.rs only runs the exact test when both groups are under 50 AND no value is
@@ -133,34 +133,23 @@ export class Volcano extends PlotBase implements RxComponent {
 		if (config.chartType != this.type && config.childType != this.type) return
 
 		const settings = config.settings.volcano
-		let showWait, waitTimer
+		let showWait, stopTimer
 		try {
 			/* A genome scan is about a minute of server work with nothing on the wire until it finishes;
 			a bare "Loading..." is indistinguishable from a hung request. */
 			const isScan = settings.elementType == DMR_SCAN_ELEMENT_TYPE
-			//the times are a whole-genome scan's, and the background drift correction makes it 1.5 to 2 times as long
+			//every scan runs the whole genome, a chromosome choice only picks what is shown, so the wait is the same
 			const waitText = !isScan
 				? 'Loading...'
-				: settings.scanChromosome
-				? `Scanning ${settings.scanChromosome} for DMRs...`
-				: `Scanning for DMRs... a whole-genome scan ${
-						settings.backgroundCorrection
-							? 'with the background drift correction takes about 1.5 to 2 minutes'
-							: 'takes about 1 minute'
-				  } the first time, and is cached after that.`
+				: `Scanning the genome for DMRs${settings.scanChromosome ? ` to show ${settings.scanChromosome}` : ''}... ` +
+				  'the first scan of a comparison can take a minute or more, and is cached after that.'
 			this.dom.wait.text(waitText)
 			//Only show Loading for data requests that take longer than 500ms
 			showWait = setTimeout(() => {
 				this.dom.wait.style('display', 'block')
 			}, 500)
 			//a methylation analysis counts the time in its message, so a long wait is seen to be still running
-			const start = Date.now()
-			if (this.termType == DNA_METHYLATION)
-				waitTimer = setInterval(() => {
-					//whole seconds, so that the minutes form never reads "1m 60s"
-					const ms = Math.round((Date.now() - start) / 1000) * 1000
-					this.dom.wait.text(`${waitText} ${formatElapsedTime(ms, 0)} elapsed.`)
-				}, 1000)
+			if (this.termType == DNA_METHYLATION) stopTimer = startElapsedTimer(this.dom.wait, waitText)
 
 			/** Fetch data */
 			const response = await this.model.getData(config, settings)
@@ -223,7 +212,7 @@ export class Volcano extends PlotBase implements RxComponent {
 			throw e
 		} finally {
 			clearTimeout(showWait)
-			clearInterval(waitTimer)
+			stopTimer?.()
 			this.dom.wait.style('display', 'none')
 		}
 	}
