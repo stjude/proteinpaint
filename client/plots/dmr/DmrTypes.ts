@@ -15,6 +15,9 @@ export type DmrConfig = {
 	settings: { dmr: DMRSettings }
 	/** The chromosomes of the scan this view was opened from; see TermdbDmrRequest.scanChromosomes */
 	scanChromosomes?: string[]
+	/** That scan's background correction and CpG floor; see TermdbDmrRequest */
+	backgroundCorrection?: boolean
+	minCpgs?: number
 	/** Mean reads per CpG of each group in that scan, so the view can say when a DMR may be read depth */
 	readDepth?: { control: number; case: number }
 	/** Set by onBlockCoordinateChange when user pans/zooms the genome browser */

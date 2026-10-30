@@ -320,9 +320,11 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	track is optional -- the browser opens without it -- so a failed write (unwritable cachedir,
 	full disk) is logged and dropped rather than failing the whole analysis. */
 	try {
+		// the view's DMRs only, so a one-chromosome scan's track holds that chromosome's
+		const viewKey = view === payload ? 'all' : chromosomes.join('_')
 		scan.bedjFile = await writeDmrBedjFile(
-			`dmr-${cacheId}-${scan.minCpgs}-${scan.minDeltaBeta}.txt`,
-			dmrBedjLines(payload, scan.minCpgs, scan.minDeltaBeta)
+			`dmr-${cacheId}-${viewKey}-${scan.minCpgs}-${scan.minDeltaBeta}.txt`,
+			dmrBedjLines(view, scan.minCpgs, scan.minDeltaBeta)
 		)
 	} catch (e: any) {
 		console.error('DMR scan: bedj cache write failed, browser track unavailable:', e?.message || e)

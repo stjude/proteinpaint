@@ -205,7 +205,11 @@ export class VolcanoModel {
 			...(useDeltaBeta ? { xField: 'delta_beta' as const } : {}),
 			// Tied to the delta-beta axis: the control that sets it is only offered for
 			// methylation, and centering a log2 fold-change axis is a different conversation.
-			...(useDeltaBeta && this.settings.centerDeltaBeta ? { centerX: true } : {}),
+			/* Not on a scan, whose control is hidden but whose setting survives a switch from an element
+			class: the scan counts, Manhattan and track use raw Δβ, and a centered volcano would disagree. */
+			...(useDeltaBeta && this.settings.centerDeltaBeta && this.settings.elementType != DMR_SCAN_ELEMENT_TYPE
+				? { centerX: true }
+				: {}),
 			pixelWidth: this.settings.width,
 			pixelHeight: this.settings.height,
 			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),

@@ -80,18 +80,19 @@ export function genesForDmr(idx: TssIndex, d: { chr: string; start: number; stop
 	return [...out].reverse().map(([gene, context]) => ({ gene, context }))
 }
 
-/** One link per gene and context, from every DMR meeting the CpG floor. */
-export function linkDmrsToGenes(dmrs: Dmr[], idx: TssIndex, minCpgs: number): GeneLink[] {
+/** One link per gene and context, from every DMR meeting the CpG floor and the |Δβ| floor. A DMR with no Δβ (no
+ * covered cell in one group) has no measurable effect and links nothing. */
+export function linkDmrsToGenes(dmrs: Dmr[], idx: TssIndex, minCpgs: number, minDeltaBeta = 0): GeneLink[] {
 	const links = new Map<string, GeneLink>()
 	for (const d of dmrs) {
-		if (d.no_cpgs < minCpgs) continue
+		if (d.no_cpgs < minCpgs || d.delta_beta_mean == null || Math.abs(d.delta_beta_mean) < minDeltaBeta) continue
 		for (const { gene, context } of genesForDmr(idx, d)) {
 			const key = `${gene}\t${context}`
 			const dmr = {
 				chr: d.chr,
 				start: d.start,
 				stop: d.stop,
-				deltaBeta: d.delta_beta_mean ?? NaN,
+				deltaBeta: d.delta_beta_mean,
 				cpgs: d.no_cpgs,
 				fdr: d.min_smoothed_fdr
 			}

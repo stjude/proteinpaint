@@ -11,6 +11,7 @@ import {
 	eligibleMethylationSamples,
 	validateChromosomes,
 	admitDmrcateJobs,
+	dmrcateValues,
 	runJobPool
 } from '#src/utils/methylationMatrix.ts'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
@@ -284,7 +285,7 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 	)
 	try {
 		await runJobPool(jobList, CONCURRENCY, async jobChrs => {
-			const { matrixFile, mvalues } = resolveMethylationMatrix(ds, jobChrs[0], q.element_type)
+			const matrix = resolveMethylationMatrix(ds, jobChrs[0], q.element_type)
 			/* Corrected: intergenic windows width-matched to the gene bodies ride along in the same
 			rust call, after each chromosome's bodies, so one fit serves both. Same sampler and seed rule
 			as the scan, so the two corrections are the same correction. */
@@ -315,8 +316,8 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 				await run_rust(
 					'dmrcate',
 					JSON.stringify({
-						matrices: [{ file: matrixFile, chrs: jobChrs }],
-						mvalues,
+						matrices: [{ file: matrix.matrixFile, chrs: jobChrs }],
+						...dmrcateValues(matrix),
 						background_regions: parts.flatMap(p => [
 							...p.bodies.map(b => ({ chr: p.chr, start: b.start, stop: b.stop })),
 							...p.windows

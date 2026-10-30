@@ -114,6 +114,8 @@ export type DmrScanSummary = {
 	/** the chromosomes DMRcate ran over: the whole genome (less the sex chromosomes when excluded),
 	 * of which `chromosomes` is the view. A region view opened from the scan windows this run. */
 	runChromosomes: string[]
+	/** the DMRcate parameters that run used, defaults filled in, which a region view must match */
+	dmrcate?: { lambda: number; C: number; fdr_cutoff: number }
 	totalProbesAnalyzed: number
 	/** DMRs the scan called, before any filtering here */
 	called: number

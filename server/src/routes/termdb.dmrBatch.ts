@@ -10,7 +10,8 @@ import {
 	resolveGroupNames,
 	eligibleMethylationSamples,
 	validateChromosomes,
-	admitDmrcateRun
+	admitDmrcateRun,
+	dmrcateValues
 } from '#src/utils/methylationMatrix.ts'
 import {
 	resolveExcludeBeds,
@@ -332,7 +333,7 @@ export async function runDmrBatch(
 			}
 			const input = {
 				matrices: [...files].map(([file, chrs]) => ({ file, chrs })),
-				mvalues: first.mvalues,
+				...dmrcateValues(first),
 				case: group2.join(','),
 				control: group1.join(','),
 				fdr_cutoff,

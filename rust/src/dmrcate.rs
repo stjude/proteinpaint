@@ -14,8 +14,9 @@
 //               locally from the run's constants, so every CpG reads exactly as it did in the run.
 //   background  + "background_regions": mean delta-beta per window, no model.
 //
-// A matrix is either a CpG matrix (beta plus read depth per cell) or, with "mvalues": true, an
-// element matrix (promoters, cCREs) holding M-values. See read_rows for what each contributes.
+// A matrix is either a CpG matrix (beta plus read depth per cell) or an element matrix (promoters,
+// cCREs) holding M-values ("mvalues": true) or betas ("element_betas": true). See read_rows for what
+// each contributes.
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use hdf5::File;
@@ -577,6 +578,17 @@ struct MatrixJob {
 occur nearly always. Profiling put a quarter of a chromosome's runtime in log2; this is the same
 expression, looked up. */
 const LR_TABLE: usize = 256;
+
+/// What a matrix file holds. An element matrix has no read depth, so either unit is fitted unweighted
+/// on the M-value scale, as cpg.annotate() fits it.
+#[derive(Clone, Copy, PartialEq)]
+enum Values {
+    /// a CpG matrix: betas, with read depth in depth/values
+    Counts,
+    MValues,
+    /// an element matrix of betas, taken to M-values clamped to [0.001, 0.999] for the fit
+    Betas,
+}
 struct LogRatio(Vec<f64>);
 
 impl LogRatio {
@@ -611,8 +623,8 @@ So that is what is fitted here, over EVERY requested sample. A sample with no re
 0/0 cell and contributes d = 0, as it does upstream (all.cov = FALSE); a CpG with no reads in any
 requested sample is dropped, as upstream drops it.
 
-An element matrix is cpg.annotate()'s case instead: lmFit on the stored M-values, where a missing
-cell is NA and simply absent, so the group sizes vary by row. `model` false skips the fit and keeps
+An element matrix is cpg.annotate()'s case instead: lmFit on the M-values (stored, or from stored
+betas), where a missing cell is NA and simply absent, so the group sizes vary by row. `model` false skips the fit and keeps
 only the display means, for the background mode. */
 fn read_rows(
     file: &File,
@@ -621,7 +633,7 @@ fn read_rows(
     starts: &[i64],
     case_idx: &[usize],
     ctrl_idx: &[usize],
-    mvalues: bool,
+    values: Values,
     model: bool,
     lr: &LogRatio,
     out: &mut Vec<Cpg>,
@@ -631,7 +643,7 @@ fn read_rows(
         return Ok(gb);
     }
     let ds = file.dataset("beta/values").map_err(|e| format!("beta/values: {}", e))?;
-    let dds = if mvalues {
+    let dds = if values != Values::Counts {
         None
     } else {
         Some(file.dataset("depth/values").map_err(|_| {
@@ -713,8 +725,13 @@ fn read_rows(
                         if !v.is_finite() {
                             continue;
                         }
-                        let e = v.exp2();
-                        let b = e / (1.0 + e);
+                        let (v, b) = if values == Values::Betas {
+                            let c = v.clamp(0.001, 0.999);
+                            ((c / (1.0 - c)).log2(), v)
+                        } else {
+                            let e = v.exp2();
+                            (v, e / (1.0 + e))
+                        };
                         *bsum += b;
                         *bn += 1;
                         if is_case {
@@ -772,7 +789,7 @@ fn read_matrix(
     job: &MatrixJob,
     cases: &[&str],
     ctrls: &[&str],
-    mvalues: bool,
+    values: Values,
     model: bool,
     lr: &LogRatio,
     g: &mut Genome,
@@ -795,7 +812,7 @@ fn read_matrix(
                 &meta.starts,
                 &ci,
                 &ki,
-                mvalues,
+                values,
                 model,
                 lr,
                 &mut g.cpgs,
@@ -818,7 +835,7 @@ fn read_genome(
     jobs: &[MatrixJob],
     cases: &[&str],
     ctrls: &[&str],
-    mvalues: bool,
+    values: Values,
     model: bool,
 ) -> Result<Genome, String> {
     let mut rows = 0usize;
@@ -839,7 +856,7 @@ fn read_genome(
     };
     let lr = LogRatio::new();
     for job in jobs {
-        read_matrix(job, cases, ctrls, mvalues, model, &lr, &mut g)?;
+        read_matrix(job, cases, ctrls, values, model, &lr, &mut g)?;
     }
     Ok(g)
 }
@@ -1512,8 +1529,14 @@ fn main() {
         bail!("Missing required parameters: matrices, case and control");
     }
     // Set by the server from the ds config entry, never by the client: an element matrix stores
-    // M-values where a CpG matrix stores betas and read depth.
-    let mvalues = p["mvalues"].as_bool().unwrap_or(false);
+    // M-values or betas where a CpG matrix stores betas and read depth.
+    let values = if p["mvalues"].as_bool().unwrap_or(false) {
+        Values::MValues
+    } else if p["element_betas"].as_bool().unwrap_or(false) {
+        Values::Betas
+    } else {
+        Values::Counts
+    };
     let fdr_cut = p["fdr_cutoff"].as_f64().unwrap_or(0.05);
     let lambda = p["lambda"].as_f64().unwrap_or(1000.0);
     let c_param = p["C"].as_f64().unwrap_or(2.0);
@@ -1531,7 +1554,7 @@ fn main() {
     };
 
     if p["region"].is_object() {
-        region_mode(&p, &jobs, &cases, &ctrls, mvalues, lambda, c_param, &diagnostic);
+        region_mode(&p, &jobs, &cases, &ctrls, values, lambda, c_param, &diagnostic);
         return;
     }
 
@@ -1539,7 +1562,7 @@ fn main() {
     let windows = parse_ranges(&p["windows"]);
     if windows.is_empty() {
         // the background correction only needs each window's delta-beta, not the model
-        let g = match read_genome(&jobs, &cases, &ctrls, mvalues, false) {
+        let g = match read_genome(&jobs, &cases, &ctrls, values, false) {
             Ok(g) => g,
             Err(e) => bail!("{}", e),
         };
@@ -1555,7 +1578,7 @@ fn main() {
         return;
     }
 
-    let mut g = match read_genome(&jobs, &cases, &ctrls, mvalues, true) {
+    let mut g = match read_genome(&jobs, &cases, &ctrls, values, true) {
         Ok(g) => g,
         Err(e) => bail!("{}", e),
     };
@@ -1662,7 +1685,7 @@ fn region_mode(
     jobs: &[MatrixJob],
     cases: &[&str],
     ctrls: &[&str],
-    mvalues: bool,
+    values: Values,
     lambda: f64,
     c_param: f64,
     diagnostic: &dyn Fn(usize) -> Value,
@@ -1707,7 +1730,7 @@ fn region_mode(
         &meta.starts,
         &ci,
         &ki,
-        mvalues,
+        values,
         true,
         &LogRatio::new(),
         &mut cpgs,
@@ -1829,6 +1852,49 @@ mod tests {
             beta_ctrl: 0.2,
             beta_case: 0.6,
         }
+    }
+
+    #[test]
+    fn a_beta_element_matrix_is_fitted_on_clamped_m_values_with_no_depth() {
+        // 2 elements x 4 samples (2 case, 2 control); no depth/values, which a CpG matrix would need
+        let path = std::env::temp_dir().join(format!("dmrcate-betas-{}.h5", std::process::id()));
+        let file = File::create(&path).unwrap();
+        let beta = ndarray::arr2(&[[0.8f32, 0.6, 0.2, 0.4], [1.0, f32::NAN, 0.0, 0.5]]);
+        file.create_group("beta")
+            .unwrap()
+            .new_dataset_builder()
+            .with_data(&beta)
+            .create("values")
+            .unwrap();
+        let mut out = Vec::new();
+        read_rows(
+            &file,
+            0,
+            2,
+            &[100, 200],
+            &[0, 1],
+            &[2, 3],
+            Values::Betas,
+            true,
+            &LogRatio::new(),
+            &mut out,
+        )
+        .unwrap();
+        std::fs::remove_file(&path).ok();
+        assert_eq!(out.len(), 2);
+        let m = |b: f64| {
+            let c = b.clamp(0.001, 0.999);
+            (c / (1.0 - c)).log2()
+        };
+        let fc0 = (m(0.8f32 as f64) + m(0.6f32 as f64)) / 2.0 - (m(0.2f32 as f64) + m(0.4f32 as f64)) / 2.0;
+        assert!((out[0].log_fc - fc0).abs() < 1e-12, "the fit is on M-values");
+        assert!(
+            (out[0].beta_case - 0.7).abs() < 1e-6 && (out[0].beta_ctrl - 0.3).abs() < 1e-6,
+            "display means are betas"
+        );
+        // the NaN cell is absent, and 0 and 1 clamp rather than going infinite
+        assert_eq!((out[1].n_case, out[1].n_ctrl), (1, 2));
+        assert!(out[1].log_fc.is_finite());
     }
 
     /* The values each port of an R function is checked against were computed in R 4.5.2 with

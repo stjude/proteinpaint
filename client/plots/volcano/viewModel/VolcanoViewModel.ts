@@ -643,9 +643,10 @@ export class VolcanoViewModel {
 		const gm = s.globalMethylation
 		if (gm) {
 			const [g1, g2] = this.config.samplelst?.groups?.map((g: any) => g.name) || ['group 1', 'group 2']
-			/* Named for what was scanned. One chromosome makes these chromosome-wide numbers, and
-			"genome-wide" would overstate every one of them. */
-			const one = s.chromosomes.length == 1 ? s.chromosomes[0] : null
+			/* Named for what DMRcate ran over, which these are measured on: the whole genome, even when
+			the volcano shows one chromosome of it. */
+			const run = s.runChromosomes || s.chromosomes
+			const one = run.length == 1 ? run[0] : null
 			const meanLabel = (g: string) => (one ? `${g} mean β on ${one}` : `${g} genome-wide mean β`)
 			rows.push(
 				{ label: meanLabel(g1), value: gm.controlMeanBeta.toFixed(4) },

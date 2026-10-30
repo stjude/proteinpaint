@@ -124,6 +124,15 @@ export function dmrScanToRows(
 		panel saying "24" while one ran would misdescribe every number under it. */
 		chromosomes: scanned.length ? scanned : opts.chromosomes,
 		runChromosomes: opts.runChromosomes || opts.chromosomes,
+		...(payload.constants
+			? {
+					dmrcate: {
+						lambda: payload.constants.lambda,
+						C: payload.constants.C,
+						fdr_cutoff: payload.constants.fdr_cutoff
+					}
+			  }
+			: {}),
 		totalProbesAnalyzed: payload.totalProbesAnalyzed,
 		called: called.length,
 		minCpgs,

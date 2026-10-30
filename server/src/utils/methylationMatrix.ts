@@ -73,6 +73,13 @@ function resolveElementEntry(ds: any, elementType: string | undefined): any {
 	return dm.elements?.promoter?.file ? dm.elements.promoter : dm.promoter?.file ? dm.promoter : undefined
 }
 
+/** How dmrcate reads a resolved matrix (see rust/src/dmrcate.rs): an element matrix of M-values or of betas, neither
+ * with read depth, or a CpG matrix of betas with depth. `mvalues` alone cannot tell a beta element matrix from a CpG
+ * one. */
+export function dmrcateValues(m: Pick<ResolvedMatrix, 'mvalues' | 'useElement'>) {
+	return { mvalues: m.mvalues, element_betas: m.useElement && !m.mvalues }
+}
+
 /* Which samples can take part in a methylation contrast, for the whole analysis rather than for one
 chromosome.
 
@@ -256,23 +263,27 @@ export async function resolveGroupNames(
 }
 
 /** Peak memory of one rust dmrcate run (the DMR scan, termdb/dmr, geneBodyMeth), by the rows of the matrix files it
- * reads. dmrcate streams the values in 2,000-row chunks, so neither the samples in a file nor those selected count:
- * its memory is a few numbers per row kept for the genome-wide steps. Measured 2026-10-28 on one-, two- and
- * all-chromosome scans of DISCOVER (26.6M CpGs, 125 selected) and MMRF (16.4M CpGs, 200 of 415 selected), as max RSS,
- * and set at or above every run. */
-export const DMRCATE_MEMORY: MemoryCost = { baseMB: 60, perUnitMB: { rows: 0.00008 } }
+ * reads and the columns of its read buffer. dmrcate streams the values in 2,000-row chunks, holding each chunk's every
+ * column as f32 beta and u16 depth (6 bytes a cell; ~114 MB at 10,000 columns), one chunk at a time; beyond that the
+ * selected samples do not count. The rest is a few numbers per row kept for the genome-wide steps. Measured 2026-10-28
+ * on one-, two- and all-chromosome scans of DISCOVER (26.6M CpGs, 125 selected) and MMRF (16.4M CpGs, 200 of 415
+ * selected), as max RSS, and set at or above every run. */
+export const DMRCATE_MEMORY: MemoryCost = {
+	baseMB: 60,
+	perUnitMB: { rows: 0.00008, cols: (2000 * 6) / 1048576 }
+}
 
-/** Rows of a methylation matrix file, from the header of its beta/values, read once per file: the files do not
- * change while the server runs */
-const fileRows = new Map<string, Promise<number>>()
-export function matrixRows(file: string): Promise<number> {
-	if (!fileRows.has(file)) {
-		const rows = getH5shape(file, 'beta/values').then(shape => shape[0])
+/** [rows, columns] of a methylation matrix file, from the header of its beta/values, read once per file: the files do
+ * not change while the server runs */
+const fileShapes = new Map<string, Promise<number[]>>()
+function matrixShape(file: string): Promise<number[]> {
+	if (!fileShapes.has(file)) {
+		const shape = getH5shape(file, 'beta/values')
 		// a failed read is not kept, so the next request tries again
-		rows.catch(() => fileRows.delete(file))
-		fileRows.set(file, rows)
+		shape.catch(() => fileShapes.delete(file))
+		fileShapes.set(file, shape)
 	}
-	return fileRows.get(file)!
+	return fileShapes.get(file)!
 }
 
 /** Admits dmrcate jobs over these matrix files, `concurrency` at a time (see admitRun): reserves the memory of the
@@ -284,16 +295,21 @@ export async function admitDmrcateJobs(
 	concurrency: number,
 	refusal: string
 ): Promise<() => void> {
-	const largest = (await Promise.all([...new Set(files)].map(matrixRows))).sort((a, b) => b - a).slice(0, concurrency)
+	const largest = (await Promise.all([...new Set(files)].map(matrixShape)))
+		.sort((a, b) => b[0] - a[0])
+		.slice(0, concurrency)
 	const cost = { baseMB: DMRCATE_MEMORY.baseMB * largest.length, perUnitMB: DMRCATE_MEMORY.perUnitMB }
-	return admitRun(label, cost, { rows: largest.reduce((sum, r) => sum + r, 0) }, await getAvailableMemoryMB(), refusal)
+	const units = { rows: largest.reduce((n, s) => n + s[0], 0), cols: largest.reduce((n, s) => n + s[1], 0) }
+	return admitRun(label, cost, units, await getAvailableMemoryMB(), refusal)
 }
 
-/** Admits one dmrcate run over all of these matrix files -- a DMR scan, which reads every file in one process and holds
- * a few numbers per row of each -- reserving its memory until the returned release is called. */
+/** Admits one dmrcate run over all of these matrix files -- a DMR scan, which reads every file in one process, one
+ * chunk at a time, and holds a few numbers per row of each -- reserving its memory until the returned release is
+ * called. */
 export async function admitDmrcateRun(label: string, files: string[], refusal: string): Promise<() => void> {
-	const rows = (await Promise.all([...new Set(files)].map(matrixRows))).reduce((sum, r) => sum + r, 0)
-	return admitRun(label, DMRCATE_MEMORY, { rows }, await getAvailableMemoryMB(), refusal)
+	const shapes = await Promise.all([...new Set(files)].map(matrixShape))
+	const units = { rows: shapes.reduce((n, s) => n + s[0], 0), cols: Math.max(0, ...shapes.map(s => s[1])) }
+	return admitRun(label, DMRCATE_MEMORY, units, await getAvailableMemoryMB(), refusal)
 }
 
 /** Runs `run` on each job, `concurrency` at a time (mapConcurrent), and settles only once every job it started has

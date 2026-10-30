@@ -2,7 +2,12 @@ import type { RoutePayload, RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
-import { resolveMethylationMatrix, resolveGroupNames, admitDmrcateJobs } from '#src/utils/methylationMatrix.ts'
+import {
+	resolveMethylationMatrix,
+	resolveGroupNames,
+	admitDmrcateJobs,
+	dmrcateValues
+} from '#src/utils/methylationMatrix.ts'
 import { resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import { formatElapsedTime } from '#shared'
 import { genomes } from '#src/initGenomesDs.js'
@@ -40,7 +45,8 @@ function init({ genomes }) {
 
 			/* The matrix a scan runs on: the region view is a window on a scan and takes no element class,
 			so an element-class result can never be drawn under DMRcate's calls. */
-			const { matrixFile, mvalues, eligible } = resolveMethylationMatrix(ds, q.chr, undefined)
+			const matrix = resolveMethylationMatrix(ds, q.chr, undefined)
+			const { matrixFile, eligible } = matrix
 
 			// a group may be defined by a filter
 			const [list1, list2] = await resolveGroupPair(q, ds)
@@ -96,21 +102,28 @@ function init({ genomes }) {
 					lambda: q.lambda,
 					C: q.C,
 					fdr_cutoff: q.fdr_cutoff,
+					// in the run's cache key: the scan's own setting, or this misses its run and refits
+					backgroundCorrection: !!q.backgroundCorrection,
 					__protected__: q.__protected__
 				},
 				genomes
 			)
 			if (!run.constants) throw new Error('This DMR run predates region views; run the scan again.')
+			// the scan's CpG floor: a DMR the scan dropped is not drawn as one it counted
+			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
 			const dmrInput = {
 				matrices: [{ file: matrixFile, chrs: [q.chr] }],
-				mvalues,
+				...dmrcateValues(matrix),
 				case: group2.join(','),
 				control: group1.join(','),
 				lambda: run.constants.lambda,
 				C: run.constants.C,
 				region: { chr: q.chr, start: q.start, stop: q.stop },
 				constants: run.constants,
-				dmrs: run.regions.filter(r => r.chr == q.chr).flatMap(r => r.dmrs),
+				dmrs: run.regions
+					.filter(r => r.chr == q.chr)
+					.flatMap(r => r.dmrs)
+					.filter(d => d.no_cpgs >= minCpgs),
 				blockWidth: q.blockWidth,
 				devicePixelRatio: q.devicePixelRatio,
 				maxLoessRegion: q.maxLoessRegion,

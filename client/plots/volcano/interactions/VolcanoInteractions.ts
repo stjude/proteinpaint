@@ -1,6 +1,6 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { groupColors } from '../groupColors'
-import { getGroupForRegion } from '#mass/groups'
+import { getGroupForRegion, getOthersGroup } from '#mass/groups'
 import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI, sayerror } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
@@ -307,17 +307,37 @@ export class VolcanoInteractions {
 		const colors = groupColors(config)
 
 		const s = config.settings.volcano
+		/* The groups as the scan request sent them (VolcanoModel.setOthersGroup): the state's "others"
+		group is an {in:false} placeholder repeating the first group's samples, which would compare the
+		group with itself and miss the scan's cached run. */
+		const samplesGroup = config.samplelst.groups.find(g => g.in)
+		const termfilter = this.app.getState().termfilter
+		const groups = config.samplelst.groups.map(g =>
+			g.in ? g : getOthersGroup({ name: g.name, values: samplesGroup.values }, termfilter)
+		)
+		// the parameters the scan's run used, defaults filled in server-side, so the region windows that run
+		const k = scan.dmrcate
 		const dmrConfig: any = {
 			chartType: 'dmr',
 			headerText: `DMR: ${d.chr}:${d.start}-${d.stop}`,
 			coordinateOverride: { chr: d.chr, start: d.start, stop: d.stop },
 			// the samples of each group, or the filter of a group that is defined by one
-			group1: getGroupForRegion(config.samplelst.groups[0]),
-			group2: getGroupForRegion(config.samplelst.groups[1]),
-			group1Name: config.samplelst.groups[0].name,
-			group2Name: config.samplelst.groups[1].name,
-			settings: { colors, lambda: s.lambda, C: s.C, fdr_cutoff: s.fdrCutoff, minDeltaBeta: s.deltaBetaCutoff },
+			group1: getGroupForRegion(groups[0]),
+			group2: getGroupForRegion(groups[1]),
+			group1Name: groups[0].name,
+			group2Name: groups[1].name,
+			settings: {
+				colors,
+				lambda: k?.lambda ?? s.lambda,
+				C: k?.C ?? s.C,
+				fdr_cutoff: k?.fdr_cutoff ?? s.fdrCutoff,
+				minDeltaBeta: s.deltaBetaCutoff
+			},
 			scanChromosomes: scan.runChromosomes,
+			// also in the run's cache key, so the region finds the scan's run rather than refitting it
+			backgroundCorrection: !!scan.backgroundCorrection,
+			// the scan drops DMRs with fewer CpGs; the region view drops them too
+			minCpgs: scan.minCpgs,
 			...(scan.globalMethylation?.controlMeanDepth != null && scan.globalMethylation?.caseMeanDepth != null
 				? {
 						readDepth: {

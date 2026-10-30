@@ -127,15 +127,20 @@ tape('DM', test => {
 })
 
 tape('DM routes (dmrcate)', test => {
-	/* one dmrcate run, one process over every chromosome named: [rows, peak MB], max RSS. The model reads the
-	values in 2,000-row chunks, so neither the samples in a file nor those selected count. */
-	for (const [rows, peak] of [
-		[896179, 96] /* DISCOVER chr21+chr22 scan, 125 selected */,
-		[1110433, 129] /* DISCOVER chr17 scan, 125 selected */,
-		[16374220, 1216] /* MMRF genome scan, 200 of 415 selected */,
-		[26591958, 2075] /* DISCOVER genome scan, 125 selected, 214,978 DMRs */
+	/* one dmrcate run, one process over every chromosome named: [rows, columns, peak MB], max RSS. The model reads the
+	values in 2,000-row chunks, so the selected samples do not count, but the columns of the file do. */
+	for (const [rows, cols, peak] of [
+		[896179, 151, 96] /* DISCOVER chr21+chr22 scan, 125 selected */,
+		[1110433, 151, 129] /* DISCOVER chr17 scan, 125 selected */,
+		[16374220, 415, 1216] /* MMRF genome scan, 200 of 415 selected */,
+		[26591958, 151, 2075] /* DISCOVER genome scan, 125 selected, 214,978 DMRs */
 	])
-		covers(test, `${rows} rows`, estimatePeakMB(DMRCATE_MEMORY, { rows }), peak)
+		covers(test, `${rows} rows`, estimatePeakMB(DMRCATE_MEMORY, { rows, cols }), peak)
+	// the chunk buffer alone, 2,000 rows of f32 beta and u16 depth, at 10,000 columns
+	test.ok(
+		estimatePeakMB(DMRCATE_MEMORY, { rows: 0, cols: 10000 }) - DMRCATE_MEMORY.baseMB >= 114,
+		'a wide matrix reserves its read buffer'
+	)
 	test.end()
 })
 

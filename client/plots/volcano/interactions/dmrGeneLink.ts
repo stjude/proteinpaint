@@ -34,6 +34,7 @@ export async function dmrGeneLinkPanel(
 				dslabel: vocab.dslabel,
 				cacheId: scan.cacheId,
 				minCpgs: scan.minCpgs,
+				minDeltaBeta: scan.minDeltaBeta,
 				// the run is genome-wide; the volcano may be showing a part of it
 				chromosomes: scan.chromosomes,
 				/* The cohort the scan compared, expanded and matched server-side. The plot state's list can still

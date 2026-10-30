@@ -45,6 +45,19 @@ tape('linkDmrsToGenes keeps the strongest DMR per gene and context', t => {
 	t.end()
 })
 
+tape('linkDmrsToGenes skips DMRs with no Δβ or under the Δβ floor', t => {
+	const links = linkDmrsToGenes(
+		[dmr(20_000, 21_000, null as any), dmr(30_000, 31_000, 0.05), dmr(40_000, 41_000, -0.2)],
+		idx,
+		5,
+		0.1
+	)
+	t.equal(links.length, 1)
+	t.equal(links[0].nDmrs, 1, 'only the DMR at or above the floor links')
+	t.equal(links[0].dmr.deltaBeta, -0.2, 'a null Δβ does not block a finite one from being the strongest')
+	t.end()
+})
+
 tape('classifyLink reads promoter and body in opposite directions', t => {
 	t.equal(classifyLink('promoter', 0.2, { fc: -1, p: 0.01 }), 'concordant', 'promoter hyper, expression down')
 	t.equal(classifyLink('promoter', 0.2, { fc: 1, p: 0.01 }), 'discordant')

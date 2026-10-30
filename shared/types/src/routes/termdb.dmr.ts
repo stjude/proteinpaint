@@ -34,6 +34,10 @@ export type TermdbDmrRequest = {
 	/** The chromosomes of the DMRcate run this view is a window on: a region opened from a scan names
 	 * the scan's, so it shows the DMRs the volcano drew. Absent, or not covering chr = the whole genome. */
 	scanChromosomes?: string[]
+	/** That scan's background correction, which is in its run's cache key, so the view finds the run */
+	backgroundCorrection?: boolean
+	/** That scan's CpG floor: DMRs from fewer CpGs are left out, as the scan leaves them out. Absent = 1 */
+	minCpgs?: number
 	filter?: Filter
 	__protected__?: any
 }
