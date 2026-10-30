@@ -37,7 +37,8 @@ export default class DataObjectMapper {
 			posA: dObject.posA,
 			posB: dObject.posB,
 			strandA: dObject.strandA,
-			strandB: dObject.strandB
+			strandB: dObject.strandB,
+			eventImage: dObject.eventImage
 		}
 	}
 }

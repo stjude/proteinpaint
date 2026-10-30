@@ -352,7 +352,7 @@ export async function load_driver(q, ds) {
 		throw 'm2csq not supported on this dataset'
 	}
 
-	if (q.eventImages) {
+	if (q.eventImage !== undefined) {
 		if (!ds.queries?.svfusion?.eventImages) throw 'eventImages not supported on this dataset'
 		return { eventImages: await ds.queries.svfusion.eventImages.get(q) }
 	}

@@ -516,59 +516,38 @@ async function table_svfusion(arg, table) {
 	// todo: support chimeric read fraction on each break end
 	const [c1, c2] = table.addRow()
 	c1.text('Break points')
-	const updateImages = mayGetEventImageRow(arg, table)
+
+	let imagesShown // promise of showing the images of the event, if it has any
+	const eventImages = arg.tk.mds.eventImages
+	if (m.eventImageValue && eventImages) {
+		const [key, cell] = table.addRow()
+		key.text(eventImages.label)
+		cell.attr('data-testid', 'sjpp-mds3-event-images').text('Loading...')
+		imagesShown = (async () => {
+			try {
+				const { images } = await eventImages.get(m.eventImageValue)
+				if (!Array.isArray(images)) throw 'images[] not array from return'
+				if (!images.length) return cell.node().parentNode.remove()
+				renderEventImages(cell, images)
+			} catch (e) {
+				cell.text('Error: ' + (e.message || e))
+			}
+		})()
+	}
 
 	// m.pairlstIdx is the side of the pair on the gene in view, thus the partner is the other side
 	const partnerSide = m.pairlstIdx == 0 ? 'b' : 'a'
 	if (m.pairlst[0][partnerSide]?.breakpoints) {
 		/* the samples of this event break at multiple positions of the partner gene (see
 		mayUpdatePairlst() in mds3.load.js); chart them and let user pick which to show */
-		await makeBreakpointChart(arg, m, partnerSide, graphDiv, c2, updateImages)
+		await makeBreakpointChart(arg, m, partnerSide, graphDiv, c2)
 	} else {
 		await makeSvgraph(m, graphDiv, arg.block)
 		for (const pair of m.pairlst) {
 			printSvPair(pair, c2.append('div'))
 		}
-		await updateImages?.(null)
 	}
-}
-
-/*
-adds a row to the item table of a svfusion event to show its images, if the ds has svfusion.eventImages
-the row is hidden until there are images to show
-
-returns update(range), to list the images of the event limited to samples whose partner breakpoint is in range{},
-or all samples when range is null; or undefined when the ds has no event images
-*/
-function mayGetEventImageRow(arg, table) {
-	const eventImages = arg.tk.mds.eventImages
-	if (!eventImages?.get) return
-	const [key, cell] = table.addRow()
-	key.text(eventImages.label)
-	const row = cell.node().parentNode
-	row.style.display = 'none'
-	cell.attr('data-testid', 'sjpp-mds3-event-images')
-	let latest = 0 // increments on each update, so that a slow response does not overwrite a newer one
-
-	return async range => {
-		const token = ++latest
-		row.style.display = ''
-		cell.text('Loading...')
-		const m = arg.mlst[0]
-		try {
-			const { groups } = await eventImages.get({ m, range, tid2value: arg.tid2value })
-			if (token != latest) return
-			if (!Array.isArray(groups)) throw 'groups[] not array from return'
-			row.style.display = groups.length ? '' : 'none'
-			renderEventImages(cell, groups, async file => {
-				const { src } = await eventImages.get({ m, range, file, tid2value: arg.tid2value })
-				if (!src) throw 'src missing from return'
-				return src
-			})
-		} catch (e) {
-			if (token == latest) cell.text('Error: ' + (e.message || e))
-		}
-	}
+	await imagesShown
 }
 
 /*
@@ -582,7 +561,7 @@ clearing the range shows all breakpoints and samples. the most frequent breakpoi
 
 m.pairlst[0][partnerSide].breakpoints[] is required; see mayUpdatePairlst() in mds3.load.js
 */
-async function makeBreakpointChart(arg, m, partnerSide, div, breakpointCell, updateImages) {
+async function makeBreakpointChart(arg, m, partnerSide, div, breakpointCell) {
 	const selfSide = partnerSide == 'a' ? 'b' : 'a'
 	const self = m.pairlst[0][selfSide] // point on the gene in view
 	const partner = m.pairlst[0][partnerSide]
@@ -634,7 +613,6 @@ async function makeBreakpointChart(arg, m, partnerSide, div, breakpointCell, upd
 		try {
 			// breakpoints[] are all on the partner chr, the chr of the range
 			const inRange = range ? breakpoints.filter(b => b.pos >= range.start && b.pos <= range.stop) : breakpoints
-			const imagesUpdated = updateImages?.(range)
 
 			breakpointCell.selectAll('*').remove()
 			if (!inRange.length)
@@ -671,7 +649,6 @@ async function makeBreakpointChart(arg, m, partnerSide, div, breakpointCell, upd
 			}
 
 			await renderSampleTable(token)
-			await imagesUpdated
 		} catch (e) {
 			// nothing awaits a selection made in the chart; report in place rather than leaving an unhandled rejection
 			if (token == latest) breakpointCell.text('Error: ' + (e.message || e))

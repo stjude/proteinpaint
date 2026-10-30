@@ -10,7 +10,6 @@ import type { ClientGenome } from '../../../types/clientGenome.ts'
 
 export type FusionContext = {
 	dslabel?: string
-	sampleName?: string
 	eventImages?: { label: string }
 }
 
@@ -117,7 +116,7 @@ export default class FusionRenderer {
 		}
 		holder.append('div').style('padding', '5px').text(fusionText(fusion))
 		const graph = holder.append('div')
-		if (this.canShowEventImages()) {
+		if (this.context.eventImages && this.context.dslabel && fusion.eventImageValue) {
 			const section = holder.append('div').attr('data-testid', 'sjpp-disco-event-images').style('margin', '10px 5px')
 			section.append('div').style('font-weight', 'bold').text(this.context.eventImages!.label)
 			// not awaited, so that the fusion graph is rendered without waiting for the image list
@@ -132,39 +131,17 @@ export default class FusionRenderer {
 
 	private async showEventImages(section: any, fusion: Fusion) {
 		const content = section.append('div').text('Loading...')
-		const pair = {
-			sample: String(this.context.sampleName),
-			dt: fusion.dt,
-			chrA: fusion.source.positionInChromosome.chromosome,
-			posA: fusion.source.positionInChromosome.position,
-			strandA: fusion.source.strand,
-			chrB: fusion.target.positionInChromosome.chromosome,
-			posB: fusion.target.positionInChromosome.position,
-			strandB: fusion.target.strand
-		}
-		const getEventImages = async (file?: string) => {
-			const body = { genome: this.genome.name, dslabel: this.context.dslabel, eventImages: { pair, file } }
+		try {
+			const body = { genome: this.genome.name, dslabel: this.context.dslabel, eventImage: fusion.eventImageValue }
 			const data = await dofetch3('termdb/mds3', { body })
 			if (data.error) throw data.error
-			if (!data.eventImages) throw 'result error'
-			return data.eventImages
-		}
-		try {
-			const { groups } = await getEventImages()
-			if (!Array.isArray(groups)) throw 'groups[] not array from return'
-			if (!groups.length) return section.remove()
-			renderEventImages(content, groups, async file => {
-				const { src } = await getEventImages(file)
-				if (!src) throw 'src missing from return'
-				return src
-			})
+			const images = data.eventImages?.images
+			if (!Array.isArray(images)) throw 'images[] not array from return'
+			if (!images.length) return section.remove()
+			renderEventImages(content, images)
 		} catch (e: any) {
 			content.text('Error: ' + (e.message || e))
 		}
-	}
-
-	private canShowEventImages() {
-		return !!(this.context.eventImages && this.context.dslabel && this.context.sampleName != null)
 	}
 }
 

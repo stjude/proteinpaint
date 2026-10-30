@@ -623,28 +623,17 @@ function mayaddGetter_m2csq(tk, block) {
 }
 
 /* if termdbConfig.queries.svfusion.eventImages{} is present, add tk.mds.eventImages{label, get()}
-get() returns {groups[]} or {src} of one image
-arg{}
-	.m{} svfusion event, lists its images
-	.range{} optional, limits to samples whose partner breakpoint is in range
-	.file optional, loads this listed image instead
-	.tid2value{} optional, from the sample summary of a clicked item
-uses the same sample filters as variant2samples, so that only images of samples shown in the track are available
+get(eventImageValue) returns {images[]}, all images of a svfusion event by its m.eventImageValue, each with png data
 */
 export function mayaddGetter_eventImages(tk, block) {
 	const cfg = tk.mds.termdbConfig?.queries?.svfusion?.eventImages
 	if (!cfg) return
 	// keep termdbConfig as plain server data, and add the getter to tk.mds instead
 	tk.mds.eventImages = { label: cfg.label }
-	tk.mds.eventImages.get = async arg => {
-		const { m, range, file } = arg
-		const body = {
-			genome: block.genome.name,
-			dslabel: tk.mds.label,
-			eventImages: { ssm_id: m.ssm_id, chr: m.chr, pos: m.pos, range, file }
-		}
+	tk.mds.eventImages.get = async eventImageValue => {
+		const body = { genome: block.genome.name, dslabel: tk.mds.label, eventImage: eventImageValue }
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-		addSampleFilterParameters(tk, body, headers, arg.tid2value)
+		if (tk.token) headers['X-Auth-Token'] = tk.token
 		const data = await dofetch3('termdb/mds3', { body, headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
 		if (!data.eventImages) throw 'result error'
@@ -652,7 +641,7 @@ export function mayaddGetter_eventImages(tk, block) {
 	}
 }
 
-/* add the request parameters and headers that filter samples by the track, shared by variant2samples and eventImages
+/* add the request parameters and headers that filter samples by the track
 par{} request body
 headers{} request headers
 tid2value{} optional, from the sample summary of a clicked item

@@ -255,7 +255,6 @@ export default class Disco extends PlotBase implements RxComponent {
 				this.app.opts.state.args.genome,
 				{
 					dslabel: this.app.opts.state.vocab.dslabel,
-					sampleName: this.app.opts.state.args.sampleName,
 					eventImages: this.app.opts.state.args.eventImages
 				}
 			)

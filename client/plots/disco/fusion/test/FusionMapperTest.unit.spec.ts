@@ -30,7 +30,8 @@ test('FusionMapper.map() should return an array of Fusion objects', t => {
 			chrB: 'chr2',
 			posB: 50,
 			strandB: '+',
-			geneB: 'gene2'
+			geneB: 'gene2',
+			eventImage: 'gene1_gene2'
 		},
 		{
 			dt: dtsv,
@@ -54,6 +55,11 @@ test('FusionMapper.map() should return an array of Fusion objects', t => {
 		'preserves each event type'
 	)
 	t.deepEqual([fusions[0].source.strand, fusions[0].target.strand], ['-', '+'], 'preserves both breakpoint strands')
+	t.deepEqual(
+		fusions.map(f => f.eventImageValue),
+		['gene1_gene2', undefined],
+		'preserves the optional event image value'
+	)
 	t.equal(fusions[0].source.startAngle, -0.01, 'Start angle for position 0 on chr1 should be 0')
 	t.equal(
 		fusions[0].target.endAngle,

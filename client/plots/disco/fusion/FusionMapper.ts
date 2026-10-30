@@ -61,7 +61,7 @@ export default class FusionMapper {
 					data.strandB
 				)
 			}
-			const fusion = new Fusion(source, target, 'genes', -1, 'Endpoints', data.dt)
+			const fusion = new Fusion(source, target, 'genes', -1, 'Endpoints', data.dt, data.eventImage)
 
 			fusions.push(fusion)
 		})

@@ -1684,7 +1684,7 @@ async function validate_query_svfusion(ds, genome) {
 		await setFile(q.byname, 'svfusion.byname')
 		q.byname.get = await svfusionByNameGetter_file(ds, genome)
 	}
-	validate_query_svfusionEventImages(ds, genome)
+	validate_query_svfusionEventImages(ds)
 }
 
 async function validate_query_cnv(ds, genome) {
@@ -3044,7 +3044,7 @@ async function svfusionByRangeGetter_file(ds, genome) {
 						}
 					}
 					if (!key2variants.has(ssm_id)) {
-						key2variants.set(ssm_id, {
+						const j0 = {
 							ssm_id,
 							dt: j.dt,
 							class: j.class,
@@ -3055,7 +3055,12 @@ async function svfusionByRangeGetter_file(ds, genome) {
 							mname,
 							pairlst, // if this key corresponds multiple events, add initial pairlst to allow showing svgraph without additional query to get other breakpoints
 							samples: []
-						})
+						}
+						if (ds.queries.svfusion.eventImages && j.mattr?.eventImage) {
+							// images are associated with event. even if .mattr was supposed for sample-level event properties, because mattr.eventImage is used, now will add image value to j0
+							j0.eventImageValue = j.mattr.eventImage
+						}
+						key2variants.set(ssm_id, j0)
 					}
 					if (sampleObj) key2variants.get(ssm_id).samples.push(sampleObj)
 				}
