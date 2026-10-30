@@ -220,7 +220,7 @@ export type DmrRunConstants = {
 export type DmrRunResources = {
 	/** dmrcate processes run at once: one, which reads every chromosome of the run */
 	workers: number
-	/** threads that process uses, reading matrix files concurrently */
+	/** threads that process uses; the dmrcate binary is single-threaded */
 	threadsPerWorker: number
 	wallMs: number
 	/** largest resident set any one worker reached, MB */

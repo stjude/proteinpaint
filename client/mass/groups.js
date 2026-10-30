@@ -1700,6 +1700,15 @@ export function getOthersGroup(group, termfilter) {
 	return others
 }
 
+/* The groups of a two-group analysis as its request sends them: an in:false placeholder replaced by the group that
+it stands for (getOthersGroup). Shared so that the volcano's request and the region view opened from it send the
+same groups, which the region view needs to find the volcano's cached DMR run.
+termfilter: {filter, filter0} of the app state */
+export function withOthersGroup(groups, termfilter) {
+	const samplesGroup = groups.find(g => g.in)
+	return groups.map(g => (g.in ? g : getOthersGroup({ name: g.name, values: samplesGroup.values }, termfilter)))
+}
+
 /* A samplelst tw whose groups are each defined by a filter.
 groups[]: {name, filter, color?, filter0?, sampleCount?, mapParent2Children?}
 - filter: the server resolves the samples that it selects, where the samples of the group are needed.

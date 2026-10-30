@@ -6,7 +6,8 @@ import {
 	resolveMethylationMatrix,
 	resolveGroupNames,
 	admitDmrcateJobs,
-	dmrcateValues
+	dmrcateValues,
+	eligibleMethylationSamples
 } from '#src/utils/methylationMatrix.ts'
 import { resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import { formatElapsedTime } from '#shared'
@@ -46,7 +47,7 @@ function init({ genomes }) {
 			/* The matrix a scan runs on: the region view is a window on a scan and takes no element class,
 			so an element-class result can never be drawn under DMRcate's calls. */
 			const matrix = resolveMethylationMatrix(ds, q.chr, undefined)
-			const { matrixFile, eligible } = matrix
+			const { matrixFile } = matrix
 
 			// a group may be defined by a filter
 			const [list1, list2] = await resolveGroupPair(q, ds)
@@ -67,7 +68,14 @@ function init({ genomes }) {
 					`Region too large (${(span / 1e6).toFixed(1)} Mb). Server maximum is ${SERVER_MAX_REGION_BP / 1e6} Mb.`
 				)
 
-			const { group1, group2 } = await resolveGroupNames(list1, list2, eligible, ds, q.__protected__)
+			// the run's own sample set (runDmrBatch), whose prior and cutoffs this view applies
+			const { group1, group2 } = await resolveGroupNames(
+				list1,
+				list2,
+				eligibleMethylationSamples(ds, undefined),
+				ds,
+				q.__protected__
+			)
 			// checked after id-to-name resolution, which is where a group actually shrinks
 			if (group1.length < 3 || group2.length < 3)
 				throw new Error(
@@ -88,7 +96,10 @@ function init({ genomes }) {
 					? q.scanChromosomes.filter((c: unknown) => typeof c == 'string' && genomeChroms.includes(c))
 					: []
 			if (!genomeChroms.includes(q.chr)) throw new Error(`Unknown chromosome: ${q.chr}`)
-			const runChroms = fromScan.includes(q.chr) ? fromScan : genomeChroms
+			// a chromosome outside the scan's run would be another run, with its own prior and cutoffs
+			if (fromScan.length && !fromScan.includes(q.chr))
+				throw new Error(`${q.chr} was not in the DMR scan this view was opened from.`)
+			const runChroms = fromScan.length ? fromScan : genomeChroms
 			const { payload: run } = await runDmrBatch(
 				{
 					genome: q.genome,
@@ -150,7 +161,7 @@ function init({ genomes }) {
 			const maskedDmrs = run.regions
 				.filter(r => r.chr == q.chr)
 				.flatMap(r => r.masked || [])
-				.filter(d => d.start < q.stop && d.stop > q.start)
+				.filter(d => d.start < q.stop && d.stop > q.start && d.no_cpgs >= minCpgs)
 			res.send({
 				status: 'ok',
 				dmrs: result.dmrs,

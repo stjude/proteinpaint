@@ -18,6 +18,8 @@ export type DmrConfig = {
 	/** That scan's background correction and CpG floor; see TermdbDmrRequest */
 	backgroundCorrection?: boolean
 	minCpgs?: number
+	/** The app's cohort filter when that scan ran; see TermdbDmrRequest.filter0 */
+	filter0?: any
 	/** Mean reads per CpG of each group in that scan, so the view can say when a DMR may be read depth */
 	readDepth?: { control: number; case: number }
 	/** Set by onBlockCoordinateChange when user pans/zooms the genome browser */

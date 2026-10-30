@@ -1,6 +1,6 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { groupColors } from '../groupColors'
-import { getGroupForRegion, getOthersGroup } from '#mass/groups'
+import { getGroupForRegion, withOthersGroup } from '#mass/groups'
 import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI, sayerror } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
@@ -307,14 +307,11 @@ export class VolcanoInteractions {
 		const colors = groupColors(config)
 
 		const s = config.settings.volcano
-		/* The groups as the scan request sent them (VolcanoModel.setOthersGroup): the state's "others"
-		group is an {in:false} placeholder repeating the first group's samples, which would compare the
-		group with itself and miss the scan's cached run. */
-		const samplesGroup = config.samplelst.groups.find(g => g.in)
+		/* The groups as the scan request sent them: the state's "others" group is an {in:false} placeholder
+		repeating the first group's samples, which would compare the group with itself and miss the scan's
+		cached run. */
 		const termfilter = this.app.getState().termfilter
-		const groups = config.samplelst.groups.map(g =>
-			g.in ? g : getOthersGroup({ name: g.name, values: samplesGroup.values }, termfilter)
-		)
+		const groups = withOthersGroup(config.samplelst.groups, termfilter)
 		// the parameters the scan's run used, defaults filled in server-side, so the region windows that run
 		const k = scan.dmrcate
 		const dmrConfig: any = {
@@ -338,6 +335,9 @@ export class VolcanoInteractions {
 			backgroundCorrection: !!scan.backgroundCorrection,
 			// the scan drops DMRs with fewer CpGs; the region view drops them too
 			minCpgs: scan.minCpgs,
+			/* the cohort filter the scan request sent, which resolves a filter-defined group that carries none
+			of its own; a different cohort would be a different run */
+			filter0: termfilter.filter0,
 			...(scan.globalMethylation?.controlMeanDepth != null && scan.globalMethylation?.caseMeanDepth != null
 				? {
 						readDepth: {

@@ -35,7 +35,8 @@ export class DmrModel {
 				colors: settings.dmr.colors,
 				scanChromosomes: this.config.scanChromosomes,
 				backgroundCorrection: this.config.backgroundCorrection,
-				minCpgs: this.config.minCpgs
+				minCpgs: this.config.minCpgs,
+				filter0: this.config.filter0
 			}
 		}) as Promise<TermdbDmrResponse>
 	}

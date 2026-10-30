@@ -427,7 +427,7 @@ export async function runDmrBatch(
 				run, because the windows are matched to the widths of the DMRs the first one called; it
 				reads only each window's delta-beta, with no model. */
 				if (q.backgroundCorrection) {
-					const draws: { called: any[]; windows: any[] }[] = []
+					const draws: { chr: string; called: any[]; windows: any[] }[] = []
 					for (const { chr, called } of perChr) {
 						const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
 						const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
@@ -441,11 +441,19 @@ export async function runDmrBatch(
 							// seeded from the chromosome name so the draw is reproducible and cacheable
 							chrSeed(chr)
 						)
-						if (windows.length) draws.push({ called, windows })
+						if (windows.length) draws.push({ chr, called, windows })
 					}
 					if (draws.length) {
+						// only the chromosomes drawn on: this run reads every row of what it is given
+						const drawn = new Set(draws.map(d => d.chr))
+						const matrices = input.matrices
+							.map(m => ({ ...m, chrs: m.chrs.filter(c => drawn.has(c)) }))
+							.filter(m => m.chrs.length)
 						const bgRes = JSON.parse(
-							await run_rust('dmrcate', JSON.stringify({ ...input, background_regions: draws.flatMap(d => d.windows) }))
+							await run_rust(
+								'dmrcate',
+								JSON.stringify({ ...input, matrices, background_regions: draws.flatMap(d => d.windows) })
+							)
 						)
 						if (bgRes.error) throw new Error(bgRes.error)
 						account('background', bgRes.diagnostic)
@@ -522,7 +530,8 @@ export async function runDmrBatch(
 				totalProbesAnalyzed: result.diagnostic?.total_probes_analyzed || 0,
 				/* What a region view needs to recompute any region of this run exactly as the run saw it
 				(termdb/dmr). Along with the parameters, which a region view must match. */
-				constants: { ...result.constants, lambda, C, fdr_cutoff },
+				// absent when the run reported none, so a region view refuses it rather than recomputing from nothing
+				constants: result.constants ? { ...result.constants, lambda, C, fdr_cutoff } : undefined,
 				resources,
 				binMethylation: q.binMethylation
 					? { binBp: METHYLATION_BIN_BP, bins: result.bin_methylation || [] }

@@ -6,7 +6,7 @@ import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { getGroupColors, toHex } from '../colors'
 import { DMRCATE_DEFAULTS } from '../settings/defaults'
-import { getOthersGroup } from '#mass/groups'
+import { withOthersGroup } from '#mass/groups'
 // import type { Volcano } from '../Volcano'
 
 export class VolcanoModel {
@@ -277,13 +277,7 @@ export class VolcanoModel {
 	 * it stands for: the filter of the app without the samples of the other group, which the server
 	 * resolves. */
 	setOthersGroup(samplelst) {
-		const i = samplelst.groups.findIndex(g => !g.in)
-		if (i == -1) return
-		const samplesGroup = samplelst.groups.find(g => g.in)
-		samplelst.groups[i] = getOthersGroup(
-			{ name: samplelst.groups[i].name, values: samplesGroup.values },
-			this.app.getState().termfilter
-		)
+		samplelst.groups = withOthersGroup(samplelst.groups, this.app.getState().termfilter)
 	}
 
 	/** A group that the server resolved from a filter lists no sample here. Keep the number of its

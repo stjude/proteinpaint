@@ -59,9 +59,9 @@ export const cacheRegistry = {
 	dm: { type: 'compute', maxPending: 5 },
 	// differential splicing; each job is an edgeR or leafcutter run over every cluster in the h5
 	ds: { type: 'compute', maxPending: 2 },
-	/* DMR scans. Lower than the analyses above because each pending job is one rust process over the
-	whole genome, reading two matrix files at a time on two cores. At 2 pending that is 4 cores, the
-	ceiling a 4-core deployment can absorb. Identical requests still share one compute through the
+	/* DMR scans. Lower than the analyses above because each pending job is one single-threaded rust
+	process over the whole genome, a core and ~1-2 GB each (DMRCATE_MEMORY), with the Node work around
+	it; 2 pending leaves the rest of a 4-core deployment to every other request. Identical requests still share one compute through the
 	in-flight dedup in cacheOrRecompute, so several users running the SAME scan cost one. */
 	dmr: { type: 'compute', maxPending: 2 },
 	/* per-gene gene-body methylation deltas for a contrast: `serverconfig.dmrBatchConcurrency` rust
