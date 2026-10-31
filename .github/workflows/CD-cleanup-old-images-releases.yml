@@ -14,7 +14,6 @@ on:
 
 jobs:
   cleanup-images:
-    environment: release
     runs-on: ubuntu-22.04
     permissions:
       packages: write
@@ -236,7 +235,6 @@ jobs:
           done < <(echo "$BATCH" | jq -c '.[]')
 
   cleanup-releases:
-    environment: release
     runs-on: ubuntu-22.04
     permissions:
       contents: write
