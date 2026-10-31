@@ -60,6 +60,16 @@ jobs:
         env:
           GH_TOKEN: ${{secrets.PAT}}
       
+      - name: Restore manifest cache
+        # The manifest at a digest never changes, so what was learned about a digest in an earlier run is
+        # reused here, and only digests not seen before are fetched. Every run saves a new cache entry
+        # (keyed by run id) at the end of the job, and the next run restores the newest one by prefix.
+        uses: actions/cache@v6
+        with:
+          path: .cache/manifest-groups
+          key: manifest-groups-${{ github.run_id }}
+          restore-keys: manifest-groups-
+
       - name: Build manifest groups
         # ppclingen, ppfilesync, and proteinpaint%2Fppserver are built via docker/build-push-action with
         # default provenance attestations, so their tagged versions are OCI image INDEXES referencing
@@ -69,31 +79,58 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
-          GROUPS_FILE="$RUNNER_TEMP/groups.json"
-          : > "$GROUPS_FILE"
+          # one line per known digest: {package, digest, children}, where children is null if the digest is not an index
+          CACHE_FILE=.cache/manifest-groups/manifests.jsonl
+          mkdir -p "$(dirname "$CACHE_FILE")"
+          touch "$CACHE_FILE"
+          NEW_FILE="$RUNNER_TEMP/manifests.new.jsonl"
+          : > "$NEW_FILE"
+
+          get_bearer() {
+            curl -fsS -u "x:$GH_TOKEN" "https://ghcr.io/token?service=ghcr.io&scope=repository:stjude/${pkg}:pull" | jq -er '.token // empty'
+          }
+          get_manifest() {
+            curl -fsS -H "Authorization: Bearer $BEARER" -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.list.v2+json" "https://ghcr.io/v2/stjude/${pkg}/manifests/${digest}"
+          }
 
           for pkg in $(echo "$INDEX_PACKAGES" | jq -r '.[]'); do
-            while read -r version; do
-              tag=$(echo "$version" | jq -r '.tags[0]')
-              digest=$(echo "$version" | jq -r '.name')
-
-              if ! BEARER=$(curl -fsS -u "x:$GH_TOKEN" "https://ghcr.io/token?service=ghcr.io&scope=repository:stjude/${pkg}:pull" | jq -er '.token // empty');then
-                echo "No valid bearer"
-              continue;
+            BEARER=""
+            while read -r digest; do
+              if [ -z "$BEARER" ] && ! BEARER=$(get_bearer); then
+                echo "::warning::no valid bearer for $pkg - skipping its uncached digests"
+                break
               fi
-              if ! MANIFEST=$(curl -fsS -H "Authorization: Bearer $BEARER" -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.list.v2+json" "https://ghcr.io/v2/stjude/${pkg}/manifests/${digest}"); then
-                echo "::warning::manifest fetch failed for $pkg@$digest - skipping"
-                continue
+              if ! MANIFEST=$(get_manifest); then
+                # the bearer may have expired during a long run; get a new one and retry once
+                if ! { BEARER=$(get_bearer) && MANIFEST=$(get_manifest); }; then
+                  echo "::warning::manifest fetch failed for $pkg@$digest - skipping"
+                  BEARER=""
+                  continue
+                fi
               fi
-              if echo "$MANIFEST" | jq -e '.mediaType == "application/vnd.oci.image.index.v1+json"' > /dev/null; then
-                CHILDREN=$(echo "$MANIFEST" | jq -c '[.manifests[].digest]')
-                echo "{\"parent\":\"$digest\",\"children\":$CHILDREN}" >> "$GROUPS_FILE"
-              fi
-            done < <(jq -c --arg pkg "$pkg" '.[] | select(.package == $pkg)' "$IMAGE_VERSIONS_FILE")
+              echo "$MANIFEST" | jq -c --arg pkg "$pkg" --arg digest "$digest" '{
+                package: $pkg,
+                digest: $digest,
+                children: (if .mediaType == "application/vnd.oci.image.index.v1+json" then [.manifests[].digest] else null end)
+              }' >> "$NEW_FILE"
+            done < <(jq -r -n --arg pkg "$pkg" --slurpfile versions "$IMAGE_VERSIONS_FILE" --slurpfile cache "$CACHE_FILE" '
+              ($cache | map({key: (.package + " " + .digest), value: true}) | from_entries) as $seen
+              | $versions[0][] | select(.package == $pkg and ($seen[$pkg + " " + .name] | not)) | .name
+            ')
           done
+          echo "fetched $(wc -l < "$NEW_FILE") uncached manifests"
 
+          # drop digests that no longer exist, so the cache only holds current versions
+          jq -c -n --slurpfile versions "$IMAGE_VERSIONS_FILE" --slurpfile known <(cat "$CACHE_FILE" "$NEW_FILE") '
+            ($versions[0] | map({key: (.package + " " + .name), value: true}) | from_entries) as $current
+            | $known[] | select($current[.package + " " + .digest])
+          ' > "$RUNNER_TEMP/manifests.jsonl"
+          mv "$RUNNER_TEMP/manifests.jsonl" "$CACHE_FILE"
+
+          GROUPS_FILE="$RUNNER_TEMP/groups.json"
+          jq -c 'select(.children != null) | {parent: .digest, children}' "$CACHE_FILE" > "$GROUPS_FILE"
           echo "GROUPS_FILE=$GROUPS_FILE" >> "$GITHUB_ENV"
-          
+
       - name: Compute images to be retained
         run: |
           PROTECTED_IDS=$(jq -c --argjson n "$VERSIONS_TO_RETAIN" '[group_by(.package)[] | sort_by(.created_at) | reverse | .[0:$n] | .[].id]' "$IMAGE_VERSIONS_FILE")
@@ -102,45 +139,34 @@ jobs:
           GH_TOKEN: ${{secrets.PAT}}
 
       - name: Filter Packages
+        # One jq pass over all versions; starting several jq processes per version in a shell loop took minutes.
+        # A version is kept if any of these is true:
+        #   - it is one of the newest VERSIONS_TO_RETAIN of its package (PROTECTED_IDS)
+        #   - a tag is "latest" or "protected", or starts with "paper-"
+        #   - a version tag's major.minor prefix (e.g. 2.224 from v2.224.1) has an active release-<major.minor> branch
+        #   - it is younger than MAX_AGE_DAYS
+        # Untagged (digest-only) versions can only be kept by PROTECTED_IDS or age.
         run: |
           VERDICTS_FILE="$RUNNER_TEMP/verdicts.json"
-          : > "$VERDICTS_FILE"
-          NOW=$(date +%s)
 
-          while read -r version; do #pulls one json object every iteration from the IMAGE_VERSIONS in the previous step
-            tags=$(echo "$version" | jq -c '.tags') #pulls the tags array out
-            tag_count=$(echo "$tags" | jq 'length') #pulls how many tags the image has
-            id=$(echo "$version" | jq -r '.id')
-            keep=false
-            
-            if echo "$PROTECTED_IDS" | jq -e --argjson id "$id" 'index($id) != null' > /dev/null; then #check if this version's id is in the list of PROTECTED_IDS
-              keep=true
-            elif [ "$tag_count" -eq 0 ]; then
-              : #digest-only, no branch check possible - falls through to age check
-            elif echo "$tags" | jq -e 'index("latest") != null' > /dev/null; then #if any tag is "latest", mark it true
-              keep=true
-            elif echo "$tags" | jq -e 'any(. == "protected" or startswith("paper-"))' > /dev/null; then #if tag is either protected or startswith paper-, mark it true
-              keep=true
-            else #check if this is a version image whose release is still active
-              for tag in $(echo "$tags" | jq -r '.[]'); do
-                if [[ "$tag" =~ ^v?([0-9]+\.[0-9]+)\.[0-9]+(-.+)?$ ]]; then #Tests this tag against the pattern to capture its major.minor prefix
-                  prefix="release-${BASH_REMATCH[1]}" #Get the capture version from the above comparision using BASH_REMATCH[1] and concatenate it with 'release-'                  
-                  if echo "$RELEASE_BRANCHES" | jq -e --arg p "$prefix" 'any(.[]; . == $p or startswith($p + ".") or startswith($p + "-"))' > /dev/null; then #If any of the RELEASE_BRANCHES has the prefix we retrieved in the previous step, we keep it
-                    keep=true
-                    break
-                  fi
-                fi
-              done
-            fi
+          jq -c --argjson protected "$PROTECTED_IDS" --argjson branches "$RELEASE_BRANCHES" --argjson maxAge "$MAX_AGE_DAYS" '
+            def on_release_branch: #true if any version tag has a matching release-<major.minor> branch
+              any(
+                .[] | capture("^v?(?<mm>[0-9]+\\.[0-9]+)\\.[0-9]+(-.+)?$") | "release-" + .mm;
+                . as $p | any($branches[]; . == $p or startswith($p + ".") or startswith($p + "-"))
+              );
+            def age_days: (now - (.created_at | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) / 86400 | floor;
 
-            if [ "$keep" = false ]; then #If we decided to not keep the image, we extract the date it was created on and image age
-              created_at=$(echo "$version" | jq -r '.created_at')
-              age_days=$(( (NOW - $(date -d "$created_at" +%s)) / 86400 ))
-              [ "$age_days" -lt "$MAX_AGE_DAYS" ] && keep=true #if age<MAX_AGE_DAYS, we keep it
-            fi
-            
-            echo "$version" | jq -c --arg k "$keep" '. + {keep: ($k == "true")}' >> "$VERDICTS_FILE"
-          done < <(jq -c '.[]' "$IMAGE_VERSIONS_FILE")
+            .[]
+            | (.tags // []) as $tags
+            | (.id as $id | any($protected[]; . == $id)) as $isProtected
+            | . + {keep: (
+                $isProtected
+                or any($tags[]; . == "latest" or . == "protected" or startswith("paper-"))
+                or ($tags | on_release_branch)
+                or age_days < $maxAge
+              )}
+          ' "$IMAGE_VERSIONS_FILE" > "$VERDICTS_FILE"
 
           # Every version's verdict is recorded here, not just the eligible ones - "Reconcile manifest
           # groups" needs to see KEPT versions too, to know when a whole parent/child group must be protected.
@@ -248,35 +274,28 @@ jobs:
           echo "PROTECTED_IDS=$PROTECTED_IDS" >> "$GITHUB_ENV"
 
       - name: Filter Releases
+        # Same rules as "Filter Packages" in the cleanup-images job, in one jq pass. Only the releases
+        # that are NOT kept are listed in ELIGIBLE.
         run: |
-          Filtered="[]"
-          NOW=$(date +%s)
+          ELIGIBLE=$(echo "$RELEASES" | jq -c --argjson protected "$PROTECTED_IDS" --argjson branches "$RELEASE_BRANCHES" --argjson maxAge "$MAX_AGE_DAYS" '
+            def on_release_branch: #true if the version tag has a matching release-<major.minor> branch
+              any(
+                capture("^v(?<mm>[0-9]+\\.[0-9]+)\\.[0-9]+(-.+)?$") | "release-" + .mm;
+                . as $p | any($branches[]; . == $p or startswith($p + ".") or startswith($p + "-"))
+              );
+            def age_days: (now - (.created_at | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) / 86400 | floor;
 
-          while read -r release; do
-            tag=$(echo "$release" | jq -r '.tag') #pulls the tag
-            keep=false
-            if [[ "$tag" == "latest" || "$tag" == "protected" || "$tag" == paper-* ]]; then
-               keep=true
-            elif echo "$PROTECTED_IDS" | jq -e --arg t "$tag" 'index($t) != null' > /dev/null; then #check if this tag is in the list of PROTECTED_IDS
-              keep=true
-            elif [[ "$tag" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+(-.+)?$ ]]; then #Tests the release's tag against the pattern to capture its major.minor prefix
-              prefix="release-${BASH_REMATCH[1]}" #concatenate the captured major.minor with 'release-'                  
-              if echo "$RELEASE_BRANCHES" | jq -e --arg p "$prefix" 'any(.[]; . == $p or startswith($p + ".") or startswith($p + "-"))' > /dev/null; then #If any of the RELEASE_BRANCHES has the prefix we retrieved in the previous step, we keep it
-                keep=true
-              fi
-            fi
-            
-            if [ "$keep" = false ]; then #If we decided to not keep the image, we extract the date it was created on and image age
-              created_at=$(echo "$release" | jq -r '.created_at')
-              age_days=$(( (NOW - $(date -d "$created_at" +%s)) / 86400 ))
-              [ "$age_days" -lt "$MAX_AGE_DAYS" ] && keep=true #if age<MAX_AGE_DAYS, we keep it
-            fi  
-            
-            if [ "$keep" = false ]; then
-              Filtered=$(jq -c -n --argjson a "$Filtered" --argjson b "$release" '$a + [$b]')
-            fi
-          done < <(echo "$RELEASES" | jq -c '.[]')
-          echo "ELIGIBLE=$Filtered" >> "$GITHUB_ENV"
+            [
+              .[]
+              | select((
+                  (.tag == "latest" or .tag == "protected" or (.tag | startswith("paper-")))
+                  or (.tag as $t | any($protected[]; . == $t))
+                  or (.tag | on_release_branch)
+                  or age_days < $maxAge
+                ) | not)
+            ]
+          ')
+          echo "ELIGIBLE=$ELIGIBLE" >> "$GITHUB_ENV"
 
       - name: Throttle and Delete
         env:
