@@ -5,6 +5,9 @@ name: "Cleanup old images and releases"
 
 
 on:
+  # nightly at 07:00 UTC (1 or 2 AM US Central), from the default branch only; scheduled runs are never dry runs
+  schedule:
+    - cron: '0 7 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
