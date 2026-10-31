@@ -74,7 +74,8 @@ jobs:
         # default provenance attestations, so their tagged versions are OCI image INDEXES referencing
         # untagged child manifests (platform image + attestation) by digest. Deleting an untagged child
         # that a kept parent still needs would break that parent, so we record parent/child relationships
-        # here to protect them together in "Reconcile manifest groups" below.
+        # here to protect them together in "Reconcile manifest groups" below. If any digest can't be
+        # inspected, its group is unknown, so "Throttle and Delete" only logs this run's deletions.
         env:
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
@@ -84,6 +85,7 @@ jobs:
           touch "$CACHE_FILE"
           NEW_FILE="$RUNNER_TEMP/manifests.new.jsonl"
           : > "$NEW_FILE"
+          FAILED=0
 
           get_bearer() {
             local response
@@ -101,6 +103,7 @@ jobs:
                 # skip only this digest, as before; the next digest tries for a new bearer
                 echo "::warning::no valid bearer for $pkg@$digest - skipping"
                 BEARER=""
+                FAILED=$((FAILED + 1))
                 continue
               fi
               if ! MANIFEST=$(get_manifest); then
@@ -108,6 +111,7 @@ jobs:
                 if ! { BEARER=$(get_bearer) && MANIFEST=$(get_manifest); }; then
                   echo "::warning::manifest fetch failed for $pkg@$digest - skipping"
                   BEARER=""
+                  FAILED=$((FAILED + 1))
                   continue
                 fi
               fi
@@ -122,6 +126,11 @@ jobs:
             ')
           done
           echo "fetched $(wc -l < "$NEW_FILE") uncached manifests"
+          if [ "$FAILED" -gt 0 ]; then
+            # failed digests are not cached, so the next run retries only those
+            echo "::warning::$FAILED manifests could not be inspected - image deletions in this run will only be logged"
+            echo "DISCOVERY_INCOMPLETE=true" >> "$GITHUB_ENV"
+          fi
 
           # drop digests that no longer exist, so the cache only holds current versions
           jq -c -n --slurpfile versions "$IMAGE_VERSIONS_FILE" --slurpfile known <(cat "$CACHE_FILE" "$NEW_FILE") '
@@ -203,6 +212,12 @@ jobs:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
           GH_TOKEN: ${{ secrets.PAT }}
         run: |
+          if [ "${DISCOVERY_INCOMPLETE:-}" = "true" ] && [ "$DRY_RUN" != "true" ]; then
+            # set by "Build manifest groups" when a digest could not be inspected
+            echo "::warning::manifest groups are incomplete - only logging the deletions in this run"
+            DRY_RUN=true
+          fi
+
           BATCH=$(jq -c --slurpfile eligible "$ELIGIBLE_FILE" --slurpfile groups "$GROUPS_FILE" --argjson n "$MAX_DELETIONS" -n '
             ($eligible | map({(.name): .}) | add) as $by_digest #by_digest is a lookup table so we can fetch an eligible item full record by its digest
             | ($groups | map(.parent)) as $parent_digests #every digest that is a group parent
