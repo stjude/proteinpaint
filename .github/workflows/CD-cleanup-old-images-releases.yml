@@ -31,6 +31,7 @@ jobs:
           echo "VERSIONS_TO_RETAIN=$(jq -r '.VersionsToRetain' "$CONFIG")" >> "$GITHUB_ENV"
           echo "PACKAGES=$(jq -c '.packages' "$CONFIG")" >> "$GITHUB_ENV"
           echo "INDEX_PACKAGES=$(jq -c '.IndexPackages' "$CONFIG")" >> "$GITHUB_ENV"
+          echo "PROTECTED_VERSIONS=$(jq -c '[.protectedVersions[].version]' "$CONFIG")" >> "$GITHUB_ENV"
 
       - name: List release branches
         run: |
@@ -155,13 +156,16 @@ jobs:
         # A version is kept if any of these is true:
         #   - it is one of the newest VERSIONS_TO_RETAIN of its package (PROTECTED_IDS)
         #   - a tag is "latest" or "protected", or starts with "paper-"
+        #   - a tag is, or is a build of, a version in protectedVersions of cleanup-config.json (e.g. 2.11.2 or 2.11.2-1)
         #   - a version tag's major.minor prefix (e.g. 2.224 from v2.224.1) has an active release-<major.minor> branch
         #   - it is younger than MAX_AGE_DAYS
         # Untagged (digest-only) versions can only be kept by PROTECTED_IDS or age.
         run: |
           VERDICTS_FILE="$RUNNER_TEMP/verdicts.json"
 
-          jq -c --argjson protected "$PROTECTED_IDS" --argjson branches "$RELEASE_BRANCHES" --argjson maxAge "$MAX_AGE_DAYS" '
+          jq -c --argjson protected "$PROTECTED_IDS" --argjson protectedVersions "$PROTECTED_VERSIONS" --argjson branches "$RELEASE_BRANCHES" --argjson maxAge "$MAX_AGE_DAYS" '
+            def is_protected_version: #true if any tag is a protected version, or a build of one
+              any(.[] as $t | $protectedVersions[] as $v | $t == $v or ($t | startswith($v + "-")); .);
             def on_release_branch: #true if any version tag has a matching release-<major.minor> branch
               any(
                 .[] | capture("^v?(?<mm>[0-9]+\\.[0-9]+)\\.[0-9]+(-.+)?$") | "release-" + .mm;
@@ -175,6 +179,7 @@ jobs:
             | . + {keep: (
                 $isProtected
                 or any($tags[]; . == "latest" or . == "protected" or startswith("paper-"))
+                or ($tags | is_protected_version)
                 or ($tags | on_release_branch)
                 or age_days < $maxAge
               )}
@@ -268,6 +273,7 @@ jobs:
          echo "MAX_AGE_DAYS=$(jq -r '.maxAgeDays' "$CONFIG")" >> "$GITHUB_ENV"
          echo "MAX_DELETIONS=$(jq -r '.maxReleaseDeletionsPerRun' "$CONFIG")" >> "$GITHUB_ENV"
          echo "RELEASES_TO_RETAIN=$(jq -r '.ReleasesToRetain' "$CONFIG")" >> "$GITHUB_ENV"
+         echo "PROTECTED_VERSIONS=$(jq -c '[.protectedVersions[].version]' "$CONFIG")" >> "$GITHUB_ENV"
 
       - name: List release branches
         run: |
@@ -294,7 +300,7 @@ jobs:
         # Same rules as "Filter Packages" in the cleanup-images job, in one jq pass. Only the releases
         # that are NOT kept are listed in ELIGIBLE.
         run: |
-          ELIGIBLE=$(echo "$RELEASES" | jq -c --argjson protected "$PROTECTED_IDS" --argjson branches "$RELEASE_BRANCHES" --argjson maxAge "$MAX_AGE_DAYS" '
+          ELIGIBLE=$(echo "$RELEASES" | jq -c --argjson protected "$PROTECTED_IDS" --argjson protectedVersions "$PROTECTED_VERSIONS" --argjson branches "$RELEASE_BRANCHES" --argjson maxAge "$MAX_AGE_DAYS" '
             def on_release_branch: #true if the version tag has a matching release-<major.minor> branch
               any(
                 capture("^v(?<mm>[0-9]+\\.[0-9]+)\\.[0-9]+(-.+)?$") | "release-" + .mm;
@@ -307,6 +313,7 @@ jobs:
               | select((
                   (.tag == "latest" or .tag == "protected" or (.tag | startswith("paper-")))
                   or (.tag as $t | any($protected[]; . == $t))
+                  or (.tag as $t | any($protectedVersions[]; $t == "v" + .))
                   or (.tag | on_release_branch)
                   or age_days < $maxAge
                 ) | not)

@@ -5,5 +5,27 @@
     "VersionsToRetain":5,
     "ReleasesToRetain":5,
     "packages":["ppfull","ppserver","rust","ppbase","pp-irt","proteinpaint%2Fppserver","ppgdc","blat","ppclingen","ppfilesync"],
-    "IndexPackages":["proteinpaint%2Fppserver","ppclingen","ppfilesync"]
+    "IndexPackages":["proteinpaint%2Fppserver","ppclingen","ppfilesync"],
+    "protectedVersions":[
+        {"version":"2.11.2", "reason":"ppBAM, Paul R et al, Bioinformatics 2023, https://doi.org/10.1093/bioinformatics/btad300: latest version when revised 2023-03-19"},
+        {"version":"2.13.0", "reason":"ppBAM, Paul R et al, Bioinformatics 2023, https://doi.org/10.1093/bioinformatics/btad300: latest version with an image when accepted 2023-04-25 (v2.14.2 has no image)"},
+        {"version":"2.32.1", "reason":"Survivorship Portal, Matt G et al, Cancer Discov 2024, https://doi.org/10.1158/2159-8290.CD-23-1441: latest version when received 2023-11-29"},
+        {"version":"2.40.6", "reason":"GDC Data Portal 2.0.0, released 2024-02-08: ppserver:2.40.6-5c812a8a5 in ppgdc/Dockerfile"},
+        {"version":"2.46.3", "reason":"Survivorship Portal, Matt G et al, Cancer Discov 2024, https://doi.org/10.1158/2159-8290.CD-23-1441: latest version when revised 2024-03-08"},
+        {"version":"2.48.1", "reason":"Survivorship Portal, Matt G et al, Cancer Discov 2024, https://doi.org/10.1158/2159-8290.CD-23-1441: latest version when accepted 2024-03-26"},
+        {"version":"2.55.1", "reason":"GDC Data Portal 2.1.0, released 2024-04-30: ppserver:2.55.1-bd7df273c in ppgdc/Dockerfile"},
+        {"version":"2.63.5", "reason":"GDC Data Portal 2.2.0, released 2024-06-26: ppserver:2.63.5-f873e2e7 in ppgdc/Dockerfile"},
+        {"version":"2.67.0", "reason":"ppHiC, Rajput A et al, CSBJ 2024, https://doi.org/10.1016/j.csbj.2024.09.020: latest version when received 2024-07-10"},
+        {"version":"2.78.0", "reason":"ppHiC, Rajput A et al, CSBJ 2024, https://doi.org/10.1016/j.csbj.2024.09.020: latest version the day before revised and accepted 2024-09-26"},
+        {"version":"2.79.0", "reason":"ppHiC, Rajput A et al, CSBJ 2024, https://doi.org/10.1016/j.csbj.2024.09.020: tagged the day it was revised and accepted 2024-09-26"},
+        {"version":"2.81.5", "reason":"GDC Data Portal 2.3.0 and 2.3.1, released 2024-10-29 and 2024-11-21: ppserver:2.81.5-0-809befd3 in ppgdc/Dockerfile"},
+        {"version":"2.94.1", "reason":"MBPortal, Gangwani K et al, Cancer Res 2025, https://doi.org/10.1158/0008-5472.CAN-24-4976: latest version when received 2024-12-24"},
+        {"version":"2.108.6", "reason":"GDC Data Portal 2.4.0, released 2025-03-20: ppserver:2.108.6-0-d5fcd248 in ppgdc/Dockerfile"},
+        {"version":"2.125.0", "reason":"MBPortal, Gangwani K et al, Cancer Res 2025, https://doi.org/10.1158/0008-5472.CAN-24-4976: latest version when revised 2025-05-15"},
+        {"version":"2.129.4", "reason":"GDC Data Portal 2.5.0, released 2025-06-30: ppserver:2.129.4-2d683af58 in ppgdc/Dockerfile"},
+        {"version":"2.142.1", "reason":"MBPortal, Gangwani K et al, Cancer Res 2025, https://doi.org/10.1158/0008-5472.CAN-24-4976: latest version when accepted 2025-09-08"},
+        {"version":"2.170.26", "reason":"GDC Data Portal 2.6.0, released 2026-03-16: ppserver:2.170.26-ad2586080 in ppgdc/Dockerfile"},
+        {"version":"2.182.2", "reason":"GDC Data Portal 2.7.0, released 2026-04-27: ppserver:2.182.2-25da6540a in ppgdc/Dockerfile"},
+        {"version":"2.191.9", "reason":"GDC Data Portal 2.8.0, released 2026-06-29: ppserver:2.191.9-129ce6387 in ppgdc/Dockerfile"}
+    ]
 }
