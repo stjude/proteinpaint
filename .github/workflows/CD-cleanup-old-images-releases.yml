@@ -213,9 +213,11 @@ jobs:
         # Each eligible item is either standalone, or part of a parent/child group recorded in GROUPS_FILE.
         # A whole group counts as ONE slot against MAX_DELETIONS (not one slot per member), so the cap can
         # never select part of a group and leave the rest behind - that would break the surviving members.
+        # Deleting uses the job's GITHUB_TOKEN (packages: write), since the PAT has no delete:packages scope.
+        # A 403 for a package means this repo needs the Admin role in that package's "Manage Actions access".
         env:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
-          GH_TOKEN: ${{ secrets.PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${DISCOVERY_INCOMPLETE:-}" = "true" ] && [ "$DRY_RUN" != "true" ]; then
             # set by "Build manifest groups" when a digest could not be inspected
