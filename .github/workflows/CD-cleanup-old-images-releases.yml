@@ -86,7 +86,9 @@ jobs:
           : > "$NEW_FILE"
 
           get_bearer() {
-            curl -fsS -u "x:$GH_TOKEN" "https://ghcr.io/token?service=ghcr.io&scope=repository:stjude/${pkg}:pull" | jq -er '.token // empty'
+            local response
+            response=$(curl -fsS -u "x:$GH_TOKEN" "https://ghcr.io/token?service=ghcr.io&scope=repository:stjude/${pkg}:pull") || return 1
+            echo "$response" | jq -er '.token // empty'
           }
           get_manifest() {
             curl -fsS -H "Authorization: Bearer $BEARER" -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.list.v2+json" "https://ghcr.io/v2/stjude/${pkg}/manifests/${digest}"
@@ -96,8 +98,10 @@ jobs:
             BEARER=""
             while read -r digest; do
               if [ -z "$BEARER" ] && ! BEARER=$(get_bearer); then
-                echo "::warning::no valid bearer for $pkg - skipping its uncached digests"
-                break
+                # skip only this digest, as before; the next digest tries for a new bearer
+                echo "::warning::no valid bearer for $pkg@$digest - skipping"
+                BEARER=""
+                continue
               fi
               if ! MANIFEST=$(get_manifest); then
                 # the bearer may have expired during a long run; get a new one and retry once
