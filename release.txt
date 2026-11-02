@@ -1,2 +1,1 @@
-Features:
-- Allow selecting sample types for DNA methylation terms, as for gene expression terms
+

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Allow selecting sample types for DNA methylation terms, as for gene expression terms
+
+
 ## 2.225.0
 
 Features:
