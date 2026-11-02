@@ -2,7 +2,7 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from '../PlotBase' // shared mass-plot base class
 import type { BasePlotConfig, MassState } from '#mass/types/mass' // app state shapes
 import type { SpatialImage } from '#types' // spatial image entry from wsiBySample
-import { dofetch3 } from '#common/dofetch' // gene-name/cell-type discovery requests
+import { dofetch2, dofetch3 } from '#common/dofetch' // gene-name/cell-type discovery requests
 import { controlsInit } from '../controls' // burger-menu builder
 import type Settings from './Settings.ts' // this plot's settings shape
 import { Model } from './model/Model' // server data access
@@ -250,19 +250,20 @@ class Wsi extends PlotBase implements RxComponent {
 			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
 			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
 		const r = await dofetch3(`wsitiles/meta?${base}&cellAnnotations=${encodeURIComponent(src)}`).catch(() => null)
-		let names: string[] = Array.isArray(r?.cellTypes) ? r.cellTypes : []
+		let names: string[] | undefined = Array.isArray(r?.cellTypes) ? r.cellTypes : undefined // [] is a valid answer
 		// meta.cellTypes is optional: the h5ad scan can fail even when the file
-		// has types. Recover the vocabulary from the annotations route, the same
-		// fallback the viewer uses (wsi.direct.ts) — otherwise an empty list here
-		// keeps 'Types shown' hidden and skips the stale-filter reconciliation in
-		// main() even though the overlay itself recovered and renders.
-		if (!names.length) {
-			const a = await dofetch3(
+		// has types. Only when it is missing/invalid, recover the vocabulary from
+		// the annotations route, the same fallback the viewer uses (wsi.direct.ts).
+		// dofetch2 (uncached): dofetch3 would cache a transient JSON error and
+		// every later render would replay it.
+		if (!names) {
+			const a = await dofetch2(
 				`wsitiles/annotations?${base}&file=${encodeURIComponent(src)}&types=1&v=${r?.spatialVersion || 0}`
 			).catch(() => null)
 			if (Array.isArray(a?.cellTypes)) names = a.cellTypes
 		}
-		this.cellTypeNames = names // failure of both = no dropdowns, overlay still works
+		if (!names) return [] // both failed: no dropdowns this time, but don't memoize so a later render retries
+		this.cellTypeNames = names
 		this.cellTypesFile = src // remember which file the cache is for
 		return this.cellTypeNames
 	}
