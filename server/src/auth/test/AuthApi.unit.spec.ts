@@ -1593,6 +1593,84 @@ tape(
 	}
 )
 
+tape('AuthApi.mayAdjustFilter: a hiddenIds term in a filter uses the default routeTerms', function (test) {
+	test.timeoutAfter(500)
+
+	const { authApi } = makeAuthApi()
+	const calls: any[] = []
+	const ds = {
+		cohort: {
+			termdb: {
+				hiddenIds: ['hiddenTerm'],
+				getAdditionalFilter: (_protected: any, terms: any) => {
+					calls.push(terms)
+					return { type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term: { id: 'hiddenTerm' } } }] }
+				}
+			}
+		}
+	}
+	const tvs = (id: string) => ({ type: 'tvs', tvs: { term: { id } } })
+	const filter = (id: string) => ({
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [{ type: 'tvslst', in: true, join: '', lst: [tvs(id)] }]
+	})
+	const routeTwLst = [{ term: { id: 'otherTerm' } }]
+	const __protected__ = (ignoredTermIds: string[] = []) => ({ clientAuthResult: {}, ignoredTermIds })
+
+	authApi.mayAdjustFilter(
+		{ filter: filter('otherTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.deepEqual(
+		calls.pop(),
+		routeTwLst.map(tw => tw.term),
+		'should use routeTwLst when the filter has no hiddenIds term'
+	)
+
+	authApi.mayAdjustFilter(
+		{ filter: filter('hiddenTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.equal(calls.pop(), undefined, 'should use the default for a hiddenIds term in a nested q.filter entry')
+
+	authApi.mayAdjustFilter({ filter: filter('hiddenTerm'), __protected__: __protected__() } as any, ds as any, [] as any)
+	test.equal(calls.pop(), undefined, 'should use the default with an empty routeTwLst')
+
+	authApi.mayAdjustFilter(
+		{ filter0: filter('hiddenTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.equal(calls.pop(), undefined, 'should use the default for a hiddenIds term in q.filter0')
+
+	authApi.mayAdjustFilter(
+		{ filter: filter('hiddenTerm'), __protected__: __protected__(['hiddenTerm']) } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.deepEqual(
+		calls.pop(),
+		routeTwLst.map(tw => tw.term),
+		'should use routeTwLst for a term in ignoredTermIds'
+	)
+
+	// the entry added by a previous call must not count as a filter term
+	const q: any = { filter: filter('otherTerm'), __protected__: __protected__() }
+	authApi.mayAdjustFilter(q, ds as any, undefined)
+	test.equal(calls.pop(), undefined, 'should use the default without routeTwLst')
+	authApi.mayAdjustFilter(q, ds as any, routeTwLst as any)
+	test.deepEqual(
+		calls.pop(),
+		routeTwLst.map(tw => tw.term),
+		'should not consider a previously added auth filter'
+	)
+	test.end()
+})
+
 tape('AuthApi.mayAdjustFilter: throws when filter.type is not tvslst', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)

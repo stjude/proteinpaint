@@ -2398,6 +2398,10 @@ keep this setting here for reason of:
 	 * - Skipped when undefined. */
 	pruneTermdbConfig?: (c: any, q: any, ds: any) => void
 	hiddenIds?: string[]
+	/** the terms whose distinct values are the names and count given to checkAccessToSampleData(), defaults to
+	 * hiddenIds. Use when hiddenIds has several terms that describe the same entity, such that one entity has
+	 * more than one value across these terms; list one term per entity. */
+	sampleAccessTermIds?: string[]
 	/* (server-side) when this returns a truthy value, a survival request carrying a stratification
 	term (term0 divide-by, or an overlay/series term2) is rejected. Return a non-empty string to use
 	it as the rejection message (let the dataset reuse the same wording it shows on the disabled UI

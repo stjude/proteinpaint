@@ -1681,7 +1681,7 @@ function checkAccessToSampleData(data, ds, q, unmappedSampleIds: string[]) {
 
 	const sampleIds = Object.keys(data.samples)
 	if (!sampleIds.length) return
-	const hiddenIds = ds.cohort.termdb.hiddenIds
+	const hiddenIds = ds.cohort.termdb.sampleAccessTermIds || ds.cohort.termdb.hiddenIds
 	let rows
 	if (hiddenIds?.length) {
 		// Check both original and root sample IDs because hidden terms can be attached to either.

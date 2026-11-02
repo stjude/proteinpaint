@@ -1560,6 +1560,44 @@ tape('getData: mapChildren2Root finds the values of a hidden term that annotates
 	t.end()
 })
 
+tape('getData: sampleAccessTermIds overrides hiddenIds for checkAccessToSampleData', async t => {
+	await ensureOpenAuth()
+	const tdb = await init('termdb.test.ts')
+	server_init_db_queries(tdb.ds)
+	const termdb = tdb.ds.cohort.termdb
+	const termjson = id => structuredClone(termdb.q.termjsonByOneid(id))
+	const terms = () => [{ $id: 'wgs_curated', term: termjson('wgs_curated'), q: { type: 'values' } }]
+	const distinctValues = id =>
+		tdb.ds.cohort.db.connection
+			.prepare('SELECT distinct value FROM anno_categorical WHERE term_id=?')
+			.all(id)
+			.map(r => r.value)
+	const saved = {
+		hiddenIds: termdb.hiddenIds,
+		sampleAccessTermIds: termdb.sampleAccessTermIds,
+		checkAccessToSampleData: termdb.checkAccessToSampleData
+	}
+	let names
+	termdb.checkAccessToSampleData = (q, data) => {
+		if (data.names) names = data.names // the quick check, the detailed check has no names
+		return { canAccess: true }
+	}
+	try {
+		termdb.hiddenIds = ['diaggrp', 'sex']
+		termdb.sampleAccessTermIds = ['diaggrp']
+		await getData({ terms: terms(), mapChildren2Root: true }, tdb.ds)
+		const expected = new Set(distinctValues('diaggrp'))
+		t.ok(names.length, 'the values of sampleAccessTermIds are found')
+		t.ok(
+			names.every(n => expected.has(n)),
+			'only the values of sampleAccessTermIds are used'
+		)
+	} finally {
+		Object.assign(termdb, saved)
+	}
+	t.end()
+})
+
 tape('getData: mapChildren2Root rejects a numeric termCollection', async t => {
 	await ensureOpenAuth()
 	const tdb = await init('termdb.test.ts')

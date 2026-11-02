@@ -2,6 +2,7 @@ import tape from 'tape'
 // import * as d3s from 'd3-selection'
 // import * as helpers from '../../test/front.helpers.js'
 import { Barchart } from '#plots/barchart/barchart.ts'
+import { hideCategory } from '#plots/barchart/barchart.events.ts'
 // import { detectGte } from '../../test/test.helpers.js'
 
 /* 
@@ -68,6 +69,55 @@ tape('Default barchart component', test => {
 	test.equal(typeof testBarchart.getLegendGrps, 'function', 'Should have a .getLegendGrps() function')
 	test.equal(typeof testBarchart.getOneLegendGrps, 'function', 'Should have a .getOneLegendGrps() function')
 	test.equal(typeof testBarchart.toggleLoadingDiv, 'function', 'Should have a .toggleLoadingDiv() function')
+
+	test.end()
+})
+
+tape('hideCategory() should key q.hiddenValues by value key', function (test) {
+	test.timeoutAfter(100)
+
+	const getHiddenValues = (values, d, isHidden, hiddenValues = {}) => {
+		const term = { $id: 'abc', id: 't', term: { type: 'categorical', values }, q: { hiddenValues } }
+		let config
+		const self = { id: 'plot', config: { term }, app: { dispatch: action => (config = action.config) } }
+		hideCategory({ type: 'col', ...d }, self, isHidden)
+		return config.term.q.hiddenValues
+	}
+
+	const notAssessed = 'not assessed'
+	const values = {
+		1: { key: '1', label: 'Yes' },
+		9: { key: '9', label: notAssessed },
+		Yes: { label: 'Yes' },
+		[notAssessed]: { label: notAssessed }
+	}
+
+	test.deepEqual(
+		getHiddenValues(values, { id: 'Yes' }, true),
+		{ Yes: 1 },
+		'Should hide the clicked key, not an earlier key with the same label'
+	)
+	test.deepEqual(
+		getHiddenValues(values, { id: '9' }, true),
+		{ 9: 1 },
+		'Should hide a code key that shares a label with another key'
+	)
+	test.deepEqual(
+		getHiddenValues(values, { id: notAssessed }, true),
+		{ [notAssessed]: 1 },
+		'Should only hide the clicked key when two keys share a label'
+	)
+	test.deepEqual(
+		getHiddenValues(values, { id: 'Yes' }, false, { Yes: 1, 9: 1 }),
+		{ 9: 1 },
+		'Should show the clicked key and leave other hidden keys'
+	)
+	test.deepEqual(
+		getHiddenValues({ '-999': { label: 'unknown' } }, { id: 'unknown' }, true),
+		{ '-999': 1 },
+		'Should convert a label that is not a value key'
+	)
+	test.deepEqual(getHiddenValues(undefined, { id: '1-5' }, true), { '1-5': 1 }, 'Should support a term without values')
 
 	test.end()
 })
