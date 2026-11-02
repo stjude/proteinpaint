@@ -26,7 +26,8 @@ export function getTermSampleTypes(sampleTypeSelect: any, query: any, termdbConf
 	const opts = {
 		sampleTypeSelect,
 		querySampleTypes: query?.sampleTypes,
-		querySampleTypesByTerms: query?.sampleTypesByTerms
+		// no select means a single sample type and no dropdowns, so that type is assigned as is
+		querySampleTypesByTerms: sampleTypeSelect ? query?.sampleTypesByTerms : undefined
 	}
 	const sampleTypes = getSelectedSampleTypes(opts)
 	if (sampleTypeSelect && !sampleTypes?.length) return

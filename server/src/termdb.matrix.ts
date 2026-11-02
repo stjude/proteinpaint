@@ -406,7 +406,10 @@ async function getSampleData(q, ds) {
 				filter0: q.filter0,
 				dataTypeDetails: tw.term.dataTypeDetails,
 				mapParent2Children: q.mapParent2Children,
-				sampleTypes: q.sampleTypes
+				/* q.sampleTypes is the union over every term of the request, so a term that chose its
+				own sample types (e.g. in the gene expression or methylation term picker) reads only
+				those, and two terms of the same gene or region with different selections stay apart */
+				sampleTypes: tw.term.sampleTypes || q.sampleTypes
 			}
 			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			for (const [dataId, values] of data.term2sample2value) {

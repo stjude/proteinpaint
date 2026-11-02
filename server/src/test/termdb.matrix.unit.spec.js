@@ -995,6 +995,47 @@ tape('getData: an untrustworthy scope adds no absent group member', async t => {
 	t.end()
 })
 
+tape('getData: each methylation term reads only the sample types it selected', async t => {
+	await ensureOpenAuth()
+	const ds = makeNoDbDs({
+		sampleTypes: {
+			1: { name: 'case', plural_name: 'cases', parent_id: null },
+			2: { name: 'Tumor', plural_name: 'Tumors', parent_id: 1 },
+			3: { name: 'Normal', plural_name: 'Normals', parent_id: 1 }
+		}
+	})
+	const requested = {}
+	ds.queries.dnaMethylation = {
+		get: async args => {
+			const tw = args.terms[0]
+			requested[tw.$id] = args.sampleTypes
+			return { term2sample2value: new Map([[tw.$id, { c1: 0.5 }]]) }
+		}
+	}
+	const methTw = ($id, sampleTypes, sampleTypeLabel) => ({
+		$id,
+		term: {
+			type: 'dnaMethylation',
+			id: 'chr17:100-200',
+			name: `chr17:100-200 Average Beta Value (${sampleTypeLabel})`,
+			chr: 'chr17',
+			start: 100,
+			stop: 200,
+			genomicFeatureType: 'region',
+			sampleTypes,
+			sampleTypeLabel
+		},
+		q: { mode: 'continuous' }
+	})
+	const data = await getData(
+		{ terms: [methTw('tumor', [2], 'Tumors'), methTw('normal', [3], 'Normals')], filter: emptyFilter() },
+		ds
+	)
+	t.equal(data.error, undefined, 'no error')
+	t.deepEqual(requested, { tumor: [2], normal: [3] }, 'each term is read for its own sample types')
+	t.end()
+})
+
 tape('getData: a request of only a negated samplelst group is rejected', async t => {
 	await ensureOpenAuth()
 	const tw = sampleLstTw()

@@ -35,6 +35,14 @@ tape('makeTerm() assigns a single sample type without labelling it', test => {
 	test.end()
 })
 
+tape('makeTerm() keeps a single sample type of a dataset with sample type terms', test => {
+	const sampleTypesByTerms = { 'samples.event': { Baseline: [1] } }
+	const term = getHandler({ sampleTypes: [1], sampleTypesByTerms }).makeTerm(region)
+	test.deepEqual(term.sampleTypes, [1], 'Should assign the one available sample type')
+	test.equal(term.sampleTypeLabel, '', 'Should use an empty label')
+	test.end()
+})
+
 tape('makeTerm() names the selected sample-type subset', test => {
 	const handler = getHandler({ sampleTypes: [1, 2] })
 	handler.sampleTypeSelect = [
