@@ -799,12 +799,13 @@ tape('navigation during the initial build is not dropped; the build never leaves
 			const [zoomOut] = await waitForSelector(dom.viewer.node(), '.ol-zoom-out')
 			const cellcountBeforeNavigation = cellcountStarts
 			;(zoomOut as HTMLElement).click() // navigation while annotations are still held
-			await waitForCondition(
-				() => cellcountStarts > cellcountBeforeNavigation,
-				'zoom navigation reached updateMode while annotations were held'
-			)
+			await new Promise(r => setTimeout(r, 400)) // let the zoom animation settle independently of the held request
 			releaseAnnotations()
 			await dispatched
+			await waitForCondition(
+				() => cellcountStarts > cellcountBeforeNavigation,
+				'zoom navigation reached updateMode after annotations were released'
+			)
 
 			const [legend2] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-typelegend"]')
 			test.ok(legend2, 'viewer settled with a legend after navigating mid-build')
@@ -828,6 +829,7 @@ tape('navigation during the initial build is not dropped; the build never leaves
 		} catch (e) {
 			test.fail(`mid-build navigation test error: ${e}`)
 		} finally {
+			releaseAnnotations()
 			window.fetch = nativeFetch
 		}
 		test.end()
