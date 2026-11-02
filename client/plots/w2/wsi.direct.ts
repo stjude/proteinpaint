@@ -646,6 +646,8 @@ export async function init(
 		function teardownVector() {
 			for (const l of vectorLayers) map.removeLayer(l)
 			vectorLayers = []
+			mode = undefined
+			loadedBbox = undefined
 			for (const el of legendEls) {
 				el.remove()
 				const i = pinned.findIndex(p => p.box === el)
@@ -672,8 +674,6 @@ export async function init(
 		 or a stale build could finish last and overwrite a newer, correct result.
 		 Returns false (nothing committed beyond this point) when superseded. */
 		async function buildVector(bbox: [number, number, number, number], gen: number): Promise<boolean> {
-			mode = undefined
-			loadedBbox = undefined
 			teardownVector()
 			const bboxParam = bbox.join(',')
 			for (const [kind, wanted, color] of [
