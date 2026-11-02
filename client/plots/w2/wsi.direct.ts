@@ -1245,7 +1245,7 @@ export async function init(
 					try {
 						built = await buildVector(fetchBbox, gen)
 					} finally {
-						pendingFitExtent = null // build over (or failed): never keep suppressing moveend
+						if (gen === modeGeneration) pendingFitExtent = null // only clear this generation's fit guard
 					}
 					if (gen !== modeGeneration) {
 						endLoading() // superseded while buildVector() was in flight: its layers/data are already stale
