@@ -397,10 +397,15 @@ export async function init(
 		refreshShownTypes()
 		// meta.cellTypes is optional. Recover the global type vocabulary before
 		// rasterFills is decided, since a dense initial view never enters the
-		// viewport-scoped annotation fetch in buildVector().
-		if (needCellPolys && opts.showCellTypes && !Array.isArray(meta.cellTypes)) {
+		// viewport-scoped annotation fetch in buildVector(). buildVector() may
+		// add viewport-only types without it, so the flag (not typeNames) says
+		// whether the full vocabulary is known; updateMode() retries before
+		// showing raster fills. Existing types keep their colors: new ones append.
+		let globalTypesLoaded = Array.isArray(meta.cellTypes)
+		async function loadGlobalTypes() {
+			if (globalTypesLoaded || !needCellPolys || !opts.showCellTypes) return
 			try {
-				// uncached, so a transient error is retried on the next render
+				// uncached, so a transient error is retried on the next call
 				const r = await dofetch2(
 					`wsitiles/annotations?${sq}&file=${encodeURIComponent(opts.spatialData!)}&types=1&v=${
 						meta.spatialVersion || 0
@@ -408,15 +413,17 @@ export async function init(
 				)
 				if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
 				const names: string[] = Array.isArray(r.cellTypes) ? r.cellTypes : []
-				for (const t of names) {
+				for (const t of names.filter(t => !typeNames.includes(t))) {
 					typeColor[t] = CELL_TYPE_COLORS[typeNames.length % CELL_TYPE_COLORS.length]
 					typeNames.push(t)
 				}
+				globalTypesLoaded = true
 				refreshShownTypes()
 			} catch (e: any) {
 				sayerrorOnTop(holder, `Error loading cell types: ${e.message || e}`)
 			}
 		}
+		await loadGlobalTypes()
 
 		// per-gene count maps, fetched ONCE for the whole sample (this route
 		// isn't bbox-scoped: one int per expressing cell is far lighter than a
@@ -1219,6 +1226,16 @@ export async function init(
 					firstBuild = false // subsequent vector loads must preserve the user's framing
 					if (mode !== 'raster') {
 						teardownVector()
+					}
+					if (!globalTypesLoaded) {
+						// viewport-only palette so far: retry the global vocabulary so
+						// raster fills don't omit types outside the loaded viewport
+						await loadGlobalTypes()
+						if (gen !== modeGeneration) {
+							endLoading()
+							return
+						}
+						refreshRasterFills()
 					}
 					showRaster() // restore visibility even if a superseded vector decision hid it
 					mode = 'raster'

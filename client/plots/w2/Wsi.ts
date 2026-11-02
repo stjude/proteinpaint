@@ -262,7 +262,11 @@ class Wsi extends PlotBase implements RxComponent {
 			).catch(() => null)
 			if (Array.isArray(a?.cellTypes)) names = a.cellTypes
 		}
-		if (!names) return [] // both failed: no dropdowns this time, but don't memoize so a later render retries
+		if (!names) {
+			this.cellTypeNames = []
+			this.cellTypesFile = undefined
+			return [] // both failed: no dropdowns this time, but don't memoize so a later render retries
+		}
 		this.cellTypeNames = names
 		this.cellTypesFile = src // remember which file the cache is for
 		return this.cellTypeNames

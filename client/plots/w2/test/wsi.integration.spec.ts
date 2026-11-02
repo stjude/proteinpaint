@@ -746,11 +746,13 @@ tape('navigation during the initial build is not dropped; the build never leaves
 	const nativeFetch = window.fetch
 	let armed = false
 	let annotationsStarts = 0
+	let releaseAnnotations: () => void = () => {}
+	const gate = new Promise<void>(r => (releaseAnnotations = r))
 	window.fetch = function (...args: Parameters<typeof fetch>) {
 		const url = String(args[0] instanceof Request ? args[0].url : args[0])
 		if (armed && url.includes('wsitiles/annotations')) {
 			annotationsStarts++
-			return new Promise(r => setTimeout(r, 1500)).then(() => nativeFetch.apply(window, args))
+			return gate.then(() => nativeFetch.apply(window, args))
 		}
 		return nativeFetch.apply(window, args)
 	}
@@ -785,14 +787,17 @@ tape('navigation during the initial build is not dropped; the build never leaves
 
 			// fresh init in the settled layout, annotations held open
 			armed = true
-			await wsi.Inner.app.dispatch({
+			// dispatch awaits the initial build, so don't await it until after navigating
+			const dispatched = wsi.Inner.app.dispatch({
 				type: 'plot_edit',
 				id: wsi.Inner.id,
 				config: { settings: { wsi: { viewerHeight: '440px' } } }
 			})
 			await waitForCondition(() => annotationsStarts > 0, 'annotations request in flight')
 			const [zoomOut] = await waitForSelector(dom.viewer.node(), '.ol-zoom-out')
-			;(zoomOut as HTMLElement).click() // navigation while the build is pending
+			;(zoomOut as HTMLElement).click() // navigation while annotations are still held
+			releaseAnnotations()
+			await dispatched
 
 			const [legend2] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-typelegend"]')
 			test.ok(legend2, 'viewer settled with a legend after navigating mid-build')
