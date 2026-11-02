@@ -735,6 +735,93 @@ tape('fit moveend suppressed during initial build; subsequent zoom still trigger
 	}
 })
 
+tape('navigation during the initial build is not dropped; the build never leaves moveend suppressed', test => {
+	test.timeoutAfter(30000)
+
+	// Holds the first build's annotations open, then navigates while it is
+	// still in flight (the user's drag overlapping the initial fit). That
+	// moveend is real navigation, not the fit's own, so it must not be
+	// swallowed: afterwards the viewer settles with its legend, and a LATER
+	// user zoom still reaches updateMode (pendingFitExtent was cleared).
+	const nativeFetch = window.fetch
+	let armed = false
+	let annotationsStarts = 0
+	window.fetch = function (...args: Parameters<typeof fetch>) {
+		const url = String(args[0] instanceof Request ? args[0].url : args[0])
+		if (armed && url.includes('wsitiles/annotations')) {
+			annotationsStarts++
+			return new Promise(r => setTimeout(r, 1500)).then(() => nativeFetch.apply(window, args))
+		}
+		return nativeFetch.apply(window, args)
+	}
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' },
+					settings: {
+						wsi: {
+							geneExpression: 'PTPRC',
+							showCellTypes: true,
+							showGeneExpression: false,
+							annotationLevel: 0,
+							viewerHeight: '439px' // unique height: dofetch3's page-wide cache must not hide requests
+						}
+					}
+				}
+			]
+		},
+		wsi: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(wsi) {
+		wsi.on('postRender.test', null)
+		try {
+			const dom = wsi.Inner.dom
+			const [legend] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-typelegend"]')
+			test.ok(legend, 'initial build completed')
+
+			// fresh init in the settled layout, annotations held open
+			armed = true
+			await wsi.Inner.app.dispatch({
+				type: 'plot_edit',
+				id: wsi.Inner.id,
+				config: { settings: { wsi: { viewerHeight: '440px' } } }
+			})
+			await waitForCondition(() => annotationsStarts > 0, 'annotations request in flight')
+			const [zoomOut] = await waitForSelector(dom.viewer.node(), '.ol-zoom-out')
+			;(zoomOut as HTMLElement).click() // navigation while the build is pending
+
+			const [legend2] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-typelegend"]')
+			test.ok(legend2, 'viewer settled with a legend after navigating mid-build')
+			armed = false
+			window.fetch = nativeFetch
+			const [loading] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-loading"]')
+			await waitForCondition(() => (loading as HTMLElement).style.display === 'none', 'loading settled')
+
+			// moveend must not be left suppressed once the build is over
+			performance.setResourceTimingBufferSize(1000)
+			performance.clearResourceTimings()
+			const [zoomIn] = await waitForSelector(dom.viewer.node(), '.ol-zoom-in')
+			;(zoomIn as HTMLElement).click()
+			await waitForCondition(
+				() => performance.getEntriesByType('resource').some(e => e.name.includes('wsitiles/cellcount')),
+				'later zoom reached updateMode'
+			)
+			test.pass('moveend not left suppressed after the build')
+
+			if (test['_ok']) wsi.Inner.app.destroy()
+		} catch (e) {
+			test.fail(`mid-build navigation test error: ${e}`)
+		} finally {
+			window.fetch = nativeFetch
+		}
+		test.end()
+	}
+})
+
 tape('missing meta cellTypes: dense start recovers the vocabulary; raster/vector switches reuse it', test => {
 	test.timeoutAfter(90000) // raster tiles + a vector build per zoom phase spawn python server-side
 

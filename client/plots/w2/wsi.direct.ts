@@ -528,8 +528,11 @@ export async function init(
 		let modeGeneration = 0
 		// buildVector() fits the first view to the sample's cells. OpenLayers
 		// emits moveend for that programmatic fit; do not let it supersede the
-		// build while it is still fetching annotations.
-		let ignoreNextMoveend = false
+		// build while it is still fetching annotations. Holds the fitted extent
+		// only while that build is pending; only a moveend that lands exactly on
+		// it is the fit's own. Any other moveend (e.g. a drag overlapping the fit)
+		// is real navigation: updateMode()'s post-build viewport check handles it.
+		let pendingFitExtent: number[] | null = null
 		// raster-vs-vector + which bbox is currently loaded, read/written by
 		// both updateMode() and buildVector() (moved up here, alongside
 		// modeGeneration, so buildVector() -- defined outside updateMode()'s
@@ -725,7 +728,7 @@ export async function init(
 				const previousExtent = view.calculateExtent()
 				view.fit([minX, minY, maxX, maxY], { padding: [40, 40, 40, 40] })
 				const fittedExtent = view.calculateExtent()
-				ignoreNextMoveend = previousExtent.some((v, i) => v !== fittedExtent[i])
+				pendingFitExtent = previousExtent.some((v, i) => v !== fittedExtent[i]) ? fittedExtent : null
 			}
 			firstBuild = false
 
@@ -1238,7 +1241,12 @@ export async function init(
 						endLoading() // superseded while awaiting the padded count
 						return
 					}
-					const built = await buildVector(fetchBbox, gen)
+					let built: boolean
+					try {
+						built = await buildVector(fetchBbox, gen)
+					} finally {
+						pendingFitExtent = null // build over (or failed): never keep suppressing moveend
+					}
 					if (gen !== modeGeneration) {
 						endLoading() // superseded while buildVector() was in flight: its layers/data are already stale
 						return
@@ -1267,9 +1275,16 @@ export async function init(
 			// /cellcount would otherwise fire moveend with no listener attached
 			// yet to catch it, leaving the viewer showing the stale initial view
 			map.on('moveend', () => {
-				if (ignoreNextMoveend) {
-					ignoreNextMoveend = false
-					return
+				if (pendingFitExtent) {
+					const fit = pendingFitExtent
+					if (
+						map
+							.getView()
+							.calculateExtent()
+							.every((v, i) => v === fit[i])
+					)
+						pendingFitExtent = null // the fit's own event
+					return // build pending: the post-build viewport check picks up any other movement
 				}
 				updateMode().catch((e: any) => sayerrorOnTop(holder, `Cell count error: ${e.message || e}`))
 			})
