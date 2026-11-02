@@ -1235,8 +1235,8 @@ export async function init(
 							endLoading()
 							return
 						}
-						refreshRasterFills()
 					}
+					refreshRasterFills()
 					showRaster() // restore visibility even if a superseded vector decision hid it
 					mode = 'raster'
 					setLassoEnabled(false)
