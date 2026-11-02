@@ -398,7 +398,7 @@ export async function init(
 		// meta.cellTypes is optional. Recover the global type vocabulary before
 		// rasterFills is decided, since a dense initial view never enters the
 		// viewport-scoped annotation fetch in buildVector().
-		if (needCellPolys && opts.showCellTypes && !typeNames.length) {
+		if (needCellPolys && opts.showCellTypes && !Array.isArray(meta.cellTypes)) {
 			try {
 				const r = await dofetch3(
 					`wsitiles/annotations?${sq}&file=${encodeURIComponent(opts.spatialData!)}&types=1&v=${
