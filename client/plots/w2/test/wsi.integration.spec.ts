@@ -746,10 +746,12 @@ tape('navigation during the initial build is not dropped; the build never leaves
 	const nativeFetch = window.fetch
 	let armed = false
 	let annotationsStarts = 0
+	let cellcountStarts = 0
 	let releaseAnnotations: () => void = () => {}
 	const gate = new Promise<void>(r => (releaseAnnotations = r))
 	window.fetch = function (...args: Parameters<typeof fetch>) {
 		const url = String(args[0] instanceof Request ? args[0].url : args[0])
+		if (armed && url.includes('wsitiles/cellcount')) cellcountStarts++
 		if (armed && url.includes('wsitiles/annotations')) {
 			annotationsStarts++
 			return gate.then(() => nativeFetch.apply(window, args))
@@ -795,7 +797,12 @@ tape('navigation during the initial build is not dropped; the build never leaves
 			})
 			await waitForCondition(() => annotationsStarts > 0, 'annotations request in flight')
 			const [zoomOut] = await waitForSelector(dom.viewer.node(), '.ol-zoom-out')
+			const cellcountBeforeNavigation = cellcountStarts
 			;(zoomOut as HTMLElement).click() // navigation while annotations are still held
+			await waitForCondition(
+				() => cellcountStarts > cellcountBeforeNavigation,
+				'zoom navigation reached updateMode while annotations were held'
+			)
 			releaseAnnotations()
 			await dispatched
 
