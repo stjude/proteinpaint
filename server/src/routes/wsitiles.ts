@@ -196,10 +196,16 @@ function init({ genomes }) {
 				}
 				if (req.params.action == 'annotations' && q.types !== undefined) {
 					try {
-						const out = JSON.parse(
-							await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_celltypes', h5ad: full }))
-						)
-						res.status(200).json(out)
+						const mtime = (await stat(full)).mtimeMs
+						let hit = cellTypesCache.get(full)
+						if (!hit || hit.mtime !== mtime) {
+							const types = JSON.parse(
+								await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_celltypes', h5ad: full }))
+							).cellTypes
+							hit = { mtime, types }
+							cellTypesCache.set(full, hit)
+						}
+						res.status(200).json({ cellTypes: hit.types })
 					} catch (e: any) {
 						res.status(500).send({ status: 'error', error: e.message || String(e) })
 					}
