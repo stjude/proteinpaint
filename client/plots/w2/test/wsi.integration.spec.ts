@@ -738,16 +738,18 @@ tape('fit moveend suppressed during initial build; subsequent zoom still trigger
 tape('missing meta cellTypes: dense start recovers the vocabulary; raster/vector switches reuse it', test => {
 	test.timeoutAfter(90000) // raster tiles + a vector build per zoom phase spawn python server-side
 
-	// meta.cellTypes is optional (the h5ad scan can fail). On a DENSE initial
-	// view the raster overlay must decide its fills BEFORE buildVector()'s
-	// viewport-scoped annotations fetch could ever discover the types, so
-	// wsi.direct.ts recovers the global vocabulary with one extra
-	// annotations?types=1 request. Force that path by stripping cellTypes out
-	// of the real meta response, then walk raster -> vector -> raster:
-	// cellCountLimit 600 sits between the whole-slide count (the fixture's 791
-	// cells) and the max-zoom viewport's own count (~390 at the pinned 439px
-	// height and 0.2125 mpp), so zooming in reliably crosses into vector mode
-	// and zooming back out returns to raster, all inside ONE viewer.
+	// meta.cellTypes is optional (the h5ad scan can fail). Two independent
+	// discovery paths read it and must both recover via annotations?types=1:
+	// the viewer (wsi.direct.ts), which on a DENSE initial view decides its
+	// raster fills BEFORE buildVector()'s viewport-scoped annotations fetch
+	// could discover the types; and the controls (Wsi.ts fetchCellTypes), which
+	// feeds the 'Types shown' filter and main()'s stale-filter reconciliation.
+	// Force both by stripping cellTypes out of the real meta response, then walk
+	// raster -> vector -> raster: cellCountLimit 600 sits between the whole-slide
+	// count (the fixture's 791 cells) and the max-zoom viewport's own count
+	// (~390 at the pinned 439px height and 0.2125 mpp), so zooming in reliably
+	// crosses into vector mode and zooming back out returns to raster, all
+	// inside ONE viewer.
 	const nativeFetch = window.fetch
 	const annotationsUrls: string[] = [] // every wsitiles/annotations request this viewer makes
 	let typesBody: any // the annotations?types=1 response body
@@ -845,10 +847,14 @@ tape('missing meta cellTypes: dense start recovers the vocabulary; raster/vector
 			const [legend1] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-raster-typelegend"]')
 			test.equal(vectorLegend(), null, 'no vector legend on the dense start')
 
-			// the one recovery request, and its answer
+			// the recovery requests (one per discovery path) and their answer
 			const recoveryUrls = annotationsUrls.filter(u => u.includes('types=1'))
-			test.equal(recoveryUrls.length, 1, 'exactly one annotations?types=1 recovery request')
-			test.ok(!recoveryUrls[0]?.includes('bbox='), 'the recovery request carries no bbox')
+			const recoveryCount = recoveryUrls.length // baseline: must not grow on mode switches
+			test.ok(recoveryCount >= 1, 'the type vocabulary was recovered via annotations?types=1')
+			test.ok(
+				recoveryUrls.every(u => !u.includes('bbox=')),
+				'every recovery request is whole-vocabulary (carries no bbox)'
+			)
 			const recovered: string[] = Array.isArray(typesBody?.cellTypes) ? typesBody.cellTypes : []
 			test.ok(recovered.length >= 1, 'types=1 answered the type vocabulary')
 			test.deepEqual(
@@ -856,6 +862,14 @@ tape('missing meta cellTypes: dense start recovers the vocabulary; raster/vector
 				['cellTypes'],
 				'types=1 returns ONLY the vocabulary, no per-cell annotations'
 			)
+
+			// the controls side (Wsi.ts fetchCellTypes): the same recovery feeds
+			// the 'Types shown' filter. An empty list would hide the filter row and
+			// skip main()'s stale-filter reconciliation even though the overlay
+			// itself recovered — so the filter's presence is the regression signal.
+			const [filterSelect] = await waitForSelector(dom.controls.node(), 'select[aria-label="Cell type filter"]')
+			const optionVals = [...(filterSelect as HTMLSelectElement).options].map(o => o.value).filter(Boolean)
+			test.deepEqual(optionVals, recovered, "'Types shown' filter lists exactly the recovered types")
 
 			// the raster legend lists exactly the recovered types
 			const rasterColors = legendColors(legend1)
@@ -866,10 +880,20 @@ tape('missing meta cellTypes: dense start recovers the vocabulary; raster/vector
 			)
 
 			// the recovered colors reach the raster tile URLs
-			await waitForCondition(
-				() => performance.getEntriesByType('resource').some(e => e.name.includes('wsitiles/overlaytile')),
-				'an overlay tile loaded'
-			)
+			try {
+				await waitForCondition(
+					() => performance.getEntriesByType('resource').some(e => e.name.includes('wsitiles/overlaytile')),
+					'an overlay tile loaded',
+					30000 // cold-start PNG render; two extra python type-scan jobs share the server
+				)
+			} catch (e) {
+				const wsitiles = performance
+					.getEntriesByType('resource')
+					.map((r: any) => `${r.name.split('wsitiles/')[1]?.split('?')[0]} ${Math.round(r.responseEnd)}ms`)
+					.filter(s => s && !s.startsWith('undefined'))
+				test.comment(`wsitiles resource entries at timeout: ${JSON.stringify(wsitiles)}`)
+				throw e
+			}
 			const tileUrl = performance
 				.getEntriesByType('resource')
 				.map(e => e.name)
@@ -904,8 +928,8 @@ tape('missing meta cellTypes: dense start recovers the vocabulary; raster/vector
 			test.pass('zoomed back out: vector legend torn down, raster legend restored')
 			test.equal(
 				annotationsUrls.filter(u => u.includes('types=1')).length,
-				1,
-				'no second recovery request across the mode switches'
+				recoveryCount,
+				'no further recovery request across the mode switches'
 			)
 			test.ok(
 				annotationsUrls.some(u => u.includes('bbox=')),

@@ -246,11 +246,23 @@ class Wsi extends PlotBase implements RxComponent {
 		}
 		if (this.cellTypesFile == src) return this.cellTypeNames // cached
 		const v = this.state.vocab // genome + dslabel for the request
-		const params = // standard wsitiles slide addressing + the annotations source to scan
+		const base = // standard wsitiles slide addressing, shared by both requests below
 			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
-			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&cellAnnotations=${encodeURIComponent(src)}`
-		const r = await dofetch3(`wsitiles/meta?${params}`).catch(() => null)
-		this.cellTypeNames = Array.isArray(r?.cellTypes) ? r.cellTypes : [] // failure = no dropdowns, overlay still works
+			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
+		const r = await dofetch3(`wsitiles/meta?${base}&cellAnnotations=${encodeURIComponent(src)}`).catch(() => null)
+		let names: string[] = Array.isArray(r?.cellTypes) ? r.cellTypes : []
+		// meta.cellTypes is optional: the h5ad scan can fail even when the file
+		// has types. Recover the vocabulary from the annotations route, the same
+		// fallback the viewer uses (wsi.direct.ts) — otherwise an empty list here
+		// keeps 'Types shown' hidden and skips the stale-filter reconciliation in
+		// main() even though the overlay itself recovered and renders.
+		if (!names.length) {
+			const a = await dofetch3(
+				`wsitiles/annotations?${base}&file=${encodeURIComponent(src)}&types=1&v=${r?.spatialVersion || 0}`
+			).catch(() => null)
+			if (Array.isArray(a?.cellTypes)) names = a.cellTypes
+		}
+		this.cellTypeNames = names // failure of both = no dropdowns, overlay still works
 		this.cellTypesFile = src // remember which file the cache is for
 		return this.cellTypeNames
 	}
