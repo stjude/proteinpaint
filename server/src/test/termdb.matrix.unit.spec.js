@@ -5,18 +5,23 @@ import {
 	getSamples,
 	getSampleData_dictionaryTerms_cached,
 	getSampleData_dictionaryTerms_termdb,
+	getAnnotationRows,
 	id2sampleRef,
 	setSampleLstData,
 	isNegatedSampleLstOnlyRequest,
 	hasFilterTermsUnsupportedByFilterSamples,
 	maySetMapParent2Children,
+	maySetMapChildren2Parent,
 	shouldMapParent2Children,
 	mayMapChildren2Root,
-	dropRowsWithoutAnnotation
+	dropRowsWithoutAnnotation,
+	shouldMapChildren2Parent,
+	mayMapChildren2Root
 } from '../termdb.matrix.js'
 import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
+import { sql } from '../sql.ts'
 
 /*
 test sections:
@@ -153,6 +158,110 @@ tape('maySetMapParent2Children: does not invent sample types without a query sco
 	// without setting q.mapParent2Children, even though the caller requested true
 	t.equal(mapParents.mapParent2Children, undefined, 'the flag is not set when no sample types are found')
 	t.equal(mapParents.sampleTypes, undefined, 'no sample types are synthesized without a query scope')
+	t.end()
+})
+
+tape('maySetMapChildren2Parent: maps sister sample types to their common parent', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: {
+					1: { name: 'Root', parent_id: null },
+					2: { name: 'Child A', parent_id: 1 },
+					3: { name: 'Child B', parent_id: 1 },
+					4: { name: 'Unrelated', parent_id: 5 },
+					5: { name: 'Other root', parent_id: null }
+				}
+			}
+		}
+	}
+
+	const sisterTerms = {
+		terms: [{ term: { id: 'a', sampleTypes: [2] } }, { term: { id: 'b', sampleTypes: [3] } }]
+	}
+	maySetMapChildren2Parent(sisterTerms, ds)
+	t.equal(sisterTerms.mapChildren2Parent, true, 'sister sample types enable mapping')
+	t.deepEqual(sisterTerms.sampleTypes, [1], 'query sample type becomes the common parent')
+
+	const oneTerm = { mapChildren2Parent: true, terms: [{ term: { id: 'a', sampleTypes: [2] } }] }
+	maySetMapChildren2Parent(oneTerm, ds)
+	t.equal(oneTerm.mapChildren2Parent, false, 'one term does not enable mapping')
+
+	const unrelatedTerms = {
+		terms: [{ term: { id: 'a', sampleTypes: [2] } }, { term: { id: 'b', sampleTypes: [4] } }]
+	}
+	maySetMapChildren2Parent(unrelatedTerms, ds)
+	t.equal(unrelatedTerms.mapChildren2Parent, false, 'different parent types do not enable mapping')
+	t.end()
+})
+
+tape('shouldMapChildren2Parent: maps annotations from child term types to queried parent types', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				sampleTypes: {
+					1: { name: 'Parent', parent_id: null },
+					2: { name: 'Child', parent_id: 1 },
+					4: { name: 'Unrelated', parent_id: null }
+				}
+			}
+		}
+	}
+	t.equal(
+		shouldMapChildren2Parent({ term: { id: 'child', sampleTypes: [2] } }, ds, true, [1]),
+		true,
+		'a child term maps to its queried parent type'
+	)
+	t.equal(
+		shouldMapChildren2Parent({ term: { id: 'unrelated', sampleTypes: [4] } }, ds, true, [1]),
+		false,
+		'unrelated term types do not map'
+	)
+	t.equal(
+		shouldMapChildren2Parent({ term: { id: 'child', sampleTypes: [2] } }, ds, false, [1]),
+		false,
+		'disabled mapping never maps'
+	)
+	t.end()
+})
+
+tape('getAnnotationRows: maps child annotations onto parent samples', async t => {
+	let preparedQuery
+	const ds = {
+		cohort: {
+			db: {
+				connection: {
+					prepare(query) {
+						preparedQuery = query
+						return { all: () => [] }
+					}
+				}
+			},
+			termdb: {
+				sampleTypes: {
+					1: { name: 'Parent', parent_id: null },
+					2: { name: 'Child A', parent_id: 1 },
+					3: { name: 'Child B', parent_id: 1 }
+				}
+			}
+		}
+	}
+	const termWrappers = [
+		{ $id: 'a', term: { id: 'a', sampleTypes: [2] } },
+		{ $id: 'b', term: { id: 'b', sampleTypes: [3] } }
+	]
+	const CTEs = [
+		{ tablename: 'anno_categorical', sql: sql`SELECT sample, key, value FROM anno_categorical` },
+		{ tablename: 'anno_categorical', sql: sql`SELECT sample, key, value FROM anno_categorical` }
+	]
+	const filter = { CTEname: 'filter_samples', filters: sql`filter_samples AS (SELECT 1 AS sample)` }
+	await getAnnotationRows({ ds, mapChildren2Parent: true, sampleTypes: [1] }, termWrappers, filter, CTEs)
+	t.ok(preparedQuery.text.includes('SELECT sa.ancestor_id as sample'), 'selects the parent sample id')
+	t.ok(preparedQuery.text.includes('JOIN "anno_categorical" ON sa.sample_id = sample'), 'joins child annotations')
+	t.ok(preparedQuery.text.includes('JOIN sampleidmap sm ON sa.ancestor_id = sm.id'), 'checks the parent sample type')
+	t.ok(preparedQuery.text.includes('AND sa.ancestor_id IN "filter_samples"'), 'filters by parent sample ids')
+	t.deepEqual(preparedQuery.values, ['a', 1, 'b', 1], 'both terms bind their term id and queried parent sample type')
 	t.end()
 })
 

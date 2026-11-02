@@ -67,6 +67,15 @@ export function shouldMapParent2Children(tw, ds, mapParent2Children, qSampleType
 	)
 }
 
+export function shouldMapChildren2Parent(tw, ds, mapChildren2Parent, qSampleTypes) {
+	if (!mapChildren2Parent || !qSampleTypes?.length) return false
+	const st = getTwSampleTypes(tw, ds)
+	const twSampleTypes = st.sampleTypes || []
+	return twSampleTypes.some(twSampleType =>
+		qSampleTypes.some(qSampleType => ds.cohort.termdb.sampleTypes[twSampleType].parent_id == qSampleType)
+	)
+}
+
 /* validated integer sample type ids as a sql.list() fragment, for use in an IN (...) clause */
 export function getSampleTypesSqlList(sampleTypes, ds) {
 	return sql.list(
@@ -93,6 +102,7 @@ Inputs:
 		.filter{}
 		.filter0
 		.terms[] array of tw
+		.mapChildren2Parent: maps child annotations onto parent samples for sister sample types
 	ds{}
 		server-side dataset object
 	mapParent2Children: boolean
@@ -120,8 +130,9 @@ export async function getData(q, ds, mapParent2Children?: boolean): Promise<any>
 		const { expandedTerms, tcMappings } = expandCustomTermCollection(originalTerms)
 		q.terms = expandedTerms
 
-		// set flag for mapping from parent to children
+		// set sample hierarchy mapping flags
 		maySetMapParent2Children(q, ds, mapParent2Children)
+		maySetMapChildren2Parent(q, ds)
 
 		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
@@ -780,6 +791,7 @@ export function divideTerms(q, ds) {
 
 /* function may set:
 - q.mapParent2Children: flag for whether to map data of parent samples onto child samples
+- q.mapChildren2Parent: flag for whether to map data of child samples onto parent samples
 - q.sampleTypes: sample types to query for
 TODO: may rename to maySetSampleTypes() */
 export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
@@ -824,6 +836,26 @@ export function maySetMapParent2Children(q, ds, mapParent2Children?: boolean) {
 		if (!Number.isInteger(st)) throw `sample type '${st}' is not integer`
 		if (!ds.cohort.termdb.sampleTypes[st]) throw `invalid sample type '${st}' found`
 	}
+}
+
+export function maySetMapChildren2Parent(q, ds) {
+	q.mapChildren2Parent = false
+	if (!ds.cohort?.termdb?.hasSampleAncestry) return
+	// A caller-requested parent-to-children mapping takes precedence.
+	if (q.mapParent2Children) return
+	const sampleTypes = getSampleTypes(q, ds)
+	const types = [...sampleTypes.sampleTypes]
+	if (types.length < 2 || !Array.isArray(q.terms) || q.terms.length < 2) return
+	for (const type of types) {
+		if (!ds.cohort.termdb.sampleTypes[type]) throw 'invalid sample types'
+	}
+	const parentTypes = new Set(types.map(type => ds.cohort.termdb.sampleTypes[type].parent_id))
+	if (parentTypes.size != 1) return
+	const parentType = parentTypes.values().next().value
+	if (!Number.isInteger(parentType) || !ds.cohort.termdb.sampleTypes[parentType])
+		throw `invalid sample type '${parentType}' found`
+	q.mapChildren2Parent = true
+	q.sampleTypes = [parentType]
 }
 
 // Returns samples[sampleId], creating it as a null-prototype own property first if needed.
@@ -1006,7 +1038,8 @@ When querying sample annotations for dictionary terms, the query is split into t
 1. CTEs are generated for each term, and the CTEs are combined into a single SQL query
 2. The SQL query is executed and the results are processed into a map of samples
 
-Mapping parent annotations onto child samples: when mapParent2Children is true and the term sample type is a parent of the query sample type, then map the annotations of the term onto child samples with sample type matching the query sample type
+Mapping parent annotations onto child samples: when mapParent2Children is true and the term sample type is a parent of the query sample type, then map the annotations of the term onto child samples with sample type matching the query sample type.
+Mapping child annotations onto parent samples: when mapChildren2Parent is true and the term sample type is a child of the query sample type, map the annotations onto the matching parent samples.
 */
 export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
 	const filterCTE = filter ? sql.id(filter.CTEname) : null
@@ -1024,6 +1057,14 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
 				JOIN sampleidmap sm ON sa.sample_id = sm.id
 				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})
 				${filterCTE ? sql`AND sa.sample_id IN ${filterCTE}` : sql``}`
+		}
+		if (shouldMapChildren2Parent(tw, q.ds, q.mapChildren2Parent, q.sampleTypes)) {
+			return sql`SELECT sa.ancestor_id as sample, key, value, ${termId} as term_id
+				FROM sample_ancestry sa
+				JOIN ${table} ON sa.sample_id = sample
+				JOIN sampleidmap sm ON sa.ancestor_id = sm.id
+				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})
+				${filterCTE ? sql`AND sa.ancestor_id IN ${filterCTE}` : sql``}`
 		}
 		// query annotations directly
 		return sql`SELECT sample, key, value, ${termId} as term_id
