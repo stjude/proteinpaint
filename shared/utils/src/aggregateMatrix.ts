@@ -36,13 +36,11 @@ export function expandsToValues(type: string): boolean {
 
 /** True when the matrix is drawn as pies: a gene variant term on one axis, and a term of another type on the other.
  * The gene variant terms give the slices and the other terms decide which samples are in the pie.
- * Accepts bare terms, as the plot config is read before its terms are wrapped, and does not validate. */
+ * Does not validate: terms that are not term wrappers are ignored. */
 export function hasPieAxes(rows: any, columns: any): boolean {
 	const types = (axis: any) =>
 		axis && typeof axis == 'object'
-			? Object.values<any>(axis).flatMap(terms =>
-					Array.isArray(terms) ? terms.map(item => item?.term?.type ?? item?.type) : []
-			  )
+			? Object.values<any>(axis).flatMap(terms => (Array.isArray(terms) ? terms.map(tw => tw?.term?.type) : []))
 			: []
 	const rowTypes = types(rows)
 	const colTypes = types(columns)

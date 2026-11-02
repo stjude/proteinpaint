@@ -1,12 +1,11 @@
 import tape from 'tape'
-import { getPlotConfig, validatePlotConfig, wrapBareTerms } from '../AggregateMatrix.ts'
+import { getPlotConfig, validatePlotConfig } from '../AggregateMatrix.ts'
 
 /*
 Tests:
     - Accepted rows and columns
     - Rejected rows and columns 
     - Rejected methods
-    - Bare terms are wrapped before validation
     - Pie charts default to larger dot sizes
 */
 
@@ -64,7 +63,7 @@ tape('Rejected rows and columns', function (test) {
 		['empty rows', config({ rows: {} }), /invalid \.rows: no sections/],
 		['an empty section', config({ columns: { A: [] } }), /invalid \.columns\[A\]/],
 		[
-			'bare terms, which getPlotConfig wraps before validating',
+			'bare terms, as every term must be a term wrapper',
 			config({ rows: { Genes: [{ name: 'TP53', gene: 'TP53', type: 'geneExpression' }] } }),
 			/must contain term wrappers/
 		],
@@ -108,42 +107,6 @@ tape('Rejected methods', function (test) {
 	test.end()
 })
 
-tape('Bare terms are wrapped before validation', function (test) {
-	const bareRows = {
-		Genes: [{ name: 'TP53', gene: 'TP53', type: 'geneExpression' }, tw('geneExpression', 'KRAS').term]
-	}
-	const bareColumns = {
-		'Cell type': [{ name: 'B', id: 'B', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' }]
-	}
-
-	const wrapped: any = { rows: structuredClone(bareRows), columns: structuredClone(bareColumns) }
-	wrapBareTerms(wrapped)
-	test.deepEqual(wrapped.rows.Genes[0], { term: bareRows.Genes[0] }, 'Should wrap a bare row term')
-	test.deepEqual(
-		wrapped.columns['Cell type'][0],
-		{ term: bareColumns['Cell type'][0] },
-		'Should wrap a bare column term'
-	)
-
-	const wrappers = config()
-	const before = structuredClone(wrappers)
-	wrapBareTerms(wrappers)
-	test.deepEqual(wrappers, before, 'Should not change term wrappers')
-
-	const invalid: any = { rows: [{ type: 'geneExpression' }], columns: { A: 'x' } }
-	test.doesNotThrow(() => wrapBareTerms(invalid), 'Should leave invalid axes for validatePlotConfig to reject')
-	test.deepEqual(invalid, { rows: [{ type: 'geneExpression' }], columns: { A: 'x' } }, 'Should not change invalid axes')
-
-	const plotConfig: any = getPlotConfig({ rows: bareRows, columns: bareColumns, settings })
-	test.deepEqual(
-		plotConfig.rows.Genes.map(item => item.term.gene || item.term.id),
-		['TP53', 'KRAS'],
-		'Should accept bare terms in getPlotConfig and wrap every one'
-	)
-	test.equal(plotConfig.columns['Cell type'][0].term.id, 'B', 'Should wrap bare column terms in getPlotConfig')
-	test.end()
-})
-
 tape('Pie charts default to larger dot sizes', function (test) {
 	const sizes = (cfg: any) => {
 		const { minDotSize, maxDotSize, dotInputMin, dotInputMax } = getPlotConfig(cfg).settings.aggregateMatrix
@@ -156,11 +119,6 @@ tape('Pie charts default to larger dot sizes', function (test) {
 
 	test.deepEqual(sizes(config({ rows: gv, columns: sex })), pieSizes, 'Should use pie sizes with gene variant rows')
 	test.deepEqual(sizes(config({ rows: sex, columns: gv })), pieSizes, 'Should use pie sizes with gene variant columns')
-	test.deepEqual(
-		sizes(config({ rows: { Variants: [{ type: 'geneVariant', gene: 'TP53' }] }, columns: sex })),
-		pieSizes,
-		'Should use pie sizes when the terms are bare'
-	)
 	test.deepEqual(
 		sizes(config({ rows: sex, columns: sex })),
 		dotSizes,

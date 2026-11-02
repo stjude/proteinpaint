@@ -110,26 +110,9 @@ export function getPlotConfig(opts: any) {
 	}
 
 	const returnConfig = copyMerge(config, opts)
-	wrapBareTerms(returnConfig)
 	validatePlotConfig(returnConfig)
 
 	return returnConfig
-}
-
-/** Rows and columns may be supplied as bare terms, e.g. { type: 'geneExpression', gene: 'TP53' }.
- * The server and validatePlotConfig need term wrappers, i.e. { term, q }, so wrap bare terms in place.
- * Term wrappers and anything that is not a term list are left for validatePlotConfig to judge. */
-export function wrapBareTerms(config: any) {
-	for (const axisName of ['rows', 'columns']) {
-		const axis = config?.[axisName]
-		if (!axis || typeof axis != 'object' || Array.isArray(axis)) continue
-		for (const [section, terms] of Object.entries<any>(axis)) {
-			if (!Array.isArray(terms)) continue
-			axis[section] = terms.map(item =>
-				item && typeof item == 'object' && !item.term && item.type ? { term: item } : item
-			)
-		}
-	}
 }
 
 export function validatePlotConfig(config: any) {

@@ -39,24 +39,26 @@ const runpp = helpers.getRunPp('mass', {
 })
 
 // TermdbTest terms and term wrappers shared with other client tests
-const sex = getTermCopy('sex')
-const diaggrp = getTermCopy('diaggrp')
-const agedx = getTermCopy('agedx')
+const wrap = (term: any) => ({ term, q: {} })
+const sex = wrap(getTermCopy('sex'))
+const diaggrp = wrap(getTermCopy('diaggrp'))
+const agedx = wrap(getTermCopy('agedx'))
 const ssgsea = getSsgseaTw()
 const tp53Variant = getGeneVariantTw()
 const krasRegionVariant = getGeneVariantTw(true)
-const krasIsoforms = getIsoformExpCollectionFractionTw().term.termlst
+const krasIsoforms = getIsoformExpCollectionFractionTw().term.termlst.map(wrap)
 
-const geneExpression = (gene: string) => ({ name: gene, gene, type: 'geneExpression' })
-const dnaMethylation = (name: string, start: number, stop: number) => ({
-	name,
-	id: `chr17:${start}-${stop}`,
-	chr: 'chr17',
-	start,
-	stop,
-	genomicFeatureType: 'promoter',
-	type: 'dnaMethylation'
-})
+const geneExpression = (gene: string) => wrap({ name: gene, gene, type: 'geneExpression' })
+const dnaMethylation = (name: string, start: number, stop: number) =>
+	wrap({
+		name,
+		id: `chr17:${start}-${stop}`,
+		chr: 'chr17',
+		start,
+		stop,
+		genomicFeatureType: 'promoter',
+		type: 'dnaMethylation'
+	})
 
 /** Rows, columns, and dots rendered by the plot. */
 function getRendered(aggregateMatrix: any) {
@@ -371,7 +373,7 @@ tape('Isoform expression rows by diagnosis group columns', function (test) {
 		rendered => {
 			test.deepEqual(
 				rendered.rowLabels,
-				krasIsoforms.map(isoform => isoform.name),
+				krasIsoforms.map(isoform => isoform.term.name),
 				'Should render one row per isoform'
 			)
 			test.ok(rendered.colLabels.length > 1, 'Should expand diagnosis group into one column per category')

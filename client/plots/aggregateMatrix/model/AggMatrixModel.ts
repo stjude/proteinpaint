@@ -1,4 +1,4 @@
-import { type AggregateMatrix, validatePlotConfig, wrapBareTerms } from '../AggregateMatrix.ts'
+import { type AggregateMatrix, validatePlotConfig } from '../AggregateMatrix.ts'
 import type { AppApi } from '#rx'
 
 export class AggMatrixModel {
@@ -14,7 +14,6 @@ export class AggMatrixModel {
 		const state = this.ag.state
 		const config = structuredClone(state.config)
 
-		wrapBareTerms(config)
 		validatePlotConfig(config)
 
 		const settings = config.settings.aggregateMatrix || {}
