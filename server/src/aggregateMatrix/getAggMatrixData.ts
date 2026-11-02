@@ -142,7 +142,12 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	const colOther = columnSources.filter(s => !isGeneVariant(s))
 	const pieCounter =
 		(rowGv.length && colOther.length) || (colGv.length && rowOther.length) ? new PieCounter() : undefined
-	const geneVariantSlices = mclassScheme(mclass)
+	// one scheme per gene variant term, as each term's request says which values are uncomputable
+	const geneVariantSchemes = new Map<string, ReturnType<typeof mclassScheme>>()
+	const geneVariantSlices = (source: AxisSource) => {
+		if (!geneVariantSchemes.has(source.queryId)) geneVariantSchemes.set(source.queryId, mclassScheme(mclass, source.tw))
+		return geneVariantSchemes.get(source.queryId)!
+	}
 	for (const sample of Object.values<any>(response.samples)) {
 		if (pieCounter) {
 			const indexes = (sources: AxisSource[], lookup: Map<string, number>, requireVariant = true) =>
@@ -152,13 +157,17 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 			for (const rowIndex of rowGvIndexes) {
 				for (const columnIndex of indexes(colOther, columnLookup)) {
 					const annotation = sample[rows[rowIndex].source.queryId]
-					pieCounter.add(rowIndex * columns.length + columnIndex, annotation, geneVariantSlices)
+					pieCounter.add(rowIndex * columns.length + columnIndex, annotation, geneVariantSlices(rows[rowIndex].source))
 				}
 			}
 			for (const columnIndex of colGvIndexes) {
 				for (const rowIndex of indexes(rowOther, rowLookup)) {
 					const annotation = sample[columns[columnIndex].source.queryId]
-					pieCounter.add(rowIndex * columns.length + columnIndex, annotation, geneVariantSlices)
+					pieCounter.add(
+						rowIndex * columns.length + columnIndex,
+						annotation,
+						geneVariantSlices(columns[columnIndex].source)
+					)
 				}
 			}
 		}

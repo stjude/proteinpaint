@@ -278,9 +278,16 @@ export class AggMatrixViewModel {
 		this.lastY = startY
 		this.lastX = startX
 
+		/* In a pie chart, a dot is a pie or it is no data. A dot with only slices that are hidden has nothing to show,
+		so it is treated like a dot without data: it is blank and its tooltip reports that no data is available. */
+		const isPieChart = data.some(row => row.some(dot => dot.pie))
+
 		for (const [i, row] of data.entries()) {
 			for (const dot of row) {
-				const hasData = dot.colorValue !== null && dot.sizeValue !== null
+				const pie = dot.pie ? this.getPiePosition(dot.pie, settings) : undefined
+				const hasPie = !!pie?.slices.length
+				const noData = dot.colorValue === null || dot.sizeValue === null || (isPieChart && !hasPie)
+				const hasData = !noData
 				const dotPos = {
 					x: this.lastX + cellSize / 2,
 					y: this.lastY + cellSize / 2,
@@ -294,7 +301,7 @@ export class AggMatrixViewModel {
 					rowSection: dot.rowSection,
 					column: dot.column,
 					colSection: dot.colSection,
-					pie: dot.pie ? this.getPiePosition(dot.pie, settings) : undefined,
+					pie: hasPie ? pie : undefined,
 					tipData: [
 						{
 							label: dot.rowSection,
@@ -307,16 +314,16 @@ export class AggMatrixViewModel {
 						{
 							// Show the color value
 							label: capitalizeFirstLetter(settings.gradientMethod),
-							value: dot.colorValue === null ? 'No available data' : roundValue(dot.colorValue, 2)
+							value: noData ? 'No available data' : roundValue(dot.colorValue!, 2)
 						},
 						{
 							// Show the size value
 							label: capitalizeFirstLetter(settings.sizeMethod),
-							value: dot.sizeValue === null ? 'No available data' : roundValue(dot.sizeValue, 2)
+							value: noData ? 'No available data' : roundValue(dot.sizeValue!, 2)
 						}
 					]
 				} satisfies AggMatrixDotPosition
-				if (dot.pie) this.getPieTipData(dot.pie, sampleType).forEach(entry => dotPos.tipData.push(entry))
+				if (dot.pie && hasPie) this.getPieTipData(dot.pie, sampleType).forEach(entry => dotPos.tipData.push(entry))
 				this.viewData.dotPositions.push(dotPos)
 				this.lastX += cellSize
 			}
@@ -338,9 +345,10 @@ export class AggMatrixViewModel {
 	/** Pie area is proportional to the number of samples. A pie is never smaller than the smallest dot. */
 	getPiePosition(data: AggMatrixPie, settings: AggregateMatrixSettings): AggMatrixPiePosition {
 		const radius = Math.max(settings.minDotSize, data.radius * settings.maxDotSize)
+		// slices that are hidden by default, such as wildtype, are not drawn, so the pie shows the rest of the samples
 		const arcs = pie<AggMatrixPie['slices'][number]>()
 			.sort(null)
-			.value(slice => slice.count)(data.slices)
+			.value(slice => slice.count)(data.slices.filter(slice => !slice.hidden))
 		const makePath = arc<any>().innerRadius(0).outerRadius(radius)
 		return {
 			radius,
@@ -372,7 +380,7 @@ export class AggMatrixViewModel {
 			for (const dot of row) {
 				if (!dot.pie) continue
 				termType ??= dot.pie.termType
-				for (const slice of dot.pie.slices) {
+				for (const slice of dot.pie.slices.filter(slice => !slice.hidden)) {
 					if (!entries.has(slice.key)) {
 						entries.set(slice.key, { key: slice.key, ...this.describeSlice(slice, dot.pie.termType) })
 					}

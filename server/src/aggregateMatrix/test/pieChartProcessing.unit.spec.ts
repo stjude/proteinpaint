@@ -6,6 +6,8 @@ import { MAX_SLICES, OTHER_KEY, PieCounter, mclassScheme, termValuesScheme } fro
 	- Should list wildtype first and keep the mclass order
 	- Should ignore classes that are not in mclass
 	- Should count samples once per cell and every variant value
+	- Should hide wildtype and not tested by default and keep every other class
+	- Should follow the request term for uncomputable and hidden values
 	- Should scale the radius so that area is proportional to n
 	- Should leave a cell without values empty
 	- Should pass labels and colors through from mclass unchanged
@@ -57,17 +59,99 @@ tape('Should count samples once per cell and every variant value', test => {
 	counter.add(3, ann('WT'), gv)
 	counter.add(3, ann('M', 'M'), gv)
 	counter.add(3, ann('M', 'F'), gv)
-	counter.add(3, ann('Blank'), gv)
 	const pie = counter.build().get(3)!
-	test.equal(pie.n, 4, 'Should count each sample once')
+	test.equal(pie.n, 3, 'Should count each sample once')
 	test.equal(pie.termType, 'geneVariant', 'Should tell the client the term type of the slices')
 	const order = Object.keys(mclass)
-	const counts = { M: 3, F: 1, Blank: 1 }
+	const counts = { M: 3, F: 1 }
 	const expected = [['WT', 1], ...Object.entries(counts).sort(([a], [b]) => order.indexOf(a) - order.indexOf(b))]
 	test.deepEqual(
 		pie.slices.map(s => [s.key, s.count]),
 		expected,
 		'Should count both values of a sample with two variants, in the fixed class order'
+	)
+	test.end()
+})
+
+tape('Should hide wildtype and not tested by default and keep every other class', test => {
+	const counter = new PieCounter()
+	counter.add(0, ann('Blank', 'M'), gv)
+	counter.add(0, ann('WT'), gv)
+	const pie = counter.build().get(0)!
+	test.equal(pie.n, 2, 'Should count the samples, hidden classes included')
+	test.deepEqual(
+		pie.slices.map(s => [s.key, !!s.hidden]),
+		[
+			['WT', true],
+			['M', false],
+			['Blank', true]
+		],
+		'Should flag wildtype and not tested as hidden, and no other class'
+	)
+	test.end()
+})
+
+tape('Should follow the request term for uncomputable and hidden values', test => {
+	const tw = {
+		term: { values: { M: { uncomputable: true }, F: { label: 'Frameshift' } } },
+		q: { hiddenValues: { F: 1, N: 1, S: 0 } }
+	}
+	const scheme = mclassScheme(mclass, tw)
+	test.deepEqual(
+		scheme.keysOf(ann('M', 'F', 'WT', 'N', 'S')),
+		['F', 'WT', 'N', 'S'],
+		'Should remove uncomputable values only'
+	)
+	test.deepEqual(
+		scheme.define(new Set(['WT', 'F', 'N', 'S'])).map(d => [d.key, !!d.hidden]),
+		[
+			['WT', true],
+			['N', true],
+			['F', true],
+			['S', false]
+		].sort((a, b) =>
+			a[0] == 'WT'
+				? -1
+				: b[0] == 'WT'
+				? 1
+				: Object.keys(mclass).indexOf(a[0] as string) - Object.keys(mclass).indexOf(b[0] as string)
+		),
+		'Should flag the values of q.hiddenValues as hidden, and not a value that is set to 0'
+	)
+	const counter = new PieCounter()
+	counter.add(0, ann('M'), scheme)
+	test.equal(counter.build().size, 0, 'Should not make a pie from samples that only have uncomputable values')
+	test.deepEqual(
+		mclassScheme(mclass, { term: { values: { __proto__: { M: { uncomputable: true } } } }, q: {} }).keysOf(ann('M')),
+		['M'],
+		'Should not read inherited values'
+	)
+	test.deepEqual(
+		mclassScheme(mclass, undefined).keysOf(ann('M', 'Blank')),
+		['M', 'Blank'],
+		'Should handle a request without a term'
+	)
+
+	const generic = termValuesScheme({
+		keysOf: a => a.keys,
+		keyOrder: ['a', 'b', 'c'],
+		labelOf: k => k,
+		colorOf: () => undefined,
+		isUncomputable: k => k == 'a',
+		isHidden: k => k == 'b'
+	})
+	test.deepEqual(
+		generic.keysOf({ keys: ['a', 'b', 'c'] }),
+		['b', 'c'],
+		'Should remove uncomputable values of any term type'
+	)
+	test.deepEqual(
+		generic.define(new Set(['b', 'c'])).map(d => [d.key, !!d.hidden]),
+		[
+			['b', true],
+			['c', false]
+		],
+		'Should flag hidden values of any term type'
 	)
 	test.end()
 })

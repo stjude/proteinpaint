@@ -55,6 +55,8 @@ export type AggMatrixPieSlice = {
 	color: string
 	/** Number of values in this slice. A sample with several values counts once per value. */
 	count: number
+	/** The client does not draw this slice until the user shows it, such as wildtype. Uncomputable values are not sent. */
+	hidden?: boolean
 }
 
 export type AggMatrixPie = {

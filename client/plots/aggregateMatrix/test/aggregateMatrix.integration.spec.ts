@@ -305,6 +305,13 @@ tape('Gene variant pies by diagnosis group columns', function (test) {
 				slices.every(slice => slice.getAttribute('d')?.startsWith('M') && slice.getAttribute('fill')),
 				'Should draw every slice as a path with a fill color'
 			)
+			const wildtype = slices.filter(slice => slice.getAttribute('data-testid') == 'sjpp-ag-matrix-pie-slice-WT')
+			test.equal(wildtype.length, 0, 'Should not draw wildtype slices by default')
+			test.equal(
+				slices.filter(slice => slice.getAttribute('data-testid') == 'sjpp-ag-matrix-pie-slice-Blank').length,
+				0,
+				'Should not draw not tested slices by default'
+			)
 			const legend = rendered.mainDiv.querySelector('.sjpp-ag-matrix-pie-legend') as any
 			test.ok(legend?.textContent.includes('Variant class'), 'Should render the variant class legend')
 			const sizes = pies.map(pie => pie.getBoundingClientRect().width / 2)

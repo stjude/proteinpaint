@@ -299,6 +299,10 @@ tape('pies are returned only when a geneVariant term is on an axis', async test 
 				`${label}: slices should count at least one value for each sample`
 			)
 		}
+		test.ok(
+			withPie.every(cell => cell.pie.slices.every(s => (s.key == 'WT' || s.key == 'Blank') == !!s.hidden)),
+			`${name}: should send wildtype and not tested, and only those, hidden by default`
+		)
 		const colorByKey = new Map<string, string>()
 		for (const { pie } of withPie) {
 			for (const s of pie.slices) {

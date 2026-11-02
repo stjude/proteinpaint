@@ -9,7 +9,13 @@ const OTHER_LABEL = 'Other'
 const OTHER_COLOR = '#bdbdbd'
 const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
-export type SliceDef = { key: string; label: string; color: string }
+export type SliceDef = {
+	key: string
+	label: string
+	color: string
+	/** Shown only when the user asks for it. The slice is still counted in n and sent to the client. */
+	hidden?: boolean
+}
 
 /** Decides which slices a term's annotation falls into, and how each slice looks.
  * The server is the only place that decides labels and colors, so the client needs nothing but the response. */
@@ -25,13 +31,27 @@ export interface SliceScheme {
 
 type MclassLookup = Record<string, { key: string; label: string; color: string }>
 
+/** Classes that are hidden without being asked. Wildtype and not tested (Blank) say nothing about an alteration,
+ * and would otherwise be most of every pie. They are sent flagged hidden, not removed, so the user can show them. */
+const HIDDEN_BY_DEFAULT_CLASSES = ['WT', 'Blank']
+
 /** Slices of a geneVariant term. Wildtype comes first, then the other classes in the order they are declared
- * in mclass. Not tested (Blank) is a regular class: datasets may use it for custom data.
- * Classes that are not in mclass are ignored, so labels and colors never come from the data. */
-export function mclassScheme(mclass: MclassLookup): SliceScheme {
+ * in mclass. Classes that are not in mclass are ignored, so labels and colors never come from the data.
+ * The term in the request decides what is shown, whatever the class:
+ * - a value that is uncomputable is removed completely, so it is not sent and not counted
+ * - a value in q.hiddenValues is sent flagged hidden, and the client shows it only when the user asks to
+ * - wildtype and not tested are flagged hidden by default */
+export function mclassScheme(mclass: MclassLookup, tw?: any): SliceScheme {
 	const keys = Object.keys(mclass)
 	const order = ['WT', ...keys.filter(k => k != 'WT')].filter(k => Object.hasOwn(mclass, k))
-	const known = new Set(order)
+	const isOwn = (obj: any, key: string) => obj && typeof obj == 'object' && Object.hasOwn(obj, key)
+	const removed = new Set<string>()
+	const hidden = new Set<string>(HIDDEN_BY_DEFAULT_CLASSES)
+	for (const key of order) {
+		if (isOwn(tw?.term?.values, key) && tw.term.values[key]?.uncomputable) removed.add(key)
+		else if (isOwn(tw?.q?.hiddenValues, key) && tw.q.hiddenValues[key]) hidden.add(key)
+	}
+	const known = new Set(order.filter(k => !removed.has(k)))
 	return {
 		termType: GENE_VARIANT,
 		keysOf(annotation) {
@@ -44,7 +64,14 @@ export function mclassScheme(mclass: MclassLookup): SliceScheme {
 			return found
 		},
 		define(observed) {
-			return order.filter(k => observed.has(k)).map(k => ({ key: k, label: mclass[k].label, color: mclass[k].color }))
+			return order
+				.filter(k => observed.has(k))
+				.map(k => ({
+					key: k,
+					label: mclass[k].label,
+					color: mclass[k].color,
+					...(hidden.has(k) && { hidden: true })
+				}))
 		}
 	}
 }
@@ -57,9 +84,13 @@ export function termValuesScheme(args: {
 	keyOrder: string[]
 	labelOf: (key: string) => string
 	colorOf: (key: string) => string | undefined
+	/** Uncomputable values are removed completely */
+	isUncomputable?: (key: string) => boolean
+	/** Hidden values are sent flagged hidden, and shown only when the user asks to */
+	isHidden?: (key: string) => boolean
 }): SliceScheme {
 	return {
-		keysOf: args.keysOf,
+		keysOf: annotation => args.keysOf(annotation).filter(key => !args.isUncomputable?.(key)),
 		define(observed) {
 			const listed = new Set(args.keyOrder)
 			const ordered = [...args.keyOrder.filter(k => observed.has(k)), ...[...observed].filter(k => !listed.has(k))]
@@ -70,7 +101,8 @@ export function termValuesScheme(args: {
 				return {
 					key,
 					label: args.labelOf(key),
-					color: typeof color == 'string' && HEX_COLOR.test(color) ? color : fallbackColor
+					color: typeof color == 'string' && HEX_COLOR.test(color) ? color : fallbackColor,
+					...(args.isHidden?.(key) && { hidden: true })
 				}
 			})
 		}
@@ -132,7 +164,8 @@ export class PieCounter {
 				const count = counts.get(def.key)
 				if (!count || !Number.isFinite(count)) continue
 				if (folded.has(def.key)) other += count
-				else slices.push({ key: def.key, label: def.label, color: def.color, count })
+				else
+					slices.push({ key: def.key, label: def.label, color: def.color, count, ...(def.hidden && { hidden: true }) })
 			}
 			if (other) slices.push({ key: OTHER_KEY, label: OTHER_LABEL, color: OTHER_COLOR, count: other })
 			const radius = maxN > 0 ? Math.sqrt(n / maxN) : 0
