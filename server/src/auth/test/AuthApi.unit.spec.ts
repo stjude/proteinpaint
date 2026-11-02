@@ -1593,7 +1593,7 @@ tape(
 	}
 )
 
-tape('AuthApi.mayAdjustFilter: a hiddenIds term in a filter uses the default routeTerms', function (test) {
+tape('AuthApi.mayAdjustFilter: routeTerms', function (test) {
 	test.timeoutAfter(500)
 
 	const { authApi } = makeAuthApi()
@@ -1627,7 +1627,7 @@ tape('AuthApi.mayAdjustFilter: a hiddenIds term in a filter uses the default rou
 	test.deepEqual(
 		calls.pop(),
 		routeTwLst.map(tw => tw.term),
-		'should use routeTwLst when the filter has no hiddenIds term'
+		'should use routeTwLst'
 	)
 
 	authApi.mayAdjustFilter(
@@ -1635,7 +1635,7 @@ tape('AuthApi.mayAdjustFilter: a hiddenIds term in a filter uses the default rou
 		ds as any,
 		routeTwLst as any
 	)
-	test.equal(calls.pop(), undefined, 'should use the default for a hiddenIds term in a nested q.filter entry')
+	test.equal(calls.pop(), undefined, 'should use the default for a nested entry')
 
 	authApi.mayAdjustFilter({ filter: filter('hiddenTerm'), __protected__: __protected__() } as any, ds as any, [] as any)
 	test.equal(calls.pop(), undefined, 'should use the default with an empty routeTwLst')
@@ -1645,7 +1645,7 @@ tape('AuthApi.mayAdjustFilter: a hiddenIds term in a filter uses the default rou
 		ds as any,
 		routeTwLst as any
 	)
-	test.equal(calls.pop(), undefined, 'should use the default for a hiddenIds term in q.filter0')
+	test.equal(calls.pop(), undefined, 'should use the default for filter0')
 
 	authApi.mayAdjustFilter(
 		{ filter: filter('hiddenTerm'), __protected__: __protected__(['hiddenTerm']) } as any,
@@ -1668,6 +1668,55 @@ tape('AuthApi.mayAdjustFilter: a hiddenIds term in a filter uses the default rou
 		routeTwLst.map(tw => tw.term),
 		'should not consider a previously added auth filter'
 	)
+
+	const tagged = (id: string) => {
+		const f = filter(id)
+		f.join = 'and'
+		f.lst[0]['tag'] = 'termLevelAuthFilter'
+		return f
+	}
+	authApi.mayAdjustFilter(
+		{ filter: tagged('hiddenTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.equal(calls.pop(), undefined, 'should consider an entry that was not added by mayAdjustFilter()')
+
+	const rootTagged: any = { ...filter('hiddenTerm'), tag: 'termLevelAuthFilter' }
+	authApi.mayAdjustFilter({ filter: rootTagged, __protected__: __protected__() } as any, ds as any, routeTwLst as any)
+	test.equal(calls.pop(), undefined, 'should consider a root filter that was not added by mayAdjustFilter()')
+
+	// getFilterCTEs() does not require a type for a tvs entry
+	const noType = (id: string) => ({
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [{ type: 'tvslst', in: true, join: '', lst: [{ tvs: { term: { id } } }] }]
+	})
+	authApi.mayAdjustFilter(
+		{ filter: noType('hiddenTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.equal(calls.pop(), undefined, 'should use the default for an entry without a type')
+	authApi.mayAdjustFilter(
+		{ filter: noType('otherTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.deepEqual(
+		calls.pop(),
+		routeTwLst.map(tw => tw.term),
+		'should use routeTwLst for an entry without a type'
+	)
+
+	const q1: any = { filter: filter('otherTerm'), __protected__: __protected__() }
+	authApi.mayAdjustFilter(q1, ds as any, undefined)
+	calls.pop()
+	q1.filter = structuredClone(q1.filter)
+	authApi.mayAdjustFilter(q1, ds as any, routeTwLst as any)
+	test.equal(calls.pop(), undefined, 'should consider a copy of an entry that was added by mayAdjustFilter()')
+
 	test.end()
 })
 

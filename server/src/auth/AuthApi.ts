@@ -14,12 +14,16 @@ import { sleep } from '../utils.js'
 // the tag of a filter entry that was added by mayAdjustFilter()
 const FILTER_TAG = 'termLevelAuthFilter'
 
+// the filter objects that were added by mayAdjustFilter()
+const addedFilters = new WeakSet()
+
 // returns true if a tvs in the filter tree has a term.id in termIds[],
 // the entries that were added by mayAdjustFilter() are not considered
 function hasFilterTerm(filter, termIds: string[]): boolean {
-	if (!filter || filter.tag === FILTER_TAG) return false
-	if (filter.type == 'tvs') return termIds.includes(filter.tvs?.term?.id)
-	return Array.isArray(filter.lst) && filter.lst.some(f => hasFilterTerm(f, termIds))
+	if (!filter || addedFilters.has(filter)) return false
+	// same as getFilterCTEs(), which treats a filter entry as a tvs unless its type is tvslst
+	if (filter.type == 'tvslst') return Array.isArray(filter.lst) && filter.lst.some(f => hasFilterTerm(f, termIds))
+	return termIds.includes(filter.tvs?.term?.id)
 }
 
 // An AuthApi class instance will wrap a private Auth class instance.
@@ -312,8 +316,7 @@ export class AuthApi implements AuthInterface {
 		// NOTE: as needed, the server route code must append to q.__protected__.ignoredTermIds[],
 		//       since it knows the req.query key names that correspond to terms/termwrappers
 
-		// a term in ds.cohort.termdb.hiddenIds that is used by q.filter or q.filter0 is treated the same as
-		// not supplying routeTwLst, so that ds.getAdditionalFilter() returns its strictest auth filter
+		// routeTerms is undefined in some cases, so that ds.getAdditionalFilter() returns its strictest auth filter
 		const hiddenIds = (ds.cohort.termdb.hiddenIds || []).filter(id => !q.__protected__.ignoredTermIds.includes(id))
 		const routeTerms =
 			routeTwLst === undefined || [q.filter, q.filter0].some(f => hasFilterTerm(f, hiddenIds))
@@ -342,6 +345,7 @@ export class AuthApi implements AuthInterface {
 			return
 		} else {
 			authFilter.tag = FILTER_TAG
+			addedFilters.add(authFilter)
 			// the adjusted filter must have the correct filter shape, for example, avoid an empty nested tvslst
 			if (i !== -1) {
 				if (q.filter.join != 'and') throw `unexpected filter.join != 'and' for a previously added auth filter entry `
