@@ -76,8 +76,8 @@ tape('Default barchart component', test => {
 tape('hideCategory() should key q.hiddenValues by value key', function (test) {
 	test.timeoutAfter(100)
 
-	const getHiddenValues = (values, d, isHidden, hiddenValues = {}) => {
-		const term = { $id: 'abc', id: 't', term: { type: 'categorical', values }, q: { hiddenValues } }
+	const getHiddenValues = (values, d, isHidden, hiddenValues = {}, type = 'categorical') => {
+		const term = { $id: 'abc', id: 't', term: { type, values }, q: { hiddenValues } }
 		let config
 		const self = { id: 'plot', config: { term }, app: { dispatch: action => (config = action.config) } }
 		hideCategory({ type: 'col', ...d }, self, isHidden)
@@ -118,6 +118,40 @@ tape('hideCategory() should key q.hiddenValues by value key', function (test) {
 		'Should convert a label that is not a value key'
 	)
 	test.deepEqual(getHiddenValues(undefined, { id: '1-5' }, true), { '1-5': 1 }, 'Should support a term without values')
+
+	const uncomputable = { '-999': { label: '0', uncomputable: true }, 0: { label: 'Not assessed', uncomputable: true } }
+	for (const type of ['integer', 'float', 'date']) {
+		test.deepEqual(
+			getHiddenValues(uncomputable, { id: '0' }, true, {}, type),
+			{ '-999': 1 },
+			`Should hide the key of a ${type} label that equals another key`
+		)
+		test.deepEqual(
+			getHiddenValues(uncomputable, { id: '0' }, false, { '-999': 1 }, type),
+			{},
+			`Should show the key of a ${type} label that equals another key`
+		)
+		test.deepEqual(
+			getHiddenValues(uncomputable, { id: 'Not assessed' }, true, {}, type),
+			{ 0: 1 },
+			`Should hide the key of a ${type} label that is not a key`
+		)
+		test.deepEqual(
+			getHiddenValues(uncomputable, { id: '1 to <5' }, true, {}, type),
+			{ '1 to <5': 1 },
+			`Should keep a ${type} bin label that has no value key`
+		)
+	}
+	test.deepEqual(
+		getHiddenValues(uncomputable, { id: '0' }, true),
+		{ 0: 1 },
+		'Should prefer the key for a categorical term when a label equals another key'
+	)
+	test.deepEqual(
+		getHiddenValues(uncomputable, { id: '0' }, false, { 0: 1, '-999': 1 }),
+		{ '-999': 1 },
+		'Should show the clicked key of a categorical term when a label equals another key'
+	)
 
 	test.end()
 })
