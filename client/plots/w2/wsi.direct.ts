@@ -68,7 +68,7 @@ import Draw from 'ol/interaction/Draw.js' // freehand polygon drawing = the lass
 import Control from 'ol/control/Control.js' // hosts the lasso toggle inside the map's viewport
 import { select } from 'd3-selection' // wraps the control element for the icon helper
 import { scaleLinear } from 'd3-scale' // diverging z-score color scale of the enrichment heatmap
-import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
+import { dofetch2, dofetch3 } from '#common/dofetch' // fetch wrappers for meta/genecounts (dofetch2 is uncached)
 import { sayerror, Menu, renderTable, icons, ColorScale } from '#dom' // error banner, lasso menu + table, lasso icon, heatmap legend
 import { addScaleBar } from './scaleBar' // bottom-right µm scale bar, every image (spatial or plain)
 
@@ -400,7 +400,8 @@ export async function init(
 		// viewport-scoped annotation fetch in buildVector().
 		if (needCellPolys && opts.showCellTypes && !Array.isArray(meta.cellTypes)) {
 			try {
-				const r = await dofetch3(
+				// uncached, so a transient error is retried on the next render
+				const r = await dofetch2(
 					`wsitiles/annotations?${sq}&file=${encodeURIComponent(opts.spatialData!)}&types=1&v=${
 						meta.spatialVersion || 0
 					}`
