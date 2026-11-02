@@ -3,6 +3,7 @@ import * as d3s from 'd3-selection'
 import {
 	getSelectedSampleTypesByTerms,
 	mayGetSampleTypeLabel,
+	mayRenderSampleTypeRow,
 	renderSampleTypesByTermsSelect
 } from '../sampleTypeSelect'
 
@@ -131,6 +132,37 @@ tape('getSelectedSampleTypesByTerms(): handles impossible combinations', test =>
 		'Sample type not found. Please select a different sample type.',
 		'alerts on an impossible combination'
 	)
+
+	holder.remove()
+	test.end()
+})
+
+tape('mayRenderSampleTypeRow(): renders only when there is a choice', test => {
+	const holder: any = d3s.select('body').append('div')
+	const config = {
+		...termdbConfig,
+		sampleTypes: { 2: { name: 'Tumor', plural_name: 'Tumors' }, 3: { name: 'Normal', plural_name: 'Normals' } }
+	}
+
+	test.equal(mayRenderSampleTypeRow(holder, undefined, config), undefined, 'no query: nothing to choose')
+	test.equal(
+		mayRenderSampleTypeRow(holder, { sampleTypes: [2] }, config),
+		undefined,
+		'one sample type: nothing to choose'
+	)
+	test.equal(
+		mayRenderSampleTypeRow(holder, { sampleTypes: [2], sampleTypesByTerms }, config),
+		undefined,
+		'one sample type: no by-terms dropdowns either'
+	)
+	test.equal(holder.selectAll('*').size(), 0, 'renders nothing without a choice')
+
+	test.ok(mayRenderSampleTypeRow(holder, { sampleTypes: [2, 3] }, config), 'returns a select for two sample types')
+	test.equal(holder.selectAll('input[type=checkbox]').size(), 2, 'renders a checkbox per sample type')
+
+	const termSelects: any = mayRenderSampleTypeRow(holder, { sampleTypes: [2, 3], sampleTypesByTerms }, config)
+	test.deepEqual(Object.keys(termSelects), Object.keys(sampleTypesByTerms), 'prefers the by-terms dropdowns')
+	test.equal(holder.selectAll('input[type=checkbox]').size(), 0, 'clears the previous select')
 
 	holder.remove()
 	test.end()

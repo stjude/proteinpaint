@@ -75,7 +75,6 @@ tape('selectGene() should label a selected sample-type subset', async test => {
 			}
 		}
 	} as any
-	handler.querySampleTypes = [1, 2]
 	handler.sampleTypeSelect = [
 		{ property: key => (key == 'checked' ? false : 1) },
 		{ property: key => (key == 'checked' ? true : 2) }

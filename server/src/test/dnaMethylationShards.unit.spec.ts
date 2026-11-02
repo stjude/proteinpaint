@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from '../serverconfig.js'
 import { validate_query_dnaMethylation, readsCpgShard } from '../mds3.init.js'
+import { addNonDictionaryQueries } from '../routes/termdb.config.ts'
 
 /*
 CpG shards (dnaMethylation.cpgByChr) on a dataset whose terms are served from an element matrix.
@@ -15,6 +16,9 @@ Two contracts, both silent when broken:
 
 Init is run against the TermdbTest fixtures: dnaMeth.h5 holds only chr17 CpGs, so a directory
 linking it as chr17.h5 is a one-shard build. Sample ids are not checked here, so every name maps.
+
+The sample types offered to the client's sample type selector are those of the samples a term
+can be read for; a sample with no sample type is skipped rather than offered as null.
 */
 
 const tdir = 'files/hg38/TermdbTest'
@@ -24,6 +28,7 @@ function getDs(cpgByChr: string) {
 	return {
 		label: 'TermdbTest',
 		cohort: { termdb: { q: { sampleName2id: () => 1 } } },
+		sampleId2Type: new Map([[1, 2]]),
 		queries: {
 			dnaMethylation: {
 				cpgByChr,
@@ -84,5 +89,30 @@ tape('validate_query_dnaMethylation() - no matching shard falls back to element 
 		t.equal(q.unit, 'Average M-value', `${label}: unit taken from the element entry`)
 		t.equal(readsCpgShard(q, term('region')), false, `${label}: region term reads the element matrix`)
 	}
+	t.end()
+})
+
+tape('validate_query_dnaMethylation() - sample types of the term samples are offered to the client', async t => {
+	const ds = getDs(`${tdir}/__noSuchDir/{chr}.h5`)
+	const name2id = new Map()
+	ds.cohort.termdb.q.sampleName2id = sn => {
+		if (!name2id.has(sn)) name2id.set(sn, name2id.size + 1)
+		return name2id.get(sn)
+	}
+	// sample 1 is a type 3, sample 2 has no type, every other sample is a type 2
+	ds.sampleId2Type = { get: id => (id == 1 ? 3 : id == 2 ? undefined : 2) }
+	ds.cohort.termdb.sampleTypesByTerms = { 'samples.event': { Baseline: [2], Relapse: [3], Remission: [5] } }
+	await validate_query_dnaMethylation(ds, {})
+	const q = ds.queries.dnaMethylation
+	t.deepEqual([...q.sampleTypes].sort(), [2, 3], 'one entry per sample type, the untyped sample skipped')
+	t.deepEqual(
+		q.sampleTypesByTerms,
+		{ 'samples.event': { Baseline: [2], Relapse: [3] } },
+		'by-terms values limited to the offered sample types'
+	)
+	const c: any = {}
+	addNonDictionaryQueries(c, ds, {})
+	t.deepEqual(c.queries.dnaMethylation.sampleTypes, q.sampleTypes, 'termdb config exposes the sample types')
+	t.deepEqual(c.queries.dnaMethylation.sampleTypesByTerms, q.sampleTypesByTerms, 'and the by-terms values')
 	t.end()
 })

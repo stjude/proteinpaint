@@ -54,7 +54,13 @@ import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGene
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_swimmer } from '#routes/termdb.swimmer.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
-import { dtTermTypes, getGvQueryRegion, getGvQueryKey, matchesGvQueryEntry } from '#shared/terms.js'
+import {
+	dtTermTypes,
+	getGvQueryRegion,
+	getGvQueryKey,
+	matchesGvQueryEntry,
+	setQuerySampleTypes
+} from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { isNumeric } from '#shared/helpers.js'
 import { validate_query_junction } from './j2/validate.ts'
@@ -2179,6 +2185,16 @@ export async function validate_query_dnaMethylation(ds, genome) {
 			}
 			console.log(`${ds.label}: dnaMethylation ${elementClass} HDF5 file validated. Samples:`, samples.length)
 		}
+		/* sample types a term can be read for, offered by the client's sample type selector as
+		geneExpression does: .file's samples when .file serves terms, otherwise every element
+		matrix's, since a term opened from a differential methylation hit reads its own element
+		class, and a region term read from a CpG shard is still limited to its element matrix's
+		samples. Sample names unknown to the dataset are skipped, as the element term getter
+		skips them. */
+		const termSampleIds = q.file
+			? q.samples
+			: dmEntries.flatMap(([, qe]) => qe.allSampleNames.map(sn => ds.cohort.termdb.q.sampleName2id(sn)))
+		setQuerySampleTypes(q, termSampleIds, ds)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`
 	}
