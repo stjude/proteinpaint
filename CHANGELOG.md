@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.225.0
 
 Features:
 - Read bcf files in the server process, instead of with bcftools, which the server no longer requires
