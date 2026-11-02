@@ -1,6 +1,5 @@
 import { Menu, addGeneSearchbox, sayerror, mayRenderSampleTypeRow, getTermSampleTypes } from '#dom'
-import { DNA_METHYLATION } from '#types'
-import { getDNAMethUnit, getDNAMethTermName } from '#tw/dnaMethylation'
+import { makeDNAMethRegionTerm } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 
 /** Coordinate note: both the genome browser and the HDF5 beta file use 0-based
@@ -117,29 +116,9 @@ export class SearchHandler {
 	}
 
 	makeTerm(opts) {
-		const { chr, start, stop } = opts
-		if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('invalid coordinate')
-		const unit = getDNAMethUnit('region', this.app.vocabApi)
-
 		const termSampleTypes = getTermSampleTypes(this.sampleTypeSelect, this.query, this.app.vocabApi.termdbConfig)
 		if (!termSampleTypes) return
-		const term: any = {
-			chr,
-			start,
-			stop,
-			type: DNA_METHYLATION,
-			unit,
-			genomicFeatureType: 'region',
-			sampleTypes: termSampleTypes.sampleTypes
-		}
-		/* term.id stays the region, which is what the server queries the matrix with; the sample
-		types go in the name instead, so that the same region read for two sample types is told
-		apart wherever a plot labels a term by its name (matrix rows, legends, axes) */
-		term.name = getDNAMethTermName(term)
-		if (termSampleTypes.sampleTypeLabel) term.name += ` (${termSampleTypes.sampleTypeLabel})`
-		// kept for the server, which shortens its samples label when the term names its sample types
-		term.sampleTypeLabel = termSampleTypes.sampleTypeLabel
-		return term
+		return makeDNAMethRegionTerm(opts, this.app.vocabApi, termSampleTypes)
 	}
 
 	get query() {

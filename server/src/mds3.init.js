@@ -2226,29 +2226,9 @@ export async function validate_query_dnaMethylation(ds, genome) {
 
 	// HDF5 validation successful, set up the getter function
 	q.get = async param => {
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
-		if (limitSamples?.size == 0) {
-			// Got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
-		}
-
-		// Set up sample IDs and labels
-		const bySampleId = {}
-		const samples = q.samples || []
-		if (limitSamples) {
-			for (const sid of limitSamples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
-		} else {
-			// Use all samples with methylation data
-			for (const sid of samples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
-		}
-
-		// Initialize data structure
 		const term2sample2value = new Map()
 		const byTermId = {}
+		const bySampleId = {}
 
 		// Get methylation term
 		const dnaMethylTws = param.terms.filter(tw => tw.term.type == TermTypes.DNA_METHYLATION)
@@ -2257,10 +2237,20 @@ export async function validate_query_dnaMethylation(ds, genome) {
 			return { term2sample2value, byTermId }
 		}
 
-		// Query methylation values
-		// TODO: python script should query all samples by default
-		const sampleNames = Object.values(bySampleId).map(s => s.label)
+		// the samples each term reads, after the request's sample filter and the term's sample types
+		const limitSamples = getTermSampleLimiter(param, q.samples, ds)
+		let anySample = false
 		for (const tw of dnaMethylTws) {
+			const termSamples = await limitSamples(tw.term)
+			// all samples with methylation data when nothing limits them
+			const sampleIds = termSamples ? [...termSamples] : q.samples
+			if (!sampleIds.length) continue
+			anySample = true
+			const sampleNames = sampleIds.map(sid => ds.cohort.termdb.q.id2sampleName(sid))
+			for (const [i, sid] of sampleIds.entries()) bySampleId[sid] = { label: sampleNames[i] }
+
+			// Query methylation values
+			// TODO: python script should query all samples by default
 			const input = { h: q.file, s: sampleNames.join(','), q: tw.term.id }
 			const dnaMethylData = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input)))
 			if (!Array.isArray(dnaMethylData)) throw new Error('methylation data has unexpected format')
@@ -2293,7 +2283,6 @@ export async function validate_query_dnaMethylation(ds, genome) {
 			for (const [i, sampleName] of sampleNames.entries()) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 				if (!sampleId) continue
-				if (limitSamples && !limitSamples.has(sampleId)) continue
 				const values = sampleidx2values.get(i)
 				if (!values?.length) continue // skip samples with no beta values
 				if (useM) {
@@ -2310,9 +2299,28 @@ export async function validate_query_dnaMethylation(ds, genome) {
 			}
 		}
 
+		// Got 0 sample after filtering, must still return expected structure with no data
+		if (!anySample) return { term2sample2value, byTermId, bySampleId }
 		if (term2sample2value.size == 0) throw 'No data available for the input'
 
 		return { term2sample2value, byTermId, bySampleId }
+	}
+}
+
+/* Returns async term => the samples, of allSamples, that one term reads; undefined when nothing
+limits them. A term that chose its own sample types in the term picker reads only those: the
+request's sample types are the union over all its terms (see getSampleData() in termdb.matrix.ts),
+and a getter such as clustering's is handed every term at once, so without this a tumor-only row
+would read normal samples as well. One sample filter per distinct sample type selection. */
+function getTermSampleLimiter(param, allSamples, ds) {
+	const byTypes = new Map()
+	return async term => {
+		const key = JSON.stringify(term.sampleTypes ?? null)
+		if (!byTypes.has(key)) {
+			const termParam = term.sampleTypes ? { ...param, sampleTypes: term.sampleTypes } : param
+			byTypes.set(key, await mayLimitSamples(termParam, allSamples, ds))
+		}
+		return byTypes.get(key)
 	}
 }
 
@@ -2422,22 +2430,20 @@ function makeElementMethylationGetter(q, nominated, ds) {
 		const bySampleId = {}
 		const tws = param.terms.filter(tw => tw.term.type == TermTypes.DNA_METHYLATION)
 
-		// the names to query in each matrix this request reads, after the request's sample filter
-		const namesByEntry = new Map()
+		/* the names each term queries in its matrix, after the request's sample filter and the
+		term's own sample types (see getTermSampleLimiter()) */
+		const limitersByEntry = new Map()
 		for (const tw of tws) {
 			const entry = resolveElementEntryForTerm(q, tw.term, nominated)
-			if (!namesByEntry.has(entry)) {
-				const { ids, names } = samplesOf(entry)
-				const limitSamples = await mayLimitSamples(param, ids, ds)
-				const kept = []
-				for (const [i, sid] of ids.entries()) {
-					if (limitSamples && !limitSamples.has(sid)) continue
-					bySampleId[sid] = { label: names[i] }
-					kept.push(names[i])
-				}
-				namesByEntry.set(entry, kept)
+			const { ids, names } = samplesOf(entry)
+			if (!limitersByEntry.has(entry)) limitersByEntry.set(entry, getTermSampleLimiter(param, ids, ds))
+			const limitSamples = await limitersByEntry.get(entry)(tw.term)
+			const queryNames = []
+			for (const [i, sid] of ids.entries()) {
+				if (limitSamples && !limitSamples.has(sid)) continue
+				bySampleId[sid] = { label: names[i] }
+				queryNames.push(names[i])
 			}
-			const queryNames = namesByEntry.get(entry)
 			if (!queryNames.length) continue
 
 			/* A region on a chromosome that has a CpG shard is read from the CpGs themselves. The

@@ -43,6 +43,33 @@ function makeDNAMethTermId(term: RawDnaMethylationTerm) {
 	return `${term.chr}:${term.start}-${term.stop}`
 }
 
+/** A region term from a coordinate picker (the term search handler and the mass omnisearch), given the
+ * sample types chosen there, see getTermSampleTypes(). term.id stays the region, which is what the server
+ * queries the matrix with, so the chosen sample types also go in the name: that is what tells apart the
+ * same region read for two sample types wherever a plot labels a term by name (matrix rows, legends, axes). */
+export function makeDNAMethRegionTerm(
+	coord: { chr: string; start: number; stop: number },
+	vocabApi: VocabApi,
+	termSampleTypes: { sampleTypes?: number[]; sampleTypeLabel?: string }
+) {
+	const { chr, start, stop } = coord
+	if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('invalid coordinate')
+	const term: any = {
+		chr,
+		start,
+		stop,
+		type: DNA_METHYLATION,
+		unit: getDNAMethUnit('region', vocabApi),
+		genomicFeatureType: 'region',
+		sampleTypes: termSampleTypes.sampleTypes,
+		// kept for the server, which shortens its samples label when the term names its sample types
+		sampleTypeLabel: termSampleTypes.sampleTypeLabel
+	}
+	term.name = getDNAMethTermName(term)
+	if (term.sampleTypeLabel) term.name += ` (${term.sampleTypeLabel})`
+	return term
+}
+
 /** Function standardizes DNA methylation units */
 export function getDNAMethUnit(genomicFeatureType: string, vocabApi: VocabApi) {
 	switch (genomicFeatureType) {
