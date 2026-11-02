@@ -85,7 +85,7 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleTypes,
 		} else if (item.tvs.term.type == TermTypes.SSGSEA) {
 			f = await get_ssGSEA(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.DNA_METHYLATION) {
-			f = await get_dnaMethylation(item.tvs, CTEname_i, ds)
+			f = await get_dnaMethylation(item.tvs, CTEname_i, ds, mapParent2Children, sampleTypes)
 		} else if (item.tvs.term.type == TermTypes.JUNCTION) {
 			f = await get_junction(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.PSEUDOBULK) {
@@ -498,12 +498,13 @@ async function get_ssGSEA(tvs, CTEname, ds) {
 	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
-async function get_dnaMethylation(tvs, CTEname, ds) {
+async function get_dnaMethylation(tvs, CTEname, ds, mapParent2Children, sampleTypes) {
 	const q = ds.queries?.dnaMethylation
 	// q.get exists only when the dataset has a dnaMethylation term getter configured (CpG-level .file
 	// or an element-matrix-backed fallback). If missing, the term type is not supported (or the request is stale)
 	if (!q?.get) throw 'dnaMethylation not supported'
-	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	// the getter reads the sample types chosen for the term itself, see getTermSampleLimiter()
+	const data = await q.get({ terms: [{ $id, term: tvs.term }], mapParent2Children, sampleTypes }, ds)
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 async function get_junction(tvs, CTEname, ds) {

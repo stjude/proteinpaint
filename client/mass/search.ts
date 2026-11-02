@@ -4,15 +4,15 @@
 // which owns the DOM (self.dom), app api (self.app), and options (self.opts).
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
-import { type OmnisearchResult, DNA_METHYLATION } from '#types'
+import { type OmnisearchResult } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 import { fillTermWrapper } from '#termsetting'
 import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
-import { getDNAMethUnit } from '#tw/dnaMethylation'
+import { makeDNAMethRegionTerm } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { getSampleFilter } from './groups.js'
-import { escapeHtml } from '#dom'
+import { escapeHtml, mayRenderSampleTypeRow, getTermSampleTypes } from '#dom'
 
 // Minimum prompt length per search family. Gene search runs from a single character; dictionary and
 // sample search require 3 (they match more loosely and, for samples, scan every sample name). Coordinate
@@ -22,25 +22,11 @@ const MIN_PROMPT_LENGTH_FOR_GENE_SEARCH = 1
 const MIN_PROMPT_LENGTH_FOR_OTHER_SEARCH = 3
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 20
 
-/** Build a region-based dnaMethylation term for the given coordinates. */
-function makeMethylationRegionTerm(opts: { chr: string; start: number; stop: number }, vocabApi: any) {
-	const { chr, start, stop } = opts
-	if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('invalid coordinate')
-	return {
-		chr,
-		start,
-		stop,
-		type: DNA_METHYLATION,
-		unit: getDNAMethUnit('region', vocabApi),
-		genomicFeatureType: 'region'
-	}
-}
-
 /**
  * Embed a genome browser of a gene/region into `holder` with a "Submit Region" button. On submit,
- * builds a region-based dnaMethylation term from the region the user navigated to and passes it to
- * `callback`. Returns the Block instance. Used by the mass omnisearch to open a methylation region
- * picker for a gene. (The dnaMethylation search handler keeps its own equivalent inline logic.)
+ * builds a region-based dnaMethylation term from the region the user navigated to and the sample types
+ * chosen above the browser, as the dnaMethylation search handler does, and passes it to `callback`.
+ * Returns the Block instance. Used by the mass omnisearch to open a methylation region picker for a gene.
  */
 async function embedMethylationRegionPicker(opts: {
 	holder: any
@@ -57,6 +43,8 @@ async function embedMethylationRegionPicker(opts: {
 
 	holder.selectAll('*').remove()
 	holder.style('display', 'block')
+	const query = vocabApi.termdbConfig?.queries.dnaMethylation
+	const sampleTypeSelect = mayRenderSampleTypeRow(holder.append('div'), query, vocabApi.termdbConfig)
 	holder.append('div').style('opacity', 0.6).text('Navigate genome browser to desired region')
 
 	const arg: any = {
@@ -85,8 +73,10 @@ async function embedMethylationRegionPicker(opts: {
 		.style('padding', '10px 15px')
 		.text('Submit Region')
 		.on('click', async () => {
+			const termSampleTypes = getTermSampleTypes(sampleTypeSelect, query, vocabApi.termdbConfig)
+			if (!termSampleTypes) return
 			const { chr, start, stop } = blockInstance.rglst[0]
-			await callback(makeMethylationRegionTerm({ chr, start, stop }, vocabApi))
+			await callback(makeDNAMethRegionTerm({ chr, start, stop }, vocabApi, termSampleTypes))
 		})
 
 	return blockInstance

@@ -1,5 +1,38 @@
 import type { SampleTypes } from '#types'
 import { getSelectedCheckboxValues, renderCheckboxSelect } from './checkboxSelect.ts'
+import { table2col } from './table2col.js'
+
+/** renders a "Sample Type" row holding the sample type checkboxes or the
+ * sample-types-by-terms dropdowns, for a query (e.g. queries.geneExpression or
+ * queries.dnaMethylation) that offers a choice of sample types. Returns the
+ * sample type select, undefined when there is nothing to choose. */
+export function mayRenderSampleTypeRow(holder: any, query: any, termdbConfig: any) {
+	holder.selectAll('*').remove()
+	const { sampleTypes, sampleTypesByTerms } = query || {}
+	// sampleTypesByTerms is built from sampleTypes, so fewer than two leaves nothing to choose
+	if (!Array.isArray(sampleTypes) || sampleTypes.length < 2) return
+	const table = table2col({ holder, margin: '0px 0px 15px 0px' })
+	const [td1, td2] = table.addRow()
+	td1.text('Sample Type')
+	td2.style('padding-left', '10px')
+	if (sampleTypesByTerms) return renderSampleTypesByTermsSelect(td2, sampleTypesByTerms, termdbConfig)
+	return renderSampleTypeSelect(td2, sampleTypes, termdbConfig)
+}
+
+/** the sample types and label to set on a term, from the select mayRenderSampleTypeRow()
+ * rendered for the query. undefined when the select is rendered but nothing in it is
+ * selectable, which getSelectedSampleTypes() has already alerted. */
+export function getTermSampleTypes(sampleTypeSelect: any, query: any, termdbConfig: any) {
+	const opts = {
+		sampleTypeSelect,
+		querySampleTypes: query?.sampleTypes,
+		// no select means a single sample type and no dropdowns, so that type is assigned as is
+		querySampleTypesByTerms: sampleTypeSelect ? query?.sampleTypesByTerms : undefined
+	}
+	const sampleTypes = getSelectedSampleTypes(opts)
+	if (sampleTypeSelect && !sampleTypes?.length) return
+	return { sampleTypes, sampleTypeLabel: mayGetSampleTypeLabel({ ...opts, termdbConfig }) }
+}
 
 // renders sample type checkboxes, all checked by default. At least one sample
 // type always stays checked: a click that would uncheck the last checked box is cancelled

@@ -19,7 +19,7 @@ import serverconfig from '#src/serverconfig.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getData, id2sampleRef, maySetMapParent2Children } from '#src/termdb.matrix.js'
-import { termType2label, numericTypes, dictionaryNumericTypes, getQuerySampleTypesByTerms } from '#shared/terms.js'
+import { termType2label, numericTypes, dictionaryNumericTypes, setQuerySampleTypes } from '#shared/terms.js'
 import { GENE_EXPRESSION, PROTEOME_ABUNDANCE } from '#types'
 import { formatElapsedTime } from '#shared/time.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
@@ -357,7 +357,6 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		const samples = await getH5samples(q.file)
 		if (!Array.isArray(samples)) throw new Error('samples not array')
 		if (!samples.length) throw 'HDF5 file has no samples, please check file.'
-		const sampleTypes = new Set()
 		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si === undefined) {
@@ -365,11 +364,8 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 				throw `unknown sample ${sn} from HDF5 ${q.file}`
 			}
 			q.samples.push(si)
-			const sampleType = ds.sampleId2Type.get(si)
-			sampleTypes.add(sampleType)
 		}
-		q.sampleTypes = [...sampleTypes]
-		q.sampleTypesByTerms = getQuerySampleTypesByTerms(ds.cohort.termdb.sampleTypesByTerms, q.sampleTypes)
+		setQuerySampleTypes(q, q.samples, ds)
 		console.log(`${ds.label}: geneExpression HDF5 file validated. Samples:`, q.samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate geneExpression HDF5 file: ${error}`

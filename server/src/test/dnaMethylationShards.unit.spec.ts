@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from '../serverconfig.js'
 import { validate_query_dnaMethylation, readsCpgShard } from '../mds3.init.js'
+import { addNonDictionaryQueries } from '../routes/termdb.config.ts'
 
 /*
 CpG shards (dnaMethylation.cpgByChr) on a dataset whose terms are served from an element matrix.
@@ -15,6 +16,10 @@ Two contracts, both silent when broken:
 
 Init is run against the TermdbTest fixtures: dnaMeth.h5 holds only chr17 CpGs, so a directory
 linking it as chr17.h5 is a one-shard build. Sample ids are not checked here, so every name maps.
+
+The sample types offered to the client's sample type selector are those of the samples a term
+can be read for; a sample with no sample type is skipped rather than offered as null. Both term
+getters, CpG .file and element matrix, read each term for its own sample types.
 */
 
 const tdir = 'files/hg38/TermdbTest'
@@ -24,6 +29,7 @@ function getDs(cpgByChr: string) {
 	return {
 		label: 'TermdbTest',
 		cohort: { termdb: { q: { sampleName2id: () => 1 } } },
+		sampleId2Type: new Map([[1, 2]]),
 		queries: {
 			dnaMethylation: {
 				cpgByChr,
@@ -83,6 +89,64 @@ tape('validate_query_dnaMethylation() - no matching shard falls back to element 
 		t.equal(typeof q.get, 'function', `${label}: element-backed term getter still set`)
 		t.equal(q.unit, 'Average M-value', `${label}: unit taken from the element entry`)
 		t.equal(readsCpgShard(q, term('region')), false, `${label}: region term reads the element matrix`)
+	}
+	t.end()
+})
+
+tape('validate_query_dnaMethylation() - sample types of the term samples are offered to the client', async t => {
+	const ds = getDs(`${tdir}/__noSuchDir/{chr}.h5`)
+	const name2id = new Map()
+	ds.cohort.termdb.q.sampleName2id = sn => {
+		if (!name2id.has(sn)) name2id.set(sn, name2id.size + 1)
+		return name2id.get(sn)
+	}
+	// sample 1 is a type 3, sample 2 has no type, every other sample is a type 2
+	ds.sampleId2Type = { get: id => (id == 1 ? 3 : id == 2 ? undefined : 2) }
+	ds.cohort.termdb.sampleTypesByTerms = { 'samples.event': { Baseline: [2], Relapse: [3], Remission: [5] } }
+	await validate_query_dnaMethylation(ds, {})
+	const q = ds.queries.dnaMethylation
+	t.deepEqual([...q.sampleTypes].sort(), [2, 3], 'one entry per sample type, the untyped sample skipped')
+	t.deepEqual(
+		q.sampleTypesByTerms,
+		{ 'samples.event': { Baseline: [2], Relapse: [3] } },
+		'by-terms values limited to the offered sample types'
+	)
+	const c: any = {}
+	addNonDictionaryQueries(c, ds, {})
+	t.deepEqual(c.queries.dnaMethylation.sampleTypes, q.sampleTypes, 'termdb config exposes the sample types')
+	t.deepEqual(c.queries.dnaMethylation.sampleTypesByTerms, q.sampleTypesByTerms, 'and the by-terms values')
+	t.end()
+})
+
+tape('dnaMethylation term getters read each term for its own sample types', async t => {
+	// the fixture sample names are integer ids; odd ones are made a type 2, even ones a type 3
+	const typed = (ds: any) => {
+		ds.cohort.termdb.q.sampleName2id = sn => Number(sn)
+		ds.cohort.termdb.q.id2sampleName = id => String(id)
+		ds.sampleId2Type = new Map()
+		return ds
+	}
+	const region = { chr: 'chr17', start: 7669000, stop: 7680000 }
+	const tw = ($id: string, sampleTypes?: number[]) => ({
+		$id,
+		term: { type: 'dnaMethylation', id: 'chr17:7669000-7680000', genomicFeatureType: 'region', ...region, sampleTypes }
+	})
+	const elementDs = typed(getDs(`${tdir}/__noSuchDir/{chr}.h5`))
+	const fileDs = typed(getDs(`${tdir}/__noSuchDir/{chr}.h5`))
+	fileDs.queries.dnaMethylation = { file: `${tdir}/dnaMeth.h5`, unit: 'Average Beta Value' }
+	for (const [label, ds] of [
+		['element getter', elementDs],
+		['CpG file getter', fileDs]
+	]) {
+		await validate_query_dnaMethylation(ds, {})
+		const q = ds.queries.dnaMethylation
+		for (const id of q.samples || q.elements.promoter.allSampleNames.map(Number))
+			ds.sampleId2Type.set(id, id % 2 ? 2 : 3)
+		const data = await q.get({ terms: [tw('odd', [2]), tw('even', [3]), tw('all')] }, ds)
+		const ids = $id => Object.keys(data.term2sample2value.get($id) || {}).map(Number)
+		t.ok(ids('odd').length && ids('odd').every(id => id % 2), `${label}: a type 2 term reads only type 2 samples`)
+		t.ok(ids('even').length && ids('even').every(id => !(id % 2)), `${label}: a type 3 term reads only type 3 samples`)
+		t.equal(ids('all').length, ids('odd').length + ids('even').length, `${label}: a term without its own reads both`)
 	}
 	t.end()
 })

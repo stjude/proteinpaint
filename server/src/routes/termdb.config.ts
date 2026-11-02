@@ -415,7 +415,8 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	if (q.dnaMethylation) {
 		// .file (CpG-level) and .promoter are independent; a WGBS dataset may be
 		// promoter-only, in which case there is no CpG-level unit to advertise
-		q2.dnaMethylation = {}
+		q2.dnaMethylation = { sampleTypes: q.dnaMethylation.sampleTypes }
+		if (q.dnaMethylation.sampleTypesByTerms) q2.dnaMethylation.sampleTypesByTerms = q.dnaMethylation.sampleTypesByTerms
 		/* Not gated on .file any more: validate_query_dnaMethylation() also sets .unit from the
 		element matrix that serves terms when there is no CpG file, and the client needs it to
 		label a region term with the unit it will actually receive. */

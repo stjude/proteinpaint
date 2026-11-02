@@ -787,6 +787,19 @@ export function getDefaultSampleTypes(ds: any) {
 	return sampleTypes
 }
 
+/* set q.sampleTypes[] and q.sampleTypesByTerms{} of a query (e.g. queries.geneExpression) from
+the termdb sample ids its data holds, for the client's sample type selector. A sample with no
+sample type is skipped, since the selector has nothing to offer for it. */
+export function setQuerySampleTypes(q: any, sampleIds: Iterable<number>, ds: any) {
+	const sampleTypes = new Set<number>()
+	for (const id of sampleIds) {
+		const sampleType = ds.sampleId2Type.get(id)
+		if (sampleType != undefined) sampleTypes.add(sampleType)
+	}
+	q.sampleTypes = [...sampleTypes]
+	q.sampleTypesByTerms = getQuerySampleTypesByTerms(ds.cohort.termdb.sampleTypesByTerms, q.sampleTypes)
+}
+
 // filter sampleTypesByTerms for those entries with query sample types
 export function getQuerySampleTypesByTerms(sampleTypesByTerms: SampleTypesByTerms, querySampleTypes: number[]) {
 	if (!sampleTypesByTerms) return

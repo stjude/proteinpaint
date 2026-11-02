@@ -1617,6 +1617,10 @@ type Mds3Queries = {
 		cpgByChr?: string
 		/** Chromosomes with a built shard, filled at startup from the files matching .cpgByChr. */
 		cpgChroms?: Set<string>
+		/** unique list of sample types present in the methylation matrices, set at init */
+		sampleTypes?: any[]
+		/** termdb sampleTypesByTerms{} filtered for those entries with sample types present in .sampleTypes[] */
+		sampleTypesByTerms?: SampleTypesByTerms
 		/** dna methylation unit (e.g. 'Average Beta Value'); required with .file.
 		 * Also set at init from the element matrix that serves terms when there is no .file,
 		 * so the client can label a region term with the unit it will actually receive. */

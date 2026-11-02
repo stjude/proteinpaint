@@ -185,6 +185,40 @@ tape('junction numeric filter', async function (test) {
 	test.end()
 })
 
+tape('dnaMethylation numeric filter hands the term and the request sample types to the getter', async function (test) {
+	const params = []
+	const dnaMethylation = tdb.ds.queries.dnaMethylation
+	tdb.ds.queries.dnaMethylation = {
+		get: async param => {
+			params.push(param)
+			return { term2sample2value: new Map([['xx', { 1: 0.2, 2: 0.6 }]]) }
+		}
+	}
+	const filterWith = async (term, sampleTypes) =>
+		await getFilterCTEs(
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [{ type: 'tvs', tvs: { term, ranges: [{ start: 0.5, startinclusive: true, stopunbounded: true }] } }]
+			},
+			tdb.ds,
+			true,
+			sampleTypes
+		)
+	const region = { type: 'dnaMethylation', chr: 'chr17', start: 100, stop: 200, genomicFeatureType: 'region' }
+
+	// the getter itself limits a term to its own sample types, see getTermSampleLimiter()
+	const term = { ...region, sampleTypes: [3] }
+	const filter = await filterWith(term, [2, 3])
+	test.deepEqual(filter.filters.values, ['2'], 'selects samples whose methylation is in range')
+	test.deepEqual(params[0].terms[0].term, term, 'passes the term with its own sample types')
+	test.deepEqual(params[0].sampleTypes, [2, 3], "passes the request's sample types")
+	test.equal(params[0].mapParent2Children, true, 'passes mapParent2Children')
+	tdb.ds.queries.dnaMethylation = dnaMethylation
+	test.end()
+})
+
 tape('pseudobulk numeric filter', async function (test) {
 	let requestedTerms
 	let requestedDs

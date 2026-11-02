@@ -1,6 +1,5 @@
-import { Menu, addGeneSearchbox, sayerror } from '#dom'
-import { DNA_METHYLATION } from '#types'
-import { getDNAMethUnit } from '#tw/dnaMethylation'
+import { Menu, addGeneSearchbox, sayerror, mayRenderSampleTypeRow, getTermSampleTypes } from '#dom'
+import { makeDNAMethRegionTerm } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 
 /** Coordinate note: both the genome browser and the HDF5 beta file use 0-based
@@ -28,12 +27,14 @@ export class SearchHandler {
 	app: any
 	dom: any
 	blockInstance: any
+	sampleTypeSelect?: any
 	init(opts) {
 		this.opts = opts
 		this.callback = opts.callback
 		this.app = opts.app
 		const holder = opts.holder.append('div').style('margin', '10px 0px')
 		this.dom = {}
+		this.sampleTypeSelect = mayRenderSampleTypeRow(holder.append('div'), this.query, this.app.vocabApi.termdbConfig)
 		this.dom.errDiv = holder.append('div').style('margin', '5px 0px').style('display', 'none')
 		this.dom.geneSearchDiv = holder.append('div')
 		this.dom.blockDiv = holder.append('div').style('display', 'none').style('margin', '15px 4px')
@@ -94,7 +95,7 @@ export class SearchHandler {
 				.on('click', async () => {
 					const { chr, start, stop } = this.blockInstance.rglst[0]
 					const term = this.makeTerm({ chr, start, stop })
-					await this.callback(term)
+					if (term) await this.callback(term)
 				})
 		} else if (geneSearch.chr && Number.isInteger(geneSearch.start) && Number.isInteger(geneSearch.stop)) {
 			// coordinate input
@@ -108,25 +109,19 @@ export class SearchHandler {
 				stop = start + 1
 			}
 			const term = this.makeTerm({ chr, start, stop })
-			await this.callback(term)
+			if (term) await this.callback(term)
 		} else {
 			throw new Error('invalid gene search input')
 		}
 	}
 
 	makeTerm(opts) {
-		const { chr, start, stop } = opts
-		if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('invalid coordinate')
-		const unit = getDNAMethUnit('region', this.app.vocabApi)
+		const termSampleTypes = getTermSampleTypes(this.sampleTypeSelect, this.query, this.app.vocabApi.termdbConfig)
+		if (!termSampleTypes) return
+		return makeDNAMethRegionTerm(opts, this.app.vocabApi, termSampleTypes)
+	}
 
-		const term = {
-			chr,
-			start,
-			stop,
-			type: DNA_METHYLATION,
-			unit,
-			genomicFeatureType: 'region'
-		}
-		return term
+	get query() {
+		return this.app.vocabApi.termdbConfig?.queries.dnaMethylation
 	}
 }
