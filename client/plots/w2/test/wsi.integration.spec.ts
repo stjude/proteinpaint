@@ -1,5 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
+import { clearServerDataCache } from '../../../common/dofetch.js'
 
 /* Tests
     spatial OME-TIFF image renders the map with overlays and the burger menu
@@ -729,6 +730,198 @@ tape('fit moveend suppressed during initial build; subsequent zoom still trigger
 			test.fail(`fit moveend suppression test error: ${e}`)
 		} finally {
 			window.fetch = nativeFetch // never leave the delaying wrapper installed for later specs
+		}
+		test.end()
+	}
+})
+
+tape('missing meta cellTypes: dense start recovers the vocabulary; raster/vector switches reuse it', test => {
+	test.timeoutAfter(90000) // raster tiles + a vector build per zoom phase spawn python server-side
+
+	// meta.cellTypes is optional (the h5ad scan can fail). On a DENSE initial
+	// view the raster overlay must decide its fills BEFORE buildVector()'s
+	// viewport-scoped annotations fetch could ever discover the types, so
+	// wsi.direct.ts recovers the global vocabulary with one extra
+	// annotations?types=1 request. Force that path by stripping cellTypes out
+	// of the real meta response, then walk raster -> vector -> raster:
+	// cellCountLimit 600 sits between the whole-slide count (the fixture's 791
+	// cells) and the max-zoom viewport's own count (~390 at the pinned 439px
+	// height and 0.2125 mpp), so zooming in reliably crosses into vector mode
+	// and zooming back out returns to raster, all inside ONE viewer.
+	const nativeFetch = window.fetch
+	const annotationsUrls: string[] = [] // every wsitiles/annotations request this viewer makes
+	let typesBody: any // the annotations?types=1 response body
+	window.fetch = function (...args: Parameters<typeof fetch>) {
+		const url = String(args[0] instanceof Request ? args[0].url : args[0])
+		if (url.includes('wsitiles/meta')) {
+			// serve the real meta minus cellTypes: the failed-scan shape
+			return nativeFetch.apply(window, args).then(async res => {
+				const body = await res.json()
+				delete body.cellTypes
+				return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+			})
+		}
+		if (url.includes('wsitiles/annotations')) {
+			annotationsUrls.push(url)
+			if (url.includes('types=1'))
+				return nativeFetch.apply(window, args).then(async res => {
+					typesBody = await res
+						.clone()
+						.json()
+						.catch(() => null)
+					return res
+				})
+		}
+		return nativeFetch.apply(window, args)
+	}
+	// the page-wide dofetch3 cache already holds this sample's FULL meta from
+	// the specs above — cleared so the stripped version is what this viewer gets
+	clearServerDataCache()
+	// overlay tiles load as <img>, not fetch(): the resource timing buffer is
+	// the only place their URLs (carrying ?colors=) can be read back from
+	performance.setResourceTimingBufferSize(1000)
+	performance.clearResourceTimings()
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' },
+					settings: {
+						wsi: {
+							geneExpression: 'PTPRC', // preset: skips the one-time seeding dispatch
+							showCellTypes: true, // the recovery only runs for the cell-type fills
+							showGeneExpression: false,
+							annotationLevel: 0,
+							cellCountLimit: 600, // whole-slide view (791 cells) is dense, the max-zoom view (~390) is not
+							viewerHeight: '439px' // pins the max-zoom count above; also keeps bbox URLs unique page-wide
+						}
+					}
+				}
+			]
+		},
+		wsi: {
+			callbacks: { 'postRender.test': runTests }
+		}
+	})
+
+	async function runTests(wsi) {
+		wsi.on('postRender.test', null) // run once
+		try {
+			const dom = wsi.Inner.dom
+			await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
+			const vectorLegend = () =>
+				dom.viewer.node().querySelector('div[data-testid="sjpp-wsi-typelegend"]') as HTMLElement | null
+			const rasterLegend = () =>
+				dom.viewer.node().querySelector('div[data-testid="sjpp-wsi-raster-typelegend"]') as HTMLElement | null
+
+			/** type -> swatch color off a legend box, 'rgb(r,g,b)' with no spaces */
+			const legendColors = (legend: Element, stripCount = false) => {
+				const colors: { [t: string]: string } = {}
+				for (const row of [...legend.children].slice(1)) {
+					// each row: swatch span + text span (vector rows suffix ' (count)')
+					const raw = row.lastChild?.textContent || ''
+					const name = stripCount ? raw.replace(/ \(\d+\)$/, '') : raw
+					colors[name] = ((row.firstChild as HTMLElement).style.background || '').replace(/\s/g, '')
+				}
+				return colors
+			}
+
+			/** click a zoom button until cond() holds, letting each moveend's updateMode settle */
+			async function zoomUntil(selector: string, cond: () => boolean, label: string) {
+				const [btn] = await waitForSelector(dom.viewer.node(), selector)
+				const [loading] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-loading"]')
+				for (let i = 0; i < 10; i++) {
+					if (cond()) return
+					;(btn as HTMLElement).click()
+					await new Promise(r => setTimeout(r, 400)) // OL animates the zoom; moveend (-> updateMode) fires after
+					await waitForCondition(() => (loading as HTMLElement).style.display === 'none', `${label}: loading settled`)
+				}
+				if (!cond()) throw new Error(`${label}: not reached within 10 zoom clicks`)
+			}
+
+			// ---- phase 1: dense start -> raster mode, fills from the RECOVERED vocabulary
+			const [legend1] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-wsi-raster-typelegend"]')
+			test.equal(vectorLegend(), null, 'no vector legend on the dense start')
+
+			// the one recovery request, and its answer
+			const recoveryUrls = annotationsUrls.filter(u => u.includes('types=1'))
+			test.equal(recoveryUrls.length, 1, 'exactly one annotations?types=1 recovery request')
+			test.ok(!recoveryUrls[0]?.includes('bbox='), 'the recovery request carries no bbox')
+			const recovered: string[] = Array.isArray(typesBody?.cellTypes) ? typesBody.cellTypes : []
+			test.ok(recovered.length >= 1, 'types=1 answered the type vocabulary')
+			test.deepEqual(
+				Object.keys(typesBody || {}),
+				['cellTypes'],
+				'types=1 returns ONLY the vocabulary, no per-cell annotations'
+			)
+
+			// the raster legend lists exactly the recovered types
+			const rasterColors = legendColors(legend1)
+			test.deepEqual(
+				Object.keys(rasterColors),
+				recovered,
+				'raster legend rows are exactly the recovered types, in order'
+			)
+
+			// the recovered colors reach the raster tile URLs
+			await waitForCondition(
+				() => performance.getEntriesByType('resource').some(e => e.name.includes('wsitiles/overlaytile')),
+				'an overlay tile loaded'
+			)
+			const tileUrl = performance
+				.getEntriesByType('resource')
+				.map(e => e.name)
+				.find(n => n.includes('wsitiles/overlaytile'))!
+			const urlColors = JSON.parse(decodeURIComponent(tileUrl.match(/colors=([^&]*)/)![1]))
+			test.deepEqual(Object.keys(urlColors).sort(), [...recovered].sort(), 'tile URL colors= keys the recovered types')
+			test.ok(
+				recovered.every(t => rasterColors[t] === `rgb(${urlColors[t]})`.replace(/\s/g, '')),
+				'raster legend swatches carry the same colors as the tile URLs'
+			)
+
+			// ---- phase 2: zoom in below cellCountLimit -> vector mode reuses the vocabulary
+			await zoomUntil('.ol-zoom-in', () => !!vectorLegend(), 'zoom-in to vector mode')
+			test.equal(rasterLegend()!.style.display, 'none', 'raster legend hidden in vector mode')
+			const vecColors = legendColors(vectorLegend()!, true)
+			const vecNames = Object.keys(vecColors)
+			test.ok(
+				vecNames.length >= 1 && vecNames.every(t => recovered.includes(t)),
+				'vector legend types all come from the recovered vocabulary'
+			)
+			test.ok(
+				vecNames.every(t => vecColors[t] === `rgb(${urlColors[t]})`.replace(/\s/g, '')),
+				"vector legend swatches keep the raster tiles' own colors"
+			)
+
+			// ---- phase 3: zoom back out -> raster again, still on the one recovery
+			await zoomUntil(
+				'.ol-zoom-out',
+				() => !vectorLegend() && rasterLegend()?.style.display === 'block',
+				'zoom-out back to raster mode'
+			)
+			test.pass('zoomed back out: vector legend torn down, raster legend restored')
+			test.equal(
+				annotationsUrls.filter(u => u.includes('types=1')).length,
+				1,
+				'no second recovery request across the mode switches'
+			)
+			test.ok(
+				annotationsUrls.some(u => u.includes('bbox=')),
+				'vector mode fetched its own viewport-scoped annotations'
+			)
+			test.ok(
+				annotationsUrls.every(u => u.includes('types=1') || u.includes('bbox=')),
+				'every per-cell annotations request was viewport-scoped: whole-sample annotations never fetched'
+			)
+
+			if (test['_ok']) wsi.Inner.app.destroy()
+		} catch (e) {
+			test.fail(`missing-cellTypes recovery test error: ${e}`)
+		} finally {
+			window.fetch = nativeFetch // never leave the stripping wrapper installed for later specs
+			clearServerDataCache() // nor the stripped meta cached page-wide
 		}
 		test.end()
 	}
