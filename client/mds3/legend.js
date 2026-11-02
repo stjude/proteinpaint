@@ -655,6 +655,7 @@ function update_mclass(tk) {
 			.append('div')
 			.style('display', 'inline-block')
 			.attr('class', 'sja_clb')
+			.attr('data-testid', 'sjpp-mds3tk-hidden-legenditemlabel')
 			.style('text-decoration', 'line-through')
 			.style('opacity', 0.7)
 			.text((c.count ? '(' + c.count + ') ' : '') + (Number.isInteger(c.k) ? dt2label[c.k] : mclass[c.k].label))

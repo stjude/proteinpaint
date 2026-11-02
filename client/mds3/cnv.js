@@ -93,12 +93,14 @@ function renderDensity(data, tk, block) {
 	 */
 	tk.cnv.g
 		.append('image')
+		.attr('data-testid', 'sjpp-cnv-density-gain')
 		.attr('width', block.width)
 		.attr('height', tk.cnv.density.barheight)
 		.attr('xlink:href', data.cnvDensity.gain.src)
 		.attr('data-testid', 'sjpp-mds3tk-cnvdensityimg')
 	tk.cnv.g
 		.append('image')
+		.attr('data-testid', 'sjpp-cnv-density-loss')
 		.attr('width', block.width)
 		.attr('height', tk.cnv.density.barheight)
 		.attr('xlink:href', data.cnvDensity.loss.src)
@@ -260,6 +262,7 @@ function plotOneSegment(c, y, rowheight, tk, block, sample) {
 		.append('rect')
 		.attr('x', x1)
 		.attr('y', y)
+		.attr('data-testid', 'sjpp-cnv-segment-' + c.class)
 		.attr('width', x2 - x1)
 		.attr('height', Math.max(rowheight, 1))
 		.attr('fill', Number.isFinite(c.value) ? tk.cnv.colorScale(c.value) : mclass[c.class].color)

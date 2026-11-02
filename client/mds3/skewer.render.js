@@ -121,6 +121,7 @@ export function skewer_make(tk, block) {
 		.attr('class', 'sja_skg')
 		.attr('extended', d => d.showmode)
 		.attr('data-testid', d => 'sjpp-mds3skewer-' + d.mlst.map(mItem => mItem.mname).join('-'))
+		.attr('mclasses', d => d.mlst.map(mItem => mItem.class).join('-'))
 		.each(function (d) {
 			d.skewer = this
 		})
