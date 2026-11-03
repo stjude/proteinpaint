@@ -227,10 +227,14 @@ export class Block {
 			}
 		} else if (arg.rglst) {
 			for (const r of arg.rglst) {
+				// keep given region boundaries (e.g. from a saved block state) if they enclose the view range,
+				// otherwise boundaries default to the view range, and the region cannot be zoomed out or panned
+				const hasBounds =
+					Number.isFinite(r.bstart) && Number.isFinite(r.bstop) && r.bstart <= r.start && r.bstop >= r.stop
 				this.rglst.push({
 					chr: r.chr,
-					bstart: r.start,
-					bstop: r.stop,
+					bstart: hasBounds ? r.bstart : r.start,
+					bstop: hasBounds ? r.bstop : r.stop,
 					start: r.start,
 					stop: r.stop,
 					reverse: r.reverse
