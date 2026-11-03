@@ -611,7 +611,7 @@ export class SunburstChart {
 				comparisonCounts.length == 2 &&
 				comparisonCounts.every(g => (g.data.rnaseqGeneCount || 0) > 0)
 			) {
-				const tw = getSamplelstTWFromFilters(comparison)
+				const tw = getSamplelstTWFromFilters(groups.slice(1))
 				this.dataRow(
 					list,
 					{ kind: 'data', key: 'differentialExpression', label: 'Differential Gene Expression Analysis', counts: [] },
