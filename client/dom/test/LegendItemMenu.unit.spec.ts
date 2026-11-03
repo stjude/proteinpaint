@@ -44,7 +44,9 @@ tape('Menu options', test => {
 	const menu = new LegendItemMenu({ callback: hidden => (result = hidden) })
 	const options = () => menu.tip.d.selectAll('.sja_menuoption').nodes() as HTMLElement[]
 
-	menu.show({ target: getTarget(), key: 'a', keys, hiddenKeys: [] })
+	const target1 = getTarget()
+
+	menu.show({ target: target1, key: 'a', keys, hiddenKeys: [] })
 	test.deepEqual(
 		options().map(o => o.textContent),
 		['Hide', 'Show only'],
@@ -53,7 +55,8 @@ tape('Menu options', test => {
 	options()[0].click()
 	test.deepEqual(result, ['a'], 'Should hide the item')
 
-	menu.show({ target: getTarget(), key: 'a', keys, hiddenKeys: ['a', 'b'] })
+	const target2 = getTarget()
+	menu.show({ target: target2, key: 'a', keys, hiddenKeys: ['a', 'b'] })
 	test.deepEqual(
 		options().map(o => o.textContent),
 		['Show', 'Show only', 'Show all'],
@@ -61,11 +64,18 @@ tape('Menu options', test => {
 	)
 	options()[1].click()
 	test.deepEqual(result, ['b', 'c'], 'Should show only the item')
-	menu.show({ target: getTarget(), key: 'a', keys, hiddenKeys: ['a', 'b'] })
+
+	const target3 = getTarget()
+	menu.show({ target: target3, key: 'a', keys, hiddenKeys: ['a', 'b'] })
 	options()[2].click()
 	test.deepEqual(result, [], 'Should show all items')
 
-	menu.tip.hide()
+	if (test._ok) {
+		menu.tip.destroy()
+		target1.remove()
+		target2.remove()
+		target3.remove()
+	}
 	test.end()
 })
 
@@ -73,7 +83,13 @@ tape('Menu is skipped for the only hidden item', test => {
 	test.timeoutAfter(500)
 	let result: string[] | undefined
 	const menu = new LegendItemMenu({ callback: hidden => (result = hidden) })
-	menu.show({ target: getTarget(), key: 'b', keys, hiddenKeys: ['b'] })
+	const target = getTarget()
+	menu.show({ target, key: 'b', keys, hiddenKeys: ['b'] })
 	test.deepEqual(result, [], 'Should show the only hidden item without a menu')
+
+	if (test._ok) {
+		menu.tip.destroy()
+		target.remove()
+	}
 	test.end()
 })
