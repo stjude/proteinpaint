@@ -1,9 +1,9 @@
 import type { SvgG } from '../../types/d3'
 
-/** Types for #dom/LegendCircleReference component */
+/** Types for #dom/DotSizeScale component */
 
 /** Constructor opts */
-export type LegendCircleReferenceOpts = {
+export type DotSizeScaleOpts = {
 	/** Holder */
 	g: SvgG
 	/** Upper limit user can input for size */
@@ -32,7 +32,9 @@ export type LegendCircleReferenceOpts = {
 	isAscending?: boolean
 	/** If provided, displays a title above the
 	 * the circle reference. */
-	title?: string,
+	title?: string
+	/** Center of the first circle in the holder. If not provided, it is where the circles and
+	 * their labels fit, and at least 40. The title is at the origin of the holder, above the circles. */
 	x?: number
 	y?: number
 }

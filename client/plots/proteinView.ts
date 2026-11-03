@@ -1,7 +1,7 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { axisstyle, to_svg } from '#src/client'
-import { Menu, table2col, LegendCircleReference, addGeneSearchbox, DataPointInteractions, make_radios } from '#dom'
+import { Menu, table2col, DotSizeScale, addGeneSearchbox, DataPointInteractions, make_radios } from '#dom'
 import { PlotBase } from './PlotBase'
 import { dofetch3 } from '#common/dofetch'
 import {
@@ -1002,7 +1002,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView, ptmSiteC
 		legendSvg.selectAll('*').remove()
 		const stats = updateRadiusScaleForVisibleDots()
 
-		new LegendCircleReference({
+		new DotSizeScale({
 			g: legendSvg.append('g').attr('transform', 'translate(12, 8)'),
 			inputMax: radiusRange[1],
 			inputMin: radiusRange[0],

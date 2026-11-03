@@ -1,7 +1,7 @@
 import { axisstyle } from '#src/client'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { select } from 'd3-selection'
-import { LegendCircleReference } from '#dom'
+import { DotSizeScale } from '#dom'
 import type {
 	CorrVolcanoDom,
 	CorrVolcanoSettings,
@@ -129,7 +129,7 @@ export class View {
 		const startXPos = 20
 		const startYPos = 20
 
-		new LegendCircleReference({
+		new DotSizeScale({
 			g: svg.append('g').attr('transform', `translate(${startXPos}, ${startYPos})`),
 			inputMax: defaultMaxRadius,
 			inputMin: defaultMinRadius,
