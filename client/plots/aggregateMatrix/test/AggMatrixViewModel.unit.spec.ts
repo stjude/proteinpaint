@@ -1,6 +1,5 @@
 import tape from 'tape'
 import { AggMatrixViewModel } from '../viewModel/AggMatrixViewModel'
-import { mclass } from '#shared/common.js'
 
 /*
 Tests:
@@ -8,7 +7,7 @@ Tests:
     - Default view data structure
     - setColorScale and getDotPositions
     - Tooltip values
-    - Pie positions, tooltip, and legend
+    - Pies in the dot positions
 */
 
 function getViewModel() {
@@ -178,22 +177,27 @@ tape('Tooltip values', function (test) {
 	test.end()
 })
 
-tape('Pie positions, tooltip, and legend', function (test) {
+tape('Pies in the dot positions', function (test) {
 	const { viewModel, mockAggregateMatrix } = getViewModel()
 	const settings = mockAggregateMatrix.state.config.settings.aggregateMatrix
 	viewModel.viewData = viewModel.getDefaultViewData()
 	viewModel.setColorScale(settings, { min: 0, max: 10 })
 	viewModel.sizeScale = (v: number) => v
 
-	const pie = (n: number, radius: number, termType?: string) => ({
-		n,
-		radius,
-		termType,
+	const pie = {
+		n: 100,
+		radius: 1,
+		termType: 'geneVariant',
 		slices: [
-			{ key: 'WT', label: 'Wildtype', color: '#D3D3D3', count: n - 1, hidden: true },
+			{ key: 'WT', label: 'Wildtype', color: '#D3D3D3', count: 99, hidden: true },
 			{ key: 'M', label: 'MISSENSE', color: '#3987CC', count: 1 }
 		]
-	})
+	}
+	const hiddenOnly = {
+		n: 5,
+		radius: 1,
+		slices: [{ key: 'WT', label: 'Wildtype', color: '#ccc', count: 5, hidden: true }]
+	}
 	const dot = (column: string, withPie?: any) => ({
 		row: 'TP53',
 		rowSection: 'Genes',
@@ -203,101 +207,39 @@ tape('Pie positions, tooltip, and legend', function (test) {
 		sizeValue: 1,
 		...(withPie && { pie: withPie })
 	})
-	const data = [
-		[
-			dot('B', pie(100, 1, 'geneVariant')),
-			dot('T', pie(25, 0.5, 'geneVariant')),
-			dot('Tiny', pie(1, 0.001)),
-			dot('None')
-		]
-	]
-	viewModel.getDotPositions(data, 10, settings, { name: 'cell', plural_name: 'cells' })
-	const [big, half, tiny, none] = viewModel.viewData.dotPositions
+	viewModel.getDotPositions([[dot('B', pie), dot('Hidden', hiddenOnly), dot('None')]], 10, settings, {
+		name: 'cell',
+		plural_name: 'cells'
+	})
+	const [shown, hidden, none] = viewModel.viewData.dotPositions
 
-	test.equal(big.pie?.radius, settings.maxDotSize, 'Should draw the largest pie at the maximum dot size')
-	test.equal(half.pie?.radius, settings.maxDotSize * 0.5, 'Should keep the pie area proportional to n')
-	test.equal(tiny.pie?.radius, settings.minDotSize, 'Should not draw a pie smaller than the minimum dot size')
-	test.equal(none.pie, undefined, 'Should leave a dot without a pie as a circle')
+	test.equal(shown.pie?.radius, settings.maxDotSize, 'Should add the pie to the dot')
+	test.equal(shown.hasData, true, 'Should treat a dot with a pie as data')
 	test.deepEqual(
-		big.pie?.slices.map(s => s.key),
-		['M'],
-		'Should not draw slices that are hidden by default, such as wildtype'
-	)
-	test.equal(
-		viewModel.getPiePosition(
-			{ n: 5, radius: 1, slices: [{ key: 'WT', label: 'Wildtype', color: '#ccc', count: 5, hidden: true }] },
-			settings
-		).slices.length,
-		0,
-		'Should have no slices to draw when every slice is hidden'
-	)
-	test.ok(
-		big.pie?.slices.every(s => s.path.startsWith('M')),
-		'Should create an svg path for every slice'
-	)
-	test.deepEqual(
-		big.tipData.slice(4).map(e => [e.label, e.value]),
+		shown.tipData.slice(4).map(e => [e.label, e.value]),
 		[
 			['Cells', 100],
 			['Wildtype', 99],
 			['MISSENSE', 1]
 		],
-		'Should add the number of samples and each slice, hidden ones too, to the tooltip'
+		'Should add the pie to the tooltip after the standard entries'
 	)
-	test.equal(none.tipData.length, 4, 'Should not add pie entries to a dot without a pie')
-	test.equal(none.hasData, false, 'Should treat a dot without a pie as no data in a pie chart')
-	test.equal(none.color, 'transparent', 'Should leave a dot without a pie blank in a pie chart')
-	test.equal(none.tipData[2].value, 'No available data', 'Should report that no data is available')
-
-	// a pie with only hidden slices has nothing to show
-	viewModel.viewData.dotPositions = []
-	const hiddenOnly = {
-		n: 5,
-		radius: 1,
-		slices: [{ key: 'WT', label: 'Wildtype', color: '#ccc', count: 5, hidden: true }]
+	for (const [name, position] of [
+		['a pie whose slices are all hidden', hidden],
+		['a dot without a pie in a pie chart', none]
+	] as const) {
+		test.equal(position.pie, undefined, `Should not draw ${name}`)
+		test.equal(position.hasData, false, `Should treat ${name} as no data`)
+		test.equal(position.color, 'transparent', `Should leave ${name} blank`)
+		test.equal(position.tipData.length, 4, `Should only add the standard tooltip entries for ${name}`)
+		test.equal(position.tipData[3].value, 'No available data', `Should report that no data is available for ${name}`)
 	}
-	viewModel.getDotPositions([[dot('B', pie(10, 1)), dot('Hidden', hiddenOnly)]], 10, settings, undefined)
-	const hidden = viewModel.viewData.dotPositions[1]
-	test.equal(hidden.pie, undefined, 'Should not draw a pie whose slices are all hidden')
-	test.equal(hidden.hasData, false, 'Should treat a pie whose slices are all hidden as no data')
-	test.equal(hidden.tipData.length, 4, 'Should not report the samples of a pie that is not shown')
-	test.equal(hidden.tipData[3].value, 'No available data', 'Should report that no data is available for it')
+
 	viewModel.viewData.dotPositions = []
 	viewModel.getDotPositions([[dot('A'), dot('B')]], 10, settings, undefined)
 	test.ok(
-		viewModel.viewData.dotPositions.every(d => d.hasData),
-		'Should keep drawing dots with data when there are no pies'
+		viewModel.viewData.dotPositions.every(d => d.hasData && !d.pie),
+		'Should keep drawing circles for dots with data when there are no pies'
 	)
-	viewModel.viewData.dotPositions = []
-	viewModel.getDotPositions(data, 10, settings, { name: 'cell', plural_name: 'cells' })
-
-	// the client mclass has the launch argument mclassOverride applied, so it decides the look of a variant class
-	const original = { ...mclass.M }
-	Object.assign(mclass.M, { label: 'Custom missense', color: '#123456' })
-	const overridden = viewModel.getPiePosition(pie(10, 1, 'geneVariant'), settings)
-	Object.assign(mclass.M, original)
-	test.deepEqual(
-		overridden.slices.find(s => s.key == 'M') && {
-			label: overridden.slices.find(s => s.key == 'M')!.label,
-			color: overridden.slices.find(s => s.key == 'M')!.color
-		},
-		{ label: 'Custom missense', color: '#123456' },
-		'Should describe a variant class by the mclass of the client, which has the override'
-	)
-	const other = viewModel.getPiePosition(pie(10, 1, 'categorical'), settings)
-	test.equal(
-		other.slices.find(s => s.key == 'M')!.color,
-		'#3987CC',
-		'Should keep the server color for other term types'
-	)
-
-	const legend = viewModel.getPieLegend(data)
-	test.equal(legend.title, 'Variant class', 'Should title a gene variant legend')
-	test.deepEqual(
-		legend.entries.map(e => e.key),
-		['M'],
-		'Should list every slice that is drawn once, without the hidden slices'
-	)
-	test.deepEqual(viewModel.getPieLegend([[dot('None')]]).entries, [], 'Should have no legend entries without pies')
 	test.end()
 })
