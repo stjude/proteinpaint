@@ -1,5 +1,7 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
+import { getActiveCohortStr } from '#mass/charts'
+import { dtfusionrna, dtsv } from '#shared/common.js'
 
 /*
 Tests:
@@ -10,6 +12,10 @@ Tests:
 	- Pass a changed filter to the Rings box pills
 	- Select the wedge at the centre
 	- Show the available data of a selection
+	- Offer GRIN2 for selected samples with mutation data
+	- Summarize a dictionary term in the selected group
+	- Compare exactly two selected wedges with differential gene expression
+	- Split survival curves by selected wedge
 */
 
 /*************************
@@ -34,7 +40,7 @@ async function waitFor(get: () => any, maxTime = 5000) {
 	for (;;) {
 		const v = get()
 		if (v) return v
-		if (Date.now() - start > maxTime) throw 'waitFor() timed out'
+		if (Date.now() - start > maxTime) throw `waitFor() timed out: ${get}`
 		await new Promise(r => setTimeout(r, 50))
 	}
 }
@@ -46,6 +52,32 @@ function getWedge(sunburst, name: string) {
 		.node()
 }
 
+/** Replace chart.app so launched plots are recorded instead of created; with chartTypes, the
+ *  chart also sees a copy of termdbConfig with those chart types for the active cohort, which the
+ *  test may edit. Call restore() in finally. */
+function stubApp(chart, chartTypes?: string[]) {
+	const app = chart.app
+	const state = app.getState()
+	const cohort = getActiveCohortStr(state)
+	const termdbConfig = chartTypes
+		? { ...app.vocabApi.termdbConfig, supportedChartTypes: { [cohort]: chartTypes } }
+		: app.vocabApi.termdbConfig
+	const stub = {
+		cohort,
+		termdbConfig,
+		launched: undefined as any,
+		restore: () => (chart.app = app)
+	}
+	chart.app = {
+		vocabApi: chartTypes ? { vocab: app.vocabApi.vocab, termdbConfig } : app.vocabApi,
+		getState: () => (chartTypes ? { ...state, termdbConfig } : app.getState()),
+		dispatch: async action => {
+			stub.launched = action
+		}
+	}
+	return stub
+}
+
 /**************
  test sections
 ***************/
@@ -53,6 +85,259 @@ function getWedge(sunburst, name: string) {
 tape('\n', test => {
 	test.comment('-***- plots/sunburst -***-')
 	test.end()
+})
+
+tape('Compare exactly two selected wedges with differential gene expression', test => {
+	test.timeoutAfter(30000)
+	runpp({
+		state: { plots: [{ chartType: 'sunburst', twLst: [{ id: 'diaggrp' }] }] },
+		sunburst: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(sunburst) {
+		sunburst.on('postRender.test', null)
+		const inner = sunburst.Inner
+		const chart = inner.chart
+		const holder = inner.opts.holder.append('div')
+		const row = () => holder.select('[data-testid=sjpp-sunburst-data-differentialExpression]')
+		const stub = stubApp(chart, ['DA'])
+		const { termdbConfig, cohort } = stub
+		let beforeLaunch = false
+		chart.beforeLaunch = () => {
+			beforeLaunch = true
+		}
+		async function render() {
+			chart.dataShown = true
+			holder.selectAll('*').remove()
+			await chart.renderData(holder, chart.selectedCount())
+			test.ok(holder.select('.sja_errorbar').empty(), 'Should load availability without errors')
+		}
+		try {
+			const all = getWedge(sunburst, ALL).__data__
+			const hodgkin = getWedge(sunburst, 'Hodgkin lymphoma').__data__
+			chart.toggle(all)
+			await render()
+			test.ok(row().empty(), 'Should not offer a comparison for one wedge')
+			chart.toggle(hodgkin)
+			await render()
+			test.equal(
+				row().select('span').text(),
+				'Differential Gene Expression Analysis',
+				'Should offer differential expression for two wedges with RNA-seq counts'
+			)
+			const expected = chart.comparisonGroups()
+			test.ok(expected[0].name.includes(ALL), 'Should use the first-selected wedge as control')
+			test.ok(expected[1].name.includes('Hodgkin lymphoma'), 'Should use the second-selected wedge as case')
+			row().node().click()
+			const menu = await waitFor(() => chart.dataMenu?.dnode)
+			const run = await waitFor(() => menu.querySelector('[data-testid=sjpp-da-run-btn]'), 10000)
+			test.ok(
+				menu.textContent.includes('CONTROL') && menu.textContent.includes('CASE'),
+				'Should show the shared group-count panel'
+			)
+			test.ok(
+				menu.textContent.includes('edgeR') && menu.textContent.includes('Limma'),
+				'Should show the shared analysis methods'
+			)
+			test.notOk(stub.launched, 'Should not create a plot until Run is clicked')
+			run.click()
+			await waitFor(() => stub.launched)
+			test.ok(beforeLaunch, 'Should use the launch hook for the About tab')
+			test.equal(stub.launched.config.chartType, 'differentialAnalysis', 'Should launch the differential analysis plot')
+			test.equal(stub.launched.config.termType, 'geneExpression', 'Should compare gene expression')
+			test.deepEqual(
+				stub.launched.config.samplelst.groups.map(g => ({ name: g.name, filter: g.filter })),
+				expected.map(g => ({ name: g.name, filter: g.filter })),
+				'Should preserve the distinct control and case filters in selection order'
+			)
+			test.ok(
+				stub.launched.config.samplelst.groups.every(g => g.sampleCount > 0),
+				'Should pass RNA-seq sample counts to the analysis'
+			)
+			test.notOk(
+				document.querySelector('[data-testid=sjpp-sunburst-differential-menu]'),
+				'Should close the panel after launching'
+			)
+
+			chart.groupFilter = expected[0].filter
+			await render()
+			test.ok(row().empty(), 'Should not offer a comparison when one wedge has no eligible RNA-seq samples')
+			const filtered = chart.comparisonGroups()
+			test.equal(filtered[1].filter.join, 'and', 'Should join each wedge filter with the plot filter')
+			test.deepEqual(
+				filtered[1].filter.lst[1],
+				expected[0].filter.lst[0],
+				'Should preserve the local plot filter for each comparison group'
+			)
+			chart.groupFilter = undefined
+			termdbConfig.supportedChartTypes = { [cohort]: ['summary'] }
+			await render()
+			test.ok(row().empty(), 'Should not offer differential expression when unsupported')
+			termdbConfig.supportedChartTypes = { [cohort]: ['DA'] }
+			const queries = termdbConfig.queries
+			termdbConfig.queries = { ...queries, rnaseqGeneCount: undefined }
+			await render()
+			test.ok(row().empty(), 'Should not offer differential expression without a count query')
+			termdbConfig.queries = queries
+			const third = chart.renderer.root.children.find(d => d != all && d != hodgkin)
+			chart.toggle(third)
+			await render()
+			test.ok(row().empty(), 'Should not offer a comparison for three wedges')
+			chart.toggle(third)
+			chart.toggle(all)
+			chart.toggle(all)
+			const reordered = chart.comparisonGroups()
+			test.ok(reordered[0].name.includes('Hodgkin lymphoma'), 'Should update control when selection order changes')
+		} catch (e) {
+			test.fail(String(e))
+		} finally {
+			stub.restore()
+			holder.remove()
+			inner.app.destroy()
+			test.end()
+		}
+	}
+})
+
+tape('Split survival curves by selected wedge', test => {
+	test.timeoutAfter(20000)
+	runpp({
+		state: { plots: [{ chartType: 'sunburst', twLst: [{ id: 'diaggrp' }] }] },
+		sunburst: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(sunburst) {
+		sunburst.on('postRender.test', null)
+		const inner = sunburst.Inner
+		const chart = inner.chart
+		const holder = inner.opts.holder.append('div')
+		const stub = stubApp(chart)
+		const localFilter = {
+			type: 'tvslst',
+			join: '',
+			in: true,
+			lst: [{ type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical', name: 'Sex' }, values: [{ key: '1' }] } }]
+		}
+		chart.groupFilter = localFilter
+		try {
+			const nodes = [getWedge(sunburst, ALL).__data__, getWedge(sunburst, 'Hodgkin lymphoma').__data__]
+			nodes.push(chart.renderer.root.children.find(d => !nodes.includes(d)))
+			for (const [i, node] of nodes.entries()) {
+				chart.toggle(node)
+				chart.dataShown = true
+				holder.selectAll('*').remove()
+				await chart.renderData(holder, chart.selectedCount())
+				test.ok(holder.select('.sja_errorbar').empty(), 'Should load survival availability')
+				const row = holder.select('[data-testid=sjpp-sunburst-data-survival-os]').node()
+				test.ok(row, `Should offer survival for ${i + 1} selected wedges`)
+				stub.launched = undefined
+				row.click()
+				const launched = (await waitFor(() => stub.launched)).config
+				test.equal(launched.chartType, 'survival', 'Should launch one survival plot')
+				test.equal(launched.term.id, 'os', 'Should use the clicked survival term')
+				test.deepEqual(launched.filter, chart.plotFilter(), 'Should restrict the plot to the selected union')
+				if (i == 0) {
+					test.notOk(launched.term2, 'Should preserve a single curve for one wedge')
+					continue
+				}
+				test.equal(launched.term2.term.type, 'samplelst', 'Should group curves using the custom-variable mechanism')
+				const groups = chart.comparisonGroups()
+				test.equal(launched.term2.q.groups.length, i + 1, 'Should create one curve group per wedge')
+				test.deepEqual(
+					launched.term2.q.groups.map(g => ({ name: g.name, filter: g.filter })),
+					groups.map(g => ({ name: g.name, filter: g.filter })),
+					'Should preserve wedge order and each wedge filter with the local plot filter'
+				)
+				for (const group of groups) {
+					test.equal(
+						launched.term2.term.values[group.name].color,
+						group.color,
+						'Should retain the wedge color for its survival curve'
+					)
+				}
+			}
+		} catch (e) {
+			test.fail(String(e))
+		} finally {
+			stub.restore()
+			holder.remove()
+			inner.app.destroy()
+			test.end()
+		}
+	}
+})
+
+tape('Offer GRIN2 for selected samples with mutation data', test => {
+	test.timeoutAfter(20000)
+	runpp({
+		state: { plots: [{ chartType: 'sunburst', twLst: [{ id: 'diaggrp' }] }] },
+		sunburst: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(sunburst) {
+		sunburst.on('postRender.test', null)
+		const inner = sunburst.Inner
+		const chart = inner.chart
+		getWedge(sunburst, ALL).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		const stub = stubApp(chart, ['grin2'])
+		const { termdbConfig, cohort } = stub
+		let beforeLaunch = false
+		chart.beforeLaunch = () => {
+			beforeLaunch = true
+		}
+		const holder = inner.opts.holder.append('div')
+		const button = () => holder.select('[data-testid=sjpp-sunburst-grin2]')
+		async function render() {
+			holder.selectAll('*').remove()
+			await chart.renderData(holder, chart.selectedCount())
+			test.ok(holder.select('.sja_errorbar').empty(), 'Should load data availability without errors')
+		}
+		try {
+			await render()
+			test.ok(button().empty(), 'Should not offer GRIN2 before Show available data is clicked')
+			holder.select('[data-testid=sjpp-sunburst-show-data]').node().click()
+			// The click redraws the sidebar; use the same render path for each dataset configuration below.
+			for (const queries of [
+				{ snvindel: {} },
+				{ cnv: {} },
+				{ svfusion: { dtLst: [dtfusionrna] } },
+				{ singleSampleMutation: { cnvTypes: ['copyNumber'] } }
+			]) {
+				termdbConfig.queries = queries
+				await render()
+				test.equal(button().text(), 'Run GRIN2', `Should offer GRIN2 with ${Object.keys(queries)[0]} data`)
+			}
+			button().node().click()
+			await waitFor(() => stub.launched)
+			test.ok(beforeLaunch, 'Should run the launch hook used by the About tab')
+			test.equal(stub.launched.type, 'plot_create', 'Should create a plot')
+			test.equal(stub.launched.config.chartType, 'grin2', 'Should open GRIN2')
+			test.deepEqual(stub.launched.config.filter, chart.plotFilter(), 'Should give GRIN2 the selection as its filter')
+			test.equal(stub.launched.config.filter.lst[0].tvs.values[0].key, ALL, 'Should filter GRIN2 by the selected wedge')
+
+			termdbConfig.queries = { snvindel: {} }
+			termdbConfig.supportedChartTypes = { [cohort]: ['summary'] }
+			await render()
+			test.ok(button().empty(), 'Should not offer GRIN2 when disabled for the active cohort')
+			termdbConfig.supportedChartTypes = { otherCohort: ['grin2'] }
+			await render()
+			test.ok(button().empty(), "Should not use another cohort's GRIN2 setting")
+			termdbConfig.supportedChartTypes = { [cohort]: ['grin2'] }
+			termdbConfig.queries = {}
+			await render()
+			test.ok(button().empty(), 'Should not offer GRIN2 without supported mutation queries')
+			termdbConfig.queries = { svfusion: { dtLst: [dtsv] } }
+			await render()
+			test.ok(button().empty(), 'Should not offer GRIN2 when the selection lacks the supported mutation data')
+		} catch (e) {
+			test.fail(String(e))
+		} finally {
+			stub.restore()
+			holder.remove()
+			inner.app.destroy()
+			test.end()
+		}
+	}
 })
 
 tape('Render rings of a sample-level and a patient-level term', test => {
@@ -97,7 +382,27 @@ tape('Select wedges and create a group', test => {
 	async function runTests(sunburst) {
 		sunburst.on('postRender.test', null)
 		const inner = sunburst.Inner
+		const createButton = () => inner.chart.dom.sel.body.select('[data-testid=sjpp-sunburst-create-group]')
+		test.ok(createButton().empty(), 'Should not render Create group without selected wedges')
 		const all = getWedge(sunburst, ALL)
+		test.equal(
+			getComputedStyle(inner.chart.renderer.dom.svg.node()).userSelect,
+			'none',
+			'Should disable text selection only within the chart SVG'
+		)
+		for (const { shiftKey, button, prevented } of [
+			{ shiftKey: true, button: 0, prevented: true },
+			{ shiftKey: false, button: 0, prevented: false },
+			{ shiftKey: true, button: 2, prevented: false }
+		]) {
+			const event = new MouseEvent('mousedown', { shiftKey, button, bubbles: true, cancelable: true })
+			all.dispatchEvent(event)
+			test.equal(
+				event.defaultPrevented,
+				prevented,
+				`Should ${prevented ? '' : 'not '}prevent text-selection default for shift=${shiftKey}, button=${button}`
+			)
+		}
 		all.dispatchEvent(new MouseEvent('click', { shiftKey: true, bubbles: true }))
 		test.deepEqual(
 			[...inner.chart.selected.values()].map(d => d.data.name),
@@ -127,6 +432,11 @@ tape('Select wedges and create a group', test => {
 			'Should select each wedge by its diagnosis group'
 		)
 		test.equal(inner.chart.selected.size, 0, 'Should clear the selection once the group is created')
+		test.ok(createButton().empty(), 'Should remove Create group when the selection is cleared')
+		test.ok(
+			inner.chart.dom.sel.body.text().includes('added; find it in the GROUPS tab'),
+			'Should still show the group-created confirmation'
+		)
 		if (test['_ok']) inner.app.destroy()
 		test.end()
 	}
@@ -289,6 +599,97 @@ tape('Select the wedge at the centre', test => {
 	}
 })
 
+tape('Summarize a dictionary term in the selected group', test => {
+	test.timeoutAfter(20000)
+	let inner: any
+	let expectedFilter: any
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'sunburst',
+					twLst: [{ id: 'diaggrp' }],
+					filter: {
+						type: 'tvslst',
+						join: '',
+						in: true,
+						lst: [
+							{
+								type: 'tvs',
+								tvs: { term: { id: 'sex', type: 'categorical', name: 'Sex' }, values: [{ key: '1' }] }
+							}
+						]
+					}
+				}
+			]
+		},
+		sunburst: {
+			callbacks: {
+				'postRender.test': async sunburst => {
+					sunburst.on('postRender.test', null)
+					inner = sunburst.Inner
+					getWedge(sunburst, ALL).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+					const card = inner.chart.dom.sel.body
+					test.ok(
+						card.select('[data-testid=sjpp-sunburst-data-summarize]').empty(),
+						'Should hide Summarize until Show available data is clicked'
+					)
+					card.select('[data-testid=sjpp-sunburst-show-data]').node().click()
+					expectedFilter = inner.chart.plotFilter()
+					const summarize = card.select('[data-testid=sjpp-sunburst-data-summarize]')
+					test.equal(summarize.select('span').text(), 'Summarize', 'Should label the summary row')
+					test.equal(
+						summarize.node().lastChild.textContent,
+						' ›',
+						'Should show only the navigation arrow without a sample count in the summary row'
+					)
+					summarize.node().click()
+					await selectTerm()
+				}
+			}
+		},
+		summary: {
+			callbacks: {
+				'postRender.test': summary => {
+					summary.on('postRender.test', null)
+					const config = inner.app.getState().plots.find(p => p.chartType == 'summary')
+					test.equal(config.term.term.id, 'sex', 'Should summarize the selected dictionary term')
+					test.deepEqual(config.filter, expectedFilter, 'Should preserve the wedge selection and plot filter')
+					test.ok(
+						!inner.app.getState().plots.some(p => p.chartType == 'dictionary'),
+						'Should not create a dictionary plot'
+					)
+					test.notOk(
+						document.querySelector('[data-testid=sjpp-sunburst-summary-menu]'),
+						'Should remove the dictionary popover after selecting a term'
+					)
+					inner.app.destroy()
+					test.end()
+				}
+			}
+		}
+	})
+
+	async function selectTerm() {
+		try {
+			const holder = await waitFor(() => inner.chart.dataMenu?.dnode)
+			test.equal(inner.app.getState().plots.length, 1, 'Should open the picker without creating another plot')
+			const demographic = await waitFor(() =>
+				[...holder.querySelectorAll('.termbtn')].find((n: any) => n.__data__?.name == 'Demographic Variables')
+			)
+			demographic.click()
+			const sex = await waitFor(() =>
+				[...holder.querySelectorAll('.sja_tree_click_term')].find((n: any) => n.__data__?.id == 'sex')
+			)
+			sex.click()
+		} catch (e) {
+			test.fail(String(e))
+			inner.app.destroy()
+			test.end()
+		}
+	}
+})
+
 tape('Show the available data of a selection', test => {
 	test.timeoutAfter(20000)
 	runpp({
@@ -332,13 +733,23 @@ tape('Show the available data of a selection', test => {
 			'Should not list the counts of differential expression, which compares groups'
 		)
 
-		// a row opens the plot of its data, of the selected samples
+		// gene selection stays in a popover until a gene is chosen
 		const plots = inner.app.getState().plots.length
 		expRow.click()
-		const plot = await waitFor(() => inner.app.getState().plots[plots])
-		test.equal(plot.chartType, 'GeneExpInput', 'Should open the gene expression input form')
-		test.deepEqual(plot.spawnConfig.filter, inner.chart.plotFilter(), 'Should give its plots the selection as filter')
-		test.equal(plot.spawnConfig.filter.lst[0].tvs.values[0].key, ALL, 'Should filter by the selected wedge')
+		const expressionMenu = await waitFor(() => inner.chart.dataMenu?.dnode)
+		await waitFor(() => expressionMenu.querySelector('.sja_genesearchinput'))
+		const searchMenus = [...inner.chart.dataPicker.Inner.geneSearchMenus]
+		test.equal(searchMenus[0].d.node().parent_menu, expressionMenu, 'Should associate suggestions with the picker')
+		test.equal(inner.app.getState().plots.length, plots, 'Should not create a plot for gene selection')
+		test.equal(
+			expressionMenu.querySelector('[data-testid=sjpp-gene-exp-input-termType]')?.textContent,
+			'GENE EXPRESSION',
+			'Should show the expression selection form'
+		)
+		inner.chart.closeDataPicker()
+		for (const menu of searchMenus) {
+			test.notOk(menu.d.node().isConnected, 'Should remove the search menus with the picker')
+		}
 
 		// the methylation row opens the term search, for the selected samples
 		methRow.click()

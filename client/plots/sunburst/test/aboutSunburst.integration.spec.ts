@@ -31,7 +31,7 @@ async function waitFor(get: () => any, maxTime = 5000) {
 	for (;;) {
 		const v = get()
 		if (v) return v
-		if (Date.now() - start > maxTime) throw 'waitFor() timed out'
+		if (Date.now() - start > maxTime) throw `waitFor() timed out: ${get}`
 		await new Promise(r => setTimeout(r, 50))
 	}
 }
@@ -135,13 +135,13 @@ tape('Launch a plot of a selection in the plots tab', test => {
 		chart.toggle(chart.renderer.root.children[0])
 		chart.dom.sel.body.select('[data-testid=sjpp-sunburst-show-data]').node().click()
 		const row = await waitFor(
-			() => chart.dom.sel.body.select('[data-testid=sjpp-sunburst-data-geneExpression]').node(),
+			() => chart.dom.sel.body.select('[data-testid=sjpp-sunburst-data-survival-os]').node(),
 			10000
 		)
 		test.equal(app.getState().nav.activeTab, 0, 'Should start on the About tab')
 		row.click()
 		await waitFor(() => app.getState().plots.length)
 		test.equal(app.getState().nav.activeTab, 1, 'Should show the plots tab for the plot')
-		test.equal(app.getState().plots[0].chartType, 'GeneExpInput', 'Should create the plot of the data')
+		test.equal(app.getState().plots[0].chartType, 'survival', 'Should create the plot of the data')
 	})
 })

@@ -1825,6 +1825,49 @@ tape('\n', test => {
 	test.end()
 })
 
+tape('filterPromptInit preserves OR and negated scopes', async test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+	let submitted
+	const prompt = await filterPromptInit({
+		holder,
+		vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' },
+		debug: true,
+		callback: filter => (submitted = getNormalRoot(filter))
+	})
+	try {
+		for (const scope of [
+			{ type: 'tvslst', in: true, join: 'or', lst: ['1', '2'].map(sexTvs) },
+			{ type: 'tvslst', in: false, join: 'and', lst: ['1', '2'].map(sexTvs) }
+		]) {
+			await prompt.main(structuredClone(scope))
+			test.deepEqual(getNormalRoot(prompt.Inner.rawFilter), scope, 'Should preserve the initial scope')
+			const condition = sexTvs('1')
+			const filter = { ...prompt.Inner.filter, lst: [condition] }
+			prompt.Inner.refresh(filter)
+			test.deepEqual(
+				submitted,
+				filterJoin([scope, { type: 'tvslst', in: true, join: '', lst: [condition] }]),
+				'Should AND the new condition with the intact scope'
+			)
+			await prompt.getPromise('postRender')
+			test.deepEqual(
+				getNormalRoot(prompt.Inner.rawFilter),
+				scope,
+				'Should retain the scope without the previous condition when resetting the prompt'
+			)
+		}
+	} finally {
+		prompt.destroy()
+		holder.remove()
+		test.end()
+	}
+
+	function sexTvs(key) {
+		return { type: 'tvs', tvs: { term: { id: 'sex', name: 'Sex', type: 'categorical' }, values: [{ key }] } }
+	}
+})
+
 tape('filterPromptInit()', async test => {
 	test.timeoutAfter(3000)
 
