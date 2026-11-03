@@ -15,10 +15,8 @@ export class LegendRender {
 	render(viewData: AggMatrixViewData, div: any) {
 		const settings = this.ag.state.config.settings.aggregateMatrix
 		const colorScaleSvg = div.append('svg').style('display', 'block').attr('height', 100)
-		const dotScaleSvg = div
-			.append('svg')
-			.style('display', 'block')
-			.attr('height', settings.maxDotSize + 20 + 50) //20px for the title position, 50px for the title and padding around the rendering.
+		//The size is set in renderDotScaleRef, from the bounding box of the rendered scale
+		const dotScaleSvg = div.append('svg').style('display', 'block')
 		this.renderColorScale(viewData.colorScale, settings, colorScaleSvg)
 		this.renderDotScaleRef(dotScaleSvg, settings)
 	}
@@ -90,5 +88,9 @@ export class LegendRender {
 				}
 			}
 		})
+
+		//Fit the svg to what was rendered, including the group's translation, title and labels
+		const box = svg.node().getBBox()
+		svg.attr('width', Math.ceil(box.x + box.width + this.xStart)).attr('height', Math.ceil(box.y + box.height + 15))
 	}
 }
