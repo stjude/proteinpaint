@@ -2,6 +2,7 @@ import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
 import { getActiveCohortStr } from '#mass/charts'
 import { dtfusionrna, dtsv } from '#shared/common.js'
+import { filterJoin } from '#filter'
 
 /*
 Tests:
@@ -145,10 +146,13 @@ tape('Compare exactly two selected wedges with differential gene expression', te
 			test.ok(beforeLaunch, 'Should use the launch hook for the About tab')
 			test.equal(stub.launched.config.chartType, 'differentialAnalysis', 'Should launch the differential analysis plot')
 			test.equal(stub.launched.config.termType, 'geneExpression', 'Should compare gene expression')
+			// the server resolves each group by its own filter alone, so a group carries the global filter too
+			const globalFilter = chart.app.getState().termfilter.filter
+			test.ok(globalFilter?.lst?.length, 'Should have a global filter to scope the groups to')
 			test.deepEqual(
 				stub.launched.config.samplelst.groups.map(g => ({ name: g.name, filter: g.filter })),
-				expected.map(g => ({ name: g.name, filter: g.filter })),
-				'Should preserve the distinct control and case filters in selection order'
+				expected.map(g => ({ name: g.name, filter: filterJoin([g.filter, globalFilter]) })),
+				'Should scope the distinct control and case filters to the global filter, in selection order'
 			)
 			test.ok(
 				stub.launched.config.samplelst.groups.every(g => g.sampleCount > 0),
