@@ -81,7 +81,7 @@ export class AggMatrixViewModel {
 			.range([settings.minDotSize, settings.maxDotSize])
 			.clamp(true)
 		this.getDotPositions(data.data, cellSize, settings, data.sampleType)
-		this.viewData.pieLegend = getPieLegend(data.data)
+		this.viewData.pieLegend = getPieLegend(data.data, settings)
 	}
 
 	getSectionLabelLayout(sections: AxisLayoutRows['sections'], cellSize: number, measureSvg, isYaxis: boolean) {

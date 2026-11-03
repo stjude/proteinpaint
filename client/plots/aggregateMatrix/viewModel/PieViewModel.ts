@@ -41,6 +41,12 @@ export function getDotPie(
 	}
 }
 
+/** Whether a slice is not drawn. The server flags the slices that are hidden by default, such as wildtype, until
+ * the user chooses which slices to hide in the legend. */
+export function isSliceHidden(slice: PieSlice, settings: Pick<AggregateMatrixSettings, 'hiddenSliceKeys'>): boolean {
+	return settings.hiddenSliceKeys ? settings.hiddenSliceKeys.includes(slice.key) : !!slice.hidden
+}
+
 /** The server sends default labels and colors for variant classes. The mclass of the client has the
  * mclassOverride of the launch arguments applied, so a variant class is described by it instead. */
 export function describeSlice(slice: PieSlice, termType?: string) {
@@ -57,7 +63,7 @@ export function getPiePosition(data: AggMatrixPie, settings: AggregateMatrixSett
 	const radius = Math.max(settings.minDotSize, data.radius * settings.maxDotSize)
 	const arcs = pie<PieSlice>()
 		.sort(null)
-		.value(slice => slice.count)(data.slices.filter(slice => !slice.hidden))
+		.value(slice => slice.count)(data.slices.filter(slice => !isSliceHidden(slice, settings)))
 	const makePath = arc<any>().innerRadius(0).outerRadius(radius)
 	return {
 		radius,
@@ -81,17 +87,25 @@ export function getPieTipData(data: AggMatrixPie, sampleType?: ValidAggMatrixRes
 	return entries
 }
 
-/** One entry for every slice that is drawn, in order of first appearance */
-export function getPieLegend(data: AggMatrixDot[][]): AggMatrixViewData['pieLegend'] {
+/** One entry for every slice that can be drawn, hidden or not, in order of first appearance.
+ * Slices that are not computable are never sent by the server, so they are not here. */
+export function getPieLegend(
+	data: AggMatrixDot[][],
+	settings: Pick<AggregateMatrixSettings, 'hiddenSliceKeys'> = {}
+): AggMatrixViewData['pieLegend'] {
 	const entries = new Map<string, PieLegendEntry>()
 	let termType: string | undefined
 	for (const row of data) {
 		for (const dot of row) {
 			if (!dot.pie) continue
 			termType ??= dot.pie.termType
-			for (const slice of dot.pie.slices.filter(slice => !slice.hidden)) {
+			for (const slice of dot.pie.slices) {
 				if (!entries.has(slice.key)) {
-					entries.set(slice.key, { key: slice.key, ...describeSlice(slice, dot.pie.termType) })
+					entries.set(slice.key, {
+						key: slice.key,
+						...describeSlice(slice, dot.pie.termType),
+						hidden: isSliceHidden(slice, settings)
+					})
 				}
 			}
 		}

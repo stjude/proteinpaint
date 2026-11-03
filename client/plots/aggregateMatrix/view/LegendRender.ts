@@ -1,17 +1,25 @@
 import type { AggregateMatrix } from '../AggregateMatrix.ts'
 import type { AggMatrixViewData } from '../viewModel/ViewModelDataTypes.ts'
-import { ColorScale, DotSizeScale, capitalizeFirstLetter } from '#dom'
+import { ColorScale, DotSizeScale, LegendItemMenu, capitalizeFirstLetter } from '#dom'
 import { rgb } from 'd3-color'
 import { validateMinMax } from '../settings/defaults.ts'
 
 export class LegendRender {
 	ag: AggregateMatrix
 	readonly xStart = 15
-	ag: AggregateMatrix
-	readonly xStart = 15
+	pieLegendMenu: LegendItemMenu
 
 	constructor(ag: AggregateMatrix) {
 		this.ag = ag
+		this.pieLegendMenu = new LegendItemMenu({
+			callback: hiddenSliceKeys => {
+				this.ag.app.dispatch({
+					type: 'plot_edit',
+					id: this.ag.id,
+					config: { settings: { aggregateMatrix: { hiddenSliceKeys } } }
+				})
+			}
+		})
 	}
 
 	render(viewData: AggMatrixViewData, div: any) {
@@ -24,7 +32,8 @@ export class LegendRender {
 		if (viewData.pieLegend.entries.length) this.renderPieLegend(viewData.pieLegend, div)
 	}
 
-	/** One shared legend of the slice colors, as every pie uses the same colors and order */
+	/** One shared legend of the slice colors, as every pie uses the same colors and order. It has every slice,
+	 * hidden or not. Hidden slices are crossed out, and clicking an entry opens a menu to show or hide slices. */
 	renderPieLegend(legend: AggMatrixViewData['pieLegend'], div: any) {
 		const rowHeight = 18
 		const svg = div
@@ -41,22 +50,33 @@ export class LegendRender {
 			.style('font-weight', 'bold')
 			.style('font-size', '0.8em')
 			.text(legend.title)
+		const keys = legend.entries.map(entry => entry.key)
+		const hiddenKeys = legend.entries.filter(entry => entry.hidden).map(entry => entry.key)
 		legend.entries.forEach((entry, i) => {
 			const y = 30 + i * rowHeight
-			svg
-				.append('rect')
+			const g = svg
+				.append('g')
+				.attr('class', 'sjpp-ag-matrix-pie-legend-item')
+				.attr('data-testid', 'sjpp-ag-matrix-pie-legend-item')
+				.style('cursor', 'pointer')
+				.on('click', event => {
+					this.pieLegendMenu.show({ target: event.currentTarget, key: entry.key, keys, hiddenKeys })
+				})
+			g.append('rect')
 				.attr('x', this.xStart)
 				.attr('y', y)
 				.attr('width', 12)
 				.attr('height', 12)
 				.attr('fill', entry.color)
+				.attr('fill-opacity', entry.hidden ? 0.3 : 1)
 				.attr('stroke', '#999')
 				.attr('stroke-width', 0.5)
-			svg
-				.append('text')
+			g.append('text')
 				.attr('x', this.xStart + 18)
 				.attr('y', y + 10)
 				.style('font-size', '0.8em')
+				.style('text-decoration', entry.hidden ? 'line-through' : 'none')
+				.style('opacity', entry.hidden ? 0.6 : 1)
 				.text(entry.label)
 		})
 	}

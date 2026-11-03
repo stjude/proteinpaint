@@ -41,7 +41,7 @@ export type AggMatrixPiePosition = {
 	slices: AggMatrixPieSlicePosition[]
 }
 
-export type PieLegendEntry = { key: string; label: string; color: string }
+export type PieLegendEntry = { key: string; label: string; color: string; hidden: boolean }
 
 export type AggMatrixDotPosition = {
 	x: number

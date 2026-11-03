@@ -6,13 +6,15 @@ import {
 	getPieLegend,
 	getPiePosition,
 	getPieTipData,
-	hasPies
+	hasPies,
+	isSliceHidden
 } from '../viewModel/PieViewModel.ts'
 
 /*
 Tests:
     - Pie positions
     - Hidden slices
+    - Slices the user hides
     - Slice labels and colors
     - Pie tooltip
     - Dots of a pie chart
@@ -144,10 +146,52 @@ tape('Pie legend', function (test) {
 	test.equal(legend.title, 'Variant class', 'Should title a gene variant legend')
 	test.deepEqual(
 		legend.entries.map(e => e.key),
-		['M'],
-		'Should list every slice that is drawn once, without the hidden slices'
+		['WT', 'M'],
+		'Should list every slice once, hidden slices too'
+	)
+	test.deepEqual(
+		legend.entries.map(e => e.hidden),
+		[true, false],
+		'Should flag the slices that are hidden by default'
+	)
+	const chosen = getPieLegend(data, { hiddenSliceKeys: ['M'] })
+	test.deepEqual(
+		chosen.entries.map(e => e.hidden),
+		[false, true],
+		'Should flag the slices the user hides instead of the defaults'
+	)
+	test.deepEqual(
+		getPieLegend(data, { hiddenSliceKeys: [] }).entries.map(e => e.hidden),
+		[false, false],
+		'Should show every slice when the user shows all'
 	)
 	test.equal(getPieLegend([[dot('A', pie(5, 1))]]).title, 'Category', 'Should title the legend of other terms')
 	test.deepEqual(getPieLegend([[dot('A')]]).entries, [], 'Should have no legend entries without pies')
+	test.end()
+})
+
+tape('Slices the user hides', function (test) {
+	const wt = slice('WT', 'Wildtype', '#D3D3D3', 9, true)
+	const m = slice('M', 'MISSENSE', '#3987CC', 1)
+	test.equal(isSliceHidden(wt, {}), true, 'Should hide a slice that is hidden by default')
+	test.equal(isSliceHidden(m, {}), false, 'Should show a slice that is not hidden by default')
+	test.equal(
+		isSliceHidden(wt, { hiddenSliceKeys: [] }),
+		false,
+		'Should show a default hidden slice when the user shows all'
+	)
+	test.equal(isSliceHidden(m, { hiddenSliceKeys: ['M'] }), true, 'Should hide a slice the user hides')
+
+	const data = { n: 10, radius: 1, slices: [wt, m] }
+	test.deepEqual(
+		getPiePosition(data, { ...settings, hiddenSliceKeys: [] }).slices.map(s => s.key),
+		['WT', 'M'],
+		'Should draw every slice when the user shows all'
+	)
+	test.equal(
+		getPiePosition(data, { ...settings, hiddenSliceKeys: ['M'] }).slices.length,
+		1,
+		'Should draw only the slices the user does not hide'
+	)
 	test.end()
 })
