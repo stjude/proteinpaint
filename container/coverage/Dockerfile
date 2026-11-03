@@ -1,3 +1,9 @@
+# the same as NODE_IMAGE in server/Dockerfile, used only to copy npm into this image
+ARG registry=docker.io/library
+ARG NODE_IMAGE=node:24.22.0-trixie-slim@sha256:7f486cabe892bff8fef04c0f7da8dba84a560be3e4e2740b7a86afc57ebec315
+
+FROM ${registry}/${NODE_IMAGE} AS node
+
 #########################
 # Server-only app update
 #########################
@@ -8,6 +14,13 @@ FROM ppserver:latest
 # the root-owned npm global prefix under /usr/local, and only generates the combined coverage report,
 # so it runs as root.
 USER root
+
+# the ppserver image is built on the runtime-only deps image, which has no npm,
+# so copy npm from the official node image to install the dev deps and run the tests
+COPY --from=node /usr/local/lib/node_modules/npm/ /usr/local/lib/node_modules/npm/
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+    ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
+    npm -v
 
 WORKDIR /home/root/pp/app/
 COPY ./python ./
