@@ -1,13 +1,16 @@
 import './dataset/termdb.test.ts'
-import { execSync } from 'child_process'
-import tape from 'tape'
+import { spawn } from 'child_process'
 import path from 'path'
 import './src/serverconfig.js'
 
 /*
   This script is used in server/package.json combined:coverage script.
-  It loads server unit tests and starts a server instance
+  It runs the server unit tests in a child process, and then starts a server instance in this process
   to handle requests and serve response data during client integration tests.
+
+  The unit tests run in their own process, so that what they change in the shared module state,
+  such as serverconfig or the shared authApi of auth.ts, is not carried over into the server.
+  c8 also collects the coverage of the child process, from the NODE_V8_COVERAGE env that it sets.
 */
 
 const __dirname = import.meta.dirname
@@ -31,19 +34,18 @@ try {
 
 // TODO: handler spec:coverage package script to only test relevant specs
 try {
-	await import('./serverTests.js')
-	// launch() freezes the whole serverconfig, so all unit tests must finish first, since some of them modify serverconfig;
-	// must register after the import, since calling tape.onFinish() before any test is defined ends an empty test run
-	await new Promise(resolve => tape.onFinish(resolve))
-	await sleep(5000)
+	// the same node options as this process, such as the tsx loader; a failed test does not stop the server launch,
+	// so that the client tests still run, as when the unit tests were run in this process
+	const code = await new Promise((resolve, reject) => {
+		const ps = spawn(process.execPath, [...process.execArgv, 'serverTests.js'], { cwd: __dirname, stdio: 'inherit' })
+		ps.on('error', reject)
+		ps.on('close', resolve)
+	})
+	console.log(`server unit tests exited with code ${code}`)
 	const { launch } = await import('./src/app.ts')
 	await launch()
 } catch (e) {
 	fetch(`${host}/coverage/close`) /*.then(r => r.json()).then(console.log)*/
 		.catch(console.log)
 	throw e
-}
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
 }
