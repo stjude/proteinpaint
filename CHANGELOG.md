@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Allow selecting sample types for splice junction terms, as for gene expression and DNA methylation terms
+
 
 ## 2.226.0
 
