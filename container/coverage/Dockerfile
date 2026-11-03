@@ -22,6 +22,8 @@ RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
     ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
     npm -v
 
+COPY ./tmppack /home/root/pp/tmppack
+
 WORKDIR /home/root/pp/app/
 COPY ./python ./
 RUN cd python && npm link
