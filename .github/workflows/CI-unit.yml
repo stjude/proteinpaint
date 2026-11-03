@@ -91,7 +91,7 @@ jobs:
         run: npm test --workspace="shared/utils"
 
       - name: Setup Python
-        if: contains(env.WS_TO_TEST, 'python')
+        if: contains(env.WS_TO_TEST, 'python') || contains(env.WS_TO_TEST, 'server')
         uses: actions/setup-python@v6
         with:
           python-version: '3.13'
@@ -139,6 +139,12 @@ jobs:
       - name: Install htslib
         if: contains(env.WS_TO_TEST, 'server')
         run: sudo apt-get install -y tabix
+
+      # h5py, for specs that read an HDF5 file with a python script, pinned as in python/requirements.txt;
+      # the python dependencies step installs it when the python workspace is also tested
+      - name: Install h5py
+        if: contains(env.WS_TO_TEST, 'server') && !contains(env.WS_TO_TEST, 'python')
+        run: python -m pip install "$(grep '^h5py==' python/requirements.txt)"
 
       - name: 🔎 Server unit tests
         if: contains(env.WS_TO_TEST, 'server')
