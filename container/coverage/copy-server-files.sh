@@ -9,6 +9,14 @@ set -exo pipefail
 # COPY SOURCE CODE, ARTIFACTS
 ##############################
 
+# the packed tarballs that the ppserver:latest @sjcrh/proteinpaint-server/package.json may point to,
+# which are only in the install stage of the ppserver image; empty if pack.sh was not run
+rm -rf tmppack
+mkdir tmppack
+if [[ -d ../tmppack ]]; then
+  cp ../tmppack/*.tgz tmppack/ 2>/dev/null || true
+fi
+
 rm -rf python
 mkdir python
 cp -r ../../python python/
