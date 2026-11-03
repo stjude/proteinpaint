@@ -196,20 +196,23 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 	for (const [category_key, count, total] of numbycategory) {
 		// in future tw may be in groupsetting mode
 		const sk = category_key.replace(/\s/g, '-') // safe key to avoid space
-		const row = [
-			{ value: tw.term.values?.[category_key]?.label || category_key },
-			{ html: total == undefined ? '' : fillbar(null, { f: count / total, v1: count, v2: total }) },
+		const row = Object.assign(
+			[
+				{ value: tw.term.values?.[category_key]?.label || category_key },
+				{ html: total == undefined ? '' : fillbar(null, { f: count / total, v1: count, v2: total }) },
+				{
+					html: `<span data-testid="sjpp-mds3tk-samsumcatmutcount-${sk}">${count}</span>
+						${
+							total
+								? ` <span style="font-size:.8em">/ <span data-testid="sjpp-mds3tk-samsumcattotalcount-${sk}">${total}</span></span>`
+								: ''
+						}`
+				}
+			],
 			{
-				html: `<span data-testid=sjpp-mds3tk-samsumcatmutcount-${sk}>${count}</span>
-			${
-				total
-					? ` <span style="font-size:.8em">/ <span data-testid=sjpp-mds3tk-samsumcattotalcount-${sk}>` +
-					  total +
-					  '</span></span>'
-					: ''
-			}`
+				testId: `sjpp-mds3tk-samsumcatrow-${sk}`
 			}
-		]
+		)
 		rows.push(row)
 	}
 	renderTable({
@@ -303,6 +306,7 @@ async function showDensity4oneTerm(termid, div, data, tk, block) {
 function createSubTk(tk, block, tvs) {
 	const tk2 = block.block_addtk_template(tk.duplicateTk(getNewFilter(tk, tvs)))
 	tk2.subtk = true
+	tk2.g.attr('class', 'sjpp-subtk')
 	block.tk_load(tk2)
 }
 

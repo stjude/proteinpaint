@@ -112,7 +112,6 @@ export function skewer_make(tk, block) {
 			Object.keys(mclass).forEach(v => (tk.shapes[v] = 'filledCircle'))
 		}
 	}
-	console.log(ss.data)
 	ss.selection = ss.g
 		.selectAll()
 		.data(ss.data)

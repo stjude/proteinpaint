@@ -83,7 +83,7 @@ export type TableButton = {
 /** ariaLabelledBy is an optional attribute on the array object,
  * if present, will be used as aria-labelledby attribute on the
  * radio or checkbox input element, to address Section 508 requirement */
-export type TableRow = TableCell[] & { ariaLabelledBy?: string }
+export type TableRow = TableCell[] & { ariaLabelledBy?: string; testId?: string }
 
 export type TableArgs = {
 	/** List of table columns */

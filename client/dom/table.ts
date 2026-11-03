@@ -295,7 +295,11 @@ export function renderTable({
 		for (const [sliceIdx, row] of slice.entries()) {
 			const rowIdx = pagination ? startIdx + sliceIdx : sliceIdx
 			let checkbox
-			const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper').attr('tabindex', 0)
+			const tr = tbody
+				.append('tr')
+				.attr('class', 'sjpp_row_wrapper')
+				.attr('tabindex', 0)
+				.attr('data-testid', row.testId ?? 'sjpp-table-row-item')
 			if (striped && rowIdx % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
 
 			// by default, assume that the first data cell with text should be used to label the input to its left,
