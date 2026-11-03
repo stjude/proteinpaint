@@ -1,5 +1,4 @@
 import tape from 'tape'
-import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { readFastaRegion } from '#src/fasta.ts'
@@ -74,20 +73,14 @@ tape('readFastaRegion(): rejected arguments', async test => {
 			`should reject ${label}`
 		)
 	}
-	// a bgzipped file must have the .gzi index, which samtools faidx would otherwise write next to it
-	const dir = fs.mkdtempSync(path.join(tp, 'files/pp-fasta-'))
-	try {
-		fs.copyFileSync(path.join(tp, bgzipped), path.join(dir, 'a.fa.gz'))
-		fs.copyFileSync(path.join(tp, bgzipped + '.fai'), path.join(dir, 'a.fa.gz.fai'))
-		await rejects(
-			test,
-			() => readFastaRegion(path.join(dir, 'a.fa.gz'), 'chrA', 1, 2),
-			/\.gzi index/,
-			'should reject a bgzipped file without a .gzi index'
-		)
-	} finally {
-		fs.rmSync(dir, { recursive: true, force: true })
-	}
+	// a bgzipped file must have the .gzi index, which samtools faidx would otherwise write next to it;
+	// a committed copy of the bgzipped file and its .fai, without a .gzi, since tp may be mounted read-only
+	await rejects(
+		test,
+		() => readFastaRegion(path.join(tp, 'files/hg38/fasta/test.nogzi.fa.gz'), 'chrA', 1, 2),
+		/\.gzi index/,
+		'should reject a bgzipped file without a .gzi index'
+	)
 	test.end()
 })
 

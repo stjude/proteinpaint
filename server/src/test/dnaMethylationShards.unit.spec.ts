@@ -1,7 +1,4 @@
 import tape from 'tape'
-import fs from 'fs'
-import path from 'path'
-import serverconfig from '../serverconfig.js'
 import { validate_query_dnaMethylation, readsCpgShard } from '../mds3.init.js'
 import { addNonDictionaryQueries } from '../routes/termdb.config.ts'
 
@@ -23,7 +20,8 @@ getters, CpG .file and element matrix, read each term for its own sample types.
 */
 
 const tdir = 'files/hg38/TermdbTest'
-const shardDir = `${tdir}/__cpgShardsTest`
+// a committed one-shard dir, with a copy of dnaMeth.h5 as chr17.h5, since tp may be mounted read-only
+const shardDir = `${tdir}/cpgShards`
 
 function getDs(cpgByChr: string) {
 	return {
@@ -53,20 +51,13 @@ tape('readsCpgShard() - only a region term on a chromosome with a shard reads it
 })
 
 tape('validate_query_dnaMethylation() - one shard is kept and serves region terms', async t => {
-	const dir = path.join(serverconfig.tpmasterdir, shardDir)
-	fs.mkdirSync(dir, { recursive: true })
-	fs.symlinkSync(path.join(serverconfig.tpmasterdir, tdir, 'dnaMeth.h5'), path.join(dir, 'chr17.h5'))
-	try {
-		const ds = getDs(`${shardDir}/{chr}.h5`)
-		await validate_query_dnaMethylation(ds, {})
-		const q = ds.queries.dnaMethylation
-		t.deepEqual([...q.cpgChroms], ['chr17'], 'chr17 shard found')
-		t.equal(typeof q.get, 'function', 'term getter set')
-		t.equal(readsCpgShard(q, term('region')), true, 'region term reads the shard')
-		t.equal(readsCpgShard(q, term('promoter')), false, 'promoter term still reads the element matrix')
-	} finally {
-		fs.rmSync(dir, { recursive: true, force: true })
-	}
+	const ds = getDs(`${shardDir}/{chr}.h5`)
+	await validate_query_dnaMethylation(ds, {})
+	const q = ds.queries.dnaMethylation
+	t.deepEqual([...q.cpgChroms], ['chr17'], 'chr17 shard found')
+	t.equal(typeof q.get, 'function', 'term getter set')
+	t.equal(readsCpgShard(q, term('region')), true, 'region term reads the shard')
+	t.equal(readsCpgShard(q, term('promoter')), false, 'promoter term still reads the element matrix')
 	t.end()
 })
 

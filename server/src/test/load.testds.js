@@ -1,5 +1,6 @@
 import serverconfig from '../serverconfig.js'
 import path from 'path'
+import fs from 'fs'
 import bettersqlite from 'better-sqlite3'
 
 /* 
@@ -12,7 +13,11 @@ import bettersqlite from 'better-sqlite3'
 // if (process.argv[2]) load_dataset(process.argv[2])
 
 export async function init(dslabel) {
-	serverconfig.tpmasterdir = path.join(import.meta.dirname, '../../test/tp')
+	// keep a configured tpmasterdir that already has the test data, such as the /home/root/pp/tp mount of
+	// the coverage container, since it is shared by the other specs that run in the same process
+	if (!fs.existsSync(path.join(serverconfig.tpmasterdir || '', 'files/hg38/TermdbTest/db'))) {
+		serverconfig.tpmasterdir = path.join(import.meta.dirname, '../../test/tp')
+	}
 	const ds = await get_dataset(dslabel)
 	const db = bettersqlite(path.join(serverconfig.tpmasterdir, ds.cohort.db.file), {
 		readonly: true,
