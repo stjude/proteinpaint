@@ -3,6 +3,7 @@ import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx
 import {
 	filterInit,
 	filterPromptInit,
+	getCombinedTermFilter,
 	getNormalRoot,
 	excludeFilterByTag,
 	filterJoin,
@@ -28,6 +29,7 @@ in only three places, all branched on `isGE` below: which ds query proves the as
 which server route the pre-analysis hits, and the expression-source tabs (methylation has no
 pseudobulk counterpart). The group table, filter prompt and submit flow are shared.
 
+config.filter limits the group picker, sample counts, and analysis to the plot's selected samples.
 The results view is a separate chart, 'differentialAnalysis'; this plot only builds groups
 and hands them over via renderPreAnalysisData(). */
 class DEinputPlot extends PlotBase implements RxComponent {
@@ -98,7 +100,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			termfilter: appState.termfilter,
+			termfilter: getCombinedTermFilter(appState, config.filter),
 			config,
 			// quick fix to skip history tracking as needed
 			_scope_: appState._scope_
@@ -388,7 +390,10 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			// fill the #SAMPLE cell. not awaited: the table is already rendered, and on gdc each count
 			// is a /cases round trip
 			this.app.vocabApi
-				.getFilteredSampleCount(this.groups[i].filter, this.hasCohort0 ? null : this.state.termfilter.filter0)
+				.getFilteredSampleCount(
+					filterJoin([this.groups[i].filter, this.state.termfilter.filter].filter(f => f?.lst?.length)),
+					this.hasCohort0 ? null : this.state.termfilter.filter0
+				)
 				.then(n => row[3].__td.text(n))
 				.catch(e => row[3].__td.text('n/a').attr('title', e?.message || e))
 

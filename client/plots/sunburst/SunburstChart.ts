@@ -1,11 +1,18 @@
 import { dofetch3 } from '#common/dofetch'
 import { select } from 'd3-selection'
-import { escapeHtml, capitalizeFirstLetter } from '#dom'
+import { escapeHtml, capitalizeFirstLetter, Menu } from '#dom'
 import { getNormalRoot, filterJoin } from '#filter'
-import { addNewGroup, getGroupFilterOfConditions } from '#mass/groups'
+import {
+	addNewGroup,
+	getGroupFilterOfConditions,
+	getSamplelstTWFromFilters,
+	getGeneExpressionPreAnalysis,
+	renderPreAnalysisData
+} from '#mass/groups'
 import { availabilitySections, fetchDataAvailability, type AvailabilityRow } from '#mass/groupDataAvailability'
 import { TermTypes } from '#types'
-import { getActiveCohortStr } from '#mass/charts'
+import { getActiveCohortStr, getCurrentCohortChartTypes } from '#mass/charts'
+import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
 import type { Filter, SunburstRequest, SunburstResponse } from '#types'
 import {
 	SunburstRenderer,
@@ -28,8 +35,15 @@ import { buildTermTree, selectionFilter, selectionName, type TermSunNode } from 
 The term-based sunburst without its rx plot component: fetches the counts of the given rings, draws them,
 and keeps the wedge selection, one sample group. Below the selected wedges, "Show available data" lists how
 many of the selected samples have each kind of data of the dataset (termdb/dataAvailability); a kind with a
-plot of its own opens that plot of the selected samples, which have the selection as the plot's filter. The
-selection can also become one sample group in the GROUPS tab. Used by the sunburst
+plot of its own opens that plot of the selected samples, which have the selection as the plot's filter.
+When enabled for the active cohort, GRIN2 is offered for a selection with SNV/indel, CNV or SV/fusion
+data, alongside the mutation rows that open the genome browser.
+Summarize opens a dictionary popover beside its button to plot a term with the selection as its filter.
+Gene Expression row likewise opens its gene-selection form beside the row, creating only the chosen plot.
+Exactly two selected wedges can open the shared differential expression panel when supported and both
+have RNA-seq counts; the first-selected wedge is the control and the second is the case.
+Survival plots split two or more selected wedges into separate curves using a samplelst term, as custom variables do.
+The selection can also become one sample group in the GROUPS tab. Used by the sunburst
 plot (sunburst.ts), which fills the Rings box with term pills, and by the About tab (about.ts), which
 lists the dataset's default rings.
 
@@ -102,6 +116,8 @@ export class SunburstChart {
 	dataShown = false
 	/** number of the latest renderData(), so that the response of an earlier one is dropped */
 	dataId = 0
+	dataMenu?: Menu
+	dataPicker?: { destroy: () => void }
 
 	constructor(opts: SunburstChartOpts) {
 		this.app = opts.app
@@ -158,6 +174,7 @@ export class SunburstChart {
 	 *  when drawn, false when the request failed (the error is shown), and undefined when a later update
 	 *  replaced this one, which then has its own outcome */
 	async update(arg: SunburstUpdateArg, emptyNote = ''): Promise<boolean | undefined> {
+		this.closeDataPicker()
 		const id = ++this.updateId
 		this.twLst = arg.twLst
 		this.groupFilter = arg.groupFilter
@@ -395,6 +412,7 @@ export class SunburstChart {
 	/** the selected-wedges card: one line per wedge with its path and count, and the create-group
 	 *  action as the footer */
 	renderSidebar() {
+		this.closeDataPicker()
 		const sel = this.dom.sel
 		const { title, headRight, body } = sel
 		headRight.selectAll('*').remove()
@@ -483,19 +501,19 @@ export class SunburstChart {
 
 		const count = this.selectedCount()
 		if (n) void this.renderData(body, count)
+		if (!n && !this.createdNote) return
 
 		const footer = body
 			.append('div')
 			.style('margin-top', '10px')
 			.style('padding-top', '10px')
 			.style('border-top', `1px solid ${RULE}`)
-		pill(footer, { button: true })
-			.attr('data-testid', 'sjpp-sunburst-create-group')
-			.property('disabled', n === 0)
-			.style('opacity', n ? 1 : 0.3)
-			.style('cursor', n ? 'pointer' : 'default')
-			.text(n ? `Create group of ${this.renderer.unitText(count)}` : 'Create group')
-			.on('click', () => this.createGroup())
+		if (n) {
+			pill(footer, { button: true })
+				.attr('data-testid', 'sjpp-sunburst-create-group')
+				.text(`Create group of ${this.renderer.unitText(count)}`)
+				.on('click', () => this.createGroup())
+		}
 		if (this.createdNote) {
 			footer
 				.append('div')
@@ -556,12 +574,29 @@ export class SunburstChart {
 			.style('cursor', 'pointer')
 			.text('Hide ▴')
 			.on('click', () => this.hideData())
+		this.dataRow(
+			div.append('div').style('font-size', '0.85em'),
+			{ kind: 'data', key: 'summarize', label: 'Summarize', counts: [] },
+			false,
+			undefined,
+			anchor => this.showDataPicker(anchor)
+		)
 		const list = div.append('div').text('Loading ...').style('font-size', '0.85em').style('color', TEXT_MUTED)
 		try {
 			const appState = this.app.getState()
 			const termfilter = appState.termfilter || {}
 			const filter = filterJoin([this.plotFilter(), termfilter.filter].filter(f => f?.lst?.length))
-			const groups = [{ name: 'selection', filter }]
+			const chartTypes = getCurrentCohortChartTypes(appState)
+			const queries = this.app.vocabApi.termdbConfig?.queries || {}
+			const canCompare = this.selected.size == 2 && chartTypes.includes('DA') && queries.rnaseqGeneCount
+			const comparison = canCompare ? this.comparisonGroups() : []
+			const groups = [
+				{ name: 'selection', filter },
+				...comparison.map(g => ({
+					...g,
+					filter: filterJoin([g.filter, termfilter.filter].filter(f => f?.lst?.length))
+				}))
+			]
 			const res = await fetchDataAvailability(
 				this.app.vocabApi,
 				groups,
@@ -570,10 +605,24 @@ export class SunburstChart {
 			)
 			if (id != this.dataId) return
 			list.text('').style('color', null)
-			// differential expression compares groups, and the selection is one
-			const sections = availabilitySections(res, ['rnaseqGeneCount'])
+			const comparisonCounts = res.groups.slice(1)
+			if (
+				canCompare &&
+				comparisonCounts.length == 2 &&
+				comparisonCounts.every(g => (g.data.rnaseqGeneCount || 0) > 0)
+			) {
+				const tw = getSamplelstTWFromFilters(comparison)
+				this.dataRow(
+					list,
+					{ kind: 'data', key: 'differentialExpression', label: 'Differential Gene Expression Analysis', counts: [] },
+					false,
+					undefined,
+					anchor => this.showDataPicker(anchor, 'differentialExpression', tw)
+				)
+			}
+			const sections = availabilitySections({ ...res, groups: res.groups.slice(0, 1) }, ['rnaseqGeneCount'])
 			if (!sections.length) {
-				list.style('color', TEXT_MUTED).text(`No data for these ${this.unit.many}`)
+				if (list.selectAll('*').empty()) list.style('color', TEXT_MUTED).text(`No data for these ${this.unit.many}`)
 				return
 			}
 			for (const section of sections) {
@@ -592,13 +641,166 @@ export class SunburstChart {
 				}
 				for (const row of section.rows) {
 					const launch = this.dataPlot(row)
-					this.dataRow(list, row, !!section.title, launch)
+					this.dataRow(
+						list,
+						row,
+						!!section.title,
+						launch,
+						row.kind == 'data' && row.key == 'geneExpression'
+							? anchor => this.showDataPicker(anchor, 'geneExpression')
+							: undefined
+					)
+				}
+				if (
+					section.key == 'mutations' &&
+					chartTypes.includes('grin2') &&
+					section.rows.some(row => {
+						const dt = Number(row.key.split('.')[0])
+						if (dt == dtsnvindel) return !!queries.snvindel
+						if (dt == dtcnv) return !!(queries.cnv || queries.singleSampleMutation?.cnvTypes?.length)
+						return (dt == dtfusionrna || dt == dtsv) && queries.svfusion?.dtLst?.includes(dt)
+					})
+				) {
+					pill(list, { button: true })
+						.attr('data-testid', 'sjpp-sunburst-grin2')
+						.style('font-family', 'inherit')
+						.style('font-weight', 'normal')
+						.style('width', 'auto')
+						.style('padding', '2px 8px')
+						.style('margin', '4px 6px 4px 16px')
+						.text('Run GRIN2')
+						.on('click', () => this.launchPlot({ chartType: 'grin2', filter: this.plotFilter() }))
 				}
 			}
 		} catch (e: any) {
 			if (id != this.dataId) return
 			list.attr('class', 'sja_errorbar').text(e?.message || String(e))
 		}
+	}
+
+	/** Separate groups in selection order; for differential analysis, first control, then case. */
+	comparisonGroups() {
+		const termfilter = this.app.getState().termfilter || {}
+		const nodes = [...this.selected.values()]
+		return this.selectedPaths().map((path, i) => ({
+			name: `${i + 1}: ${selectionName([path])}`,
+			filter: filterJoin([selectionFilter([path], this.twLst), this.groupFilter].filter(f => f?.lst?.length)),
+			filter0: termfilter.filter0,
+			sampleCount: nodes[i].value || 0,
+			color: this.renderer.color(nodes[i])
+		}))
+	}
+
+	async showDataPicker(
+		anchor: HTMLElement,
+		kind: 'summary' | 'geneExpression' | 'differentialExpression' = 'summary',
+		samplelstTW?: ReturnType<typeof getSamplelstTWFromFilters>
+	) {
+		this.closeDataPicker()
+		const menu = new Menu({
+			padding: '8px',
+			testid:
+				kind == 'geneExpression'
+					? 'sjpp-sunburst-expression-menu'
+					: kind == 'differentialExpression'
+					? 'sjpp-sunburst-differential-menu'
+					: 'sjpp-sunburst-summary-menu'
+		})
+		this.dataMenu = menu
+		const position = () => {
+			if (!menu.dnode) throw new Error('Missing data picker menu element')
+			const rect = anchor.getBoundingClientRect()
+			const width = menu.dnode.getBoundingClientRect().width
+			const x = rect.right + 5 + width <= window.innerWidth ? rect.right + 5 : Math.max(0, rect.left - width - 5)
+			menu.showunder(anchor, { offsetX: x - rect.left, offsetY: -rect.height - 5 })
+		}
+		const loading = menu.d.append('div').text('Loading ...')
+		position()
+		try {
+			const state = this.app.getState()
+			const filter = this.plotFilter()
+			if (kind == 'differentialExpression') {
+				if (!samplelstTW) throw new Error('Missing differential analysis groups')
+				const preAnalysisData = await getGeneExpressionPreAnalysis(this.app, samplelstTW, state.termfilter)
+				if (this.dataMenu != menu) return
+				renderPreAnalysisData({
+					preAnalysisData,
+					samplelstTW,
+					groups: samplelstTW.q.groups,
+					tip: menu,
+					self: { app: this.app, state: { termfilter: state.termfilter } },
+					onLaunch: async config => {
+						this.closeDataPicker()
+						await this.launchPlot(config)
+					}
+				})
+			} else if (kind == 'geneExpression') {
+				const { geneExpInputInit } = await import('#plots/GeneExpInput.ts')
+				if (this.dataMenu != menu) return
+				const picker = await geneExpInputInit({
+					app: this.app,
+					holder: menu.d.append('div'),
+					header: menu.d.insert('div', ':first-child'),
+					config: { termType: TermTypes.GENE_EXPRESSION, spawnConfig: { filter } },
+					onSubmit: async config => {
+						this.closeDataPicker()
+						await this.launchPlot(config)
+					}
+				})
+				if (this.dataMenu != menu) {
+					picker.destroy()
+					return
+				}
+				this.dataPicker = picker
+				await picker.update({ appState: state })
+			} else {
+				const { appInit } = await import('#termdb/app')
+				if (this.dataMenu != menu) return
+				const tree = await appInit({
+					vocabApi: this.app.vocabApi,
+					holder: menu.d.append('div'),
+					state: {
+						vocab: state.vocab,
+						activeCohort: state.activeCohort,
+						termfilter: {
+							...state.termfilter,
+							filter: filterJoin([filter, state.termfilter?.filter].filter(f => f?.lst?.length))
+						},
+						customTerms: state.customTerms,
+						tree: { usecase: { target: 'dictionary' } }
+					},
+					tree: {
+						click_term: selected => {
+							const term = selected.term || selected
+							this.closeDataPicker()
+							void this.launchPlot(
+								term.type == 'survival'
+									? this.survivalConfig(selected.term ? selected : { term })
+									: { chartType: 'summary', term: selected.term ? selected : { term }, filter }
+							)
+						}
+					}
+				})
+				if (this.dataMenu != menu) {
+					tree.destroy()
+					return
+				}
+				this.dataPicker = tree
+			}
+			if (this.dataMenu != menu) return
+			loading.remove()
+			if (menu.d.style('display') != 'none') position()
+		} catch (e: any) {
+			if (this.dataMenu != menu) return
+			loading.attr('class', 'sja_errorbar').text(e?.message || String(e))
+		}
+	}
+
+	closeDataPicker() {
+		this.dataPicker?.destroy()
+		this.dataPicker = undefined
+		this.dataMenu?.destroy()
+		this.dataMenu = undefined
 	}
 
 	hideData() {
@@ -608,10 +810,17 @@ export class SunburstChart {
 		this.renderSidebar()
 	}
 
-	/** a line of the available data: the kind of data and its count, which opens `launch`, a plot_create config,
+	/** a line of the available data: the kind of data and its count (omitted for empty counts), which opens `launch`, a plot_create config,
 	 *  when given; a row of a section is indented under the section's title */
-	dataRow(list: any, row: AvailabilityRow, inSection: boolean, launch?: any) {
-		const n = row.counts[0] || 0
+	dataRow(
+		list: any,
+		row: AvailabilityRow,
+		inSection: boolean,
+		launch?: any,
+		onActivate?: (anchor: HTMLElement) => void
+	) {
+		const n = row.counts.length ? row.counts[0] || 0 : undefined
+		const clickable = !!launch || !!onActivate
 		const div = list
 			.append('div')
 			.attr('data-testid', `sjpp-sunburst-data-${row.kind == 'data' ? '' : row.kind + '-'}${row.key}`)
@@ -626,9 +835,10 @@ export class SunburstChart {
 		div
 			.append('span')
 			.style('white-space', 'nowrap')
-			.style('color', launch ? LINK : null)
-			.text(`${n.toLocaleString()}${row.unit ? ' ' + row.unit : ''}${launch ? ' ›' : ''}`)
-		if (!launch) return
+			.style('color', clickable ? LINK : null)
+			.text(`${n === undefined ? '' : n.toLocaleString()}${row.unit ? ' ' + row.unit : ''}${clickable ? ' ›' : ''}`)
+		if (!clickable) return
+		const activate = (anchor: HTMLElement) => (onActivate ? onActivate(anchor) : this.launchPlot(launch))
 		div
 			.attr('role', 'button')
 			.attr('tabindex', 0)
@@ -636,11 +846,11 @@ export class SunburstChart {
 			.style('cursor', 'pointer')
 			.on('mouseenter', (event: any) => select(event.currentTarget).style('background', '#f3f4f6'))
 			.on('mouseleave', (event: any) => select(event.currentTarget).style('background', 'transparent'))
-			.on('click', () => this.launchPlot(launch))
+			.on('click', (event: MouseEvent) => activate(event.currentTarget as HTMLElement))
 			.on('keydown', (event: KeyboardEvent) => {
 				if (event.key == 'Enter' || event.key == ' ') {
 					event.preventDefault()
-					this.launchPlot(launch)
+					activate(event.currentTarget as HTMLElement)
 				}
 			})
 	}
@@ -650,6 +860,15 @@ export class SunburstChart {
 	plotFilter(): Filter {
 		const filters = [selectionFilter(this.selectedPaths(), this.twLst), this.groupFilter]
 		return filterJoin(filters.filter(f => f?.lst?.length)) as Filter
+	}
+
+	survivalConfig(term: any) {
+		return {
+			chartType: 'survival',
+			term,
+			filter: this.plotFilter(),
+			...(this.selected.size > 1 ? { term2: getSamplelstTWFromFilters(this.comparisonGroups()) } : {})
+		}
 	}
 
 	/** the plot of the selected samples for a row of the available data, as a plot_create config; undefined
@@ -668,11 +887,7 @@ export class SunburstChart {
 						...(q.snvindel ? { snvindel: { ...structuredClone(q.snvindel), shown: true } } : {})
 				  }
 				: undefined
-		// the survival curve of the selected samples
-		if (row.kind == 'survival') return { chartType: 'survival', term: { id: row.key }, filter }
-		// the input form of expression plots; each plot it opens has the filter
-		if (row.key == 'geneExpression')
-			return { chartType: 'GeneExpInput', termType: TermTypes.GENE_EXPRESSION, spawnConfig: { filter } }
+		if (row.kind == 'survival') return this.survivalConfig({ id: row.key })
 		// the term search, whose DNA methylation tab lists methylation terms; a term opens its summary with the filter
 		if (row.key == 'dnaMethylation') return { chartType: 'dictionary', spawnConfig: { filter } }
 		// the table of the imaging samples that pass the filter, to render on a brain template
@@ -709,6 +924,7 @@ export class SunburstChart {
 	}
 
 	destroy() {
+		this.closeDataPicker()
 		this.renderer?.destroy()
 	}
 }

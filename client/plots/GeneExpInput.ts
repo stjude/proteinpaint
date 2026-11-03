@@ -10,18 +10,19 @@ import { getCurrentCohortChartTypes } from '../mass/charts.js'
 import { importPlot } from '#plots/importPlot.js'
 
 type GeneExpInputOpts = {
-	/** sandbox header
-	 * Normally this is optional but there's no reason to launch this plot
-	 * sans sandbox. */
+	/** Sandbox or embedded picker header. */
 	header: any
 	/** Optional text to display in the header before the term type */
 	headerText?: string
 	termProperties?: { [key: string]: any }
 	spawnConfig?: { [key: string]: any }
+	/** Embedded picker configuration, without a plot in the mass store. */
+	config?: { termType: string; spawnConfig?: { [key: string]: any } }
+	/** Launch a plot from an embedded picker instead of replacing a transient input plot. */
+	onSubmit?: (config: { [key: string]: any }) => Promise<void>
 }
 
-/** Transient plot for users to pick gene(s) of interest and launch
- * the appropriate plot. */
+/** Pick gene(s) and launch a plot, either in a transient plot or embedded with config/onSubmit. */
 export class GeneExpInput extends PlotBase implements RxComponent {
 	static type = 'GeneExpInput'
 
@@ -34,6 +35,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	unit!: string
 	dom!: { [index: string]: any }
 	tabs!: any
+	geneSearchMenus: Menu[] = []
 
 	constructor(opts: GeneExpInputOpts, api: ComponentApi) {
 		super(opts, api)
@@ -54,11 +56,11 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	}
 
 	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+		const config = this.opts.config || appState.plots.find(p => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-		const subplots = appState.plots.filter(p => p.parentId === this.id)
+		const subplots = this.opts.config ? [] : appState.plots.filter(p => p.parentId === this.id)
 		return {
 			config,
 			termdbConfig: appState.termdbConfig,
@@ -143,6 +145,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 
 	/** Render the termType-dependent gene-selection tabs, once termType is known. */
 	async renderTermTypeUI(state) {
+		this.clearGeneSearchMenus()
 		this.termType = state.config.termType
 		this.unit = getUnit(this.termType, this.app.vocabApi)
 		// a panel-based sc sample restricts gene search to its assayed genes;
@@ -203,11 +206,14 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			},
 			{
 				label: `Differential ${typeGroup[this.termType as string].toLowerCase()} analysis`,
-				//Only enabling for gene expression for now
 				chartType: 'DEinput',
 				//TODO: add whether or not a total file is available for pseudobulk to enable DA
 				isVisible: () => chartTypes.has('DA') && (this.termType === GENE_EXPRESSION || this.termType === PSEUDOBULK),
 				callback: async (event, tab) => {
+					if (this.opts.onSubmit) {
+						await this.opts.onSubmit(this.makeConfig({ chartType: 'DEinput', header_mode: ' ' }))
+						return
+					}
 					await this.app.dispatch({
 						type: 'plot_create',
 						parentId: this.id,
@@ -280,7 +286,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			row,
 			genome: this.genome,
 			geneList: this.sampleGeneList, // sc: only the sample's assayed genes
-			tip: new Menu({ padding: '0px' }),
+			tip: this.geneSearchMenu(row),
 			searchOnly: 'gene',
 			callback: async () => {
 				const tw = {
@@ -335,7 +341,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			row: gene1row,
 			genome: this.genome,
 			geneList: this.sampleGeneList, // sc panel: only the sample's assayed genes
-			tip: new Menu({ padding: '0px' }),
+			tip: this.geneSearchMenu(gene1row),
 			searchOnly: 'gene',
 			callback: async () => {
 				gene2row.style('display', 'block')
@@ -350,7 +356,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			row: gene2row,
 			genome: this.genome,
 			geneList: this.sampleGeneList, // sc panel: only the sample's assayed genes
-			tip: new Menu({ padding: '0px' }),
+			tip: this.geneSearchMenu(gene2row),
 			searchOnly: 'gene',
 			callback: async () => {
 				if (!geneSearch2.geneSymbol) throw new Error('Second gene result is required')
@@ -475,7 +481,26 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		this.components.plots[subplot.id] = await componentInit(opts)
 	}
 
+	geneSearchMenu(row) {
+		const menu = new Menu({ padding: '0px', parent_menu: row.node().closest('.sja_menu_div') })
+		this.geneSearchMenus.push(menu)
+		return menu
+	}
+
+	clearGeneSearchMenus() {
+		for (const menu of this.geneSearchMenus) menu.destroy()
+		this.geneSearchMenus = []
+	}
+
+	destroy() {
+		this.clearGeneSearchMenus()
+	}
+
 	async dispatchEdits(config) {
+		if (this.opts.onSubmit) {
+			await this.opts.onSubmit(config)
+			return
+		}
 		await this.app.dispatch({
 			type: 'app_refresh',
 			subactions: [
