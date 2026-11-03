@@ -34,6 +34,13 @@ const allowed = new Map([
 ])
 
 tape('child_process imports', test => {
+	// the scanned files are only all present in a repo checkout, not in an image with only the server dir,
+	// such as the coverage container, where repoDir is the app dir
+	if (!isRepoCheckout()) {
+		test.comment('skipped: not run from a repo checkout')
+		test.end()
+		return
+	}
 	const found = getImportingFiles()
 	test.deepEqual(
 		found.filter(f => !allowed.has(f)),
@@ -47,6 +54,14 @@ tape('child_process imports', test => {
 	)
 	test.end()
 })
+
+function isRepoCheckout() {
+	try {
+		return !!JSON.parse(fs.readFileSync(path.join(repoDir, 'package.json'), 'utf8')).workspaces
+	} catch (_) {
+		return false
+	}
+}
 
 function getImportingFiles() {
 	const files = [...scanFiles]
