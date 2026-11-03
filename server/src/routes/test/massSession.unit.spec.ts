@@ -36,9 +36,12 @@ function loadRoutes(massSessionCacheOpts?: { maxAge?: number; maxSize?: number }
 	try {
 		const overrides: any = { cachedir }
 		if (massSessionCacheOpts) overrides.features = { cacheMonitor: { subdirs: { massSession: massSessionCacheOpts } } }
+		// the same export conditions as this process, such as sjpp/dev for the workspace sources, or none in the
+		// coverage container, where the installed workspace packages only have their dist files
+		const conditions = process.execArgv.filter(a => a.startsWith('--conditions'))
 		const child = spawnSync(
 			process.execPath,
-			['--import', 'tsx', '--conditions=sjpp/dev', '--input-type=module', '--eval', childScript],
+			['--import', 'tsx', ...conditions, '--input-type=module', '--eval', childScript],
 			{ encoding: 'utf8', env: { ...process.env, PP_SERVERCONFIG_OVERRIDES: JSON.stringify(overrides) } }
 		)
 		const line = child.stdout.split('\n').find(l => l.startsWith('RESULT='))
