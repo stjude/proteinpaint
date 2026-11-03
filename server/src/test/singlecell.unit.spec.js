@@ -1,8 +1,5 @@
 import tape from 'tape'
-import fs from 'fs'
 import path from 'path'
-import crypto from 'crypto'
-import serverconfig from '../serverconfig.js'
 import { handle_singlecell_closure } from '../singlecell.js'
 
 /*
@@ -17,12 +14,10 @@ test sections:
 - gene expression requests are no longer supported
 */
 
-// test files are written to a temporary dir under tpmasterdir, since file paths are relative to it
-const reldir = 'tmp-singlecell-' + crypto.randomUUID()
-const absdir = path.join(serverconfig.tpmasterdir, reldir)
-fs.mkdirSync(absdir)
+// a committed test file under tpmasterdir, since file paths are relative to it,
+// and the tp dir may be mounted read-only, such as in the coverage container
+const reldir = 'files/hg38/singlecell'
 const textfile = path.join(reldir, 'cells.txt')
-fs.writeFileSync(path.join(serverconfig.tpmasterdir, textfile), 'x\ty\tz\ttype\n1\t2\t3\tA\n-4\t5\t6\tB\n')
 
 const genome = {
 	name: 'hg38',
@@ -139,10 +134,5 @@ tape('gene expression requests are no longer supported', async test => {
 	test.equal(box?.error, 'unknown request', 'should reject getgeneboxplot')
 	const heat = await send({ genome: 'hg38', getheatmap: {} })
 	test.equal(heat?.error, 'unknown request', 'should reject getheatmap')
-	test.end()
-})
-
-tape('cleanup', test => {
-	fs.rmSync(absdir, { recursive: true, force: true })
 	test.end()
 })
