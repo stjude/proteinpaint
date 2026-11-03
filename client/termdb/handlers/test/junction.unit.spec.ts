@@ -165,3 +165,57 @@ tape('event junction renders fraction choices when requested', async test => {
 	holder.remove()
 	test.end()
 })
+
+tape('the sample type row sets the chosen sample types on the picked junction and event', async test => {
+	const holder = d3s.select('body').append('div')
+	const handler = new SearchHandler()
+	let selected: any
+	const customTerms = [
+		makeJunctionCustomTerm([makeJunction('junction-1')]),
+		makeJunctionCustomTerm([makeJunction('junction-2'), makeJunction('junction-3')], 'Event A')
+	]
+	const opts: any = getOpts(holder, 'junction-handler-sampletypes', customTerms, term => {
+		selected = term
+	})
+	opts.app.vocabApi.termdbConfig = {
+		queries: { junction: { sampleTypes: [2, 3] } },
+		sampleTypes: {
+			1: { name: 'patient', plural_name: 'patients', parent_id: null },
+			2: { name: 'diagnosis sample', plural_name: 'diagnosis samples', parent_id: 1 },
+			3: { name: 'relapse sample', plural_name: 'relapse samples', parent_id: 1 }
+		}
+	}
+	await handler.init(opts)
+
+	const pills = () => holder.selectAll('.ts_pill').nodes() as HTMLElement[]
+	const boxes = () => holder.selectAll('input[type=checkbox]').nodes() as HTMLInputElement[]
+	test.equal(boxes().length, 2, 'renders a checkbox for each sample type of the junction file')
+
+	pills()[0].click()
+	test.equal(selected.name, 'Name junction-1', 'keeps the name when every sample type is checked')
+	test.notOk('sampleTypes' in selected, 'reads every sample, as before the selector, when every type is checked')
+
+	boxes()[1].click()
+	pills()[0].click()
+	test.deepEqual(selected.sampleTypes, [2], 'sets the checked sample types on the junction term')
+	test.equal(selected.name, 'Name junction-1 (diagnosis samples)', 'names the sample types')
+	test.equal(selected.id, 'junction-1', 'keeps the junction id')
+	test.notOk(customTerms[0].tw.term.sampleTypes, 'leaves the stored custom term unchanged')
+
+	pills()[1].click()
+	test.deepEqual(selected.sampleTypes, [2], 'sets the sample types on the event collection')
+	test.ok(
+		selected.termlst.every(m => m.sampleTypes?.[0] == 2),
+		'sets them on each member junction, which the server reads on its own'
+	)
+
+	// a delete draws the list again, which must keep the choice and not apply the sample types twice
+	;(holder.select('[data-testid="sjpp-junction-delete"]').node() as HTMLButtonElement).click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	test.equal(boxes()[1].checked, false, 'keeps the sample type choice after a delete')
+	pills()[0].click()
+	test.equal(selected.name, 'Event A (diagnosis samples)', 'names the sample types once after the list is redrawn')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})

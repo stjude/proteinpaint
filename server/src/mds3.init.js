@@ -2311,17 +2311,33 @@ export async function validate_query_dnaMethylation(ds, genome) {
 limits them. A term that chose its own sample types in the term picker reads only those: the
 request's sample types are the union over all its terms (see getSampleData() in termdb.matrix.ts),
 and a getter such as clustering's is handed every term at once, so without this a tumor-only row
-would read normal samples as well. One sample filter per distinct sample type selection. */
-function getTermSampleLimiter(param, allSamples, ds) {
+would read normal samples as well. One sample filter per distinct sample type selection.
+Also used by the junction term getter, see getJunctionData() in j2/validate.ts.
+
+term.sampleTypes arrives with the request, so it must be a list of the dataset's sample type ids;
+an id may come as a numeric string, and is matched as a number. */
+export function getTermSampleLimiter(param, allSamples, ds) {
 	const byTypes = new Map()
 	return async term => {
-		const key = JSON.stringify(term.sampleTypes ?? null)
+		const sampleTypes = getTermSampleTypeIds(term, ds)
+		const key = JSON.stringify(sampleTypes ?? null)
 		if (!byTypes.has(key)) {
-			const termParam = term.sampleTypes ? { ...param, sampleTypes: term.sampleTypes } : param
+			const termParam = sampleTypes ? { ...param, sampleTypes } : param
 			byTypes.set(key, await mayLimitSamples(termParam, allSamples, ds))
 		}
 		return byTypes.get(key)
 	}
+}
+
+/* term.sampleTypes as the dataset's sample type ids, or undefined when the term chose none */
+function getTermSampleTypeIds(term, ds) {
+	if (term.sampleTypes == null) return
+	if (!Array.isArray(term.sampleTypes)) throw new Error('term.sampleTypes must be an array')
+	return term.sampleTypes.map(st => {
+		const n = Number(st)
+		if (!Number.isInteger(n) || !ds.cohort?.termdb?.sampleTypes?.[n]) throw new Error(`invalid sample type='${st}'`)
+		return n
+	})
 }
 
 /* Pick which element matrix answers dnaMethylation term queries on a dataset that has no

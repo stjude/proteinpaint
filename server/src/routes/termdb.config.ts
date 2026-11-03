@@ -227,6 +227,13 @@ function addMatrixplots(c, ds) {
  * @param ds Entire dataset configuration from ds file. ds.queries{} contains diverse query types covering genomic, molecular, imaging etc
  * @param genome Genome obj.
  */
+/** What the sample type selector of a term picker reads from a query (geneExpression, dnaMethylation,
+ * junction): the sample types of its data, set at init by setQuerySampleTypes() in #shared/terms.js,
+ * and the sample types by terms when the dataset groups them that way */
+function getSampleTypesPayload(q: { sampleTypes?: number[]; sampleTypesByTerms?: any }) {
+	return { sampleTypes: q.sampleTypes, ...(q.sampleTypesByTerms && { sampleTypesByTerms: q.sampleTypesByTerms }) }
+}
+
 export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	const q = ds.queries
 	if (!q) return
@@ -304,8 +311,7 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		}
 	}
 	if (q.geneExpression) {
-		q2.geneExpression = { unit: q.geneExpression.unit, sampleTypes: q.geneExpression.sampleTypes }
-		if (q.geneExpression.sampleTypesByTerms) q2.geneExpression.sampleTypesByTerms = q.geneExpression.sampleTypesByTerms
+		q2.geneExpression = { unit: q.geneExpression.unit, ...getSampleTypesPayload(q.geneExpression) }
 	}
 	if (q.isoformExpression) {
 		q2.isoformExpression = { unit: q.isoformExpression.unit }
@@ -415,8 +421,7 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	if (q.dnaMethylation) {
 		// .file (CpG-level) and .promoter are independent; a WGBS dataset may be
 		// promoter-only, in which case there is no CpG-level unit to advertise
-		q2.dnaMethylation = { sampleTypes: q.dnaMethylation.sampleTypes }
-		if (q.dnaMethylation.sampleTypesByTerms) q2.dnaMethylation.sampleTypesByTerms = q.dnaMethylation.sampleTypesByTerms
+		q2.dnaMethylation = getSampleTypesPayload(q.dnaMethylation)
 		/* Not gated on .file any more: validate_query_dnaMethylation() also sets .unit from the
 		element matrix that serves terms when there is no CpG file, and the client needs it to
 		label a region term with the unit it will actually receive. */
@@ -608,7 +613,7 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		q2.images = {} //nothing to pass to the client for now, but the key must be present
 	}
 	if (q.junction) {
-		q2.junction = {}
+		q2.junction = getSampleTypesPayload(q.junction)
 		if (q.junction.cluster) {
 			/* Defaults to true unless overridden by ds. The cap is enforced server-side 
 			on eligible samples; h5 and maxSamplesPerGroup are not forwarded.*/

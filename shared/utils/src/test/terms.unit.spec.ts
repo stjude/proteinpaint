@@ -7,7 +7,7 @@ import {
 	getGvQCacheKey,
 	getGvQueryKey,
 	getOriginLabel,
-	getGvLabelSuffix,
+	getTermLabelSuffix,
 	getTwSampleTypes,
 	matchesGvQueryEntry,
 	internGvQueryEntry,
@@ -15,6 +15,7 @@ import {
 	restoreGvQueryEntry,
 	setGroupsetParentTerms,
 	trimGvQForCache,
+	setQuerySampleTypes,
 	trimGvTermsForSave
 } from '../terms.js'
 
@@ -575,29 +576,35 @@ tape('getOriginLabel()', t => {
 	t.end()
 })
 
-tape('getGvLabelSuffix()', t => {
+tape('getTermLabelSuffix()', t => {
 	t.equal(
-		getGvLabelSuffix({ originLabel: 'Inherited' }, { sampleTypeLabel: 'Normals' }),
+		getTermLabelSuffix({ sampleTypeLabel: 'Normals' }, { originLabel: 'Inherited' }),
 		' (Inherited, Normals)',
 		'Should list the origin before the sample type'
 	)
-	t.equal(getGvLabelSuffix({ originLabel: 'Inherited' }, {}), ' (Inherited)', 'Should use the origin label alone')
-	t.equal(getGvLabelSuffix({}, { sampleTypeLabel: 'Normals' }), ' (Normals)', 'Should use the sample type label alone')
-	t.equal(getGvLabelSuffix({}, {}), '', 'Should be empty when there is nothing to qualify')
+	t.equal(getTermLabelSuffix({}, { originLabel: 'Inherited' }), ' (Inherited)', 'Should use the origin label alone')
+	t.equal(
+		getTermLabelSuffix({ sampleTypeLabel: 'Normals' }, {}),
+		' (Normals)',
+		'Should use the sample type label alone'
+	)
+	t.equal(getTermLabelSuffix({}, {}), '', 'Should be empty when there is nothing to qualify')
+	// any term with sample types, e.g. geneExpression, dnaMethylation and junction, has no q to pass
+	t.equal(getTermLabelSuffix({ sampleTypeLabel: 'Relapses' }), ' (Relapses)', 'Should take the term alone')
 	// '' is what both labels use for "every option selected", so it must not render as "()"
 	t.equal(
-		getGvLabelSuffix({ originLabel: '' }, { sampleTypeLabel: '' }),
+		getTermLabelSuffix({ sampleTypeLabel: '' }, { originLabel: '' }),
 		'',
 		'Should skip the empty label both selectors use for a full selection'
 	)
 	t.equal(
-		getGvLabelSuffix({ originLabel: '' }, { sampleTypeLabel: 'Normals' }),
+		getTermLabelSuffix({ sampleTypeLabel: 'Normals' }, { originLabel: '' }),
 		' (Normals)',
 		'Should skip only the empty label'
 	)
 	// a custom groupset has no q.originLabel; its tvs name their own origins
 	t.equal(
-		getGvLabelSuffix({ type: 'custom-groupset' }, { sampleTypeLabel: 'Normals' }),
+		getTermLabelSuffix({ sampleTypeLabel: 'Normals' }, { type: 'custom-groupset' }),
 		' (Normals)',
 		'Should tolerate a q that carries no origin label'
 	)
@@ -774,5 +781,24 @@ tape('getTwSampleTypes(): defaults', t => {
 	}
 	const emptyDs = { cohort: { termdb: { sampleTypes: {}, term2SampleType: new Map() } } }
 	t.deepEqual(getTwSampleTypes({ term }, emptyDs), { sampleTypes: [] }, 'Should support no default sample types')
+	t.end()
+})
+
+tape('setQuerySampleTypes()', t => {
+	const q: any = {}
+	setQuerySampleTypes(q, [1, 2, 3], {
+		sampleId2Type: new Map([
+			[1, 2],
+			[2, 3]
+		]),
+		cohort: { termdb: {} }
+	})
+	t.deepEqual(q.sampleTypes, [2, 3], 'Should list the sample types of the samples, skipping a sample without one')
+
+	// a dataset without a termdb, e.g. one serving only a custom junction track, must still load
+	const q2: any = {}
+	setQuerySampleTypes(q2, [1, 2], {})
+	t.deepEqual(q2.sampleTypes, [], 'Should offer no sample types for a dataset without sample types')
+	t.equal(q2.sampleTypesByTerms, undefined, 'Should have no sample types by terms without a termdb')
 	t.end()
 })

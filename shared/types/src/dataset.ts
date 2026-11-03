@@ -869,6 +869,10 @@ type JunctionQuery = {
 	hiddentypes?: string
 	/** default min read count to filter samples */
 	readcountCutoff?: number
+	/** unique list of sample types of the junction file's samples, set at init */
+	sampleTypes?: number[]
+	/** termdb sampleTypesByTerms{} filtered for those entries with sample types present in .sampleTypes[] */
+	sampleTypesByTerms?: SampleTypesByTerms
 	/** intron clusters of these junctions, for differential splicing analysis */
 	cluster?: JunctionClusterQuery
 }

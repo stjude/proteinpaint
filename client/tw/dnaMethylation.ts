@@ -1,5 +1,6 @@
 import { type RawDnaMethylationTerm, type VocabApi, DNA_METHYLATION } from '#types'
 import { type TwOpts } from './TwBase.ts'
+import { getTermLabelSuffix } from '#shared/terms.js'
 
 const termType = DNA_METHYLATION
 
@@ -66,7 +67,7 @@ export function makeDNAMethRegionTerm(
 		sampleTypeLabel: termSampleTypes.sampleTypeLabel
 	}
 	term.name = getDNAMethTermName(term)
-	if (term.sampleTypeLabel) term.name += ` (${term.sampleTypeLabel})`
+	term.name += getTermLabelSuffix(term)
 	return term
 }
 

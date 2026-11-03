@@ -32,7 +32,7 @@ import {
 	setGroupsetOrigins,
 	walkTvs,
 	getOriginLabel,
-	getGvLabelSuffix,
+	getTermLabelSuffix,
 	hasLegacyGroupsetOrigins,
 	migrateLegacyGroupsetOrigins
 } from '#shared/terms.js'
@@ -329,7 +329,7 @@ export class GvPredefinedGS extends GvBase {
 		let text = this.term.name
 		const gsname = this.term?.groupsetting?.lst?.[this.q.predefined_groupset_idx].name
 		if (gsname) text += ` ${gsname}`
-		text += getGvLabelSuffix(this.q, this.term)
+		text += getTermLabelSuffix(this.term, this.q)
 		return text
 	}
 }
@@ -398,7 +398,7 @@ export class GvCustomGS extends GvBase {
 
 	getTitleText() {
 		let text = `${this.term.name} Custom Groups`
-		text += getGvLabelSuffix(this.q, this.term)
+		text += getTermLabelSuffix(this.term, this.q)
 		return text
 	}
 }

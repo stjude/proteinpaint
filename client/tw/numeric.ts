@@ -33,6 +33,7 @@ import { SingleCellGeneExpressionBase } from './singleCellGeneExpression.ts'
 import { PseudobulkBase } from './pseudobulk.ts'
 import * as tt from '#types'
 import { SingleCellNumericValueBase } from './singleCellNumericValue.ts'
+import { getTermLabelSuffix } from '#shared/terms.js'
 
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor
@@ -219,7 +220,8 @@ export class NumericBase extends TwBase {
 
 	getTitleText() {
 		let text = this.term.name
-		if (this.term.type == 'geneExpression' && this.term.sampleTypeLabel) text += ` (${this.term.sampleTypeLabel})`
+		// other term types with sample types name them in term.name, see getTermLabelSuffix()
+		if (this.term.type == 'geneExpression') text += getTermLabelSuffix(this.term)
 		return text
 	}
 }

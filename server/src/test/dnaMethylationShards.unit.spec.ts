@@ -123,6 +123,8 @@ tape('dnaMethylation term getters read each term for its own sample types', asyn
 	const typed = (ds: any) => {
 		ds.cohort.termdb.q.sampleName2id = sn => Number(sn)
 		ds.cohort.termdb.q.id2sampleName = id => String(id)
+		// the getters accept only the dataset's own sample types
+		ds.cohort.termdb.sampleTypes = { 2: { name: 'odd', parent_id: 1 }, 3: { name: 'even', parent_id: 1 } }
 		ds.sampleId2Type = new Map()
 		return ds
 	}

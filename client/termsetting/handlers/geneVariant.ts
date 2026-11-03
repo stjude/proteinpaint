@@ -5,7 +5,7 @@ import type { TermSetting } from '../TermSetting.ts'
 import { vocabInit } from '#termdb/vocabulary'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getColors } from '#shared/common.js'
-import { getDtsFromGroups, getGvLabelSuffix } from '#shared/terms.js'
+import { getDtsFromGroups, getTermLabelSuffix } from '#shared/terms.js'
 import { fillGroupsetGroups } from '../../tw/geneVariant'
 import { rgb } from 'd3-color'
 
@@ -38,7 +38,7 @@ export function getHandler(self: TermSetting) {
 			} else {
 				text = 'any variant class'
 			}
-			text += getGvLabelSuffix(q, self.term)
+			text += getTermLabelSuffix(self.term, q)
 			return { text }
 		},
 
