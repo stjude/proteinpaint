@@ -3,10 +3,11 @@ import { boxplot_getvalue } from '#shared/boxplot.js'
 import { JT_na, JT_canonical } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
-import { setFile, validateSampleHeader } from '../mds3.init.js'
+import { setFile, validateSampleHeader, getTermSampleLimiter } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
 import { maySetMapParent2Children } from '../termdb.matrix.js'
 import { getH5samples } from '../utils/h5samples.ts'
+import { setQuerySampleTypes } from '#shared/terms.js'
 
 export async function validate_query_junction(ds: any, genome: any) {
 	const tmp = ds.queries?.junction // fixme: tmp-to-q avoids tsc err
@@ -25,6 +26,12 @@ export async function validate_query_junction(ds: any, genome: any) {
 			return { name: i }
 		})
 		q.samples = validateSampleHeader(ds, q.samples, 'junction')
+		// for the sample type selector of the junction term picker; .name is the sample id here
+		setQuerySampleTypes(
+			q,
+			q.samples.map((s: any) => s.name),
+			ds
+		)
 	}
 
 	/*
@@ -164,7 +171,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 	/*
 	called by getData() and return sample level numeric values in required format
 	*/
-	q.get = async (param: { terms?: any[]; [key: string]: any }) => getJunctionData(param, q.listJunctions)
+	q.get = async (param: { terms?: any[]; [key: string]: any }) => getJunctionData(param, q.listJunctions, ds)
 
 	/*
 	get sample details of one junction
@@ -232,10 +239,14 @@ async function validate_junction_cluster(ds: any, junctionQ: any) {
 
 export async function getJunctionData(
 	param: { terms?: any[]; [key: string]: any },
-	listJunctions: (param: any, keepList: { start: number; stop: number; strand: string }[]) => Promise<any>
+	listJunctions: (param: any, keepList: { start: number; stop: number; strand: string }[]) => Promise<any>,
+	/** for the sample types of a term, see getTermSampleLimiter() */
+	ds: any
 ) {
 	if (!Array.isArray(param?.terms) || !param.terms.length) throw new Error('junction.get(): terms[] is required')
 	const term2sample2value = new Map<string, Record<string, number>>()
+	// the samples of each term's own sample types
+	const limitSamples = getTermSampleLimiter(param, undefined, ds)
 	for (const tw of param.terms) {
 		if (!tw?.$id) throw new Error('junction.get(): term wrapper $id is required')
 		const term = tw.term
@@ -254,7 +265,15 @@ export async function getJunctionData(
 		const junction = result.junctions.find(
 			(j: Junction) => j.start == term.start && j.stop == term.stop && j.strand == term.strand
 		)
-		term2sample2value.set(tw.$id, junction ? Object.fromEntries(junction.sn2rc || []) : {})
+		let sn2rc: [string | number, number][] = junction ? [...(junction.sn2rc || [])] : []
+		/* the samples of the sample types chosen for this term in the term picker. Applied here, per term,
+		rather than through the request: listJunctions() resets the request's sample types to the default
+		ones, and a request may hold terms that chose different sample types */
+		if (term.sampleTypes != null) {
+			const keep = await limitSamples(term)
+			if (keep) sn2rc = sn2rc.filter(([sid]) => keep.has(sid))
+		}
+		term2sample2value.set(tw.$id, Object.fromEntries(sn2rc))
 	}
 	return { term2sample2value }
 }

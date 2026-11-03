@@ -608,20 +608,22 @@ export function getOriginLabel(origins: string[] | undefined, byOrigin: any): st
 }
 
 /*
-The qualifiers of a geneVariant selection as a parenthesized suffix, or '' when there is
-nothing to qualify: the origins of its groupset and the sample types of its term. Empty
-labels are skipped, which is what both of them use for "every option selected, so there is
-nothing to tell apart" (see getOriginLabel()).
+The qualifiers of a term's selection as a parenthesized suffix, or '' when there is nothing to
+qualify: the sample types chosen for the term in the term picker (term.sampleTypeLabel, see
+mayGetSampleTypeLabel() in client/dom/sampleTypeSelect.ts) and, for a geneVariant term, the
+origins of its groupset (q.originLabel). Empty labels are skipped, which is what both of them
+use for "every option selected, so there is nothing to tell apart" (see getOriginLabel()).
 
 Origin first, then sample type, so the two read in the order the gene search UI selects them.
-One definition, so that a pill and a plot title describe the same selection the same way --
-see getPillStatus() in client/termsetting/handlers/geneVariant.ts and getTitleText() in
-client/tw/geneVariant.ts.
+One definition for every term type, so that a pill, a plot title and a term name describe the
+same selection the same way -- see getTitleText() in client/tw/geneVariant.ts and
+client/tw/numeric.ts, and the term names of makeDNAMethRegionTerm() in client/tw/dnaMethylation.ts
+and withSampleTypes() in client/termdb/handlers/junction.ts.
 
 q.originLabel is only set for a predefined groupset; the tvs of a custom groupset carry their
 own origins and name them in their own filter pills instead.
 */
-export function getGvLabelSuffix(q: any, term: any): string {
+export function getTermLabelSuffix(term: any, q?: any): string {
 	const labels = [q?.originLabel, term?.sampleTypeLabel].filter(Boolean)
 	return labels.length ? ` (${labels.join(', ')})` : ''
 }
@@ -792,12 +794,15 @@ the termdb sample ids its data holds, for the client's sample type selector. A s
 sample type is skipped, since the selector has nothing to offer for it. */
 export function setQuerySampleTypes(q: any, sampleIds: Iterable<number>, ds: any) {
 	const sampleTypes = new Set<number>()
-	for (const id of sampleIds) {
-		const sampleType = ds.sampleId2Type.get(id)
-		if (sampleType != undefined) sampleTypes.add(sampleType)
+	// a dataset without a termdb (e.g. a custom junction track) has no sample types to offer
+	if (ds.sampleId2Type) {
+		for (const id of sampleIds) {
+			const sampleType = ds.sampleId2Type.get(id)
+			if (sampleType != undefined) sampleTypes.add(sampleType)
+		}
 	}
 	q.sampleTypes = [...sampleTypes]
-	q.sampleTypesByTerms = getQuerySampleTypesByTerms(ds.cohort.termdb.sampleTypesByTerms, q.sampleTypes)
+	q.sampleTypesByTerms = getQuerySampleTypesByTerms(ds.cohort?.termdb?.sampleTypesByTerms, q.sampleTypes)
 }
 
 // filter sampleTypesByTerms for those entries with query sample types

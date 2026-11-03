@@ -7,6 +7,7 @@ import type { NumContEditor } from './NumContEditor'
 import type { NumDiscreteEditor } from './NumDiscreteEditor'
 import type { NumBinaryEditor } from './NumBinaryEditor'
 import type { NumSplineEditor } from './NumSplineEditor'
+import { getTermLabelSuffix } from '#shared/terms.js'
 
 type NumericTabCallback = (event: PointerEvent, tab: TabData) => void
 
@@ -57,8 +58,8 @@ export class NumericHandler extends HandlerBase implements Handler {
 	getPillStatus() {
 		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins | NumCont | NumSpline // TODO: do not force type
 		const status = this.tw.getStatus(this.termsetting.usecase, this.termsetting.data)
-		if (this.tw.term.type == 'geneExpression' && this.tw.term.sampleTypeLabel)
-			status.text += ` (${this.tw.term.sampleTypeLabel})`
+		// other term types with sample types name them in term.name, see getTermLabelSuffix()
+		if (this.tw.term.type == 'geneExpression') status.text += getTermLabelSuffix(this.tw.term)
 		return status
 	}
 
