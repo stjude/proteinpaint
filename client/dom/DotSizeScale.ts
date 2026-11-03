@@ -28,10 +28,16 @@ export class DotSizeScale {
 	title?: string
 	readonly color = '#aaa'
 	readonly shift = 20
-	readonly width = 70
+	/** The least distance between the centers of the two circles, and the room between the circles at the least */
+	readonly minWidth = 70
+	readonly circleGap = 10
+	/** The room that a label needs */
+	readonly labelWidth = 30
+	readonly bottomPad = 15
 	readonly tip = new Menu({ padding: '5px' })
-	readonly x: number
-	readonly y: number
+	/** When set by the caller, the position of the center of the first circle. Otherwise it follows the radii. */
+	readonly optsX?: number
+	readonly optsY?: number
 
 	constructor(opts: DotSizeScaleOpts) {
 		this.validateOpts(opts)
@@ -43,13 +49,35 @@ export class DotSizeScale {
 		this.maxRadius = opts.maxRadius
 		this.minLabel = opts.minLabel ?? opts.minRadius
 		this.minRadius = opts.minRadius
-		this.x = opts.x ?? 40
-		this.y = opts.y ?? 40
+		this.optsX = opts.x
+		this.optsY = opts.y
 
 		if (opts.menu) this.menu = opts.menu
 		if (opts.title) this.title = opts.title
 
 		this.renderLegendComponent()
+	}
+
+	/** Where things are, for the radii as they are now. The circles follow the radii, as they can be
+	 * set by the user: the second circle is far enough from the first not to cover it, and both are
+	 * far enough from the top and left for the title, labels and circles to stay inside the svg. */
+	getLayout() {
+		const first = this.isAscending ? this.minRadius : this.maxRadius
+		const last = this.isAscending ? this.maxRadius : this.minRadius
+		const width = Math.max(this.minWidth, first + last + this.circleGap)
+		const x = this.optsX ?? Math.max(40, first + this.shift)
+		const y = this.optsY ?? Math.max(40, Math.max(this.minRadius, this.maxRadius) + 10)
+		return { x, y, width, first, last }
+	}
+
+	/** The size of the svg that holds the whole reference: the circles and the labels at the left and right.
+	 * The bottom is the lower edge of the largest circle. The title is above the group, at its origin. */
+	getDimensions() {
+		const { x, y, width, last } = this.getLayout()
+		return {
+			width: x + width + last + this.shift + this.labelWidth,
+			height: y + Math.max(this.minRadius, this.maxRadius) + this.bottomPad
+		}
 	}
 
 	validateOpts(opts: DotSizeScaleOpts) {
@@ -63,22 +91,23 @@ export class DotSizeScale {
 
 		if (this.title) this.g.append('text').style('font-weight', 'bold').style('font-size', '0.8em').text(this.title)
 
-		const minG = this.g.append('g').attr('transform', `translate(${this.x},${this.y})`)
-		const maxG = this.g.append('g').attr('transform', `translate(${this.x + this.width},${this.y})`)
+		const { x, y, width } = this.getLayout()
+		const minG = this.g.append('g').attr('transform', `translate(${x},${y})`)
+		const maxG = this.g.append('g').attr('transform', `translate(${x + width},${y})`)
 
 		//Starting text and circle element
 		const startRadius = this.isAscending ? this.minRadius : this.maxRadius
-		this.renderLabel(minG, -startRadius - this.shift, this.minLabel)
+		this.renderLabel(minG, -startRadius - this.shift, this.isAscending ? this.minLabel : this.maxLabel)
 		this.renderReferenceCircle(minG, startRadius)
 
 		//Ending text and circle element
 		const endRadius = this.isAscending ? this.maxRadius : this.minRadius
 		this.renderReferenceCircle(maxG, endRadius)
-		this.renderLabel(maxG, endRadius + this.shift, this.maxLabel)
+		this.renderLabel(maxG, endRadius + this.shift, this.isAscending ? this.maxLabel : this.minLabel)
 
 		//Lines connecting the top and bottom of the circles
-		this.renderScalingLine(minG, this.minRadius, this.maxRadius)
-		this.renderScalingLine(minG, -this.minRadius, -this.maxRadius)
+		this.renderScalingLine(minG, this.minRadius, this.maxRadius, width)
+		this.renderScalingLine(minG, -this.minRadius, -this.maxRadius, width)
 
 		const minBBox = minG.node()!.getBBox()
 		const maxBBox = maxG.node()!.getBBox()
@@ -108,11 +137,11 @@ export class DotSizeScale {
 		g.append('text').attr('x', x).attr('y', 5).style('font-size', '.8em').text(text)
 	}
 
-	renderScalingLine(g: SvgG, minRadius: number, maxRadius: number) {
+	renderScalingLine(g: SvgG, minRadius: number, maxRadius: number, width: number) {
 		g.append('line')
 			.attr('x1', 0)
 			.attr('y1', this.isAscending ? minRadius : maxRadius)
-			.attr('x2', this.width)
+			.attr('x2', width)
 			.attr('y2', this.isAscending ? maxRadius : minRadius)
 			.style('stroke', this.color)
 	}
