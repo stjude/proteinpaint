@@ -68,7 +68,7 @@ import Draw from 'ol/interaction/Draw.js' // freehand polygon drawing = the lass
 import Control from 'ol/control/Control.js' // hosts the lasso toggle inside the map's viewport
 import { select } from 'd3-selection' // wraps the control element for the icon helper
 import { scaleLinear } from 'd3-scale' // diverging z-score color scale of the enrichment heatmap
-import { dofetch3 } from '#common/dofetch' // fetch wrapper for meta/genecounts
+import { dofetch2, dofetch3 } from '#common/dofetch' // fetch wrappers for meta/genecounts (dofetch2 is uncached)
 import { sayerror, Menu, renderTable, icons, ColorScale } from '#dom' // error banner, lasso menu + table, lasso icon, heatmap legend
 import { addScaleBar } from './scaleBar' // bottom-right µm scale bar, every image (spatial or plain)
 
@@ -361,6 +361,8 @@ export async function init(
 				.filter(Boolean)
 		const exprGenes = geneList(opts.geneExpression) // one overlay per gene
 		const groupGenes = geneList(opts.geneGroups) // summed into a single overlay
+		if ((exprGenes.length || groupGenes.length) && !opts.spatialData && !opts.slideQuery)
+			throw new Error('gene_expression/gene_groups requires spatial_data=<h5ad file>')
 
 		// which overlays need the h5ad: cell polygons serve the strokes, the
 		// type/expression fills, the hover tooltip and the lasso (hit-testing
@@ -377,22 +379,51 @@ export async function init(
 		// MultiPolygon feature per hundred-thousand-cell sample.
 		const needCellPolys = !!opts.spatialData
 
-		// stable type -> color assignment, from meta's own sorted cellTypes
-		// (cheap regardless of sample size, unlike a whole-sample abundance
-		// tally) rather than per-load abundance order: a type must keep the
-		// SAME color whether it's drawn by the vector fill below or by the
-		// raster overlay (wsitiles/overlaytile), which only ever receives
-		// whatever this assigns — there is no cheaper shared source of truth
+		// stable type -> color assignment, from meta's own sorted cellTypes when
+		// available. If meta could not scan the h5ad, buildVector() adds types
+		// from the annotations response below so fills still work.
 		const typeColor: { [t: string]: string } = Object.create(null) // type -> 'r, g, b'
-		if (Array.isArray(meta.cellTypes))
-			for (const [i, t] of meta.cellTypes.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
+		const typeNames: string[] = Array.isArray(meta.cellTypes) ? [...meta.cellTypes] : []
+		for (const [i, t] of typeNames.entries()) typeColor[t] = CELL_TYPE_COLORS[i % CELL_TYPE_COLORS.length]
 		// optional filter: fill/legend/raster tiles only show these types (colors unchanged)
 		const filterList = opts.cellTypeFilter || [] // the requested type list
-		const shownTypes: string[] = filterList.length
-			? (meta.cellTypes || []).filter((t: string) => filterList.includes(t))
-			: meta.cellTypes || []
+		let shownTypes: string[] = []
 		const shownColor: { [t: string]: string } = Object.create(null) // color subset acting as the fill filter
-		for (const t of shownTypes) shownColor[t] = typeColor[t]
+		function refreshShownTypes() {
+			shownTypes = filterList.length ? typeNames.filter(t => filterList.includes(t)) : [...typeNames]
+			for (const t of Object.keys(shownColor)) delete shownColor[t]
+			for (const t of shownTypes) shownColor[t] = typeColor[t]
+		}
+		refreshShownTypes()
+		// meta.cellTypes is optional. Recover the global type vocabulary before
+		// rasterFills is decided, since a dense initial view never enters the
+		// viewport-scoped annotation fetch in buildVector(). buildVector() may
+		// add viewport-only types without it, so the flag (not typeNames) says
+		// whether the full vocabulary is known; updateMode() retries before
+		// showing raster fills. Existing types keep their colors: new ones append.
+		let globalTypesLoaded = Array.isArray(meta.cellTypes)
+		async function loadGlobalTypes() {
+			if (globalTypesLoaded || !needCellPolys || !opts.showCellTypes) return
+			try {
+				// uncached, so a transient error is retried on the next call
+				const r = await dofetch2(
+					`wsitiles/annotations?${sq}&file=${encodeURIComponent(opts.spatialData!)}&types=1&v=${
+						meta.spatialVersion || 0
+					}`
+				)
+				if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
+				const names: string[] = Array.isArray(r.cellTypes) ? r.cellTypes : []
+				for (const t of names.filter(t => !typeNames.includes(t))) {
+					typeColor[t] = CELL_TYPE_COLORS[typeNames.length % CELL_TYPE_COLORS.length]
+					typeNames.push(t)
+				}
+				globalTypesLoaded = true
+				refreshShownTypes()
+			} catch (e: any) {
+				sayerrorOnTop(holder, `Error loading cell types: ${e.message || e}`)
+			}
+		}
+		await loadGlobalTypes()
 
 		// per-gene count maps, fetched ONCE for the whole sample (this route
 		// isn't bbox-scoped: one int per expressing cell is far lighter than a
@@ -466,13 +497,18 @@ export async function init(
 		// Raster can only draw a fill (see overlay_tile's own ponytail note
 		// on strokes), so with neither requested there's nothing to show.
 		type RasterFill = { kind: 'types' } | { kind: 'gene'; genes: string[]; rgb: string; max: number; label: string }
-		const rasterFills: RasterFill[] =
-			needCellPolys && opts.showCellTypes && shownTypes.length > 0
-				? [{ kind: 'types' }]
-				: needCellPolys && geneCounts.length && !opts.hideExpressionFills
-				? geneCounts.map(g => ({ kind: 'gene', genes: g.genes, rgb: g.rgb, max: g.max, label: g.gene }))
-				: []
-		const rasterEnabled = rasterFills.length > 0
+		let rasterFills: RasterFill[] = []
+		let rasterEnabled = false
+		function refreshRasterFills() {
+			rasterFills =
+				needCellPolys && opts.showCellTypes && shownTypes.length > 0
+					? [{ kind: 'types' }]
+					: needCellPolys && geneCounts.length && !opts.hideExpressionFills
+					? geneCounts.map(g => ({ kind: 'gene' as const, genes: g.genes, rgb: g.rgb, max: g.max, label: g.gene }))
+					: []
+			rasterEnabled = rasterFills.length > 0
+		}
+		refreshRasterFills()
 
 		// mutable per-rebuild state: the hover tooltip and lasso below close
 		// over these `let`s by reference, so neither listener is ever torn
@@ -497,6 +533,13 @@ export async function init(
 		// buildVector() takes the caller's generation and checks it before each
 		// of its own shared-state commits too (see its own doc comment below).
 		let modeGeneration = 0
+		// buildVector() fits the first view to the sample's cells. OpenLayers
+		// emits moveend for that programmatic fit; do not let it supersede the
+		// build while it is still fetching annotations. Holds the fitted extent
+		// only while that build is pending; only a moveend that lands exactly on
+		// it is the fit's own. Any other moveend (e.g. a drag overlapping the fit)
+		// is real navigation: updateMode()'s post-build viewport check handles it.
+		let pendingFitExtent: number[] | null = null
 		// raster-vs-vector + which bbox is currently loaded, read/written by
 		// both updateMode() and buildVector() (moved up here, alongside
 		// modeGeneration, so buildVector() -- defined outside updateMode()'s
@@ -603,6 +646,8 @@ export async function init(
 		function teardownVector() {
 			for (const l of vectorLayers) map.removeLayer(l)
 			vectorLayers = []
+			mode = undefined
+			loadedBbox = undefined
 			for (const el of legendEls) {
 				el.remove()
 				const i = pinned.findIndex(p => p.box === el)
@@ -629,8 +674,6 @@ export async function init(
 		 or a stale build could finish last and overwrite a newer, correct result.
 		 Returns false (nothing committed beyond this point) when superseded. */
 		async function buildVector(bbox: [number, number, number, number], gen: number): Promise<boolean> {
-			mode = undefined
-			loadedBbox = undefined
 			teardownVector()
 			const bboxParam = bbox.join(',')
 			for (const [kind, wanted, color] of [
@@ -688,7 +731,11 @@ export async function init(
 						if (y > maxY) maxY = y
 					}
 				}
-				map.getView().fit([minX, minY, maxX, maxY], { padding: [40, 40, 40, 40] })
+				const view = map.getView()
+				const previousExtent = view.calculateExtent()
+				view.fit([minX, minY, maxX, maxY], { padding: [40, 40, 40, 40] })
+				const fittedExtent = view.calculateExtent()
+				pendingFitExtent = previousExtent.some((v, i) => v !== fittedExtent[i]) ? fittedExtent : null
 			}
 			firstBuild = false
 
@@ -704,7 +751,20 @@ export async function init(
 					)
 					if (!r || r.error) throw new Error(r?.error || 'failed to load annotations')
 					if (gen !== modeGeneration) return false // superseded while this fetch was in flight: stop before committing it
-					cellTypes = r.cells // the id->type map, served ready to use
+					const annotations: { [id: string]: string } = r.cells // the id->type map, served ready to use
+					cellTypes = annotations
+					// meta.cellTypes is normally the stable global order, but it is
+					// optional when the metadata scan failed. Add any types discovered
+					// here so vector and later raster fills still have a palette.
+					const missingTypes = [...new Set(Object.values(annotations).filter(Boolean))]
+						.filter(t => !typeNames.includes(t))
+						.sort()
+					for (const t of missingTypes) {
+						typeColor[t] = CELL_TYPE_COLORS[typeNames.length % CELL_TYPE_COLORS.length]
+						typeNames.push(t)
+					}
+					refreshShownTypes()
+					refreshRasterFills()
 				} catch (e: any) {
 					sayerrorOnTop(holder, `Error loading annotations: ${e.message || e}`) // overlay lost, viewer lives
 				}
@@ -1091,8 +1151,28 @@ export async function init(
 				}
 				return rasterLegends
 			}
+			let lastRasterFp = ''
+			function rasterFp(): string {
+				if (!rasterFills.length) return ''
+				return rasterFills[0].kind === 'types' ? `t:${JSON.stringify(shownColor)}` : `g:${JSON.stringify(rasterFills)}`
+			}
+			function teardownRaster() {
+				for (const l of rasterLayers) map.removeLayer(l)
+				rasterLayers.length = 0
+				for (const l of rasterLegends) {
+					l.remove()
+					const i = pinned.findIndex(p => p.box === l)
+					if (i >= 0) pinned.splice(i, 1)
+				}
+				rasterLegends.length = 0
+			}
 			function showRaster() {
 				if (!rasterEnabled) return
+				const fp = rasterFp()
+				if (fp !== lastRasterFp) {
+					teardownRaster()
+					lastRasterFp = fp
+				}
 				for (const l of ensureRasterLayers()) l.setVisible(true)
 				for (const l of ensureRasterLegends()) l.style('display', 'block')
 				repin()
@@ -1146,10 +1226,20 @@ export async function init(
 					firstBuild = false // subsequent vector loads must preserve the user's framing
 					if (mode !== 'raster') {
 						teardownVector()
-						showRaster()
-						mode = 'raster'
-						setLassoEnabled(false)
 					}
+					if (!globalTypesLoaded) {
+						// viewport-only palette so far: retry the global vocabulary so
+						// raster fills don't omit types outside the loaded viewport
+						await loadGlobalTypes()
+						if (gen !== modeGeneration) {
+							endLoading()
+							return
+						}
+					}
+					refreshRasterFills()
+					showRaster() // restore visibility even if a superseded vector decision hid it
+					mode = 'raster'
+					setLassoEnabled(false)
 					endLoading() // this fetch is done; any newly-needed raster tiles are tracked by loadstart/loadend, not here
 				} else if (mode !== 'vector' || !loadedBbox || !bboxContains(loadedBbox, bbox)) {
 					hideRaster()
@@ -1168,7 +1258,12 @@ export async function init(
 						endLoading() // superseded while awaiting the padded count
 						return
 					}
-					const built = await buildVector(fetchBbox, gen)
+					let built: boolean
+					try {
+						built = await buildVector(fetchBbox, gen)
+					} finally {
+						if (gen === modeGeneration) pendingFitExtent = null // only clear this generation's fit guard
+					}
 					if (gen !== modeGeneration) {
 						endLoading() // superseded while buildVector() was in flight: its layers/data are already stale
 						return
@@ -1179,6 +1274,14 @@ export async function init(
 						setLassoEnabled(true)
 					}
 					endLoading()
+					// The first build may fit the map, or the user may have moved it
+					// while the requests were in flight. If the live viewport extends
+					// beyond the exact fetched region, make a fresh mode decision now
+					// rather than cancelling this completed annotation fetch.
+					const liveBbox = viewBboxUm(map.getView().calculateExtent() as [number, number, number, number], mppX, mppY)
+					if (built && !bboxContains(fetchBbox, liveBbox)) {
+						updateMode().catch((e: any) => sayerrorOnTop(holder, `Cell count error: ${e.message || e}`))
+					}
 				} else {
 					endLoading() // already loaded and still in view: nothing to wait for
 				}
@@ -1189,6 +1292,17 @@ export async function init(
 			// /cellcount would otherwise fire moveend with no listener attached
 			// yet to catch it, leaving the viewer showing the stale initial view
 			map.on('moveend', () => {
+				if (pendingFitExtent) {
+					const fit = pendingFitExtent
+					if (
+						map
+							.getView()
+							.calculateExtent()
+							.every((v, i) => v === fit[i])
+					)
+						pendingFitExtent = null // the fit's own event
+					return // build pending: the post-build viewport check picks up any other movement
+				}
 				updateMode().catch((e: any) => sayerrorOnTop(holder, `Cell count error: ${e.message || e}`))
 			})
 			await updateMode() // the starting view's own mode

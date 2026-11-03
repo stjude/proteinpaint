@@ -194,6 +194,23 @@ function init({ genomes }) {
 					res.status(400).send({ status: 'error', error: `${req.params.action} path escapes the slide folder` })
 					return
 				}
+				if (req.params.action == 'annotations' && q.types !== undefined) {
+					try {
+						const mtime = (await stat(full)).mtimeMs
+						let hit = cellTypesCache.get(full)
+						if (!hit || hit.mtime !== mtime) {
+							const types = JSON.parse(
+								await run_python('wsi_tile.py', JSON.stringify({ action: 'h5ad_celltypes', h5ad: full }))
+							).cellTypes
+							hit = { mtime, types }
+							cellTypesCache.set(full, hit)
+						}
+						res.status(200).json({ cellTypes: hit.types })
+					} catch (e: any) {
+						res.status(500).send({ status: 'error', error: e.message || String(e) })
+					}
+					return
+				}
 				// optional ?bbox=x0,y0,x1,y1 (um): the under-cellCountLimit viewport
 				// fetch wsi.direct.ts makes once a zoomed-in view's own cell count is
 				// small enough for vector rendering, instead of the whole sample.

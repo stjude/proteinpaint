@@ -2,7 +2,7 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from '../PlotBase' // shared mass-plot base class
 import type { BasePlotConfig, MassState } from '#mass/types/mass' // app state shapes
 import type { SpatialImage } from '#types' // spatial image entry from wsiBySample
-import { dofetch3 } from '#common/dofetch' // gene-name/cell-type discovery requests
+import { dofetch2, dofetch3 } from '#common/dofetch' // gene-name/cell-type discovery requests
 import { controlsInit } from '../controls' // burger-menu builder
 import type Settings from './Settings.ts' // this plot's settings shape
 import { Model } from './model/Model' // server data access
@@ -246,11 +246,28 @@ class Wsi extends PlotBase implements RxComponent {
 		}
 		if (this.cellTypesFile == src) return this.cellTypeNames // cached
 		const v = this.state.vocab // genome + dslabel for the request
-		const params = // standard wsitiles slide addressing + the annotations source to scan
+		const base = // standard wsitiles slide addressing, shared by both requests below
 			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
-			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&cellAnnotations=${encodeURIComponent(src)}`
-		const r = await dofetch3(`wsitiles/meta?${params}`).catch(() => null)
-		this.cellTypeNames = Array.isArray(r?.cellTypes) ? r.cellTypes : [] // failure = no dropdowns, overlay still works
+			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
+		const r = await dofetch3(`wsitiles/meta?${base}&cellAnnotations=${encodeURIComponent(src)}`).catch(() => null)
+		let names: string[] | undefined = Array.isArray(r?.cellTypes) ? r.cellTypes : undefined // [] is a valid answer
+		// meta.cellTypes is optional: the h5ad scan can fail even when the file
+		// has types. Only when it is missing/invalid, recover the vocabulary from
+		// the annotations route, the same fallback the viewer uses (wsi.direct.ts).
+		// dofetch2 (uncached): dofetch3 would cache a transient JSON error and
+		// every later render would replay it.
+		if (!names) {
+			const a = await dofetch2(
+				`wsitiles/annotations?${base}&file=${encodeURIComponent(src)}&types=1&v=${r?.spatialVersion || 0}`
+			).catch(() => null)
+			if (Array.isArray(a?.cellTypes)) names = a.cellTypes
+		}
+		if (!names) {
+			this.cellTypeNames = []
+			this.cellTypesFile = undefined
+			return [] // both failed: no dropdowns this time, but don't memoize so a later render retries
+		}
+		this.cellTypeNames = names
 		this.cellTypesFile = src // remember which file the cache is for
 		return this.cellTypeNames
 	}
