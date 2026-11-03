@@ -22,34 +22,35 @@ ENDSTR="Validation succeeded"
 echo "Waiting for server validation ..."
 NUMLINES=0
 while true; do
-  LOGS="$(docker logs $CONTAINER_NAME 2>&1)"
-  if [[ "$LOGS" == "" ]]; then
-    continue
+  # checked first, so that the wait also ends when there are no new log lines
+  if (( SECONDS >= end_time )); then
+    echo "Validation timed out"
+    exit 1
   fi
-  
-  LINECOUNT=$(echo -n "$LOGS" | grep -c "^")
-  if (( $LINECOUNT == $NUMLINES )); then
+
+  LOGS="$(docker logs $CONTAINER_NAME 2>&1)"
+  # the log lines are printed and matched as is, not with echo -e, which would stop at a \c in a line,
+  # such as in a test name, and hide the rest of the lines, including the ENDSTR line
+  LINECOUNT=$(printf '%s' "$LOGS" | grep -c "^" || true)
+  if [[ "$LOGS" == "" ]] || (( LINECOUNT == NUMLINES )); then
+    sleep 1
     continue
   fi
 
-  NEWLOGS=$(echo -e "$LOGS" | tail -n$(( $LINECOUNT - $NUMLINES )))
-  echo -e "$NEWLOGS"
+  NEWLOGS=$(printf '%s\n' "$LOGS" | tail -n$(( LINECOUNT - NUMLINES )))
+  printf '%s\n' "$NEWLOGS"
   NUMLINES=$LINECOUNT
-  
-  if echo -e "$NEWLOGS" | grep -q "$ENDSTR"; then
+
+  if grep -q "$ENDSTR" <<< "$NEWLOGS"; then
     break
   fi
-  if echo -e "$NEWLOGS" | grep -q "Error"; then
+  if grep -q "Error" <<< "$NEWLOGS"; then
   	# ppcov runs tests where Error messages may be displayed and should not stop the container
     if [[ "$CONTAINER_NAME" != "ppcov" ]]; then
       exit 1
     fi
   fi
   sleep 1
-  if (( SECONDS >= end_time )); then
-    echo "Validation timed out"
-    exit 1
-  fi
 done
 
 ENDSTR="STANDBY AT PORT ${EXPOSED_PORT}" # the port is forced to 3000 inside the container by server/src/serverconfig.js

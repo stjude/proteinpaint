@@ -29,7 +29,9 @@ type LoadOpts = { key?: string; hide?: boolean; keepFirstLoad?: boolean; parent?
 async function load(tag: string, opts: LoadOpts = {}) {
 	const parent = opts.parent || fs.mkdtempSync(path.join(os.tmpdir(), 'pp-cachekey-'))
 	if (!opts.parent) tmpdirs.push(parent)
-	const env = { overrides: process.env.PP_SERVERCONFIG_OVERRIDES }
+	// PP_MODE is unset while loading, since a container mode, such as in the coverage container, forces the cachedir
+	const env = { overrides: process.env.PP_SERVERCONFIG_OVERRIDES, mode: process.env.PP_MODE }
+	delete process.env.PP_MODE
 	const warn = console.warn
 	const warnings: string[] = []
 	console.warn = (...args) => warnings.push(args.join(' '))
@@ -45,6 +47,7 @@ async function load(tag: string, opts: LoadOpts = {}) {
 		delete process.env.PP_CACHEID_CREDS
 		if (env.overrides === undefined) delete process.env.PP_SERVERCONFIG_OVERRIDES
 		else process.env.PP_SERVERCONFIG_OVERRIDES = env.overrides
+		if (env.mode !== undefined) process.env.PP_MODE = env.mode
 	}
 }
 
