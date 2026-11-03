@@ -1,7 +1,7 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from './PlotBase'
-import { Menu, addGeneSearchbox, LegendCircleReference } from '#dom'
+import { Menu, addGeneSearchbox, DotSizeScale } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { scaleLinear, scaleSqrt } from 'd3'
 
@@ -383,7 +383,7 @@ class CellTypeBubbleHeatmap extends PlotBase implements RxComponent {
 			.text('Dot size: significance (−log₁₀ FDR)')
 		const sSvg = sizeBlock.append('svg')
 		const sG = sSvg.append('g')
-		new LegendCircleReference({
+		new DotSizeScale({
 			g: sG,
 			inputMin: 0,
 			inputMax: MAX_DOT_R * 2,

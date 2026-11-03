@@ -3,7 +3,7 @@ import type { SvgG } from '../../types/d3'
 /** Types for #dom/LegendCircleReference component */
 
 /** Constructor opts */
-export type LegendCircleReferenceOpts = {
+export type DotSizeScaleOpts = {
 	/** Holder */
 	g: SvgG
 	/** Upper limit user can input for size */

@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { select } from 'd3-selection'
-import { LegendCircleReference } from '#dom'
+import { DotSizeScale } from '#dom'
 
 /*************************
  reusable helper functions
@@ -23,7 +23,7 @@ tape('Default LegendCircleReference', test => {
 	const holder: any = getHolder()
 	const svg = holder.append('svg').attr('width', 300).attr('height', 300)
 
-	const ui = new LegendCircleReference({
+	const ui = new DotSizeScale({
 		g: svg.append('g').attr('transform', 'translate(20, 20)'),
 		inputMax: 20,
 		inputMin: 5,

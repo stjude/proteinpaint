@@ -1,4 +1,4 @@
-import type { LegendCircleReferenceOpts } from './types/LegendCircleReference'
+import type { DotSizeScaleOpts } from './types/DotSizeScale'
 import type { Div, SvgG } from '../types/d3'
 import { Menu, make_radios } from '#dom'
 
@@ -11,7 +11,7 @@ import { Menu, make_radios } from '#dom'
  * on the holder.
  */
 
-export class LegendCircleReference {
+export class DotSizeScale {
 	g: SvgG
 	inputMax: number
 	inputMin: number
@@ -33,7 +33,7 @@ export class LegendCircleReference {
 	readonly x: number
 	readonly y: number
 
-	constructor(opts: LegendCircleReferenceOpts) {
+	constructor(opts: DotSizeScaleOpts) {
 		this.validateOpts(opts)
 		this.g = opts.g
 		this.inputMax = opts.inputMax
@@ -52,7 +52,7 @@ export class LegendCircleReference {
 		this.renderLegendComponent()
 	}
 
-	validateOpts(opts: LegendCircleReferenceOpts) {
+	validateOpts(opts: DotSizeScaleOpts) {
 		if (!opts.g) throw `Missing g in LegendCircleReference`
 		if (opts.maxRadius > opts.inputMax) throw `Max radius must be less than inputMax`
 		if (opts.minRadius < opts.inputMin) throw `Min radius must be greater than inputMin`
