@@ -1,8 +1,10 @@
 import path from 'path'
 import tape from 'tape'
+import serverconfig from '#src/serverconfig.js'
 import { getH5samples } from '#src/utils/h5samples.ts'
 
-const TESTDATA_DIR = path.join(process.cwd(), 'test/tp/files/hg38/TermdbTest')
+// under tpmasterdir, since the h5dump file argument must be under it
+const TESTDATA_DIR = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
 
 tape('\n', t => {
 	t.comment('-***- src/utils/h5samples -***-')
