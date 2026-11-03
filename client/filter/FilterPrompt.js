@@ -38,6 +38,10 @@ class FilterPrompt extends Filter {
 		// always replace the filterUiRoot with a tvslst object that has an empty lst,
 		// so that the prompt will always be displayed
 		if (filterUiRoot) delete filterUiRoot.tag
+		// Keep an OR or negated scope intact when adding the new condition under AND.
+		if (rawFilter.join === 'or' || rawFilter.in === false) {
+			rawFilter = { type: 'tvslst', in: true, join: '', lst: [rawFilter] }
+		}
 		rawFilter.lst.push({
 			tag: 'filterUiRoot',
 			type: 'tvslst',

@@ -183,7 +183,16 @@ export class SunburstRenderer {
 					.style('font-size', '12px')
 					.style('margin-top', '6px')
 					.style('min-height', '16px')
-		const svg = panel.append('svg').attr('width', SIZE).attr('height', SIZE).style('display', 'block')
+		const svg = panel
+			.append('svg')
+			.attr('width', SIZE)
+			.attr('height', SIZE)
+			.style('display', 'block')
+			.style('user-select', 'none')
+			.on('mousedown', (event: MouseEvent) => {
+				// Stop Shift+click from extending a browser text selection outside the chart.
+				if (event.shiftKey && event.button == 0) event.preventDefault()
+			})
 		const right = layout
 			.append('div')
 			.style('flex', '0 0 300px')

@@ -605,40 +605,18 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.attr('data-testid', 'sjpp-da-option')
 			.text(`Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
-			.on('click', async e => {
-				// self.tip2.hide() // in case tip2 is already opened through another option
-				//Move this to diff analysis plot??
-				//Do the check but not add to the state??
-				const groups = []
-				for (const group of samplelstTW.q.groups) {
-					if (groupHasSamples(group)) {
-						groups.push(group)
-					} else {
-						throw 'group does not contain samples for differential analysis'
-					}
-				}
-
-				// get actual numbers of samples with rnaseq count
-				const body = {
-					genome: self.app.vocabApi.vocab.genome,
-					dslabel: self.app.vocabApi.vocab.dslabel,
-					samplelst: { groups },
-					filter: self.state.termfilter.filter,
-					filter0: self.state.termfilter.filter0,
-					preAnalysis: true
-				}
-				const preAnalysisData = await dofetch3('termdb/DE', { body })
-
+			.on('click', async () => {
 				const tip = self.tip2
-				if (!preAnalysisData?.data) {
-					tip.clear().showunderoffset(itemDiv.node())
-					sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
-					throw new Error('no data returned from pre-analysis request')
-				}
-
 				tip.clear().showunderoffset(itemDiv.node())
-
-				renderPreAnalysisData({ preAnalysisData, samplelstTW, groups, tip, self })
+				const loading = tip.d.append('div').text('Loading ...')
+				try {
+					const preAnalysisData = await getGeneExpressionPreAnalysis(self.app, samplelstTW, self.state.termfilter)
+					loading.remove()
+					renderPreAnalysisData({ preAnalysisData, samplelstTW, groups: samplelstTW.q.groups, tip, self })
+				} catch (e) {
+					loading.remove()
+					sayerror(tip.d.append('div'), e)
+				}
 			})
 	}
 
@@ -869,6 +847,26 @@ function renderCountsFileInfo(holder, preview, sampleLabel) {
 	for (const l of lines) div.append('div').text(l)
 }
 
+/** Counts and available methods for the expression pre-analysis panel used by group pickers. */
+export async function getGeneExpressionPreAnalysis(app, samplelstTW, termfilter = {}) {
+	const groups = samplelstTW.q.groups
+	if (groups.length != 2 || groups.some(g => !groupHasSamples(g))) {
+		throw new Error('Differential analysis requires two groups containing samples')
+	}
+	const body = {
+		genome: app.vocabApi.vocab.genome,
+		dslabel: app.vocabApi.vocab.dslabel,
+		samplelst: { groups },
+		filter: termfilter.filter,
+		filter0: termfilter.filter0,
+		preAnalysis: true
+	}
+	const res = await dofetch3('termdb/DE', { body })
+	if (res?.error) throw new Error(res.error)
+	if (!res?.data) throw new Error('Error retrieving pre-analysis data')
+	return res
+}
+
 /* Renders the group sample counts and the "Run Differential X Analysis" button, for both
 differential gene expression and differential DNA methylation.
 
@@ -876,7 +874,8 @@ arg.termType selects the assay; it defaults to gene expression so existing calle
 unchanged. Only two things actually differ between the two: the label on the counts header,
 and the analysis-method radios, which exist for expression alone (diffMeth.R is the only
 methylation engine, so there is nothing to choose). Everything else -- the counts table, the
-sample-size cap, the alert, and the plot_create dispatch -- is shared. */
+sample-size cap, the alert, and the plot_create dispatch -- is shared.
+arg.onLaunch optionally handles creating the plot for an embedded group picker. */
 export function renderPreAnalysisData(arg) {
 	const { preAnalysisData, samplelstTW, groups, holder, tip, self } = arg
 	const termType = arg.termType || TermTypes.GENE_EXPRESSION
@@ -1102,6 +1101,10 @@ export function renderPreAnalysisData(arg) {
 				}
 				if (tip) tip.hide()
 				if (self.tip) self.tip.hide()
+				if (arg.onLaunch) {
+					await arg.onLaunch(config)
+					return
+				}
 				self.app.dispatch({
 					type: 'plot_create',
 					config

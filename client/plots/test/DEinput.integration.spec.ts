@@ -1,5 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
+import { filterJoin, getNormalRoot } from '#filter/filter'
 
 /*
 Tests:
@@ -8,6 +9,8 @@ Tests:
 	- DEinput renders a group name as text
 	- DEinput with a group named alert
 	- DEinput rejects an invalid config.groups[]
+	- DEinput keeps groups within its local filter
+	- DEinput adds groups within a union of selected wedges
  */
 
 /*************************
@@ -127,6 +130,154 @@ tape('DEinput with two prebuilt groups', test => {
 
 		if (test['_ok']) self.app.destroy()
 		test.end()
+	}
+})
+
+tape('DEinput keeps groups within its local filter', test => {
+	test.timeoutAfter(15000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'DEinput',
+					groups: structuredClone(groups),
+					filter: {
+						type: 'tvslst',
+						in: true,
+						join: '',
+						lst: [
+							{
+								type: 'tvs',
+								tvs: {
+									term: { id: 'diaggrp', name: 'Diagnosis group', type: 'categorical' },
+									values: [{ key: 'Acute lymphoblastic leukemia' }]
+								}
+							}
+						]
+					},
+					autoSubmit: true
+				}
+			]
+		},
+		DEinput: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(deinput) {
+		deinput.on('postRender.test', null)
+		const self = deinput.Inner
+		try {
+			const local = self.state.config.filter
+			const vocab = self.app.vocabApi
+			const filter0 = self.state.termfilter.filter0
+			const sexFilter = structuredClone(groups[0].filter)
+			Object.assign(sexFilter.lst[0].tvs.term, { name: 'Sex', type: 'categorical' })
+			test.deepEqual(
+				self.getState({ ...self.app.getState(), termfilter: { filter: sexFilter, filter0 } }).termfilter,
+				{ filter: filterJoin([sexFilter, local]), filter0 },
+				'Should join the selected scope with the global filter and preserve filter0'
+			)
+			// Remove the embedded scope from the editable group: the plot filter must still apply.
+			self.groups = [{ ...self.groups[0], filter: sexFilter }]
+			await self.main()
+			const withinScope = filterJoin([sexFilter, self.state.termfilter.filter])
+			const expected = await vocab.getFilteredSampleCount(withinScope, filter0)
+			const unscoped = await vocab.getFilteredSampleCount(sexFilter, filter0)
+			test.ok(parseInt(expected) < parseInt(unscoped), 'Should use a scope smaller than the global male group')
+			await self.clickSubmit(self.getSubmitGroups())
+			const rows = [...self.dom.preAnalysis.node().querySelectorAll('table.sja_simpletable tr')]
+			const scopedTotal = await vocab.getFilteredSampleCount(self.state.termfilter.filter, filter0)
+			test.equal(
+				rows[0].querySelectorAll('td')[1].textContent,
+				expected,
+				'Should restrict the control to the selected scope'
+			)
+			test.ok(
+				rows[1].textContent.includes(`${parseInt(scopedTotal) - parseInt(expected)} samples`),
+				'Should restrict the complement group to the selected scope'
+			)
+		} catch (e) {
+			test.fail(String(e))
+		} finally {
+			self.app.destroy()
+			test.end()
+		}
+	}
+})
+
+tape('DEinput adds groups within a union of selected wedges', test => {
+	test.timeoutAfter(15000)
+	const scope = {
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: ['Acute lymphoblastic leukemia', 'Hodgkin lymphoma'].map(key => ({
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { id: 'diaggrp', name: 'Diagnosis group', type: 'categorical' },
+						values: [{ key }]
+					}
+				}
+			]
+		}))
+	}
+	runpp({
+		state: { plots: [{ chartType: 'DEinput', filter: scope }] },
+		DEinput: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(deinput) {
+		deinput.on('postRender.test', null)
+		const self = deinput.Inner
+		try {
+			const sexFilter = structuredClone(groups[0].filter)
+			Object.assign(sexFilter.lst[0].tvs.term, { name: 'Sex', type: 'categorical' })
+			const prompt = self.filterPrompt.Inner
+			test.deepEqual(
+				getNormalRoot(prompt.rawFilter),
+				getNormalRoot(scope),
+				'Should preserve the selected-wedge union in the Add group prompt'
+			)
+			const expectedFilter = filterJoin([scope, sexFilter])
+			await new Promise<void>((resolve, reject) => {
+				const callback = prompt.opts.callback
+				prompt.opts.callback = async filter => {
+					try {
+						await callback(filter)
+						resolve()
+					} catch (e) {
+						reject(e)
+					}
+				}
+				prompt.refresh({ ...prompt.filter, lst: sexFilter.lst })
+			})
+			test.deepEqual(
+				self.groups[0].filter,
+				expectedFilter,
+				'Should add the sex condition with AND without changing the OR between wedges'
+			)
+			const expected = await self.app.vocabApi.getFilteredSampleCount(
+				filterJoin([self.app.getState().termfilter.filter, expectedFilter]),
+				self.state.termfilter.filter0
+			)
+			test.ok(parseInt(expected) > 0, 'Should find male samples across the selected wedges')
+			await self.clickSubmit(self.getSubmitGroups())
+			const rows = self.dom.preAnalysis.node().querySelectorAll('table.sja_simpletable tr')
+			test.equal(
+				rows[0].querySelectorAll('td')[1].textContent,
+				expected,
+				'Should analyze the male samples from the selected-wedge union'
+			)
+		} catch (e) {
+			test.fail(String(e))
+		} finally {
+			self.app.destroy()
+			test.end()
+		}
 	}
 })
 

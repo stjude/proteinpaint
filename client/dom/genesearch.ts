@@ -398,6 +398,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		// checking input format
 		const v = searchbox.property('value').trim()
 		if (!v) return
+		// tip was destroyed while this debounced call waited: showing it would put the menu back on the page
+		if (!tip.d.node().isConnected) return
 
 		tip.showunder(searchbox.node()).clear()
 
@@ -590,6 +592,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		// retrieve its coordinates
 		tip.hide()
 		const data = await dofetch3('genelookup', { body: { genome: arg.genome.name, input: geneSymbol, deep: 1 } })
+		// tip was destroyed during the request; drop the result
+		if (!tip.d.node().isConnected) return
 		if (data.error) throw data.error
 		if (!data.gmlst?.length) throw 'cannot retrieve gene coordinates'
 		const loci = gmlst2loci(data.gmlst)
