@@ -316,6 +316,8 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	if (q.isoformExpression) {
 		q2.isoformExpression = { unit: q.isoformExpression.unit }
 	}
+	// for the sample type row of the geneset expression term picker
+	if (q.ssGSEA) q2.ssGSEA = getSampleTypesPayload(q.ssGSEA)
 	if (q.proteome) {
 		q2.proteome = {}
 		if (q.proteome.proteinView) {

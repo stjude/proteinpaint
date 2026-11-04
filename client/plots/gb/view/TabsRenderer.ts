@@ -22,7 +22,7 @@ export class TabsRenderer {
 
 	async main() {
 		/* Preserve the currently active tab label before clearing. On the first draw, config.activeTab may
-		name the tab to open at, e.g. 'Splice junction' from the junction term picker */
+		name the tab to open at, e.g. 'Splice Junction' from the junction term picker */
 		let previousActiveTabLabel: string | null = this.state.config.activeTab || null
 		const existingActiveButton = this.dom.tabsDiv.select('button.sjpp-active')
 		if (!existingActiveButton.empty()) {
@@ -87,7 +87,7 @@ export class TabsRenderer {
 			}
 		}
 		if (this.state.config.junction) {
-			tabs.push({ label: 'Splice junction', active: this.state.config.junction.shown })
+			tabs.push({ label: 'Splice Junction', active: this.state.config.junction.shown })
 		}
 		if (this.state.config.ld) {
 			const shown = this.state.config.ld.tracks.some(t => t.shown)

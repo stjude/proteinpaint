@@ -2002,6 +2002,8 @@ async function validate_query_ssGSEA(ds, genome) {
 			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
 			q.samples.push(si)
 		}
+		// for the sample type row of the geneset expression term picker
+		setQuerySampleTypes(q, q.samples, ds)
 		console.log(`${ds.label}: ssGSEA HDF5 file validated. Samples:`, samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate ssGSEA HDF5 file: ${error}`
@@ -2040,18 +2042,22 @@ async function validate_query_ssGSEA(ds, genome) {
 		const results = JSON.parse(tmp)
 		mayLog('ssGSEA h5 file', Date.now() - time1)
 
+		// the samples each term reads, after the request's sample filter and the term's sample types
+		const limitTermSamples = getTermSampleLimiter(param, q.samples, ds)
 		for (const tw of param.terms) {
 			const result = results.query_output[tw.term.id]?.samples
 			if (!result) {
 				console.warn(`No data found for geneset ${tw.term.id} in the response`)
 				continue
 			}
+			const termSamples = await limitTermSamples(tw.term)
 
 			const s2v = {}
 			for (const sampleName in result) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 				if (!sampleId) continue
 				if (limitSamples && !limitSamples.has(sampleId)) continue
+				if (termSamples && !termSamples.has(sampleId)) continue
 				s2v[sampleId] = result[sampleName]
 			}
 

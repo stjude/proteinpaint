@@ -1,6 +1,7 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
 import { filterJoin, getNormalRoot } from '#filter/filter'
+import { getDaTermTypes } from '../diffAnalysis/enabledTermTypes.ts'
 
 /*
 Tests:
@@ -11,6 +12,7 @@ Tests:
 	- DEinput rejects an invalid config.groups[]
 	- DEinput keeps groups within its local filter
 	- DEinput adds groups within a union of selected wedges
+	- DEinput offers the kinds of data of the dataset
  */
 
 /*************************
@@ -473,4 +475,42 @@ tape('DEinput rejects an invalid config.groups[]', async test => {
 	}
 
 	test.end()
+})
+
+tape('DEinput offers the kinds of data of the dataset', test => {
+	test.timeoutAfter(10000)
+
+	let tested = false
+	runpp({
+		state: { plots: [{ chartType: 'DEinput', chooseTermType: true, groups: structuredClone(groups) }] },
+		DEinput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(deinput) {
+		// a choice is a state change, which renders again
+		if (tested) return
+		tested = true
+		const self = deinput.Inner
+		const types = getDaTermTypes(self.app.vocabApi.termdbConfig)
+		const radios = [...self.dom.termTypeChoice.node().querySelectorAll('input[type=radio]')] as HTMLInputElement[]
+		test.equal(radios.length, types.length > 1 ? types.length : 0, 'should offer a radio for each kind of data')
+		test.equal(self.termType, types[0], 'should open on the first kind of data')
+		if (types.length > 1) {
+			radios[1].click()
+			await new Promise(resolve => setTimeout(resolve, 500))
+			test.equal(self.termType, types[1], 'should switch to the kind of data that is chosen')
+			test.equal(self.app.getState().plots[0].termType, types[1], 'should keep the choice in the plot config')
+			test.deepEqual(
+				self.getSubmitGroups().map(g => g.name),
+				['Male', 'Female'],
+				'should keep the groups'
+			)
+		}
+		if (test['_ok']) self.app.destroy()
+		test.end()
+	}
 })

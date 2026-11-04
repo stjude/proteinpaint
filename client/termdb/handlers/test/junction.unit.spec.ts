@@ -1,7 +1,8 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import type { JunctionTerm } from '#types'
-import { SearchHandler } from '../junction.ts'
+import { SearchHandler, getGenomeBrowserConfig } from '../junction.ts'
+import { mayRenderSampleTypeRow } from '#dom'
 import { makeJunctionCustomTerm } from '../junction.customTerm.ts'
 
 function makeJunction(id: string): JunctionTerm {
@@ -74,14 +75,53 @@ tape('init() offers a genome browser search when there is no junction', async te
 	await new SearchHandler().init(opts)
 
 	test.equal(holder.selectAll('.sja_genesearchinput').size(), 1, 'should show a search that opens a genome browser')
-	test.ok(holder.text().includes('Charts > Differential Splicing'), 'should point to differential splicing')
-
-	delete opts.app.vocabApi.termdbConfig.queries.junction.cluster
-	holder.selectAll('*').remove()
-	await new SearchHandler().init(opts)
-	test.notOk(holder.text().includes('Differential Splicing'), 'should not point to it without differential splicing')
+	test.notOk(holder.text().includes('Differential Analysis'), 'should not point elsewhere for differential splicing')
 
 	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('the empty picker offers sample types for the genome browser it opens', async test => {
+	const termdbConfig = {
+		queries: { junction: { sampleTypes: [1, 2, 3] } },
+		sampleTypes: {
+			1: { name: 'patient', plural_name: 'patients', parent_id: null },
+			2: { name: 'diagnosis sample', plural_name: 'diagnosis samples', parent_id: 1 },
+			3: { name: 'relapse sample', plural_name: 'relapse samples', parent_id: 1 }
+		}
+	}
+	const holder = d3s.select('body').append('div')
+	const opts: any = getOpts(holder, 'junction-handler-empty-sampletypes')
+	opts.app.vocabApi.termdbConfig = termdbConfig
+	opts.app.vocabApi.app = { dispatch: () => {}, getState: () => ({}) }
+	await new SearchHandler().init(opts)
+	test.equal(holder.selectAll('input[type=checkbox]').size(), 0, 'should draw no row in a standalone termdb app')
+
+	opts.app.vocabApi.app.getState = () => ({ plots: [] })
+	await new SearchHandler().init(opts)
+	test.equal(
+		holder.selectAll('input[type=checkbox]').size(),
+		2,
+		'should draw a checkbox for each sample type with a parent above the search'
+	)
+
+	// the config the search dispatches, for the row as it is drawn
+	const query = { sampleTypes: [2, 3] }
+	const rowHolder: any = d3s.select('body').append('div')
+	const select = mayRenderSampleTypeRow(rowHolder, query, termdbConfig)
+	const region = { chr: 'chr1', start: 100, stop: 200 }
+	const all: any = getGenomeBrowserConfig(region, select, query, termdbConfig)
+	test.equal(all.chartType, 'genomeBrowser', 'should open a genome browser')
+	test.equal(all.activeTab, 'Splice Junction', 'should open it on the splice junction tab')
+	test.notOk('sampleTypes' in all, 'should read every sample when every sample type is checked')
+	;(rowHolder.selectAll('input[type=checkbox]').nodes()[1] as HTMLInputElement).click()
+	test.deepEqual(
+		getGenomeBrowserConfig(region, select, query, termdbConfig)?.sampleTypes,
+		[2],
+		'should open it with the checked sample types'
+	)
+
+	if (test['_ok']) for (const d of [holder, rowHolder]) d.remove()
 	test.end()
 })
 

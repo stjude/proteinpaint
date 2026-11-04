@@ -1,6 +1,13 @@
 import { junctionCustomTermSource, withSampleTypes, type JunctionCustomTerm } from './junction.customTerm.ts'
 import { mayRenderFractionSelection } from './termCollectionFractionSelection.ts'
-import { Menu, addGeneSearchbox, mayRenderSampleTypeRow, getTermSampleTypes, getChosenSampleTypes } from '#dom'
+import {
+	Menu,
+	addGeneSearchbox,
+	mayRenderSampleTypeRow,
+	getTermSampleTypes,
+	getChosenSampleTypes,
+	getChildSampleTypeQuery
+} from '#dom'
 
 export class SearchHandler {
 	async init(opts) {
@@ -21,16 +28,17 @@ function render(opts, entries: JunctionCustomTerm[]) {
 	const holder = opts.holder
 	holder.selectAll('*').remove()
 	const div = holder.append('div').style('padding', '10px 0px')
+	const termdbConfig = opts.app.vocabApi.termdbConfig
+	// the sample types with a parent, as the genome browser and the differential analysis forms offer them
+	const query = getChildSampleTypeQuery(termdbConfig?.queries?.junction, termdbConfig)
 
 	if (!entries.length) {
-		renderNoJunctions(div, opts)
+		renderNoJunctions(div, opts, query)
 		return
 	}
 
 	/* the sample types to read the picked junction for, as for gene expression and methylation terms.
 	Drawn once: a delete redraws only the list below, so the choice stays */
-	const termdbConfig = opts.app.vocabApi.termdbConfig
-	const query = termdbConfig?.queries?.junction
 	const sampleTypeSelect = mayRenderSampleTypeRow(div.append('div'), query, termdbConfig)
 	/* a junction or event term, or the term wrapper of an event's fraction from the fraction chooser, with
 	the chosen sample types, see withSampleTypes() */
@@ -75,13 +83,17 @@ function render(opts, entries: JunctionCustomTerm[]) {
 }
 
 /* Junction terms are made only in a genome browser, by Select on a junction of its splice junction
-track, so a search here opens one, in the mass app that vocabApi belongs to. A dataset with
-differential splicing is also pointed to it, as a group of samples is not made from a junction. */
-function renderNoJunctions(div, opts) {
-	div.append('div').text('Junctions selected from genome browser will be shown here.')
+track, so a search here opens one, in the mass app that vocabApi belongs to. As in the gene
+expression picker, the sample type row is above the search: the genome browser opens with
+the chosen sample types, which a junction selected from its track keeps. */
+function renderNoJunctions(div, opts, query) {
+	const termdbConfig = opts.app.vocabApi.termdbConfig
 	const massApp = opts.app.vocabApi.app
 	// only the mass app, whose state lists plots, can open a genome browser; a standalone termdb app cannot
-	if (!Array.isArray(massApp?.getState?.()?.plots) || !opts.genomeObj) return
+	const canOpen = Array.isArray(massApp?.getState?.()?.plots) && opts.genomeObj
+	const sampleTypeSelect = canOpen ? mayRenderSampleTypeRow(div.append('div'), query, termdbConfig) : undefined
+	div.append('div').text('Junctions selected from genome browser will be shown here.')
+	if (!canOpen) return
 	const row = div.append('div').style('margin-top', '10px')
 	row.append('span').style('margin-right', '5px').text('Open genome browser at')
 	const geneSearch = addGeneSearchbox({
@@ -91,24 +103,26 @@ function renderNoJunctions(div, opts) {
 		callback: () => {
 			const { chr, start, stop } = geneSearch
 			if (!chr) return
-			massApp.dispatch({
-				type: 'plot_create',
-				config: {
-					chartType: 'genomeBrowser',
-					blockIsProteinMode: false,
-					geneSearchResult: { chr, start, stop },
-					activeTab: 'Splice junction'
-				}
-			})
+			const config = getGenomeBrowserConfig({ chr, start, stop }, sampleTypeSelect, query, termdbConfig)
+			if (config) massApp.dispatch({ type: 'plot_create', config })
 		}
 	})
-	if (opts.app.vocabApi.termdbConfig?.queries?.junction?.cluster)
-		div
-			.append('div')
-			.style('margin-top', '10px')
-			.style('font-size', '.8em')
-			.style('opacity', 0.7)
-			.text('To compare splicing between groups of samples, use Charts > Differential Splicing.')
+}
+
+/** the genome browser the search opens: at the found region, on its splice junction tab, with the sample
+ * types of the row (none, or every one, reads every sample). undefined when nothing is selectable, which
+ * getTermSampleTypes() has alerted */
+export function getGenomeBrowserConfig(geneSearchResult, sampleTypeSelect, query, termdbConfig) {
+	const termSampleTypes = getTermSampleTypes(sampleTypeSelect, query, termdbConfig)
+	if (!termSampleTypes) return
+	const sampleTypes = getChosenSampleTypes(query, termSampleTypes.sampleTypes)
+	return {
+		chartType: 'genomeBrowser',
+		blockIsProteinMode: false,
+		geneSearchResult,
+		activeTab: 'Splice Junction',
+		...(sampleTypes ? { sampleTypes } : {})
+	}
 }
 
 function renderJunction(holder, entry: JunctionCustomTerm, opts) {

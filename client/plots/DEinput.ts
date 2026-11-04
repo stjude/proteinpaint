@@ -18,6 +18,7 @@ import { renderPreAnalysisData, getSamplelstTWFromFilters, initDaSampleTypes } f
 import { TermTypeGroups, termType2label } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { uiLabel } from '#shared'
+import { getDaTermTypes } from './diffAnalysis/enabledTermTypes.ts'
 
 const colorScale = getColors(5)
 
@@ -29,6 +30,11 @@ which ds query proves the assay exists, which server route the pre-analysis hits
 expression-source tabs (only gene expression has a pseudobulk counterpart), and the query whose
 sample types the sample type row offers (none for pseudobulk), as in the Groups tab. The group
 table, filter prompt and submit flow are shared.
+
+config.chooseTermType offers the kinds of data of the dataset as radios above the groups (see
+getDaTermTypes()), so one form serves every differential analysis, as Charts > Differential Analysis
+opens it. A change keeps the groups, which are filters, and the counts are fetched again for the new
+kind of data.
 
 config.filter limits the group picker, sample counts, and analysis to the plot's selected samples.
 The results view is a separate chart, 'differentialAnalysis'; this plot only builds groups
@@ -80,6 +86,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		// header text is set in init(), once state.config.termType is known
 		const header = this.opts?.header || undefined
 		const holder = this.opts.holder.append('div').style('margin', '10px')
+		const termTypeChoice = holder.append('div').style('margin-bottom', '15px')
 		const expressionSource = holder.append('div').style('margin-bottom', '15px')
 		const table = holder.append('div')
 		const btns = holder.append('div').style('margin-top', '5px')
@@ -95,7 +102,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			.style('display', 'none')
 			.style('margin-top', '20px')
 			.style('margin-left', '5px')
-		const dom = { header, expressionSource, table, addGroup, submit, loading, preAnalysis }
+		const dom = { header, termTypeChoice, expressionSource, table, addGroup, submit, loading, preAnalysis }
 		return dom
 	}
 
@@ -114,8 +121,36 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 	async init(appState) {
 		const state = this.getState(appState)
-		this.termType = state.config.termType || TermTypes.GENE_EXPRESSION
+		this.termType = state.config.termType || getDefaultTermType(this.app.vocabApi.termdbConfig)
 		this.dom.header?.html(`Differential ${termType2label(this.termType)}`)
+		if (state.config.chooseTermType) this.renderTermTypeChoice()
+		await this.renderExpressionSourceUI()
+	}
+
+	/** radios of the kinds of data, when the dataset has more than one; a choice is kept in the plot config */
+	renderTermTypeChoice() {
+		const types = getDaTermTypes(this.app.vocabApi.termdbConfig)
+		if (types.length < 2) return
+		this.dom.termTypeChoice.append('div').style('opacity', 0.7).text('Compare the groups by:')
+		make_radios({
+			holder: this.dom.termTypeChoice,
+			inputName: `sjpp-da-termtype-${this.id}`,
+			options: types.map(t => ({ label: termType2label(t), value: t, checked: t == this.termType })),
+			styles: { display: 'inline-block', padding: '3px 10px 3px 0px' },
+			callback: termType => this.app.dispatch({ type: 'plot_edit', id: this.id, config: { termType } })
+		})
+	}
+
+	/** a new kind of data: the source tabs or sample type row of that kind replace the old one, and groups
+	passed by the caller are counted again, as they were for the first kind */
+	async setTermType(termType: string) {
+		this.termType = termType
+		this.dom.header?.html(`Differential ${termType2label(termType)}`)
+		this.dom.expressionSource.selectAll('*').remove()
+		delete this.expressionSource
+		delete this.pseudobulk
+		delete this.sampleTypeRow
+		this.autoSubmitted = false
 		await this.renderExpressionSourceUI()
 	}
 
@@ -127,6 +162,9 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		so the throw permanently skips seeding and config.groups[] silently never appears. The
 		framework calls main() again right after init(), so nothing is lost by returning. */
 		if (!this.state) return
+		// plot_prep skips getPlotConfig() when the config has more keys than chartType, so termType may be unset
+		const termType = this.state.config.termType || this.termType
+		if (termType != this.termType) await this.setTermType(termType)
 		this.clearPreAnalysis()
 		if (!this.expressionSource || (this.expressionSource === 'pseudobulk' && !this.pseudobulk)) {
 			this.dom.table.style('display', 'none')
@@ -560,13 +598,18 @@ export const componentInit = DEinputInit
 
 const supportedTermTypes = new Set([TermTypes.GENE_EXPRESSION, TermTypes.DNA_METHYLATION, TermTypes.JUNCTION])
 
+function getDefaultTermType(termdbConfig) {
+	return getDaTermTypes(termdbConfig)[0] || TermTypes.GENE_EXPRESSION
+}
+
 export async function getPlotConfig(opts, app?) {
 	if (opts.termType && !supportedTermTypes.has(opts.termType))
 		throw new Error(`termType='${opts.termType}' is not supported by DEinput`)
 	const config = {
 		chartType: 'DEinput',
-		// default keeps every existing caller on gene expression without passing anything
-		termType: opts.termType || TermTypes.GENE_EXPRESSION,
+		/* the first kind of data of the dataset, which is gene expression wherever it was before, so a caller
+		that passes no termType opens as it did */
+		termType: opts.termType || getDefaultTermType(app?.vocabApi?.termdbConfig),
 		settings: {}
 	}
 

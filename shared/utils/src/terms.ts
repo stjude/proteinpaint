@@ -830,7 +830,7 @@ const typeMap: { [key: string]: string } = {
 	date: 'Date',
 	geneExpression: 'Gene Expression',
 	isoformExpression: 'Isoform Expression',
-	[JUNCTION]: 'Splice junction',
+	[JUNCTION]: 'Splice Junction',
 	ssGSEA: 'Geneset Expression',
 	dnaMethylation: 'DNA Methylation',
 	geneVariant: 'Gene Variant',

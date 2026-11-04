@@ -238,8 +238,8 @@ tape('opening tab', async test => {
 
 	const plain = await draw()
 	test.equal(active(plain), 'Mutation', 'should open at the first shown tab by default')
-	const junction = await draw('Splice junction')
-	test.equal(active(junction), 'Splice junction', 'should open at the tab named by config.activeTab')
+	const junction = await draw('Splice Junction')
+	test.equal(active(junction), 'Splice Junction', 'should open at the tab named by config.activeTab')
 
 	if (test['_ok']) for (const d of [plain, junction]) d.remove()
 	test.end()

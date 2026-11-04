@@ -424,7 +424,7 @@ export class VolcanoInteractions {
 				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - 1 - pad), stop: d.stop + pad },
 				// every track reads the samples of the analysis, as the cluster track does
 				...(config.sampleTypes ? { sampleTypes: config.sampleTypes } : {}),
-				activeTab: 'Splice junction',
+				activeTab: 'Splice Junction',
 				tracks: [
 					{
 						type: 'j2',
