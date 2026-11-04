@@ -93,14 +93,13 @@ function renderDensity(data, tk, block) {
 	 */
 	tk.cnv.g
 		.append('image')
-		.attr('data-testid', 'sjpp-cnv-density-gain')
 		.attr('width', block.width)
 		.attr('height', tk.cnv.density.barheight)
 		.attr('xlink:href', data.cnvDensity.gain.src)
 		.attr('data-testid', 'sjpp-mds3tk-cnvdensityimg')
 	tk.cnv.g
 		.append('image')
-		.attr('data-testid', 'sjpp-cnv-density-loss')
+		.attr('data-testid', 'sjpp-mds3tk-cnvdensityimg')
 		.attr('width', block.width)
 		.attr('height', tk.cnv.density.barheight)
 		.attr('xlink:href', data.cnvDensity.loss.src)

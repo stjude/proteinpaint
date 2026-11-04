@@ -103,7 +103,8 @@ export async function itemtable_oneItem(arg) {
 
 	// if the variant has only one sample,
 	// allow to append new rows to table to show sample key:value
-	arg.singleSampleDiv = table.scrollDiv.attr('data-testid', 'sjpp-mds3-single-occurence-table')
+	table.scrollDiv.attr('data-testid', 'sjpp-mds3-single-occurence-table')
+	arg.singleSampleDiv = table
 	// if there are multiple samples, this <div> won't be used
 	// a new table will be created under arg.div to show sample table
 
