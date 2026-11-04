@@ -3,9 +3,9 @@ import { boxplot_getvalue } from '#shared/boxplot.js'
 import { JT_na, JT_canonical } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
-import { setFile, validateSampleHeader, getTermSampleLimiter, getTermSampleTypeIds } from '../mds3.init.js'
+import { setFile, validateSampleHeader, getTermSampleLimiter } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
-import { maySetMapParent2Children } from '../termdb.matrix.js'
+import { mapParent2ChildrenWithSampleTypes } from '../utils/sampleTypes.ts'
 import { getH5samples } from '../utils/h5samples.ts'
 import { setQuerySampleTypes } from '#shared/terms.js'
 
@@ -57,11 +57,8 @@ export async function validate_query_junction(ds: any, genome: any) {
 		// assuming genomic data in mds3 tk is at sample-level, so setting
 		// mapParent2Children=true to allow parent-level term data to be mapped
 		// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
-		/* the sample types chosen for the genome browser track, in its config panel. Put back after the
-		mapping, which resets them to the default ones whenever the request has a filter */
-		const sampleTypes = getTermSampleTypeIds(param, ds)
-		maySetMapParent2Children(param, ds, true)
-		if (sampleTypes?.length) param.sampleTypes = sampleTypes
+		// with the sample types chosen in the genome browser
+		mapParent2ChildrenWithSampleTypes(param, ds)
 
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {

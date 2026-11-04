@@ -65,6 +65,7 @@ export async function geneBodyLossTest(
 				min_count: de.minCount,
 				min_total_count: de.minTotalCount,
 				cpm_cutoff: de.cpmCutoff,
+				sampleTypes: config?.sampleTypes,
 				filter: app.getState().termfilter?.filter,
 				filter0: app.getState().termfilter?.filter0
 			}
@@ -113,6 +114,8 @@ function renderGeneDE(div: any, res: any, nRegions: number, config: any, scan: D
 					termType: 'geneExpression',
 					state: config.state,
 					samplelst,
+					// with a group defined by a filter, the DE keeps to the scan's samples by these too
+					...(config.sampleTypes ? { sampleTypes: config.sampleTypes } : {}),
 					tw: config.tw,
 					highlightedData: gb.genes,
 					/* The default highlight is orange-yellow, which on a case group drawn in orange makes

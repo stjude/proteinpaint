@@ -23,6 +23,27 @@ export function mayRenderSampleTypeRow(holder: any, query: any, termdbConfig: an
 	return termSelects
 }
 
+/** a query's sample types (e.g. queries.junction.cluster) that have a parent, and its dropdown values left with any
+ * of them: the types of the samples that data read by case, such as a differential analysis group or a genome
+ * browser track, maps each case to */
+export function getChildSampleTypeQuery(query: any, termdbConfig: any) {
+	if (!query?.sampleTypes) return query
+	const hasParent = t => Number.isInteger(termdbConfig.sampleTypes?.[t]?.parent_id)
+	const q = { ...query, sampleTypes: query.sampleTypes.filter(hasParent) }
+	if (query.sampleTypesByTerms)
+		q.sampleTypesByTerms = Object.fromEntries(
+			Object.entries<any>(query.sampleTypesByTerms).map(([term, byValue]) => [
+				term,
+				Object.fromEntries(
+					Object.entries<number[]>(byValue)
+						.map(([v, types]) => [v, types.filter(hasParent)])
+						.filter(([, types]) => types.length)
+				)
+			])
+		)
+	return q
+}
+
 /** the ids of a kept choice of sample types (e.g. the genome browser's config.junction.sampleTypes, which a
  * launcher may set from the sample types of another query) that the query has. undefined for none, or every
  * one, of them, which reads every sample */

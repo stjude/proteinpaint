@@ -220,11 +220,12 @@ export async function matchedSamplelst(
 	samplelst: { groups: { name: string; values: any[]; [k: string]: any }[] },
 	eligible: Set<string>,
 	ds: any,
-	__protected__?: any
+	__protected__?: any,
+	sampleTypes?: number[]
 ): Promise<{ groups: { name: string; values: { sampleId: number | string }[]; [k: string]: any }[] }> {
 	const groups: { name: string; values: { sampleId: number | string }[] }[] = []
 	for (const g of samplelst.groups) {
-		const { names } = await buildGroupValues(g.values, eligible, ds, null, null, null, null, __protected__)
+		const { names } = await buildGroupValues(g.values, eligible, ds, null, null, null, null, __protected__, sampleTypes)
 		/* Everything but the values is kept as it came, `in: true` included: the volcano treats a
 		group without `in` as the "all other samples" group and rebuilds its membership. */
 		groups.push({ ...g, values: names.map(n => ({ sampleId: ds.cohort?.termdb?.q?.sampleName2id?.(n) ?? n })) })
@@ -257,11 +258,12 @@ export async function resolveGroupNames(
 	group2: any[],
 	eligible: Set<string>,
 	ds: any,
-	__protected__?: any
+	__protected__?: any,
+	sampleTypes?: number[]
 ): Promise<{ group1: string[]; group2: string[] }> {
 	const [g1, g2] = await Promise.all([
-		buildGroupValues(group1, eligible, ds, null, null, null, null, __protected__),
-		buildGroupValues(group2, eligible, ds, null, null, null, null, __protected__)
+		buildGroupValues(group1, eligible, ds, null, null, null, null, __protected__, sampleTypes),
+		buildGroupValues(group2, eligible, ds, null, null, null, null, __protected__, sampleTypes)
 	])
 	return { group1: g1.names, group2: g2.names }
 }

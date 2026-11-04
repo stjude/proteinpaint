@@ -12,6 +12,8 @@ export type DmrConfig = {
 	group2: { sampleId: number | string; sample?: string }[] | SampleFilterGroup
 	group1Name?: string
 	group2Name?: string
+	/** the sample types of the scan this view was opened from; see TermdbDmrRequest.sampleTypes */
+	sampleTypes?: number[]
 	settings: { dmr: DMRSettings }
 	/** The chromosomes of the scan this view was opened from; see TermdbDmrRequest.scanChromosomes */
 	scanChromosomes?: string[]

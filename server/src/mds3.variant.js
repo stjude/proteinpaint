@@ -4,6 +4,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import path from 'path'
 import serverconfig from './serverconfig.js'
 import { validateRglst } from './utils.js'
+import { getTermSampleTypeIds } from './utils/sampleTypes.ts'
 
 /*
 
@@ -116,7 +117,9 @@ async function getResultsWithMlst(q, ds) {
 	const param = {
 		rglst: [{ chr: q.chr, start: q.start, stop: q.stop }],
 		addFormatValues: true, // allows to add FORMAT including GT in each
-		variantFilter: q.variantFilter
+		variantFilter: q.variantFilter,
+		// chosen in the sample type row of the genome browser; byrange.get() keeps the samples of these types
+		sampleTypes: getTermSampleTypeIds(q, ds)
 	}
 
 	// g1 is always valid, g2 is optional

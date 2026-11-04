@@ -30,7 +30,7 @@ import {
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
 import { cacheOrRecompute, generateHash } from '#src/utils/cacheOrRecompute.ts'
-import { sampleFilterScope, resolveGroupPair } from '#src/utils/sampleGroups.ts'
+import { sampleFilterScope, sampleTypesKey, resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import fs from 'fs'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
@@ -300,6 +300,7 @@ export async function runDmrBatch(
 		C,
 		fdr_cutoff,
 		element_type: q.element_type ?? null,
+		...sampleTypesKey(q),
 		mask: { sources: [...appliedNames].sort(), overlapFrac },
 		background: !!q.backgroundCorrection,
 		/* how dmrcate reads the values (read counts, betas or M-values), from the dataset's platform and element unit:
@@ -335,7 +336,8 @@ export async function runDmrBatch(
 				list2,
 				eligibleMethylationSamples(ds, q.element_type),
 				ds,
-				q.__protected__
+				q.__protected__,
+				q.sampleTypes
 			)
 			if (group1.length < 3 || group2.length < 3)
 				throw new Error(

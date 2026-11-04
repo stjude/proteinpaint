@@ -904,6 +904,10 @@ type RnaseqGeneCount = {
 	/** sample names present in the counts matrix. may be a getter on api-backed datasets whose
 	 * sample list is populated asynchronously after launch */
 	allSampleSet?: Set<string>
+	/** sample types of the counts matrix's samples, set at init, for the panel's sample type selector */
+	sampleTypes?: number[]
+	/** termdb sampleTypesByTerms{} filtered for those entries with sample types present in .sampleTypes[] */
+	sampleTypesByTerms?: SampleTypesByTerms
 }
 
 type JunctionClusterQuery = {

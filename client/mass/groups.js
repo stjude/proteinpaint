@@ -8,7 +8,8 @@ import {
 	make_radios,
 	mayRenderSampleTypeRow,
 	getSelectedSampleTypes,
-	getChosenSampleTypes
+	getChosenSampleTypes,
+	getChildSampleTypeQuery
 } from '#dom'
 import {
 	filterInit,
@@ -608,26 +609,33 @@ function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
 
 function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 	// DA app can be applied to multiple datatypes. show options based on availability for each datatype
-	if (self.app.vocabApi.termdbConfig.queries?.rnaseqGeneCount) {
+	const queries = self.app.vocabApi.termdbConfig.queries || {}
+	// the groups of an analysis that runs on the samples the groups list
+	const getListedGroups = () => {
+		for (const group of samplelstTW.q.groups)
+			if (!groupHasSamples(group)) throw 'group does not contain samples for differential analysis'
+		return samplelstTW.q.groups
+	}
+	const preAnalysisBody = (groups, sampleTypes, more = {}) => ({
+		genome: self.app.vocabApi.vocab.genome,
+		dslabel: self.app.vocabApi.vocab.dslabel,
+		samplelst: { groups },
+		filter: self.state.termfilter.filter,
+		filter0: self.state.termfilter.filter0,
+		...(sampleTypes ? { sampleTypes } : {}),
+		...more,
+		preAnalysis: true
+	})
+
+	if (queries.rnaseqGeneCount) {
 		// hardcoded! rnaseq genecount will correspond to gene exp term type on DA ui
-		const itemDiv = div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.attr('data-testid', 'sjpp-da-option')
-			.text(`Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
-			.on('click', async () => {
-				const tip = self.tip2
-				tip.clear().showunderoffset(itemDiv.node())
-				const loading = tip.d.append('div').text('Loading ...')
-				try {
-					const preAnalysisData = await getGeneExpressionPreAnalysis(self.app, samplelstTW, self.state.termfilter)
-					loading.remove()
-					renderPreAnalysisData({ preAnalysisData, samplelstTW, groups: samplelstTW.q.groups, tip, self })
-				} catch (e) {
-					loading.remove()
-					sayerror(tip.d.append('div'), e)
-				}
-			})
+		const itemDiv = addDaMenuOption(div, 'sjpp-da-option', TermTypes.GENE_EXPRESSION)
+		itemDiv.on('click', () =>
+			initDaPanel(self, itemDiv, queries.rnaseqGeneCount, {
+				fetch: sampleTypes => getGeneExpressionPreAnalysis(self.app, samplelstTW, self.state.termfilter, sampleTypes),
+				render: () => ({ samplelstTW, groups: samplelstTW.q.groups })
+			})()
+		)
 	}
 
 	/* Show the DM option when the dataset has EITHER the legacy promoter matrix or any
@@ -635,125 +643,48 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 	so this is belt-and-braces for a dataset that offers only non-promoter classes --
 	without the elementTypes check such a dataset would have differential methylation
 	fully configured server-side and no way to reach it. */
-	const dmQuery = self.app.vocabApi.termdbConfig.queries?.dnaMethylation
+	const dmQuery = queries.dnaMethylation
 	if (dmQuery?.promoter || dmQuery?.elementTypes?.length) {
-		const itemDiv = div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.attr('data-testid', 'sjpp-da-dnaMeth-option')
-			.text(`Differential ${termType2label(TermTypes.DNA_METHYLATION)} Analysis`)
-			.on('click', async () => {
-				const groups = []
-				for (const group of samplelstTW.q.groups) {
-					if (groupHasSamples(group)) {
-						groups.push(group)
-					} else {
-						throw 'group does not contain samples for differential analysis'
-					}
+		const itemDiv = addDaMenuOption(div, 'sjpp-da-dnaMeth-option', TermTypes.DNA_METHYLATION)
+		itemDiv.on('click', async () => {
+			const groups = getListedGroups()
+			/* The numbers of samples with methylation data, for one element class: each matrix has
+			its own eligible samples, so the panel is fetched for the class it opens on and again
+			for a class picked in it. A dataset without a class list sends none, as before. */
+			const showPanel = initDaPanel(self, itemDiv, dmQuery, {
+				fetch: (sampleTypes, { elementType }) =>
+					dofetch3('termdb/diffMeth', {
+						body: preAnalysisBody(groups, sampleTypes, elementType ? { element_type: elementType } : {})
+					}),
+				// shared with differential expression; termType selects the label and drops the method radios
+				render: ({ elementType }) => ({
+					samplelstTW,
+					groups,
+					termType: TermTypes.DNA_METHYLATION,
+					elementType,
+					onElementType: v => showPanel({ elementType: v, refocus: true })
+				}),
+				// the panel was drawn again under a keyboard user's hands
+				after: (holder, { refocus }) => {
+					if (refocus) holder.select('[data-testid="sjpp-da-element-select"]').node()?.focus()
 				}
-
-				const tip = self.tip2
-				/* The numbers of samples with methylation data, for one element class: each matrix has
-				its own eligible samples, so the panel is fetched for the class it opens on and again
-				for a class picked in it. A dataset without a class list sends none, as before. */
-				const showPanel = async (elementType, refocus) => {
-					const body = {
-						genome: self.app.vocabApi.vocab.genome,
-						dslabel: self.app.vocabApi.vocab.dslabel,
-						samplelst: { groups },
-						filter: self.state.termfilter.filter,
-						filter0: self.state.termfilter.filter0,
-						...(elementType ? { element_type: elementType } : {}),
-						preAnalysis: true
-					}
-					const preAnalysisData = await dofetch3('termdb/diffMeth', { body })
-
-					tip.clear().showunderoffset(itemDiv.node())
-					if (!preAnalysisData?.data) {
-						sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
-						throw new Error('no data returned from pre-analysis request')
-					}
-
-					// shared with differential expression; termType selects the label and drops the
-					// method radios, which do not apply to methylation
-					renderPreAnalysisData({
-						preAnalysisData,
-						samplelstTW,
-						groups,
-						tip,
-						termType: TermTypes.DNA_METHYLATION,
-						self,
-						elementType,
-						onElementType: v => showPanel(v, true)
-					})
-					// the panel was drawn again under a keyboard user's hands
-					if (refocus) tip.d.select('[data-testid="sjpp-da-element-select"]').node()?.focus()
-				}
-				// the class the volcano would open on, where the dataset lists it
-				const startClass = dmQuery.defaultElementType || 'promoter'
-				await showPanel(dmQuery.elementTypes?.some(e => e.key == startClass) ? startClass : undefined)
 			})
+			// the class the volcano would open on, where the dataset lists it
+			const startClass = dmQuery.defaultElementType || 'promoter'
+			await showPanel({ elementType: dmQuery.elementTypes?.some(e => e.key == startClass) ? startClass : undefined })
+		})
 	}
 
 	// differential splicing; no method radio yet, only edgeR is wired (leafcutter to be added)
-	if (self.app.vocabApi.termdbConfig.queries?.junction?.cluster) {
-		const itemDiv = div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.attr('data-testid', 'sjpp-da-splicing-option')
-			.text(`Differential ${termType2label(TermTypes.JUNCTION)} Analysis`)
-			.on('click', async () => {
-				const groups = []
-				for (const group of samplelstTW.q.groups) {
-					if (groupHasSamples(group)) {
-						groups.push(group)
-					} else {
-						throw 'group does not contain samples for differential analysis'
-					}
-				}
-
-				const tip = self.tip2.clear()
-				const dsQuery = self.app.vocabApi.termdbConfig.queries.junction.cluster
-				const { sampleTypes, panelDiv, isCurrent } = initDaSampleTypes(tip.d, dsQuery, self, () => showPanel())
-				// the numbers of samples with splicing data, fetched again for other sample types
-				const showPanel = async () => {
-					const st = sampleTypes()
-					if (st === null) return
-					const body = {
-						genome: self.app.vocabApi.vocab.genome,
-						dslabel: self.app.vocabApi.vocab.dslabel,
-						samplelst: { groups },
-						filter: self.state.termfilter.filter,
-						filter0: self.state.termfilter.filter0,
-						...(st ? { sampleTypes: st } : {}),
-						preAnalysis: true
-					}
-					const current = isCurrent()
-					const preAnalysisData = await dofetch3('termdb/diffSplice', { body })
-					if (!current()) return
-
-					panelDiv.selectAll('*').remove()
-					tip.showunderoffset(itemDiv.node())
-					if (!preAnalysisData?.data) {
-						sayerror(panelDiv.append('div'), 'Error retrieving pre-analysis data')
-						throw new Error('no data returned from pre-analysis request')
-					}
-					/* Shared with differential expression and methylation; termType selects the label
-					and drops the method radios. The per-group cap is enforced server-side and arrives
-					as preAnalysisData.alert, which hides the Run button. */
-					renderPreAnalysisData({
-						preAnalysisData,
-						samplelstTW,
-						groups,
-						holder: panelDiv,
-						tip,
-						termType: TermTypes.JUNCTION,
-						self,
-						sampleTypes: st
-					})
-				}
-				await showPanel()
-			})
+	if (queries.junction?.cluster) {
+		const itemDiv = addDaMenuOption(div, 'sjpp-da-splicing-option', TermTypes.JUNCTION)
+		itemDiv.on('click', async () => {
+			const groups = getListedGroups()
+			await initDaPanel(self, itemDiv, queries.junction.cluster, {
+				fetch: sampleTypes => dofetch3('termdb/diffSplice', { body: preAnalysisBody(groups, sampleTypes) }),
+				render: () => ({ samplelstTW, groups, termType: TermTypes.JUNCTION })
+			})()
+		})
 	}
 
 	if (self.app.vocabApi.termdbConfig.allowedTermTypes?.includes(TermTypes.METABOLITE_INTENSITY)) {
@@ -868,8 +799,54 @@ function renderCountsFileInfo(holder, preview, sampleLabel) {
 	for (const l of lines) div.append('div').text(l)
 }
 
+function addDaMenuOption(div, testid, termType) {
+	return div
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.attr('data-testid', testid)
+		.text(`Differential ${termType2label(termType)} Analysis`)
+}
+
+/* The tip of a differential analysis menu item, under itemDiv: the sample type row of query (see initDaSampleTypes())
+and below it the panel of group counts, drawn by renderPreAnalysisData(). Returns show(opts), which fetches and draws
+the panel; a change of sample types calls it again with the last opts, and a reply that is no longer current is
+dropped.
+arg.fetch(sampleTypes, opts): the pre-analysis reply, {data:{groupName:n}}
+arg.render(opts): the arguments of renderPreAnalysisData() that differ by data type
+arg.after(holder, opts): optional, once the panel is drawn */
+function initDaPanel(self, itemDiv, query, arg) {
+	const tip = self.tip2.clear()
+	tip.showunderoffset(itemDiv.node())
+	let opts = {}
+	const row = initDaSampleTypes(tip.d, query, self, () => show())
+	const show = async (newOpts = opts) => {
+		opts = newOpts
+		const sampleTypes = row.sampleTypes()
+		// no sample type left, which getSelectedSampleTypes() has alerted
+		if (sampleTypes === null) return
+		const current = row.isCurrent()
+		row.panelDiv.selectAll('*').remove()
+		const loading = row.panelDiv.append('div').text('Loading ...')
+		try {
+			const preAnalysisData = await arg.fetch(sampleTypes, opts)
+			if (!current()) return
+			loading.remove()
+			if (!preAnalysisData?.data) throw preAnalysisData?.error || 'Error retrieving pre-analysis data'
+			/* The per-group cap is enforced server-side and arrives as preAnalysisData.alert, which hides the
+			Run button */
+			renderPreAnalysisData({ preAnalysisData, holder: row.panelDiv, tip, self, sampleTypes, ...arg.render(opts) })
+			arg.after?.(row.panelDiv, opts)
+		} catch (e) {
+			if (!current()) return
+			loading.remove()
+			sayerror(row.panelDiv.append('div'), e.message || e)
+		}
+	}
+	return show
+}
+
 /** Counts and available methods for the expression pre-analysis panel used by group pickers. */
-export async function getGeneExpressionPreAnalysis(app, samplelstTW, termfilter = {}) {
+export async function getGeneExpressionPreAnalysis(app, samplelstTW, termfilter = {}, sampleTypes) {
 	const groups = samplelstTW.q.groups
 	if (groups.length != 2 || groups.some(g => !groupHasSamples(g))) {
 		throw new Error('Differential analysis requires two groups containing samples')
@@ -880,6 +857,8 @@ export async function getGeneExpressionPreAnalysis(app, samplelstTW, termfilter 
 		samplelst: { groups },
 		filter: termfilter.filter,
 		filter0: termfilter.filter0,
+		// chosen in the panel's sample type row; absent when every sample type is
+		...(sampleTypes ? { sampleTypes } : {}),
 		preAnalysis: true
 	}
 	const res = await dofetch3('termdb/DE', { body })
@@ -894,7 +873,8 @@ sample types calls onChange, which fetches the counts again and redraws the pane
 samples of several types, such as a diagnosis and a relapse sample, is otherwise in its group
 with each of them.
 
-query: queries.junction.cluster, with .sampleTypes[] (set at server init) when the data has more
+query: the query of the data type (queries.rnaseqGeneCount, queries.dnaMethylation or
+queries.junction.cluster), with .sampleTypes[] (set at server init) when the data has more
 than one sample type. No query, or one without them, draws no row. Only sample types with a parent
 are offered: the groups are always mapped from cases to their samples of those types, see
 buildGroupValues() on the server
@@ -907,22 +887,7 @@ Returns
   change has started another fetch, whose counts are then the ones to show */
 export function initDaSampleTypes(holder, query, self, onChange) {
 	const termdbConfig = self.app.vocabApi.termdbConfig
-	if (query?.sampleTypes) {
-		const hasParent = t => Number.isInteger(termdbConfig.sampleTypes?.[t]?.parent_id)
-		query = { ...query, sampleTypes: query.sampleTypes.filter(hasParent) }
-		// and the dropdown values, dropping a value left with none
-		if (query.sampleTypesByTerms)
-			query.sampleTypesByTerms = Object.fromEntries(
-				Object.entries(query.sampleTypesByTerms).map(([term, byValue]) => [
-					term,
-					Object.fromEntries(
-						Object.entries(byValue)
-							.map(([v, types]) => [v, types.filter(hasParent)])
-							.filter(([, types]) => types.length)
-					)
-				])
-			)
-	}
+	query = getChildSampleTypeQuery(query, termdbConfig)
 	const rowDiv = holder.append('div')
 	const select = mayRenderSampleTypeRow(rowDiv, query, termdbConfig)
 	const panelDiv = holder.append('div')

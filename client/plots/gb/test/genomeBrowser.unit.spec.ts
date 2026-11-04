@@ -155,26 +155,27 @@ tape('junction track request sample types', test => {
 	test.end()
 })
 
-tape('junction tab sample types', test => {
-	const termdbConfig = {
-		sampleTypes: {
-			1: { name: 'Patient', plural_name: 'patients', parent_id: null },
-			2: { name: 'Diagnosis', plural_name: 'diagnosis samples', parent_id: 1 },
-			3: { name: 'Relapse', plural_name: 'relapse samples', parent_id: 1 }
-		},
-		queries: { junction: { sampleTypes: [2, 3] } }
-	}
+const sampleTypeConfig = {
+	sampleTypes: {
+		1: { name: 'Patient', plural_name: 'patients', parent_id: null },
+		2: { name: 'Diagnosis', plural_name: 'diagnosis samples', parent_id: 1 },
+		3: { name: 'Relapse', plural_name: 'relapse samples', parent_id: 1 }
+	},
+	queries: {}
+}
+
+tape('sample type row of the genome browser', test => {
 	const choices: any[] = []
-	const interactions = { setJunctionSampleTypes: c => choices.push(c) }
-	const draw = (sampleTypes?: number[]) => {
-		const holder: any = d3s.select('body').append('div')
-		const state = { config: { junction: { shown: true, sampleTypes } } }
-		new TabsRenderer(state, {}, { vocabApi: { termdbConfig } }, interactions).mayRenderJunctionSampleTypes(holder)
-		return { holder, boxes: holder.selectAll('input[type=checkbox]').nodes() as HTMLInputElement[] }
+	const interactions = { setSampleTypes: c => choices.push(c) }
+	const draw = (sampleTypes?: number[], termdbConfig: any = sampleTypeConfig) => {
+		const sampleTypeDiv: any = d3s.select('body').append('div')
+		const state = { config: { sampleTypes } }
+		new View(state, null, {}, { sampleTypeDiv }, { vocabApi: { termdbConfig } }, interactions).mayRenderSampleTypes()
+		return { sampleTypeDiv, boxes: sampleTypeDiv.selectAll('input[type=checkbox]').nodes() as HTMLInputElement[] }
 	}
 
 	const first = draw()
-	test.equal(first.boxes.length, 2, 'should draw a checkbox for each sample type of the junction data')
+	test.equal(first.boxes.length, 2, 'should draw a checkbox for each sample type with a parent, not for patients')
 	test.deepEqual(
 		first.boxes.map(b => b.checked),
 		[true, true],
@@ -192,40 +193,35 @@ tape('junction tab sample types', test => {
 	again.boxes[1].click()
 	test.equal(choices[1], null, 'should dispatch null when every sample type is checked')
 
-	const none = draw()
-	termdbConfig.queries.junction.sampleTypes = [2]
-	test.equal(draw().boxes.length, 0, 'should draw no row for junction data of one sample type')
+	const one = draw(undefined, {
+		sampleTypes: { 1: sampleTypeConfig.sampleTypes[1], 2: sampleTypeConfig.sampleTypes[2] }
+	})
+	test.equal(one.boxes.length, 0, 'should draw no row for a dataset of one sample type with a parent')
 
-	if (test['_ok']) for (const d of [first, again, none]) d.holder.remove()
+	if (test['_ok']) for (const d of [first, again, one]) d.sampleTypeDiv.remove()
 	test.end()
 })
 
-tape('junction track sample types from the config', async test => {
-	const termdbConfig = {
-		sampleTypes: {
-			1: { name: 'Patient', plural_name: 'patients', parent_id: null },
-			2: { name: 'Diagnosis', plural_name: 'diagnosis samples', parent_id: 1 },
-			3: { name: 'Relapse', plural_name: 'relapse samples', parent_id: 1 }
-		},
-		queries: { junction: { sampleTypes: [2, 3] } }
+tape('every track reads the sample types of the genome browser', async test => {
+	const getTracks = async (sampleTypes?: number[]) => {
+		const state = {
+			config: { sampleTypes, snvindel: { shown: true }, junction: { shown: true } },
+			vocab: { dslabel: 'ds' }
+		}
+		const view = new View(state, null, null, {}, { vocabApi: { termdbConfig: sampleTypeConfig } }, {})
+		const tklst = await view.generateTracks()
+		return { mds3: tklst.find(t => t.type == 'mds3'), j2: tklst.find(t => t.type == 'j2') }
 	}
-	const getTk = async (sampleTypes?: number[]) => {
-		const state = { config: { junction: { shown: true, sampleTypes } }, vocab: { dslabel: 'ds' } }
-		const view = new View(state, null, {}, {}, { vocabApi: { termdbConfig } }, {})
-		return (await view.generateTracks()).find(t => t.type == 'j2')
-	}
-	const tk = await getTk([2])
-	test.deepEqual(tk.sampleTypes, [2], 'should read the chosen sample types')
-	test.equal(tk.sampleTypeLabel, 'diagnosis samples', 'should name them, for the junction terms of Details and Select')
-	test.notOk(
-		'sampleTypes' in (await getTk([2, 3])),
-		'should read every sample for every sample type, as saved by older sessions'
-	)
-	test.notOk('sampleTypes' in (await getTk()), 'should read every sample when none is chosen')
+	const { mds3, j2 } = await getTracks([2])
+	test.deepEqual(mds3.sampleTypes, [2], 'should read the chosen sample types on the mutation track')
+	test.deepEqual(j2.sampleTypes, [2], 'should read them on the splice junction track')
+	test.equal(j2.sampleTypeLabel, 'diagnosis samples', 'should name them, for the junction terms of Details and Select')
+	test.notOk('sampleTypes' in (await getTracks([2, 3])).j2, 'should read every sample for every sample type')
+	test.notOk('sampleTypes' in (await getTracks()).mds3, 'should read every sample when none is chosen')
 	test.deepEqual(
-		(await getTk([2, 9])).sampleTypes,
+		(await getTracks([2, 9])).j2.sampleTypes,
 		[2],
-		'should read only the sample types of the junction data, of those a launcher set'
+		'should read only the sample types the browser offers, of those a launcher set'
 	)
 	test.end()
 })

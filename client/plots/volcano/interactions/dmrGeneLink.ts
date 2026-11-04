@@ -54,6 +54,7 @@ export async function dmrGeneLinkPanel(
 				min_count: de.minCount,
 				min_total_count: de.minTotalCount,
 				cpm_cutoff: de.cpmCutoff,
+				sampleTypes: config.sampleTypes,
 				filter: state.termfilter?.filter,
 				filter0: state.termfilter?.filter0
 			}

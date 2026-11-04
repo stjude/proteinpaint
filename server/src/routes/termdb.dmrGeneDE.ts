@@ -75,7 +75,8 @@ function init({ genomes }) {
 				{ groups: await resolveGroups(q.samplelst.groups, q, ds) },
 				eligible,
 				ds,
-				q.__protected__
+				q.__protected__,
+				q.sampleTypes
 			)
 			const { result } = await getDeCacheResult(
 				{

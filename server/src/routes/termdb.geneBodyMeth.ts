@@ -19,7 +19,7 @@ import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
 import { median, chrSeed } from '#src/utils/dmrStats.ts'
 import { GENE_BODY_PAD } from '#src/utils/dmrGenes.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import { sampleFilterScope, resolveGroups, resolveGroupPair } from '#src/utils/sampleGroups.ts'
+import { sampleFilterScope, sampleTypesKey, resolveGroups, resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import { fingerprint } from '#src/routes/termdb.dmrBatch.ts'
 import { buildGeneIndex } from '#src/utils/dmrGenes.ts'
 import {
@@ -92,7 +92,8 @@ function init({ genomes }) {
 				{ groups: await resolveGroups(q.samplelst.groups, q, ds) },
 				eligible,
 				ds,
-				q.__protected__
+				q.__protected__,
+				q.sampleTypes
 			)
 			const { result } = await getDeCacheResult(
 				{
@@ -176,6 +177,8 @@ export async function getGeneBodyDeltas(
 		/** each an array of {sampleId}, or a group defined by a filter, see resolveGroups() */
 		group1: any
 		group2: any
+		/** keep only the samples of these sample types, as the scan did */
+		sampleTypes?: number[]
 		filter0?: any
 		chromosomes?: string[]
 		element_type?: string
@@ -215,6 +218,7 @@ export async function getGeneBodyDeltas(
 			chromosomes,
 			element_type: q.element_type ?? null,
 			corrected: !!q.corrected,
+			...sampleTypesKey(q),
 			files: fingerprint([...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile))
 		},
 		cacheScope: sampleFilterScope(q, ds),
@@ -262,7 +266,8 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 		q.group2,
 		eligibleMethylationSamples(ds, q.element_type),
 		ds,
-		q.__protected__
+		q.__protected__,
+		q.sampleTypes
 	)
 	if (group1.length < 3 || group2.length < 3) throw new Error('Each group needs at least 3 samples.')
 	const deltaOf: Record<string, number> = {}

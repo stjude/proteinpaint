@@ -553,10 +553,15 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		}
 	}
 	if (q.rnaseqGeneCount) {
-		/* stays `true` unless the ds prefers a DE method, so datasets that don't set one are unchanged
-		on the wire. both client gates are truthy checks and read `?.defaultMethod`, which is undefined
-		for the boolean form. */
-		q2.rnaseqGeneCount = q.rnaseqGeneCount.defaultMethod ? { defaultMethod: q.rnaseqGeneCount.defaultMethod } : true
+		/* stays `true` unless the ds prefers a DE method or has several sample types, so other datasets
+		are unchanged on the wire. both client gates are truthy checks and read `?.defaultMethod`, which is
+		undefined for the boolean form. */
+		const c = q.rnaseqGeneCount
+		const so: any = {}
+		if (c.defaultMethod) so.defaultMethod = c.defaultMethod
+		// for the sample type selector of the differential expression panel
+		if ((c.sampleTypes?.length ?? 0) > 1) Object.assign(so, getSampleTypesPayload(c))
+		q2.rnaseqGeneCount = Object.keys(so).length ? so : true
 	}
 	if (q.w2) {
 		/* presence-only capability marker: the ds has whole-slide/spatial images.

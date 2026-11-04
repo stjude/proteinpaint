@@ -26,8 +26,9 @@ const colorScale = getColors(5)
 Serves differential gene expression, DNA methylation and splicing, selected by config.termType
 (default gene expression, so existing callers are unchanged). They differ in only four places:
 which ds query proves the assay exists, which server route the pre-analysis hits, the
-expression-source tabs (only gene expression has a pseudobulk counterpart), and the sample type
-row (only splicing, as in the Groups tab). The group table, filter prompt and submit flow are shared.
+expression-source tabs (only gene expression has a pseudobulk counterpart), and the query whose
+sample types the sample type row offers (none for pseudobulk), as in the Groups tab. The group
+table, filter prompt and submit flow are shared.
 
 config.filter limits the group picker, sample counts, and analysis to the plot's selected samples.
 The results view is a separate chart, 'differentialAnalysis'; this plot only builds groups
@@ -61,7 +62,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	 * opts: mass/plot.js hands the component only {app, holder, header, id, ...}, so config fields
 	 * are not on opts and reading it in the constructor would silently always be undefined. */
 	termType!: string
-	/** splicing only: the sample type row, see initDaSampleTypes() in mass/groups.js */
+	/** the sample type row, see addSampleTypeRow(); none for pseudobulk */
 	sampleTypeRow?: { sampleTypes: () => number[] | null | undefined }
 
 	constructor(opts: any, api: ComponentApi) {
@@ -192,14 +193,12 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	async renderExpressionSourceUI() {
 		const config = this.app.vocabApi.termdbConfig
 
-		// splicing has one source, the junction counts, and a sample type row in place of the source tabs
+		// splicing has one source, the junction counts, so there are no source tabs
 		if (this.termType == TermTypes.JUNCTION) {
 			const cluster = config.queries?.junction?.cluster
 			if (!cluster) throw new Error('No splice junction data configured for differential analysis')
 			this.expressionSource = 'bulk'
-			/* a change of sample types clears the counts below the groups, which Submit fetches again. The group
-			table counts the group filters alone, so it stays */
-			this.sampleTypeRow = initDaSampleTypes(this.dom.expressionSource, cluster, this, () => this.clearPreAnalysis())
+			this.addSampleTypeRow(this.dom.expressionSource, cluster)
 			return
 		}
 		/* methylation has one source, the element matrices, and no pseudobulk counterpart, so there
@@ -211,10 +210,12 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			if (!dm?.promoter && !dm?.elementTypes?.length)
 				throw new Error('No DNA methylation data configured for differential analysis')
 			this.expressionSource = 'bulk'
+			this.addSampleTypeRow(this.dom.expressionSource, dm)
 			return
 		}
 
-		const hasBulk = !!config.queries?.rnaseqGeneCount
+		const bulkQuery = config.queries?.rnaseqGeneCount
+		const hasBulk = !!bulkQuery
 		const terms = config.termType2terms?.[TermTypeGroups.PSEUDOBULK] || []
 		const hasPseudobulk = terms.length > 0
 		if (!hasBulk && !hasPseudobulk)
@@ -222,6 +223,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 		if (hasBulk && !hasPseudobulk) {
 			this.expressionSource = 'bulk'
+			this.addSampleTypeRow(this.dom.expressionSource, bulkQuery)
 			return
 		}
 
@@ -235,8 +237,10 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			{
 				label: 'Bulk RNA-seq',
 				active: true,
-				callback: async () => {
+				callback: async (_event, tab) => {
 					this.expressionSource = 'bulk'
+					tab.contentHolder.selectAll('*').remove()
+					this.addSampleTypeRow(tab.contentHolder, bulkQuery)
 					await this.main()
 				}
 			},
@@ -244,6 +248,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				label: 'Single-cell pseudobulk',
 				callback: async (_event, tab) => {
 					this.expressionSource = 'pseudobulk'
+					// a pseudobulk sample is a cell group, of no sample type
+					delete this.sampleTypeRow
 					tab.contentHolder.selectAll('*').remove()
 					this.renderPseudobulkSelection(tab.contentHolder, terms)
 					await this.main()
@@ -251,6 +257,12 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			}
 		]
 		await new Tabs({ holder: this.dom.expressionSource, tabs }).main()
+	}
+
+	/* The sample type row of the data type's query, see initDaSampleTypes() in mass/groups.js. A change clears the
+	counts below the groups, which Submit fetches again; the group table counts the group filters alone, so it stays */
+	addSampleTypeRow(holder, query) {
+		this.sampleTypeRow = initDaSampleTypes(holder, query, this, () => this.clearPreAnalysis())
 	}
 
 	renderPseudobulkSelection(holder, terms) {

@@ -9,6 +9,8 @@ export type TermdbDmrRequest = {
 	/** each group as the list of its samples, or defined by a filter that the server resolves */
 	group1: Sample[] | SampleFilterGroup
 	group2: Sample[] | SampleFilterGroup
+	/** keep only the samples of these sample types; absent = every sample of a group's cases */
+	sampleTypes?: number[]
 	filter0?: any
 	/** query region */
 	chr: string

@@ -5,6 +5,7 @@ import { filterSampleNamesByAccess, get_samples } from '#src/termdb.sql.js'
 import { authApi } from '#src/auth.js'
 import { generateHash } from '#src/serverconfig.js'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { mapParent2ChildrenWithSampleTypes } from '#src/utils/sampleTypes.ts'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
  * carry the confounder values for samples that survived the per-confounder
@@ -143,11 +144,9 @@ export async function buildGroupValues(
 		// ds has sample ancestry
 		// data for DE/DM (i.e. genomic data) are assumed to be
 		// at sample-level, so map sample ids to sample-level
-		const arg: any = { filter: samplelstFilter(values) }
-		maySetMapParent2Children(arg, ds, true)
-		// after the mapping, which sets the default child sample types on arg
-		// numbers, as mayLimitSamples() matches them against ds.sampleId2Type
-		if (sampleTypes?.length) arg.sampleTypes = sampleTypes.map(Number)
+		// checks the sample types, which mayLimitSamples() matches as numbers against ds.sampleId2Type
+		const arg: any = { filter: samplelstFilter(values), sampleTypes }
+		mapParent2ChildrenWithSampleTypes(arg, ds)
 		const allSamples = [...readable].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
 		// filtering samples by samplelst term
 		// if samples are at parent-level then will get

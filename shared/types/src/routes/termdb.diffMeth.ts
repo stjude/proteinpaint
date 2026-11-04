@@ -82,6 +82,8 @@ export type DiffMethRequest = {
 	tw?: any
 	/** Term for confounding variable 2 (if present) */
 	tw2?: any
+	/** test only the samples of these sample types; absent = every sample of a group's cases */
+	sampleTypes?: number[]
 	/** Option to return early with actual number of samples with methylation values */
 	preAnalysis?: boolean
 	/** Parameters for the server-side `da` Rust renderer. Always required — the

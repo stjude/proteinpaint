@@ -23,6 +23,7 @@ import {
 	resolveGroups,
 	withResolvedGroups,
 	sampleFilterScope,
+	sampleTypesKey,
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
 import type { DeCacheResult } from '../../routes/types.ts'
@@ -164,7 +165,8 @@ function deKeyInputs(req: DERequest) {
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
 		filter: (req as any).filter ?? null,
-		filter0: (req as any).filter0 ?? null
+		filter0: (req as any).filter0 ?? null,
+		...sampleTypesKey(req)
 	}
 }
 
@@ -204,7 +206,8 @@ export async function getDeCacheResult(
 			req.samplelst,
 			eligibleMethylationSamples(ds, undefined),
 			ds,
-			req.__protected__
+			req.__protected__,
+			req.sampleTypes
 		)
 		req = { ...req, samplelst }
 	}
@@ -564,7 +567,8 @@ export async function resolveSampleGroups(
 		param.tw2,
 		term_results,
 		term_results2,
-		param.__protected__
+		param.__protected__,
+		param.sampleTypes
 	)
 	const g2 = await buildGroupValues(
 		groups[1].values,
@@ -574,7 +578,8 @@ export async function resolveSampleGroups(
 		param.tw2,
 		term_results,
 		term_results2,
-		param.__protected__
+		param.__protected__,
+		param.sampleTypes
 	)
 
 	const alerts: string[] = []

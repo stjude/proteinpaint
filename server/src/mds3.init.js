@@ -14,6 +14,7 @@ import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
 import { getH5samples } from './utils/h5samples.ts'
 import { withholdSampleNames } from './utils/sampleGroups.ts'
+import { getTermSampleTypeIds } from './utils/sampleTypes.ts'
 import { compute_mclass } from './vcf.mclass.js'
 import serverconfig, { mergeDsFeatures } from './serverconfig.js'
 import {
@@ -2329,19 +2330,6 @@ export function getTermSampleLimiter(param, allSamples, ds) {
 	}
 }
 
-/* term.sampleTypes, or those of a request such as the genome browser junction track's, as the dataset's sample
-type ids; undefined when none were chosen. An invalid one is the request's error, so it is a 400 */
-export function getTermSampleTypeIds(term, ds) {
-	if (term.sampleTypes == null) return
-	const refuse = message => Object.assign(new Error(message), { status: 400 })
-	if (!Array.isArray(term.sampleTypes)) throw refuse('sampleTypes must be an array')
-	return term.sampleTypes.map(st => {
-		const n = Number(st)
-		if (!Number.isInteger(n) || !ds.cohort?.termdb?.sampleTypes?.[n]) throw refuse(`invalid sample type='${st}'`)
-		return n
-	})
-}
-
 /* Pick which element matrix answers dnaMethylation term queries on a dataset that has no
 CpG-level .file.
 
@@ -4316,5 +4304,11 @@ async function validate_query_rnaseqGeneCount(ds) {
 	for (const n of q.allSampleSet) {
 		if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
 	}
+	// for the sample type selector of the differential expression panel; unknown names are skipped
+	setQuerySampleTypes(
+		q,
+		samples.map(sn => ds.cohort.termdb.q.sampleName2id(sn)),
+		ds
+	)
 	console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
 }

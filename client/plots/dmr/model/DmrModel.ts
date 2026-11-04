@@ -24,6 +24,7 @@ export class DmrModel {
 				stop,
 				group1,
 				group2,
+				sampleTypes: this.config.sampleTypes,
 				lambda: settings.dmr.lambda,
 				C: settings.dmr.C,
 				fdr_cutoff: settings.dmr.fdr_cutoff,
