@@ -1204,14 +1204,17 @@ for(const i of atlst) {
 					})
 					.remove()
 				evt.svg.framew = 22 // fixed
+				evt.svg.typew = 60
 				svg
 					.append('text')
-					.text(prod.type2 || '')
 					.attr('font-size', fontsize)
 					.attr('font-family', client.font)
 					.each(function () {
-						// at least 60 so that short type labels keep the previous fixed width
-						evt.svg.typew = Math.max(60, this.getBBox().width)
+						// Reserve space for the current label and every selectable type.
+						for (const label of [prod.type2 || '', ...type2lst.map(t => t.label)]) {
+							this.textContent = label
+							evt.svg.typew = Math.max(evt.svg.typew, this.getBBox().width)
+						}
 					})
 					.remove()
 				if (prod.usepair) {
