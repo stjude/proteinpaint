@@ -73,6 +73,43 @@ tape('Should count samples once per cell and every variant value', test => {
 	test.end()
 })
 
+tape('Should count wildtype and not tested once per sample', test => {
+	test.deepEqual(
+		gv.keysOf(ann('WT', 'M', 'WT', 'M', 'Blank', 'Blank')),
+		['WT', 'M', 'M', 'Blank'],
+		'Should keep one wildtype and one not tested, and every variant'
+	)
+	const counter = new PieCounter()
+	counter.add(0, ann('WT', 'WT', 'WT', 'WT'), gv)
+	counter.add(0, ann('WT', 'WT', 'M', 'M'), gv)
+	counter.add(0, ann('Blank', 'Blank'), gv)
+	const pie = counter.build().get(0)!
+	test.equal(pie.n, 3, 'Should count each sample once')
+	const count = (key: string) => pie.slices.find(s => s.key == key)?.count
+	test.equal(count('WT'), 2, 'Should count wildtype once for each sample that has it')
+	test.equal(count('Blank'), 1, 'Should count not tested once for each sample that has it')
+	test.equal(count('M'), 2, 'Should still count every variant of a sample')
+	test.end()
+})
+
+tape('Should count the samples with a variant', test => {
+	const counter = new PieCounter()
+	counter.add(0, ann('WT'), gv)
+	counter.add(0, ann('M', 'M'), gv)
+	counter.add(0, ann('M', 'F'), gv)
+	counter.add(0, ann('Blank'), gv)
+	test.equal(counter.build().get(0)!.variantSamples, 2, 'Should count a sample once however many variants it has')
+
+	const generic = new PieCounter()
+	generic.add(
+		0,
+		{ keys: ['a'] },
+		{ keysOf: a => a.keys, define: o => [...o].map(key => ({ key, label: key, color: '#000' })) }
+	)
+	test.equal(generic.build().get(0)!.variantSamples, undefined, 'Should not count variants of a term without them')
+	test.end()
+})
+
 tape('Should hide wildtype and not tested by default and keep every other class', test => {
 	const counter = new PieCounter()
 	counter.add(0, ann('Blank', 'M'), gv)

@@ -218,11 +218,10 @@ tape('Pies in the dot positions', function (test) {
 	test.deepEqual(
 		shown.tipData.slice(4).map(e => [e.label, e.value]),
 		[
-			['Cells', 100],
-			['Wildtype', 99],
+			['Cells', 1],
 			['MISSENSE', 1]
 		],
-		'Should add the pie to the tooltip after the standard entries'
+		'Should add the drawn slices of the pie to the tooltip after the standard entries'
 	)
 	for (const [name, position] of [
 		['a pie whose slices are all hidden', hidden],

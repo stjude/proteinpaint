@@ -24,6 +24,9 @@ export interface SliceScheme {
 	termType?: string
 	/** The slice key of each value of an annotation. A sample with several values contributes every one of them. */
 	keysOf(annotation: any): string[]
+	/** Whether a slice key is a variant, as opposed to a status such as wildtype. When set, a pie also counts the
+	 * samples that have at least one variant. */
+	isVariant?(key: string): boolean
 	/** Ordered definitions of the observed keys. Called once per chart, after every key is known, so a
 	 * color assigned here is the same in every pie and in the shared legend. */
 	define(observed: Set<string>): SliceDef[]
@@ -34,6 +37,10 @@ type MclassLookup = Record<string, { key: string; label: string; color: string }
 /** Classes that are hidden without being asked. Wildtype and not tested (Blank) say nothing about an alteration,
  * and would otherwise be most of every pie. They are sent flagged hidden, not removed, so the user can show them. */
 const HIDDEN_BY_DEFAULT_CLASSES = ['WT', 'Blank']
+
+/** Wildtype and not tested are in an annotation once for every variant type queried, and say nothing about a
+ * variant. A sample counts once for each of them, so that their numbers are samples and never exceed n. */
+const STATUS_CLASSES = ['WT', 'Blank']
 
 /** Slices of a geneVariant term. Wildtype comes first, then the other classes in the order they are declared
  * in mclass. Classes that are not in mclass are ignored, so labels and colors never come from the data.
@@ -59,10 +66,13 @@ export function mclassScheme(mclass: MclassLookup, tw?: any): SliceScheme {
 			const found: string[] = []
 			for (const value of annotation.values) {
 				const key = value?.class
-				if (typeof key == 'string' && known.has(key)) found.push(key)
+				if (typeof key != 'string' || !known.has(key)) continue
+				if (STATUS_CLASSES.includes(key) && found.includes(key)) continue
+				found.push(key)
 			}
 			return found
 		},
+		isVariant: key => !STATUS_CLASSES.includes(key),
 		define(observed) {
 			return order
 				.filter(k => observed.has(k))
@@ -109,7 +119,7 @@ export function termValuesScheme(args: {
 	}
 }
 
-type Cell = { scheme: SliceScheme; n: number; counts: Map<string, number> }
+type Cell = { scheme: SliceScheme; n: number; variantSamples: number; counts: Map<string, number> }
 
 /** Accumulates, per matrix cell, the slices of the samples in that cell.
  * Pure data in, data out: no dataset or database is needed to use it.
@@ -124,10 +134,11 @@ export class PieCounter {
 		if (!keys.length) return
 		let cell = this.cells.get(cellIndex)
 		if (!cell) {
-			cell = { scheme, n: 0, counts: new Map() }
+			cell = { scheme, n: 0, variantSamples: 0, counts: new Map() }
 			this.cells.set(cellIndex, cell)
 		}
 		cell.n++
+		if (scheme.isVariant && keys.some(scheme.isVariant)) cell.variantSamples++
 		for (const key of keys) cell.counts.set(key, (cell.counts.get(key) ?? 0) + 1)
 	}
 
@@ -156,7 +167,7 @@ export class PieCounter {
 		}
 
 		const pies = new Map<number, AggMatrixPie>()
-		for (const [index, { scheme, n, counts }] of this.cells) {
+		for (const [index, { scheme, n, variantSamples, counts }] of this.cells) {
 			const { defs, folded } = defsByScheme.get(scheme)!
 			const slices: AggMatrixPie['slices'] = []
 			let other = 0
@@ -169,7 +180,13 @@ export class PieCounter {
 			}
 			if (other) slices.push({ key: OTHER_KEY, label: OTHER_LABEL, color: OTHER_COLOR, count: other })
 			const radius = maxN > 0 ? Math.sqrt(n / maxN) : 0
-			pies.set(index, { n, radius, slices, ...(scheme.termType && { termType: scheme.termType }) })
+			pies.set(index, {
+				n,
+				radius,
+				slices,
+				...(scheme.isVariant && { variantSamples }),
+				...(scheme.termType && { termType: scheme.termType })
+			})
 		}
 		return pies
 	}

@@ -103,17 +103,51 @@ tape('Slice labels and colors', function (test) {
 })
 
 tape('Pie tooltip', function (test) {
-	const entries = (sampleType?: any) => getPieTipData(pie(100, 1), sampleType).map(e => [e.label, e.value])
+	const entries = (data: any, hiddenSliceKeys?: string[], sampleType?: any) =>
+		getPieTipData(data, { hiddenSliceKeys }, sampleType).map(e => [e.label, e.value])
 	test.deepEqual(
-		entries({ name: 'cell', plural_name: 'cells' }),
+		entries(pie(100, 1), undefined, { name: 'cell', plural_name: 'cells' }),
 		[
-			['Cells', 100],
+			['Cells', 1],
+			['MISSENSE', 1]
+		],
+		'Should total and list only the slices that are drawn'
+	)
+	test.equal(entries(pie(100, 1))[0][0], 'Samples', 'Should call the samples samples without a sample type')
+
+	const variants = { ...pie(100, 1, 'geneVariant'), variantSamples: 1 }
+	test.deepEqual(
+		entries(variants),
+		[
+			['Samples with a variant', 1],
+			['Variants', 1],
+			['MISSENSE', 1]
+		],
+		'Should report the samples with a variant and the variants of the drawn slices, without wildtype'
+	)
+	test.deepEqual(
+		entries(variants, []),
+		[
+			['Samples with a variant', 1],
+			['Variants', 100],
 			['Wildtype', 99],
 			['MISSENSE', 1]
 		],
-		'Should list the number of samples and each slice, hidden ones too'
+		'Should add the slices that the user shows to the list and the total'
 	)
-	test.equal(entries()[0][0], 'Samples', 'Should call the samples samples without a sample type')
+	test.deepEqual(
+		entries(variants, ['M', 'WT']),
+		[
+			['Samples with a variant', 1],
+			['Variants', 0]
+		],
+		'Should leave out the slices that the user hides'
+	)
+	test.deepEqual(
+		entries(variants, ['M']).map(e => e[0]),
+		['Samples with a variant', 'Variants', 'Wildtype'],
+		'Should show a slice hidden by the server when the user does not hide it'
+	)
 	test.end()
 })
 
@@ -121,7 +155,7 @@ tape('Dots of a pie chart', function (test) {
 	const shown = getDotPie(dot('B', pie(10, 1)), settings, true)
 	test.ok(shown.pie, 'Should draw a pie that has slices')
 	test.equal(shown.isNoData, false, 'Should treat a pie as data')
-	test.equal(shown.tipData.length, 3, 'Should add the pie to the tooltip')
+	test.equal(shown.tipData.length, 2, 'Should add the total and the drawn slices of the pie to the tooltip')
 
 	const none = getDotPie(dot('None'), settings, true)
 	test.equal(none.pie, undefined, 'Should not draw a pie for a dot without one')

@@ -36,7 +36,7 @@ export function getDotPie(
 	const pie = position?.slices.length ? position : undefined
 	return {
 		pie,
-		tipData: dot.pie && pie ? getPieTipData(dot.pie, sampleType) : [],
+		tipData: dot.pie && pie ? getPieTipData(dot.pie, settings, sampleType) : [],
 		isNoData: isPieChart && !pie
 	}
 }
@@ -77,11 +77,25 @@ export function getPiePosition(data: AggMatrixPie, settings: AggregateMatrixSett
 	}
 }
 
-export function getPieTipData(data: AggMatrixPie, sampleType?: ValidAggMatrixResponse['sampleType']) {
-	const entries: AggMatrixDotPosition['tipData'] = [
-		{ label: capitalizeFirstLetter(sampleType?.plural_name || 'samples'), value: data.n }
-	]
-	for (const slice of data.slices) {
+/** The tooltip reports only the slices that are drawn, so a slice that is hidden is not listed and is not in the total.
+ * - gene variant: the samples with a variant, which does not follow the hidden slices, and the variants of the drawn slices
+ * - other terms: the samples of the drawn slices */
+export function getPieTipData(
+	data: AggMatrixPie,
+	settings: Pick<AggregateMatrixSettings, 'hiddenSliceKeys'>,
+	sampleType?: ValidAggMatrixResponse['sampleType']
+) {
+	const drawn = data.slices.filter(slice => !isSliceHidden(slice, settings))
+	const total = drawn.reduce((sum, slice) => sum + slice.count, 0)
+	const samples = capitalizeFirstLetter(sampleType?.plural_name || 'samples')
+	const entries: AggMatrixDotPosition['tipData'] = []
+	if (data.termType == GENE_VARIANT && data.variantSamples !== undefined) {
+		entries.push({ label: `${samples} with a variant`, value: data.variantSamples })
+		entries.push({ label: 'Variants', value: total })
+	} else {
+		entries.push({ label: samples, value: total })
+	}
+	for (const slice of drawn) {
 		entries.push({ label: describeSlice(slice, data.termType).label, value: slice.count })
 	}
 	return entries

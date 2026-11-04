@@ -53,7 +53,8 @@ export type AggMatrixPieSlice = {
 	 * default mclass values; the client may remap them from `key` with its mclassOverride. */
 	label: string
 	color: string
-	/** Number of values in this slice. A sample with several values counts once per value. */
+	/** Number of values in this slice. A sample with several values counts once per value, except for the
+	 * statuses wildtype and not tested, which count once per sample. */
 	count: number
 	/** The client does not draw this slice until the user shows it, such as wildtype. Uncomputable values are not sent. */
 	hidden?: boolean
@@ -62,6 +63,9 @@ export type AggMatrixPieSlice = {
 export type AggMatrixPie = {
 	/** Number of samples with a value for the slice term */
 	n: number
+	/** Number of samples with at least one variant. Not present for terms without variants. It does not follow
+	 * the slices the user hides, as a sample can be in several slices. */
+	variantSamples?: number
 	/** Relative radius, 0 to 1, of the largest pie. Area is proportional to n. */
 	radius: number
 	/** Ordered the same way in every pie */
