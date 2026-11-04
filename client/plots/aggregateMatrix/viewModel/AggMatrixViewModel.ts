@@ -239,7 +239,7 @@ export class AggMatrixViewModel {
 		}
 	}
 
-	setColorScale(settings: AggregateMatrixSettings, colorScaleData: ValidAggMatrixResponse['colorScale']) {
+	setColorScale(settings: AggregateMatrixSettings, colorScaleData: NonNullable<ValidAggMatrixResponse['colorScale']>) {
 		const domain =
 			colorScaleData.min === colorScaleData.max
 				? /** Instances, like count, may return identical min and max values.

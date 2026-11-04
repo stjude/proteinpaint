@@ -75,7 +75,8 @@ tape('Should validate standard data requests', test => {
 })
 
 tape('Should not need a gradient method when every dot is a pie', test => {
-	const { ...noGradient } = base
+	const noGradient: any = { ...base }
+	delete noGradient.gradientMethod
 	test.equal(message(noGradient), undefined, 'should accept pies without a gradient method')
 	test.equal(message({ ...base, gradientMethod: '' }), undefined, 'should ignore an empty gradient method of pies')
 	test.equal(

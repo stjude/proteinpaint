@@ -345,7 +345,8 @@ tape('pies are returned only when a geneVariant term is on an axis', async test 
 	checkPies(await post({ rows: kinds[0].axis, columns: kinds[4].axis, ...methods }), 'geneVariant columns')
 
 	// a gradient is never applied to a pie, so a chart of only pies needs no gradient method and has no color scale
-	const { ...sizeOnly } = methods
+	const sizeOnly: any = { ...methods }
+	delete sizeOnly.gradientMethod
 	const noGradient = await post({ rows: kinds[4].axis, columns: kinds[0].axis, ...sizeOnly })
 	checkPies(noGradient, 'geneVariant rows without a gradient method')
 	test.notOk('colorScale' in noGradient, 'should not return a color scale when every dot is a pie')
