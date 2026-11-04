@@ -2,7 +2,7 @@ import { select as d3select } from 'd3-selection'
 import * as client from './client'
 import { genomic2gm } from './coord'
 import { bplen as bplength } from '#shared/common.js'
-import Svmr from './svmr.c'
+import Svmr, { findType2, ratingGrades } from './svmr.c'
 
 export function svmrparseinput(arg, sayerror, genome, holder, hostURL, jwt) {
 	if (!arg.dataname) {
@@ -194,16 +194,13 @@ export function svmrparseraw(raw, genome) {
 				return ['Input file has  invalid character " e.g. "NM_001007565"']
 			m[header[j].key] = lst[j]
 		}
-		if (!m.rating) {
-			badlines.push([i, 'rating unspecified', lst])
-			continue
-		}
-		let s = m.rating
-		if (s.toLowerCase() == 'major') {
+		// a product without a rating is not rated, read as NA
+		if (!m.rating || m.rating.toUpperCase() == 'NA') {
+			m.rating = 'NA'
+		} else if (m.rating.toLowerCase() == 'major') {
 			m.rating = 'HQ'
-			s = 'HQ'
 		}
-		if (s != 'HQ' && s != 'LQ' && s != 'RT' && s != 'bad') {
+		if (!ratingGrades.some(g => g.rating == m.rating)) {
 			badlines.push([i, 'invalid rating: ' + m.rating, lst])
 			continue
 		}
@@ -223,7 +220,7 @@ export function svmrparseraw(raw, genome) {
 			badlines.push([i, 'invalid chrB: ' + m.chrB, lst])
 			continue
 		}
-		s = m.posA
+		let s = m.posA
 		if (!s) {
 			badlines.push([i, 'missing posA', lst])
 			continue
@@ -233,7 +230,7 @@ export function svmrparseraw(raw, genome) {
 			badlines.push([i, 'invalid posA: ' + s, lst])
 			continue
 		}
-		if (v < 0 || v >= genome.chrlookup[m.chrA.toUpperCase()]) {
+		if (v < 0 || v >= genome.chrlookup[m.chrA.toUpperCase()].len) {
 			badlines.push([i, 'invalid posA: ' + s, lst])
 			continue
 		}
@@ -248,7 +245,7 @@ export function svmrparseraw(raw, genome) {
 			badlines.push([i, 'invalid posB: ' + s, lst])
 			continue
 		}
-		if (v < 0 || v >= genome.chrlookup[m.chrB.toUpperCase()]) {
+		if (v < 0 || v >= genome.chrlookup[m.chrB.toUpperCase()].len) {
 			badlines.push([i, 'invalid posB: ' + s, lst])
 			continue
 		}
@@ -356,29 +353,12 @@ export function svmrparseraw(raw, genome) {
 		m.repeatB = v
 
 		if (m.type2) {
-			switch (m.type2.toLowerCase()) {
-				case 'closs':
-					m.iscloss = true
-					break
-				case 'nloss':
-					m.isnloss = true
-					break
-				case 'fusion':
-					m.isfusion = true
-					break
-				case 'itd':
-					m.isitd = true
-					break
-				case 'other':
-					m.isother = true
-					break
-				case 'uptss':
-					m.isuptss = true
-					break
-				default:
-					badlines.push([i, 'unknown type2: ' + m.type2, lst])
-					continue
+			const t = findType2(m.type2)
+			if (!t) {
+				badlines.push([i, 'unknown functional effect: ' + m.type2, lst])
+				continue
 			}
+			if (t.flag) m[t.flag] = true
 		}
 		// A B names
 		if (m.geneA == '' || m.geneA == 'NA') {
