@@ -23,6 +23,8 @@ type ColSectionLine = {
 type DotTipEntry = {
 	label: string
 	value: string | number
+	/** A swatch of this color is shown before the label, as a reference to a slice of a pie */
+	color?: string
 }
 
 export type AggMatrixPieSlicePosition = {

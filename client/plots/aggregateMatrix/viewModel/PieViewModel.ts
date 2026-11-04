@@ -96,7 +96,8 @@ export function getPieTipData(
 		entries.push({ label: samples, value: total })
 	}
 	for (const slice of drawn) {
-		entries.push({ label: describeSlice(slice, data.termType).label, value: slice.count })
+		const { label, color } = describeSlice(slice, data.termType)
+		entries.push({ label, value: slice.count, color })
 	}
 	return entries
 }

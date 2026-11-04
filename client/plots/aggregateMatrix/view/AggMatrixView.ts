@@ -166,7 +166,7 @@ export class AggMatrixView {
 					this.ag.dom.tip.clear().show(event.clientX, event.clientY)
 					const table = table2col({ holder: this.ag.dom.tip.d })
 					for (const v of dot.tipData) {
-						addTableRow(table, v.label, v.value)
+						addTableRow(table, v.label, v.value, v.color)
 					}
 				})
 				.on('mouseout', () => {
@@ -233,8 +233,19 @@ export class AggMatrixView {
 	}
 }
 
-function addTableRow(table: any, label: string, value: any) {
+function addTableRow(table: any, label: string, value: any, color?: string) {
 	const [td1, td2] = table.addRow()
-	td1.text(label)
+	if (color) {
+		td1
+			.append('span')
+			.attr('class', 'sjpp-ag-matrix-tip-swatch')
+			.style('display', 'inline-block')
+			.style('width', '10px')
+			.style('height', '10px')
+			.style('margin-right', '6px')
+			.style('background-color', color)
+			.style('border', '1px solid #999')
+	}
+	td1.append('span').text(label)
 	td2.text(value)
 }

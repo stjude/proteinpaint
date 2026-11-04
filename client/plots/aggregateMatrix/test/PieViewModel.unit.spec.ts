@@ -125,6 +125,12 @@ tape('Pie tooltip', function (test) {
 		],
 		'Should report the samples with a variant and the variants of the drawn slices, without wildtype'
 	)
+	const tip = getPieTipData(variants, {})
+	test.deepEqual(
+		tip.map(e => e.color),
+		[undefined, undefined, '#3987CC'],
+		'Should give each slice its color for a swatch, and no color to the totals'
+	)
 	test.deepEqual(
 		entries(variants, []),
 		[
