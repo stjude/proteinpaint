@@ -11,6 +11,78 @@ const genomelimit = 10000 // bp distance
 const knownprod_c = '#A702C4'
 const tip = new Menu()
 
+/*
+accepted values of the "functional effect" input column, stored as prod.type2, matched case-insensitively
+the list order is the option order in the edit menu
+flag: optional boolean property set on a product of this type; iscloss, isnloss, isitd and isuptss change how the product is processed
+*/
+export const type2lst = [
+	{ label: 'CLoss', flag: 'iscloss' },
+	{ label: 'ENHANCER_PROX' },
+	{ label: 'Fusion', flag: 'isfusion' },
+	{ label: 'GENE_PROX' },
+	{ label: 'GENIC' },
+	{ label: 'HALF_INTERGENIC' },
+	{ label: 'INTERGENIC' },
+	{ label: 'INTRONIC' },
+	{ label: 'INVERTED_REPEAT' },
+	{ label: 'ITD', flag: 'isitd' },
+	{ label: 'NLoss', flag: 'isnloss' },
+	{ label: 'other', flag: 'isother' },
+	{ label: 'TRUNCATING' },
+	{ label: 'upTSS', flag: 'isuptss' }
+]
+
+export function findType2(value) {
+	if (!value) return
+	const v = value.toLowerCase()
+	return type2lst.find(t => t.label.toLowerCase() == v)
+}
+
+/*
+accepted values of prod.rating, from the highest to the lowest grade
+NA: not rated, an empty rating in the input is read as NA
+the rating menu also offers "Major", for exporting the products a curator has marked as major
+*/
+export const ratingGrades = [
+	{ rating: 'HQ', htmlab: 'HQ' + '&nbsp;'.repeat(11) },
+	{ rating: 'LQ', htmlab: 'LQ' + '&nbsp;'.repeat(11) },
+	{ rating: 'RT', htmlab: 'Read-through ' },
+	{ rating: 'bad', htmlab: 'Bad' + '&nbsp;'.repeat(10) },
+	{ rating: 'NA', htmlab: 'NA' + '&nbsp;'.repeat(11) }
+]
+
+// categories of products within a rating grade, from the highest to the lowest
+const productCategories = [
+	{
+		htmlab:
+			'<span style="background-color:' +
+			client.colorinframe +
+			';color:white;padding:1px 3px;font-size:80%;">in-frame&nbsp;&nbsp;</span>'
+	},
+	{ htmlab: '<span style="background-color:#E3C3C8;padding:1px 3px;font-size:80%;">truncation</span>' },
+	{ htmlab: '<span style="background-color:#ccc;padding:1px 3px;font-size:80%;">others&nbsp;&nbsp;&nbsp;&nbsp;</span>' }
+]
+
+/*
+rank of the rating grade and category of a product, a smaller value is a higher rank
+a rating not in ratingGrades, such as Major, is ranked as bad
+*/
+function getBucket(prod) {
+	let grade = ratingGrades.findIndex(g => g.rating == prod.rating)
+	if (grade == -1) grade = ratingGrades.findIndex(g => g.rating == 'bad')
+	const pair = prod.usepair
+	let category
+	if (pair) {
+		category = pair.inframe ? 0 : 1 // in-frame, or truncation for a not in-frame fusion
+	} else if (prod.isnloss || prod.iscloss) {
+		category = 1
+	} else {
+		category = 2
+	}
+	return grade * productCategories.length + category
+}
+
 export default class {
 	constructor(genome, atlst, items, filename, holder, hostURL, jwt) {
 		window.svmr = this
@@ -591,24 +663,11 @@ for(const i of atlst) {
 			/* group - multi-seg */
 			const newholder = []
 			// multiple rounds, one rating grade each time
-			for (const elab in sample.events) {
-				for (const prod of sample.events[elab]) {
-					if (prod.rating == 'HQ') msjoin(prod, newholder)
-				}
-			}
-			for (const elab in sample.events) {
-				for (const prod of sample.events[elab]) {
-					if (prod.rating == 'LQ') msjoin(prod, newholder)
-				}
-			}
-			for (const elab in sample.events) {
-				for (const prod of sample.events[elab]) {
-					if (prod.rating == 'RT') msjoin(prod, newholder)
-				}
-			}
-			for (const elab in sample.events) {
-				for (const prod of sample.events[elab]) {
-					if (prod.rating == 'bad') msjoin(prod, newholder)
+			for (const grade of ratingGrades) {
+				for (const elab in sample.events) {
+					for (const prod of sample.events[elab]) {
+						if (prod.rating == grade.rating) msjoin(prod, newholder)
+					}
 				}
 			}
 			// assign id to multi-seg groups
@@ -623,104 +682,21 @@ for(const i of atlst) {
 					msglst.push(lst)
 				}
 			}
-			/* rating grades */
-			const hqin = [], // in frame
-				hqt = [], // truncation, including not in-frame fusion
-				hqo = [], // others
-				lqin = [],
-				lqt = [],
-				lqo = [],
-				rtin = [],
-				rtt = [],
-				rto = [],
-				badin = [],
-				badt = [],
-				bado = []
+			/* rating grades
+			one bucket for each rating grade and category, ordered by rank, see getBucket()
+			*/
+			const buckets = ratingGrades.flatMap(() => productCategories.map(() => []))
 			// stuff multi-seg into grades
 			for (const msg of msglst) {
 				const thisset = []
 				// survey through all events in a group, find the highest grade, assign this group to that grade
-				let hqin3 = false,
-					hqt3 = false,
-					hqo3 = false,
-					lqin3 = false,
-					lqt3 = false,
-					lqo3 = false,
-					rtin3 = false,
-					rtt3 = false,
-					rto3 = false,
-					badin3 = false,
-					badt3 = false,
-					bado3 = false
+				let best = buckets.length
 				for (const prod of msg) {
 					thisset.push({ label: prod.eventlabel, lst: [prod] })
-					const pair = prod.usepair
-					if (prod.rating == 'HQ') {
-						if (pair) {
-							if (pair.inframe) hqin3 = true
-							else hqt3 = true
-						} else if (prod.isnloss || prod.iscloss) {
-							hqt3 = true
-						} else {
-							hqo3 = true
-						}
-					} else if (prod.rating == 'LQ') {
-						if (pair) {
-							if (pair.inframe) lqin3 = true
-							else lqt3 = true
-						} else if (prod.isnloss || prod.iscloss) {
-							lqt3 = true
-						} else {
-							lqo3 = true
-						}
-					} else if (prod.rating == 'RT') {
-						if (pair) {
-							if (pair.inframe) rtin3 = true
-							else rtt3 = true
-						} else if (prod.isnloss || prod.iscloss) {
-							rtt3 = true
-						} else {
-							rto3 = true
-						}
-					} else {
-						if (pair) {
-							if (pair.inframe) badin3 = true
-							else badt3 = true
-						} else if (prod.isnloss || prod.iscloss) {
-							badt3 = true
-						} else {
-							bado3 = true
-						}
-					}
+					best = Math.min(best, getBucket(prod))
 				}
 				// must only assign after going through all events
-				if (hqin3) {
-					hqin.push({ label: '', lst: thisset, ismsg: true })
-				} else if (hqt3) {
-					hqt.push({ label: '', lst: thisset, ismsg: true })
-				} else if (hqo3) {
-					hqo.push({ label: '', lst: thisset, ismsg: true })
-				} else if (lqin3) {
-					lqin.push({ label: '', lst: thisset, ismsg: true })
-				} else if (lqt3) {
-					lqt.push({ label: '', lst: thisset, ismsg: true })
-				} else if (lqo3) {
-					lqo.push({ label: '', lst: thisset, ismsg: true })
-				} else if (rtin3) {
-					rtin.push({ label: '', lst: thisset, ismsg: true })
-				} else if (rtt3) {
-					rtt.push({ label: '', lst: thisset, ismsg: true })
-				} else if (rto3) {
-					rto.push({ label: '', lst: thisset, ismsg: true })
-				} else if (badin3) {
-					badin.push({ label: '', lst: thisset, ismsg: true })
-				} else if (badt3) {
-					badt.push({ label: '', lst: thisset, ismsg: true })
-				} else if (bado3) {
-					bado.push({ label: '', lst: thisset, ismsg: true })
-				} else {
-					console.log('multi-seg group unclassfied? ' + key)
-				}
+				buckets[best].push({ label: '', lst: thisset, ismsg: true })
 			}
 			/* group - reciprocal gene pairs */
 			const genepairs = {}
@@ -729,19 +705,8 @@ for(const i of atlst) {
 			//   k: actual label
 			//   v: prod lst
 			for (const elab in sample.events) {
-				// to hold non-gene-pair products
-				const hqin2 = [],
-					hqt2 = [],
-					hqo2 = [],
-					lqin2 = [],
-					lqt2 = [],
-					lqo2 = [],
-					rtin2 = [],
-					rtt2 = [],
-					rto2 = [],
-					badin2 = [],
-					badt2 = [],
-					bado2 = []
+				// to hold non-gene-pair products, one list for each bucket
+				const buckets2 = buckets.map(() => [])
 				for (const prod of sample.events[elab]) {
 					if (prod.msgid != undefined) {
 						continue
@@ -767,87 +732,18 @@ for(const i of atlst) {
 						continue
 					}
 					// not a gene pair
-					var pair = prod.usepair
 					// directly to holder
-					if (prod.rating == 'HQ') {
-						if (pair) {
-							if (pair.inframe) hqin2.push(prod)
-							else hqt2.push(prod)
-						} else if (prod.isnloss || prod.iscloss) {
-							hqt2.push(prod)
-						} else {
-							hqo2.push(prod)
-						}
-					} else if (prod.rating == 'LQ') {
-						if (pair) {
-							if (pair.inframe) lqin2.push(prod)
-							else lqt2.push(prod)
-						} else if (prod.isnloss || prod.iscloss) {
-							lqt2.push(prod)
-						} else {
-							lqo2.push(prod)
-						}
-					} else if (prod.rating == 'RT') {
-						if (pair) {
-							if (pair.inframe) rtin2.push(prod)
-							else rtt2.push(prod)
-						} else if (prod.isnloss || prod.iscloss) {
-							rtt2.push(prod)
-						} else {
-							rto2.push(prod)
-						}
-					} else {
-						if (pair) {
-							if (pair.inframe) badin2.push(prod)
-							else badt2.push(prod)
-						} else if (prod.isnloss || prod.iscloss) {
-							badt2.push(prod)
-						} else {
-							bado2.push(prod)
-						}
-					}
+					buckets2[getBucket(prod)].push(prod)
 				}
-				// fill-in any non-gene-pairs
-				if (hqin2.length > 0) {
-					hqin.push({ label: elab, lst: [{ label: elab, lst: hqin2 }] })
-				} else if (hqt2.length > 0) {
-					hqt.push({ label: elab, lst: [{ label: elab, lst: hqt2 }] })
-				} else if (hqo2.length > 0) {
-					hqo.push({ label: elab, lst: [{ label: elab, lst: hqo2 }] })
-				} else if (lqin2.length > 0) {
-					lqin.push({ label: elab, lst: [{ label: elab, lst: lqin2 }] })
-				} else if (lqt2.length > 0) {
-					lqt.push({ label: elab, lst: [{ label: elab, lst: lqt2 }] })
-				} else if (lqo2.length > 0) {
-					lqo.push({ label: elab, lst: [{ label: elab, lst: lqo2 }] })
-				} else if (rtin2.length > 0) {
-					rtin.push({ label: elab, lst: [{ label: elab, lst: rtin2 }] })
-				} else if (rtt2.length > 0) {
-					rtt.push({ label: elab, lst: [{ label: elab, lst: rtt2 }] })
-				} else if (rto2.length > 0) {
-					rto.push({ label: elab, lst: [{ label: elab, lst: rto2 }] })
-				} else if (badin2.length > 0) {
-					badin.push({ label: elab, lst: [{ label: elab, lst: badin2 }] })
-				} else if (badt2.length > 0) {
-					badt.push({ label: elab, lst: [{ label: elab, lst: badt2 }] })
-				} else if (bado2.length > 0) {
-					bado.push({ label: elab, lst: [{ label: elab, lst: bado2 }] })
+				// fill-in any non-gene-pairs, only those of the highest grade
+				const best = buckets2.findIndex(lst => lst.length > 0)
+				if (best != -1) {
+					buckets[best].push({ label: elab, lst: [{ label: elab, lst: buckets2[best] }] })
 				}
 			}
 			// for group of gene pairs, assign to rating grades
 			for (const key in genepairs) {
-				let hqin3 = false,
-					hqt3 = false,
-					hqo3 = false,
-					lqin3 = false,
-					lqt3 = false,
-					lqo3 = false,
-					rtin3 = false,
-					rtt3 = false,
-					rto3 = false,
-					badin3 = false,
-					badt3 = false,
-					bado3 = false
+				let best = buckets.length
 				const thisset = []
 				for (const elab in genepairs[key]) {
 					const prodlst = genepairs[key][elab]
@@ -858,169 +754,28 @@ for(const i of atlst) {
 					}
 					thisset.push({ label: elab, lst: prodlst })
 					for (const prod of prodlst) {
-						const pair = prod.usepair
-						if (prod.rating == 'HQ') {
-							if (pair) {
-								if (pair.inframe) hqin3 = true
-								else hqt3 = true
-							} else if (prod.isnloss || prod.iscloss) {
-								hqt3 = true
-							} else {
-								hqo3 = true
-							}
-						} else if (prod.rating == 'LQ') {
-							if (pair) {
-								if (pair.inframe) lqin3 = true
-								else lqt3 = true
-							} else if (prod.isnloss || prod.iscloss) {
-								lqt3 = true
-							} else {
-								lqo3 = true
-							}
-						} else if (prod.rating == 'RT') {
-							if (pair) {
-								if (pair.inframe) rtin3 = true
-								else rtt3 = true
-							} else if (prod.isnloss || prod.iscloss) {
-								rtt3 = true
-							} else {
-								rto3 = true
-							}
-						} else {
-							if (pair) {
-								if (pair.inframe) badin3 = true
-								else badt3 = true
-							} else if (prod.isnloss || prod.iscloss) {
-								badt3 = true
-							} else {
-								bado3 = true
-							}
-						}
+						best = Math.min(best, getBucket(prod))
 					}
 				}
-				if (hqin3) {
-					hqin.push({ label: key, lst: thisset })
-				} else if (hqt3) {
-					hqt.push({ label: key, lst: thisset })
-				} else if (hqo3) {
-					hqo.push({ label: key, lst: thisset })
-				} else if (lqin3) {
-					lqin.push({ label: key, lst: thisset })
-				} else if (lqt3) {
-					lqt.push({ label: key, lst: thisset })
-				} else if (lqo3) {
-					lqo.push({ label: key, lst: thisset })
-				} else if (rtin3) {
-					rtin.push({ label: key, lst: thisset })
-				} else if (rtt3) {
-					rtt.push({ label: key, lst: thisset })
-				} else if (rto3) {
-					rto.push({ label: key, lst: thisset })
-				} else if (badin3) {
-					badin.push({ label: key, lst: thisset })
-				} else if (badt3) {
-					badt.push({ label: key, lst: thisset })
-				} else if (bado3) {
-					bado.push({ label: key, lst: thisset })
+				if (best < buckets.length) {
+					buckets[best].push({ label: key, lst: thisset })
 				}
 			}
 			sample.egglst = []
-			sample.hqincount = 0
-			sample.lqincount = 0
-			if (hqin.length) {
-				sample.egglst.push({
-					htmlab:
-						'HQ&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color:' +
-						client.colorinframe +
-						';color:white;padding:1px 3px;font-size:80%;">in-frame&nbsp;&nbsp;</span>',
-					lst: hqin
+			ratingGrades.forEach((grade, i) => {
+				productCategories.forEach((category, j) => {
+					const lst = buckets[i * productCategories.length + j]
+					if (!lst.length) return
+					sample.egglst.push({ htmlab: grade.htmlab + category.htmlab, lst })
 				})
-				sample.hqincount = hqin.reduce((i, j) => i + j.lst.length, 0)
+			})
+			// number of in-frame events of HQ and LQ, for sorting samples
+			const countInframe = rating => {
+				const i = ratingGrades.findIndex(g => g.rating == rating)
+				return buckets[i * productCategories.length].reduce((n, eg) => n + eg.lst.length, 0)
 			}
-			if (hqt.length) {
-				sample.egglst.push({
-					htmlab:
-						'HQ&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color:#E3C3C8;padding:1px 3px;font-size:80%;">truncation</span>',
-					lst: hqt
-				})
-			}
-			if (hqo.length) {
-				sample.egglst.push({
-					htmlab:
-						'HQ&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color:#ccc;padding:1px 3px;font-size:80%;">others&nbsp;&nbsp;&nbsp;&nbsp;</span>',
-					lst: hqo
-				})
-			}
-			if (lqin.length) {
-				sample.egglst.push({
-					htmlab:
-						'LQ&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color:' +
-						client.colorinframe +
-						';color:white;padding:1px 3px;font-size:80%;">in-frame&nbsp;&nbsp;</span>',
-					lst: lqin
-				})
-				sample.lqincount = lqin.reduce((i, j) => i + j, 0)
-			}
-			if (lqt.length) {
-				sample.egglst.push({
-					htmlab:
-						'LQ&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color:#E3C3C8;padding:1px 3px;font-size:80%;">truncation</span>',
-					lst: lqt
-				})
-			}
-			if (lqo.length) {
-				sample.egglst.push({
-					htmlab:
-						'LQ&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color:#ccc;padding:1px 3px;font-size:80%;">others&nbsp;&nbsp;&nbsp;&nbsp;</span>',
-					lst: lqo
-				})
-			}
-			if (rtin.length) {
-				sample.egglst.push({
-					htmlab:
-						'Read-through <span style="background-color:' +
-						client.colorinframe +
-						';color:white;padding:1px 3px;font-size:80%;">in-frame&nbsp;&nbsp;</span>',
-					lst: rtin
-				})
-			}
-			if (rtt.length) {
-				sample.egglst.push({
-					htmlab:
-						'Read-through <span style="background-color:#E3C3C8;padding:1px 3px;font-size:80%;">truncation</span>',
-					lst: rtt
-				})
-			}
-			if (rto.length) {
-				sample.egglst.push({
-					htmlab:
-						'Read-through <span style="background-color:#ccc;padding:1px 3px;font-size:80%;">others&nbsp;&nbsp;&nbsp;&nbsp;</span>',
-					lst: rto
-				})
-			}
-			if (badin.length) {
-				sample.egglst.push({
-					htmlab:
-						'Bad&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color:' +
-						client.colorinframe +
-						';color:white;padding:1px 3px;font-size:80%;">in-frame</span>',
-					lst: badin
-				})
-			}
-			if (badt.length) {
-				sample.egglst.push({
-					htmlab:
-						'Bad&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color:#E3C3C8;padding:1px 3px;font-size:80%;">truncation</span>',
-					lst: badt
-				})
-			}
-			if (bado.length) {
-				sample.egglst.push({
-					htmlab:
-						'Bad&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="background-color:#ccc;padding:1px 3px;font-size:80%;">others&nbsp;&nbsp;&nbsp;&nbsp;</span>',
-					lst: bado
-				})
-			}
+			sample.hqincount = countInframe('HQ')
+			sample.lqincount = countInframe('LQ')
 		}
 		// sort samples
 		this.samples.sort((a, b) => {
@@ -1216,7 +971,7 @@ for(const i of atlst) {
 				}
 			}
 			const lst = []
-			for (const smp of ['HQ', 'LQ', 'RT', 'bad']) {
+			for (const smp of ratingGrades.map(g => g.rating)) {
 				if (hash[smp]) {
 					lst.push(
 						'<span style="border-radius:6px;background-color:#ededed;padding:1px 6px;font-size:80%">' +
@@ -1449,7 +1204,19 @@ for(const i of atlst) {
 					})
 					.remove()
 				evt.svg.framew = 22 // fixed
-				evt.svg.typew = 60 // fixed
+				evt.svg.typew = 60
+				svg
+					.append('text')
+					.attr('font-size', fontsize)
+					.attr('font-family', client.font)
+					.each(function () {
+						// Reserve space for the current label and every selectable type.
+						for (const label of [prod.type2 || '', ...type2lst.map(t => t.label)]) {
+							this.textContent = label
+							evt.svg.typew = Math.max(evt.svg.typew, this.getBBox().width)
+						}
+					})
+					.remove()
 				if (prod.usepair) {
 					evt.svg.frameword = prod.usepair.inframe ? 'IN' : 'O'
 				} else {
@@ -2498,8 +2265,7 @@ for(const i of atlst) {
 					.append('select')
 					.style('margin-right', '5px')
 					.on('change', event => {
-						const sl = event.target
-						const newv = sl.options[sl.selectedIndex].innerHTML
+						const newv = event.target.value
 						prod.rating = newv
 						if (prod.hook.mainRating) {
 							prod.hook.mainRating.text(newv)
@@ -2535,19 +2301,15 @@ for(const i of atlst) {
 					.append('select')
 					.style('margin-right', '5px')
 					.on('change', event => {
-						const sl = event.target
-						const i = sl.selectedIndex
-						const newv = sl.options[i].innerHTML
-						prod.type2 = newv
+						const t = findType2(event.target.value)
+						if (!t) return
+						prod.type2 = t.label
 						if (prod.hook.mainType) {
-							prod.hook.mainType.text(newv)
+							prod.hook.mainType.text(t.label)
 						}
-						prod.iscloss = i == 0
-						prod.isnloss = i == 1
-						prod.isfusion = i == 2
-						prod.isitd = i == 3
-						prod.isuptss = i == 4
-						prod.isother = i == 5
+						for (const t2 of type2lst) {
+							if (t2.flag) prod[t2.flag] = t2 === t
+						}
 					})
 				const effectsl = div
 					.append('select')
@@ -2607,30 +2369,10 @@ for(const i of atlst) {
 							})
 					})
 				// <select>
-				ratingsl.append('option').text('HQ')
-				ratingsl.append('option').text('LQ')
-				ratingsl.append('option').text('RT')
-				ratingsl.append('option').text('bad')
-				ratingsl.append('option').text('Major')
-				switch (prod.rating) {
-					case 'HQ':
-						ratingsl.property('selectedindex', 0)
-						break
-					case 'LQ':
-						ratingsl.property('selectedIndex', 1)
-						break
-					case 'RT':
-						ratingsl.property('selectedIndex', 2)
-						break
-					case 'bad':
-						ratingsl.property('selectedIndex', 3)
-						break
-					case 'Major':
-						ratingsl.property('selectedIndex', 4)
-						break
-					default:
-						alert('unknown rating: ' + prod.rating)
+				for (const rating of ['HQ', 'LQ', 'RT', 'bad', 'Major', 'NA']) {
+					ratingsl.append('option').attr('value', rating).text(rating)
 				}
+				ratingsl.property('value', prod.rating)
 				framesl.append('option').text('in-frame')
 				framesl.append('option').text('out-of-frame')
 				if (!prod.usepair) {
@@ -2638,27 +2380,19 @@ for(const i of atlst) {
 				} else {
 					framesl.property('selectedIndex', prod.usepair.inframe ? 0 : 1)
 				}
-				typesl.append('option').text('CLoss')
-				typesl.append('option').text('NLoss')
-				typesl.append('option').text('Fusion')
-				typesl.append('option').text('ITD')
-				typesl.append('option').text('upTSS')
-				typesl.append('option').text('other')
-				if (prod.iscloss) {
-					typesl.property('selectedIndex', 0)
-				} else if (prod.isnloss) {
-					typesl.property('selectedIndex', 1)
-				} else if (prod.isfusion) {
-					typesl.property('selectedIndex', 2)
-				} else if (prod.isitd) {
-					typesl.property('selectedIndex', 3)
-				} else if (prod.isuptss) {
-					typesl.property('selectedIndex', 4)
-				} else if (prod.isother) {
-					typesl.property('selectedIndex', 5)
-				} else {
-					alert('unknown type2: ' + prod.type2)
+				const curtype = findType2(prod.type2)
+				if (!curtype) {
+					// no value given for this product, show a blank option until a type is chosen
+					typesl
+						.append('option')
+						.attr('value', '')
+						.attr('disabled', 1)
+						.text(prod.type2 || '')
 				}
+				for (const t of type2lst) {
+					typesl.append('option').attr('value', t.label).text(t.label)
+				}
+				typesl.property('value', curtype ? curtype.label : '')
 				// <select> done
 				effectsl.append('option').text('unknown effect')
 				effectsl.append('option').text('fusion gene')
