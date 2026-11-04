@@ -152,6 +152,14 @@ export type Mds3SingleSampleGenomeQuantificationResponse =
 
 export type Mds3SingleSampleGbtkResponse = Mds3NonTrackResponse & {
 	path?: string
+	src?: never
+	canvasWidth?: never
+	canvasHeight?: never
+	xoff?: never
+	chrLst?: never
+	isoform?: never
+	variant2samples?: never
+	csq?: never
 }
 
 export type Mds3CanonicalIsoformResponse = Mds3NonTrackResponse & {
