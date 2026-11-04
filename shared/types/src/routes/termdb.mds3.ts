@@ -125,12 +125,71 @@ export type Mds3TrackResponse = {
 	sampleTotalNumber?: number
 }
 
+type Mds3NonTrackResponse = {
+	variantAlerts?: never
+	skewer?: never
+	cnv?: never
+	cnvDensity?: never
+	mclass2variantcount?: never
+	sampleTotalNumber?: never
+	error?: never
+}
+
+export type Mds3SingleSampleGenomeQuantificationResponse =
+	| []
+	| (Mds3NonTrackResponse & {
+			src: string
+			canvasWidth: number
+			canvasHeight: number
+			xoff: number
+			chrLst: {
+				chr: string
+				chrLen: number
+				xStart: number
+				xStop: number
+			}[]
+	  })
+
+export type Mds3SingleSampleGbtkResponse = Mds3NonTrackResponse & {
+	path?: string
+}
+
+export type Mds3CanonicalIsoformResponse = Mds3NonTrackResponse & {
+	isoform: string
+}
+
+export type Mds3Variant2SamplesResponse = Mds3NonTrackResponse & {
+	variant2samples:
+		| {
+				samples: Mds3Sample[]
+				byTermId?: JsonObject
+		  }
+		| {
+				nodes: JsonObject[]
+				byTermId?: JsonObject
+		  }
+		| {
+				summary: unknown[]
+				byTermId?: JsonObject
+		  }
+}
+
+export type Mds3ConsequenceResponse = Mds3NonTrackResponse & {
+	csq: {
+		aa_change?: string
+		transcript_id?: string
+		consequence_type?: string
+		[key: string]: unknown
+	}[]
+}
+
 export type TermdbMds3Response =
 	| Mds3TrackResponse
+	| Mds3SingleSampleGenomeQuantificationResponse
+	| Mds3SingleSampleGbtkResponse
+	| Mds3CanonicalIsoformResponse
+	| Mds3Variant2SamplesResponse
+	| Mds3ConsequenceResponse
 	| {
 			error: string
-	  }
-	| {
-			/** Response from one of the endpoint's dataset-specific auxiliary query modes. */
-			[key: string]: unknown
 	  }
