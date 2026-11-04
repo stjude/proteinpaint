@@ -261,7 +261,7 @@ function plotOneSegment(c, y, rowheight, tk, block, sample) {
 		.append('rect')
 		.attr('x', x1)
 		.attr('y', y)
-		.attr('data-testid', 'sjpp-cnv-segment-' + c.class)
+		.attr('data-testid', 'sjpp-mds3tk-cnv-segment-' + c.class)
 		.attr('width', x2 - x1)
 		.attr('height', Math.max(rowheight, 1))
 		.attr('fill', Number.isFinite(c.value) ? tk.cnv.colorScale(c.value) : mclass[c.class].color)

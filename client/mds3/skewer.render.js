@@ -119,7 +119,7 @@ export function skewer_make(tk, block) {
 		.append('g')
 		.attr('class', 'sja_skg')
 		.attr('extended', d => d.showmode)
-		.attr('data-testid', d => 'sjpp-mds3skewer-' + [...new Set(d.mlst.map(mItem => mItem.mname))].join('-'))
+		.attr('data-testid', d => 'sjpp-mds3tk-skewer-' + [...new Set(d.mlst.map(mItem => mItem.mname))].join('-'))
 		.attr('mclasses', d => [...new Set(d.mlst.map(mItem => mItem.class))].join('-'))
 		.each(function (d) {
 			d.skewer = this
