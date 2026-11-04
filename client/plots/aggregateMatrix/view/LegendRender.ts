@@ -24,10 +24,12 @@ export class LegendRender {
 
 	render(viewData: AggMatrixViewData, div: any) {
 		const settings = this.ag.state.config.settings.aggregateMatrix
-		const colorScaleSvg = div.append('svg').style('display', 'block').attr('height', 100)
+		if (viewData.hasColorScale) {
+			const colorScaleSvg = div.append('svg').style('display', 'block').attr('height', 100)
+			this.renderColorScale(viewData.colorScale, settings, colorScaleSvg)
+		}
 		//The size is set in renderDotScaleRef, from the bounding box of the rendered scale
 		const dotScaleSvg = div.append('svg').style('display', 'block')
-		this.renderColorScale(viewData.colorScale, settings, colorScaleSvg)
 		this.renderDotScaleRef(dotScaleSvg, settings)
 		if (viewData.pieLegend.entries.length) this.renderPieLegend(viewData.pieLegend, div)
 	}
@@ -123,7 +125,7 @@ export class LegendRender {
 			maxRadius: settings.maxDotSize,
 			minRadius: settings.minDotSize,
 			isAscending: true,
-			title: capitalizeFirstLetter(settings.sizeMethod),
+			title: `${capitalizeFirstLetter(settings.sizeMethod)} size`,
 			menu: {
 				minMaxLabel: 'pixels',
 				callback: async (obj: { min: number; max: number }) => {
