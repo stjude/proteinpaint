@@ -1,4 +1,11 @@
-import { Tabs, make_one_checkbox, renderTable } from '#dom'
+import {
+	Tabs,
+	make_one_checkbox,
+	renderTable,
+	mayRenderSampleTypeRow,
+	getTermSampleTypes,
+	getChosenSampleTypes
+} from '#dom'
 import { filterInit } from '#filter'
 import { mayUpdateGroupTestMethodsIdx } from '../interactions/Interactions.ts'
 import { appInit } from '#termdb/app'
@@ -21,8 +28,9 @@ export class TabsRenderer {
 	}
 
 	async main() {
-		// Preserve the currently active tab label before clearing
-		let previousActiveTabLabel: string | null = null
+		/* Preserve the currently active tab label before clearing. On the first draw, config.activeTab may
+		name the tab to open at, e.g. 'Splice junction' from the junction term picker */
+		let previousActiveTabLabel: string | null = this.state.config.activeTab || null
 		const existingActiveButton = this.dom.tabsDiv.select('button.sjpp-active')
 		if (!existingActiveButton.empty()) {
 			previousActiveTabLabel = existingActiveButton.datum()?.label ?? null
@@ -158,6 +166,7 @@ export class TabsRenderer {
 				holder: div,
 				callback: this.interactions.launchJunctionTrack
 			})
+			this.mayRenderJunctionSampleTypes(div.append('div').style('margin-top', '10px'))
 		}
 		if (this.state.config.ld) {
 			/* tricky: duplicate ld.tracks[] and scope it here, to pass to dispatch
@@ -186,6 +195,24 @@ export class TabsRenderer {
 				})
 			}
 		}
+	}
+
+	/* The sample types the splice junction track reads, for junction data of more than one (e.g. diagnosis,
+	relapse and germline samples), as the junction term picker offers them. The tabs are drawn again on
+	every state change, so the choice is kept as ids in config.junction.sampleTypes, which a launcher such
+	as the differential splicing volcano may also set. None, or every sample type, reads every sample. */
+	mayRenderJunctionSampleTypes(holder) {
+		const termdbConfig = this.opts.vocabApi?.termdbConfig
+		const query = termdbConfig?.queries?.junction
+		const chosen = getChosenSampleTypes(query, this.state.config.junction.sampleTypes)
+		const select = mayRenderSampleTypeRow(holder, query, termdbConfig, chosen)
+		if (!select) return
+		holder.on('change', () => {
+			// undefined when nothing is selectable, which getTermSampleTypes() has alerted
+			const termSampleTypes = getTermSampleTypes(select, query, termdbConfig)
+			if (termSampleTypes)
+				this.interactions.setJunctionSampleTypes(getChosenSampleTypes(query, termSampleTypes.sampleTypes) ?? null)
+		})
 	}
 
 	renderFacetTable(facet, div) {

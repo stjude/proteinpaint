@@ -1,5 +1,6 @@
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { filterJoin } from '#filter'
+import { getChosenSampleTypes, getSampleTypeLabel } from '#dom'
 import { TabsRenderer } from './TabsRenderer.ts'
 import { GeneSearchRenderer } from './GeneSearchRenderer.ts'
 
@@ -148,6 +149,15 @@ export class View {
 				hiddentypes: this.state.config.junction.hiddentypes,
 				readcountCutoff: this.state.config.junction.readcountCutoff
 			}
+			/* every sample type, as in a session saved when config.junction was a copy of queries.junction, reads
+			every sample, as no choice does */
+			const termdbConfig = this.opts.vocabApi?.termdbConfig
+			const query = termdbConfig?.queries?.junction
+			const sampleTypes = getChosenSampleTypes(query, this.state.config.junction.sampleTypes)
+			if (sampleTypes) {
+				tk.sampleTypes = sampleTypes
+				tk.sampleTypeLabel = getSampleTypeLabel(query, sampleTypes, termdbConfig)
+			}
 			if (this.state.filter?.lst?.length) tk.filter = structuredClone(this.state.filter)
 			tklst.push(tk)
 		}
@@ -241,6 +251,8 @@ export class View {
             this should be updating tracks in this block, by adding new ones listed in tklst[],
             and deleting old ones via a tricky method
             */
+			// the block track of the last tk above, so that a track shown again goes back to where it was first drawn
+			let prev
 			for (const tk of tklst) {
 				let tki // index of this tk in block
 				if (tk.dslabel) {
@@ -255,8 +267,23 @@ export class View {
 				if (tki == -1) {
 					// this tk is not in block, add to block
 					const t = this.blockInstance.block_addtk_template(tk)
+					// the block appends it, below e.g. the gene track; move it to just after the tk above it, or first
+					const lst = this.blockInstance.tklst
+					lst.splice(lst.indexOf(t), 1)
+					lst.splice(prev ? lst.indexOf(prev) + 1 : 0, 0, t)
+					prev = t
 					this.blockInstance.tk_load(t)
+					continue
+				} else if (tk.type == 'j2') {
+					// the junction track is kept, so a change of its sample types reloads it
+					const t = this.blockInstance.tklst[tki]
+					if (String(t.sampleTypes) != String(tk.sampleTypes)) {
+						t.sampleTypes = tk.sampleTypes
+						t.sampleTypeLabel = tk.sampleTypeLabel
+						this.blockInstance.tk_load(t)
+					}
 				}
+				prev = this.blockInstance.tklst[tki]
 			}
 			if (this.state.config.trackLst?.removeTracks) {
 				// facet table marks these tracks for removal. they are all identified by tk.name

@@ -156,6 +156,15 @@ export class Interactions {
 		})
 	}
 
+	/** null when every sample type is chosen, see TabsRenderer.mayRenderJunctionSampleTypes() */
+	setJunctionSampleTypes = (sampleTypes: number[] | null) => {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { junction: { sampleTypes } }
+		})
+	}
+
 	launchGroupsFilter = groups => {
 		this.app.dispatch({
 			type: 'plot_edit',

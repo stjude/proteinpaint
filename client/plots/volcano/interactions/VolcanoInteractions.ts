@@ -420,6 +420,9 @@ export class VolcanoInteractions {
 				blockIsProteinMode: false,
 				// cluster start/stop are the 1-based exon boundaries; the junctions are already 0-based
 				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - 1 - pad), stop: d.stop + pad },
+				// the splice junction track reads the samples of the analysis, as the cluster track does
+				...(config.sampleTypes ? { junction: { sampleTypes: config.sampleTypes } } : {}),
+				activeTab: 'Splice junction',
 				tracks: [
 					{
 						type: 'j2',

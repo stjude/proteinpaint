@@ -917,6 +917,10 @@ type JunctionClusterQuery = {
 	maxSamplesPerGroup?: number
 	/** filled at init from the h5 */
 	allSampleSet?: Set<string>
+	/** sample types of the h5's samples, set at init, for the panel's sample type selector */
+	sampleTypes?: number[]
+	/** termdb sampleTypesByTerms{} filtered for those entries with sample types present in .sampleTypes[] */
+	sampleTypesByTerms?: SampleTypesByTerms
 }
 
 /** the metabolite query */

@@ -620,6 +620,8 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			const c = q.junction.cluster
 			const so: any = {}
 			if (c.defaultMethod) so.defaultMethod = c.defaultMethod
+			// for the sample type selector of the differential splicing panel
+			if ((c.sampleTypes?.length ?? 0) > 1) Object.assign(so, getSampleTypesPayload(c))
 			q2.junction.cluster = Object.keys(so).length ? so : true
 		}
 	}

@@ -119,7 +119,9 @@ export function samplelstFilter(list: { sampleId: number | string }[]): any {
  * nested if/else cascade. Used by both DE and DM resolvers; the per-route
  * wrappers add their own validation + alert messages around this.
  * `__protected__` is the request's q.__protected__, which a dataset with a
- * sample filter (getAdditionalFilter) requires. */
+ * sample filter (getAdditionalFilter) requires. `sampleTypes` keeps only the samples of
+ * those types, as chosen in the analysis panel: without it a case with, say, a diagnosis
+ * and a relapse sample is in the group twice. */
 export async function buildGroupValues(
 	values: Array<{ sampleId: number | string }>,
 	allSampleSet: Set<string>,
@@ -128,7 +130,8 @@ export async function buildGroupValues(
 	tw2: any,
 	term_results: any,
 	term_results2: any,
-	__protected__?: any
+	__protected__?: any,
+	sampleTypes?: number[]
 ): Promise<{ names: string[]; conf1: (string | number)[]; conf2: (string | number)[] }> {
 	const names: string[] = []
 	const conf1: (string | number)[] = []
@@ -140,8 +143,11 @@ export async function buildGroupValues(
 		// ds has sample ancestry
 		// data for DE/DM (i.e. genomic data) are assumed to be
 		// at sample-level, so map sample ids to sample-level
-		const arg = { filter: samplelstFilter(values) }
+		const arg: any = { filter: samplelstFilter(values) }
 		maySetMapParent2Children(arg, ds, true)
+		// after the mapping, which sets the default child sample types on arg
+		// numbers, as mayLimitSamples() matches them against ds.sampleId2Type
+		if (sampleTypes?.length) arg.sampleTypes = sampleTypes.map(Number)
 		const allSamples = [...readable].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
 		// filtering samples by samplelst term
 		// if samples are at parent-level then will get
@@ -177,6 +183,13 @@ export async function buildGroupValues(
 		names.push(n)
 	}
 	return { names, conf1, conf2 }
+}
+
+/** The sample types of a request, as a cache key part: sorted, so that the same choice shares a
+ * result, and absent when none were chosen, so that the keys made before the sample type selector
+ * stay the same. Spread into a route's computeArgument. */
+export function sampleTypesKey(q: { sampleTypes?: any[] }): { sampleTypes?: number[] } {
+	return q.sampleTypes?.length ? { sampleTypes: [...new Set(q.sampleTypes.map(Number))].sort((a, b) => a - b) } : {}
 }
 
 /** An id of the dataset's sample filter for this request, since buildGroupValues() resolves the

@@ -54,8 +54,34 @@ tape('init() shows the empty-state message', async test => {
 	await handler.init(getOpts(holder, 'junction-handler-empty'))
 
 	test.ok(holder.text().includes('Junctions selected from genome browser'), 'shows the empty-state instructions')
+	test.equal(holder.selectAll('input').size(), 0, 'should offer no genome browser search without a mass app')
 
 	holder.remove()
+	test.end()
+})
+
+tape('init() offers a genome browser search when there is no junction', async test => {
+	const holder = d3s.select('body').append('div')
+	const opts: any = getOpts(holder, 'junction-handler-empty-search')
+	// a standalone termdb app, which has no plots
+	opts.app.vocabApi.app = { dispatch: () => {}, getState: () => ({}) }
+	opts.app.vocabApi.termdbConfig = { queries: { junction: { cluster: true } } }
+	await new SearchHandler().init(opts)
+	test.equal(holder.selectAll('.sja_genesearchinput').size(), 0, 'should offer no search in a standalone termdb app')
+
+	holder.selectAll('*').remove()
+	opts.app.vocabApi.app.getState = () => ({ plots: [] })
+	await new SearchHandler().init(opts)
+
+	test.equal(holder.selectAll('.sja_genesearchinput').size(), 1, 'should show a search that opens a genome browser')
+	test.ok(holder.text().includes('Charts > Differential Splicing'), 'should point to differential splicing')
+
+	delete opts.app.vocabApi.termdbConfig.queries.junction.cluster
+	holder.selectAll('*').remove()
+	await new SearchHandler().init(opts)
+	test.notOk(holder.text().includes('Differential Splicing'), 'should not point to it without differential splicing')
+
+	if (test['_ok']) holder.remove()
 	test.end()
 })
 
@@ -215,6 +241,53 @@ tape('the sample type row sets the chosen sample types on the picked junction an
 	test.equal(boxes()[1].checked, false, 'keeps the sample type choice after a delete')
 	pills()[0].click()
 	test.equal(selected.name, 'Event A (diagnosis samples)', 'names the sample types once after the list is redrawn')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('a junction selected from a track of some sample types keeps them', async test => {
+	const trackSampleTypes = { sampleTypes: [2], sampleTypeLabel: 'diagnosis samples' }
+	const single = makeJunctionCustomTerm([makeJunction('junction-1')], undefined, trackSampleTypes)
+	const event = makeJunctionCustomTerm(
+		[makeJunction('junction-2'), makeJunction('junction-3')],
+		'Event A',
+		trackSampleTypes
+	)
+	test.equal(single.id, 'junction:junction-1:2', 'should keep it apart from the same junction for other sample types')
+	test.equal(single.name, 'Name junction-1 (diagnosis samples)', 'should name the sample types')
+	test.deepEqual(single.tw.term.sampleTypes, [2], 'should read the sample types of the track')
+	test.ok(
+		event.tw.term.termlst.every(m => m.sampleTypes?.[0] == 2),
+		'should set them on each member junction'
+	)
+	test.notOk(
+		'sampleTypes' in makeJunctionCustomTerm([makeJunction('junction-1')], undefined, {}).tw.term,
+		'should read every sample for a track of every sample type'
+	)
+
+	const holder = d3s.select('body').append('div')
+	let selected: any
+	const opts: any = getOpts(holder, 'junction-handler-track-sampletypes', [single, event], term => {
+		selected = term
+	})
+	opts.app.vocabApi.termdbConfig = {
+		queries: { junction: { sampleTypes: [2, 3] } },
+		sampleTypes: {
+			1: { name: 'patient', plural_name: 'patients', parent_id: null },
+			2: { name: 'diagnosis sample', plural_name: 'diagnosis samples', parent_id: 1 },
+			3: { name: 'relapse sample', plural_name: 'relapse samples', parent_id: 1 }
+		}
+	}
+	await new SearchHandler().init(opts)
+	const pills = () => holder.selectAll('.ts_pill').nodes() as HTMLElement[]
+	test.equal(pills()[1].textContent, 'Event A (diagnosis samples)', 'should name the sample types on the event pill')
+	pills()[0].click()
+	test.deepEqual(selected.sampleTypes, [2], 'should keep them when every sample type is checked')
+	;(holder.selectAll('input[type=checkbox]').nodes()[0] as HTMLInputElement).click()
+	pills()[0].click()
+	test.deepEqual(selected.sampleTypes, [3], 'should read the sample types checked here instead')
+	test.equal(selected.name, 'Name junction-1 (relapse samples)', 'should name only the sample types read')
 
 	if (test['_ok']) holder.remove()
 	test.end()

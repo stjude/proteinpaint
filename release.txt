@@ -1,1 +1,7 @@
+Features:
+- Allow selecting sample types for differential splicing analysis and for the splice junction track in the genome browser
+- Add a Differential Splicing button to the Charts tab, to compare splicing between two groups of samples defined by filters
+- Offer a search that opens a genome browser when no splice junction has been selected yet
 
+Fixes:
+- Show a genome browser track again at its earlier place when it is unchecked and checked again

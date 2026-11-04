@@ -12,7 +12,8 @@ import {
 	resolveGroups,
 	resolveGroupPair,
 	withResolvedGroups,
-	maxFilterGroups
+	maxFilterGroups,
+	sampleTypesKey
 } from '#src/utils/sampleGroups.ts'
 import { getData } from '#src/termdb.matrix.js'
 import { init as initTestDs } from '#src/test/load.testds.js'
@@ -33,6 +34,8 @@ buildGroupValues skips non-integer sampleId
 buildGroupValues skips when id2sampleName returns falsy
 buildGroupValues skips when name is not in allSampleSet
 buildGroupValues resolves the samples of a ds with a sample filter once per request
+buildGroupValues keeps only the samples of the chosen sample types
+sampleTypesKey is absent without sample types and sorted with them
 sampleFilterId is empty only for no sample filter
 sampleFilterScope is empty for a dataset without a sample filter
 buildGroupValues skips when tw is configured but term_results has no row for that sample
@@ -225,6 +228,64 @@ tape('buildGroupValues skips when name is not in allSampleSet', async t => {
 returns sampleA only, and the shared authApi of a unit test run is the open-access one, which does
 not call getAdditionalFilter(): this covers which names are kept and how often the db is queried.
 The filter of a session's role is covered by sampleGroups.request.integration.spec.ts. */
+tape('buildGroupValues keeps only the samples of the chosen sample types', async t => {
+	// two cases, P1 with a diagnosis (11) and a relapse (12) sample, P2 with a diagnosis sample (21)
+	const names: Record<number, string> = { 11: 'P1_D', 12: 'P1_R', 21: 'P2_D' }
+	const queried: any[] = []
+	const ds = {
+		sampleId2Type: new Map([
+			[1, 1],
+			[2, 1],
+			[11, 2],
+			[12, 3],
+			[21, 2]
+		]),
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				term2SampleType: new Map(),
+				sampleTypes: {
+					1: { name: 'Patient', parent_id: null },
+					2: { name: 'Diagnosis', parent_id: 1 },
+					3: { name: 'Relapse', parent_id: 1 }
+				},
+				q: {
+					id2sampleName: (id: number) => names[id],
+					sampleName2id: (n: string) => Number(Object.keys(names).find(id => names[id] == n))
+				},
+				// the samples of the two cases, as the samplelst filter maps them to their children
+				filterSamples: async (q: any) => {
+					queried.push(q.sampleTypes)
+					return new Set([11, 12, 21])
+				}
+			}
+		}
+	}
+	const allSampleSet = new Set(Object.values(names))
+	const group = [{ sampleId: 1 }, { sampleId: 2 }]
+
+	const all = await buildGroupValues(group, allSampleSet, ds, null, null, [], [])
+	t.deepEqual(
+		all.names.sort(),
+		['P1_D', 'P1_R', 'P2_D'],
+		'without sample types, a case is in the group with each sample'
+	)
+	t.deepEqual(queried.at(-1), [2, 3], 'the cases are mapped to the default child sample types')
+
+	const dx = await buildGroupValues(group, allSampleSet, ds, null, null, [], [], undefined, ['2'] as any)
+	t.deepEqual(dx.names.sort(), ['P1_D', 'P2_D'], 'with Diagnosis chosen, one sample a case')
+	t.deepEqual(queried.at(-1), [2], 'the chosen types replace the default ones in the dataset query, as numbers')
+	t.end()
+})
+
+tape('sampleTypesKey is absent without sample types and sorted with them', t => {
+	t.deepEqual(sampleTypesKey({}), {}, 'no key part, so the keys of earlier results stay the same')
+	t.deepEqual(sampleTypesKey({ sampleTypes: [] }), {}, 'an empty list is no choice')
+	t.deepEqual(sampleTypesKey({ sampleTypes: [3, '2'] }), { sampleTypes: [2, 3] }, 'numbers, sorted')
+	t.deepEqual(sampleTypesKey({ sampleTypes: [2, 3, '2'] }), { sampleTypes: [2, 3] }, 'once each, for one cache key')
+	t.end()
+})
+
 tape('buildGroupValues resolves the samples of a ds with a sample filter once per request', async t => {
 	// assign the shared open-access api once, the same idempotent way termdb.matrix.unit.spec.js does
 	if (!authApi) {

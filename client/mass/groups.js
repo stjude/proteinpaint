@@ -1,5 +1,15 @@
 import { getCompInit } from '#rx'
-import { Menu, GeneSetEditUI, renderTable, table2col, sayerror, make_radios } from '#dom'
+import {
+	Menu,
+	GeneSetEditUI,
+	renderTable,
+	table2col,
+	sayerror,
+	make_radios,
+	mayRenderSampleTypeRow,
+	getSelectedSampleTypes,
+	getChosenSampleTypes
+} from '#dom'
 import {
 	filterInit,
 	getNormalRoot,
@@ -702,36 +712,47 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					}
 				}
 
-				// get actual numbers of samples with splicing data
-				const body = {
-					genome: self.app.vocabApi.vocab.genome,
-					dslabel: self.app.vocabApi.vocab.dslabel,
-					samplelst: { groups },
-					filter: self.state.termfilter.filter,
-					filter0: self.state.termfilter.filter0,
-					preAnalysis: true
-				}
-				const preAnalysisData = await dofetch3('termdb/diffSplice', { body })
+				const tip = self.tip2.clear()
+				const dsQuery = self.app.vocabApi.termdbConfig.queries.junction.cluster
+				const { sampleTypes, panelDiv, isCurrent } = initDaSampleTypes(tip.d, dsQuery, self, () => showPanel())
+				// the numbers of samples with splicing data, fetched again for other sample types
+				const showPanel = async () => {
+					const st = sampleTypes()
+					if (st === null) return
+					const body = {
+						genome: self.app.vocabApi.vocab.genome,
+						dslabel: self.app.vocabApi.vocab.dslabel,
+						samplelst: { groups },
+						filter: self.state.termfilter.filter,
+						filter0: self.state.termfilter.filter0,
+						...(st ? { sampleTypes: st } : {}),
+						preAnalysis: true
+					}
+					const current = isCurrent()
+					const preAnalysisData = await dofetch3('termdb/diffSplice', { body })
+					if (!current()) return
 
-				const tip = self.tip2
-				if (!preAnalysisData?.data) {
-					tip.clear().showunderoffset(itemDiv.node())
-					sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
-					throw new Error('no data returned from pre-analysis request')
+					panelDiv.selectAll('*').remove()
+					tip.showunderoffset(itemDiv.node())
+					if (!preAnalysisData?.data) {
+						sayerror(panelDiv.append('div'), 'Error retrieving pre-analysis data')
+						throw new Error('no data returned from pre-analysis request')
+					}
+					/* Shared with differential expression and methylation; termType selects the label
+					and drops the method radios. The per-group cap is enforced server-side and arrives
+					as preAnalysisData.alert, which hides the Run button. */
+					renderPreAnalysisData({
+						preAnalysisData,
+						samplelstTW,
+						groups,
+						holder: panelDiv,
+						tip,
+						termType: TermTypes.JUNCTION,
+						self,
+						sampleTypes: st
+					})
 				}
-
-				tip.clear().showunderoffset(itemDiv.node())
-				/* Shared with differential expression and methylation; termType selects the label
-				and drops the method radios. The per-group cap is enforced server-side and arrives
-				as preAnalysisData.alert, which hides the Run button. */
-				renderPreAnalysisData({
-					preAnalysisData,
-					samplelstTW,
-					groups,
-					tip,
-					termType: TermTypes.JUNCTION,
-					self
-				})
+				await showPanel()
 			})
 	}
 
@@ -867,6 +888,66 @@ export async function getGeneExpressionPreAnalysis(app, samplelstTW, termfilter 
 	return res
 }
 
+/* The sample type row of a differential analysis panel, drawn once at the top of the holder
+(the tip of the groups menu), and the div below it that the panel is drawn in. A change of
+sample types calls onChange, which fetches the counts again and redraws the panel. A case with
+samples of several types, such as a diagnosis and a relapse sample, is otherwise in its group
+with each of them.
+
+query: queries.junction.cluster, with .sampleTypes[] (set at server init) when the data has more
+than one sample type. No query, or one without them, draws no row. Only sample types with a parent
+are offered: the groups are always mapped from cases to their samples of those types, see
+buildGroupValues() on the server
+
+Returns
+- sampleTypes(): the chosen sample types to send. undefined when every type is chosen, so that
+  the request and its cached result are the same as before the selector; null when the choice
+  leaves no sample type, which getSelectedSampleTypes() has alerted
+- isCurrent(): call as a fetch is sent; the function it returns is false once a later
+  change has started another fetch, whose counts are then the ones to show */
+export function initDaSampleTypes(holder, query, self, onChange) {
+	const termdbConfig = self.app.vocabApi.termdbConfig
+	if (query?.sampleTypes) {
+		const hasParent = t => Number.isInteger(termdbConfig.sampleTypes?.[t]?.parent_id)
+		query = { ...query, sampleTypes: query.sampleTypes.filter(hasParent) }
+		// and the dropdown values, dropping a value left with none
+		if (query.sampleTypesByTerms)
+			query.sampleTypesByTerms = Object.fromEntries(
+				Object.entries(query.sampleTypesByTerms).map(([term, byValue]) => [
+					term,
+					Object.fromEntries(
+						Object.entries(byValue)
+							.map(([v, types]) => [v, types.filter(hasParent)])
+							.filter(([, types]) => types.length)
+					)
+				])
+			)
+	}
+	const rowDiv = holder.append('div')
+	const select = mayRenderSampleTypeRow(rowDiv, query, termdbConfig)
+	const panelDiv = holder.append('div')
+	// on the row alone: the controls of the panel below fire change events of their own
+	if (select) rowDiv.on('change', onChange)
+	let requests = 0
+	return {
+		panelDiv,
+		sampleTypes: () => {
+			if (!select) return
+			const st = getSelectedSampleTypes({
+				sampleTypeSelect: select,
+				querySampleTypes: query.sampleTypes,
+				querySampleTypesByTerms: query.sampleTypesByTerms
+			})
+			if (!st?.length) return null
+			return getChosenSampleTypes(query, st)
+		},
+		isCurrent: () => {
+			const n = ++requests
+			return () => n === requests
+		}
+	}
+}
+
 /* Renders the group sample counts and the "Run Differential X Analysis" button, for both
 differential gene expression and differential DNA methylation.
 
@@ -924,7 +1005,8 @@ export function renderPreAnalysisData(arg) {
 	if (preAnalysisData.alert)
 		for (const o of options) Object.assign(o, { disabled: true, reason: preAnalysisData.alert })
 
-	const menuDiv = tip ? tip.d.append('div') : holder.append('div')
+	// a holder within the tip, when there is one: the sample type row sits above it in the tip
+	const menuDiv = (holder || tip.d).append('div')
 	/* these counts are a subset of the group sizes shown in the groups table: only the samples that
 	actually have data for this assay can be compared. without this header the two numbers look like a
 	bug (e.g. a GDC group of 1570 cases showing as 626 here). */
@@ -1095,6 +1177,8 @@ export function renderPreAnalysisData(arg) {
 					chartType: 'differentialAnalysis',
 					state: self.state,
 					samplelst: { groups },
+					// only a subset: every sample type is the same as none
+					...(arg.sampleTypes ? { sampleTypes: arg.sampleTypes } : {}),
 					termType,
 					tw: samplelstTW,
 					...(Object.keys(volcano).length ? { settings: { volcano } } : {})

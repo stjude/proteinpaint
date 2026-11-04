@@ -1,7 +1,6 @@
-import { junctionCustomTermSource, type JunctionCustomTerm } from './junction.customTerm.ts'
+import { junctionCustomTermSource, withSampleTypes, type JunctionCustomTerm } from './junction.customTerm.ts'
 import { mayRenderFractionSelection } from './termCollectionFractionSelection.ts'
-import { mayRenderSampleTypeRow, getTermSampleTypes } from '#dom'
-import { getTermLabelSuffix } from '#shared/terms.js'
+import { Menu, addGeneSearchbox, mayRenderSampleTypeRow, getTermSampleTypes, getChosenSampleTypes } from '#dom'
 
 export class SearchHandler {
 	async init(opts) {
@@ -24,7 +23,7 @@ function render(opts, entries: JunctionCustomTerm[]) {
 	const div = holder.append('div').style('padding', '10px 0px')
 
 	if (!entries.length) {
-		div.append('div').text('Junctions selected from genome browser will be shown here.')
+		renderNoJunctions(div, opts)
 		return
 	}
 
@@ -40,9 +39,9 @@ function render(opts, entries: JunctionCustomTerm[]) {
 		// nothing selectable, which getTermSampleTypes() has alerted
 		if (!termSampleTypes) return
 		/* every sample type of the junction file, or its only one, is the same as no choice: the term then
-		reads every sample, as before there was a selector, including any sample without a sample type */
-		const all =
-			!termSampleTypes.sampleTypes?.length || query.sampleTypes.every(t => termSampleTypes.sampleTypes!.includes(t))
+		reads every sample, as before there was a selector, including any sample without a sample type. A term
+		selected from a genome browser track that reads some sample types keeps them, unless others are chosen here */
+		const all = !getChosenSampleTypes(query, termSampleTypes.sampleTypes)
 		const apply = (term: any) => (all ? term : withSampleTypes(term, termSampleTypes))
 		return opts.callback(termOrTw.term ? { ...termOrTw, term: apply(termOrTw.term) } : apply(termOrTw))
 	}
@@ -75,6 +74,43 @@ function render(opts, entries: JunctionCustomTerm[]) {
 	renderList()
 }
 
+/* Junction terms are made only in a genome browser, by Select on a junction of its splice junction
+track, so a search here opens one, in the mass app that vocabApi belongs to. A dataset with
+differential splicing is also pointed to it, as a group of samples is not made from a junction. */
+function renderNoJunctions(div, opts) {
+	div.append('div').text('Junctions selected from genome browser will be shown here.')
+	const massApp = opts.app.vocabApi.app
+	// only the mass app, whose state lists plots, can open a genome browser; a standalone termdb app cannot
+	if (!Array.isArray(massApp?.getState?.()?.plots) || !opts.genomeObj) return
+	const row = div.append('div').style('margin-top', '10px')
+	row.append('span').style('margin-right', '5px').text('Open genome browser at')
+	const geneSearch = addGeneSearchbox({
+		tip: new Menu({ padding: '0px' }),
+		genome: opts.genomeObj,
+		row,
+		callback: () => {
+			const { chr, start, stop } = geneSearch
+			if (!chr) return
+			massApp.dispatch({
+				type: 'plot_create',
+				config: {
+					chartType: 'genomeBrowser',
+					blockIsProteinMode: false,
+					geneSearchResult: { chr, start, stop },
+					activeTab: 'Splice junction'
+				}
+			})
+		}
+	})
+	if (opts.app.vocabApi.termdbConfig?.queries?.junction?.cluster)
+		div
+			.append('div')
+			.style('margin-top', '10px')
+			.style('font-size', '.8em')
+			.style('opacity', 0.7)
+			.text('To compare splicing between groups of samples, use Charts > Differential Splicing.')
+}
+
 function renderJunction(holder, entry: JunctionCustomTerm, opts) {
 	const choice = holder.append('div')
 	choice
@@ -97,7 +133,8 @@ function renderJunctionEvent(holder, fractionDiv, entry: JunctionCustomTerm, opt
 		.style('display', 'inline-block')
 		.style('border-radius', '6px')
 		.style('margin', '1px 0')
-		.text(entry.eventlabel!)
+		// the event label, and the sample types it was selected for
+		.text(entry.name)
 		.on('click', () => selectJunctionEvent(holder, fractionDiv, entry, opts))
 	addDeleteButton(pillRow, entry, opts)
 	eventHolder
@@ -133,17 +170,4 @@ function addDeleteButton(holder, entry: JunctionCustomTerm, opts) {
 			await opts.app.vocabApi.deleteCustomTermById(entry.id)
 			opts.renderList()
 		})
-}
-
-/** A copy of a picked junction term, or of a splice event's termCollection, read for the chosen sample
- * types. A collection's member junctions get them too, since the server reads each member as a junction
- * term of its own. The caller leaves a term unchanged for no choice or a choice of every sample type. Like a methylation region term, the name says which
- * sample types, so that the same junction read for two of them is told apart where a plot labels terms
- * by name. */
-function withSampleTypes(term: any, termSampleTypes: { sampleTypes?: number[]; sampleTypeLabel?: string }) {
-	const { sampleTypes, sampleTypeLabel } = termSampleTypes
-	const t = { ...term, sampleTypes, sampleTypeLabel }
-	t.name = term.name + getTermLabelSuffix(t)
-	if (Array.isArray(term.termlst)) t.termlst = term.termlst.map(m => ({ ...m, sampleTypes }))
-	return t
 }

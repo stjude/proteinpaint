@@ -172,6 +172,8 @@ export class VolcanoModel {
 			minSamplesPerIntron: this.settings.minSamplesPerIntron,
 			minSamplesPerGroup: this.settings.minSamplesPerGroup,
 			minCountsPerCluster: this.settings.minCountsPerCluster,
+			// the sample types chosen in the panel that launched the plot; absent when every type was chosen
+			...(this.config.sampleTypes ? { sampleTypes: this.config.sampleTypes } : {}),
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffSpliceRequest>
 

@@ -2329,13 +2329,15 @@ export function getTermSampleLimiter(param, allSamples, ds) {
 	}
 }
 
-/* term.sampleTypes as the dataset's sample type ids, or undefined when the term chose none */
-function getTermSampleTypeIds(term, ds) {
+/* term.sampleTypes, or those of a request such as the genome browser junction track's, as the dataset's sample
+type ids; undefined when none were chosen. An invalid one is the request's error, so it is a 400 */
+export function getTermSampleTypeIds(term, ds) {
 	if (term.sampleTypes == null) return
-	if (!Array.isArray(term.sampleTypes)) throw new Error('term.sampleTypes must be an array')
+	const refuse = message => Object.assign(new Error(message), { status: 400 })
+	if (!Array.isArray(term.sampleTypes)) throw refuse('sampleTypes must be an array')
 	return term.sampleTypes.map(st => {
 		const n = Number(st)
-		if (!Number.isInteger(n) || !ds.cohort?.termdb?.sampleTypes?.[n]) throw new Error(`invalid sample type='${st}'`)
+		if (!Number.isInteger(n) || !ds.cohort?.termdb?.sampleTypes?.[n]) throw refuse(`invalid sample type='${st}'`)
 		return n
 	})
 }

@@ -383,6 +383,14 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'Differential Splicing',
+			// DA, as for the differential analysis menu of the Groups tab, which this mirrors
+			chartType: 'DA',
+			clickTo: self.prepPlot,
+			config: { chartType: 'DEinput', termType: TermTypes.JUNCTION },
+			isVisible: () => (state.termdbConfig?.queries?.junction?.cluster ? '' : 'none')
+		},
+		{
 			label: 'Metabolite Intensity',
 			chartType: 'metaboliteIntensity',
 			clickTo: self.showTree_selectlst,

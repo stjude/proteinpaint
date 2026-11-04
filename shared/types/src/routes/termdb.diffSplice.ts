@@ -18,6 +18,8 @@ export type DiffSpliceRequest = {
 	minCountsPerCluster: number
 	tw?: any
 	tw2?: any
+	/** test only the samples of these sample types; absent = every sample of a group's cases */
+	sampleTypes?: number[]
 	preAnalysis?: boolean
 	clusterId?: string
 	volcanoRender: VolcanoRenderRequest

@@ -20,10 +20,12 @@ import {
 	resolveGroups,
 	withResolvedGroups,
 	sampleFilterScope,
+	sampleTypesKey,
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
 import type { DsCacheResult } from '../../routes/types.ts'
 import { genomes } from '#src/initGenomesDs.js'
+import { getTermSampleTypeIds } from '#src/mds3.init.js'
 
 export const payload: RoutePayload = {
 	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
@@ -75,6 +77,11 @@ export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const q = req.query as DiffSpliceRequest
+			/* the sample type ids, checked as for the genome browser junction track, before they reach the
+			cache key or the group samples */
+			const ds = genomes[q.genome]?.datasets?.[q.dslabel]
+			// an unknown dataset is refused below, by resolveDaContext()
+			if (ds && q.sampleTypes != null) q.sampleTypes = getTermSampleTypeIds(q, ds)
 
 			// preAnalysis short-circuit: just sample counts, no cache touch.
 			if (q.preAnalysis) {
@@ -171,7 +178,8 @@ function dsKeyInputs(req: DiffSpliceRequest) {
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
 		filter: (req as any).filter ?? null,
-		filter0: (req as any).filter0 ?? null
+		filter0: (req as any).filter0 ?? null,
+		...sampleTypesKey(req)
 	}
 }
 
@@ -398,7 +406,8 @@ export async function resolveDsSampleGroups(
 		req.tw2,
 		term_results,
 		term_results2,
-		req.__protected__
+		req.__protected__,
+		req.sampleTypes
 	)
 	const g2 = await buildGroupValues(
 		groups[1].values,
@@ -408,7 +417,8 @@ export async function resolveDsSampleGroups(
 		req.tw2,
 		term_results,
 		term_results2,
-		req.__protected__
+		req.__protected__,
+		req.sampleTypes
 	)
 
 	const alerts: string[] = []
