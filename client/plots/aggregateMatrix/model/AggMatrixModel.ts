@@ -1,5 +1,6 @@
 import { type AggregateMatrix, validatePlotConfig } from '../AggregateMatrix.ts'
 import type { AppApi } from '#rx'
+import { isPieOnly } from '#shared/aggregateMatrix.js'
 
 export class AggMatrixModel {
 	ag: AggregateMatrix
@@ -21,7 +22,8 @@ export class AggMatrixModel {
 		const body = {
 			rows: config.rows,
 			columns: config.columns,
-			gradientMethod: settings.gradientMethod,
+			// not needed when every dot is a pie
+			gradientMethod: isPieOnly(config.rows, config.columns) ? undefined : settings.gradientMethod,
 			sizeMethod: settings.sizeMethod,
 			minDotSize: settings.minDotSize,
 			maxDotSize: settings.maxDotSize,

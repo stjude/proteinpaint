@@ -6,6 +6,7 @@ Tests:
     - Accepted rows and columns
     - Rejected rows and columns 
     - Rejected methods
+    - Pie charts do not need a gradient method
     - Pie charts default to larger dot sizes
 */
 
@@ -103,6 +104,24 @@ tape('Rejected methods', function (test) {
 	test.ok(
 		/cannot be the same/.test(message(withMethods({ gradientMethod: 'mean', sizeMethod: 'mean' }))!),
 		'Should reject identical methods'
+	)
+	test.end()
+})
+
+tape('Pie charts do not need a gradient method', function (test) {
+	const pies = { rows: { Genes: [tw('geneVariant', 'TP53')] }, columns: { Sex: [tw('categorical', 'sex')] } }
+	const withMethods = (aggregateMatrix: any, extra: any = pies) => config({ ...extra, settings: { aggregateMatrix } })
+	test.equal(message(withMethods({ sizeMethod: 'count' })), undefined, 'Should accept pies without a gradient method')
+	test.equal(
+		message(withMethods({ gradientMethod: 'count', sizeMethod: 'count' })),
+		undefined,
+		'Should not compare the gradient method of pies with the size method'
+	)
+	test.ok(/dot size/.test(message(withMethods({}))!), 'Should still require a size method for pies')
+	const mixed = { ...pies, columns: { Sex: [tw('categorical', 'sex')], Gene: [tw('geneVariant', 'KRAS')] } }
+	test.ok(
+		/color gradient/.test(message(withMethods({ sizeMethod: 'count' }, mixed))!),
+		'Should require a gradient method when an axis has both gene variant and other terms'
 	)
 	test.end()
 })

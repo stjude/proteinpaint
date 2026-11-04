@@ -242,3 +242,35 @@ tape('Pies in the dot positions', function (test) {
 	)
 	test.end()
 })
+
+tape('Pies without a color scale', function (test) {
+	const { viewModel, mockAggregateMatrix } = getViewModel()
+	const settings = mockAggregateMatrix.state.config.settings.aggregateMatrix
+	viewModel.viewData = viewModel.getDefaultViewData()
+	viewModel.viewData.hasColorScale = false
+	viewModel.sizeScale = (v: number) => v
+	const pie = {
+		n: 10,
+		radius: 1,
+		termType: 'geneVariant',
+		slices: [{ key: 'M', label: 'MISSENSE', color: '#3987CC', count: 4 }]
+	}
+	const dot = (column: string, withPie?: any): any => ({
+		row: 'TP53',
+		rowSection: 'Genes',
+		column,
+		colSection: 'Sex',
+		colorValue: null,
+		sizeValue: 3,
+		...(withPie && { pie: withPie })
+	})
+	viewModel.getDotPositions([[dot('F', pie), dot('M')]], 10, settings)
+	const [shown, none] = viewModel.viewData.dotPositions
+	test.equal(shown.hasData, true, 'Should treat a pie as data without a color value')
+	test.ok(shown.pie, 'Should draw the pie')
+	const labels = shown.tipData.map(e => e.label)
+	test.notOk(labels.includes('Mean'), 'Should not show the color value in the tooltip of a pie')
+	test.ok(labels.includes('Percent'), 'Should still show the size value')
+	test.equal(none.hasData, false, 'Should treat a dot without a pie as no data')
+	test.end()
+})

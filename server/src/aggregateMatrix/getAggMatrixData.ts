@@ -9,7 +9,7 @@ import { GENE_VARIANT, PSEUDOBULK } from '#types'
 import { mclass } from '#shared/common.js'
 import { isDictionaryType, isNumericTerm } from '#shared/terms.js'
 import { get_bin_label } from '#shared/termdb.bins.js'
-import { expandsToValues, getAggMatrixTermId, getAggMatrixTermLabel } from '#shared/aggregateMatrix.js'
+import { expandsToValues, getAggMatrixTermId, getAggMatrixTermLabel, isPieOnly } from '#shared/aggregateMatrix.js'
 import { getData } from '../termdb.matrix.js'
 import { calculateAggregateMethod, calculateSampleBasedMethods } from './aggregateMethods.ts'
 import { PieCounter, mclassScheme } from './pieChartProcessing.ts'
@@ -19,7 +19,7 @@ type RowData = { id: string; label: string; section: string; tw: any; queryId: s
 type ColData = { section: string; id: string; colorValues: ValueByRow; sizeValues: ValueByRow }
 type ProcessedData = { values: ValueByRow; min: number; max: number }
 export type AggregateMatrixDataRequest = TermdbAggregateMatrixRequest &
-	Required<Pick<TermdbAggregateMatrixRequest, 'rows' | 'gradientMethod' | 'sizeMethod'>>
+	Required<Pick<TermdbAggregateMatrixRequest, 'rows' | 'sizeMethod'>>
 
 export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): Promise<ValidAggMatrixResponse> {
 	const columnTerms = Object.values(q.columns).flat()
@@ -30,6 +30,9 @@ export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): 
 	if (pseudobulkColumns != columnTerms.length) {
 		throw new Error('Pseudobulk and sample-based columns cannot currently be combined in one aggregate matrix')
 	}
+	// only a matrix of pies goes without a gradient, and pies are made from sample intersections
+	const gradientMethod = q.gradientMethod
+	if (!gradientMethod) throw new Error('A gradient method is required')
 	const { rows, sections: rowSections, longestLabel: rowLongest } = makeRows(q)
 	const columns: ColData[] = []
 	const colSections: AxisSection[] = []
@@ -57,12 +60,12 @@ export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): 
 			let sizeData: ProcessedData
 			if (columnTw.term.type == PSEUDOBULK) {
 				const genes = rows.map(row => row.id)
-				colorData = await getPseudobulkData(columnTw, genes, q.gradientMethod, q, ds)
+				colorData = await getPseudobulkData(columnTw, genes, gradientMethod, q, ds)
 				sizeData = await getPseudobulkData(columnTw, genes, q.sizeMethod, q, ds)
 			} else {
-				const byMethod = await getSampleBasedData(columnTw, rows, [q.gradientMethod, q.sizeMethod], q, ds)
+				const byMethod = await getSampleBasedData(columnTw, rows, [gradientMethod, q.sizeMethod], q, ds)
 				colorData = summarizeValues(
-					byMethod.get(q.gradientMethod)!,
+					byMethod.get(gradientMethod)!,
 					rows.map(row => row.id)
 				)
 				sizeData = summarizeValues(
@@ -140,6 +143,9 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	const rowOther = rowSources.filter(s => !isGeneVariant(s))
 	const colGv = columnSources.filter(isGeneVariant)
 	const colOther = columnSources.filter(s => !isGeneVariant(s))
+	/* A gradient is never applied to a pie, so a matrix of nothing but pies has no color values and no color scale */
+	const hasColor = !isPieOnly(q.rows, q.columns)
+	if (hasColor && !q.gradientMethod) throw new Error('A gradient method is required')
 	const pieCounter =
 		(rowGv.length && colOther.length) || (colGv.length && rowOther.length) ? new PieCounter() : undefined
 	// one scheme per gene variant term, as each term's request says which values are uncomputable
@@ -199,7 +205,11 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 		columns.map((column, columnIndex) => {
 			const index = rowIndex * columns.length + columnIndex
 			const stats = { matches: counts[index], numericMatches: numericMatches[index], cohortCount, sum: sums[index] }
-			const colorValue = q.gradientMethod == 'count' ? stats.matches : calculateAggregateMethod(q.gradientMethod, stats)
+			const colorValue = !hasColor
+				? null
+				: q.gradientMethod == 'count'
+				? stats.matches
+				: calculateAggregateMethod(q.gradientMethod!, stats)
 			const sizeValue = q.sizeMethod == 'count' ? stats.matches : calculateAggregateMethod(q.sizeMethod, stats)
 			if (colorValue !== null) {
 				if (colorValue < colorMin) colorMin = colorValue
@@ -223,7 +233,7 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	)
 
 	return {
-		colorScale: validateScale(colorMin, colorMax),
+		...(hasColor && { colorScale: validateScale(colorMin, colorMax) }),
 		sizeScale: validateScale(sizeMin, sizeMax),
 		data,
 		axesLayout: {

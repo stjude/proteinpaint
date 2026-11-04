@@ -19,7 +19,8 @@ export type TermdbAggregateMatrixRequest = {
 	getAvailableMethods?: boolean
 	rows?: { [section: string]: TermWrapper[] }
 	columns: { [member: string]: TermWrapper[] }
-	/** Aggregation method to determine the color gradient. */
+	/** Aggregation method to determine the color gradient. Not needed when every dot is a pie, as a
+	 * gradient is never applied to a pie. */
 	gradientMethod?: string
 	/** Aggregation method to determine the dot sizes. */
 	sizeMethod?: string
@@ -106,8 +107,8 @@ export type AxesLayout = {
 }
 
 export type ValidAggMatrixResponse = {
-	/** Min and max raw values for the color gradient */
-	colorScale: { min: number; max: number }
+	/** Min and max raw values for the color gradient. Not present when every dot is a pie. */
+	colorScale?: { min: number; max: number }
 	/** Min and max raw values for the dot sizes */
 	sizeScale: { min: number; max: number }
 	/** Array of rows, each row is an array of dots ordered left to right by column */

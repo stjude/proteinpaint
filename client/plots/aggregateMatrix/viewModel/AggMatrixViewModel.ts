@@ -75,7 +75,8 @@ export class AggMatrixViewModel {
 
 		this.getPlotDimensions()
 		this.getAxisLabelPositions(rowData, colData, cellSize)
-		this.setColorScale(settings, data.colorScale)
+		this.viewData.hasColorScale = !!data.colorScale
+		if (data.colorScale) this.setColorScale(settings, data.colorScale)
 		this.sizeScale = scaleLinear()
 			.domain([data.sizeScale.min, data.sizeScale.max])
 			.range([settings.minDotSize, settings.maxDotSize])
@@ -149,6 +150,7 @@ export class AggMatrixViewModel {
 			colSectionLines: [],
 			dotPositions: [],
 			pieLegend: { title: '', entries: [] },
+			hasColorScale: true,
 			colorScale: {
 				//TODO: If the user cannot set the min and max for color values,
 				// revert to colorScale = scale
@@ -276,7 +278,8 @@ export class AggMatrixViewModel {
 		for (const [i, row] of data.entries()) {
 			for (const dot of row) {
 				const { pie, tipData: pieTipData, isNoData } = getDotPie(dot, settings, isPieChart, sampleType)
-				const noData = dot.colorValue === null || dot.sizeValue === null || isNoData
+				const hasColorScale = this.viewData.hasColorScale
+				const noData = (hasColorScale && dot.colorValue === null) || dot.sizeValue === null || isNoData
 				const hasData = !noData
 				const dotPos = {
 					x: this.lastX + cellSize / 2,
@@ -285,7 +288,7 @@ export class AggMatrixViewModel {
 					 * This will allow the tooltip to appear, displaying the data or lack thereof
 					 * to the user. */
 					size: hasData ? this.sizeScale(dot.sizeValue!) : settings.maxDotSize,
-					color: hasData ? this.viewData.colorScale.scale(dot.colorValue!) : 'transparent',
+					color: hasData && hasColorScale ? this.viewData.colorScale.scale(dot.colorValue!) : 'transparent',
 					hasData,
 					row: dot.row,
 					rowSection: dot.rowSection,
@@ -301,11 +304,15 @@ export class AggMatrixViewModel {
 							label: dot.colSection,
 							value: dot.column
 						},
-						{
-							// Show the color value
-							label: capitalizeFirstLetter(settings.gradientMethod),
-							value: noData ? 'No available data' : roundValue(dot.colorValue!, 2)
-						},
+						// The color value, unless there is no color scale
+						...(hasColorScale
+							? [
+									{
+										label: capitalizeFirstLetter(settings.gradientMethod),
+										value: noData ? 'No available data' : roundValue(dot.colorValue!, 2)
+									}
+							  ]
+							: []),
 						{
 							// Show the size value
 							label: capitalizeFirstLetter(settings.sizeMethod),

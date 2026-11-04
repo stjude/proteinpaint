@@ -34,16 +34,30 @@ export function expandsToValues(type: string): boolean {
 	return type == SINGLECELL_CELLTYPE || !isNonDictionaryType(type)
 }
 
+function getAxisTermTypes(axis: any): any[] {
+	return axis && typeof axis == 'object'
+		? Object.values<any>(axis).flatMap(terms => (Array.isArray(terms) ? terms.map(tw => tw?.term?.type) : []))
+		: []
+}
+
+/** True when every dot of the matrix is a pie: all terms of one axis are gene variant terms, and all terms of the
+ * other axis are of another type. There is then nothing to color with a gradient, so no gradient method is needed.
+ * A matrix with both kinds of term on one axis has dots that are not pies, so it still needs one.
+ * Does not validate: terms that are not term wrappers are ignored. */
+export function isPieOnly(rows: any, columns: any): boolean {
+	const rowTypes = getAxisTermTypes(rows)
+	const colTypes = getAxisTermTypes(columns)
+	const allVariants = (list: any[]) => list.length > 0 && list.every(type => type == GENE_VARIANT)
+	const noVariants = (list: any[]) => list.length > 0 && list.every(type => type && type != GENE_VARIANT)
+	return (allVariants(rowTypes) && noVariants(colTypes)) || (allVariants(colTypes) && noVariants(rowTypes))
+}
+
 /** True when the matrix is drawn as pies: a gene variant term on one axis, and a term of another type on the other.
  * The gene variant terms give the slices and the other terms decide which samples are in the pie.
  * Does not validate: terms that are not term wrappers are ignored. */
 export function hasPieAxes(rows: any, columns: any): boolean {
-	const types = (axis: any) =>
-		axis && typeof axis == 'object'
-			? Object.values<any>(axis).flatMap(terms => (Array.isArray(terms) ? terms.map(tw => tw?.term?.type) : []))
-			: []
-	const rowTypes = types(rows)
-	const colTypes = types(columns)
+	const rowTypes = getAxisTermTypes(rows)
+	const colTypes = getAxisTermTypes(columns)
 	const hasOther = (list: any[]) => list.some(type => type && type != GENE_VARIANT)
 	return (
 		(rowTypes.includes(GENE_VARIANT) && hasOther(colTypes)) || (colTypes.includes(GENE_VARIANT) && hasOther(rowTypes))

@@ -65,9 +65,9 @@ The response also has `sampleType`, so the client can name the samples in a tool
 
 - **Count** of a cell is samples with a variant. **Percent** is that count over all samples in the response, not over the samples of the column, so it is a share of the cohort.
 - **The size method does not set the size of a pie.** The pie radius comes from `n`, whatever the size method is.
-- **The color gradient is not used by pies.** A request still needs a gradient method that differs from the size method.
+- **A gradient is never applied to a pie.** When every dot is a pie, the request needs no gradient method, and a `gradientMethod` that is sent is ignored. The response then has no `colorScale`, and every `colorValue` is `null`. Every dot is a pie when all terms of one axis are gene variant terms and all terms of the other axis are of another type (`isPieOnly()` in `shared/utils/src/aggregateMatrix.ts`). If an axis has both kinds of term, some dots are not pies, so the request still needs a gradient method and the response has a color scale. The client then shows no color scale, color controls or color value in the tooltip for a chart of only pies.
 
-These two are expected to change.
+The pie size not following the size method is expected to change.
 
 ## Implementation
 

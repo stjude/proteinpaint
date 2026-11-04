@@ -88,6 +88,8 @@ export type AggMatrixViewData = {
 	dotPositions: AggMatrixDotPosition[]
 	/** Slices of every pie, in order of first appearance. Empty when there are no pies. */
 	pieLegend: { title: string; entries: PieLegendEntry[] }
+	/** False when every dot is a pie, as a gradient is never applied to a pie. Then there is no color scale. */
+	hasColorScale: boolean
 	colorScale: {
 		scale: (value: number) => string | number
 		absMin: number

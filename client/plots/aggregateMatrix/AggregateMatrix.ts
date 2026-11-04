@@ -7,7 +7,7 @@ import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
 import { Menu, formatHeaderText } from '#dom'
-import { hasPieAxes, validateAggMatrixAxes } from '#shared/aggregateMatrix.js'
+import { hasPieAxes, isPieOnly, validateAggMatrixAxes } from '#shared/aggregateMatrix.js'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -124,6 +124,8 @@ export function validatePlotConfig(config: any) {
 	if (typeof settings.sizeMethod != 'string' || !settings.sizeMethod) {
 		throw new Error(`Invalid aggregate method for dot size`)
 	}
+	// a gradient is never applied to a pie, so only a chart with a dot that is not a pie needs a method for it
+	if (isPieOnly(config.rows, config.columns)) return
 	if (typeof settings.gradientMethod != 'string' || !settings.gradientMethod) {
 		throw new Error(`Invalid aggregate method for color gradient`)
 	}

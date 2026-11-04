@@ -3,6 +3,7 @@ import { validTermdbAggregateMatrixRequest } from '../AggMatrixRoute.ts'
 
 /* test sections
 	- Should validate standard data requests
+	- Should not need a gradient method when every dot is a pie
 	- Should validate available method requests
 	- Should validate cell type terms
 */
@@ -16,6 +17,9 @@ const base = {
 	gradientMethod: 'percent',
 	sizeMethod: 'count'
 }
+
+/** Not a chart of pies, so a gradient method is needed */
+const heatmap = { ...base, rows: { Genes: [tw('geneExpression', 'TP53')] } }
 
 function message(input: any) {
 	try {
@@ -36,7 +40,8 @@ tape('\n', test => {
 
 tape('Should validate standard data requests', test => {
 	test.equal(message(base), undefined, 'should accept geneVariant rows x categorical columns')
-	const request = validTermdbAggregateMatrixRequest({ ...base, extra: 'ignored' }) as any
+	test.equal(message(heatmap), undefined, 'should accept geneExpression rows x categorical columns')
+	const request = validTermdbAggregateMatrixRequest({ ...heatmap, extra: 'ignored' }) as any
 	test.deepEqual(
 		Object.keys(request).sort(),
 		['columns', 'dslabel', 'filter', 'filter0', 'genome', 'gradientMethod', 'rows', 'sizeMethod'],
@@ -54,11 +59,11 @@ tape('Should validate standard data requests', test => {
 		'should reject unsupported term types'
 	)
 	test.ok(
-		/must be different/.test(message({ ...base, gradientMethod: 'percent', sizeMethod: 'percent' })!),
+		/must be different/.test(message({ ...heatmap, gradientMethod: 'percent', sizeMethod: 'percent' })!),
 		'should reject identical methods'
 	)
 	test.ok(
-		/invalid \.gradientMethod/.test(message({ ...base, gradientMethod: '' })!),
+		/invalid \.gradientMethod/.test(message({ ...heatmap, gradientMethod: '' })!),
 		'should reject a missing gradient method'
 	)
 	test.ok(
@@ -66,6 +71,37 @@ tape('Should validate standard data requests', test => {
 		'should reject a missing size method'
 	)
 	test.ok(/genome/.test(message({ ...base, genome: undefined })!), 'should reject a missing genome')
+	test.end()
+})
+
+tape('Should not need a gradient method when every dot is a pie', test => {
+	const { ...noGradient } = base
+	test.equal(message(noGradient), undefined, 'should accept pies without a gradient method')
+	test.equal(message({ ...base, gradientMethod: '' }), undefined, 'should ignore an empty gradient method of pies')
+	test.equal(
+		message({ ...base, gradientMethod: 'count', sizeMethod: 'count' }),
+		undefined,
+		'should not compare the gradient method of pies with the size method'
+	)
+	test.notOk(
+		'gradientMethod' in (validTermdbAggregateMatrixRequest(base) as any),
+		'should not pass a gradient method of pies on'
+	)
+	test.equal(
+		message({ ...noGradient, columns: { Sex: [tw('categorical', 'sex')], Age: [tw('geneVariant', 'TP53')] } }) !==
+			undefined,
+		true,
+		'should still need a gradient method when an axis has both gene variant and other terms'
+	)
+	test.equal(
+		message({ ...noGradient, rows: { Genes: [tw('geneVariant', 'KRAS'), tw('categorical', 'sex')] } }) !== undefined,
+		true,
+		'should still need a gradient method when some dots are not pies'
+	)
+	test.ok(
+		/invalid \.sizeMethod/.test(message({ ...noGradient, sizeMethod: undefined })!),
+		'should still need a size method'
+	)
 	test.end()
 })
 

@@ -1,27 +1,34 @@
-import type { AggregateMatrix } from "../AggregateMatrix"
+import type { AggregateMatrix } from '../AggregateMatrix'
 import { controlsInit } from '#plots/controls.js'
 import { validateMinMax } from '../settings/defaults.ts'
 import { capitalizeFirstLetter, DownloadMenu } from '#dom'
-
+import { isPieOnly } from '#shared/aggregateMatrix.js'
 
 export async function setControls(controlsDiv, ag: AggregateMatrix, initConfig: any) {
 	const settings = initConfig.settings.aggregateMatrix
 	const chartType = initConfig.chartType
 	const gradientLabel = capitalizeFirstLetter(settings.gradientMethod)
 
+	// a gradient is never applied to a pie, so a chart of only pies has no colors to set
+	const colorInputs = isPieOnly(initConfig.rows, initConfig.columns)
+		? []
+		: [
+				{
+					label: `${gradientLabel} start color`,
+					type: 'color',
+					chartType,
+					settingsKey: 'startColor'
+				},
+				{
+					label: `${gradientLabel} stop color`,
+					type: 'color',
+					chartType,
+					settingsKey: 'stopColor'
+				}
+		  ]
+
 	const inputs: any = [
-		{
-				label: `${gradientLabel} start color`,
-				type: 'color',
-				chartType,
-				settingsKey: 'startColor'
-		},
-		{
-				label: `${gradientLabel} stop color`,
-				type: 'color',
-				chartType,
-				settingsKey: 'stopColor'
-		},
+		...colorInputs,
 		{
 			label: 'Min dot size',
 			title: 'Set the minimum dot size. Number must be between 2 and 35',

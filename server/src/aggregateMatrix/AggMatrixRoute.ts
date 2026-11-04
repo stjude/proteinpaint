@@ -8,7 +8,7 @@ import {
 } from '#types'
 import { validGenomeDs } from '#routes/common.ts'
 import { getAggMatrixData, type AggregateMatrixDataRequest } from './getAggMatrixData.ts'
-import { validateAggMatrixAxis, validateAggMatrixAxes } from '#shared/aggregateMatrix.js'
+import { validateAggMatrixAxis, validateAggMatrixAxes, isPieOnly } from '#shared/aggregateMatrix.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -37,13 +37,17 @@ export function validTermdbAggregateMatrixRequest(input) {
 		}
 	}
 	validateAggMatrixAxes(input.rows, input.columns)
-	if (input.gradientMethod === input.sizeMethod) throw `.gradientMethod and .sizeMethod must be different`
-	if (typeof input.gradientMethod != 'string' || !input.gradientMethod) throw `invalid .gradientMethod`
+	// a gradient is never applied to a pie, so it is only needed when a dot is not a pie
+	const needsGradient = !isPieOnly(input.rows, input.columns)
+	if (needsGradient && input.gradientMethod === input.sizeMethod)
+		throw `.gradientMethod and .sizeMethod must be different`
+	if (needsGradient && (typeof input.gradientMethod != 'string' || !input.gradientMethod))
+		throw `invalid .gradientMethod`
 	if (typeof input.sizeMethod != 'string' || !input.sizeMethod) throw `invalid .sizeMethod`
 
 	return {
 		...validGenomeDs(input),
-		gradientMethod: input.gradientMethod,
+		...(needsGradient && { gradientMethod: input.gradientMethod }),
 		sizeMethod: input.sizeMethod,
 		rows: input.rows,
 		columns: input.columns,
@@ -75,7 +79,8 @@ function init({ genomes }) {
 				return
 			}
 			const methodIds = new Set(availableMethods.map((method: { id: string }) => method.id))
-			if (!methodIds.has(q.gradientMethod)) throw new Error(`invalid .gradientMethod: ${q.gradientMethod}`)
+			if (q.gradientMethod !== undefined && !methodIds.has(q.gradientMethod))
+				throw new Error(`invalid .gradientMethod: ${q.gradientMethod}`)
 			if (!methodIds.has(q.sizeMethod)) throw new Error(`invalid .sizeMethod: ${q.sizeMethod}`)
 
 			result = await getAggMatrixData(q as AggregateMatrixDataRequest, ds)

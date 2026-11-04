@@ -268,7 +268,8 @@ tape('geneVariant terms only match samples with a variant', async test => {
 tape('pies are returned only when a geneVariant term is on an axis', async test => {
 	test.timeoutAfter(60000)
 	/* The pie of a dot counts every sample of the dot that has a value for the geneVariant term, wildtype and
-	not tested samples included, so n is at least the count of samples with a variant (sizeValue) */
+	not tested samples included, so n is at least the count of samples with a variant (sizeValue). Wildtype and not
+	tested count once per sample, and every variant counts once. */
 	const checkPies = (res, name: string) => {
 		test.notOk(res.error, `${name}: should not return an error`)
 		const cells = res.data?.flat() || []
@@ -285,9 +286,18 @@ tape('pies are returned only when a geneVariant term is on an axis', async test 
 			`${name}: should give the largest pie a radius of 1`
 		)
 		for (const cell of withPie) {
-			const { n, radius, slices } = cell.pie
+			const { n, radius, slices, variantSamples } = cell.pie
 			const label = `${name} ${cell.row}/${cell.column}`
 			test.ok(n >= cell.sizeValue, `${label}: n should include at least the samples with a variant`)
+			test.equal(
+				variantSamples,
+				cell.sizeValue,
+				`${label}: should count the samples with a variant as the count method does`
+			)
+			test.ok(
+				slices.filter(s => s.key == 'WT' || s.key == 'Blank').every(s => s.count <= n),
+				`${label}: wildtype and not tested should count at most once for each sample`
+			)
 			test.ok(radius > 0 && radius <= 1, `${label}: radius should be relative to the largest pie`)
 			test.ok(slices.length > 0, `${label}: should have slices`)
 			test.ok(
@@ -333,6 +343,16 @@ tape('pies are returned only when a geneVariant term is on an axis', async test 
 	const methods = { gradientMethod: 'percent', sizeMethod: 'count' }
 	checkPies(await post({ rows: kinds[4].axis, columns: kinds[0].axis, ...methods }), 'geneVariant rows')
 	checkPies(await post({ rows: kinds[0].axis, columns: kinds[4].axis, ...methods }), 'geneVariant columns')
+
+	// a gradient is never applied to a pie, so a chart of only pies needs no gradient method and has no color scale
+	const { ...sizeOnly } = methods
+	const noGradient = await post({ rows: kinds[4].axis, columns: kinds[0].axis, ...sizeOnly })
+	checkPies(noGradient, 'geneVariant rows without a gradient method')
+	test.notOk('colorScale' in noGradient, 'should not return a color scale when every dot is a pie')
+	test.ok(
+		noGradient.data.flat().every(cell => cell.colorValue === null),
+		'should not return color values when every dot is a pie'
+	)
 
 	const res = await post({ rows: kinds[0].axis, columns: kinds[2].axis, gradientMethod: 'mean', sizeMethod: 'percent' })
 	test.notOk(res.error, 'should not return an error without a geneVariant term')
