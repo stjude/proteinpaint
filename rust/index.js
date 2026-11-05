@@ -9,9 +9,10 @@ Arguments:
 Input data is streamed into the standard input of the rust binary.
 Standard output of the rust binary is returned.
 
-When the node permission model does not allow a child process, such as in an image without the rust binaries, a binary
-that has a wasm32-wasip1 module, see wasm/Cargo.toml, is run in this process instead, as it also is with USE_WASM=1,
-such as for a dev server that tests the features of an image without the rust binaries. It is instantiated with only
+A binary that has a wasm32-wasip1 module, see wasm/Cargo.toml, always runs that module in this process, so that it runs
+the same way in a dev, test or prod server, whether or not a child process is allowed. Any other binary is spawned,
+unless the node permission model does not allow a child process, such as in an image without the rust binaries, where
+it fails with a neutral error. A module is instantiated with only
 the WASI functions in wasiImports(), not node:wasi, so that no --allow-wasi permission is needed: its stdin, stdout
 and stderr are in memory, and it has no other file, no env vars, no args, no network, and cannot start a process. A
 module that imports any other function does not instantiate. A module runs synchronously, and blocks the event loop
@@ -26,23 +27,28 @@ import { Readable } from 'stream'
 
 const __dirname = import.meta.dirname // set __dirname for consistency with cjs code
 
-// A child process is allowed without the permission model. USE_WASM=1 runs the wasm modules even when a child process
-// is allowed, such as in a dev server, to test the features of an image without the rust binaries; it can only turn
-// the wasm modules on, and never allows a child process that the permission model denies.
-const useWasm = process.env.USE_WASM === '1' || (process.permission ? !process.permission.has('child') : false)
+// a child process is allowed without the permission model
+const canSpawn = process.permission ? process.permission.has('child') : true
 
-// Check if rust binary directory, or else the wasm module directory, exists and is not empty. The rust binaries are
-// optional, so that a missing one does not stop the server: a run_rust() call of it fails with the spawn error, or the
-// missing wasm module error, instead.
+// Check if the wasm module directory, and the rust binary directory when a child process is allowed, exist and are not
+// empty. Both are optional, so that a missing one does not stop the server: without the wasm modules, the binaries that
+// have one are spawned instead, and a run_rust() call of a missing binary fails with the spawn error, or the missing
+// wasm module error.
 const binaryDir = path.join(__dirname, '/target/release/')
 const wasmDir = path.join(__dirname, '/target/wasm/wasm32-wasip1/release/')
 {
-	const dir = useWasm ? wasmDir : binaryDir
-	if (!fs.existsSync(dir) || !fs.readdirSync(dir).length)
+	const isEmpty = dir => !fs.existsSync(dir) || !fs.readdirSync(dir).length
+	if (isEmpty(wasmDir))
 		console.warn(
-			`WARNING: missing or empty rust ${
-				useWasm ? 'wasm module' : 'binary'
-			} directory='${dir}', requests that need rust will fail`
+			`WARNING: missing or empty rust wasm module directory='${wasmDir}', ${
+				canSpawn
+					? 'the rust binaries are spawned instead, see `npm run build:wasm -w rust`'
+					: 'requests that need rust will fail'
+			}`
+		)
+	if (canSpawn && isEmpty(binaryDir))
+		console.warn(
+			`WARNING: missing or empty rust binary directory='${binaryDir}', requests that need a rust binary without a wasm module will fail`
 		)
 }
 
@@ -50,7 +56,7 @@ const wasmDir = path.join(__dirname, '/target/wasm/wasm32-wasip1/release/')
 const binaryName = /^[A-Za-z0-9_][A-Za-z0-9_-]*$/
 
 export function run_rust(binfile, input_data, args = [], { signal } = {}) {
-	if (useWasm) return run_wasm(binfile, input_data, args, { signal })
+	if (!canSpawn || hasWasmModule(binfile)) return run_wasm(binfile, input_data, args, { signal })
 	return new Promise((resolve, reject) => {
 		const binpath = path.join(__dirname, '/target/release/', binfile)
 
@@ -134,6 +140,12 @@ function getOutput(binfile, code, stdout, stderr, stdinError) {
 // the compiled wasm module of each binary, by name
 const wasmModules = new Map()
 
+// true when a binary has a wasm module; the name is checked first, so that it cannot be a path outside wasmDir
+function hasWasmModule(binfile) {
+	if (typeof binfile != 'string' || !binaryName.test(binfile)) return false
+	return wasmModules.has(binfile) || fs.existsSync(path.join(wasmDir, binfile + '.wasm'))
+}
+
 // runs the wasm module of a binary in this process, with its stdin, stdout and stderr in memory, so that no file is
 // written, such as when the node permission model allows no write path
 async function run_wasm(binfile, input_data, args, { signal } = {}) {
@@ -143,7 +155,9 @@ async function run_wasm(binfile, input_data, args, { signal } = {}) {
 	if (!wasmModules.has(binfile)) {
 		if (!fs.existsSync(modpath)) {
 			// the details are only logged, and the response has a neutral error
-			console.warn(`run_rust('${binfile}'): no wasm module, and the rust binaries are not used, see useWasm`)
+			console.warn(
+				`run_rust('${binfile}'): no wasm module, and the node permission model does not allow a child process`
+			)
 			throw 'this server build does not support this data computation request'
 		}
 		const compiled = WebAssembly.compile(fs.readFileSync(modpath))
