@@ -290,6 +290,15 @@ tape('scale bar repositions on a layout shift that fires neither scroll nor resi
 			const dom = wsi.Inner.dom
 			await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
 			const [bar] = await waitForSelector(document.body, '.sjpp-wsi-scalebar')
+			// when all specs are run in one page, the map is below the earlier specs and the bar is hidden; scroll the
+			// map to the top, with room below it for the shift, and without scroll anchoring, which could undo the shift
+			document.body.style.paddingBottom = '100vh'
+			document.documentElement.style.overflowAnchor = 'none'
+			dom.viewer.node().scrollIntoView({ block: 'start' })
+			await waitForCondition(
+				() => (bar as HTMLElement).style.display == 'block',
+				'scale bar is shown once the map is scrolled into view'
+			)
 			const rectBefore = (bar as HTMLElement).getBoundingClientRect()
 
 			// body-level padding, not a sibling inserted next to the viewer: it
@@ -319,6 +328,8 @@ tape('scale bar repositions on a layout shift that fires neither scroll nor resi
 			test.fail(`scale bar layout-shift test error: ${e}`) // never leave tape hanging
 		} finally {
 			document.body.style.paddingTop = '' // never leave the page's own layout mutated on failure either
+			document.body.style.paddingBottom = ''
+			document.documentElement.style.overflowAnchor = ''
 		}
 		test.end()
 	}
