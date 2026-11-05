@@ -83,7 +83,7 @@ export function getAggMatrixTermId(term: any): string | undefined {
 	if (id) return String(id)
 	if (!Array.isArray(term?.genes) || !term.genes.length) return
 	const ids = term.genes.map(getGeneEntryId)
-	if (ids.some(id => !id)) return
+	if (ids.some((id: string) => !id)) return
 	return ids.join(',')
 }
 

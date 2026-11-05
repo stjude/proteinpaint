@@ -1,6 +1,6 @@
 import type { AggregateMatrix } from '../AggregateMatrix'
 import { controlsInit } from '#plots/controls.js'
-import { validateMinMax } from '../settings/defaults.ts'
+import { validateMinMaxDotSetting } from '../settings/defaults.ts'
 import { capitalizeFirstLetter, DownloadMenu } from '#dom'
 import { isPieOnly } from '#shared/aggregateMatrix.js'
 
@@ -42,7 +42,7 @@ export async function setControls(controlsDiv, ag: AggregateMatrix, initConfig: 
 			debounceInterval: 300,
 			processInput: (val: number) => {
 				const currentSettings = ag.state.config.settings.aggregateMatrix
-				const isValid = validateMinMax(currentSettings, val, currentSettings.maxDotSize)
+				const isValid = validateMinMaxDotSetting(currentSettings, val, currentSettings.maxDotSize)
 				if (isValid !== null) {
 					alert(isValid)
 					return currentSettings.minDotSize
@@ -63,7 +63,7 @@ export async function setControls(controlsDiv, ag: AggregateMatrix, initConfig: 
 			debounceInterval: 300,
 			processInput: (val: number) => {
 				const currentSettings = ag.state.config.settings.aggregateMatrix
-				const isValid = validateMinMax(currentSettings, currentSettings.minDotSize, val)
+				const isValid = validateMinMaxDotSetting(currentSettings, currentSettings.minDotSize, val)
 				if (isValid !== null) {
 					alert(isValid)
 					return currentSettings.maxDotSize

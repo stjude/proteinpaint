@@ -1,10 +1,9 @@
 import type { AggregateMatrixSettings } from './Settings.ts'
 
-/** Pies are larger than dots, so the sizes of a pie chart default to a different range. Overrides still win. */
 const pieSizeDefaults = {
-	minDotSize: 40,
-	maxDotSize: 100,
-	dotInputMin: 20,
+	minDotSize: 30,
+	maxDotSize: 60,
+	dotInputMin: 10,
 	dotInputMax: 300
 }
 
@@ -22,7 +21,7 @@ export function getAggregateMatrixSettings(overrides = {}, isPieChart = false): 
 	}
 
 	const mergedSettings = Object.assign({}, defaults, overrides)
-	const isValidMinMax = validateMinMax(mergedSettings, mergedSettings.minDotSize, mergedSettings.maxDotSize)
+	const isValidMinMax = validateMinMaxDotSetting(mergedSettings, mergedSettings.minDotSize, mergedSettings.maxDotSize)
 	if (isValidMinMax !== null) {
 		throw new Error(`Invalid min/max dot size settings: ${isValidMinMax}`)
 	}
@@ -30,7 +29,7 @@ export function getAggregateMatrixSettings(overrides = {}, isPieChart = false): 
 	return mergedSettings
 }
 
-export function validateMinMax(settings: AggregateMatrixSettings, min, max): string | null {
+export function validateMinMaxDotSetting(settings: AggregateMatrixSettings, min, max): string | null {
 	if (min < settings.dotInputMin) {
 		return `Minimum dot size must be greater than or equal to ${settings.dotInputMin}`
 	}

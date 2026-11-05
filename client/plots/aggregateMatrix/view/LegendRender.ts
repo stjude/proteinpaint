@@ -2,7 +2,7 @@ import type { AggregateMatrix } from '../AggregateMatrix.ts'
 import type { AggMatrixViewData } from '../viewModel/ViewModelDataTypes.ts'
 import { ColorScale, DotSizeScale, LegendItemMenu, capitalizeFirstLetter } from '#dom'
 import { rgb } from 'd3-color'
-import { validateMinMax } from '../settings/defaults.ts'
+import { validateMinMaxDotSetting } from '../settings/defaults.ts'
 
 export class LegendRender {
 	ag: AggregateMatrix
@@ -125,12 +125,12 @@ export class LegendRender {
 			maxRadius: settings.maxDotSize,
 			minRadius: settings.minDotSize,
 			isAscending: true,
-			title: `${capitalizeFirstLetter(settings.sizeMethod)} size`,
+			title: `${capitalizeFirstLetter(settings.sizeMethod)} size (in pixels)`,
 			menu: {
 				minMaxLabel: 'pixels',
 				callback: async (obj: { min: number; max: number }) => {
 					const { min, max } = obj
-					const isValid = validateMinMax(settings, min, max)
+					const isValid = validateMinMaxDotSetting(settings, min, max)
 					if (isValid !== null) {
 						alert(isValid)
 						return
