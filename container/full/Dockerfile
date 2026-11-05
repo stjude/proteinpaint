@@ -26,15 +26,20 @@ COPY ./full/package.json  ./
 RUN npm install --omit=dev --cache=/tmp/npm-cache && rm -rf /tmp/npm-cache && \
     find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
     find . ! -type l -perm /022 -exec chmod go-w {} +
-# The rust postinstall does not fail the npm install when it cannot download or compile the binaries, or download the
-# wasm modules, such as from a draft GitHub release, so fail the build here instead of at server startup. Without the
-# wasm modules, run_rust() would spawn the binaries instead, which a dev or test server with the modules would not.
+# The rust postinstall does not fail the npm install when it cannot download or compile the binaries, or download or
+# extract the wasm modules, such as from a draft GitHub release, so fail the build here instead of at server startup.
+# Without the wasm modules, run_rust() would spawn the binaries instead, which a dev or test server with the modules
+# would not, and it runs a module that is present but not valid, such as from a failed extraction, which then fails
+# each request of that binary, so each module must also be a valid wasm module.
 RUN if [ -z "$(ls node_modules/@sjcrh/proteinpaint-rust/target/release 2>/dev/null)" ]; then \
       echo "ERROR: missing the rust binaries in node_modules/@sjcrh/proteinpaint-rust/target/release"; exit 1; \
     fi && \
     if ! ls node_modules/@sjcrh/proteinpaint-rust/target/wasm/*.wasm > /dev/null 2>&1; then \
       echo "ERROR: missing the rust wasm modules in node_modules/@sjcrh/proteinpaint-rust/target/wasm"; exit 1; \
-    fi
+    fi && \
+    node -e "const fs = require('fs'), dir = 'node_modules/@sjcrh/proteinpaint-rust/target/wasm/'; \
+      const invalid = fs.readdirSync(dir).filter(f => f.endsWith('.wasm') && !WebAssembly.validate(fs.readFileSync(dir + f))); \
+      if (invalid.length) { console.error('ERROR: invalid rust wasm modules in ' + dir + ': ' + invalid.join(', ')); process.exit(1) }"
 
 #########################
 # Full app update
