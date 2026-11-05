@@ -9,6 +9,10 @@
 #   BINDGEN_EXTRA_CLANG_ARGS_wasm32_wasip1="--target=wasm32-wasip1 --sysroot=/usr -fvisibility=default" \
 #   cargo build --locked --release --target wasm32-wasip1
 #
+# Or, with only docker on the host, such as for a dev server that is started with USE_WASM=1, see ../index.js:
+#
+# npm run build:wasm -w rust
+#
 # -fvisibility=default is needed since clang hides the functions of a wasm target by default, which bindgen skips.
 # The macOS ar writes an archive index that the wasm linker cannot read, so a module would import the C functions,
 # such as pwilcox, instead of including them, and fail to instantiate: use llvm-ar, such as from `brew install llvm`.
