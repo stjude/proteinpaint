@@ -10,6 +10,7 @@
 	"scripts": {
 		"dev": "cargo build --release",
 		"build": "cargo build --release",
+		"build:wasm": "./buildWasm.sh",
 		"postinstall": "if [ ! -d ./test ] & [ ! -d ./target/release ]; then node ./downloadBinariesOrCompileSource.js; fi",
 		"test": "tape **/test/*.spec.js",
 		"test:unit": "tape **/test/*.unit.spec.js",
