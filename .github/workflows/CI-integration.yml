@@ -82,6 +82,13 @@ jobs:
           name: rust-binaries
           path: rust-binaries
 
+      # for pack.sh to include in the rust tarball, see RUST_WASM_DIR
+      - name: Download Rust wasm modules
+        uses: actions/download-artifact@v8
+        with:
+          name: rust-wasm
+          path: rust-wasm
+
       - name: Run integration tests
         uses: ./.github/actions/run-integration-tests
         with:

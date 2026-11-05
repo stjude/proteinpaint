@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Builds the rust wasm modules of wasm/Cargo.toml in a container, so that no wasm toolchain, such as llvm-ar and a WASI
-# libc, is needed on the host. The modules are written to target/wasm/wasm32-wasip1/release, where run_rust() in
-# index.js finds them, and then runs a module instead of spawning its binary. A wasm module does not depend on the
+# libc, is needed on the host. wasm/build.sh writes the modules to target/wasm, where run_rust() in index.js finds them,
+# and then runs a module instead of spawning its binary. A wasm module does not depend on the
 # platform that builds it.
 #
 # Usage, from any dir: ./rust/buildWasm.sh
@@ -23,8 +23,9 @@ if [[ "$CA_FILE" != "" ]]; then
 fi
 
 # - the crate registry and the cargo target dir are kept in named volumes, so that a rebuild does not download or
-#   compile the crates again; the target dir is not ../target/wasm, so that it is not mixed with a host build
-# - only the modules are copied to target/wasm, and given to the host user, since the container runs as root
+#   compile the crates again, and it is not target/wasm-build, so that it is not mixed with a host build
+# - wasm/build.sh copies only the modules to target/wasm, which are given to the host user, since the container runs
+#   as root
 docker run --rm \
 	--mount "type=bind,source=$RUSTDIR,target=/build/rust" \
 	--mount "type=volume,source=pp-rust-wasm-registry,target=/usr/local/cargo/registry" \
@@ -39,13 +40,7 @@ docker run --rm \
 			cp /extra_ca_certs.pem /usr/local/share/ca-certificates/extra_ca_certs.crt && update-ca-certificates > /dev/null
 		fi
 		rustup target add wasm32-wasip1
-		# -fvisibility=default, since clang hides the functions of a wasm target by default, which bindgen then skips
-		AR_wasm32_wasip1=llvm-ar CC_wasm32_wasip1=clang \
-		BINDGEN_EXTRA_CLANG_ARGS_wasm32_wasip1="--target=wasm32-wasip1 --sysroot=/usr -fvisibility=default" \
-			cargo build --locked --release --target wasm32-wasip1 --target-dir /build/target
-		out=../target/wasm/wasm32-wasip1/release
-		mkdir -p $out
-		cp /build/target/wasm32-wasip1/release/*.wasm $out/
+		CARGO_TARGET_DIR=/build/target ./build.sh > /dev/null
 		chown -R "$HOST_UID:$HOST_GID" ../target/wasm'
 
-ls "$RUSTDIR/target/wasm/wasm32-wasip1/release/"*.wasm
+ls "$RUSTDIR/target/wasm/"*.wasm

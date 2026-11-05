@@ -14,33 +14,67 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.jso
 const { version } = packageJson
 const pp_release_tag = `v${version}`
 const targetDirectory = './target/release'
+// the wasm modules, which run_rust() runs instead of spawning their binaries, see index.js
+const wasmDirectory = './target/wasm'
 
 function downloadBinary(url, outputPath) {
-	const file = fs.createWriteStream(outputPath)
+	download(
+		url,
+		outputPath,
+		() => {
+			console.log('Pre-compiled binaries download completed.')
+			extractAndClean(outputPath)
+		},
+		message => {
+			console.error(`${message} Compiling from source...`)
+			compileFromSource()
+		}
+	)
+}
+
+// The wasm modules do not depend on the platform, so they are downloaded on any architecture. Without them, such as
+// for a release from before the rust-wasm asset, run_rust() spawns the binaries instead.
+function downloadWasm(url, outputPath) {
+	download(
+		url,
+		outputPath,
+		() => {
+			fs.mkdirSync(wasmDirectory, { recursive: true })
+			tar
+				.x({ file: outputPath, cwd: wasmDirectory })
+				.then(() => console.log('Rust wasm modules download and extraction completed.'))
+				.catch(err => console.error('Error during the wasm modules extraction:', err))
+				.finally(() => fs.rm(outputPath, { force: true }, () => {}))
+		},
+		message => console.warn(`${message} The rust binaries are spawned instead of the wasm modules.`)
+	)
+}
+
+// downloads a file, following redirects; calls onFail with a message when the download fails
+function download(url, outputPath, onDone, onFail) {
 	https
 		.get(url, function (response) {
 			if (response.statusCode >= 200 && response.statusCode <= 299) {
+				const file = fs.createWriteStream(outputPath)
 				response.pipe(file)
 				file.on('finish', function () {
 					file.close()
-					console.log('Pre-compiled binaries download completed.')
-					extractAndClean(outputPath)
+					onDone()
 				})
 			} else if (response.statusCode >= 300 && response.statusCode <= 399) {
+				response.resume()
 				if (response.headers.location) {
-					downloadBinary(response.headers.location, outputPath)
+					download(response.headers.location, outputPath, onDone, onFail)
 				} else {
-					console.error('Redirection without location header encountered.')
-					compileFromSource()
+					onFail(`Redirection without location header encountered for ${url}.`)
 				}
 			} else {
-				console.error('Failed to download the binary. Compiling from source...')
-				compileFromSource()
+				response.resume()
+				onFail(`Failed to download ${url}, status ${response.statusCode}.`)
 			}
 		})
 		.on('error', function (err) {
-			console.error('Error downloading the file:', err.message)
-			compileFromSource()
+			onFail(`Error downloading ${url}: ${err.message}.`)
 		})
 }
 
@@ -109,6 +143,11 @@ function makeBinariesExecutable() {
 		console.log(`Set executable permissions for all files in ${fullPath}`)
 	})
 }
+
+downloadWasm(
+	`https://github.com/stjude/proteinpaint/releases/download/${pp_release_tag}/rust-wasm-${version}.tar.gz`,
+	path.join(__dirname, 'wasm.tar.gz')
+)
 
 const architecture = os.arch()
 let binaryUrl = ''

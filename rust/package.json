@@ -30,6 +30,8 @@
 		"wasm/Cargo.toml",
 		"wasm/Cargo.lock",
 		"wasm/.cargo/config.toml",
+		"wasm/build.sh",
+		"target/wasm/*.wasm",
 		"downloadBinariesOrCompileSource.js",
 		"LICENSE/*"
 	],
