@@ -16,7 +16,7 @@ import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import serverconfig from './serverconfig.js'
 import { filterTerms } from './termdb.server.init.ts'
 import { get_matrix } from './termdb.get_matrix.js'
-import { maySetMapParent2Children } from './termdb.matrix.js'
+import { resolveSampleMapping } from './termdb.matrix.js'
 /*
 ********************** EXPORTED
 handle_request_closure
@@ -159,8 +159,8 @@ async function getSampleCount(q, ds) {
 // auth: defaults to the shared authApi, and is injectable so that unit tests can use a protected auth api
 export async function getSampleList(req, q, ds, auth = authApi) {
 	const canDisplay = auth.canDisplaySampleIds(req, ds)
-	// calling maySetMapParent2Children() to get query sample types
-	maySetMapParent2Children(q, ds, q.mapParent2Children)
+	// calling resolveSampleMapping() to get query sample types
+	resolveSampleMapping(q, ds)
 	let samples
 	if (ds.cohort?.db) {
 		// dataset is sqlite-based

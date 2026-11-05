@@ -411,8 +411,7 @@ function makeSampleTerm(tw: any, id: string) {
 async function queryData(terms: any[], q: AggregateMatrixDataRequest, ds: any): Promise<ValidGetDataResponse> {
 	const response = await getData(
 		{ terms, filter: q.filter, filter0: q.filter0, __protected__: (q as any).__protected__ },
-		ds,
-		false
+		ds
 	)
 	if ('error' in response) throw new Error(response.error)
 	return response

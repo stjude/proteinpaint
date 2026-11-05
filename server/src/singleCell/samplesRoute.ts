@@ -26,7 +26,7 @@ import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
 import { hasSingleCellDs } from './dataRoute.ts'
 import { SINGLECELL_CELLTYPE, SINGLECELL_NUMERIC_VALUE } from '#types'
 import { mayLimitSamples } from '#src/mds3.filter.js'
-import { maySetMapParent2Children } from '#src/termdb.matrix.js'
+import { resolveSampleMapping } from '#src/termdb.matrix.js'
 import { SingleCellMetaCache } from './SingleCellMetaCache.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { validatePseudobulk } from './validatePseudobulk.ts'
@@ -324,11 +324,11 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 		includeMeta = false
 	): Promise<Set<string>> => {
 		if (!_q.filter && !_q.filter0) return new Set()
-		const arg = { filter: _q.filter, filter0: _q.filter0 }
+		const arg = { filter: _q.filter, filter0: _q.filter0, sampleMapping: 'parentToChildren' }
 		// assuming single cell data is at sample level, so
-		// setting mapParent2Children=true here to be able to
+		// setting sampleMapping=parentToChildren here to be able to
 		// map patient-level data onto the single cell data
-		maySetMapParent2Children(arg, ds, true)
+		resolveSampleMapping(arg, ds)
 		const filteredSampleIds = (await mayLimitSamples(arg, Array.from(metaCache.sampleIntIds), ds)) || new Set()
 
 		// Convert cohort sample IDs to sample names

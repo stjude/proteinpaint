@@ -203,7 +203,7 @@ tape('dnaMethylation numeric filter hands the term and the request sample types 
 				lst: [{ type: 'tvs', tvs: { term, ranges: [{ start: 0.5, startinclusive: true, stopunbounded: true }] } }]
 			},
 			tdb.ds,
-			true,
+			'parentToChildren',
 			sampleTypes
 		)
 	const region = { type: 'dnaMethylation', chr: 'chr17', start: 100, stop: 200, genomicFeatureType: 'region' }
@@ -214,7 +214,7 @@ tape('dnaMethylation numeric filter hands the term and the request sample types 
 	test.deepEqual(filter.filters.values, ['2'], 'selects samples whose methylation is in range')
 	test.deepEqual(params[0].terms[0].term, term, 'passes the term with its own sample types')
 	test.deepEqual(params[0].sampleTypes, [2, 3], "passes the request's sample types")
-	test.equal(params[0].mapParent2Children, true, 'passes mapParent2Children')
+	test.equal(params[0].sampleMapping, 'parentToChildren', 'passes sampleMapping')
 	tdb.ds.queries.dnaMethylation = dnaMethylation
 	test.end()
 })

@@ -18,7 +18,7 @@ import { getH5samples } from '../utils/h5samples.ts'
 import serverconfig from '#src/serverconfig.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
-import { getData, id2sampleRef, maySetMapParent2Children } from '#src/termdb.matrix.js'
+import { getData, id2sampleRef, resolveSampleMapping } from '#src/termdb.matrix.js'
 import { termType2label, numericTypes, dictionaryNumericTypes, setQuerySampleTypes } from '#shared/terms.js'
 import { GENE_EXPRESSION, PROTEOME_ABUNDANCE } from '#types'
 import { formatElapsedTime } from '#shared/time.js'
@@ -81,7 +81,7 @@ export function init({ genomes }) {
 				if (tw?.q?.mode && tw.q.mode != 'continuous')
 					throw `clustering requires terms in continuous mode, but '${ttype}' term has q.mode='${tw.q.mode}'`
 			}
-			maySetMapParent2Children(q, ds)
+			resolveSampleMapping(q, ds)
 			result = (await getResult(q, ds)) as TermdbClusterResponse
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)

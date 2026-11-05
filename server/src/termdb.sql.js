@@ -10,7 +10,7 @@ import { isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { authApi } from '#src/auth.js'
 // circular import with termdb.matrix.js (it imports get_samples etc from this file); safe
 // because the binding is only dereferenced at runtime, never during module evaluation
-import { maySetMapParent2Children } from './termdb.matrix.js'
+import { resolveSampleMapping } from './termdb.matrix.js'
 import { sql } from './sql.ts'
 import { parseJsonParam } from './routes/common.ts'
 
@@ -18,13 +18,16 @@ import { parseJsonParam } from './routes/common.ts'
 CTEs of parent-level filter terms must be mapped down to leaf-level samples, otherwise
 intersecting them with child-level CTEs (e.g. a ds access-control filter on a sample-level
 term) matches nothing and silently yields an empty result. detect from the filter contents
-when the caller did not set q.mapParent2Children */
+when the caller did not set q.sampleMapping */
 function mayDetectSampleLevels(q, ds) {
-	if (q.mapParent2Children !== undefined) return
+	if (q.sampleMapping !== undefined) {
+		resolveSampleMapping(q, ds)
+		return
+	}
 	if (!ds.cohort?.termdb?.hasSampleAncestry) return
 	if (!q.filter?.lst?.length) return
 	try {
-		maySetMapParent2Children(q, ds)
+		resolveSampleMapping(q, ds)
 	} catch (e) {
 		// fall back to no mapping (previous behavior) on filters whose sample types cannot be detected
 		console.warn('mayDetectSampleLevels():', e.message || e)
@@ -66,7 +69,10 @@ parent-level filter results down to leaf samples; without this, a filter of only
 parent-level terms would return parent ids that intersect no file name */
 export async function getFilterSampleIdSet(q, ds) {
 	authApi.mayAdjustFilter(q, ds, undefined)
-	if (ds.cohort?.termdb?.hasSampleAncestry) maySetMapParent2Children(q, ds, true)
+	if (ds.cohort?.termdb?.hasSampleAncestry) {
+		q.sampleMapping = 'parentToChildren'
+		resolveSampleMapping(q, ds)
+	}
 	return new Set((await get_samples(q, ds)).map(i => i.id))
 }
 
@@ -100,7 +106,7 @@ export async function get_samples(q, ds, canDisplay = false) {
 	*/
 
 	mayDetectSampleLevels(q, ds)
-	const filter = await getFilterCTEs(q.filter, ds, q.mapParent2Children, q.sampleTypes) // if q.filter is blank, it returns null
+	const filter = await getFilterCTEs(q.filter, ds, q.sampleMapping, q.sampleTypes) // if q.filter is blank, it returns null
 	const query = filter
 		? sql`WITH ${filter.filters} SELECT sample as id, name FROM ${sql.id(
 				filter.CTEname
@@ -169,7 +175,7 @@ export async function get_samplecount(q, ds) {
 
 	const fq = { filter: j }
 	mayDetectSampleLevels(fq, ds)
-	const filter = await getFilterCTEs(j, ds, fq.mapParent2Children, fq.sampleTypes)
+	const filter = await getFilterCTEs(j, ds, fq.sampleMapping, fq.sampleTypes)
 	let statement, row
 	let sample_type
 	//the filters either return a sample type or none as the samples are converted to the common type.
@@ -198,7 +204,7 @@ export async function get_samplecount(q, ds) {
 /* for a ds with a patient-sample hierarchy (ds.cohort.termdb.hasSampleAncestry), describe a set of
 filtered ids at every level of the hierarchy, e.g. "874 patients and 874 primary samples and 8 PDX samples",
 joined like the unfiltered count of getCohortSampleCount() in termdb.server.init.ts.
-filtered ids sit at one level (see maySetMapParent2Children()); counted with them are their
+filtered ids sit at one level (see resolveSampleMapping()); counted with them are their
 ancestors (the patients of matched samples) and their descendants (the samples of matched
 patients), each per sample type, in sample type id order. siblings of a matched sample are not
 counted: a PDX-only filter reports its patients and PDX samples, not the primary samples that did

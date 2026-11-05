@@ -55,7 +55,7 @@ How validation creates its getter:
 - Adds sample-level annotations from `sampleColumns` by term id.
 - Injects `S.get = async (_q) => {...}` that:
 	- returns `samples` list,
-	- applies optional filtering via `getData({ filter, filter0, terms }, ds, true)`,
+	- applies optional filtering via `getData({ filter, filter0, terms, sampleMapping: 'parentToChildren' }, ds)`,
 	- includes `metaResults` if configured.
 
 Important route behavior:

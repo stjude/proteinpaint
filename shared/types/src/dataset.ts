@@ -161,7 +161,7 @@ type DictApi = {
 	/** gets dictionary term data; returns [samples{}, byTermId{}]
 	see getSampleData_dictionaryTerms() of server/src/termdb.matrix.js
 
-	sample hierarchy is signaled on q (q.mapParent2Children, with
+	sample hierarchy is signaled on q (q.sampleMapping, with
 	ds.cohort.termdb.sampleTypes and .term2SampleType), not by an arg here.
 	do not add an onlyChildren arg: that one belongs to barchart_data() of
 	server/src/termdb.barchart.js, and passing it here would land on useCache */
@@ -2948,7 +2948,7 @@ export type Mds3 = BaseMds & {
 	output: validated filter0 obj, or undefined
 	*/
 	validate_filter0?: (f: any) => void
-	getFilter0SampleTypes?: (filter: any, ds: any) => void
+	getFilter0SampleTypesLst?: (filter: any, ds: any) => { sampleTypes?: number[]; childSampleTypes?: number[] }[]
 	/** ds-supplied getter, maps a ssm id to a canonical ENST name */
 	ssm2canonicalisoform?: { get?: (q: any) => any }
 	/** mds3 tk displays presence and occurrence of genomic alterations, but not including samples harboring each alteration

@@ -476,7 +476,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				color: g.color,
 				filter: filterJoin([g.filter, this.state.termfilter.filter]),
 				filter0,
-				mapParent2Children: true // DE/DM data assumed to be at sample-level so map parent samples to child samples
+				sampleMapping: 'parentToChildren' // DE/DM data assumed to be at sample-level so map parent samples to child samples
 			})),
 			groups.map(g => g.name).join(' vs ')
 		)

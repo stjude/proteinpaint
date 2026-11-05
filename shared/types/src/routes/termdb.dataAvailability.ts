@@ -1,3 +1,4 @@
+import type { SampleMapping } from '../termdb.matrix.ts'
 import type { Filter } from '../filter.ts'
 
 /** a sample group: defined by a filter, as the groups of a custom variable and a sunburst selection are,
@@ -8,7 +9,7 @@ export type DataAvailabilityGroup = {
 	/** the samples of the group, when it lists them instead */
 	values?: { sampleId: number | string }[]
 	filter0?: any
-	mapParent2Children?: boolean
+	sampleMapping?: SampleMapping
 }
 
 /** how many samples of each group have each kind of data of the dataset */

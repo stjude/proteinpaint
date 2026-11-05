@@ -358,7 +358,7 @@ tape('groups getSamplelstTWFromFilters()', test => {
 	})
 	const tw: any = getSamplelstTWFromFilters([
 		{ name: mockGrp1Name, color: 'blue', filter: filter('1'), sampleCount: 3 },
-		{ name: mockGrp2Name, color: 'green', filter: filter('2'), mapParent2Children: true }
+		{ name: mockGrp2Name, color: 'green', filter: filter('2'), sampleMapping: 'parentToChildren' }
 	])
 	test.deepEqual(
 		tw,
@@ -375,7 +375,7 @@ tape('groups getSamplelstTWFromFilters()', test => {
 			q: {
 				groups: [
 					{ name: mockGrp1Name, in: true, filter: filter('1'), sampleCount: 3 },
-					{ name: mockGrp2Name, in: true, filter: filter('2'), mapParent2Children: true }
+					{ name: mockGrp2Name, in: true, filter: filter('2'), sampleMapping: 'parentToChildren' }
 				]
 			}
 		},
@@ -408,8 +408,8 @@ tape('groups getGroupForRegion()', test => {
 	const filter = { type: 'tvslst', in: true, join: '', lst: [] }
 	const filter0 = { op: 'and', content: [] }
 	test.deepEqual(
-		getGroupForRegion({ name: 'a', color: 'red', sampleCount: 3, filter, filter0, mapParent2Children: true }),
-		{ filter, filter0, mapParent2Children: true },
+		getGroupForRegion({ name: 'a', color: 'red', sampleCount: 3, filter, filter0, sampleMapping: 'parentToChildren' }),
+		{ filter, filter0, sampleMapping: 'parentToChildren' },
 		'a group defined by a filter is its filter, with its cohort filter and sample level'
 	)
 	test.deepEqual(getGroupForRegion({ name: 'a' }), [], 'a group with neither has no samples')
@@ -439,7 +439,7 @@ tape('groups getOthersGroup()', test => {
 	test.deepEqual(inCohort, cohort, 'the second entry is the filter of the app')
 	test.deepEqual(
 		getGroupForRegion(group),
-		{ filter: group.filter, filter0: null, mapParent2Children: undefined },
+		{ filter: group.filter, filter0: null, sampleMapping: undefined },
 		'a region request takes it as a filter'
 	)
 
@@ -460,15 +460,31 @@ tape('groups getAvailabilityGroups()', test => {
 	})
 	const byFilter = getSamplelstTWFromFilters([
 		{ name: 'a', filter: sex('1'), filter0: null, sampleCount: 3 },
-		{ name: 'b', filter: sex('2'), mapParent2Children: true }
+		{ name: 'b', filter: sex('2'), sampleMapping: 'parentToChildren' }
 	])
 	test.deepEqual(
 		getAvailabilityGroups(byFilter),
 		[
 			{ name: 'a', filter: sex('1'), filter0: null },
-			{ name: 'b', filter: sex('2'), mapParent2Children: true }
+			{ name: 'b', filter: sex('2'), sampleMapping: 'parentToChildren' }
 		],
 		'a group defined by a filter is given as its filter, with its cohort filter and sample level'
+	)
+	for (const sampleMapping of ['parentToChildren', 'childrenToParent']) {
+		const tw = getSamplelstTWFromFilters([{ name: 'mapped', filter: sex('1'), sampleMapping }])
+		test.equal(tw.q.groups[0].sampleMapping, sampleMapping, `${sampleMapping} is preserved in the term wrapper`)
+		test.deepEqual(
+			getAvailabilityGroups(tw),
+			[{ name: 'mapped', filter: sex('1'), sampleMapping }],
+			`${sampleMapping} is preserved in the availability request`
+		)
+	}
+	const unmapped = getSamplelstTWFromFilters([{ name: 'unmapped', filter: sex('1') }])
+	test.notOk('sampleMapping' in unmapped.q.groups[0], 'an unmapped group has no mapping property')
+	test.deepEqual(
+		getAvailabilityGroups(unmapped),
+		[{ name: 'unmapped', filter: sex('1') }],
+		'an unmapped availability request has no mapping property'
 	)
 
 	const listed = getSamplelstTW([{ name: 'a', items: [{ sampleId: 1, sample: 's1' }, { sampleId: 2 }] }])

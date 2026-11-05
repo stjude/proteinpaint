@@ -98,11 +98,16 @@ tape('filter sample types do not widen the sample list', async test => {
 		in: true,
 		lst: [{ type: 'tvs', tvs: { term: sex, values: [{ key: '1' }] } }]
 	}
-	const legit = await post('/termdb', { getsamplelist: 1, filter, mapParent2Children: true, sampleTypes: ['2'] })
+	const legit = await post('/termdb', {
+		getsamplelist: 1,
+		filter,
+		sampleMapping: 'parentToChildren',
+		sampleTypes: ['2']
+	})
 	test.ok(Array.isArray(legit.body) && legit.body.length, `should return a filtered sample list`)
 
 	for (const sampleTypes of [['2', '2) OR (1=1'], ['2) OR (1=1']]) {
-		const res = await post('/termdb', { getsamplelist: 1, filter, mapParent2Children: true, sampleTypes })
+		const res = await post('/termdb', { getsamplelist: 1, filter, sampleMapping: 'parentToChildren', sampleTypes })
 		const label = `sampleTypes=${JSON.stringify(sampleTypes)}`
 		if (Array.isArray(res.body)) {
 			test.ok(

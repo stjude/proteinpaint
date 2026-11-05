@@ -47,7 +47,7 @@ export async function dmrGeneLinkPanel(
 						values: g.values,
 						filter: g.filter,
 						filter0: g.filter0,
-						mapParent2Children: g.mapParent2Children
+						sampleMapping: g.sampleMapping
 					}))
 				},
 				method: de.method,
