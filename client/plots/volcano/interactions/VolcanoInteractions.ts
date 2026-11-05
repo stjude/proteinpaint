@@ -398,7 +398,8 @@ export class VolcanoInteractions {
 	}
 
 	/* Open a genome browser on an intron cluster, with its junctions as a track whose y is the
-	-log10 p of each junction and whose color tells the group with higher PSI.
+	-log10 p of each junction, or |ΔPSI| with leafcutter that has no such p, and whose color tells
+	the group with higher PSI.
 	The junctions come from the cached data, by re-sending the analysis request with the cluster id. */
 	async launchSpliceGenomeBrowser(d: { cluster_id: string; genes?: string; chr: string; start: number; stop: number }) {
 		const data = await dofetch3('termdb/diffSplice', { body: { ...this.daRequest, clusterId: d.cluster_id } })
