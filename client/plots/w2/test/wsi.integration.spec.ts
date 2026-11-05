@@ -208,6 +208,13 @@ tape('scale bar keeps its corner anchored (right/bottom) when zooming changes it
 			const dom = wsi.Inner.dom
 			await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
 			const [bar] = await waitForSelector(document.body, '.sjpp-wsi-scalebar')
+			// the bar is hidden, with no right/bottom set, while the map is scrolled out of view, such as below
+			// the earlier specs when all specs are run in one page; a scroll runs the bar's reposition()
+			dom.viewer.node().scrollIntoView({ block: 'start' })
+			await waitForCondition(
+				() => (bar as HTMLElement).style.display == 'block',
+				'scale bar is shown once the map is scrolled into view'
+			)
 
 			// right/bottom, not left/top: a widening bar (update()'s own
 			// bar.style.width, picked fresh per zoom level) must grow away
