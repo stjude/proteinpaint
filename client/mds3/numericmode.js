@@ -8,7 +8,14 @@ import { click_variant } from './clickVariant'
 import { positionLeftlabelg } from './leftlabel'
 import { may_render_skewer } from './skewer'
 import { mayHighlightDiskBySsmid } from './skewer.render'
-import { renderShapeKick, renderSkewerShapes } from './skewer.render.shapes'
+import {
+	renderShapeKick,
+	renderSkewerShapes,
+	getMlstJoinLabel,
+	DISC_G_PREFIX,
+	getMClassesLabel,
+	MCLASSES_ATTRIBUTE
+} from './skewer.render.shapes'
 
 /*
 ********************** EXPORTED
@@ -329,6 +336,10 @@ function numeric_make(nm, tk, block) {
 				renderSkewerShapes(tk, nm, d3select(this))
 			} else {
 				d3select(this)
+					//Using extended mode here to indicate that disc label is visible and a click will generate an occurence table
+					.attr('extended', 1)
+					.attr(MCLASSES_ATTRIBUTE, d => getMClassesLabel(d))
+					.attr('data-testid', d => getMlstJoinLabel(d, DISC_G_PREFIX))
 					.append('circle')
 					.attr('fill', m => (shapes[m.shape].isFilled ? tk.color4disc(m) : 'none'))
 					.attr('stroke', m => (shapes[m.shape].isFilled ? 'white' : tk.color4disc(m)))
