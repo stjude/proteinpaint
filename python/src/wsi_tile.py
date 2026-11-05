@@ -498,6 +498,40 @@ def genecounts(h5ad, gene):
     }
 
 
+def visium_spots(h5ad, png):
+    """Sequence-based (Visium) spots of a consolidated .h5ad, positioned on its
+    high-resolution tissue image `png` (the image is NOT stored in the h5ad).
+    Only in-tissue spots are returned; x/y/radius are hires-image pixels (y down),
+    i.e. obsm/spatial (full-res px) * uns/spatial/<lib>/scalefactors/tissue_hires_scalef.
+    Optional obsm/cell_type_proportions comes back as {type: [per-spot value|null]}."""
+    import h5py
+    with h5py.File(h5ad, "r") as f:
+        lib = next(iter(f["uns/spatial"]))                  # the one library id
+        sf = f[f"uns/spatial/{lib}/scalefactors"]
+        scale = float(sf["tissue_hires_scalef"][()])
+        keep = f["obs/in_tissue"][:] == 1 if "in_tissue" in f["obs"] else np.ones(f["obsm/spatial"].shape[0], bool)
+        xy = f["obsm/spatial"][:][keep] * scale
+        out = {
+            "ids": _h5ad_index(f, "obs")[keep].tolist(),
+            "x": np.round(xy[:, 0], 2).tolist(),
+            "y": np.round(xy[:, 1], 2).tolist(),
+            "arrayRow": f["obs/array_row"][:][keep].tolist(),
+            "arrayCol": f["obs/array_col"][:][keep].tolist(),
+            "radius": float(sf["spot_diameter_fullres"][()]) * scale / 2,
+            "proportions": {},
+        }
+        pg = "obsm/cell_type_proportions"
+        if pg in f:
+            order = f[pg].attrs["column-order"]
+            for t in order:
+                v = np.round(f[pg][t][:][keep], 4).astype(object)
+                v[np.isnan(v.astype(float))] = None        # JSON has no NaN
+                out["proportions"][str(t)] = v.tolist()
+    with Image.open(png) as im:
+        out["width"], out["height"] = im.size
+    return out
+
+
 def h5ad_annotations(h5ad, bbox=None):
     """Every annotated cell's type from a spatial .h5ad, as JSON — cell types
     are free text (may contain commas/quotes), so they travel as JSON, never
@@ -1019,6 +1053,8 @@ def main():
         print(json.dumps(genecounts(job["h5"], job["gene"]), separators=(",", ":")))
     elif job["action"] == "genenames":
         print(json.dumps(genenames(job["h5"]), separators=(",", ":")))
+    elif job["action"] == "visium_spots":
+        print(json.dumps(visium_spots(job["h5ad"], job["png"]), separators=(",", ":")))
     elif job["action"] == "h5ad_csv":
         print(h5ad_csv(job["h5ad"], job["kind"], job.get("bbox")))  # temp csv path
     elif job["action"] == "h5ad_annotations":

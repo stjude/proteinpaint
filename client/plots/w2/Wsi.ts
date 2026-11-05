@@ -35,6 +35,8 @@ class Wsi extends PlotBase implements RxComponent {
 	/** showCellTypes of the previous render, to tell which exclusive fill
 	 checkbox was just toggled when both end up checked */
 	private prevShowCellTypes = false
+	/** spatial method the burger menu was built for */
+	private controlsMethod?: 'image' | 'sequence'
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api) // PlotBase wires app/id/opts
@@ -129,7 +131,7 @@ class Wsi extends PlotBase implements RxComponent {
 		// The route enumerates just the requested root, so neither mode's
 		// cost or failures depend on the other tree
 		const imageData = selectedSample
-			? await model.getImages(selectedSample.sampleId, fixedSample ? fixedKind : 'wsi')
+			? await model.getImages(selectedSample.sampleId, fixedSample ? fixedKind : 'wsi', config.method)
 			: undefined
 		if (imageData?.error) throw new Error(imageData.error)
 		const images = imageData?.images ?? []
@@ -198,7 +200,16 @@ class Wsi extends PlotBase implements RxComponent {
 				})
 				return
 			}
-			if (!this.components.controls) await this.setControls() // build the burger menu once
+			// build the burger menu once; its inputs differ per method, so rebuild when the method changes
+			const method = spImage.method ?? 'image'
+			if (this.components.controls && this.controlsMethod != method) {
+				this.dom.controls.selectAll('*').remove()
+				delete this.components.controls
+			}
+			if (!this.components.controls) {
+				this.controlsMethod = method
+				await this.setControls(method)
+			}
 			this.addGeneDatalist() // autocomplete on the Genes field from the discovered names
 		}
 		this.dom.controls.style('display', isSpatial ? 'inline-block' : 'none') // burger only for spatial
@@ -221,7 +232,9 @@ class Wsi extends PlotBase implements RxComponent {
 		const params = // standard wsitiles slide addressing + the expression file
 			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
 			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&file=${encodeURIComponent(src)}`
-		const r = await dofetch3(`wsitiles/genenames?${params}`).catch(() => null)
+		// sequence-based images are served by the visium route, which finds the h5ad itself
+		const url = image.method == 'sequence' ? `visium/genenames?${params}` : `wsitiles/genenames?${params}`
+		const r = await dofetch3(url).catch(() => null)
 		this.geneNames = Array.isArray(r?.genes) ? r.genes : [] // failure = no discovery, config still works
 		this.geneNamesFile = src // remember which file the cache is for
 		return this.geneNames
@@ -249,6 +262,13 @@ class Wsi extends PlotBase implements RxComponent {
 		const base = // standard wsitiles slide addressing, shared by both requests below
 			`wsimage=${encodeURIComponent(image.fileName)}&dslabel=${v.dslabel}&genome=${v.genome}` +
 			`&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
+		if (image.method == 'sequence') {
+			// cell types = the spots' proportion columns
+			const r = await dofetch3(`visium/spots?${base}`).catch(() => null)
+			if (!r?.proportions) return (this.cellTypeNames = [])
+			this.cellTypesFile = src
+			return (this.cellTypeNames = Object.keys(r.proportions))
+		}
 		const r = await dofetch3(`wsitiles/meta?${base}&cellAnnotations=${encodeURIComponent(src)}`).catch(() => null)
 		let names: string[] | undefined = Array.isArray(r?.cellTypes) ? r.cellTypes : undefined // [] is a valid answer
 		// meta.cellTypes is optional: the h5ad scan can fail even when the file
@@ -295,7 +315,10 @@ class Wsi extends PlotBase implements RxComponent {
 
 	/** Burger menu with the spatial overlay settings; fields are pre-seeded
 	 with defaults discovered from the data by main() before this runs. */
-	private async setControls() {
+	private async setControls(method: 'image' | 'sequence') {
+		const sequence = method == 'sequence'
+		// sequence-based spots have no cell/nucleus polygons, per-gene colors or zoom levels
+		const imageOnly = new Set(['showNucleusBoundaries', 'showCellBoundaries', 'spatialMode', 'annotationLevel'])
 		this.components.controls = await controlsInit({
 			app: this.app, // rx app the inputs dispatch through
 			id: this.id, // this plot's id in app state
@@ -443,7 +466,7 @@ class Wsi extends PlotBase implements RxComponent {
 					min: 0,
 					step: 1
 				}
-			]
+			].filter((i: any) => !(sequence && imageOnly.has(i.settingsKey)))
 		})
 	}
 }

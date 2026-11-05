@@ -11,6 +11,7 @@ import { readdir, stat } from 'fs/promises' // directory listing + slide mtime (
 import path from 'path' // root/sample/image path assembly
 import serverconfig from '#src/serverconfig.js' // tpmasterdir, the root of all data paths
 import { genomes } from '#src/initGenomesDs.js' // checked when augen sets up the route
+import { HIRES_IMAGE } from './visium.ts' // the sequence-based (Visium) image's fixed file name
 
 /*
  termdb/wsiBySample — whole-slide images for the w2 plot.
@@ -92,16 +93,22 @@ function init({ genomes }) {
 			if (!ds) throw new Error('invalid dataset name')
 			// a dataset may have spatial images (folder), plain slides (wsiFolder), or both
 			const w2 = ds.queries?.w2
-			if (!w2?.folder && !w2?.wsiFolder) throw new Error('ds.queries.w2 missing folder/wsiFolder')
+			if (!w2?.folder && !w2?.wsiFolder && !w2?.sequenceFolder)
+				throw new Error('ds.queries.w2 missing folder/wsiFolder/sequenceFolder')
 			// absolute paths of the configured image roots (undefined when not configured)
 			const spatialBase = w2.folder ? path.resolve(serverconfig.tpmasterdir, w2.folder) : undefined
+			const sequenceBase = w2.sequenceFolder ? path.resolve(serverconfig.tpmasterdir, w2.sequenceFolder) : undefined
 			const wsiBase = w2.wsiFolder ? path.resolve(serverconfig.tpmasterdir, w2.wsiFolder) : undefined
 
 			/** the sample's images, from both roots by default; kind restricts to
 			 one root so the other tree is never touched (the sample listing only
 			 needs plain slides). fileName is relative to the sample's folder in
 			 its root, matching the wsitiles wsimage= param */
-			const getImages = async (sampleId: string, kind?: 'spatial' | 'wsi'): Promise<(WsiImage | SpatialImage)[]> => {
+			const getImages = async (
+				sampleId: string,
+				kind?: 'spatial' | 'wsi',
+				method?: 'image' | 'sequence'
+			): Promise<(WsiImage | SpatialImage)[]> => {
 				const images: (WsiImage | SpatialImage)[] = []
 
 				// v=<slide mtime>: tiles are served immutable, so a regenerated slide
@@ -115,7 +122,7 @@ function init({ genomes }) {
 					}&sample_id=${encodeURIComponent(sampleId)}&imageType=${imageType}&v=${mtime}`
 
 				// spatial: one image per subfolder of the sample's directory
-				if (spatialBase && kind != 'wsi') {
+				if (spatialBase && kind != 'wsi' && method != 'sequence') {
 					const spSampleDir = path.resolve(spatialBase, sampleId) // folder/<sample>/
 					if (!spSampleDir.startsWith(spatialBase + path.sep)) throw badRequest('invalid sample_id') // traversal guard
 					for (const img of await subdirs(spSampleDir)) {
@@ -132,6 +139,7 @@ function init({ genomes }) {
 						const v = (await stat(path.join(spSampleDir, img, tif))).mtimeMs // slide version for cache busting
 						images.push({
 							type: 'spatial' as const,
+							method: 'image' as const,
 							fileName,
 							spatialData: rel(bySuffix(w2.spatialDataFileSuffix)),
 							// dataset-level viewer defaults; the client's burger menu overrides them
@@ -139,6 +147,29 @@ function init({ genomes }) {
 							annotationLevel: w2.annotationLevel,
 							cellTypes: w2.cellTypes,
 							thumbnail: thumbnail(fileName, v, 'spatial')
+						})
+					}
+				}
+
+				// sequence-based (Visium): one image per subfolder holding the hires png + h5ad
+				if (sequenceBase && kind != 'wsi' && method != 'image') {
+					const seqSampleDir = path.resolve(sequenceBase, sampleId) // sequenceFolder/<sample>/
+					if (!seqSampleDir.startsWith(sequenceBase + path.sep)) throw badRequest('invalid sample_id') // traversal guard
+					for (const img of await subdirs(seqSampleDir)) {
+						const files = await readdir(path.join(seqSampleDir, img)).catch(() => [] as string[])
+						const h5 = files.find(f => f.endsWith(w2.spatialDataFileSuffix || '.h5ad'))
+						if (!h5 || !files.includes(HIRES_IMAGE)) continue // not a Visium image folder
+						const v = (await stat(path.join(seqSampleDir, img, HIRES_IMAGE))).mtimeMs // cache-busting version
+						images.push({
+							type: 'spatial' as const,
+							method: 'sequence' as const,
+							fileName: path.join(img, HIRES_IMAGE), // the visium route's wsimage= value
+							spatialData: path.join(w2.sequenceFolder, sampleId, img, h5),
+							geneExpression: w2.geneExpression,
+							cellTypes: w2.cellTypes,
+							thumbnail: `visium/image?wsimage=${encodeURIComponent(path.join(img, HIRES_IMAGE))}&dslabel=${
+								q.dslabel
+							}&genome=${q.genome}&sample_id=${encodeURIComponent(sampleId)}&v=${v}`
 						})
 					}
 				}
@@ -186,7 +217,8 @@ function init({ genomes }) {
 			// sc app for 'spatial'); absent = both kinds
 			if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw badRequest('invalid imageType')
 			// String(): numeric-looking sample names arrive as numbers from query parsing
-			const images = await getImages(String(q.sample_id), q.imageType)
+			if (q.method && q.method != 'image' && q.method != 'sequence') throw badRequest('invalid method')
+			const images = await getImages(String(q.sample_id), q.imageType, q.method)
 			res.status(200).json({ images } satisfies WsiBySampleResponse)
 		} catch (e: any) {
 			console.warn(e)

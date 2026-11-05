@@ -11,7 +11,15 @@ export type WsiBySampleRequest = {
 	 of the default plain-slide listing (the w2 viewer's similar-region
 	 search uses this to offer the dataset's other spatial samples) */
 	imageType?: 'spatial' | 'wsi'
+	/** with sample_id, restricts the spatial images to one method: 'image' =
+	 image-based ST (tiled slide + cell polygons, ds.queries.w2.folder),
+	 'sequence' = sequence-based ST (Visium; ds.queries.w2.sequenceFolder).
+	 Omit for both */
+	method?: SpatialMethod
 }
+
+/** the two spatial transcriptomics methods the spatial viewer supports */
+export type SpatialMethod = 'image' | 'sequence'
 
 /** one sample that has whole-slide images on disk of the listed kind (plain
  slides by default — the standalone Whole Slide Images plot's sample table;
@@ -44,6 +52,10 @@ export type WsiImage = {
  boundaries/genecounts ?file= param. */
 export type SpatialImage = {
 	type: 'spatial'
+	/** image-based (default when absent) or sequence-based (Visium) ST. For
+	 'sequence', fileName is <imageName>/tissue_hires_image.png and spatialData
+	 is the h5ad holding counts, spot positions and cell-type proportions */
+	method?: SpatialMethod
 	/** = image_file: slide path relative to the sample's folder under
 	 ds.queries.w2.folder (<imageName>/<tif file>); used as the wsitiles wsimage= param */
 	fileName: string

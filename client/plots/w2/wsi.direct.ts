@@ -1576,11 +1576,11 @@ const SHADES = 8
 
 // fill colors ("r, g, b") cycled per gene; green/blue-ish avoided so fills
 // stay distinguishable from the cell (green) and nucleus (blue) strokes
-const GENE_COLORS = ['255, 0, 0', '0, 90, 255', '255, 165, 0', '160, 0, 200', '0, 160, 160', '200, 160, 0']
+export const GENE_COLORS = ['255, 0, 0', '0, 90, 255', '255, 165, 0', '160, 0, 200', '0, 160, 160', '200, 160, 0']
 
 // categorical palette ("r, g, b") for the cell-type overlay, most-abundant
 // type first; ~tableau20 order, cycled if a sample has more types
-const CELL_TYPE_COLORS = [
+export const CELL_TYPE_COLORS = [
 	'31, 119, 180',
 	'255, 127, 14',
 	'44, 160, 44',

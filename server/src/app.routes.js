@@ -121,6 +121,7 @@ export const routeFiles = [
 	import('./routes/tkld.ts'),
 	import('./routes/translategm.ts'),
 	import('./routes/vcfheader.ts'),
+	import('./routes/visium.ts'),
 	import('./routes/wsitiles.ts'),
 	import('../routes/profile.impressionDistribution.ts'),
 	import('./singleCell/dataRoute.ts'),
