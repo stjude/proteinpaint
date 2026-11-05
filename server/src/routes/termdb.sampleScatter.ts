@@ -95,9 +95,15 @@ export function init({ genomes }) {
 			if (q.scaleDotTW) terms.push(q.scaleDotTW)
 			if (q.coordTWs) for (const tw of q.coordTWs) terms.push(tw)
 			const data = await getData(
-				{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
-				ds,
-				true // FIXME 3rd arg hardcoded to true
+				{
+					filter: q.filter,
+					filter0: q.filter0,
+					terms,
+					__protected__: q.__protected__,
+					__abortSignal: q.__abortSignal,
+					sampleMapping: 'parentToChildren'
+				},
+				ds
 			)
 			if (data.error) throw new Error(data.error)
 			let result

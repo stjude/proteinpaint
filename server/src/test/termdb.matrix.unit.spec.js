@@ -1,4 +1,5 @@
 import tape from 'tape'
+import Database from 'better-sqlite3'
 import {
 	divideTerms,
 	getData,
@@ -10,8 +11,7 @@ import {
 	setSampleLstData,
 	isNegatedSampleLstOnlyRequest,
 	hasFilterTermsUnsupportedByFilterSamples,
-	maySetMapParent2Children,
-	maySetMapChildren2Parent,
+	resolveSampleMapping,
 	shouldMapParent2Children,
 	mayMapChildren2Root,
 	dropRowsWithoutAnnotation,
@@ -21,7 +21,8 @@ import {
 import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
-import { sql } from '../sql.ts'
+import { sql, guardDb } from '../sql.ts'
+import { getFilterCTEs } from '../termdb.filter.js'
 
 /*
 test sections:
@@ -106,7 +107,7 @@ tape('divideTerms: sorts terms by type', t => {
 	t.end()
 })
 
-tape('maySetMapParent2Children: explicit map flag preserves query-derived sample types', t => {
+tape('resolveSampleMapping: explicit direction overrides automatic inference', t => {
 	const ds = {
 		cohort: {
 			termdb: {
@@ -121,24 +122,23 @@ tape('maySetMapParent2Children: explicit map flag preserves query-derived sample
 	}
 
 	const query = {
+		sampleMapping: 'parentToChildren',
 		terms: [{ term: { id: 'gene', sampleTypes: [2, 3] } }]
 	}
-	maySetMapParent2Children(query, ds, true)
-	t.equal(query.mapParent2Children, true, 'an explicit true flag is preserved')
+	resolveSampleMapping(query, ds)
+	t.equal(query.sampleMapping, 'parentToChildren', 'an explicit direction is preserved')
 	t.deepEqual(query.sampleTypes, [2, 3], 'sample types are derived from the query')
 
-	const doNotMapParents = {
+	const unmapped = {
 		terms: [{ term: { id: 'gene', sampleTypes: [2, 3] } }]
 	}
-	maySetMapParent2Children(doNotMapParents, ds, false)
-	// an explicit false is never written back: the flag is only ever set to true,
-	// so a falsy caller input leaves q.mapParent2Children untouched
-	t.equal(doNotMapParents.mapParent2Children, undefined, 'an explicit false flag is not written back')
-	t.deepEqual(doNotMapParents.sampleTypes, [2, 3], 'the same query-derived sample types are preserved')
+	resolveSampleMapping(unmapped, ds)
+	t.notOk(Object.hasOwn(unmapped, 'sampleMapping'), 'a single term leaves the mapping property absent')
+	t.deepEqual(unmapped.sampleTypes, [2, 3], 'the same query-derived sample types are preserved')
 	t.end()
 })
 
-tape('maySetMapParent2Children: does not invent sample types without a query scope', t => {
+tape('resolveSampleMapping: does not invent sample types without a query scope', t => {
 	const ds = {
 		cohort: {
 			termdb: {
@@ -152,16 +152,17 @@ tape('maySetMapParent2Children: does not invent sample types without a query sco
 		}
 	}
 
-	const mapParents = {}
-	maySetMapParent2Children(mapParents, ds, true)
-	// no sample types are found for an empty query, so the function returns early
-	// without setting q.mapParent2Children, even though the caller requested true
-	t.equal(mapParents.mapParent2Children, undefined, 'the flag is not set when no sample types are found')
+	const mapParents = { sampleMapping: 'parentToChildren' }
+	resolveSampleMapping(mapParents, ds)
+	t.equal(mapParents.sampleMapping, 'parentToChildren', 'explicit intent is preserved without a query scope')
 	t.equal(mapParents.sampleTypes, undefined, 'no sample types are synthesized without a query scope')
+	const automatic = {}
+	resolveSampleMapping(automatic, ds)
+	t.notOk(Object.hasOwn(automatic, 'sampleMapping'), 'an empty query leaves the mapping property absent')
 	t.end()
 })
 
-tape('maySetMapChildren2Parent: maps sister sample types to their common parent', t => {
+tape('resolveSampleMapping: maps sister sample types to their common parent', t => {
 	const ds = {
 		cohort: {
 			termdb: {
@@ -180,19 +181,154 @@ tape('maySetMapChildren2Parent: maps sister sample types to their common parent'
 	const sisterTerms = {
 		terms: [{ term: { id: 'a', sampleTypes: [2] } }, { term: { id: 'b', sampleTypes: [3] } }]
 	}
-	maySetMapChildren2Parent(sisterTerms, ds)
-	t.equal(sisterTerms.mapChildren2Parent, true, 'sister sample types enable mapping')
+	resolveSampleMapping(sisterTerms, ds)
+	t.equal(sisterTerms.sampleMapping, 'childrenToParent', 'sister sample types enable mapping')
 	t.deepEqual(sisterTerms.sampleTypes, [1], 'query sample type becomes the common parent')
 
-	const oneTerm = { mapChildren2Parent: true, terms: [{ term: { id: 'a', sampleTypes: [2] } }] }
-	maySetMapChildren2Parent(oneTerm, ds)
-	t.equal(oneTerm.mapChildren2Parent, false, 'one term does not enable mapping')
+	const oneTerm = { terms: [{ term: { id: 'a', sampleTypes: [2] } }] }
+	resolveSampleMapping(oneTerm, ds)
+	t.notOk(Object.hasOwn(oneTerm, 'sampleMapping'), 'one term does not enable mapping')
+	resolveSampleMapping(oneTerm, ds)
+	t.notOk(Object.hasOwn(oneTerm, 'sampleMapping'), 'repeated resolution still leaves mapping absent')
+	t.deepEqual(oneTerm.sampleTypes, [2], 'repeated resolution preserves the sample types')
 
 	const unrelatedTerms = {
 		terms: [{ term: { id: 'a', sampleTypes: [2] } }, { term: { id: 'b', sampleTypes: [4] } }]
 	}
-	maySetMapChildren2Parent(unrelatedTerms, ds)
-	t.equal(unrelatedTerms.mapChildren2Parent, false, 'different parent types do not enable mapping')
+	resolveSampleMapping(unrelatedTerms, ds)
+	t.notOk(Object.hasOwn(unrelatedTerms, 'sampleMapping'), 'different parent types do not enable mapping')
+	t.end()
+})
+
+tape('resolveSampleMapping: resolves automatic and explicit mapping with validated target types', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: {
+					1: { parent_id: null },
+					2: { parent_id: 1 },
+					3: { parent_id: 1 }
+				}
+			}
+		}
+	}
+	const terms = [{ term: { sampleTypes: [1] } }, { term: { sampleTypes: [2] } }]
+	const automatic = { terms }
+	resolveSampleMapping(automatic, ds)
+	t.equal(automatic.sampleMapping, 'parentToChildren', 'parent and child terms infer downward mapping')
+	t.deepEqual(automatic.sampleTypes, [2], 'only the queried child type is targeted')
+
+	const upward = { terms: [{ term: { sampleTypes: [2] } }], sampleMapping: 'childrenToParent' }
+	resolveSampleMapping(upward, ds)
+	t.equal(upward.sampleMapping, 'childrenToParent', 'explicit upward mapping overrides single-term inference')
+	t.deepEqual(upward.sampleTypes, [1], 'explicit upward mapping targets the parent')
+	t.throws(
+		() => resolveSampleMapping({ terms: [{ term: { sampleTypes: [2, 3] } }], sampleMapping: 'childrenToParent' }, ds),
+		/each sample type set must contain exactly one sample type/,
+		'explicit upward mapping rejects an input with multiple sample types'
+	)
+	t.throws(
+		() => resolveSampleMapping({ terms: [{ term: { sampleTypes: [] } }], sampleMapping: 'childrenToParent' }, ds),
+		/each sample type set must contain exactly one sample type/,
+		'explicit upward mapping rejects an input without sample type metadata'
+	)
+
+	const noAncestry = { terms, sampleMapping: 'parentToChildren' }
+	resolveSampleMapping(noAncestry, emptyDs)
+	t.notOk(Object.hasOwn(noAncestry, 'sampleMapping'), 'datasets without ancestry leave the mapping property absent')
+	for (const sampleMapping of [true, false, null, 'none', 'invalid', {}, []]) {
+		t.throws(
+			() => resolveSampleMapping({ terms, sampleMapping }, ds),
+			/invalid sampleMapping/,
+			'invalid intent rejected'
+		)
+	}
+	t.throws(
+		() => resolveSampleMapping({ terms, sampleMapping: 'childrenToParent' }, ds),
+		/common parent/,
+		'explicit upward mapping rejects levels without one common parent'
+	)
+	t.end()
+})
+
+tape('resolveSampleMapping: compares type sets across terms, filter, and filter0', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: {
+					1: { parent_id: null },
+					2: { parent_id: 1 },
+					3: { parent_id: 1 },
+					4: { parent_id: 5 },
+					5: { parent_id: null }
+				}
+			}
+		},
+		getFilter0SampleTypesLst: filter0 => filter0 || []
+	}
+	const tw = sampleTypes => ({ term: { sampleTypes } })
+	const filter = (...sets) => ({
+		type: 'tvslst',
+		lst: sets.map(sampleTypes => ({ type: 'tvs', tvs: tw(sampleTypes) }))
+	})
+	const cases = [
+		['one mixed-level term', { terms: [tw([1, 2])] }, undefined, [1, 2]],
+		['identical mixed-level terms', { terms: [tw([1, 2]), tw([2, 1, 2])] }, undefined, [1, 2]],
+		['identical sibling terms', { terms: [tw([2, 3]), tw([3, 2])] }, undefined, [2, 3]],
+		[
+			'matching mixed-level filters without terms',
+			{ filter: filter([1, 2]), filter0: [{ sampleTypes: [2, 1] }] },
+			undefined,
+			[1, 2]
+		],
+		[
+			'matching terms and both filters',
+			{ terms: [tw([2, 3])], filter: filter([3, 2]), filter0: [{ sampleTypes: [2, 3] }] },
+			undefined,
+			[2, 3]
+		],
+		['a term and a sibling filter', { terms: [tw([2])], filter: filter([3]) }, 'childrenToParent', [1]],
+		['a term and a sibling filter0', { terms: [tw([2])], filter0: [{ sampleTypes: [3] }] }, 'childrenToParent', [1]],
+		[
+			'sibling filters without terms',
+			{ filter: filter([2]), filter0: [{ sampleTypes: [3] }] },
+			'childrenToParent',
+			[1]
+		],
+		['nested sibling filter terms', { filter: { type: 'tvslst', lst: [filter([2], [3])] } }, 'childrenToParent', [1]],
+		[
+			'sibling filter0 terms without chart terms',
+			{ filter0: [{ sampleTypes: [2] }, { sampleTypes: [3] }] },
+			'childrenToParent',
+			[1]
+		],
+		['different multi-type sibling sets', { terms: [tw([2, 3]), tw([2])] }, undefined, [2, 3]],
+		[
+			'different multi-type sets containing parent and child',
+			{ terms: [tw([1, 2]), tw([2, 3])] },
+			'parentToChildren',
+			[2, 3]
+		],
+		['a child term and parent filter', { terms: [tw([2])], filter: filter([1]) }, 'parentToChildren', [2]],
+		['a parent term and child filter0', { terms: [tw([1])], filter0: [{ sampleTypes: [3] }] }, 'parentToChildren', [3]],
+		['unrelated type sets', { terms: [tw([2])], filter: filter([4]) }, undefined, [2, 4]],
+		['unknown sample types prevent inference', { terms: [tw([2]), tw([])] }, undefined, [2]],
+		['empty type metadata', { terms: [tw([2, 3])], filter0: [{}, { sampleTypes: [] }] }, undefined, [2, 3]],
+		[
+			'explicit direction with sibling sets',
+			{ terms: [tw([2]), tw([3])], sampleMapping: 'childrenToParent' },
+			'childrenToParent',
+			[1]
+		]
+	]
+	for (const [label, q, mapping, sampleTypes] of cases) {
+		resolveSampleMapping(q, ds)
+		t.equal(q.sampleMapping, mapping, `${label}: mapping direction`)
+		t.deepEqual(q.sampleTypes, sampleTypes, `${label}: target types`)
+		if (mapping === undefined) t.notOk(Object.hasOwn(q, 'sampleMapping'), `${label}: mapping remains absent`)
+	}
 	t.end()
 })
 
@@ -209,19 +345,19 @@ tape('shouldMapChildren2Parent: maps annotations from child term types to querie
 		}
 	}
 	t.equal(
-		shouldMapChildren2Parent({ term: { id: 'child', sampleTypes: [2] } }, ds, true, [1]),
+		shouldMapChildren2Parent({ term: { id: 'child', sampleTypes: [2] } }, ds, 'childrenToParent', [1]),
 		true,
 		'a child term maps to its queried parent type'
 	)
 	t.equal(
-		shouldMapChildren2Parent({ term: { id: 'unrelated', sampleTypes: [4] } }, ds, true, [1]),
+		shouldMapChildren2Parent({ term: { id: 'unrelated', sampleTypes: [4] } }, ds, 'childrenToParent', [1]),
 		false,
 		'unrelated term types do not map'
 	)
 	t.equal(
-		shouldMapChildren2Parent({ term: { id: 'child', sampleTypes: [2] } }, ds, false, [1]),
+		shouldMapChildren2Parent({ term: { id: 'child', sampleTypes: [2] } }, ds, undefined, [1]),
 		false,
-		'disabled mapping never maps'
+		'absent mapping never maps'
 	)
 	t.end()
 })
@@ -256,12 +392,81 @@ tape('getAnnotationRows: maps child annotations onto parent samples', async t =>
 		{ tablename: 'anno_categorical', sql: sql`SELECT sample, key, value FROM anno_categorical` }
 	]
 	const filter = { CTEname: 'filter_samples', filters: sql`filter_samples AS (SELECT 1 AS sample)` }
-	await getAnnotationRows({ ds, mapChildren2Parent: true, sampleTypes: [1] }, termWrappers, filter, CTEs)
+	await getAnnotationRows({ ds, sampleMapping: 'childrenToParent', sampleTypes: [1] }, termWrappers, filter, CTEs)
 	t.ok(preparedQuery.text.includes('SELECT sa.ancestor_id as sample'), 'selects the parent sample id')
 	t.ok(preparedQuery.text.includes('JOIN "anno_categorical" ON sa.sample_id = sample'), 'joins child annotations')
 	t.ok(preparedQuery.text.includes('JOIN sampleidmap sm ON sa.ancestor_id = sm.id'), 'checks the parent sample type')
 	t.ok(preparedQuery.text.includes('AND sa.ancestor_id IN "filter_samples"'), 'filters by parent sample ids')
 	t.deepEqual(preparedQuery.values, ['a', 1, 'b', 1], 'both terms bind their term id and queried parent sample type')
+	t.end()
+})
+
+tape('getAnnotationRows: resolved direction maps actual annotations and omission keeps their original ids', async t => {
+	const connection = guardDb(new Database(':memory:'), 'off')
+	connection.exec(`
+		CREATE TABLE sampleidmap (id INTEGER, sample_type INTEGER);
+		CREATE TABLE sample_ancestry (sample_id INTEGER, ancestor_id INTEGER);
+		CREATE TABLE anno_categorical (sample INTEGER, term_id TEXT, value TEXT);
+		INSERT INTO sampleidmap VALUES (10, 1), (20, 2), (30, 3);
+		INSERT INTO sample_ancestry VALUES (20, 10), (30, 10);
+		INSERT INTO anno_categorical VALUES (10, 'p', 'P');
+	`)
+	const ds = {
+		cohort: {
+			db: { connection },
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: { 1: { parent_id: null }, 2: { parent_id: 1 }, 3: { parent_id: 1 } }
+			}
+		}
+	}
+	try {
+		const parentTw = { $id: 'p', term: { sampleTypes: [1] } }
+		const childTw = { $id: 'c', term: { sampleTypes: [2] } }
+		const CTEs = [
+			{ tablename: 'p', sql: sql`p AS (SELECT 10 AS sample, 'P' AS key, 'P' AS value)` },
+			{ tablename: 'c', sql: sql`c AS (SELECT 20 AS sample, 'C' AS key, 'C' AS value)` }
+		]
+		for (const [sampleMapping, sampleTypes, expected] of [
+			['parentToChildren', [2], [20, 20]],
+			['childrenToParent', [1], [10, 10]],
+			[undefined, [1, 2], [10, 20]]
+		]) {
+			const rows = await getAnnotationRows({ ds, sampleMapping, sampleTypes }, [parentTw, childTw], undefined, CTEs)
+			t.deepEqual(
+				rows.map(row => row.sample),
+				expected,
+				`${sampleMapping} returns the expected annotation ids`
+			)
+		}
+		const filter = {
+			type: 'tvslst',
+			in: true,
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { id: 'p', name: 'Parent', type: 'categorical', sampleTypes: [1] },
+						values: [{ key: 'P' }]
+					}
+				}
+			]
+		}
+		for (const [sampleMapping, expected] of [
+			['parentToChildren', [20]],
+			[undefined, [10]]
+		]) {
+			const cte = await getFilterCTEs(filter, ds, sampleMapping, [2])
+			const rows = connection.prepare(sql`WITH ${cte.filters} SELECT sample FROM ${sql.id(cte.CTEname)}`).all()
+			t.deepEqual(
+				rows.map(row => row.sample),
+				expected,
+				`${sampleMapping} also controls filter sample ids`
+			)
+		}
+	} finally {
+		connection.close()
+	}
 	t.end()
 })
 
@@ -283,27 +488,27 @@ tape('shouldMapParent2Children: handles object sample type metadata with child s
 	}
 
 	t.equal(
-		shouldMapParent2Children({ term: { id: 'expression' } }, ds, true, [2]),
+		shouldMapParent2Children({ term: { id: 'expression' } }, ds, 'parentToChildren', [2]),
 		true,
 		'parent sample type from object metadata maps to a requested child type'
 	)
 	t.equal(
-		shouldMapParent2Children({ term: { id: 'expression' } }, ds, true, [4]),
+		shouldMapParent2Children({ term: { id: 'expression' } }, ds, 'parentToChildren', [4]),
 		false,
 		'unrelated requested sample types do not map'
 	)
 	t.equal(
-		shouldMapParent2Children({ term: { id: 'expression' } }, ds, false, [2]),
+		shouldMapParent2Children({ term: { id: 'expression' } }, ds, undefined, [2]),
 		false,
-		'disabled mapping never maps'
+		'absent mapping never maps'
 	)
 	t.equal(
-		shouldMapParent2Children({ term: { id: 'expression' } }, ds, true, []),
+		shouldMapParent2Children({ term: { id: 'expression' } }, ds, 'parentToChildren', []),
 		false,
 		'without requested sample types there is nothing to map'
 	)
 	t.equal(
-		shouldMapParent2Children({ term: { id: 'legacy' } }, ds, true, [2]),
+		shouldMapParent2Children({ term: { id: 'legacy' } }, ds, 'parentToChildren', [2]),
 		true,
 		'legacy numeric sample type metadata remains supported'
 	)

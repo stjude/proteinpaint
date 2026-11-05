@@ -7,6 +7,14 @@
  * Use this type for that purpose.
  */
 
+/**
+ * Hierarchy mapping direction. Omit for automatic inference; the server sets the direction only
+ * when sample-type sets differ across terms, filter, or filter0 and need alignment.
+ * sampleTypes contains the target types.
+ * Root-level aggregation is controlled separately by mapChildren2Root.
+ */
+export type SampleMapping = 'parentToChildren' | 'childrenToParent'
+
 type SampleEntry = {
 	/** stringified integer sample id  */
 	sample: string | number

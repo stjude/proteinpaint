@@ -293,7 +293,7 @@ tape('termdb/dataAvailability assayed samples of groups, by role', async test =>
 			}
 			const list = await post(
 				'/termdb',
-				{ genome, dslabel, embedder, getsamplelist: 1, filter, mapParent2Children: true },
+				{ genome, dslabel, embedder, getsamplelist: 1, filter, sampleMapping: 'parentToChildren' },
 				bearer(jwt)
 			)
 			test.equal(

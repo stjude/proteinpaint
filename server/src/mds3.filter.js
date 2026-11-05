@@ -9,7 +9,7 @@ param={}
 	.filterObj = pp filter
 	.filter = pp filter
 	.filter0 = gdc/mmrf filter
-	.mapParent2Children = whether to map parent term annotations onto child samples
+	.sampleMapping = hierarchy mapping direction
 _allSamples=[{name: int}] (NOTE new format: [int])
 	set of samples to use (e.g. samples from bcf/tabix file)
 	if provided, then only filtered samples in this set are returned
@@ -38,7 +38,7 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		const q = {
 			filter,
 			filter0,
-			mapParent2Children: param.mapParent2Children,
+			sampleMapping: param.sampleMapping,
 			sampleTypes: param.sampleTypes,
 			sessionid: param.sessionid,
 			__protected__: param.__protected__,

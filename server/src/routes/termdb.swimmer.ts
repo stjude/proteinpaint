@@ -164,7 +164,7 @@ export function isLaneRequested(requested: Set<string>, sample: string, relatedN
 
 /** set lane.divideBy[] from the patient's value(s) for q.term0 and return the category order.
 getData() runs in its default mode, keyed by the term's own sample level (e.g. patient for "Age", primary
-sample for a primary-sample term), since forcing mapParent2Children computes numeric bins over the child
+sample for a primary-sample term), since forcing sampleMapping computes numeric bins over the child
 samples, which lack the values of a patient-level term, and yields a single bin. a lane's categories then
 come from getLaneValues() */
 async function mayDivideLanes(q: SwimmerRequest, ds: any, lanes: SwimmerLane[]): Promise<string[]> {

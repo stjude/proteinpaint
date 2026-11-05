@@ -61,7 +61,7 @@ ds{}
 tdb{}
 	ds.cohort.termdb
 onlyChildren: boolean
-	passed to getData()
+	forces parentToChildren mapping when true
 
 output an object:
 .charts=[]
@@ -84,9 +84,15 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 	const map = getTwByIndex(q)
 	const terms = [...map.values()]
 	const data = await getData(
-		{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
-		q.ds,
-		onlyChildren
+		{
+			filter: q.filter,
+			filter0: q.filter0,
+			terms,
+			__protected__: q.__protected__,
+			__abortSignal: q.__abortSignal,
+			sampleMapping: onlyChildren ? 'parentToChildren' : q.sampleMapping
+		},
+		q.ds
 	)
 	if (data.error) throw data.error
 	const samplesMap = new Map()
