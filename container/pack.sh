@@ -13,6 +13,7 @@ set -euxo pipefail
 # call from the proteinpaint/container dir
 #
 # Usage: ./pack.sh [-s] [PKGPATH] [TMPPACKDIR] [RUST_BINARIES_DIR]
+#   RUST_WASM_DIR, an env variable, is the dir of the rust wasm modules, default ../rust-wasm
 #   -s: server-only, to not pack the client and front workspaces, that only the full image installs
 
 # defaults
@@ -21,6 +22,8 @@ PKGPATH=/home/root/pp/tmppack
 # prepack script, would then use this container path for its temp files
 TMPPACKDIR=/home/root/pp/tmppack
 RUST_BINARIES_DIR=../rust-binaries
+# such as the rust-wasm artifact of .github/workflows/CD-rust-build.yml
+RUST_WASM_DIR=${RUST_WASM_DIR:-../rust-wasm}
 
 # the macOS tar, such as in the front prepack script, otherwise adds a ._<name> entry with the extended attributes of
 # each file, which the image would extract with the owner of the host account; no effect with GNU tar
@@ -152,9 +155,16 @@ cd ../rust
 RUSTDIR=$(pwd)
 RUSTBACKUP=""
 RUSTRELEASE_REPLACED=""
+RUSTWASM_REPLACED=""
 restoreRustDir() {
   if [[ "$RUSTBACKUP" == "" ]]; then
     return
+  fi
+  if [[ "$RUSTWASM_REPLACED" != "" ]]; then
+    rm -rf "$RUSTDIR/target/wasm"
+    if [[ -d "$RUSTBACKUP/wasm" ]]; then
+      mv "$RUSTBACKUP/wasm" "$RUSTDIR/target/"
+    fi
   fi
   if [[ "$RUSTRELEASE_REPLACED" != "" ]]; then
     rm -rf "$RUSTDIR/target/release"
@@ -203,6 +213,27 @@ if [[ -d "$RUST_BINARIES_DIR" ]]; then
     '
 else
   echo "RUST_BINARIES_DIR not found at $RUST_BINARIES_DIR — skipping binary copy."
+fi
+
+# The wasm modules replace any local ones in target/wasm, which the package.json files array has, so that without
+# RUST_WASM_DIR the local modules, such as from rust/buildWasm.sh, are packed; the local ones are restored after the pack
+if [[ -d "$RUST_WASM_DIR" ]]; then
+  echo "RUST_WASM_DIR found at $RUST_WASM_DIR"
+  if [[ "$RUSTBACKUP" == "" ]]; then
+    mkdir -p target
+    RUSTBACKUP=$(mktemp -d "$RUSTDIR/target/.pack-backup.XXXXXX")
+    cp package.json "$RUSTBACKUP/"
+    trap restoreRustDir EXIT
+  fi
+  if [[ -d target/wasm ]]; then
+    mv target/wasm "$RUSTBACKUP/"
+  fi
+  RUSTWASM_REPLACED=1
+  mkdir -p target/wasm
+  echo "Copying the rust wasm modules to target/wasm ..."
+  cp "$RUST_WASM_DIR"/*.wasm target/wasm/
+else
+  echo "RUST_WASM_DIR not found at $RUST_WASM_DIR — packing the local wasm modules in target/wasm, if any."
 fi
 
 echo "Packing rust module with npm ..."

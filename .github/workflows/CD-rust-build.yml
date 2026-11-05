@@ -29,3 +29,19 @@ jobs:
         with:
           name: rust-binaries
           path: rust/extracted_binaries
+
+      # the wasm modules, which run_rust() runs instead of spawning their binaries, see rust/index.js; a module does not
+      # depend on the platform, so the rust-wasm release asset is used on any architecture, see
+      # rust/downloadBinariesOrCompileSource.js
+      - name: build rust wasm modules
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends llvm wasi-libc
+          rustup target add wasm32-wasip1
+          ./rust/wasm/build.sh "$PWD/rust/extracted_wasm"
+
+      - name: Upload wasm Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: rust-wasm
+          path: rust/extracted_wasm
+          if-no-files-found: error

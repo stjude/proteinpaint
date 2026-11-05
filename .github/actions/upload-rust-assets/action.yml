@@ -15,6 +15,12 @@ runs:
         name: rust-binaries
         path: rust-binaries
 
+    - name: Download Rust wasm modules
+      uses: actions/download-artifact@v8
+      with:
+        name: rust-wasm
+        path: rust-wasm
+
     - name: Rename Rust Binaries
       shell: bash
       id: rename_rust_binaries
@@ -29,6 +35,10 @@ runs:
         RENAMED="rust-binaries-$PP_RUST_TAG-linux-x64.tar.gz"
         tar -czvf "$RENAMED" -C rust-binaries .
         echo "renamed_rust_binaries=$RENAMED" >> "$GITHUB_OUTPUT"
+        # the wasm modules do not depend on the platform, so the asset name has no platform
+        WASMTGZ="rust-wasm-$PP_RUST_TAG.tar.gz"
+        tar -czvf "$WASMTGZ" -C rust-wasm .
+        echo "rust_wasm=$WASMTGZ" >> "$GITHUB_OUTPUT"
 
     - name: Upload rust assets
       shell: bash  # required for composite `run:` steps
@@ -36,7 +46,8 @@ runs:
         GH_TOKEN: ${{ inputs.GITHUB_TOKEN }} # gh auth
         PP_TAG: ${{ steps.rename_rust_binaries.outputs.pp_tag }} # release tag to upload to
         RENAMED: "${{ steps.rename_rust_binaries.outputs.renamed_rust_binaries }}" # tarball to attach
+        WASMTGZ: "${{ steps.rename_rust_binaries.outputs.rust_wasm }}" # wasm modules tarball to attach
       run: |
         # Attach the rust-binaries tarball to the EXISTING release for this tag.
         # --clobber overwrites an asset of the same name, so the step is safe to re-run.
-        gh release upload $PP_TAG $RENAMED --clobber
+        gh release upload $PP_TAG $RENAMED $WASMTGZ --clobber

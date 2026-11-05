@@ -181,6 +181,9 @@ jobs:
         if: contains(env.WS_TO_TEST, 'rust')
         run: |
           npm run build --workspace="rust"
+          # the wasm modules, which run_rust() runs instead of spawning their binaries, such as in the rust tests below;
+          # built in a Debian trixie container, which has the WASI libc and clang that the runner does not have
+          npm run build:wasm --workspace="rust"
           cp container/ci/serverconfig.json rust/ 
           npm run test:unit --workspace="rust"
           cd rust && cargo test
