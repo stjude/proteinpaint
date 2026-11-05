@@ -13,6 +13,11 @@
 		"samples",
 		"minSampleSize"
 	],
+	"termdb/methylationLocus": [
+		"termdb",
+		"samples",
+		"minSampleSize"
+	],
 	"termdb/regression": [
 		"minSampleSize"
 	],

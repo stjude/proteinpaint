@@ -255,6 +255,19 @@ export class VolcanoInteractions {
 		})
 	}
 
+	/** Per-sample methylation along the gene next to its expression, with the volcano's groups as a strip */
+	launchMethylationLocus(gene: string) {
+		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		this.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'methylationLocus',
+				gene,
+				groupTw: { q: { groups: config.tw.q.groups, type: 'custom-samplelst' }, term: config.tw.term }
+			}
+		})
+	}
+
 	launchGeneSetEdit() {
 		const plotConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const holder = this.dom.actionsTip.d.append('div').style('padding', '5px') as any
