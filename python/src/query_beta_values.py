@@ -228,7 +228,13 @@ class Query:
                 missing_mask.append(True)
         return np.array(col_indices), np.array(missing_mask)
 
-    def process_genomic_queries(self, query_samples, query_chrom, query_start, query_end, verbose=False):
+    def process_genomic_queries(self, query_samples, query_chrom, query_start, query_end, verbose=False, with_depth=False):
+        """
+            Returns the sites x samples beta matrix. With with_depth=True, returns
+            (beta, depth, positions, min_depth): depth is read depth per site and sample
+            (0 where beta is missing; 1 per present value when the file has no depth),
+            and min_depth is the pooled-depth floor that suits the file.
+        """
         assert os.path.exists(self.h5file)
         try:
             h5 = h5py.File(self.h5file, "r")
@@ -310,7 +316,34 @@ class Query:
                 abs_right = row_start + right
                 tmp_block = dset[abs_left:abs_right, :]
                 query_beta[:, ~missing_mask] = tmp_block[:, valid_cols]
-        return query_beta
+            if not with_depth:
+                return query_beta
+            has_depth = "depth/values" in h5
+            query_depth = np.zeros((n_rows, n_cols), dtype='float64')
+            if len(valid_cols) > 0 and n_rows > 0:
+                query_depth[:, ~missing_mask] = h5["depth/values"][abs_left:abs_right, :][:, valid_cols] if has_depth else 1
+            # a site masked in beta (e.g. low coverage) must not add reads
+            query_depth[np.isnan(query_beta)] = 0
+            return query_beta, query_depth, target_start_pos[left:right], (MIN_DEPTH if has_depth else 1)
+
+MIN_DEPTH = 5  # pooled reads per bin and sample below which a bin value is withheld
+
+def bin_by_cpg(beta, depth, pos, nbins, min_depth):
+    """
+        Split the sites into nbins runs of equal CpG count. Each bin value per sample is
+        pooled methylated reads over pooled reads (sum(beta*depth) / sum(depth)),
+        or None when pooled depth < min_depth. start/stop are the first/last CpG of the bin.
+    """
+    n = len(pos)
+    cuts = np.linspace(0, n, min(nbins, n) + 1).astype(int)
+    meth = np.nan_to_num(beta) * depth
+    bins = []
+    for i, j in zip(cuts[:-1], cuts[1:]):
+        d = depth[i:j].sum(axis=0)
+        v = np.full(d.shape, np.nan)
+        np.divide(meth[i:j].sum(axis=0), d, out=v, where=d >= min_depth)
+        bins.append({'start': int(pos[i]), 'stop': int(pos[j - 1]), 'nCpg': int(j - i), 'beta': nan_to_none(v.tolist())})
+    return bins
 
 def nan_to_none(obj):
     """ Convert np.nan in returned beta matrix to null values for NodeJS compatiblity """
@@ -321,7 +354,7 @@ def nan_to_none(obj):
         return [nan_to_none(x) for x in obj]
     return obj
 
-def main(hdf_file, query_samples, query_string, verbose=False):
+def main(hdf_file, query_samples, query_string, verbose=False, nbins=None):
     if not os.path.exists(hdf_file):
         raise FileNotFoundError(f"HDF5 file not found: {hdf_file}")
     #print(json.dumps({"status": "error", "type": "Exception", "message": str(e)}), file=sys.stderr)
@@ -339,6 +372,10 @@ def main(hdf_file, query_samples, query_string, verbose=False):
         q_chrom = query_info['chrom']
         q_start = query_info['start']
         q_end = query_info['end']
+        if nbins:
+            beta, depth, pos, min_depth = q.process_genomic_queries(query_samples_list, q_chrom, q_start, q_end, verbose, with_depth=True)
+            print(json.dumps({'bins': bin_by_cpg(beta, depth, pos, int(nbins), min_depth)}))
+            return
         # Call your genomic query function
         betavals = q.process_genomic_queries(query_samples_list, q_chrom,q_start, q_end, verbose)
         # Convert numpy array to list for JSON serialization
@@ -376,6 +413,7 @@ def parse_stdin():
         inp.get("s"),
         inp.get("q"),
         inp.get("v", False),
+        inp.get("bins"),
     )
 
 
@@ -398,7 +436,7 @@ def parse_cli_args():
     parser.add_argument("--q", metavar="QUERY", help="genomic query range or CpG IDs")
     parser.add_argument("--v", action="store_true", help="enable verbose details output")
     args = parser.parse_args()
-    return args.h, args.s, args.q, args.v
+    return args.h, args.s, args.q, args.v, None
 
 def get_inputs():
     """Unified input handler (stdin JSON OR CLI)."""
@@ -426,6 +464,6 @@ def require_query_inputs(hdf_file, query_samples, query_string):
         sys.exit(1)
 
 if __name__ == "__main__":
-    hdf_file, query_samples, query_string, verbose = get_inputs()
+    hdf_file, query_samples, query_string, verbose, nbins = get_inputs()
     require_query_inputs(hdf_file, query_samples, query_string)
-    main(hdf_file, query_samples, query_string, verbose)
+    main(hdf_file, query_samples, query_string, verbose, nbins)

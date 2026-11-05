@@ -903,6 +903,8 @@ export class VolcanoPlotView {
 	private getActionMenuOpts(d: DataPointEntry): ActionMenuItem[] {
 		const termType = this.termType
 		const interactions = this.interactions
+		// a methylation element may list several genes; the first is the one it is named for
+		const gene = d.gene_name?.split(',')[0]?.trim()
 		const all = [
 			{
 				label: 'Violin plot',
@@ -948,6 +950,19 @@ export class VolcanoPlotView {
 				onClick: async () => {
 					interactions.launchBoxPlot(d.gene_name)
 				}
+			},
+			{
+				label: `Methylation & expression at ${gene}`,
+				isVisible: () => {
+					const q = interactions.app.vocabApi.termdbConfig?.queries
+					return (
+						(termType === tt.GENE_EXPRESSION || termType === tt.DNA_METHYLATION) &&
+						!!gene &&
+						q?.dnaMethylation?.regionAnalysis == 'cpg' &&
+						!!q?.geneExpression
+					)
+				},
+				onClick: async () => interactions.launchMethylationLocus(gene!)
 			}
 		]
 		return all.filter(o => o.isVisible()).map(({ label, onClick }) => ({ label, onClick }))
