@@ -108,7 +108,8 @@ each junction requires chr, start and stop, and may have:
 	strand
 	p: y is -log10 p when every junction has it
 	medianReadCount, sampleCount: y is read count when every junction has medianReadCount, as junctions from the server
-	psi_control, psi_case: shown in tooltip; with tk.deltaPsiGroups, colored by the group with higher PSI
+	psi_control, psi_case: shown in tooltip; with tk.deltaPsiGroups, colored by the group with higher PSI,
+		and y is |ΔPSI| when not every junction has p, as a leafcutter cluster, which is tested as a whole
 	types[], info{}: types hidden in the legend are removed, as computeTypes() does on the server
 see tk.sections.jug.yAxisKey in renderTk()
 they are cloned since rendering adds attributes to each junction; tk.custom_data is not modified, so hidden types can be shown again
@@ -130,6 +131,8 @@ async function dataFromCustomData(tk, block) {
 		if (j.sv) j2.sv = { ...j.sv, mate: { ...j.sv.mate } }
 		// a p of 0 has underflowed, keep it finite on the axis
 		if (Number.isFinite(j.p)) j2.negLog10p = -Math.log10(Math.max(j.p, Number.MIN_VALUE))
+		if (tk.deltaPsiGroups && Number.isFinite(j.psi_control) && Number.isFinite(j.psi_case))
+			j2.absDeltaPsi = Math.abs(j.psi_case - j.psi_control)
 		return [j2]
 	})
 	const data = { junctions }

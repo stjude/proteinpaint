@@ -22,3 +22,9 @@ scikit-learn==1.7.2
 scipy==1.16.3
 statsmodels==0.14.4
 tifffile==2026.7.31
+# torch, for diffSpliceRun.py: the +cpu linux wheel, without CUDA libraries, which are not used.
+# The wheels are for python 3.13; update these URLs when python changes.
+# --extra-index-url https://download.pytorch.org/whl/cpu (this will affect other packages)
+torch @ https://download.pytorch.org/whl/cpu/torch-2.13.0%2Bcpu-cp313-cp313-manylinux_2_28_x86_64.whl ; sys_platform == "linux" and platform_machine == "x86_64"
+torch @ https://download.pytorch.org/whl/cpu/torch-2.13.0%2Bcpu-cp313-cp313-manylinux_2_28_aarch64.whl ; sys_platform == "linux" and platform_machine == "aarch64"
+torch==2.13.0 ; sys_platform != "linux"

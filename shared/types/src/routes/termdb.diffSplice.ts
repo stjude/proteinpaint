@@ -66,8 +66,9 @@ export type DiffSpliceJunction = {
 	chr: string
 	start: number
 	stop: number
-	/** raw p of the junction's own test, against the rest of its cluster */
-	p: number
+	/** raw p of the junction's own test, against the rest of its cluster. null for leafcutter,
+	 * whose test is per cluster */
+	p: number | null
 	/** group-mean PSI; null when no sample of the group covers the cluster */
 	psi_control: number | null
 	psi_case: number | null
