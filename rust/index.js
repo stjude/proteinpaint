@@ -35,10 +35,10 @@ const canSpawn = process.permission ? process.permission.has('child') : true
 // have one are spawned instead, and a run_rust() call of a missing binary fails with the spawn error, or the missing
 // wasm module error.
 const binaryDir = path.join(__dirname, '/target/release/')
-const wasmDir = path.join(__dirname, '/target/wasm/wasm32-wasip1/release/')
+const wasmDir = path.join(__dirname, '/target/wasm/')
 {
-	const isEmpty = dir => !fs.existsSync(dir) || !fs.readdirSync(dir).length
-	if (isEmpty(wasmDir))
+	const isEmpty = (dir, ext = '') => !fs.existsSync(dir) || !fs.readdirSync(dir).some(f => f.endsWith(ext))
+	if (isEmpty(wasmDir, '.wasm'))
 		console.warn(
 			`WARNING: missing or empty rust wasm module directory='${wasmDir}', ${
 				canSpawn
