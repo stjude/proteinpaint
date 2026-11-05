@@ -1,5 +1,5 @@
 import { dofetch3 } from '#common/dofetch' // fetch wrapper for the termdb route
-import type { WsiBySampleResponse } from '#types' // the route's response shape
+import type { SpatialMethod, WsiBySampleResponse } from '#types' // the route's response shape
 
 /** Server data access for the w2 plot. Both calls hit termdb/wsiBySample,
  which lists straight from the ds.queries.w2 roots (folder/wsiFolder) on disk. */
@@ -19,9 +19,14 @@ export class Model {
 	/** One sample's images (WsiImage | SpatialImage). imageType restricts the
 	 enumeration to that root ('wsi' = wsiFolder, 'spatial' = folder) so the
 	 other tree is never read; omitted = both kinds. */
-	async getImages(sample_id: string, imageType?: 'spatial' | 'wsi'): Promise<WsiBySampleResponse> {
+	async getImages(
+		sample_id: string,
+		imageType?: 'spatial' | 'wsi',
+		/** spatial method: 'image' (tiled slide) | 'sequence' (Visium); omitted = both */
+		method?: SpatialMethod
+	): Promise<WsiBySampleResponse> {
 		return await dofetch3('termdb/wsiBySample', {
-			body: { genome: this.genome, dslabel: this.dslabel, sample_id, imageType } // sample_id = list its images
+			body: { genome: this.genome, dslabel: this.dslabel, sample_id, imageType, method } // sample_id = list its images
 		})
 	}
 }

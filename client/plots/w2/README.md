@@ -60,6 +60,22 @@ carries a `sample`:
 So: spatial viewing is reachable only through the single-cell app, and the
 standalone chart is images-only.
 
+## Two spatial methods: `method=image` | `method=sequence`
+
+Spatial images carry a `method`. `image` (default) is the tiled-slide + per-cell
+polygon viewer described below. `sequence` is sequence-based ST (Visium): one
+`tissue_hires_image.png` plus one consolidated `.h5ad` (counts, `obsm/spatial`,
+optional `obsm/cell_type_proportions`, `uns/spatial/<lib>/scalefactors`), laid
+out under `ds.queries.w2.sequenceFolder/<sample>/<imageName>/`. It is served by
+`server/src/routes/visium.ts` (`visium/image|spots|genenames|genecounts`) and
+drawn by `visium.direct.ts` (in-tissue spots over the image; fill by dominant
+cell type or summed gene counts). Selecting the method:
+
+- mass UI: `config.method` ('image' | 'sequence') filters `termdb/wsiBySample`
+  (`method=`); unset shows both kinds, each image's own `method` picks its viewer.
+- URL: `?method=sequence&image_file=<png>&spatial_data=<h5ad>` (tpmasterdir-relative,
+  needs `features.wsi.allowDirectSlidePath`); `method=image` or absent = old behavior.
+
 ## Zoomify tile addressing (shared contract)
 
 The client uses OpenLayers' `Zoomify` source, which addresses tiles as
