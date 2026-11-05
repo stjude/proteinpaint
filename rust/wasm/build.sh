@@ -16,6 +16,7 @@ set -euo pipefail
 
 WASMDIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 OUTDIR=${1:-$WASMDIR/../target/wasm}
+[[ "$OUTDIR" = /* ]] || OUTDIR="$PWD/$OUTDIR"
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$WASMDIR/../target/wasm-build}
 
 cd "$WASMDIR"
