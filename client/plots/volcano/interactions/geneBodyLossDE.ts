@@ -57,7 +57,7 @@ export async function geneBodyLossTest(
 						values: g.values,
 						filter: g.filter,
 						filter0: g.filter0,
-						mapParent2Children: g.mapParent2Children
+						sampleMapping: g.sampleMapping
 					}))
 				},
 				genes: gb.genes,

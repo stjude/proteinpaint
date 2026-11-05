@@ -1,3 +1,4 @@
+import type { SampleMapping } from '#types'
 import { termType2label } from '#shared/terms.js'
 import { PSEUDOBULK } from '#types'
 import { plotColor } from '#shared/common.js'
@@ -126,7 +127,7 @@ export async function validatePseudobulk(ds: any) {
 	 * }
 	 *  - filter: Optional.
 	 * 	- filter0: Optional. An additional filter parameter.
-	 *  - mapParent2Children: Optional. See mayLimitSamples
+	 *  - sampleMapping: Optional. See mayLimitSamples
 	 *  - sampleTypes: Optional. See mayLimitSamples
 	 * @returns An object containing term-to-sample values, and mappings by term ID and by sample ID.
 	 * When dataTypeDetails.genes is supplied, each gene is used as the term ID in term2sample2value.
@@ -136,7 +137,7 @@ export async function validatePseudobulk(ds: any) {
 		dataTypeDetails?: { genes?: string[]; method?: string }
 		filter?: any
 		filter0?: any
-		mapParent2Children?: boolean
+		sampleMapping?: SampleMapping
 		sampleTypes?: any
 	}) => {
 		//Set default to mean for most requests

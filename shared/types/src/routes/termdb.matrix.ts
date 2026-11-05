@@ -1,5 +1,6 @@
 import type { Filter } from '../filter.ts'
 import type { TermWrapper } from '../terms/tw.ts'
+import type { SampleMapping } from '../termdb.matrix.ts'
 
 export type TermdbMatrixRequest = {
 	genome: string
@@ -7,6 +8,7 @@ export type TermdbMatrixRequest = {
 	terms?: TermWrapper[]
 	filter?: Filter
 	filter0?: any
+	sampleMapping?: SampleMapping
 	embedder?: string
 	isHierCluster?: boolean
 	isSummary?: boolean

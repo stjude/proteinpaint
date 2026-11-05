@@ -4046,7 +4046,7 @@ async function getSnvindelByTerm(ds, term, genome, q, opts = {}) {
 			filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 			sessionid: q.sessionid,
 			__abortSignal: q.__abortSignal,
-			mapParent2Children: q.mapParent2Children,
+			sampleMapping: q.sampleMapping,
 			sampleTypes: q.sampleTypes
 		},
 		ds.mayGetGeneVariantDataParam || {}
@@ -4076,7 +4076,7 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-		mapParent2Children: q.mapParent2Children,
+		sampleMapping: q.sampleMapping,
 		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid
 	}
@@ -4110,7 +4110,7 @@ async function getCnvByTw(ds, tw, genome, q) {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-		mapParent2Children: q.mapParent2Children,
+		sampleMapping: q.sampleMapping,
 		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid,
 		...(tw?.q?.type === 'values' && {
@@ -4129,7 +4129,7 @@ async function getCnvByTw(ds, tw, genome, q) {
 async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
 		filter0: q.filter0,
-		mapParent2Children: q.mapParent2Children,
+		sampleMapping: q.sampleMapping,
 		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid,
 		__abortSignal: q.__abortSignal
@@ -4148,7 +4148,7 @@ async function getItdByTerm(ds, term, genome, q) {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-		mapParent2Children: q.mapParent2Children,
+		sampleMapping: q.sampleMapping,
 		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid
 	}
