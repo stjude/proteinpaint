@@ -9,7 +9,7 @@
 #   BINDGEN_EXTRA_CLANG_ARGS_wasm32_wasip1="--target=wasm32-wasip1 --sysroot=/usr -fvisibility=default" \
 #   cargo build --locked --release --target wasm32-wasip1
 #
-# Or, with only docker on the host, such as for a dev server that is started with USE_WASM=1, see ../index.js:
+# Or, with only docker on the host, such as for a dev server, which then runs these modules, see ../index.js:
 #
 # npm run build:wasm -w rust
 #
@@ -17,7 +17,7 @@
 # The macOS ar writes an archive index that the wasm linker cannot read, so a module would import the C functions,
 # such as pwilcox, instead of including them, and fail to instantiate: use llvm-ar, such as from `brew install llvm`.
 # The modules are in ../target/wasm, see .cargo/config.toml. run_rust() in ../index.js runs a module in the node
-# process when the node permission model does not allow a child process. A module must only use stdin, stdout and
+# process instead of spawning its binary, whenever the module is present. A module must only use stdin, stdout and
 # stderr, and no args or env variable: run_rust() gives it only those WASI functions, see wasiImports(), and a module
 # that imports another one, such as to open a file, does not instantiate.
 [package]

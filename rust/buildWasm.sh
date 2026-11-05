@@ -2,7 +2,7 @@
 
 # Builds the rust wasm modules of wasm/Cargo.toml in a container, so that no wasm toolchain, such as llvm-ar and a WASI
 # libc, is needed on the host. The modules are written to target/wasm/wasm32-wasip1/release, where run_rust() in
-# index.js finds them, such as for a dev server that is started with USE_WASM=1. A wasm module does not depend on the
+# index.js finds them, and then runs a module instead of spawning its binary. A wasm module does not depend on the
 # platform that builds it.
 #
 # Usage, from any dir: ./rust/buildWasm.sh
