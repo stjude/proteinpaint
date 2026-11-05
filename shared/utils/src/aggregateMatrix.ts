@@ -34,7 +34,8 @@ export function expandsToValues(type: string): boolean {
 	return type == SINGLECELL_CELLTYPE || !isNonDictionaryType(type)
 }
 
-function getAxisTermTypes(axis: any): any[] {
+/** The type of every term of an axis, in order. Does not validate: anything that is not a term wrapper has no type. */
+export function getAxisTermTypes(axis: any): any[] {
 	return axis && typeof axis == 'object'
 		? Object.values<any>(axis).flatMap(terms => (Array.isArray(terms) ? terms.map(tw => tw?.term?.type) : []))
 		: []

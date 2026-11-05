@@ -6,6 +6,7 @@ import type { AggregateMatrixSettings } from '../settings/Settings.ts'
 import { roundValue } from '#shared/roundValue.js'
 import type { AggMatrixViewData, AggMatrixDotPosition } from './ViewModelDataTypes.ts'
 import { getDotPie, getPieLegend, hasPies } from './PieViewModel.ts'
+import { cellToDotSize } from '../settings/defaults.ts'
 
 export class AggMatrixViewModel {
 	ag: AggregateMatrix
@@ -43,9 +44,7 @@ export class AggMatrixViewModel {
 		this.viewData = this.getDefaultViewData()
 
 		const settings = this.ag.state.config.settings.aggregateMatrix
-		// padding for either top/bottom or left/right of the dot
-		const dotPadding = settings.maxDotSize * 1.5
-		const cellSize = settings.maxDotSize + dotPadding
+		const cellSize = settings.maxDotSize * cellToDotSize
 		const measureSvg = this.ag.dom.mainDiv.append('svg') as any
 
 		/** Must determine the maximum amount of space needed for the rows.

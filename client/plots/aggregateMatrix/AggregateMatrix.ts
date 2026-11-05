@@ -2,7 +2,7 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from '#plots/PlotBase.ts'
 import { getCombinedTermFilter } from '#filter'
 import { AggMatrixModel } from './model/AggMatrixModel'
-import { getAggregateMatrixSettings } from './settings/defaults.ts'
+import { getAggregateMatrixSettings, getPieSizeDefaults } from './settings/defaults.ts'
 import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
@@ -99,14 +99,13 @@ export const aggMatrixInit = getCompInit(AggregateMatrix)
 export const componentInit = aggMatrixInit
 
 export function getPlotConfig(opts: any) {
+	const overrides = opts?.settings?.aggregateMatrix
+	const sizeDefaults = hasPieAxes(opts?.rows, opts?.columns)
+		? getPieSizeDefaults(opts.rows, opts.columns, overrides)
+		: {}
 	const config = {
 		hidePlotFilter: true,
-		settings: {
-			aggregateMatrix: getAggregateMatrixSettings(
-				opts?.settings?.aggregateMatrix,
-				hasPieAxes(opts?.rows, opts?.columns)
-			)
-		}
+		settings: { aggregateMatrix: getAggregateMatrixSettings(overrides, sizeDefaults) }
 	}
 
 	const returnConfig = copyMerge(config, opts)

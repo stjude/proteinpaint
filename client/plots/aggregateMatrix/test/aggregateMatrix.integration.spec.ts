@@ -15,6 +15,7 @@ Tests:
 	- Multiple sections and categories aggregate matrix
 	- Gene variant rows by sex columns
 	- Gene variant pies by diagnosis group columns
+	- Gene variant pies with too many rows by sex columns
 	- Diagnosis group rows by age columns
 	- DNA methylation rows by sex columns
 	- Isoform expression rows by diagnosis group columns
@@ -318,11 +319,72 @@ tape('Gene variant pies by diagnosis group columns', function (test) {
 			test.ok(legend?.textContent.includes('Variant class'), 'Should render the variant class legend')
 			const sizes = pies.map(pie => pie.getBoundingClientRect().width / 2)
 			test.ok(
-				sizes.every(radius => radius >= 39 && radius <= 101),
-				'Should draw pies with a radius between the default pie sizes of 40 and 100'
+				sizes.every(radius => radius >= 29 && radius <= 61),
+				'Should draw pies with a radius between the default pie sizes of 30 and 60'
 			)
 		}
 	)
+})
+
+tape('Gene variant pies with too many rows by sex columns', function (test) {
+	test.timeoutAfter(30000)
+	/* 18 cols do not fit in the width of the window at the default pie sizes, so on creating the plot the sizes are scaled
+	down to the room that the window has. Which regions are used does not matter, as rows without variants are still rows. */
+	const colCount = 18
+	const regions = Array.from({ length: colCount }, (_, i) => {
+		const start = 7600000 + i * 10000
+		const tw = structuredClone(tp53Variant) as any
+		tw.term.genes = [
+			{ kind: 'coord', chr: 'chr17', start, stop: start + 10000, name: `Region ${i + 1}`, type: 'geneVariant' }
+		]
+		return tw
+	})
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'aggregateMatrix',
+					rows: { Sex: [sex] },
+					columns: { 'Gene variants': regions },
+					// no dot sizes, so the defaults are scaled
+					settings: { aggregateMatrix: { sizeMethod: 'count' } }
+				}
+			]
+		},
+		aggregateMatrix: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(aggregateMatrix: any) {
+		aggregateMatrix.on('postRender.test', null)
+		const rendered = getRendered(aggregateMatrix)
+		const settings = aggregateMatrix.Inner.state.config.settings.aggregateMatrix
+
+		test.equal(rendered.error, '', 'Should not display an error')
+		test.equal(rendered.rowLabels.length, 2, 'Should render a row for every sex')
+		test.equal(rendered.colLabels.length, colCount, 'Should render a column for every region')
+
+		test.ok(settings.maxDotSize < 60, 'Should scale the default max pie size down to fit the rows')
+		test.ok(settings.maxDotSize >= 20, 'Should not scale the max pie size below the max dot size')
+		test.equal(settings.minDotSize, Math.round(settings.maxDotSize / 2), 'Should keep the ratio of the default sizes')
+
+		const pies = [...rendered.mainDiv.querySelectorAll('.sjpp-ag-matrix-pie')] as any[]
+		test.ok(pies.length > 0, 'Should render pies')
+		test.ok(
+			pies.every(pie => {
+				const radius = pie.getBoundingClientRect().width / 2
+				return radius >= settings.minDotSize - 1 && radius <= settings.maxDotSize + 1
+			}),
+			'Should draw every pie with a radius between the scaled sizes'
+		)
+
+		// if (test['_ok']) aggregateMatrix.Inner.app.destroy()
+		test.end()
+	}
 })
 
 tape('Diagnosis group rows by age columns', function (test) {

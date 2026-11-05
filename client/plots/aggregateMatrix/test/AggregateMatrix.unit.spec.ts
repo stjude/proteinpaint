@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { getPlotConfig, validatePlotConfig } from '../AggregateMatrix.ts'
+import { getPieSizeDefaults } from '../settings/defaults.ts'
 
 /*
 Tests:
@@ -8,6 +9,7 @@ Tests:
     - Rejected methods
     - Pie charts do not need a gradient method
     - Pie charts default to larger dot sizes
+    - Pie charts with many rows or columns default to smaller dot sizes
 */
 
 const tw = (type: string, id = type) => ({ term: { id, name: id, type } })
@@ -131,7 +133,7 @@ tape('Pie charts default to larger dot sizes', function (test) {
 		const { minDotSize, maxDotSize, dotInputMin, dotInputMax } = getPlotConfig(cfg).settings.aggregateMatrix
 		return { minDotSize, maxDotSize, dotInputMin, dotInputMax }
 	}
-	const pieSizes = { minDotSize: 40, maxDotSize: 100, dotInputMin: 20, dotInputMax: 300 }
+	const pieSizes = { minDotSize: 30, maxDotSize: 60, dotInputMin: 5, dotInputMax: 300 }
 	const dotSizes = { minDotSize: 5, maxDotSize: 20, dotInputMin: 2, dotInputMax: 35 }
 	const gv = { Variants: [tw('geneVariant', 'TP53')] }
 	const sex = { Sex: [tw('categorical', 'sex')] }
@@ -158,6 +160,41 @@ tape('Pie charts default to larger dot sizes', function (test) {
 		),
 		{ ...pieSizes, minDotSize: 50, maxDotSize: 120 },
 		'Should keep sizes set by the user'
+	)
+	test.end()
+})
+
+tape('Pie charts with many rows or columns default to smaller dot sizes', function (test) {
+	// The room for the cells is 1000 wide and 650 high, and a cell is 2.5 times the largest dot
+	const viewport = { width: 1400, height: 900 }
+	const terms = (count: number) => ({ Terms: Array.from({ length: count }, () => tw('categorical')) })
+	const sizes = (rows: number, columns: number, overrides = {}) => {
+		const { minDotSize, maxDotSize } = getPieSizeDefaults(terms(rows), terms(columns), overrides, viewport)
+		return { minDotSize, maxDotSize }
+	}
+
+	test.deepEqual(sizes(3, 2), { minDotSize: 30, maxDotSize: 60 }, 'Should keep the pie defaults when the cells fit')
+	test.deepEqual(
+		sizes(10, 2),
+		{ minDotSize: 13, maxDotSize: 26 },
+		'Should fit the rows in the height, and keep the ratio of the min size to the max size'
+	)
+	test.deepEqual(sizes(2, 20), { minDotSize: 10, maxDotSize: 20 }, 'Should fit many columns in the width')
+	test.deepEqual(sizes(2, 8), { minDotSize: 25, maxDotSize: 50 }, 'Should fit fewer columns in the width')
+	test.deepEqual(
+		sizes(200, 200),
+		{ minDotSize: 10, maxDotSize: 20 },
+		'Should not go below the max size of a dot, or the ratio of the min size to it'
+	)
+	test.deepEqual(
+		sizes(200, 200, { minDotSize: 10 }),
+		{ minDotSize: 30, maxDotSize: 60 },
+		'Should leave the defaults alone when the user sets a min size'
+	)
+	test.deepEqual(
+		sizes(200, 200, { maxDotSize: 80 }),
+		{ minDotSize: 30, maxDotSize: 60 },
+		'Should leave the defaults alone when the user sets a max size'
 	)
 	test.end()
 })
