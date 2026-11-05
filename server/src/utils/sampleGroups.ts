@@ -1,5 +1,6 @@
+import type { SampleMapping } from '#types'
 import type { DERequest, DiffMethRequest, DiffSpliceRequest } from '#types'
-import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
+import { getData, resolveSampleMapping } from '#src/termdb.matrix.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { filterSampleNamesByAccess, get_samples } from '#src/termdb.sql.js'
 import { authApi } from '#src/auth.js'
@@ -44,10 +45,10 @@ export async function resolveDaContext(
 				filter: (req as any).filter,
 				filter0: (req as any).filter0,
 				terms: [req.tw],
-				__protected__: req.__protected__
+				__protected__: req.__protected__,
+				sampleMapping: 'parentToChildren'
 			},
-			ds,
-			true // always map parent annotations to child samples for DA analysis
+			ds
 		)
 		if (term_results.error) throw new Error(term_results.error)
 	}
@@ -59,10 +60,10 @@ export async function resolveDaContext(
 				filter: (req as any).filter,
 				filter0: (req as any).filter0,
 				terms: [req.tw2],
-				__protected__: req.__protected__
+				__protected__: req.__protected__,
+				sampleMapping: 'parentToChildren'
 			},
-			ds,
-			true // always map parent annotations to child samples for DA analysis
+			ds
 		)
 		if (term_results2.error) throw new Error(term_results2.error)
 	}
@@ -155,8 +156,8 @@ export async function buildGroupValues(
 		// ds has sample ancestry
 		// data for DE/DM (i.e. genomic data) are assumed to be
 		// at sample-level, so map sample ids to sample-level
-		const arg = { filter: samplelstFilter(values) }
-		maySetMapParent2Children(arg, ds, true)
+		const arg = { filter: samplelstFilter(values), sampleMapping: 'parentToChildren' }
+		resolveSampleMapping(arg, ds)
 		const allSamples = [...readable].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
 		// filtering samples by samplelst term
 		// if samples are at parent-level then will get
@@ -221,11 +222,12 @@ export function sampleFilterId(filter: any): string {
  * them (getSampleList() in termdb.js), without that query's display checks: the ids are for the
  * server's own use. The dataset's sample filter is merged in as getData() does, and the sample
  * level of the ids is set as getData() sets it for a filter. `fq` is modified. */
-async function filterToSampleIds(fq: any, ds: any, mapParent2Children?: boolean): Promise<(number | string)[]> {
+async function filterToSampleIds(fq: any, ds: any, sampleMapping?: SampleMapping): Promise<(number | string)[]> {
 	authApi.mayAdjustFilter(fq, ds, undefined)
 	// a dataset's own filterSamples() may read the dataset from the query, as getData() gives it
 	fq.ds = ds
-	maySetMapParent2Children(fq, ds, mapParent2Children)
+	fq.sampleMapping = sampleMapping
+	resolveSampleMapping(fq, ds)
 	if (ds.cohort?.db) {
 		// get_samples() may repeat an id
 		return [...new Set<number>((await get_samples(fq, ds)).map((i: any) => i.id))]
@@ -284,14 +286,14 @@ export async function resolveGroups(groups: any, q: any, ds: any): Promise<any[]
 				dslabel: ds.label,
 				filter,
 				filter0,
-				mapParent2Children: g.mapParent2Children
+				sampleMapping: g.sampleMapping
 			},
 			cacheScope,
 			computeFresh: () =>
 				filterToSampleIds(
 					{ filter: structuredClone(filter), filter0, __protected__: q.__protected__ },
 					ds,
-					g.mapParent2Children
+					g.sampleMapping
 				)
 		})
 		resolved.push({ ...rest, in: true, values: result.map(sampleId => ({ sampleId })) })
@@ -339,7 +341,7 @@ export function canonicalizeSamplelst(s: any): any {
 						return A < B ? -1 : 1
 				  })
 				: g.values,
-			...(isFilterGroup(g) ? { filter: g.filter, filter0: g.filter0, mapParent2Children: g.mapParent2Children } : {})
+			...(isFilterGroup(g) ? { filter: g.filter, filter0: g.filter0, sampleMapping: g.sampleMapping } : {})
 		}))
 	}
 }

@@ -11,7 +11,7 @@ import { formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import { getAvailableMemoryMB, admitRun, type MemoryCost } from '#src/utils/memory.ts'
 import type { TopVeCacheResult } from '../../routes/types.ts'
-import { maySetMapParent2Children } from '#src/termdb.matrix.js'
+import { resolveSampleMapping } from '#src/termdb.matrix.js'
 import { genomes } from '#src/initGenomesDs.js'
 
 export const payload: RoutePayload = {
@@ -53,7 +53,8 @@ function init({ genomes }) {
 
 			// map parent term annotations to child samples, since assuming
 			// gene expression data is at sample-level
-			maySetMapParent2Children(q, ds, true)
+			q.sampleMapping = 'parentToChildren'
+			resolveSampleMapping(q, ds)
 
 			const t = Date.now()
 			result = {
@@ -129,7 +130,7 @@ function topVeKeyInputs(q: TermdbTopVariablyExpressedGenesRequest) {
 		rank_type: q.rank_type?.type ?? 'var',
 		filter: (q as any).filter ?? null,
 		filter0: (q as any).filter0 ?? null,
-		mapParent2Children: q.mapParent2Children,
+		sampleMapping: q.sampleMapping,
 		sampleTypes: q.sampleTypes
 	}
 }
@@ -137,7 +138,7 @@ function topVeKeyInputs(q: TermdbTopVariablyExpressedGenesRequest) {
 async function resolveNativeSamples(q: TermdbTopVariablyExpressedGenesRequest, gE: any, ds: any): Promise<string[]> {
 	const samples: string[] = []
 	const limitSamples = await mayLimitSamples(
-		{ filter: q.filter, filter0: q.filter0, mapParent2Children: q.mapParent2Children, sampleTypes: q.sampleTypes },
+		{ filter: q.filter, filter0: q.filter0, sampleMapping: q.sampleMapping, sampleTypes: q.sampleTypes },
 		gE.samples,
 		ds
 	)

@@ -1,3 +1,4 @@
+import type { SampleMapping } from '../termdb.matrix.ts'
 import type { Filter } from '../filter.ts'
 import type { ErrorResponse } from './errorResponse.ts'
 
@@ -32,8 +33,8 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	filter0?: any
 	/** helps ds getter */
 	ds?: any
-	/** whether to map parent annotations onto child samples */
-	mapParent2Children?: boolean
+	/** hierarchy mapping direction; omitted for automatic inference */
+	sampleMapping?: SampleMapping
 	/** query sample type */
 	sampleTypes?: number[]
 }

@@ -30,7 +30,7 @@ tape('matchedSamplelstForResponse: a group by the shape that the request gave it
 	)
 
 	const byFilter = [
-		{ name: 'a', in: true, filter, filter0: null, mapParent2Children: true, sampleCount: 40 },
+		{ name: 'a', in: true, filter, filter0: null, sampleMapping: 'parentToChildren', sampleCount: 40 },
 		{ name: 'b', in: true, filter }
 	]
 	const out = matchedSamplelstForResponse(byFilter, matched)
@@ -38,7 +38,7 @@ tape('matchedSamplelstForResponse: a group by the shape that the request gave it
 	t.deepEqual(
 		out.groups,
 		[
-			{ name: 'a', in: true, filter, filter0: null, mapParent2Children: true, sampleCount: 2 },
+			{ name: 'a', in: true, filter, filter0: null, sampleMapping: 'parentToChildren', sampleCount: 2 },
 			{ name: 'b', in: true, filter, sampleCount: 1 }
 		],
 		'such a group goes back as it came, with the number of its matched samples'

@@ -15,8 +15,7 @@ import {
 } from '#shared/common.js'
 import { summarize_mclass } from '#shared/mds3tk.js'
 import { plotWiggle, validateCanvasSize } from './bw.js'
-import { mapParent2ChildrenWithSampleTypes } from './utils/sampleTypes.ts'
-import { combinePPfilterAndTid2value } from './mds3.filter.js'
+import { resolveSampleMapping } from './termdb.matrix.js'
 import { parseJsonParam } from './routes/common.ts'
 
 /*
@@ -321,11 +320,10 @@ export async function load_driver(q, ds) {
 	// what other loaders can be if not in ds.queries?
 
 	// assuming genomic data in mds3 tk is at sample-level, so setting
-	// mapParent2Children=true to allow parent-level term data to be mapped
-	// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter),
-	// keeping the sample types chosen in the genome browser. The tk sends its filter as filterObj,
-	// so the mapping is given the filter that its queries apply, see mayLimitSamples()
-	mapParent2ChildrenWithSampleTypes(q, ds, combinePPfilterAndTid2value(q, ds))
+	// sampleMapping=parentToChildren to allow parent-level term data to be mapped
+	// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
+	q.sampleMapping = 'parentToChildren'
+	resolveSampleMapping(q, ds)
 
 	if (q.singleSampleGenomeQuantification) {
 		if (!ds.queries.singleSampleGenomeQuantification) throw 'not supported on this dataset'

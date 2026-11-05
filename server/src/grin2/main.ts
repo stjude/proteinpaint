@@ -21,7 +21,7 @@ import {
 } from '../utils/memory.ts'
 import { processSampleMlst, buildLesionTypeMap } from './lesions.ts'
 import type { CnvType, Grin2CacheResult, Grin2Processing, Lesion } from './types.ts'
-import { maySetMapParent2Children } from '../termdb.matrix.js'
+import { resolveSampleMapping } from '../termdb.matrix.js'
 /* Re-exported because the GRIN2 unit spec and callers import it from here. The definition moved to
 utils/regionMask.ts once DMR analysis needed the same selector -- one copy, two consumers. */
 export { resolveExcludeBeds } from '../utils/regionMask.ts'
@@ -484,9 +484,9 @@ async function runGrin2Fresh(
 }> {
 	// QUICKFIX
 	// assuming genomic data in mds3 tk is at sample-level, so setting
-	// mapParent2Children=true to allow parent-level term data to be mapped
+	// sampleMapping=parentToChildren to allow parent-level term data to be mapped
 	// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
-	maySetMapParent2Children(request, ds, true)
+	resolveSampleMapping(Object.assign(request, { sampleMapping: 'parentToChildren' }), ds)
 
 	const startTime = Date.now()
 

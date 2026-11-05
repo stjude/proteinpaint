@@ -339,7 +339,7 @@ export function getAvailabilityGroups(samplelstTW, termfilter = {}) {
 		if (isFilterGroup(g)) {
 			const group = { name: g.name, filter: g.filter }
 			if (g.filter0 !== undefined) group.filter0 = g.filter0
-			if (g.mapParent2Children) group.mapParent2Children = true
+			if (g.sampleMapping !== undefined) group.sampleMapping = g.sampleMapping
 			return group
 		}
 		return { name: g.name, values: (g.values || []).map(v => ({ sampleId: v.sampleId })) }
@@ -455,7 +455,7 @@ async function showBrainImagingMenu(self, samplelstTW, anchor) {
 	try {
 		for (const g of samplelstTW.q.groups) {
 			if (!isFilterGroup(g)) continue
-			const lst = await self.app.vocabApi.getFilteredSampleList(g.filter, g.filter0, true)
+			const lst = await self.app.vocabApi.getFilteredSampleList(g.filter, g.filter0, 'parentToChildren')
 			for (const s of lst) addName(s.name)
 		}
 	} catch (e) {
@@ -1694,8 +1694,8 @@ with the cohort filter and the sample level that its samples depend on. */
 export function getGroupForRegion(group) {
 	if (Array.isArray(group.values)) return group.values
 	if (!group.filter) return []
-	const { filter, filter0, mapParent2Children } = group
-	return { filter, filter0, mapParent2Children }
+	const { filter, filter0, sampleMapping } = group
+	return { filter, filter0, sampleMapping }
 }
 
 /* The group that an in:false placeholder stands for: the samples of the cohort that the placeholder
@@ -1719,7 +1719,7 @@ export function withOthersGroup(groups, termfilter) {
 }
 
 /* A samplelst tw whose groups are each defined by a filter.
-groups[]: {name, filter, color?, filter0?, sampleCount?, mapParent2Children?}
+groups[]: {name, filter, color?, filter0?, sampleCount?, sampleMapping?}
 - filter: the server resolves the samples that it selects, where the samples of the group are needed.
   the tw lists no sample: a group has no values[] and its category has no list[]
 - filter0: the cohort filter that the group was made with, on a dataset that takes one, so that the
@@ -1734,7 +1734,7 @@ export function getSamplelstTWFromFilters(groups, name = 'groups') {
 		const qgroup = { name: group.name, in: true, filter: group.filter }
 		if (group.filter0 !== undefined) qgroup.filter0 = group.filter0
 		if (Number.isFinite(group.sampleCount)) qgroup.sampleCount = group.sampleCount
-		if (group.mapParent2Children) qgroup.mapParent2Children = true
+		if (group.sampleMapping !== undefined) qgroup.sampleMapping = group.sampleMapping
 		qgroups.push(qgroup)
 		values[group.name] = { key: group.name, label: group.name, color: group.color }
 	}

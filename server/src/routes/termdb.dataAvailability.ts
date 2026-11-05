@@ -121,7 +121,7 @@ async function getDataAvailability(q: DataAvailabilityRequest, ds: any): Promise
 	const resolvedToSamples =
 		assays.length || survivalTerms.length
 			? await resolveGroups(
-					filterGroups.map(g => ({ ...g, mapParent2Children: true })),
+					filterGroups.map(g => ({ ...g, sampleMapping: 'parentToChildren' })),
 					q,
 					ds
 			  )
@@ -281,7 +281,7 @@ function asFilterGroup(g: DataAvailabilityGroup): DataAvailabilityGroup {
 		name: g.name,
 		filter: g.filter || samplelstFilter(g.values!),
 		filter0: g.filter0,
-		mapParent2Children: g.mapParent2Children
+		sampleMapping: g.sampleMapping
 	}
 }
 
