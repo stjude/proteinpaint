@@ -26,6 +26,9 @@ fi
 #   compile the crates again, and it is not target/wasm-build, so that it is not mixed with a host build
 # - wasm/build.sh copies only the modules to target/wasm, which are given to the host user, since the container runs
 #   as root
+# the output dir is created here, so that it and target/ are owned by the host user, and not by the root user of the
+# container, which would otherwise create them in a checkout without target/
+mkdir -p "$RUSTDIR/target/wasm"
 docker run --rm \
 	--mount "type=bind,source=$RUSTDIR,target=/build/rust" \
 	--mount "type=volume,source=pp-rust-wasm-registry,target=/usr/local/cargo/registry" \
