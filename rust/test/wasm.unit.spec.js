@@ -144,33 +144,39 @@ tape('a wasm module that imports another function does not instantiate', { skip:
 	test.end()
 })
 
-tape('USE_WASM=1 runs the wasm modules when a child process is allowed', { skip: !hasModules }, test => {
-	// without the permission model, so that only USE_WASM selects the wasm modules
-	const run = USE_WASM =>
-		spawnSync(
-			process.execPath,
-			[
-				'--input-type=module',
-				'-e',
-				`
+tape(
+	'a binary with a wasm module runs it when a child process is allowed, and another binary is spawned',
+	{ skip: !hasModules },
+	test => {
+		// a module name that no binary has, so that only its wasm module can give the fisher output
+		const name = 'pp_test_wasm_first'
+		const modpath = path.join(wasmDir, name + '.wasm')
+		fs.copyFileSync(path.join(wasmDir, 'fisher.wasm'), modpath)
+		try {
+			// without the permission model, so that a child process is allowed
+			const result = spawnSync(
+				process.execPath,
+				[
+					'--input-type=module',
+					'-e',
+					`
+		import assert from 'node:assert/strict'
 		import { run_rust } from ${JSON.stringify(path.join(rustDir, 'index.js'))}
 		const input = [{ index: 0, n1: 605, n2: 2050, n3: 503, n4: 1895 }]
-		const out = JSON.parse(await run_rust('fisher', JSON.stringify({ input })))
-		if (out[0].p_value !== 0.12552895565046274) throw 'unexpected fisher output'
-		// a binary without a wasm module has the neutral error only when the wasm modules are used
+		const out = JSON.parse(await run_rust('${name}', JSON.stringify({ input })))
+		assert.deepEqual(out.map(r => r.p_value), [0.12552895565046274])
+		// a binary without a wasm module is spawned, and does not have the neutral error of a missing wasm module
 		const err = await run_rust('DEanalysis', '{}').then(() => '', e => String(e?.message || e))
-		console.log('DEanalysis: ' + err)`
-			],
-			{ encoding: 'utf8', env: { ...process.env, USE_WASM } }
-		)
-	const neutral = 'DEanalysis: this server build does not support this data computation request'
-	const on = run('1')
-	test.equal(on.status, 0, `USE_WASM=1 exits cleanly ${on.status ? on.stderr : ''}`)
-	test.ok(on.stdout.includes(neutral), 'USE_WASM=1 uses the wasm modules')
-	for (const value of ['', '0', 'true']) {
-		const off = run(value)
-		test.equal(off.status, 0, `USE_WASM='${value}' exits cleanly ${off.status ? off.stderr : ''}`)
-		test.notOk(off.stdout.includes(neutral), `USE_WASM='${value}' uses the rust binaries`)
+		assert.doesNotMatch(err, /this server build does not support this data computation request/)
+		console.log('checks passed')`
+				],
+				{ encoding: 'utf8' }
+			)
+			test.equal(result.status, 0, `the checks exit cleanly ${result.status ? result.stderr : ''}`)
+			test.ok(result.stdout.includes('checks passed'), 'the checks ran')
+		} finally {
+			fs.rmSync(modpath, { force: true })
+		}
+		test.end()
 	}
-	test.end()
-})
+)
