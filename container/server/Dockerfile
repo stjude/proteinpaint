@@ -26,10 +26,14 @@ COPY ./server/package.json  ./
 RUN npm install --omit=dev --cache=/tmp/npm-cache && rm -rf /tmp/npm-cache && \
     find . \( ! -user 0 -o ! -group 0 \) -exec chown -h 0:0 {} + && \
     find . ! -type l -perm /022 -exec chmod go-w {} +
-# The rust postinstall does not fail the npm install when it cannot download or compile the binaries,
-# such as from a draft GitHub release, so fail the build here instead of at server startup.
+# The rust postinstall does not fail the npm install when it cannot download or compile the binaries, or download the
+# wasm modules, such as from a draft GitHub release, so fail the build here instead of at server startup. Without the
+# wasm modules, run_rust() would spawn the binaries instead, which a dev or test server with the modules would not.
 RUN if [ -z "$(ls node_modules/@sjcrh/proteinpaint-rust/target/release 2>/dev/null)" ]; then \
       echo "ERROR: missing the rust binaries in node_modules/@sjcrh/proteinpaint-rust/target/release"; exit 1; \
+    fi && \
+    if ! ls node_modules/@sjcrh/proteinpaint-rust/target/wasm/*.wasm > /dev/null 2>&1; then \
+      echo "ERROR: missing the rust wasm modules in node_modules/@sjcrh/proteinpaint-rust/target/wasm"; exit 1; \
     fi
 
 #########################

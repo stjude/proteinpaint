@@ -9,7 +9,7 @@ The checks run in a node process with that permission model, see runChecks() bel
 command in wasm/Cargo.toml, and these tests are skipped without them. */
 
 const rustDir = path.join(import.meta.dirname, '..')
-const wasmDir = path.join(rustDir, 'target/wasm/wasm32-wasip1/release')
+const wasmDir = path.join(rustDir, 'target/wasm')
 const hasModules = ['fisher', 'wilcoxon'].every(n => fs.existsSync(path.join(wasmDir, n + '.wasm')))
 
 // runs the checks code in a node process without the child process permission; returns its exit status and output

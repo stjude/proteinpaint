@@ -200,6 +200,13 @@ jobs:
           name: rust-binaries
           path: rust-binaries
 
+      # for pack.sh to include in the rust tarball, see RUST_WASM_DIR
+      - name: Download Rust wasm modules
+        uses: actions/download-artifact@v8
+        with:
+          name: rust-wasm
+          path: rust-wasm
+
 
       # Publish Docker image with the Rust binaries included
       - name: Publish docker image with Rust binaries
