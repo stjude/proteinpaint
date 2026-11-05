@@ -18,6 +18,7 @@ WASMDIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 OUTDIR=${1:-$WASMDIR/../target/wasm}
 [[ "$OUTDIR" = /* ]] || OUTDIR="$PWD/$OUTDIR"
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$WASMDIR/../target/wasm-build}
+[[ "$CARGO_TARGET_DIR" = /* ]] || CARGO_TARGET_DIR="$PWD/$CARGO_TARGET_DIR"
 
 cd "$WASMDIR"
 # -fvisibility=default, since clang hides the functions of a wasm target by default, which bindgen then skips; the
