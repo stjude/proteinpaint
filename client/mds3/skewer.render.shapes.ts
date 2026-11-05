@@ -3,8 +3,25 @@ import { shapes } from '#dom'
 import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
 import { select as d3select } from 'd3-selection'
 
+export const MCLASSES_ATTRIBUTE = 'mclasses'
+export const DISC_G_PREFIX = 'sjpp-mds3tk-disc-g-'
+export const joinMlstBy = (d, key = 'mname') => {
+	return d?.mlst ? Array.from(new Set(d.mlst.map(mItem => mItem[key]))).join('-') : d[key]
+}
+
+export const getMClassesLabel = d => {
+	return joinMlstBy(d, 'class')
+}
+
+export const getMlstJoinLabel = (d, prefix) => {
+	const mNameSuffix = joinMlstBy(d)
+	return `${prefix}${mNameSuffix}`
+}
+
 export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
+	console.log('here')
 	shapeG
+
 		.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
 		.append('path')
 		.attr('d', d => shapes[d.shape].calculatePath(getPathDimensions(d.shape, d.radius, skewer.pointup)))
@@ -68,6 +85,7 @@ export function renderShapeKick(skewer: any, elem: any) {
 			const radius = d.radius * 1.01 || d.maxradius + 2
 			return shapes[d.shape].calculatePath(getPathDimensions(d.shape, radius, skewer.pointup))
 		})
+
 		.attr('stroke-width', 1.75)
 
 	return kick

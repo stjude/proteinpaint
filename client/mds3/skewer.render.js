@@ -3,7 +3,15 @@ import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
 import { dtsnvindel, dtsv, dtfusionrna, mclass } from '#shared/common.js'
-import { renderSkewerShapes, renderShapeKick, setNumBaseline } from './skewer.render.shapes.ts'
+import {
+	renderSkewerShapes,
+	renderShapeKick,
+	setNumBaseline,
+	getMlstJoinLabel,
+	DISC_G_PREFIX,
+	MCLASSES_ATTRIBUTE,
+	getMClassesLabel
+} from './skewer.render.shapes.ts'
 import { shapes } from '#dom/shapes'
 
 /*
@@ -136,6 +144,9 @@ export function skewer_make(tk, block) {
 			d => 'translate(0,' + (d.aa.showmode == modefold ? 0 : d.yoffset * (tk.skewer.pointup ? -1 : 1)) + ')'
 		)
 		.attr('class', 'sja_aa_discg')
+		.attr(MCLASSES_ATTRIBUTE, d => getMClassesLabel(d))
+		.attr('extended', d => d.aa.showmode)
+		.attr('data-testid', d => getMlstJoinLabel(d, DISC_G_PREFIX))
 		.each(function (d) {
 			d.g = this
 			if (!d.shape) {
@@ -276,7 +287,6 @@ export function skewer_make(tk, block) {
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
-		.attr('data-testid', d => `sjpp-mds3tk-skewer-disc-kick-${d.mlst[0].mname}`)
 		.on('mousedown', event => {
 			event.stopPropagation()
 		})
@@ -658,6 +668,7 @@ export function unfold_glyph(newlst, tk, block) {
 		*/
 		const set = tk.skewer.selection.filter(d => expanded.has(d.x0))
 		set.attr('extended', modeshow)
+		set.selectAll('.sja_aa_discg').attr('extended', modeshow)
 		set.selectAll('.sja_aa_discrim').attr('fill-opacity', 1).attr('stroke-opacity', 1)
 	}
 
@@ -665,6 +676,7 @@ export function unfold_glyph(newlst, tk, block) {
 		// vertical extending
 		const set = tk.skewer.selection.filter(d => folded.has(d.x0))
 		set.attr('extended', modeshow)
+		set.selectAll('.sja_aa_discg').attr('extended', modeshow)
 		set
 			.transition()
 			.duration(dur)
@@ -909,6 +921,7 @@ export function fold_glyph(lst, tk) {
 	}
 	const set = tk.skewer.selection.filter(d => hash.has(d.x0))
 	set.attr('extended', modefold)
+	set.selectAll('.sja_aa_discg').attr('extended', modefold)
 	set
 		.transition()
 		.duration(dur)
