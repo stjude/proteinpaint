@@ -1530,9 +1530,11 @@ export type SpatialQuery = {
 	 * holds one image per subfolder, containing that image's slide file */
 	wsiFolder?: string
 	/** sequence-based (Visium) spatial root, method=sequence: sequenceFolder/<sample_id>/<imageName>/
-	 * holds tissue_hires_image.png and the consolidated .h5ad (found by spatialDataFileSuffix,
+	 * holds the tissue image (sequenceImageSuffix) and the consolidated .h5ad (found by spatialDataFileSuffix,
 	 * default '.h5ad'): counts, spot positions (obsm/spatial), optional obsm/cell_type_proportions */
 	sequenceFolder?: string
+	/** suffix of the sequence-based tissue image (png, jpg or jpeg); default 'tissue_hires_image.png' */
+	sequenceImageSuffix?: string
 	/** suffix of the spatial slide file (e.g. 'morphology.ome.tif'); an image
 	 * subfolder without it is skipped. Required with folder */
 	tiffFileSuffix?: string

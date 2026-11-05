@@ -6,7 +6,7 @@
 
  Two ways to address a sample (neither takes file paths in dataset mode):
  - Dataset: ds.queries.w2.sequenceFolder/<sample_id>/<imageName>/ holds the h5ad (matched by
-   w2.spatialDataFileSuffix, default '.h5ad') and tissue_hires_image.png. Query: genome, dslabel,
+   w2.spatialDataFileSuffix, default '.h5ad') and the tissue image (png/jpg/jpeg, w2.sequenceImageSuffix, default tissue_hires_image.png). Query: genome, dslabel,
    sample_id, wsimage=<imageName>/<anything>.
  - Direct (runpp ?method=sequence&image_file=&spatial_data=): tpmasterdir-relative paths, gated by
    serverconfig.features.wsi.allowDirectSlidePath like wsitiles' direct mode.
@@ -25,7 +25,13 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { genomes } from '#src/initGenomesDs.js'
 
-export const HIRES_IMAGE = 'tissue_hires_image.png' // fixed name inside a sample's image folder
+/** image formats a sequence-based sample's tissue image may have */
+export const IMAGE_EXT = /\.(png|jpe?g)$/i
+
+/** the tissue image among an image folder's files: the one ending with `suffix`
+ (w2.sequenceImageSuffix, default Space Ranger's 'tissue_hires_image.png'); png/jpg/jpeg only */
+export const findSequenceImage = (files: string[], suffix = 'tissue_hires_image.png') =>
+	IMAGE_EXT.test(suffix) ? files.find(f => f.endsWith(suffix)) : undefined
 
 const hasSequenceDs = g =>
 	Object.values(g).some((x: any) => Object.values(x.datasets || {}).some((ds: any) => ds.queries?.w2?.sequenceFolder))
@@ -59,7 +65,7 @@ async function resolveFiles(genomes: any, q: any): Promise<{ h5ad: string; png: 
 			throw new Error('direct path disabled (set features.wsi.allowDirectSlidePath)')
 		const png = underMaster(String(q.image_file || ''))
 		const h5ad = underMaster(String(q.spatial_data || ''))
-		if (!png.toLowerCase().endsWith('.png')) throw new Error('image_file must be a .png')
+		if (!IMAGE_EXT.test(png)) throw new Error('image_file must be a .png, .jpg or .jpeg')
 		if (!h5ad.toLowerCase().endsWith('.h5ad')) throw new Error('spatial_data must be a .h5ad')
 		return { h5ad, png }
 	}
@@ -73,9 +79,12 @@ async function resolveFiles(genomes: any, q: any): Promise<{ h5ad: string; png: 
 	const base = path.resolve(serverconfig.tpmasterdir, w2.sequenceFolder)
 	const dir = path.resolve(base, String(q.sample_id), segs[0])
 	if (!dir.startsWith(base + path.sep)) throw new Error('invalid sample_id')
-	const h5 = (await readdir(dir)).find(f => f.endsWith(w2.spatialDataFileSuffix || '.h5ad'))
+	const files = await readdir(dir)
+	const h5 = files.find(f => f.endsWith(w2.spatialDataFileSuffix || '.h5ad'))
 	if (!h5) throw new Error('no spatial .h5ad in the image folder')
-	return { h5ad: path.join(dir, h5), png: path.join(dir, HIRES_IMAGE) }
+	const img = findSequenceImage(files, w2.sequenceImageSuffix)
+	if (!img) throw new Error('no tissue image in the image folder')
+	return { h5ad: path.join(dir, h5), png: path.join(dir, img) }
 }
 
 function init({ genomes }) {
@@ -86,7 +95,7 @@ function init({ genomes }) {
 			const action = req.params.action
 			if (action == 'image') {
 				await stat(png) // 404-ish error before streaming
-				res.set('Cache-Control', 'public, max-age=3600').type('png')
+				res.set('Cache-Control', 'public, max-age=3600')
 				res.sendFile(png)
 				return
 			}
