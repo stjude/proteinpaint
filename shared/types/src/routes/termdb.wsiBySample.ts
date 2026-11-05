@@ -53,7 +53,7 @@ export type WsiImage = {
 export type SpatialImage = {
 	type: 'spatial'
 	/** image-based (default when absent) or sequence-based (Visium) ST. For
-	 'sequence', fileName is <imageName>/tissue_hires_image.png and spatialData
+	 'sequence', fileName is <imageName>/<tissue image: png/jpg/jpeg> and spatialData
 	 is the h5ad holding counts, spot positions and cell-type proportions */
 	method?: SpatialMethod
 	/** = image_file: slide path relative to the sample's folder under

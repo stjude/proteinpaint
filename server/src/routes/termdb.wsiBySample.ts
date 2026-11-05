@@ -11,7 +11,7 @@ import { readdir, stat } from 'fs/promises' // directory listing + slide mtime (
 import path from 'path' // root/sample/image path assembly
 import serverconfig from '#src/serverconfig.js' // tpmasterdir, the root of all data paths
 import { genomes } from '#src/initGenomesDs.js' // checked when augen sets up the route
-import { HIRES_IMAGE } from './visium.ts' // the sequence-based (Visium) image's fixed file name
+import { findSequenceImage } from './visium.ts' // locates a sequence-based (Visium) sample's tissue image
 
 /*
  termdb/wsiBySample — whole-slide images for the w2 plot.
@@ -158,18 +158,19 @@ function init({ genomes }) {
 					for (const img of await subdirs(seqSampleDir)) {
 						const files = await readdir(path.join(seqSampleDir, img)).catch(() => [] as string[])
 						const h5 = files.find(f => f.endsWith(w2.spatialDataFileSuffix || '.h5ad'))
-						if (!h5 || !files.includes(HIRES_IMAGE)) continue // not a Visium image folder
-						const v = (await stat(path.join(seqSampleDir, img, HIRES_IMAGE))).mtimeMs // cache-busting version
+						const png = findSequenceImage(files, w2.sequenceImageSuffix)
+						if (!h5 || !png) continue // not a Visium image folder
+						const v = (await stat(path.join(seqSampleDir, img, png))).mtimeMs // cache-busting version
 						images.push({
 							type: 'spatial' as const,
 							method: 'sequence' as const,
-							fileName: path.join(img, HIRES_IMAGE), // the visium route's wsimage= value
+							fileName: path.join(img, png), // the visium route's wsimage= value
 							spatialData: path.join(w2.sequenceFolder, sampleId, img, h5),
 							geneExpression: w2.geneExpression,
 							cellTypes: w2.cellTypes,
-							thumbnail: `visium/image?wsimage=${encodeURIComponent(path.join(img, HIRES_IMAGE))}&dslabel=${
-								q.dslabel
-							}&genome=${q.genome}&sample_id=${encodeURIComponent(sampleId)}&v=${v}`
+							thumbnail: `visium/image?wsimage=${encodeURIComponent(path.join(img, png))}&dslabel=${q.dslabel}&genome=${
+								q.genome
+							}&sample_id=${encodeURIComponent(sampleId)}&v=${v}`
 						})
 					}
 				}

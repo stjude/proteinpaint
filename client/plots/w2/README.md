@@ -29,7 +29,7 @@ computed once per (slide, plane, z, x, y).
 carries a `sample`:
 
 - **Standalone — the "Whole Slide Images" mass chart** (no `config.sample`).
-  Lists every sample that has at least one *plain* slide on disk (the
+  Lists every sample that has at least one _plain_ slide on disk (the
   no-`sample_id` form of `termdb/wsiBySample` — spatial-only samples are not
   listed), renders the pick-a-sample table and one tab per image, and shows
   the plain OpenLayers viewer. Spatial images are filtered out of a listed
@@ -64,7 +64,7 @@ standalone chart is images-only.
 
 Spatial images carry a `method`. `image` (default) is the tiled-slide + per-cell
 polygon viewer described below. `sequence` is sequence-based ST (Visium): one
-`tissue_hires_image.png` plus one consolidated `.h5ad` (counts, `obsm/spatial`,
+tissue image (png/jpg/jpeg, found by `sequenceImageSuffix`, default `tissue_hires_image.png`) plus one consolidated `.h5ad` (counts, `obsm/spatial`,
 optional `obsm/cell_type_proportions`, `uns/spatial/<lib>/scalefactors`), laid
 out under `ds.queries.w2.sequenceFolder/<sample>/<imageName>/`. It is served by
 `server/src/routes/visium.ts` (`visium/image|spots|genenames|genecounts`) and
@@ -129,7 +129,7 @@ All viewer traffic hits `wsitiles/:action`:
   up front — and, from that same `stat()`, `spatialVersion` (the h5ad's own
   mtime, independent of the slide file's), which the client bakes into the
   `/boundaries` and `/annotations` URLs below so a regenerated h5ad busts
-  *their* cache the same way a regenerated slide busts tiles'.
+  _their_ cache the same way a regenerated slide busts tiles'.
 - **`/tile/z/x/y`**: checks the disk cache
   (`cachedir/wsitiles/<sha1(slide:mtime)>_<plane>_<z>_<x>_<y>.jpg`); on a miss
   spawns `wsi_tile.py tile`, copies the produced JPEG into the cache, and
@@ -160,7 +160,7 @@ All viewer traffic hits `wsitiles/:action`:
   Zoomify tile, cached like `/tile` (keyed on h5ad version + tile address +
   the fill mode's own fingerprint, since the same tile must re-render if the
   color assignment or gene selection ever changes). `?slide_w=&slide_h=&
-  mpp_x=&mpp_y=` come from the client's own already-fetched `/meta` (this
+mpp_x=&mpp_y=` come from the client's own already-fetched `/meta` (this
   action never opens the slide file itself); exactly one fill mode, mirroring
   the vector fills' own mutual exclusion — `?colors=` a `{type:'r, g, b'}`
   JSON object for cell-type fills, or `?genes=` a JSON gene-name array +
@@ -301,7 +301,7 @@ from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
   together (unreadable on top of each other). While cell types are shown the
   expression fills/legend are suppressed, and in the mass plot the two
   checkboxes uncheck each other (last one toggled wins). The "Gene
-  expression" checkbox only controls the *fills*: genes stay loaded either
+  expression" checkbox only controls the _fills_: genes stay loaded either
   way so the hover tooltip always reports their counts.
 - **Legend pinning** — the legends are absolutely positioned at the map's
   top corners; a scroll listener pushes them down by however much of the
@@ -328,13 +328,13 @@ from the h5ad's cell/nucleus polygons (`/boundaries`, µm→px via `meta.mpp`).
   `client/src/style.css`'s `[aria-label]:hover:after`) had the identical
   problem for a subtler reason: `#dom`'s `getHolder()` sets the button's own
   wrapper to `z-index: 1` so the tooltip (itself `z-index: 10000`) outranks
-  *plain* page content — but a child's z-index only matters within its own
+  _plain_ page content — but a child's z-index only matters within its own
   parent's stacking context; compared against this plot's own legend
   (`z-index: 10`), it's the WRAPPER's z-index (1) that loses, regardless of
   the tooltip's own value. Fixed by bumping the wrapper's z-index to 100
   after `icons.lasso()` runs.
-- **Default framing** — the *first* vector load opens fit to the *sample's
-  own cells* (the fetched boundary polygons' bounding box) rather than the
+- **Default framing** — the _first_ vector load opens fit to the _sample's
+  own cells_ (the fetched boundary polygons' bounding box) rather than the
   whole slide canvas, unless `opts.focus` already picked a specific niche
   (the similar-search preview below). A no-op for a well-cropped
   single-section slide, where the cells already fill most of the frame — but
@@ -358,7 +358,7 @@ once that's fixed, holding every ring as one `MultiPolygon` OpenLayers feature
 is a large in-memory and render-time cost the browser pays regardless of how
 much of it is actually on screen. `opts.cellCountLimit` (default
 `DEFAULT_CELL_COUNT_LIMIT` = 20,000) draws the line: above that many cells in
-the *current view*, a server-rendered raster image stands in for the vector
+the _current view_, a server-rendered raster image stands in for the vector
 overlays; at or below it, the normal per-cell vector pipeline (boundaries,
 annotations, type/expression fills, hover, lasso) runs as described above,
 scoped to just that view.
@@ -555,13 +555,13 @@ elsewhere that resemble the just-analyzed selection — in this same sample
 first as "(this sample)"). Only the query's **signature** — `types`,
 `typeCounts`, `count`, optionally `zscore`, all already computed by the
 neighborhood enrichment above — travels to the server; the source h5ad is
-never read again, so the search only ever opens the *target* sample's file.
+never read again, so the search only ever opens the _target_ sample's file.
 
 Searching **this** sample needs no dataset at all — it reuses the viewer's
 own already-known addressing (`opts.spatialData` + the same `slideQuery`/
 `slide=` fallback `init()` computed), so the option is offered in direct-file
 mode too (`runpp ?image_file=…`, no `genome`/`dslabel`/`sampleId`). Listing
-the dataset's *other* spatial samples does need `genome`/`dslabel` and is
+the dataset's _other_ spatial samples does need `genome`/`dslabel` and is
 skipped without them, leaving the sample dropdown a single "this image" entry
 in that mode.
 
@@ -595,8 +595,8 @@ top few ever use.
 For every window, in order:
 
 1. **Size filter** — dropped if its cell count falls outside
-   ±`sizeTolerance` (client: "size tolerance ±_%", default 10%) of the
-   query's own cell count. A similar niche has to be a similar *size*, not
+   ±`sizeTolerance` (client: "size tolerance ±\_%", default 10%) of the
+   query's own cell count. A similar niche has to be a similar _size_, not
    just a similar mix — otherwise a tiny or huge window could win purely on
    composition.
 2. **Same-sample exclusion** — only when searching this sample: dropped if
@@ -606,7 +606,7 @@ For every window, in order:
    sent cross-sample). Without it, the reference region would trivially
    "find" itself.
 3. **Required types** — dropped if it's missing any type the user checked
-   "require _ present" for (client: one checkbox per query type, none
+   "require \_ present" for (client: one checkbox per query type, none
    checked by default). A hard gate: no partial credit for scoring well
    otherwise.
 4. **Cheap score** — a composition vector (fraction of cells per type) and a
@@ -618,7 +618,7 @@ For every window, in order:
    entry (i,j) by `weight[i]*weight[j]` — so weighting a type to 0 removes it
    from the score entirely and a high weight makes matching that type's
    amount/pattern dominate the ranking. Unlike "required", a heavily-weighted
-   type is never *guaranteed* present — it's a soft emphasis on top of the
+   type is never _guaranteed_ present — it's a soft emphasis on top of the
    hard gate, not a replacement for it.
 
 The `topK` (default 10) highest cheap scores are then **confirmed**: each
@@ -643,13 +643,13 @@ and the candidate's sit side by side for a direct comparison.
 
 ## SVS vs OME-TIFF: what actually differs
 
-| step | .svs | .ome.tif |
-|---|---|---|
-| discovery | `wsiFolder` root, matched by extension | `folder` root, matched by `tiffFileSuffix` |
-| decoding | openslide (native) | `OmeTiffSlide`: tifffile structure + PIL (JP2K) or tifffile decoder (other codecs) |
-| planes | 1 | z-stack; `plane` job param, slider in the viewer |
-| pixel type | RGB 8-bit | often uint16 grayscale → percentile contrast-scale to 8-bit |
-| overlays | none | boundaries + gene expression via companion files |
+| step       | .svs                                   | .ome.tif                                                                           |
+| ---------- | -------------------------------------- | ---------------------------------------------------------------------------------- |
+| discovery  | `wsiFolder` root, matched by extension | `folder` root, matched by `tiffFileSuffix`                                         |
+| decoding   | openslide (native)                     | `OmeTiffSlide`: tifffile structure + PIL (JP2K) or tifffile decoder (other codecs) |
+| planes     | 1                                      | z-stack; `plane` job param, slider in the viewer                                   |
+| pixel type | RGB 8-bit                              | often uint16 grayscale → percentile contrast-scale to 8-bit                        |
+| overlays   | none                                   | boundaries + gene expression via companion files                                   |
 
 Everything downstream of `open_slide()` — tier math, level choice, JPEG
 output, node caching, OpenLayers display — is shared between the two formats.
