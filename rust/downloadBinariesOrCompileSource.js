@@ -4,6 +4,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { exec } from 'child_process'
+import { pipeline } from 'stream'
 import * as tar from 'tar'
 
 // Setting up directory name
@@ -50,31 +51,45 @@ function downloadWasm(url, outputPath) {
 	)
 }
 
-// downloads a file, following redirects; calls onFail with a message when the download fails
-function download(url, outputPath, onDone, onFail) {
+// Downloads a file, following redirects; calls onFail with a message when the download fails, such as for an
+// interrupted transfer or a file write error after a 2xx status, after the incomplete file is removed. Only one of
+// onDone and onFail is called, at most once, since the request may also emit an error after the response.
+// The messages have the requested url, and not a redirected one, such as a signed download URL.
+function download(url, outputPath, _onDone, _onFail, requestedUrl = url) {
+	let settled = false
+	const onDone = () => {
+		if (settled) return
+		settled = true
+		_onDone()
+	}
+	const onFail = message => {
+		if (settled) return
+		settled = true
+		_onFail(message)
+	}
 	https
 		.get(url, function (response) {
 			if (response.statusCode >= 200 && response.statusCode <= 299) {
-				const file = fs.createWriteStream(outputPath)
-				response.pipe(file)
-				file.on('finish', function () {
-					file.close()
-					onDone()
+				pipeline(response, fs.createWriteStream(outputPath), err => {
+					if (!err) return onDone()
+					fs.rm(outputPath, { force: true }, () => onFail(`Error downloading ${requestedUrl}: ${err.message}.`))
 				})
 			} else if (response.statusCode >= 300 && response.statusCode <= 399) {
 				response.resume()
 				if (response.headers.location) {
-					download(response.headers.location, outputPath, onDone, onFail)
+					// the redirected request settles this download
+					settled = true
+					download(response.headers.location, outputPath, _onDone, _onFail, requestedUrl)
 				} else {
-					onFail(`Redirection without location header encountered for ${url}.`)
+					onFail(`Redirection without location header encountered for ${requestedUrl}.`)
 				}
 			} else {
 				response.resume()
-				onFail(`Failed to download ${url}, status ${response.statusCode}.`)
+				onFail(`Failed to download ${requestedUrl}, status ${response.statusCode}.`)
 			}
 		})
 		.on('error', function (err) {
-			onFail(`Error downloading ${url}: ${err.message}.`)
+			onFail(`Error downloading ${requestedUrl}: ${err.message}.`)
 		})
 }
 
