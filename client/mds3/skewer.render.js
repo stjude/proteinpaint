@@ -183,7 +183,7 @@ export function skewer_make(tk, block) {
 		.append('text')
 		.text(d => d.occurrence)
 		.attr('class', 'sja_aa_discnum')
-		.attr('data-testid', d => `sjpp-mds3skewerdiscnum-${d.mlst[0].mname}`)
+		.attr('data-testid', d => `sjpp-mds3tk-skewer-discnum-${d.mlst[0].mname}`)
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('stroke-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('dominant-baseline', d => (tk.shapes ? setNumBaseline(d.shape, tk.skewer.pointup) : ''))
@@ -276,7 +276,7 @@ export function skewer_make(tk, block) {
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
-		.attr('data-testid', d => `sjpp-mds3skewerdisckick-${d.mlst[0].mname}`)
+		.attr('data-testid', d => `sjpp-mds3tk-skewer-disc-kick-${d.mlst[0].mname}`)
 		.on('mousedown', event => {
 			event.stopPropagation()
 		})

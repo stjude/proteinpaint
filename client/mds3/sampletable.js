@@ -84,7 +84,7 @@ export async function displaySampleTable(samples, args) {
 		return await make_singleSampleTable(samples[0], args)
 	}
 	const [columns, rows] = await samples2columnsRows(samples, args.tk)
-	const params = { rows, columns, div: args.div, resize: rows.length > 10, dataTestId: 'sjpp_mds3tk_sampletable' }
+	const params = { rows, columns, div: args.div, resize: rows.length > 10, dataTestId: 'sjpp-mds3tk-sampletable' }
 	//if (args.maxWidth) params.maxWidth = args.maxWidth
 	//if (args.maxHeight) params.maxHeight = args.maxHeight
 
@@ -95,7 +95,7 @@ export async function displaySampleTable(samples, args) {
 		const height = screen.height
 		const colButton = {
 			text: 'Disco',
-			dataTestId: 'sja_sample_table_disco_button',
+			dataTestId: 'sjpp-mds3tk-sample-table-disco-button',
 			callback: async (event, i) => {
 				// hide tooltips where disco may have been launched
 				args.tk.itemtip.hide() // when clicking dot with occurrence>1
@@ -116,7 +116,7 @@ export async function displaySampleTable(samples, args) {
 		for (const k in args.tk.mds.queries.singleSampleGenomeQuantification) {
 			const btn = {
 				text: k,
-				dataTestId: `${k}_button`,
+				dataTestId: `sjpp-mds3tk-${k}-button`,
 				callback: async (event, i) => {
 					const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
 					sandbox.header.text(samples[i].sample_id)
@@ -311,7 +311,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 			.append('button')
 			.style('margin-right', '10px')
 			.text('Disco plot')
-			.attr('data-testid', 'proteinpaint_disc_table_disco_button')
+			.attr('data-testid', 'sjpp-mds3tk-disc-table-disco-button')
 			.on('click', async () => {
 				tk.itemtip.hide() // hide tooltip so it won't block
 				await createDiscoInSandbox(tk, block, sample, thisMutation)

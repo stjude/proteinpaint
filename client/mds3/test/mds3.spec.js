@@ -327,7 +327,7 @@ tape('GDC - tk.filter0 and ssm/sample reduction', test => {
 	async function callbackOnRender(tk, bb) {
 		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
 		await whenVisible(tk.menutip.d)
-		await detectOne({ elem: tk.menutip.d.node(), selector: '[data-testid="sja_mds3samplesummarydiv"]' })
+		await detectOne({ elem: tk.menutip.d.node(), selector: '[data-testid="sjpp-mds3tk-samplesummarydiv"]' })
 		sampleNoFilter = tk.leftlabels.__samples_data
 		test.ok(sampleNoFilter, 'collected leftlabels.__samples_data without filter0')
 		ssmcountNoFilter = tk.skewer.rawmlst.length
@@ -360,7 +360,7 @@ tape('GDC - tk.filter0 and ssm/sample reduction (FILTER)', test => {
 		test.ok(tk.skewer.rawmlst.length < ssmcountNoFilter, 'Number of ssm is reduced')
 		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
 		await whenVisible(tk.menutip.d)
-		await detectOne({ elem: tk.menutip.d.node(), selector: '[data-testid="sja_mds3samplesummarydiv"]' })
+		await detectOne({ elem: tk.menutip.d.node(), selector: '[data-testid="sjpp-mds3tk-samplesummarydiv"]' })
 		testSubtkSampleSummaryIsSmaller(test, { leftlabels: { __samples_data: sampleNoFilter } }, tk)
 		if (test._ok) {
 			holder.remove()

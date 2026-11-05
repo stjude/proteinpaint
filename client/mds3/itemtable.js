@@ -543,7 +543,7 @@ holder is the div of the breakpoint pair; if it is removed before the images are
 async function mayShowEventImages(arg, holder, eventImage) {
 	const eventImages = arg.tk.mds.eventImages
 	if (!eventImages || !eventImage) return
-	const div = holder.append('div').attr('data-testid', 'sjpp-mds3-event-images').style('margin', '3px 0px 8px 0px')
+	const div = holder.append('div').attr('data-testid', 'sjpp-mds3tk-event-images').style('margin', '3px 0px 8px 0px')
 	div.append('div').style('font-size', '0.85em').style('opacity', 0.7).text(eventImages.label)
 	const content = div.append('div').text('Loading...')
 	try {
