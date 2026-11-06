@@ -35,13 +35,13 @@ try {
 // TODO: handler spec:coverage package script to only test relevant specs
 try {
 	// the same node options as this process, such as the tsx loader; a failed test does not stop the server launch,
-	// so that the client tests still run, as when the unit tests were run in this process
-	const code = await new Promise((resolve, reject) => {
+	// so that the client tests still run; container/coverage/test.sh checks the logged status after the report is copied
+	const { code, signal } = await new Promise((resolve, reject) => {
 		const ps = spawn(process.execPath, [...process.execArgv, 'serverTests.js'], { cwd: __dirname, stdio: 'inherit' })
 		ps.on('error', reject)
-		ps.on('close', resolve)
+		ps.on('close', (code, signal) => resolve({ code, signal }))
 	})
-	console.log(`server unit tests exited with code ${code}`)
+	console.log(`server unit tests exited with code ${code}` + (signal ? `, signal ${signal}` : ''))
 	const { launch } = await import('./src/app.ts')
 	await launch()
 } catch (e) {
