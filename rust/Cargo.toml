@@ -92,3 +92,7 @@ path="src/dmrcate.rs"
 [[bin]]
 name="survival"
 path="src/survival.rs"
+
+[[bin]]
+name="corr"
+path="src/corr.rs"

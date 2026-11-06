@@ -7,7 +7,7 @@ import { renderVolcano } from '#src/renderVolcano.ts'
 import serverconfig from '#src/serverconfig.js'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasProteomeDs, listCohortSamples } from './termdb.proteome.ts'
-import { run_R } from '@sjcrh/proteinpaint-r'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { parseJsonParam } from './common.ts'
 
 export const payload: RoutePayload = {
@@ -101,7 +101,7 @@ function init({ genomes }) {
 
 			// concordance mode (proteinView concordance tile): join this cohort's DAP with
 			// another's on upper-cased gene (human APP ↔ mouse App), one most-significant row
-			// per gene, and correlate log2FC across the shared genes with R's cor.test (corr.R)
+			// per gene, and correlate log2FC across the shared genes with run_rust('corr'), as R's cor.test
 			if (q.concordanceWith) {
 				const w =
 					typeof q.concordanceWith === 'string'
@@ -119,17 +119,15 @@ function init({ genomes }) {
 				}
 				let r: number | null = null
 				let p: number | null = null
-				// cor.test needs ≥3 observations; NA (e.g. a constant side) comes back as a string
+				// Pearson needs ≥3 observations; corr gives null where R gives NA (e.g. a constant side)
 				if (points.length >= 3) {
 					const input = {
 						method: 'pearson',
 						terms: [{ id: 'xy', v1: points.map(pt => pt.x), v2: points.map(pt => pt.y) }]
 					}
-					const [out] = JSON.parse(await run_R('corr.R', JSON.stringify(input)))
-					const rv = Number(out?.correlation)
-					const pv = Number(out?.original_p_value)
-					r = Number.isFinite(rv) ? rv : null
-					p = Number.isFinite(pv) ? pv : null
+					const [out] = JSON.parse(await run_rust('corr', JSON.stringify(input)))
+					r = out?.correlation ?? null
+					p = out?.original_p_value ?? null
 				}
 				res.send({
 					sample_size1: controlCount,

@@ -3,7 +3,6 @@ import fs from 'fs/promises'
 import type { RouteApi, RoutePayload } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import serverconfig from '#src/serverconfig.js'
-import { run_R } from '@sjcrh/proteinpaint-r'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasProteomeDs } from './termdb.proteome.ts'
@@ -24,7 +23,7 @@ the cohort's DAP load.) No mean-centring: the log2FC distributions are centred a
 
 Cohorts are aligned on the shared gene axis (intersection). Same-species matches by the gene
 symbol as-is; cross-species (opt-in) matches by upper-cased symbol (human APP ↔ mouse App).
-Returns the aligned z matrix plus pairwise Pearson and Spearman correlations (R/src/corr.R),
+Returns the aligned z matrix plus pairwise Pearson and Spearman correlations (rust/src/corr.rs),
 and a clustered heatmap, a shared-vs-specific DAP overlap (UpSet), and an
 age/progression trajectory (per-series k-means clusters of protein trajectories).
 */
@@ -109,10 +108,10 @@ function centralSd(values: number[]): number {
 }
 
 /**
- * Pairwise correlation (and p-value) matrices of the rows of `m` via R's cor.test
- * (R/src/corr.R), one term per unordered pair; the diagonal is r=1, p=0. Entries are NaN
- * when R reports NA (e.g. a constant row) or when there are too few shared genes for
- * cor.test (n < 3).
+ * Pairwise correlation (and p-value) matrices of the rows of `m` via run_rust('corr'), which
+ * gives the results of R's cor.test, one term per unordered pair; the diagonal is r=1, p=0.
+ * Entries are NaN where corr gives null (e.g. a constant row) or when there are too few
+ * shared genes (n < 3).
  */
 async function corrMatrix(m: number[][], method: 'pearson' | 'spearman'): Promise<{ r: number[][]; p: number[][] }> {
 	const n = m.length
@@ -121,14 +120,14 @@ async function corrMatrix(m: number[][], method: 'pearson' | 'spearman'): Promis
 	if (n < 2 || (m[0]?.length ?? 0) < 3) return { r, p }
 	const terms: { id: string; v1: number[]; v2: number[] }[] = []
 	for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) terms.push({ id: `${i}_${j}`, v1: m[i], v2: m[j] })
-	const R: { id: string; correlation: number | string; original_p_value: number | string }[] = JSON.parse(
-		await run_R('corr.R', JSON.stringify({ method, terms }))
+	const out: { id: string; correlation: number | null; original_p_value: number | null }[] = JSON.parse(
+		await run_rust('corr', JSON.stringify({ method, terms }))
 	)
-	for (const t of R) {
+	for (const t of out) {
 		const [i, j] = t.id.split('_').map(Number)
-		// corr.R reports NA/NaN as strings (toJSON na='string'); Number() turns those into NaN
-		r[i][j] = r[j][i] = Number(t.correlation)
-		p[i][j] = p[j][i] = Number(t.original_p_value)
+		// corr gives null where R gives NA; not Number(), which would turn null into 0
+		r[i][j] = r[j][i] = t.correlation ?? NaN
+		p[i][j] = p[j][i] = t.original_p_value ?? NaN
 	}
 	return { r, p }
 }
@@ -549,7 +548,7 @@ function init({ genomes }) {
 			const fc: number[][] = maps.map(m => shared.map(g => m!.get(g)!.fc))
 			const fdr: number[][] = maps.map(m => shared.map(g => m!.get(g)!.fdr))
 
-			// pairwise correlations (R cor.test; Spearman ranks inside R)
+			// pairwise correlations (as R cor.test; Spearman ranks inside corr)
 			const [pearsonR, spearmanR] = await Promise.all([corrMatrix(z, 'pearson'), corrMatrix(z, 'spearman')])
 
 			// DAP cutoffs, shared by the heatmap and overlap views.

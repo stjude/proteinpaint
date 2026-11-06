@@ -6,9 +6,6 @@ Run test script as follows (from 'server/'):
 	cd ~/sjpp && npx tsx proteinpaint/server/utils/test/Rscripts.spec.js
 
 Active tests:
-	- corr.R pearson
-	- corr.R spearman
-	- corr.R kendall
 	- diffMeth.R: output shape and required keys
 	- diffMeth.R: p-values sorted ascending
 	- diffMeth.R: adjusted p-values >= original p-values
@@ -30,7 +27,6 @@ import serverconfig from '../../src/serverconfig.js'
 import path from 'path'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import fs from 'fs'
-import { roundValueAuto } from '#shared/roundValue.js'
 
 const p_value_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail
 const fold_change_cutoff = 0.001 // If the difference between the actual and expected p-value is greater than this, the test will fail
@@ -172,78 +168,6 @@ tape('regression.R', async function (test) {
 })
 
 */
-
-tape('\n', function (test) {
-	test.comment('-***- R correlation specs -***-')
-	test.end()
-})
-
-// Function to round estimate values to fixed number of digits
-function roundCorrEstimates(data, digits = 10) {
-	if (!data) throw 'estimates missing'
-	const estimates = data.map(x => {
-		x.correlation = Number.isFinite(x.correlation) ? roundValueAuto(x.correlation) : x.correlation
-		x.original_p_value = Number.isFinite(x.original_p_value) ? roundValueAuto(x.original_p_value) : x.original_p_value
-		x.adjusted_p_value = Number.isFinite(x.adjusted_p_value) ? roundValueAuto(x.adjusted_p_value) : x.adjusted_p_value
-		return x
-	})
-	data = estimates
-	return data
-}
-
-tape('corr.R pearson', async function (test) {
-	test.timeoutAfter(10000)
-	const inJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/pearson-input.json'), {
-		encoding: 'utf8'
-	})
-	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/pearson-output.json'), {
-		encoding: 'utf8'
-	})
-	const Rout = await run_R('corr.R', inJson)
-	let out = JSON.parse(Rout)
-	let exp = JSON.parse(expJson)
-	// Round values to avoid precision issues
-	out = roundCorrEstimates(out)
-	exp = roundCorrEstimates(exp)
-	test.deepEqual(out, exp, 'Test corr.R pearson should match expected output')
-	test.end()
-})
-
-tape('corr.R spearman', async function (test) {
-	test.timeoutAfter(10000)
-	const inJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/spearman-input.json'), {
-		encoding: 'utf8'
-	})
-	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/spearman-output.json'), {
-		encoding: 'utf8'
-	})
-	const Rout = await run_R('corr.R', inJson)
-	let out = JSON.parse(Rout)
-	let exp = JSON.parse(expJson)
-	// Round values to avoid precision issues
-	out = roundCorrEstimates(out)
-	exp = roundCorrEstimates(exp)
-	test.deepEqual(out, exp, 'Test corr.R spearman should match expected output')
-	test.end()
-})
-
-tape('corr.R kendall', async function (test) {
-	test.timeoutAfter(10000)
-	const inJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/kendall-input.json'), {
-		encoding: 'utf8'
-	})
-	const expJson = fs.readFileSync(path.join(serverconfig.binpath, 'test/testdata/R/kendall-output.json'), {
-		encoding: 'utf8'
-	})
-	const Rout = await run_R('corr.R', inJson)
-	let out = JSON.parse(Rout)
-	let exp = JSON.parse(expJson)
-	// Round values to avoid precision issues
-	out = roundCorrEstimates(out)
-	exp = roundCorrEstimates(exp)
-	test.deepEqual(out, exp, 'Test corr.R kendall should match expected output')
-	test.end()
-})
 
 /*********** diffMeth.R tests ***********/
 

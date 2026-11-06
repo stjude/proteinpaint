@@ -1,7 +1,7 @@
 import type { RoutePayload, RouteApi } from '#types'
 import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse } from '#types'
 import { getData } from '#src/termdb.matrix.js'
-import { run_R } from '@sjcrh/proteinpaint-r'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { getStdDev } from './termdb.descrstats.ts'
 import { genomes } from '#src/initGenomesDs.js'
@@ -115,16 +115,25 @@ async function compute(q: CorrelationVolcanoRequest, ds: any) {
 	*/
 
 	const time1 = Date.now()
-	const output = {
-		terms: JSON.parse(await run_R('corr.R', JSON.stringify(input)))
-	}
+	const output: {
+		id: string
+		correlation: number | null
+		original_p_value: number | null
+		adjusted_p_value: number | null
+		sample_size: number
+	}[] = JSON.parse(await run_rust('corr', JSON.stringify(input)))
 	mayLog('Time taken to run correlation analysis:', Date.now() - time1)
 
-	for (const t of output.terms) {
+	for (const t of output) {
+		/* corr gives null where R gives NA, which the checks above should prevent; if one gets through, such as
+		for a standard deviation that is not exactly 0 here but is in corr, show the term in the legend as skipped */
+		if (t.correlation === null || t.original_p_value === null || t.adjusted_p_value === null) {
+			skippedVariables.push({ tw$id: t.id })
+			continue
+		}
 		const t2 = {
 			tw$id: t.id,
 			sampleSize: t.sample_size,
-			//sampleSize: input.terms.get(t.id).v1.length, // This was not working so passed the length of each array from R
 			correlation: t.correlation,
 			original_pvalue: t.original_p_value,
 			adjusted_pvalue: t.adjusted_p_value
