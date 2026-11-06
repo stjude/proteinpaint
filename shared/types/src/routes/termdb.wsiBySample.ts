@@ -11,7 +11,7 @@ export type WsiBySampleRequest = {
 	 of the default plain-slide listing (the w2 viewer's similar-region
 	 search uses this to offer the dataset's other spatial samples) */
 	imageType?: 'spatial' | 'wsi'
-	/** with sample_id, restricts the spatial images to one method: 'image' =
+	/** restricts spatial images to one method, including counts in a no-sample listing: 'image' =
 	 image-based ST (tiled slide + cell polygons, ds.queries.w2.folder),
 	 'sequence' = sequence-based ST (Visium; ds.queries.w2.sequenceFolder).
 	 Omit for both */

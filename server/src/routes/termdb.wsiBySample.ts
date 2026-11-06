@@ -199,6 +199,7 @@ function init({ genomes }) {
 				// instead — the w2 viewer's similar-region search uses this to
 				// offer the dataset's other spatial samples
 				if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw badRequest('invalid imageType')
+				if (q.method && q.method != 'image' && q.method != 'sequence') throw badRequest('invalid method')
 				const spatial = q.imageType == 'spatial'
 				const base = spatial ? spatialBase : wsiBase
 				const ids = base ? await subdirs(base) : [] // each subfolder = one sample
@@ -207,7 +208,7 @@ function init({ genomes }) {
 					// count each sample's images by enumerating only the requested
 					// root — the other tree is never touched here, so listing cost
 					// and failures can't depend on unrelated data
-					const count = (await getImages(name, spatial ? 'spatial' : 'wsi')).length
+					const count = (await getImages(name, spatial ? 'spatial' : 'wsi', q.method)).length
 					if (count) samples.push({ sampleId: name, count }) // a folder without images isn't listed
 				}
 				res.status(200).json({ samples } satisfies WsiBySampleResponse)
@@ -218,7 +219,6 @@ function init({ genomes }) {
 			// sc app for 'spatial'); absent = both kinds
 			if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw badRequest('invalid imageType')
 			// String(): numeric-looking sample names arrive as numbers from query parsing
-			if (q.method && q.method != 'image' && q.method != 'sequence') throw badRequest('invalid method')
 			const images = await getImages(String(q.sample_id), q.imageType, q.method)
 			res.status(200).json({ images } satisfies WsiBySampleResponse)
 		} catch (e: any) {
