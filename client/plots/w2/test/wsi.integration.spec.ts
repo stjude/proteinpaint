@@ -4,6 +4,7 @@ import { clearServerDataCache } from '../../../common/dofetch.js'
 
 /* Tests
     spatial OME-TIFF image renders the map with overlays and the burger menu
+    sequence-based (Visium) image renders spots with a shaded cell-type legend
     plain SVS image renders the map without the spatial machinery
     fixed-sample plain-WSI mode renders the pinned sample without the spatial machinery
 
@@ -11,6 +12,8 @@ Both run the mass wsi plot against the TermdbTest fixture:
     sample 2660         image1/CMU-1-Small-Region.svs (ds.queries.w2.wsiFolder)
     sample TCGA-22-1017 image1/image1_morphology.ome.tif + image1_spatial.h5ad
                         (ds.queries.w2.folder; 791 cells, 5 cell types)
+                        image2/image2_tissue_lowres_image.png + image2_spatial.h5ad
+                        (Visium, ds.queries.w2.sequenceFolder; 782 spots, 15 cell types, 253 genes)
 Spatial images are only reachable in fixed-sample mode (config.sample, the
 sc app's Spatial button path); the standalone plot lists plain slides only.
 The spatial settings below pin every value main() would otherwise seed or
@@ -127,6 +130,52 @@ tape('spatial OME-TIFF image renders the map with overlays and the burger menu',
 			if (test['_ok']) wsi.Inner.app.destroy()
 		} catch (e) {
 			test.fail(`spatial viewer test error: ${e}`) // never leave tape hanging
+		}
+		test.end()
+	}
+})
+
+tape('sequence-based (Visium) image renders spots with a shaded cell-type legend', test => {
+	test.timeoutAfter(30000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'wsi',
+					sample: { sID: 'TCGA-22-1017' },
+					settings: {
+						wsi: {
+							selectedImageIndex: 1, // image2, the Visium image
+							geneExpression: 'PTPRC', // preset: skips the one-time seeding dispatch
+							showCellTypes: true,
+							showGeneExpression: false
+						}
+					}
+				}
+			]
+		},
+		wsi: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(wsi) {
+		wsi.on('postRender.test', null) // run once
+		try {
+			const dom = wsi.Inner.dom
+			test.notEqual(dom.controls.style('display'), 'none', 'burger menu is shown')
+			const canvases = await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
+			test.ok(canvases.length >= 1, 'OpenLayers canvas rendered for the tissue image')
+			const [legend] = await waitForSelector(dom.viewer.node(), 'div[data-testid="sjpp-visium-typelegend"]')
+			test.ok(legend.firstChild?.textContent?.includes('darker = higher %'), 'legend explains the shading')
+			const rows = [...legend.children].slice(1).map((r: any) => r.textContent)
+			test.ok(rows.length >= 1, 'legend lists at least one cell type')
+			test.ok(
+				rows.every(r => / \(\d+\)$/.test(r)),
+				'every legend row ends with a spot count'
+			)
+			if (test['_ok']) wsi.Inner.app.destroy()
+		} catch (e) {
+			test.fail(`visium viewer test error: ${e}`)
 		}
 		test.end()
 	}

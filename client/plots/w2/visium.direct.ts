@@ -192,6 +192,7 @@ export async function init(
 		// legend, top-left inside the map
 		const legend = mapDiv
 			.append('div')
+			.attr('data-testid', 'sjpp-visium-typelegend')
 			.style('position', 'absolute')
 			.style('top', '50px')
 			.style('left', '8px')

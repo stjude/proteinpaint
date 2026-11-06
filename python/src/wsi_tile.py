@@ -34,6 +34,7 @@ import heapq       # bounded top-top_k heap in similar_regions(), see its note
 import io          # BytesIO: hand an in-memory JPEG-2000 codestream to PIL
 import json        # stdin job parsing / stdout result encoding
 import math        # ceil for edge-tile output sizes
+import os          # basename: which Visium scale factor fits the tissue image
 import re          # extract PhysicalSizeX/Y from the OME-XML metadata blob
 import sys         # stdin/argv access in main()
 import tempfile    # temp path for the one output JPEG per tile job
@@ -500,15 +501,16 @@ def genecounts(h5ad, gene):
 
 def visium_spots(h5ad, png):
     """Sequence-based (Visium) spots of a consolidated .h5ad, positioned on its
-    high-resolution tissue image `png` (the image is NOT stored in the h5ad).
-    Only in-tissue spots are returned; x/y/radius are hires-image pixels (y down),
-    i.e. obsm/spatial (full-res px) * uns/spatial/<lib>/scalefactors/tissue_hires_scalef.
+    tissue image `png` (the image is NOT stored in the h5ad). Only in-tissue spots are
+    returned; x/y/radius are image pixels (y down), i.e. obsm/spatial (full-res px) *
+    uns/spatial/<lib>/scalefactors/tissue_hires_scalef, or tissue_lowres_scalef when the
+    image is Space Ranger's low-resolution one (its file name contains 'lowres').
     Optional obsm/cell_type_proportions comes back as {type: [per-spot value|null]}."""
     import h5py
     with h5py.File(h5ad, "r") as f:
         lib = next(iter(f["uns/spatial"]))                  # the one library id
         sf = f[f"uns/spatial/{lib}/scalefactors"]
-        scale = float(sf["tissue_hires_scalef"][()])
+        scale = float(sf["tissue_lowres_scalef" if "lowres" in os.path.basename(png).lower() else "tissue_hires_scalef"][()])
         keep = f["obs/in_tissue"][:] == 1 if "in_tissue" in f["obs"] else np.ones(f["obsm/spatial"].shape[0], bool)
         xy = f["obsm/spatial"][:][keep] * scale
         out = {
