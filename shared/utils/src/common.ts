@@ -12,6 +12,7 @@ import { rgb } from 'd3-color'
 import * as d3scale from 'd3-scale'
 import * as d3 from 'd3'
 import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV } from '#types'
+import { HYPER_COLOR, HYPO_COLOR } from './dmrColors.js'
 
 // moved from `#shared/terms` to here, so that this can be passed as
 // part of 'common' argument to exported dataset js function, at server runtime
@@ -1399,6 +1400,8 @@ export const dtTerms = [
 export const colorScaleMap = {
 	blueWhiteRed: { domain: [0, 0.5, 1], range: ['blue', 'white', 'red'] },
 	greenWhiteRed: { domain: [0, 0.5, 1], range: ['green', 'white', 'red'] },
+	// the methylation direction colors (dmrColors), so a heatmap matches the volcano and region views
+	blueWhiteOrange: { domain: [0, 0.5, 1], range: [HYPO_COLOR, 'white', HYPER_COLOR] },
 	blueYellowRed: {
 		domain: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
 		range: ['#313695', '#649AC7', '#BCE1ED', '#FFFFBF', '#FDBE70', '#EA5839', '#A50026']

@@ -13,6 +13,8 @@ export type DMRSettings = {
 	colors: { group1: string; group2: string; hyper: string; hypo: string }
 	/** Maximum region size (bp) to display LOESS trend curves (default: 250000) */
 	maxLoessRegion: number
+	/** Radius in pixels of the per-CpG mean dots (default: 4); smaller reads better in a narrow view */
+	dotRadius: number
 	/** Minimum number of probes required to show LOESS confidence intervals (default: 10) */
 	minProbesForCi: number
 	/** Maximum allowed region size in base pairs for DMR analysis (default: 5 Mb).

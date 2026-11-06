@@ -32,7 +32,10 @@ export default function (block) {
 	const lst = []
 	if (block.usegm && block.usegm.name) lst.push(block.usegm.name)
 	if (block.usegm && block.usegm.isoform) lst.push(block.usegm.isoform)
-	client.to_svg(block.svg.node(), lst.length ? lst.join('_') : 'screenshot')
+	// track images drawn as SVG are inlined into a detached copy, never into the page
+	const svgClone = block.svg.node().cloneNode(true)
+	inlineSvgImages(svgClone)
+	client.to_svg(block.svg.node(), lst.length ? lst.join('_') : 'screenshot', { svgClone })
 
 	// recover
 
@@ -45,6 +48,46 @@ export default function (block) {
 	if (g2) g2.remove()
 
 	block.svg.attr('height', oldheight)
+}
+
+/* A track image drawn as SVG (a data:image/svg+xml source, e.g. the DMR plot's per-CpG means)
+is written into the export as its own elements, so it stays vector. Only markup made of the
+shapes and presentation attributes such a track draws is inlined; anything else (scripts, event
+handlers, links) keeps the image, which is inert. PNG track images stay embedded as they are. */
+const inlineElements = new Set(['svg', 'circle', 'polyline', 'polygon'])
+const inlineAttributes = new Set([
+	'xmlns',
+	'width',
+	'height',
+	'viewBox',
+	'cx',
+	'cy',
+	'r',
+	'points',
+	'fill',
+	'fill-opacity',
+	'stroke',
+	'stroke-opacity',
+	'stroke-width',
+	'stroke-dasharray'
+])
+
+function inlineSvgImages(svgNode) {
+	for (const img of svgNode.querySelectorAll('image')) {
+		const href = img.getAttribute('xlink:href') || img.getAttribute('href') || ''
+		const m = href.match(/^data:image\/svg\+xml;charset=utf-8,(.*)$/)
+		if (!m) continue
+		// parsed into its own inert document, then checked before any of it is moved
+		const svg = new DOMParser().parseFromString(decodeURIComponent(m[1]), 'image/svg+xml').documentElement
+		const nodes = [svg, ...svg.querySelectorAll('*')]
+		const allowed = nodes.every(
+			e => inlineElements.has(e.localName) && [...e.attributes].every(a => inlineAttributes.has(a.name))
+		)
+		if (!allowed) continue
+		for (const a of ['x', 'y', 'width', 'height']) if (img.hasAttribute(a)) svg.setAttribute(a, img.getAttribute(a))
+		svg.setAttribute('preserveAspectRatio', 'none')
+		img.replaceWith(svgNode.ownerDocument.importNode(svg, true))
+	}
 }
 
 function proteindomain(block, height) {
