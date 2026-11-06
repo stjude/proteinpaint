@@ -27,6 +27,7 @@ use r_mathlib::{normal_cdf, students_t_cdf};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::io::{self, Read};
+use std::sync::OnceLock;
 
 #[derive(Deserialize)]
 struct Input {
@@ -228,11 +229,46 @@ fn spearman_test(x: &[f64], y: &[f64]) -> (Option<f64>, Option<f64>) {
     (Some(r), Some((2.0 * p).min(1.0)))
 }
 
+/// the largest n for which prho() gives the exact p-value
+const N_SMALL: usize = 9;
+
+/// The number of permutations of n ranks for each value of S, the sum of the squared rank differences, indexed by S,
+/// for 2 <= n <= N_SMALL. The permutations are gone through once for each n, in the order of prho.c, instead of once
+/// for each test, since the 9! permutations of n = 9 take milliseconds and a request can have many tests.
+fn s_counts(n: usize) -> &'static [i64] {
+    static COUNTS: [OnceLock<Vec<i64>>; N_SMALL + 1] = [const { OnceLock::new() }; N_SMALL + 1];
+    COUNTS[n].get_or_init(|| {
+        let mut counts = vec![0; (n * n * n - n) / 3 + 1];
+        let mut l: Vec<i64> = (1..=n as i64).collect();
+        let nfac: i64 = (1..=n as i64).product();
+        for _ in 0..nfac {
+            let mut ise: i64 = 0;
+            for (i, li) in l.iter().enumerate() {
+                let d = i as i64 + 1 - li;
+                ise += d * d;
+            }
+            counts[ise as usize] += 1;
+            let mut n1 = n;
+            loop {
+                let mt = l[0];
+                for i in 1..n1 {
+                    l[i - 1] = l[i];
+                }
+                n1 -= 1;
+                l[n1] = mt;
+                if !(mt == n1 as i64 + 1 && n1 > 1) {
+                    break;
+                }
+            }
+        }
+        counts
+    })
+}
+
 /// Pr[S >= is], or Pr[S < is] if lower_tail, where S is the sum of the squared rank differences of n pairs without
 /// ties. A port of prho() in R's src/library/stats/src/prho.c, which is algorithm AS 89, Appl. Statist. (1975)
 /// Vol. 24, No. 3, p. 377: exact for n <= 9, and an Edgeworth series expansion for larger n.
 fn prho(n: usize, is: f64, lower_tail: bool) -> f64 {
-    const N_SMALL: usize = 9;
     const C1: f64 = 0.2274;
     const C2: f64 = 0.2531;
     const C3: f64 = 0.1745;
@@ -257,36 +293,18 @@ fn prho(n: usize, is: f64, lower_tail: bool) -> f64 {
     }
 
     if n <= N_SMALL {
-        // exact, by going through all the permutations
-        let mut l: Vec<i64> = (1..=n as i64).collect();
-        let nfac: i64 = (1..=n as i64).product();
+        // exact: the number of permutations with S >= is, from the counts of each value of S
+        let counts = s_counts(n);
+        let nfac: i64 = counts.iter().sum();
         let ifr: i64 = if is == n3 {
             1
         } else {
-            let mut ifr = 0;
-            for _ in 0..nfac {
-                let mut ise: i64 = 0;
-                for (i, li) in l.iter().enumerate() {
-                    let d = i as i64 + 1 - li;
-                    ise += d * d;
-                }
-                if is <= ise as f64 {
-                    ifr += 1;
-                }
-                let mut n1 = n;
-                loop {
-                    let mt = l[0];
-                    for i in 1..n1 {
-                        l[i - 1] = l[i];
-                    }
-                    n1 -= 1;
-                    l[n1] = mt;
-                    if !(mt == n1 as i64 + 1 && n1 > 1) {
-                        break;
-                    }
-                }
-            }
-            ifr
+            counts
+                .iter()
+                .enumerate()
+                .filter(|(s, _)| is <= *s as f64)
+                .map(|(_, c)| c)
+                .sum()
         };
         return (if lower_tail { nfac - ifr } else { ifr }) as f64 / nfac as f64;
     }
@@ -342,6 +360,17 @@ mod tests {
         assert!((out[0].unwrap() - 0.03).abs() < 1e-15);
         assert!((out[2].unwrap() - 0.04).abs() < 1e-15);
         assert!((out[3].unwrap() - 0.04).abs() < 1e-15);
+    }
+
+    #[test]
+    fn s_counts_cover_all_permutations() {
+        for n in 2..=N_SMALL {
+            let counts = s_counts(n);
+            assert_eq!(counts.iter().sum::<i64>(), (1..=n as i64).product::<i64>());
+            // S is always even, and has one permutation each at 0 and at its maximum (n^3 - n)/3
+            assert!(counts.iter().enumerate().all(|(s, c)| s % 2 == 0 || *c == 0));
+            assert_eq!((counts[0], counts[counts.len() - 1]), (1, 1));
+        }
     }
 
     #[test]

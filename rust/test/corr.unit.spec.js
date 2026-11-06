@@ -96,7 +96,12 @@ tape('spearman', async function (test) {
 		{ id: 'ties', v1: [1, 2, 2, 3, 4, 5, 5, 6, 7, 8, 9, 9], v2: [2, 1, 3, 3, 5, 4, 6, 8, 7, 9, 9, 10] },
 		// n > 1290: t approximation
 		{ id: 'large', v1: seq(1300, i => i), v2: seq(1300, i => ((i * 577) % 1301) + i / 4) },
-		{ id: 'constant', v1: [3, 1, 2], v2: [7, 7, 7] }
+		{ id: 'constant', v1: [3, 1, 2], v2: [7, 7, 7] },
+		// a negative correlation takes the upper tail of S in each of the above
+		{ id: 'exact negative', v1: seq(9, i => i), v2: [8, 9, 6, 7, 5, 3, 4, 1, 2] },
+		{ id: 'edgeworth negative', v1: seq(30, i => i), v2: seq(30, i => ((i * 7) % 31) - i / 2) },
+		{ id: 'ties negative', v1: [1, 2, 2, 3, 4, 5, 5, 6, 7, 8, 9, 9], v2: [10, 9, 9, 8, 6, 7, 5, 3, 4, 2, 1, 1] },
+		{ id: 'large negative', v1: seq(1300, i => i), v2: seq(1300, i => ((i * 577) % 1301) - i / 4) }
 	]
 	const output = JSON.parse(await run_rust('corr', JSON.stringify({ method: 'spearman', terms })))
 	check(test, output, [
@@ -104,7 +109,7 @@ tape('spearman', async function (test) {
 			id: 'exact',
 			correlation: 0.82142857142857129,
 			original_p_value: 0.034126984126984124,
-			adjusted_p_value: 0.034126984126984124,
+			adjusted_p_value: 0.039002267573696139,
 			sample_size: 7
 		},
 		{
@@ -128,7 +133,35 @@ tape('spearman', async function (test) {
 			adjusted_p_value: 1.2965355530954543e-15,
 			sample_size: 1300
 		},
-		{ id: 'constant', correlation: null, original_p_value: null, adjusted_p_value: null, sample_size: 3 }
+		{ id: 'constant', correlation: null, original_p_value: null, adjusted_p_value: null, sample_size: 3 },
+		{
+			id: 'exact negative',
+			correlation: -0.93333333333333335,
+			original_p_value: 0.00074955908289241625,
+			adjusted_p_value: 0.0011992945326278661,
+			sample_size: 9
+		},
+		{
+			id: 'edgeworth negative',
+			correlation: -0.37619577308120133,
+			original_p_value: 0.041255705117521912,
+			adjusted_p_value: 0.041255705117521912,
+			sample_size: 30
+		},
+		{
+			id: 'ties negative',
+			correlation: -0.98060117236038391,
+			original_p_value: 2.0942790035820263e-8,
+			adjusted_p_value: 5.5847440095520698e-8,
+			sample_size: 12
+		},
+		{
+			id: 'large negative',
+			correlation: -0.23755754247829103,
+			original_p_value: 3.9027343410741308e-18,
+			adjusted_p_value: 3.1221874728593047e-17,
+			sample_size: 1300
+		}
 	])
 	test.end()
 })
