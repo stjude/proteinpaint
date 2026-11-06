@@ -76,6 +76,27 @@ cell type or summed gene counts). Selecting the method:
 - URL: `?method=sequence&image_file=<png>&spatial_data=<h5ad>` (tpmasterdir-relative,
   needs `features.wsi.allowDirectSlidePath`); `method=image` or absent = old behavior.
 
+### Cell types in the `sequence` viewer
+
+Needs `obsm/cell_type_proportions` (one column per type, per-spot fractions).
+
+- **Fill:** each spot is colored by its dominant type (the largest proportion, not
+  necessarily >50%). The shade follows that proportion (`shadeColor`): the type's color
+  is blended toward white, so a 90% spot is darker than a 30% spot of the same type.
+- **Legend** (top-left of the map): one swatch per type with the number of spots where it
+  is dominant. Counts use all types, so a type filter does not change them; spots without
+  proportions are not counted.
+- **Hover:** the tooltip shows the barcode, array row/col and gene counts, then a pie
+  chart of the spot's proportions (`pieSlices`, plain SVG) with a legend of the types
+  present in that spot (at least 1%) and their percentages, largest first. Each slice's
+  hover title also gives its type and %.
+- **Switching on:** direct URL `&cell_types=1` (the parameter is `cell_types`, with an
+  underscore; a misspelling is silently ignored). A JSON array,
+  `&cell_types=["Epithelial","T"]`, shows only those types; colors stay fixed over all
+  types. The direct viewer has no burger menu. In the mass UI the "Cell types" box
+  defaults on for a sequence sample that has proportions (a dataset's `w2.cellTypes` still
+  takes precedence), and is mutually exclusive with "Gene expression".
+
 ## Zoomify tile addressing (shared contract)
 
 The client uses OpenLayers' `Zoomify` source, which addresses tiles as
