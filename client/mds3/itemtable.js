@@ -103,6 +103,7 @@ export async function itemtable_oneItem(arg) {
 
 	// if the variant has only one sample,
 	// allow to append new rows to table to show sample key:value
+	table.scrollDiv.attr('data-testid', 'sjpp-mds3tk-single-occurence-table')
 	arg.singleSampleDiv = table
 	// if there are multiple samples, this <div> won't be used
 	// a new table will be created under arg.div to show sample table
@@ -234,7 +235,7 @@ async function itemtable_multiItems(arg) {
 		rows.push(row)
 	}
 
-	const tableDiv = arg.div.append('div')
+	const tableDiv = arg.div.append('div').attr('data-testid', 'sjpp-mds3tk-multi-occurence-table')
 
 	renderTable({
 		div: tableDiv,
@@ -542,7 +543,7 @@ holder is the div of the breakpoint pair; if it is removed before the images are
 async function mayShowEventImages(arg, holder, eventImage) {
 	const eventImages = arg.tk.mds.eventImages
 	if (!eventImages || !eventImage) return
-	const div = holder.append('div').attr('data-testid', 'sjpp-mds3-event-images').style('margin', '3px 0px 8px 0px')
+	const div = holder.append('div').attr('data-testid', 'sjpp-mds3tk-event-images').style('margin', '3px 0px 8px 0px')
 	div.append('div').style('font-size', '0.85em').style('opacity', 0.7).text(eventImages.label)
 	const content = div.append('div').text('Loading...')
 	try {

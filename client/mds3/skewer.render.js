@@ -112,13 +112,15 @@ export function skewer_make(tk, block) {
 			Object.keys(mclass).forEach(v => (tk.shapes[v] = 'filledCircle'))
 		}
 	}
-
 	ss.selection = ss.g
 		.selectAll()
 		.data(ss.data)
 		.enter()
 		.append('g')
 		.attr('class', 'sja_skg')
+		.attr('extended', d => d.showmode)
+		.attr('data-testid', d => 'sjpp-mds3tk-skewer-' + [...new Set(d.mlst.map(mItem => mItem.mname))].join('-'))
+		.attr('mclasses', d => [...new Set(d.mlst.map(mItem => mItem.class))].join('-'))
 		.each(function (d) {
 			d.skewer = this
 		})
@@ -181,7 +183,7 @@ export function skewer_make(tk, block) {
 		.append('text')
 		.text(d => d.occurrence)
 		.attr('class', 'sja_aa_discnum')
-		.attr('data-testid', d => `sjpp-mds3skewerdiscnum-${d.mlst[0].mname}`)
+		.attr('data-testid', d => `sjpp-mds3tk-skewer-discnum-${d.mlst[0].mname}`)
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('stroke-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('dominant-baseline', d => (tk.shapes ? setNumBaseline(d.shape, tk.skewer.pointup) : ''))
@@ -274,7 +276,7 @@ export function skewer_make(tk, block) {
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
-		.attr('data-testid', d => `sjpp-mds3skewerdisckick-${d.mlst[0].mname}`)
+		.attr('data-testid', d => `sjpp-mds3tk-skewer-disc-kick-${d.mlst[0].mname}`)
 		.on('mousedown', event => {
 			event.stopPropagation()
 		})
@@ -655,12 +657,14 @@ export function unfold_glyph(newlst, tk, block) {
 		this quick fix allows to show rims for such
 		*/
 		const set = tk.skewer.selection.filter(d => expanded.has(d.x0))
+		set.attr('extended', modeshow)
 		set.selectAll('.sja_aa_discrim').attr('fill-opacity', 1).attr('stroke-opacity', 1)
 	}
 
 	if (folded.size) {
 		// vertical extending
 		const set = tk.skewer.selection.filter(d => folded.has(d.x0))
+		set.attr('extended', modeshow)
 		set
 			.transition()
 			.duration(dur)
@@ -904,6 +908,7 @@ export function fold_glyph(lst, tk) {
 		d.y = skewer_sety(d, tk)
 	}
 	const set = tk.skewer.selection.filter(d => hash.has(d.x0))
+	set.attr('extended', modefold)
 	set
 		.transition()
 		.duration(dur)

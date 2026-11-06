@@ -999,7 +999,6 @@ async function domainlegend(tk, block) {
 			}
 		}
 	]
-
 	const legendRows = tk.td_legend
 		.selectAll('div')
 		.data(domainTypes)

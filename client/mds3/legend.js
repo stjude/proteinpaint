@@ -655,6 +655,7 @@ function update_mclass(tk) {
 			.append('div')
 			.style('display', 'inline-block')
 			.attr('class', 'sja_clb')
+			.attr('data-testid', 'sjpp-mds3tk-hidden-legenditemlabel')
 			.style('text-decoration', 'line-through')
 			.style('opacity', 0.7)
 			.text((c.count ? '(' + c.count + ') ' : '') + (Number.isInteger(c.k) ? dt2label[c.k] : mclass[c.k].label))
@@ -724,7 +725,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-hide-${sk.rim1value}-option`)
+					.attr('data-testid', `sjpp-mds3tk-hide-${sk.rim1value}-option`)
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.rim1value)
@@ -745,7 +746,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', 'sjpp-hide-no-rim-option')
+					.attr('data-testid', 'sjpp-mds3tk-hide-no-rim-option')
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.noRimValue)
@@ -766,7 +767,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-hide-${sk.rim2value}-option`)
+					.attr('data-testid', `sjpp-mds3tk-hide-${sk.rim2value}-option`)
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.rim2value)
@@ -909,7 +910,7 @@ function may_create_cnv(tk, block) {
 		})
 	} else {
 		// cnv data uses category but not numeric value; fill category legend based on returned data
-		R.cnvCategoryHolder = R.holder.append('span').attr('data-testid', 'sjpp-mds3cnvlegend-categoryholder')
+		R.cnvCategoryHolder = R.holder.append('span').attr('data-testid', 'sjpp-mds3tk-cnvlegend-categoryholder')
 	}
 
 	R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6) // indicator there's no cnv in the region
@@ -1096,13 +1097,13 @@ function createLegendTipMenu(opts, tk, elem) {
 					 * effect) is removed.
 					 */
 					.classed('sja_menuoption', true)
-					.attr('data-testid', 'sjpp-change-shape-option')
+					.attr('data-testid', 'sjpp-mds3tk-change-shape-option')
 					.style('padding', '5px 10px')
 					.style('margin', '1px')
 					.style('border-radius', '0px')
 					.on('click', () => {
 						div.classed('sja_menuoption', false)
-						div.attr('data-testid', 'sjpp-shape-picker')
+						div.attr('data-testid', 'sjpp-mds3tk-shape-picker')
 						div.style('background-color', 'white')
 						if (called == false) {
 							called = true
@@ -1117,7 +1118,7 @@ function createLegendTipMenu(opts, tk, elem) {
 				tk.legend.tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-legend-option-${opt.label.toLowerCase().replace(/\s/g, '-')}`)
+					.attr('data-testid', `sjpp-mds3tk-legend-option-${opt.label.toLowerCase().replace(/\s/g, '-')}`)
 					.style('border-radius', '0px')
 					.text(opt.label)
 					.on('click', () => {

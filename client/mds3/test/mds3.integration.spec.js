@@ -154,7 +154,7 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
 		await whenVisible(tk.menutip.d, 10000)
 
-		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '[data-testid="sja_mds3samplesummarydiv"]' })
+		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '[data-testid="sjpp-mds3tk-samplesummarydiv"]' })
 		test.ok(div, 'Sample summary table rendered in menutip')
 
 		/* skipped as callbackOnRender() is now also triggered by subtk
@@ -200,7 +200,7 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 			await whenVisible(subtk.menutip.d)
 			// same as in main tk, must await for the summary table to be shown in subtk.menutip
 			// that means leftlabels.__samples_data is now created
-			await detectOne({ elem: subtk.menutip.d.node(), selector: '[data-testid="sja_mds3samplesummarydiv"]' })
+			await detectOne({ elem: subtk.menutip.d.node(), selector: '[data-testid="sjpp-mds3tk-samplesummarydiv"]' })
 
 			testSubtkSampleSummaryIsSmaller(test, tk, subtk)
 
@@ -594,7 +594,7 @@ tape('Official - sv/fusion with multiple partner breakpoints', test => {
 			test.ok(graph, 'fusion structure of the most frequent breakpoint is rendered under the chart')
 
 			// the sample table is limited to the samples of the most frequent breakpoint (2 of the 3 events)
-			const table = await detectOne({ elem: tip, selector: '[data-testid="sjpp_mds3tk_sampletable"]' })
+			const table = await detectOne({ elem: tip, selector: '[data-testid="sjpp-mds3tk-sampletable"]' })
 			test.ok(table, 'sample table of the selected breakpoint is rendered')
 			const rows = table.querySelectorAll('tbody tr, tr.sjpp_row_wrapper')
 			test.equal(rows.length, 2, 'sample table has the 2 samples of the most frequent breakpoint')
@@ -1665,7 +1665,7 @@ tape('Custom bcf with sample', test => {
 		const div = await detectOne({ elem: tk.menutip.dnode, selector: '.sja_mds3_slb_sampletablebtn' })
 		test.ok(div, '"List 5 sample" option found')
 		div.dispatchEvent(new Event('click'))
-		const table = await detectOne({ elem: tk.menutip.dnode, selector: '[data-testid="sjpp_mds3tk_sampletable"]' })
+		const table = await detectOne({ elem: tk.menutip.dnode, selector: '[data-testid="sjpp-mds3tk-sampletable"]' })
 		test.ok(table, 'sample table shown')
 		tk.menutip.d.remove()
 
@@ -2008,7 +2008,7 @@ async function testSingletonItemtipButtons(test, tk) {
 		if (tk.mds.queries?.singleSampleMutation) {
 			const btn = await detectOne({
 				elem: tk.itemtip.dnode,
-				selector: '[data-testid="proteinpaint_disc_table_disco_button"]'
+				selector: '[data-testid="sjpp-mds3tk-disc-table-disco-button"]'
 			})
 			// both custom & native tk have mds.queries
 			test.ok(btn, 'Disco button made when mds.queries.singleSampleMutation is present')
@@ -2017,7 +2017,7 @@ async function testSingletonItemtipButtons(test, tk) {
 		} else {
 			const btn = await detectZero({
 				elem: tk.itemtip.dnode,
-				selector: '[data-testid="proteinpaint_disc_table_disco_button"]'
+				selector: '[data-testid="sjpp-mds3tk-disc-table-disco-button"]'
 			})
 			test.ok(!btn, 'Disco button not made when mds.queries.singleSampleMutation is not present')
 		}

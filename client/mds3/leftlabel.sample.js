@@ -25,7 +25,7 @@ export function makeSampleLabel(data, tk, block, laby) {
 			.attr('class', 'sja_clbtext2')
 			.style('opacity', 1)
 			.text(`${data.sampleTotalNumber} sample${data.sampleTotalNumber > 1 ? 's' : ''}`)
-			.attr('data-testid', 'sjpp_mds3tk_samples_label')
+			.attr('data-testid', 'sjpp-mds3tk-samples-label')
 			.on('click', async event => {
 				tk.menutip.clear().showunder(event.target)
 
@@ -46,7 +46,7 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 	// track has a modifiable sample filter. add a new label to access the filter UI
 	if (!tk.leftlabels.doms.filterObj) {
 		tk.leftlabels.doms.filterObj = makelabel(tk, block, laby)
-		tk.leftlabels.doms.filterObj.attr('data-testid', 'sjpp_mds3tk_leftlabel_samplefilter')
+		tk.leftlabels.doms.filterObj.attr('data-testid', 'sjpp-mds3tk-leftlabel-samplefilter')
 	}
 
 	tk.leftlabels.doms.filterObj.text(getFilterName(tk.filterObj)).on('click', async event => {
@@ -105,7 +105,7 @@ async function mayShowSummary(tk, block) {
 		const { summary } = await tk.mds.getSamples({ isSummary: true })
 		tk.leftlabels.__samples_data = summary // for testing
 		wait.remove()
-		await showSummary4terms(summary, div.append('div').attr('data-testid', 'sja_mds3samplesummarydiv'), tk, block)
+		await showSummary4terms(summary, div.append('div').attr('data-testid', 'sjpp-mds3tk-samplesummarydiv'), tk, block)
 	} catch (e) {
 		wait.text(`Error: ${e.message || e}`)
 		if (e.stack) console.log(e.stack)
@@ -196,20 +196,23 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 	for (const [category_key, count, total] of numbycategory) {
 		// in future tw may be in groupsetting mode
 		const sk = category_key.replace(/\s/g, '-') // safe key to avoid space
-		const row = [
-			{ value: tw.term.values?.[category_key]?.label || category_key },
-			{ html: total == undefined ? '' : fillbar(null, { f: count / total, v1: count, v2: total }) },
+		const row = Object.assign(
+			[
+				{ value: tw.term.values?.[category_key]?.label || category_key },
+				{ html: total == undefined ? '' : fillbar(null, { f: count / total, v1: count, v2: total }) },
+				{
+					html: `<span data-testid="sjpp-mds3tk-samsumcatmutcount-${sk}">${count}</span>
+						${
+							total
+								? ` <span style="font-size:.8em">/ <span data-testid="sjpp-mds3tk-samsumcattotalcount-${sk}">${total}</span></span>`
+								: ''
+						}`
+				}
+			],
 			{
-				html: `<span data-testid=sjpp-mds3tk-samsumcatmutcount-${sk}>${count}</span>
-			${
-				total
-					? ` <span style="font-size:.8em">/ <span data-testid=sjpp-mds3tk-samsumcattotalcount-${sk}>` +
-					  total +
-					  '</span></span>'
-					: ''
-			}`
+				testId: `sjpp-mds3tk-samsumcatrow-${sk}`
 			}
-		]
+		)
 		rows.push(row)
 	}
 	renderTable({
@@ -303,6 +306,7 @@ async function showDensity4oneTerm(termid, div, data, tk, block) {
 function createSubTk(tk, block, tvs) {
 	const tk2 = block.block_addtk_template(tk.duplicateTk(getNewFilter(tk, tvs)))
 	tk2.subtk = true
+	tk2.g.attr('class', 'sjpp-mds3tk-subtk')
 	block.tk_load(tk2)
 }
 
@@ -313,7 +317,7 @@ function menu_listSamples(buttonrow, data, tk, block) {
 		.append('div')
 		.text(`List ${data.sampleTotalNumber} sample${data.sampleTotalNumber > 1 ? 's' : ''}`)
 		.attr('class', 'sja_menuoption sja_mds3_slb_sampletablebtn')
-		.attr('data-testid', 'sjpp-mds3-list-samples-option')
+		.attr('data-testid', 'sjpp-mds3tk-list-samples-option')
 		.on('click', async () => {
 			tk.menutip.clear()
 			const wait = tk.menutip.d.append('div').text('Loading...').style('margin', '15px')
