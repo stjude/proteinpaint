@@ -1645,7 +1645,11 @@ tape('AuthApi.mayAdjustFilter: routeTerms', function (test) {
 		ds as any,
 		routeTwLst as any
 	)
-	test.equal(calls.pop(), undefined, 'should use the default for filter0')
+	test.deepEqual(
+		calls.pop(),
+		routeTwLst.map(tw => tw.term),
+		'should not read filter0'
+	)
 
 	authApi.mayAdjustFilter(
 		{ filter: filter('hiddenTerm'), __protected__: __protected__(['hiddenTerm']) } as any,
@@ -1716,6 +1720,68 @@ tape('AuthApi.mayAdjustFilter: routeTerms', function (test) {
 	q1.filter = structuredClone(q1.filter)
 	authApi.mayAdjustFilter(q1, ds as any, routeTwLst as any)
 	test.equal(calls.pop(), undefined, 'should consider a copy of an entry that was added by mayAdjustFilter()')
+
+	test.end()
+})
+
+tape('AuthApi.mayAdjustFilter: routeTerms with a group filter of a route termwrapper', function (test) {
+	test.timeoutAfter(500)
+
+	const { authApi } = makeAuthApi()
+	const calls: any[] = []
+	const ds = {
+		cohort: {
+			termdb: {
+				hiddenIds: ['hiddenTerm'],
+				getAdditionalFilter: (_protected: any, terms: any) => {
+					calls.push(terms)
+					return { type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term: { id: 'hiddenTerm' } } }] }
+				}
+			}
+		}
+	}
+	const filter = (id: string) => ({ type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term: { id } } }] })
+	const groups = (id: string) => [
+		{ name: 'g1', type: 'values', values: [{ key: 'a' }] },
+		{ name: 'g2', type: 'filter', filter4activeCohort: { c1: filter('otherTerm'), c2: filter(id) } }
+	]
+	const customTw = (id: string) => ({
+		term: { id: 'otherTerm', type: 'categorical', groupsetting: {} },
+		q: { type: 'custom-groupset', groupsetting: { activeCohort: 'c2' }, customset: { groups: groups(id) } }
+	})
+	const predefinedTw = (id: string) => ({
+		term: { id: 'otherTerm', type: 'categorical', groupsetting: { lst: [{ name: 'set', groups: groups(id) }] } },
+		q: { type: 'predefined-groupset', predefined_groupset_idx: 0 }
+	})
+	const q = (ignoredTermIds: string[] = []) =>
+		({ filter: filter('otherTerm'), __protected__: { clientAuthResult: {}, ignoredTermIds } } as any)
+	const terms = (routeTwLst: any[]) => routeTwLst.map(tw => tw.term)
+
+	for (const [label, tw] of [
+		['custom', customTw],
+		['predefined', predefinedTw]
+	] as const) {
+		const lst = [tw('hiddenTerm')]
+		authApi.mayAdjustFilter(q(), ds as any, lst as any)
+		test.equal(calls.pop(), undefined, `should use the default for a ${label} group filter with a hidden term`)
+
+		const lst2 = [tw('otherTerm')]
+		authApi.mayAdjustFilter(q(), ds as any, lst2 as any)
+		test.deepEqual(calls.pop(), terms(lst2), `should use routeTwLst for a ${label} group filter without a hidden term`)
+
+		authApi.mayAdjustFilter(q(['hiddenTerm']), ds as any, lst as any)
+		test.deepEqual(calls.pop(), terms(lst), `should use routeTwLst for a ${label} group filter with an ignored term`)
+	}
+
+	const withFilter = customTw('otherTerm')
+	withFilter.q.customset.groups[1] = { name: 'g2', type: 'filter', filter: filter('hiddenTerm') } as any
+	authApi.mayAdjustFilter(q(), ds as any, [withFilter] as any)
+	test.equal(calls.pop(), undefined, 'should use the default for a group with a .filter that has a hidden term')
+
+	const valuesOnly = customTw('hiddenTerm')
+	valuesOnly.q.customset.groups[1].type = 'values'
+	authApi.mayAdjustFilter(q(), ds as any, [valuesOnly] as any)
+	test.deepEqual(calls.pop(), terms([valuesOnly]), 'should not check a group that is not type=filter')
 
 	test.end()
 })

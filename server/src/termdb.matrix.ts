@@ -129,6 +129,7 @@ export async function getData(q, ds, mapParent2Children?: boolean): Promise<any>
 		// before mayMapChildren2Root(), which replaces child samples with their root samples
 		const unmappedIdsByTerm = ds.cohort?.termdb?.checkAccessToSampleData ? getSampleIdsByTerm(data.samples) : undefined
 		mayMapChildren2Root(data, { ...q, terms: originalTerms }, ds)
+		dropRowsWithoutAnnotation(data)
 
 		mayCheckAccessToSampleData(data, ds, q, unmappedIdsByTerm)
 
@@ -1690,12 +1691,30 @@ function mayCheckAccessToSampleData(data, ds, q, unmappedIdsByTerm?: Map<string,
 	mayCheckSampleAccess(q, ds, terms)
 }
 
+/* false for a row property that is not an annotation, e.g. .sample */
+function isAnnotation(v: unknown) {
+	return Boolean(v) && typeof v == 'object'
+}
+
+/*
+remove the rows that have no annotation, along with their refs.bySampleId entries,
+such as a row whose only annotation was removed by resolveTermCollectionFractions(),
+so that every returned row has an annotation for at least one term
+*/
+export function dropRowsWithoutAnnotation(data) {
+	for (const [sid, sample] of Object.entries(data.samples || {}) as [string, any][]) {
+		if (Object.values(sample).some(isAnnotation)) continue
+		delete data.samples[sid]
+		if (data.refs?.bySampleId) delete data.refs.bySampleId[sid]
+	}
+}
+
 /* annotation key, such as tw.$id -> ids of the samples with an annotation for the key */
 function getSampleIdsByTerm(samples: Record<string, any>) {
 	const idsByTerm = new Map<string, Set<string>>()
 	for (const [sid, sample] of Object.entries(samples)) {
 		for (const [k, v] of Object.entries(sample)) {
-			if (!v || typeof v != 'object') continue // not an annotation, e.g. .sample
+			if (!isAnnotation(v)) continue
 			if (!idsByTerm.has(k)) idsByTerm.set(k, new Set())
 			idsByTerm.get(k)!.add(sid)
 		}

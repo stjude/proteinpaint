@@ -11,7 +11,8 @@ import {
 	hasFilterTermsUnsupportedByFilterSamples,
 	maySetMapParent2Children,
 	shouldMapParent2Children,
-	mayMapChildren2Root
+	mayMapChildren2Root,
+	dropRowsWithoutAnnotation
 } from '../termdb.matrix.js'
 import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'
@@ -1518,6 +1519,68 @@ tape('getData: mapChildren2Root returns one entry per root sample', async t => {
 		'patient level is not supported with snplst/snplocus data',
 		'a patient level request with a snplst term fails at argument validation, before any data is queried'
 	)
+	t.end()
+})
+
+tape('getData: a fraction termCollection returns only the rows with a fraction value', async t => {
+	await ensureOpenAuth()
+	const tdb = await init('termdb.test.ts')
+	server_init_db_queries(tdb.ds)
+	const tw = lst => ({
+		$id: 'frac',
+		type: 'TermCollectionTWFraction',
+		term: {
+			type: 'termCollection',
+			name: 'Fake Collection 1',
+			memberType: 'numeric',
+			termlst: ['agedx', 'a_death'].map(id => ({ id, type: 'float' }))
+		},
+		q: { mode: 'discrete', type: 'custom-bin', denominators: ['agedx', 'a_death'], numerators: ['agedx'], lst }
+	})
+	const counts = data => ({
+		rows: Object.keys(data.samples).length,
+		annotated: Object.values(data.samples).filter(s => s.frac).length,
+		refs: Object.keys(data.refs.bySampleId).length
+	})
+	{
+		const lst = [
+			{ startunbounded: true, stop: 0.5, label: 'low' },
+			{ start: 0.5, startinclusive: true, stopunbounded: true, label: 'high' }
+		]
+		const data = await getData({ terms: [tw(lst)] }, tdb.ds)
+		t.notOk(data.error, 'should not return an error when the bins cover the values')
+		const c = counts(data)
+		t.ok(c.rows > 0, 'should return rows when the bins cover the values')
+		t.deepEqual(
+			c,
+			{ rows: c.rows, annotated: c.rows, refs: c.rows },
+			'every returned row has a fraction value and a ref'
+		)
+	}
+	{
+		const data = await getData({ terms: [tw([{ start: 1e9, startinclusive: true, stopunbounded: true }])] }, tdb.ds)
+		t.notOk(data.error, 'should not return an error when no value is in a bin')
+		t.deepEqual(
+			counts(data),
+			{ rows: 0, annotated: 0, refs: 0 },
+			'should return no row or ref when no value is in a bin'
+		)
+	}
+	t.end()
+})
+
+tape('dropRowsWithoutAnnotation()', t => {
+	const data = {
+		samples: {
+			1: { sample: 1, sex: { key: 'M', value: 'M' } },
+			2: { sample: 2 },
+			3: { sample: 3, sex: undefined }
+		},
+		refs: { byTermId: {}, bySampleId: { 1: { label: 'a' }, 2: { label: 'b' }, 3: { label: 'c' } } }
+	}
+	dropRowsWithoutAnnotation(data)
+	t.deepEqual(Object.keys(data.samples), ['1'], 'should keep only the row with an annotation')
+	t.deepEqual(Object.keys(data.refs.bySampleId), ['1'], 'should remove the refs of the removed rows')
 	t.end()
 })
 

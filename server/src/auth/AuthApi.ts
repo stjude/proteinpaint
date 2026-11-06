@@ -26,6 +26,24 @@ function hasFilterTerm(filter, termIds: string[]): boolean {
 	return termIds.includes(filter.tvs?.term?.id)
 }
 
+// returns true if a group of type='filter' in a groupset of the termwrapper has a filter with a term.id in termIds[].
+// a categorical term query applies the filter of such a group, see termdb.sql.categorical.js, and the groupset may be
+// from tw.q.customset or tw.term.groupsetting.lst[], see get_active_groupset(). the filters of all cohorts are
+// checked, since the active cohort is from the request
+function hasGroupFilterTerm(tw, termIds: string[]): boolean {
+	const lst = tw?.term?.groupsetting?.lst
+	const groupsets = [tw?.q?.customset, ...(Array.isArray(lst) ? lst : [])]
+	for (const groupset of groupsets) {
+		if (!Array.isArray(groupset?.groups)) continue
+		for (const g of groupset.groups) {
+			if (g?.type != 'filter') continue
+			const byCohort = g.filter4activeCohort && typeof g.filter4activeCohort == 'object' ? g.filter4activeCohort : {}
+			if ([g.filter, ...Object.values(byCohort)].some(f => hasFilterTerm(f, termIds))) return true
+		}
+	}
+	return false
+}
+
 // An AuthApi class instance will wrap a private Auth class instance.
 // A class is used here so that the instance can be specific to the importer,
 // and the private #auth class will be exposed only to middleware and
@@ -316,10 +334,14 @@ export class AuthApi implements AuthInterface {
 		// NOTE: as needed, the server route code must append to q.__protected__.ignoredTermIds[],
 		//       since it knows the req.query key names that correspond to terms/termwrappers
 
-		// routeTerms is undefined in some cases, so that ds.getAdditionalFilter() returns its strictest auth filter
+		// routeTerms is undefined in some cases, so that ds.getAdditionalFilter() returns its strictest auth filter:
+		// without routeTwLst, or when a hidden term is in q.filter or in a group filter of a route termwrapper.
+		// only q.filter is checked: q.filter0 is the embedder portal's filter, which is not interpreted here
 		const hiddenIds = (ds.cohort.termdb.hiddenIds || []).filter(id => !q.__protected__.ignoredTermIds.includes(id))
 		const routeTerms =
-			routeTwLst === undefined || [q.filter, q.filter0].some(f => hasFilterTerm(f, hiddenIds))
+			routeTwLst === undefined ||
+			hasFilterTerm(q.filter, hiddenIds) ||
+			routeTwLst.some(tw => hasGroupFilterTerm(tw, hiddenIds))
 				? undefined
 				: routeTwLst.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
 		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__, routeTerms)
