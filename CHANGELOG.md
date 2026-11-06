@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Allow selecting sample types for splice junction terms, as for gene expression and DNA methylation terms
+- The server reads bigWig files in process, with @gmod/bbi, instead of running python/src/bigWigSummary.py with pyBigWig, which is removed from python/requirements.txt
+- A bigWig track shows "no data in view range" when no region in view has data, including a region on a chromosome that is not in the file or past its end, which was an error
 
 
 ## 2.226.0
