@@ -261,8 +261,9 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 
 		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
 	}
-	if (W2?.folder) {
-		for (const dir of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, W2.folder!))) {
+	for (const folder of [W2?.folder, W2?.sequenceFolder]) {
+		if (!folder) continue
+		for (const dir of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, folder))) {
 			//dir: string directory name, should match a sample name.
 			const sampleName = dir
 			if (!sampleName) throw new Error(`Spatial sample: cannot derive sample name from file name ${dir}`)
