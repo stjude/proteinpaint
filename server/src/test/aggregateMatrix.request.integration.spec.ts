@@ -175,10 +175,11 @@ tape('every row x column term type combination returns a matrix', async test => 
 			for (const key of ['rowSection', 'row', 'colSection', 'column', 'colorValue', 'sizeValue']) {
 				test.ok(key in cell, `${name}: cell should have .${key}`)
 			}
-			test.ok(
-				res.sizeScale.min <= res.sizeScale.max && res.colorScale.min <= res.colorScale.max,
-				`${name}: scales should be ordered`
-			)
+			// gene variant rows or columns, with the other axis of any other type, are all pies: no color scale
+			const isPieOnly = (row.label == 'geneVariant') != (column.label == 'geneVariant')
+			test.ok(res.sizeScale.min <= res.sizeScale.max, `${name}: size scale should be ordered`)
+			if (isPieOnly) test.notOk('colorScale' in res, `${name}: should not have a color scale for pies`)
+			else test.ok(res.colorScale.min <= res.colorScale.max, `${name}: color scale should be ordered`)
 		}
 	}
 	test.end()
@@ -255,12 +256,6 @@ tape('geneVariant terms only match samples with a variant', async test => {
 		counts,
 		{ 'TP53/1': 3, 'TP53/2': 3, 'KRASregion/1': 3, 'KRASregion/2': 1 },
 		'should count only the samples with a variant, by sex'
-	)
-
-	const percents = Object.fromEntries(res.data.flat().map(cell => [`${cell.row}/${cell.column}`, cell.colorValue]))
-	test.ok(
-		percents['TP53/1'] > percents['KRASregion/2'] && percents['KRASregion/2'] > 0,
-		'should give percent values that follow the counts'
 	)
 	test.end()
 })
@@ -463,12 +458,12 @@ tape('dictionary values are labeled by the dataset term', async test => {
 tape('percent is bounded by the cohort', async test => {
 	test.timeoutAfter(30000)
 	const res = await post({
-		rows: kinds[4].axis,
+		rows: kinds[2].axis,
 		columns: kinds[0].axis,
 		gradientMethod: 'percent',
 		sizeMethod: 'count'
 	})
-	test.notOk(res.error, 'should not return an error for geneVariant rows x categorical columns')
+	test.notOk(res.error, 'should not return an error for geneExpression rows x categorical columns')
 	const percents = res.data?.flat().map(cell => cell.colorValue) || []
 	test.ok(percents.length > 0, 'should return cells')
 	test.ok(
@@ -493,7 +488,8 @@ tape('sections keep the order and grouping of the request', async test => {
 
 tape('invalid requests are rejected', async test => {
 	test.timeoutAfter(60000)
-	const valid = { rows: kinds[4].axis, columns: kinds[0].axis, gradientMethod: 'percent', sizeMethod: 'count' }
+	// not gene variant rows: gene variant rows with other columns are all pies, and a pie has no gradient method
+	const valid = { rows: kinds[2].axis, columns: kinds[0].axis, gradientMethod: 'percent', sizeMethod: 'count' }
 	const cases: [string, any, RegExp][] = [
 		['missing rows', { ...valid, rows: undefined }, /invalid \.rows/],
 		['missing columns', { ...valid, columns: undefined }, /invalid \.columns/],
@@ -537,6 +533,7 @@ tape('invalid requests are rejected', async test => {
 			'pseudobulk columns with dictionary rows',
 			{
 				...valid,
+				rows: kinds[0].axis,
 				columns: { Cells: [{ term: { type: 'pseudobulk', id: 'B', assay: 'geneExpression', memberId: 'Cell Type' } }] }
 			},
 			/require geneExpression rows/
