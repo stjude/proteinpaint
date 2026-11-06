@@ -151,10 +151,19 @@ export type DmrScanSummary = {
 	/** present when the correction ran. `scored` and `significant` count the shown DMRs; `unscored`
 	 * shown DMRs had no background in their stratum and are not among the rows. `windows` is over the
 	 * whole run, also when `chromosomes` is one chromosome of it */
-	backgroundCorrection?: { windows: number; scored: number; unscored: number; significant: number; matchedOn: string[] }
+	backgroundCorrection?: {
+		windows: number
+		scored: number
+		unscored: number
+		/** shown DMRs at background FDR < 0.05 */
+		significant: number
+		matchedOn: string[]
+		/** background windows' own share at p < 0.05 against their stratum's null; ~0.05 when the null fits */
+		nullP05?: number
+	}
 	/** genes under shown hypomethylated gene-body DMRs -- the set the expression test
 	 * (termdb/dmrGeneDE) runs on. With the background correction on, a region must also beat its
-	 * matched background (p<0.05), which makes this the stricter of two readings rather than the
+	 * matched background (FDR < 0.05), which makes this the stricter of two readings rather than the
 	 * only one. Absent when no DMR qualifies. */
 	geneBodyLoss?: { regions: number; genes: string[] }
 	/** The two groups cut to the samples with methylation data, as sample ids: the cohort any

@@ -70,7 +70,7 @@ export function dmrScanToRows(
 	calls DMRs with no beta change (DISCOVER CSF: 87% of calls moved beta by less than 0.1). */
 	const minDeltaBeta = Math.max(0, Number(opts.minDeltaBeta) || 0)
 	const shown = kept.filter(d => clearsMinDeltaBeta(d.delta_beta_mean, minDeltaBeta))
-	/* With the correction on, the plotted p IS the background p, so a DMR whose stratum held too
+	/* With the correction on, the plotted p IS the background FDR, so a DMR whose stratum held too
 	little background to score has no y coordinate and is left out of the rows. Counted as
 	unscored rather than silently dropped: those are the widest and most CpG-dense regions,
 	which intergenic space cannot match, so "not testable this way" must stay distinguishable
@@ -79,14 +79,16 @@ export function dmrScanToRows(
 	the evidence of no change a p of 1 would claim. Counted, as withoutStatistic. And one with no Δβ, which has no
 	effect to plot: counted as withoutDeltaBeta, and left out of `shown` by clearsMinDeltaBeta too. */
 	const measured = kept.filter(d => d.delta_beta_mean != null)
-	const plotted = measured.filter(d => (opts.backgroundCorrection ? d.bgP : d[yAxis]) != null)
+	const plotted = measured.filter(d => (opts.backgroundCorrection ? d.bgQ : d[yAxis]) != null)
 
 	const rows: DiffMethEntry[] = plotted.map(d => {
 		/* y is the region statistic the reader picked. The default, the minimum smoothed FDR, is what
 		DMRcate calls regions by, but kernel pooling makes it astronomically small (1e-22 to below
 		double precision on DISCOVER chr17), so dots crowd the top of the axis; HMFDR, Stouffer and
-		Fisher combine the region's raw per-CpG p-values and spread out from 0. */
-		const p = (opts.backgroundCorrection ? d.bgP : d[yAxis])!
+		Fisher combine the region's raw per-CpG p-values and spread out from 0. With the correction, y is
+		instead the Benjamini-Hochberg q of the empirical background p across the whole scan; the raw
+		background p stays on the DMR (bgP) for anyone who needs it. */
+		const p = (opts.backgroundCorrection ? d.bgQ : d[yAxis])!
 		const id = `${d.chr}:${d.start}-${d.stop}`
 		const genes = d.genes?.length
 			? d.genes.join(', ') + (d.genesTruncated ? ` +${d.genesTruncated - d.genes.length} more` : '')
@@ -103,7 +105,7 @@ export function dmrScanToRows(
 			stay on the DMR. Both are set: a DMR with no Δβ is not among the rows. */
 			delta_beta: d.delta_beta_mean!,
 			fold_change: d.delta_beta_max!,
-			// one p per DMR: DMRcate's HMFDR, or the empirical p against matched background
+			// one p per DMR: the chosen region statistic, or the background FDR (bgQ)
 			original_p_value: p,
 			adjusted_p_value: p,
 			no_cpgs: d.no_cpgs,
@@ -156,20 +158,21 @@ export function dmrScanToRows(
 		...(payload.binMethylation ? { binMethylation: payload.binMethylation } : {})
 	}
 	if (payload.backgroundCorrection) {
-		const scored = shown.filter(d => d.bgP != null)
+		const scored = shown.filter(d => d.bgQ != null)
 		scan.backgroundCorrection = {
 			windows: payload.backgroundCorrection.windows,
 			matchedOn: payload.backgroundCorrection.matchedOn,
 			scored: scored.length,
 			unscored: shown.length - scored.length,
-			significant: scored.filter(d => d.bgP! < 0.05).length
+			significant: scored.filter(d => d.bgQ! < 0.05).length,
+			...(payload.backgroundCorrection.nullP05 != null ? { nullP05: payload.backgroundCorrection.nullP05 } : {})
 		}
 	}
 	/* Gene-body loss set: hypomethylated, in a gene body (span with 2kb trimmed off both ends). A
 	region clipping only a promoter relates to transcription the other way round, so inGeneBody
 	rather than gene overlap is the gate.
 
-	The background p is one more filter when there is one, not a precondition for asking the
+	The background q is one more filter when there is one, not a precondition for asking the
 	question: a DMR's own smoothed FDR is evidence that the region moved, and whether the genes it
 	sits in are expressed lower is answerable either way. The corrected set is the stricter reading
 	-- it drops regions that moved no more than their stratum drifts -- and on a cohort with a
@@ -179,7 +182,7 @@ export function dmrScanToRows(
 	let regions = 0
 	for (const d of shown) {
 		if (d.direction != 'hypo' || !d.inGeneBody) continue
-		if (payload.backgroundCorrection && !(d.bgP != null && d.bgP < 0.05)) continue
+		if (payload.backgroundCorrection && !(d.bgQ != null && d.bgQ < 0.05)) continue
 		regions++
 		/* bodyGenes, not genes: genes also lists promoter-only neighbours of an in-body region and is
 		capped for display, so it admitted the wrong mechanism and dropped body genes past the cap. */

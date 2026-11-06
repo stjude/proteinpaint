@@ -24,9 +24,11 @@ import {
 } from '#src/utils/regionMask.ts'
 import { buildGeneIndex, genesAt, genesInBody, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
 import {
+	adjustBackgroundP,
 	buildExclusion,
 	sampleBackground,
 	scoreAgainstBackground,
+	soloWcgwFractions,
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
 import { cacheOrRecompute, generateHash } from '#src/utils/cacheOrRecompute.ts'
@@ -133,7 +135,10 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 // global methylation carries each group's mean read depth
 // 11: element and array matrices with missing values take limma's prior for unequal residual df, and their DMRs'
 // meandiff/maxdiff are on the beta scale
-const CACHE_VERSION = 11
+// 12: background strata also split on solo-WCGW share, 6000 windows per chromosome; p from a fitted, tail-calibrated
+// empirical null (median/MAD) instead of the background fraction; DMRs carry bgQ (Benjamini-Hochberg over the
+// whole scan); the summary carries nullP05
+const CACHE_VERSION = 12
 
 /* Fingerprint the data files a result was computed from.
  *
@@ -242,6 +247,10 @@ export async function runDmrBatch(
 	const overlapFrac = Number.isFinite(rawFrac) ? Math.min(Math.max(rawFrac, 0), 1) : DEFAULT_OVERLAP_FRAC
 	let dmrsDropped = 0
 	const bgTotals = { windows: 0, scored: 0, unscored: 0, significant: 0 }
+	// whether any chromosome's strata could also split on solo-WCGW share (needs the genome sequence)
+	let bgSoloMatched = false
+	// background windows scored against their own stratum's null: the share at p < 0.05 checks its fit
+	const bgNull = { windows: 0, belowP05: 0 }
 
 	/* Built once for the request, not once per DMR: a genome scan calls >100,000 of them and
 	one sqlite round trip each would cost more than the model fits. Absent on a genome with no
@@ -491,10 +500,17 @@ export async function runDmrBatch(
 						if (bgRes.error) throw new Error(bgRes.error)
 						account('background', bgRes.diagnostic)
 						let bgOffset = 0
-						for (const { called, windows } of draws) {
+						for (const { chr, called, windows } of draws) {
 							const background = (bgRes.background || []).slice(bgOffset, bgOffset + windows.length)
 							bgOffset += windows.length
-							const { scored, unscored } = scoreAgainstBackground(called, background)
+							// solo-WCGW share of DMRs and windows alike, from one sweep of this chromosome's sequence
+							const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
+							const shares = await soloWcgwFractions(genome.genomefile, chr, chrLen, [...called, ...background])
+							const { scored, unscored, soloMatched, nullCheck } = scoreAgainstBackground(called, background, {
+								dmrs: shares.slice(0, called.length),
+								background: shares.slice(called.length)
+							})
+							if (soloMatched) bgSoloMatched = true
 							called.forEach((d: any, i: number) => {
 								const sc = scored[i]
 								if (!sc) return
@@ -504,9 +520,15 @@ export async function runDmrBatch(
 							bgTotals.windows += background.length
 							bgTotals.scored += scored.filter(Boolean).length
 							bgTotals.unscored += unscored
-							bgTotals.significant += scored.filter(s2 => s2 && s2.p < 0.05).length
+							bgNull.windows += nullCheck.windows
+							bgNull.belowP05 += nullCheck.belowP05
 						}
 					}
+					/* One Benjamini-Hochberg family for the whole scan, after every chromosome is scored; the
+					significant count is on that q, the same gate the scan rows apply. */
+					const all = perChr.flatMap(c => c.called)
+					adjustBackgroundP(all)
+					bgTotals.significant = all.filter((d: any) => d.bgQ != null && d.bgQ < 0.05).length
 				}
 				for (const { chr, windows, regions } of perChr) {
 					for (let i = 0; i < windows.length; i++) {
@@ -570,7 +592,13 @@ export async function runDmrBatch(
 					? { binBp: METHYLATION_BIN_BP, bins: result.bin_methylation || [] }
 					: undefined,
 				regionMask: maskFiles.length ? { sources: appliedNames, overlapFrac, dmrsDropped } : undefined,
-				backgroundCorrection: q.backgroundCorrection ? { ...bgTotals, matchedOn: ['CpG density', 'width'] } : undefined,
+				backgroundCorrection: q.backgroundCorrection
+					? {
+							...bgTotals,
+							matchedOn: ['CpG density', 'width', ...(bgSoloMatched ? ['solo-WCGW share'] : [])],
+							...(bgNull.windows ? { nullP05: bgNull.belowP05 / bgNull.windows } : {})
+					  }
+					: undefined,
 				globalMethylation:
 					gm && Number.isFinite(gm.control_mean_beta) && Number.isFinite(gm.case_mean_beta)
 						? {

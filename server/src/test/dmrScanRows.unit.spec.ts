@@ -129,15 +129,24 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 				direction: 'hypo',
 				delta_beta_mean: -0.2,
 				bgP: 0.01,
+				bgQ: 0.02,
 				excess: -0.15,
 				inGeneBody: true,
 				bodyGenes: ['LOSS'],
 				genes: ['LOSS']
 			}),
 			// hypo, beats background, but only clips a promoter -> not in the set
-			dmr({ start: 3000, stop: 4000, direction: 'hypo', delta_beta_mean: -0.2, bgP: 0.01, genes: ['PROMOTER_ONLY'] }),
+			dmr({
+				start: 3000,
+				stop: 4000,
+				direction: 'hypo',
+				delta_beta_mean: -0.2,
+				bgP: 0.01,
+				bgQ: 0.02,
+				genes: ['PROMOTER_ONLY']
+			}),
 			// hyper in a gene body -> not a loss
-			dmr({ start: 5000, stop: 6000, bgP: 0.01, inGeneBody: true, genes: ['GAIN'] }),
+			dmr({ start: 5000, stop: 6000, bgP: 0.01, bgQ: 0.02, inGeneBody: true, genes: ['GAIN'] }),
 			// hypo in a gene body but not significant
 			dmr({
 				start: 7000,
@@ -145,10 +154,11 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 				direction: 'hypo',
 				delta_beta_mean: -0.2,
 				bgP: 0.4,
+				bgQ: 0.5,
 				inGeneBody: true,
 				genes: ['NS']
 			}),
-			// unscored: no bgP
+			// unscored: no bgP, so no bgQ
 			dmr({ start: 9000, stop: 60000, no_cpgs: 900 })
 		],
 		{
@@ -169,7 +179,7 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 		{ windows: 2000, matchedOn: ['CpG density', 'width'], scored: 4, unscored: 1, significant: 3 },
 		'scored / unscored / significant are counted over kept DMRs'
 	)
-	t.equal(rows[0].original_p_value, 0.01, 'p is now the background p')
+	t.equal(rows[0].original_p_value, 0.02, 'the plotted value is the background FDR (bgQ), not the raw p')
 	t.equal(rows[0].excess, -0.15, 'and the excess rides along for the table')
 	t.deepEqual(
 		scan.geneBodyLoss,
