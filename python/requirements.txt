@@ -17,7 +17,6 @@ openslide-python==1.4.6
 pandas==2.2.3
 pillow==13.0.0
 psutil==7.2.1
-pyBigWig==0.3.25 --no-binary=pyBigWig
 scikit-learn==1.7.2
 # wsi_tile.py nhood: KD-tree kNN over cell centroids (already a statsmodels dependency)
 scipy==1.16.3

@@ -1,6 +1,6 @@
 import * as utils from './utils.js'
 import { rgb } from 'd3-color'
-import { run_python } from '@sjcrh/proteinpaint-python'
+import { readBigwigBins } from './bigwig.ts'
 import { mayLog } from './helpers.ts'
 import { makeCanvas, canvasToURL } from './canvas.ts'
 /*
@@ -90,21 +90,21 @@ async function handle_tkbigwig(req, res, genomes) {
 	// check the total before reading any region
 	validateBinTotal(req.query)
 
-	const t = new Date()
+	const t = Date.now()
 	for (const r of req.query.rglst) {
-		const bins = await run_bigwigsummary(req, r, file)
-
-		if (bins) {
+		// a region without data, or on a chromosome that is not in the file, has no values
+		const bins = await readBigwigBins(file, r.chr, r.start, r.stop, getNBins(req.query, r))
+		if (bins?.some(v => !Number.isNaN(v))) {
 			r.values = bins
 			if (req.query.dividefactor) {
 				r.values = r.values.map(i => i / req.query.dividefactor)
 			}
 		}
 	}
-	mayLog('bw python', Date.now() - t)
+	mayLog('bw read', Date.now() - t)
 
 	res.send(await plotWiggle(req.query, pa))
-	mayLog('bw python+rendering', Date.now() - t)
+	mayLog('bw read+rendering', Date.now() - t)
 }
 
 /*
@@ -393,24 +393,9 @@ export function validateBinTotal(q) {
 	let totalBins = 0
 	for (const r of q.rglst) {
 		const n = getNBins(q, r)
-		// the summary worker requires a positive integer
+		// readBigwigBins() requires a positive integer
 		if (!Number.isInteger(n) || n < 1) throw 'invalid number of bins for a region'
 		totalBins += n
 	}
 	if (totalBins > maxBins) throw 'too many bins requested'
-}
-
-async function run_bigwigsummary(req, r, file) {
-	const n_bins = getNBins(req.query, r)
-	const input_json = {
-		bw_file: file,
-		chromosome: r.chr,
-		start: r.start,
-		end: r.stop,
-		n_bins
-	}
-	const python_output = await run_python('bigWigSummary.py', JSON.stringify(input_json))
-	const bins = typeof python_output === 'string' ? JSON.parse(python_output) : []
-	if (bins.length == 0) throw `Couldn't find data for provided file`
-	return bins
 }

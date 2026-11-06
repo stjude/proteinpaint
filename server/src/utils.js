@@ -301,7 +301,7 @@ for (const [ip, prefix] of [
 
 	returns an error message if the url host is not allowed, or undefined if allowed
 
-	A url is fetched by spawned tools, such as straw, tabix, and pyBigWig, so a request
+	A url is fetched by spawned tools, such as straw and tabix, so a request
 	could otherwise make the server fetch from its internal network (SSRF).
 	- serverconfig.urlHosts[], if set, is the list of allowed hosts: 'a.org' matches only that host,
 	  '.a.org' matches any subdomain of a.org. A listed host is allowed even if it is not public.
