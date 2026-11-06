@@ -33,6 +33,7 @@ export function getDefaultDMRSettings(opts: any): DMRSettings {
 		},
 		maxLoessRegion: 250_000,
 		minProbesForCi: 10,
+		dotRadius: 4,
 		maxRegionSize: 5_000_000,
 		minDeltaBeta: 0
 	}

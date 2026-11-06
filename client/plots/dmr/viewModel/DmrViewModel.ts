@@ -192,8 +192,9 @@ export class DmrViewModel {
 	}
 
 	/**
-	 * Render the per-CpG means scatter plot to an offscreen canvas and return
-	 * a data URI suitable for the bigwig imgData track.
+	 * Draw the per-CpG means scatter plot as SVG and return it as a data URI for the bigwig
+	 * imgData track. SVG rather than a canvas PNG so the block's Export SVG keeps it as vector
+	 * (block.svg.js inlines it) and it stays sharp at any zoom.
 	 */
 	private renderBetaTrack(
 		diagnostic: DmrDiagnostic,
@@ -207,28 +208,29 @@ export class DmrViewModel {
 		const { probes } = diagnostic
 		if (!probes.positions.length) return undefined
 
-		const { colors, minProbesForCi } = config.settings.dmr
-		const dpr = typeof window !== 'undefined' && window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
+		const { minProbesForCi } = config.settings.dmr
+		/* colors and radius come from the plot config (a session can set them): escaped and coerced
+		so the markup below is well-formed whatever they hold */
+		const esc = (v: string) =>
+			String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
+		const colors = Object.fromEntries(
+			Object.entries(config.settings.dmr.colors).map(([k, v]) => [k, esc(v)])
+		) as typeof config.settings.dmr.colors
+		const r = Number(config.settings.dmr.dotRadius)
+		const dotRadius = Number.isFinite(r) && r > 0 ? r : 4
 		const width = blockWidth
 		const height = 150
-
-		const canvas = document.createElement('canvas')
-		canvas.width = width * dpr
-		canvas.height = height * dpr
-		const ctx = canvas.getContext('2d')
-		if (!ctx) return undefined
-		ctx.scale(dpr, dpr)
 
 		// Use the full block view range so dots align with bedj tracks above.
 		// The block stretches the image to fill the view from queryStart to queryStop.
 		const xMin = queryStart ?? probes.positions[0]
 		const xMax = queryStop ?? probes.positions[probes.positions.length - 1]
 		const xRange = xMax - xMin || 1
-		const scaleX = (val: number) => ((val - xMin) / xRange) * width
-		const scaleY = (val: number) => height - val * height // beta 0-1
+		const scaleX = (val: number) => +(((val - xMin) / xRange) * width).toFixed(1)
+		const scaleY = (val: number) => +(height - Math.max(0, Math.min(1, val)) * height).toFixed(1) // beta 0-1
 
-		// Transparent background so block mouse events (yellow line) show through
-		ctx.clearRect(0, 0, width, height)
+		// no background, so block mouse events (yellow line) show through
+		const parts: string[] = []
 
 		// DMR region shading omitted — already shown as a bedj track above
 
@@ -255,67 +257,48 @@ export class DmrViewModel {
 				while (iEnd >= 0 && lPos[iEnd] > lastProbePos) iEnd--
 				if (iStart > iEnd) continue
 
+				const line = (ys: number[], from: number, to: number) => {
+					const pts: string[] = []
+					const step = from <= to ? 1 : -1
+					for (let i = from; i != to + step; i += step) pts.push(`${scaleX(lPos[i])},${scaleY(ys[i])}`)
+					return pts.join(' ')
+				}
 				if (showCi) {
-					// Draw CI as shaded region
-					ctx.globalAlpha = 0.12
-					ctx.fillStyle = color
-					ctx.beginPath()
-					for (let i = iStart; i <= iEnd; i++) {
-						ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, ciUpper[i]))))
-					}
-					for (let i = iEnd; i >= iStart; i--) {
-						ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, ciLower[i]))))
-					}
-					ctx.closePath()
-					ctx.fill()
+					// CI as a shaded band: along the upper bound, back along the lower
+					const band = `${line(ciUpper, iStart, iEnd)} ${line(ciLower, iEnd, iStart)}`
+					parts.push(`<polygon points="${band}" fill="${color}" fill-opacity="0.12"/>`)
 				}
-
-				// Draw LOESS fitted curve (dashed when no CI, solid otherwise)
-				ctx.globalAlpha = 0.8
-				ctx.strokeStyle = color
-				ctx.lineWidth = 2
-				ctx.setLineDash(showCi ? [] : [6, 4])
-				ctx.beginPath()
-				for (let i = iStart; i <= iEnd; i++) {
-					ctx.lineTo(scaleX(lPos[i]), scaleY(Math.max(0, Math.min(1, fitted[i]))))
-				}
-				ctx.stroke()
-				ctx.setLineDash([])
+				// LOESS fitted curve (dashed when no CI, solid otherwise)
+				const dash = showCi ? '' : ' stroke-dasharray="6 4"'
+				parts.push(
+					`<polyline points="${line(
+						fitted,
+						iStart,
+						iEnd
+					)}" fill="none" stroke="${color}" stroke-opacity="0.8" stroke-width="2"${dash}/>`
+				)
 			}
 		}
 
 		// Draw dots (hidden for large regions where only LOESS is shown)
-		if (!showDots) {
-			ctx.globalAlpha = 1
-			return { img: { minv: 0, maxv: 1, src: canvas.toDataURL('image/png') }, showCi }
-		}
-		for (let i = 0; i < probes.positions.length; i++) {
-			const x = scaleX(probes.positions[i])
-			const isSig = probes.sig[i]
-			const alpha = isSig ? 0.85 : 0.3
-
-			// Group 1 (control)
-			ctx.globalAlpha = alpha
-			ctx.fillStyle = colors.group1
-			const m1 = probes.mean_group1[i]
-			if (m1 != null) {
-				ctx.beginPath()
-				ctx.arc(x, scaleY(m1), 4, 0, Math.PI * 2)
-				ctx.fill()
-			}
-
-			// Group 2 (case)
-			ctx.fillStyle = colors.group2
-			const m2 = probes.mean_group2[i]
-			if (m2 != null) {
-				ctx.beginPath()
-				ctx.arc(x, scaleY(m2), 4, 0, Math.PI * 2)
-				ctx.fill()
+		if (showDots) {
+			for (let i = 0; i < probes.positions.length; i++) {
+				const x = scaleX(probes.positions[i])
+				const alpha = probes.sig[i] ? 0.85 : 0.3
+				for (const [m, color] of [
+					[probes.mean_group1[i], colors.group1], // Group 1 (control)
+					[probes.mean_group2[i], colors.group2] // Group 2 (case)
+				] as [number | null, string][]) {
+					if (m != null)
+						parts.push(`<circle cx="${x}" cy="${scaleY(m)}" r="${dotRadius}" fill="${color}" fill-opacity="${alpha}"/>`)
+				}
 			}
 		}
-		ctx.globalAlpha = 1
 
-		return { img: { minv: 0, maxv: 1, src: canvas.toDataURL('image/png') }, showCi }
+		const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${parts.join(
+			''
+		)}</svg>`
+		return { img: { minv: 0, maxv: 1, src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) }, showCi }
 	}
 
 	private makeDmrBedItems(dmrResult: TermdbDmrSuccessResponse, settings: DmrConfig['settings']): BedItem[] {

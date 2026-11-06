@@ -132,7 +132,8 @@ export function downloadAggregatedSVG(chartImages, svgName) {
 	const svgParent = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
 	const styles = []
 
-	let y = 20
+	let y = 20,
+		width = 0
 	for (const chart of chartImages) {
 		const parent = chart.parent || chart.svg.node()
 		const svg = chart.svg.clone(true)
@@ -153,8 +154,11 @@ export function downloadAggregatedSVG(chartImages, svgName) {
 		g.appendChild(svgNode)
 		svgParent.appendChild(g)
 		y += bbox.height + 70 //30 from the shift for the label, 40 to add space for new plot
+		width = Math.max(width, 2 * x + bbox.width) // g and svg are each shifted by x
 	}
 	svgParent.setAttribute('height', `${y + 20}`)
+	// without a width, renderers that do not size to content (e.g. rsvg, image editors) cut the charts off
+	svgParent.setAttribute('width', `${width + 20}`)
 
 	to_svg(svgParent, svgName, { apply_dom_styles: true })
 }
