@@ -377,7 +377,11 @@ export function hideCategory(d, self, isHidden) {
 
 function getUpdatedQfromClick(d, term, isHidden = false, binColored = null) {
 	const label = 'id' in d ? d.id : d.type == 'col' ? d.seriesId : d.dataId
-	const valueId = term.term.values && Object.keys(term.term.values).find(id => term.term.values[id].label === label)
+	const values = term.term.values
+	// a numeric term identifies its uncomputable values by label, which may equal the key of another value;
+	// otherwise seriesId and dataId are already value keys, and two keys may share a label
+	const isValueKey = !isNumericTw(term) && values && label in values
+	const valueId = values && !isValueKey && Object.keys(values).find(id => values[id].label === label)
 	const id = !valueId ? label : valueId
 	const q = JSON.parse(JSON.stringify(term.q))
 	if (!q.hiddenValues) q.hiddenValues = {}

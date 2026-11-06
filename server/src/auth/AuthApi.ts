@@ -11,6 +11,50 @@ import { sleep } from '../utils.js'
 // 	jwt: '/jwt-status'
 // }
 
+// the tag of a filter entry that was added by mayAdjustFilter()
+const FILTER_TAG = 'termLevelAuthFilter'
+
+// the filter objects that were added by mayAdjustFilter()
+const addedFilters = new WeakSet()
+
+// returns true if a tvs in the filter tree has a term.id in termIds[],
+// the entries that were added by mayAdjustFilter() are not considered
+function hasFilterTerm(filter, termIds: string[]): boolean {
+	if (!filter || addedFilters.has(filter)) return false
+	// same as getFilterCTEs(), which treats a filter entry as a tvs unless its type is tvslst
+	if (filter.type == 'tvslst') return Array.isArray(filter.lst) && filter.lst.some(f => hasFilterTerm(f, termIds))
+	return termIds.includes(filter.tvs?.term?.id)
+}
+
+// returns the groupset that a term query applies, same as get_active_groupset() in termdb.sql.js,
+// except that undefined is returned instead of throwing, since the term query throws for such a tw.
+// not imported, since termdb.sql.js imports authApi
+function getActiveGroupset(tw) {
+	const { term, q } = tw || {}
+	if (!q || !term?.groupsetting || term.groupsetting.disabled) return
+	if (q.type == 'predefined-groupset') {
+		const lst = term.groupsetting.lst
+		return Number.isInteger(q.predefined_groupset_idx) && Array.isArray(lst)
+			? lst[q.predefined_groupset_idx]
+			: undefined
+	}
+	if (q.type == 'custom-groupset') return q.customset
+}
+
+// returns true if a group of type='filter' in the active groupset of the termwrapper has a filter with a term.id
+// in termIds[]. a categorical term query applies the filter of such a group, see termdb.sql.categorical.js.
+// the filters of all cohorts are checked, since the active cohort is from the request
+function hasGroupFilterTerm(tw, termIds: string[]): boolean {
+	const groups = getActiveGroupset(tw)?.groups
+	if (!Array.isArray(groups)) return false
+	for (const g of groups) {
+		if (g?.type != 'filter') continue
+		const byCohort = g.filter4activeCohort && typeof g.filter4activeCohort == 'object' ? g.filter4activeCohort : {}
+		if ([g.filter, ...Object.values(byCohort)].some(f => hasFilterTerm(f, termIds))) return true
+	}
+	return false
+}
+
 // An AuthApi class instance will wrap a private Auth class instance.
 // A class is used here so that the instance can be specific to the importer,
 // and the private #auth class will be exposed only to middleware and
@@ -301,8 +345,14 @@ export class AuthApi implements AuthInterface {
 		// NOTE: as needed, the server route code must append to q.__protected__.ignoredTermIds[],
 		//       since it knows the req.query key names that correspond to terms/termwrappers
 
+		// routeTerms is undefined in some cases, so that ds.getAdditionalFilter() returns its strictest auth filter:
+		// without routeTwLst, or when a hidden term is in q.filter or in a group filter of a route termwrapper.
+		// only q.filter is checked: q.filter0 is the embedder portal's filter, which is not interpreted here
+		const hiddenIds = (ds.cohort.termdb.hiddenIds || []).filter(id => !q.__protected__.ignoredTermIds.includes(id))
 		const routeTerms =
-			routeTwLst === undefined
+			routeTwLst === undefined ||
+			hasFilterTerm(q.filter, hiddenIds) ||
+			routeTwLst.some(tw => hasGroupFilterTerm(tw, hiddenIds))
 				? undefined
 				: routeTwLst.filter(tw => !q.__protected__.ignoredTermIds.includes(tw.term.id)).map(tw => tw.term)
 		const authFilter = ds.cohort.termdb.getAdditionalFilter(q.__protected__, routeTerms)
@@ -312,7 +362,6 @@ export class AuthApi implements AuthInterface {
 		else if (!Array.isArray(q.filter.lst)) throw `q.filter.lst[] is not an array`
 		// NOTE: other filter data validation will be done in termdb.filter.js
 
-		const FILTER_TAG = 'termLevelAuthFilter'
 		const i = q.filter.lst.findIndex(f => f.tag === FILTER_TAG)
 		if (!authFilter) {
 			// certain roles (from jwt payload) may have access to everything,
@@ -329,6 +378,7 @@ export class AuthApi implements AuthInterface {
 			return
 		} else {
 			authFilter.tag = FILTER_TAG
+			addedFilters.add(authFilter)
 			// the adjusted filter must have the correct filter shape, for example, avoid an empty nested tvslst
 			if (i !== -1) {
 				if (q.filter.join != 'and') throw `unexpected filter.join != 'and' for a previously added auth filter entry `

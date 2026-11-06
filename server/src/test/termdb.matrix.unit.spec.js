@@ -11,7 +11,8 @@ import {
 	hasFilterTermsUnsupportedByFilterSamples,
 	maySetMapParent2Children,
 	shouldMapParent2Children,
-	mayMapChildren2Root
+	mayMapChildren2Root,
+	dropRowsWithoutAnnotation
 } from '../termdb.matrix.js'
 import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'
@@ -1521,7 +1522,69 @@ tape('getData: mapChildren2Root returns one entry per root sample', async t => {
 	t.end()
 })
 
-tape('getData: mapChildren2Root finds the values of a hidden term that annotates child samples', async t => {
+tape('getData: a fraction termCollection returns only the rows with a fraction value', async t => {
+	await ensureOpenAuth()
+	const tdb = await init('termdb.test.ts')
+	server_init_db_queries(tdb.ds)
+	const tw = lst => ({
+		$id: 'frac',
+		type: 'TermCollectionTWFraction',
+		term: {
+			type: 'termCollection',
+			name: 'Fake Collection 1',
+			memberType: 'numeric',
+			termlst: ['agedx', 'a_death'].map(id => ({ id, type: 'float' }))
+		},
+		q: { mode: 'discrete', type: 'custom-bin', denominators: ['agedx', 'a_death'], numerators: ['agedx'], lst }
+	})
+	const counts = data => ({
+		rows: Object.keys(data.samples).length,
+		annotated: Object.values(data.samples).filter(s => s.frac).length,
+		refs: Object.keys(data.refs.bySampleId).length
+	})
+	{
+		const lst = [
+			{ startunbounded: true, stop: 0.5, label: 'low' },
+			{ start: 0.5, startinclusive: true, stopunbounded: true, label: 'high' }
+		]
+		const data = await getData({ terms: [tw(lst)] }, tdb.ds)
+		t.notOk(data.error, 'should not return an error when the bins cover the values')
+		const c = counts(data)
+		t.ok(c.rows > 0, 'should return rows when the bins cover the values')
+		t.deepEqual(
+			c,
+			{ rows: c.rows, annotated: c.rows, refs: c.rows },
+			'every returned row has a fraction value and a ref'
+		)
+	}
+	{
+		const data = await getData({ terms: [tw([{ start: 1e9, startinclusive: true, stopunbounded: true }])] }, tdb.ds)
+		t.notOk(data.error, 'should not return an error when no value is in a bin')
+		t.deepEqual(
+			counts(data),
+			{ rows: 0, annotated: 0, refs: 0 },
+			'should return no row or ref when no value is in a bin'
+		)
+	}
+	t.end()
+})
+
+tape('dropRowsWithoutAnnotation()', t => {
+	const data = {
+		samples: {
+			1: { sample: 1, sex: { key: 'M', value: 'M' } },
+			2: { sample: 2 },
+			3: { sample: 3, sex: undefined }
+		},
+		refs: { byTermId: {}, bySampleId: { 1: { label: 'a' }, 2: { label: 'b' }, 3: { label: 'c' } } }
+	}
+	dropRowsWithoutAnnotation(data)
+	t.deepEqual(Object.keys(data.samples), ['1'], 'should keep only the row with an annotation')
+	t.deepEqual(Object.keys(data.refs.bySampleId), ['1'], 'should remove the refs of the removed rows')
+	t.end()
+})
+
+tape('getData: checkAccessToSampleData.termId values are found when they annotate child samples', async t => {
 	await ensureOpenAuth()
 	const tdb = await init('termdb.test.ts')
 	server_init_db_queries(tdb.ds)
@@ -1529,33 +1592,82 @@ tape('getData: mapChildren2Root finds the values of a hidden term that annotates
 	const termjson = id => structuredClone(termdb.q.termjsonByOneid(id))
 	const terms = () => [{ $id: 'wgs_curated', term: termjson('wgs_curated'), q: { type: 'values' } }]
 	// in the test db, diaggrp annotates child samples and sex annotates patients
-	const childValues = new Set(
-		tdb.ds.cohort.db.connection
-			.prepare('SELECT distinct value FROM anno_categorical WHERE term_id=?')
-			.all('diaggrp')
-			.map(r => r.value)
-	)
-	const saved = { hiddenIds: termdb.hiddenIds, checkAccessToSampleData: termdb.checkAccessToSampleData }
+	const distinctValues = id =>
+		new Set(
+			tdb.ds.cohort.db.connection
+				.prepare('SELECT distinct value FROM anno_categorical WHERE term_id=?')
+				.all(id)
+				.map(r => r.value)
+		)
+	const saved = termdb.checkAccessToSampleData
 	let names
-	termdb.checkAccessToSampleData = (q, data) => {
-		if (data.names) names = data.names // the quick check, the detailed check has no names
-		return { canAccess: true }
+	const assess = (q, data) => {
+		names = data.names
+		return { minSize: 1, canAccess: true }
 	}
 	try {
-		termdb.hiddenIds = ['diaggrp']
-		await getData({ terms: terms(), mapChildren2Root: true }, tdb.ds)
-		t.ok(names.length, 'the hidden term values of the child samples are found')
-		t.ok(
-			names.every(n => childValues.has(n)),
-			'the found names are values of the hidden term'
+		for (const termId of ['diaggrp', 'sex']) {
+			termdb.checkAccessToSampleData = { need: 'names', termId, assess }
+			names = undefined
+			const data = await getData({ terms: terms(), mapChildren2Root: true }, tdb.ds)
+			t.notOk(data.error, `should not return an error for termId=${termId}`)
+			const expected = distinctValues(termId)
+			t.ok(names?.length, `the values of termId=${termId} are found`)
+			t.ok(
+				names?.every(n => expected.has(n)),
+				`the found names are values of termId=${termId}`
+			)
+		}
+	} finally {
+		termdb.checkAccessToSampleData = saved
+	}
+	t.end()
+})
+
+tape("getData: checkAccessToSampleData.need='count' checks the sample count of each term", async t => {
+	await ensureOpenAuth()
+	const tdb = await init('termdb.test.ts')
+	server_init_db_queries(tdb.ds)
+	const termdb = tdb.ds.cohort.termdb
+	const termjson = id => structuredClone(termdb.q.termjsonByOneid(id))
+	const terms = () => [
+		{ $id: 'relapse_site', term: termjson('relapse_site'), q: { type: 'values' } },
+		{ $id: 'diaggrp', term: termjson('diaggrp'), q: { type: 'values' } }
+	]
+	const saved = termdb.checkAccessToSampleData
+	const calls = []
+	try {
+		termdb.checkAccessToSampleData = {
+			need: 'count',
+			assess: (q, data) => {
+				calls.push(data)
+				return { minSize: 1, canAccess: true }
+			}
+		}
+		const data = await getData({ terms: terms() }, tdb.ds)
+		t.notOk(data.error, 'should not return an error')
+		const counts = ['relapse_site', 'diaggrp'].map(
+			$id => Object.values(data.samples).filter(s => s[$id] && typeof s[$id] == 'object').length
+		)
+		t.notEqual(counts[0], counts[1], 'the test terms should have data on different numbers of samples')
+		// the terms are not checked in a set order
+		const byCount = (a, b) => a.count - b.count
+		t.deepEqual(
+			calls.sort(byCount),
+			counts.map(count => ({ count })).sort(byCount),
+			'should call assess() with only the sample count of each term'
 		)
 
-		termdb.hiddenIds = ['sex']
-		names = undefined
-		await getData({ terms: terms(), mapChildren2Root: true }, tdb.ds)
-		t.ok(names.length, 'the hidden term values of the patients are still found')
+		// a minSize between the two counts rejects the term with fewer samples
+		const minSize = Math.min(...counts) + 1
+		termdb.checkAccessToSampleData = {
+			need: 'count',
+			assess: (q, data) => ({ minSize, canAccess: data.count >= minSize })
+		}
+		const data2 = await getData({ terms: terms() }, tdb.ds)
+		t.equal(data2.code, 'ERR_MIN_SIZE', 'should reject the request when one term has fewer than minSize samples')
 	} finally {
-		Object.assign(termdb, saved)
+		termdb.checkAccessToSampleData = saved
 	}
 	t.end()
 })

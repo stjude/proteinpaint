@@ -14,12 +14,15 @@ export default function (): Mds3 {
 	// NOTE: may need to supply arguments to termdbTestInit if it requires it
 	const ds = termdbTestInit()
 	if (!ds.cohort) ds.cohort = { termdb: {} }
-	ds.cohort.termdb.checkAccessToSampleData = (q, data) => {
-		const userDatasets = q.__protected__?.datasets
-		return {
-			minSize,
-			canAccess:
-				data.count >= minSize || (Array.isArray(userDatasets) && allowedDatasets.every(d => userDatasets.includes(d)))
+	ds.cohort.termdb.checkAccessToSampleData = {
+		need: 'count',
+		assess: (q, data) => {
+			const userDatasets = q.__protected__?.datasets
+			return {
+				minSize,
+				canAccess:
+					data.count >= minSize || (Array.isArray(userDatasets) && allowedDatasets.every(d => userDatasets.includes(d)))
+			}
 		}
 	}
 

@@ -1593,6 +1593,248 @@ tape(
 	}
 )
 
+tape('AuthApi.mayAdjustFilter: routeTerms', function (test) {
+	test.timeoutAfter(500)
+
+	const { authApi } = makeAuthApi()
+	const calls: any[] = []
+	const ds = {
+		cohort: {
+			termdb: {
+				hiddenIds: ['hiddenTerm'],
+				getAdditionalFilter: (_protected: any, terms: any) => {
+					calls.push(terms)
+					return { type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term: { id: 'hiddenTerm' } } }] }
+				}
+			}
+		}
+	}
+	const tvs = (id: string) => ({ type: 'tvs', tvs: { term: { id } } })
+	const filter = (id: string) => ({
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [{ type: 'tvslst', in: true, join: '', lst: [tvs(id)] }]
+	})
+	const routeTwLst = [{ term: { id: 'otherTerm' } }]
+	const __protected__ = (ignoredTermIds: string[] = []) => ({ clientAuthResult: {}, ignoredTermIds })
+
+	authApi.mayAdjustFilter(
+		{ filter: filter('otherTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.deepEqual(
+		calls.pop(),
+		routeTwLst.map(tw => tw.term),
+		'should use routeTwLst'
+	)
+
+	authApi.mayAdjustFilter(
+		{ filter: filter('hiddenTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.equal(calls.pop(), undefined, 'should use the default for a nested entry')
+
+	authApi.mayAdjustFilter({ filter: filter('hiddenTerm'), __protected__: __protected__() } as any, ds as any, [] as any)
+	test.equal(calls.pop(), undefined, 'should use the default with an empty routeTwLst')
+
+	authApi.mayAdjustFilter(
+		{ filter0: filter('hiddenTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.deepEqual(
+		calls.pop(),
+		routeTwLst.map(tw => tw.term),
+		'should not read filter0'
+	)
+
+	authApi.mayAdjustFilter(
+		{ filter: filter('hiddenTerm'), __protected__: __protected__(['hiddenTerm']) } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.deepEqual(
+		calls.pop(),
+		routeTwLst.map(tw => tw.term),
+		'should use routeTwLst for a term in ignoredTermIds'
+	)
+
+	// the entry added by a previous call must not count as a filter term
+	const q: any = { filter: filter('otherTerm'), __protected__: __protected__() }
+	authApi.mayAdjustFilter(q, ds as any, undefined)
+	test.equal(calls.pop(), undefined, 'should use the default without routeTwLst')
+	authApi.mayAdjustFilter(q, ds as any, routeTwLst as any)
+	test.deepEqual(
+		calls.pop(),
+		routeTwLst.map(tw => tw.term),
+		'should not consider a previously added auth filter'
+	)
+
+	const tagged = (id: string) => {
+		const f = filter(id)
+		f.join = 'and'
+		f.lst[0]['tag'] = 'termLevelAuthFilter'
+		return f
+	}
+	authApi.mayAdjustFilter(
+		{ filter: tagged('hiddenTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.equal(calls.pop(), undefined, 'should consider an entry that was not added by mayAdjustFilter()')
+
+	const rootTagged: any = { ...filter('hiddenTerm'), tag: 'termLevelAuthFilter' }
+	authApi.mayAdjustFilter({ filter: rootTagged, __protected__: __protected__() } as any, ds as any, routeTwLst as any)
+	test.equal(calls.pop(), undefined, 'should consider a root filter that was not added by mayAdjustFilter()')
+
+	// getFilterCTEs() does not require a type for a tvs entry
+	const noType = (id: string) => ({
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [{ type: 'tvslst', in: true, join: '', lst: [{ tvs: { term: { id } } }] }]
+	})
+	authApi.mayAdjustFilter(
+		{ filter: noType('hiddenTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.equal(calls.pop(), undefined, 'should use the default for an entry without a type')
+	authApi.mayAdjustFilter(
+		{ filter: noType('otherTerm'), __protected__: __protected__() } as any,
+		ds as any,
+		routeTwLst as any
+	)
+	test.deepEqual(
+		calls.pop(),
+		routeTwLst.map(tw => tw.term),
+		'should use routeTwLst for an entry without a type'
+	)
+
+	const q1: any = { filter: filter('otherTerm'), __protected__: __protected__() }
+	authApi.mayAdjustFilter(q1, ds as any, undefined)
+	calls.pop()
+	q1.filter = structuredClone(q1.filter)
+	authApi.mayAdjustFilter(q1, ds as any, routeTwLst as any)
+	test.equal(calls.pop(), undefined, 'should consider a copy of an entry that was added by mayAdjustFilter()')
+
+	test.end()
+})
+
+tape('AuthApi.mayAdjustFilter: routeTerms with a group filter of a route termwrapper', function (test) {
+	test.timeoutAfter(500)
+
+	const { authApi } = makeAuthApi()
+	const calls: any[] = []
+	const ds = {
+		cohort: {
+			termdb: {
+				hiddenIds: ['hiddenTerm'],
+				getAdditionalFilter: (_protected: any, terms: any) => {
+					calls.push(terms)
+					return { type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term: { id: 'hiddenTerm' } } }] }
+				}
+			}
+		}
+	}
+	const filter = (id: string) => ({ type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term: { id } } }] })
+	const groups = (id: string) => [
+		{ name: 'g1', type: 'values', values: [{ key: 'a' }] },
+		{ name: 'g2', type: 'filter', filter4activeCohort: { c1: filter('otherTerm'), c2: filter(id) } }
+	]
+	const customTw = (id: string) => ({
+		term: { id: 'otherTerm', type: 'categorical', groupsetting: {} },
+		q: { type: 'custom-groupset', groupsetting: { activeCohort: 'c2' }, customset: { groups: groups(id) } }
+	})
+	const predefinedTw = (id: string) => ({
+		term: { id: 'otherTerm', type: 'categorical', groupsetting: { lst: [{ name: 'set', groups: groups(id) }] } },
+		q: { type: 'predefined-groupset', predefined_groupset_idx: 0 }
+	})
+	const q = (ignoredTermIds: string[] = []) =>
+		({ filter: filter('otherTerm'), __protected__: { clientAuthResult: {}, ignoredTermIds } } as any)
+	const terms = (routeTwLst: any[]) => routeTwLst.map(tw => tw.term)
+
+	for (const [label, tw] of [
+		['custom', customTw],
+		['predefined', predefinedTw]
+	] as const) {
+		const lst = [tw('hiddenTerm')]
+		authApi.mayAdjustFilter(q(), ds as any, lst as any)
+		test.equal(calls.pop(), undefined, `should use the default for a ${label} group filter with a hidden term`)
+
+		const lst2 = [tw('otherTerm')]
+		authApi.mayAdjustFilter(q(), ds as any, lst2 as any)
+		test.deepEqual(calls.pop(), terms(lst2), `should use routeTwLst for a ${label} group filter without a hidden term`)
+
+		authApi.mayAdjustFilter(q(['hiddenTerm']), ds as any, lst as any)
+		test.deepEqual(calls.pop(), terms(lst), `should use routeTwLst for a ${label} group filter with an ignored term`)
+	}
+
+	const withFilter = customTw('otherTerm')
+	withFilter.q.customset.groups[1] = { name: 'g2', type: 'filter', filter: filter('hiddenTerm') } as any
+	authApi.mayAdjustFilter(q(), ds as any, [withFilter] as any)
+	test.equal(calls.pop(), undefined, 'should use the default for a group with a .filter that has a hidden term')
+
+	const otherCohort = customTw('otherTerm')
+	otherCohort.q.customset.groups[1] = {
+		name: 'g2',
+		type: 'filter',
+		filter4activeCohort: { c1: filter('hiddenTerm'), c2: filter('otherTerm') }
+	} as any
+	authApi.mayAdjustFilter(q(), ds as any, [otherCohort] as any)
+	test.equal(
+		calls.pop(),
+		undefined,
+		'should use the default for a hidden term in the filter of a cohort that is not active'
+	)
+
+	const valuesOnly = customTw('hiddenTerm')
+	valuesOnly.q.customset.groups[1].type = 'values'
+	authApi.mayAdjustFilter(q(), ds as any, [valuesOnly] as any)
+	test.deepEqual(calls.pop(), terms([valuesOnly]), 'should not check a group that is not type=filter')
+
+	// a groupset that the term query does not apply is not checked
+	const unused: [string, any][] = [
+		['values mode', { ...customTw('hiddenTerm'), q: { ...customTw('hiddenTerm').q, type: 'values' } }],
+		[
+			'disabled groupsetting',
+			{ ...customTw('hiddenTerm'), term: { ...customTw('hiddenTerm').term, groupsetting: { disabled: true } } }
+		],
+		['no groupsetting', { ...customTw('hiddenTerm'), term: { id: 'otherTerm', type: 'categorical' } }],
+		[
+			'a predefined q with an unused customset',
+			{
+				...customTw('hiddenTerm'),
+				q: { ...predefinedTw('otherTerm').q, customset: customTw('hiddenTerm').q.customset }
+			}
+		]
+	]
+	const twoSets = predefinedTw('otherTerm')
+	twoSets.term.groupsetting.lst.push({ name: 'set2', groups: groups('hiddenTerm') })
+	unused.push(['another predefined set', twoSets])
+	const customOverSets = customTw('otherTerm') as any
+	customOverSets.term.groupsetting = { lst: [{ name: 'set', groups: groups('hiddenTerm') }] }
+	unused.push(['a custom q with an unused predefined set', customOverSets])
+	const badIdx = predefinedTw('hiddenTerm') as any
+	badIdx.q.predefined_groupset_idx = 1
+	unused.push(['an out of bound predefined_groupset_idx', badIdx])
+	for (const [label, tw] of unused) {
+		authApi.mayAdjustFilter(q(), ds as any, [tw] as any)
+		test.deepEqual(calls.pop(), terms([tw]), `should use routeTwLst for ${label}`)
+	}
+
+	const usedSet = predefinedTw('otherTerm')
+	usedSet.term.groupsetting.lst.push({ name: 'set2', groups: groups('hiddenTerm') })
+	usedSet.q.predefined_groupset_idx = 1
+	authApi.mayAdjustFilter(q(), ds as any, [usedSet] as any)
+	test.equal(calls.pop(), undefined, 'should use the default for the predefined set at predefined_groupset_idx')
+
+	test.end()
+})
+
 tape('AuthApi.mayAdjustFilter: throws when filter.type is not tvslst', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
