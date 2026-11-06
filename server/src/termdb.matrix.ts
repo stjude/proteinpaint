@@ -35,6 +35,7 @@ import { get_bin_label, compute_bins, assignBinColors } from '#shared/termdb.bin
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from './routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
+import { mayCheckSampleAccess, type SampleAccessTerm } from './termdb.sampleAccess.ts'
 import {
 	expandCustomTermCollection,
 	reconstituteCustomTermCollection,
@@ -125,10 +126,11 @@ export async function getData(q, ds, mapParent2Children?: boolean): Promise<any>
 		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
 		resolveTermCollectionFractions(data, originalTerms)
-		const unmappedSampleIds = Object.keys(data.samples)
+		// before mayMapChildren2Root(), which replaces child samples with their root samples
+		const unmappedIdsByTerm = ds.cohort?.termdb?.checkAccessToSampleData ? getSampleIdsByTerm(data.samples) : undefined
 		mayMapChildren2Root(data, { ...q, terms: originalTerms }, ds)
 
-		checkAccessToSampleData(data, ds, q, unmappedSampleIds)
+		mayCheckAccessToSampleData(data, ds, q, unmappedIdsByTerm)
 
 		// get categories within same data request to avoid a separate
 		// getCategories() request, which can be time-consuming for
@@ -1669,59 +1671,34 @@ function mergeGeneVariantValues(values: any[]) {
 }
 
 /*
-	data: return value of getSampleData()
+	data: return value of getSampleData(), after mayMapChildren2Root()
 	ds: dataset object
 	q: req.query
-	unmappedSampleIds: sample ids before mayMapChildren2Root(), same as Object.keys(data.samples) when not mapped
-*/
-function checkAccessToSampleData(data, ds, q, unmappedSampleIds: string[]) {
-	// handle the option to require a minimum sample size for data
-	if (!ds.cohort.termdb.checkAccessToSampleData) return
-	// quick check
+	unmappedIdsByTerm: return value of getSampleIdsByTerm() before mayMapChildren2Root(),
+		same as for data.samples when not mapped
 
-	const sampleIds = Object.keys(data.samples)
-	if (!sampleIds.length) return
-	const hiddenIds = ds.cohort.termdb.sampleAccessTermIds || ds.cohort.termdb.hiddenIds
-	let rows
-	if (hiddenIds?.length) {
-		// Check both original and root sample IDs because hidden terms can be attached to either.
-		const lookupIds = [...new Set([...sampleIds, ...unmappedSampleIds])]
-		rows = ds.cohort.db.connection
-			.prepare(
-				sql`SELECT distinct value as name FROM anno_categorical WHERE term_id in (${sql.list(
-					hiddenIds
-				)}) and sample in (${sql.list(lookupIds)})`
-			)
-			.all()
-	} else {
-		rows = ds.cohort.db.connection.prepare(sql`SELECT name FROM sampleidmap WHERE id in (${sql.list(sampleIds)})`).all()
+each term is checked by itself, see termdb.sampleAccess.ts
+*/
+function mayCheckAccessToSampleData(data, ds, q, unmappedIdsByTerm?: Map<string, Set<string>>) {
+	if (!ds.cohort?.termdb?.checkAccessToSampleData) return
+	const terms: SampleAccessTerm[] = []
+	for (const [key, sampleIds] of getSampleIdsByTerm(data.samples)) {
+		const unmapped = unmappedIdsByTerm?.get(key)
+		// the term that gives the names may annotate either the original or the root samples
+		terms.push({ sampleIds, lookupIds: unmapped ? new Set([...sampleIds, ...unmapped]) : sampleIds })
 	}
-	const names = rows.map(s => s.name)
-	// pass sampleNames since portal token does not know internal sample ID-to-name mapping
-	const access = ds.cohort.termdb.checkAccessToSampleData(q, {
-		count: names.length,
-		names
-	})
-	if (!access.canAccess) {
-		throw {
-			message: access.message || `One or more terms has less than ${access.minSize} samples with data.`,
-			code: 'ERR_MIN_SIZE'
+	mayCheckSampleAccess(q, ds, terms)
+}
+
+/* annotation key, such as tw.$id -> ids of the samples with an annotation for the key */
+function getSampleIdsByTerm(samples: Record<string, any>) {
+	const idsByTerm = new Map<string, Set<string>>()
+	for (const [sid, sample] of Object.entries(samples)) {
+		for (const [k, v] of Object.entries(sample)) {
+			if (!v || typeof v != 'object') continue // not an annotation, e.g. .sample
+			if (!idsByTerm.has(k)) idsByTerm.set(k, new Set())
+			idsByTerm.get(k)!.add(sid)
 		}
 	}
-	// more detailed check
-	const sampleSizeByTermId = new Map()
-	for (const [sid, dataByTermId] of Object.entries(data.samples) as [string, any][]) {
-		for (const tid of Object.keys(dataByTermId)) {
-			if (!sampleSizeByTermId.has(tid)) sampleSizeByTermId.set(tid, new Set())
-			sampleSizeByTermId.get(tid).add(sid)
-		}
-	}
-	const counts = [...sampleSizeByTermId.values()].map(v => v.size) // list of sample counts for each and every term
-	const access1 = ds.cohort.termdb.checkAccessToSampleData(q, { count: Math.min(...counts) })
-	if (!access1.canAccess) {
-		throw {
-			message: `One or more terms has less than ${access1.minSize} samples with data.`,
-			code: 'ERR_MIN_SIZE'
-		}
-	}
+	return idsByTerm
 }

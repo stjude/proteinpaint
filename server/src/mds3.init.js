@@ -47,6 +47,7 @@ import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVari
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
 import { validate_query_geneExpression, validateQueryIsoformExpression } from './routes/termdb.cluster.ts'
 import { validateSkipGeneNameValidation } from './geneRefValidation.ts'
+import { validateCheckAccessToSampleData } from './termdb.sampleAccess.ts'
 import { mayLimitSamples, combinePPfilterAndTid2value } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
@@ -333,6 +334,9 @@ export async function validate_termdb(ds) {
 	if (tdb.isTermVisible) {
 		if (typeof tdb.isTermVisible != 'function') throw 'tdb.isTermVisible not function'
 	}
+
+	// after the init above, since it may need the db connection and tables
+	validateCheckAccessToSampleData(ds)
 
 	mayValidateSelectCohort(tdb)
 

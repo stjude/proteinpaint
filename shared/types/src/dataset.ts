@@ -2140,34 +2140,54 @@ export type SunburstConfig = {
 	colors?: { [key: string]: string }
 }
 
+/** returned by CheckAccessToSampleData.assess() */
+export type SampleAccessResult = {
+	/** the required minimum size for the current user to access certain data,
+	 * may be dependent on login status or other context */
+	minSize: number
+	/** whether downstream backend code can proceed */
+	canAccess: boolean
+	/** shown to the user when canAccess is false, defaults to a message about minSize */
+	message?: string
+}
+
+/**
+ * The server calls assess() once for every term in a request, with the samples that have data for that term,
+ * and rejects the request when assess() does not allow any one term.
+ * `need` decides what assess() gets, and the server only queries the db for what is needed.
+ */
+export type CheckAccessToSampleData =
+	| {
+			/** assess() gets the number of samples with data for a term, no db query is made */
+			need: 'count'
+			assess: (
+				/** req.query as processed through app middleware (pre-parsed, may have req.body props, __protected__, etc) */
+				q: any,
+				data: { count: number }
+			) => SampleAccessResult
+	  }
+	| {
+			/** assess() gets the distinct names of the samples with data for a term */
+			need: 'names'
+			/** when given, the names are the values of this categorical term for these samples, such as the site
+			 * of each patient; otherwise the names are the sample names from the sampleidmap table */
+			termId?: string
+			assess: (
+				/** req.query as processed through app middleware (pre-parsed, may have req.body props, __protected__, etc) */
+				q: any,
+				data: { names: string[] }
+			) => SampleAccessResult
+	  }
+
 export type Termdb = {
 	/** Terms */
 	termIds?: TermIds
 	/**
 	 * Check for the required minimum number of samples with data as queried with getData() or other code,
 	 * in order to minimize the ease of extracting identifiable information from aggregate data
-	 * in server response
-	 *
-	 * returns: {minSize, canAccess}, see below
+	 * in server response. See CheckAccessToSampleData.
 	 */
-	checkAccessToSampleData?: (
-		/** req.query as processed through app middleware (pre-parsed, may have req.body props, __protectec__, etc) */
-		q: any,
-		data: {
-			/** the number of samples or sites with matching data from one or more queried terms */
-			count: number
-			/** option to specify sample names or sites that are accessible to the current user,
-			 */
-			names?: string[]
-		}
-	) => {
-		/** the required minimum size for the current user to access certain data,
-		 * may be dependent on login status or other context
-		 * */
-		minSize: number
-		/** whether downstreadm backend code can proceed */
-		canAccess: boolean
-	}
+	checkAccessToSampleData?: CheckAccessToSampleData
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
 	/** Exempts this dataset from the request-level gene/isoform name check that rejects a name
@@ -2397,11 +2417,8 @@ keep this setting here for reason of:
 	 *   config.
 	 * - Skipped when undefined. */
 	pruneTermdbConfig?: (c: any, q: any, ds: any) => void
+	/** the terms that a filter is checked for by authApi.mayAdjustFilter(), before getAdditionalFilter() is called */
 	hiddenIds?: string[]
-	/** the terms whose distinct values are the names and count given to checkAccessToSampleData(), defaults to
-	 * hiddenIds. Use when hiddenIds has several terms that describe the same entity, such that one entity has
-	 * more than one value across these terms; list one term per entity. */
-	sampleAccessTermIds?: string[]
 	/* (server-side) when this returns a truthy value, a survival request carrying a stratification
 	term (term0 divide-by, or an overlay/series term2) is rejected. Return a non-empty string to use
 	it as the rejection message (let the dataset reuse the same wording it shows on the disabled UI

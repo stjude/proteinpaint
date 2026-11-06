@@ -1,5 +1,6 @@
 import { connect_db } from './utils.js'
 import { sql } from './sql.ts'
+import { mayCheckSampleAccess } from './termdb.sampleAccess.ts'
 import { authApi } from './auth.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { DEFAULT_SAMPLE_TYPE, numericTypes } from '#shared/terms.js'
@@ -580,15 +581,7 @@ export function server_init_db_queries(ds) {
 		if (!sampleId) throw new Error('sampleId is missing for q.getSingleSampleData() request.')
 		if (!term_ids) throw new Error('term_ids are missing for q.getSingleSampleData() request.')
 
-		if (ds.cohort.termdb.checkAccessToSampleData) {
-			const samples = ds.cohort.db.connection.prepare(`SELECT name FROM sampleidmap WHERE id=?`).all(sampleId)
-			// pass sampleNames since portal token does not know internal sample ID-to-name mapping
-			const access = ds.cohort.termdb.checkAccessToSampleData?.(q, {
-				sampleCount: 1,
-				sampleNames: samples.map(s => s.name)
-			})
-			if (!access.canAccess) throw access.message || 'No accessible data found for the sample provided'
-		}
+		mayCheckSampleAccess(q, ds, [{ sampleIds: [sampleId] }])
 
 		const termClause = !term_ids?.length ? sql`` : sql`and term_id in (${sql.list(term_ids)})`
 		const query = sql`
