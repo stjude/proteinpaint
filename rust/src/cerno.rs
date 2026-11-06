@@ -160,10 +160,11 @@ fn main() -> Result<()> {
 
                     drop(sample_coding_genes); // sample_coding_genes no longer deleted, so the variable is deleted
 
-                    // Assign ranks to each gene
+                    // Assign ranks to each gene, from 1 as in tmod (ranks <- c(1:N)[x]): CERNO sums ln(rank/N), so a
+                    // 0-based rank gave the top gene ln(0) and dropped every gene set containing it as non-finite
                     for i in 0..genes_descending.len() {
-                        genes_descending[i].rank = Some(i);
-                        genes_ascending[i].rank = Some(i)
+                        genes_descending[i].rank = Some(i + 1);
+                        genes_ascending[i].rank = Some(i + 1)
                     }
 
                     //println!("sample_genes:{:?}", sample_genes);

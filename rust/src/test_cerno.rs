@@ -12,10 +12,10 @@ mod tests {
     use std::fs::File;
     use std::io::{BufReader, Read};
 
-    const P_VALUE_CUTOFF: f32 = 0.01; // Threshold difference between calculated and expected p-value for the test to pass
-    const AUC_CUTOFF: f32 = 0.001; // Threshold difference between calculated and expected AUC for the test to pass
-    const ES_CUTOFF: f32 = 0.01; // Threshold difference between calculated and expected ES for the test to pass
-    const CERNO_CUTOFF: f32 = 1.0; // Threshold difference between calculated and expected CERNO value for the test to pass
+    const P_VALUE_CUTOFF: f32 = 0.0001; // Threshold difference between calculated and expected p-value for the test to pass
+    const AUC_CUTOFF: f32 = 0.0001; // Threshold difference between calculated and expected AUC for the test to pass
+    const ES_CUTOFF: f32 = 0.001; // Threshold difference between calculated and expected ES for the test to pass
+    const CERNO_CUTOFF: f32 = 0.01; // Threshold difference between calculated and expected CERNO value for the test to pass
     #[test]
     fn cerno_test() {
         // Specify the path to the json file
@@ -78,8 +78,8 @@ mod tests {
 
                 // Assign ranks to each gene
                 for i in 0..genes_descending.len() {
-                    genes_descending[i].rank = Some(i);
-                    genes_ascending[i].rank = Some(i);
+                    genes_descending[i].rank = Some(i + 1);
+                    genes_ascending[i].rank = Some(i + 1);
                 }
 
                 let modules_2_genes: &JsonValue = &json_string["MODULES2GENES"];
