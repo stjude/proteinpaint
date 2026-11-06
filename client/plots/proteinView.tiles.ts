@@ -1488,7 +1488,7 @@ function renderMultiomicRankTile(body: any, _td: TileData, self: any, _cfg: Tile
 // Answers: "Does the mouse model reproduce the human change for this protein — and for the proteome as a whole?"
 type CohortRef = { organism: string; assay: string; cohort: string; label: string }
 type ConcordancePair = { key: string; label: string; x: CohortRef; y: CohortRef }
-// server joins the two DAP files on upper-cased gene and runs R's cor.test (R/src/corr.R)
+// server joins the two DAP files on upper-cased gene and runs the equivalent of R's cor.test (rust/src/corr.rs)
 function getConcordance(self: any, x: CohortRef, y: CohortRef): Promise<DapConcordance> {
 	const [genome, dslabel] = vocabKey(self).split('|')
 	const refKey = (r: CohortRef) => `${r.organism}|${r.assay}|${r.cohort}`

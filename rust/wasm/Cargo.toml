@@ -64,3 +64,7 @@ path = "../src/survival.rs"
 [[bin]]
 name = "hclust"
 path = "../src/hclust.rs"
+
+[[bin]]
+name = "corr"
+path = "../src/corr.rs"
