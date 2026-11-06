@@ -1859,7 +1859,7 @@ export async function renderSimilarSearch(
 		const data = await dofetch3(
 			`termdb/wsiBySample?genome=${encodeURIComponent(opts.genome)}&dslabel=${encodeURIComponent(
 				opts.dslabel
-			)}&imageType=spatial`
+			)}&imageType=spatial&method=image`
 		).catch(() => null)
 		// every other spatial sample in the dataset; wsiBySample's own listing
 		// may also include this sample, so it's filtered out here to avoid a
@@ -1959,7 +1959,7 @@ export async function renderSimilarSearch(
 								await dofetch3(
 									`termdb/wsiBySample?genome=${encodeURIComponent(opts.genome!)}&dslabel=${encodeURIComponent(
 										opts.dslabel!
-									)}&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial`
+									)}&sample_id=${encodeURIComponent(sampleId)}&imageType=spatial&method=image`
 								)
 							)?.images || []
 					  ).filter((im: any) => im.type == 'spatial' && im.spatialData)
