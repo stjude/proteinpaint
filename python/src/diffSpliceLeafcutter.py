@@ -640,7 +640,9 @@ def _batched_strong_wolfe(obj_func, rows, x, t, d, f, g, gtd, c1=1e-4, c2=0.9,
         br_t[m, 0], br_f[m, 0], br_gtd[m, 0], br_g[m, 0] = t0[m], f0[m], gtd0[m], g0[m]
         br_t[m, 1], br_f[m, 1], br_gtd[m, 1], br_g[m, 1] = t1[m], f1[m], gtd1[m], g1[m]
 
-    ls_iter = 0
+    # The budget is per cluster, so that a cluster's fit does not depend on others in its batch.
+    ls_used = torch.zeros(Bsz, dtype=torch.long, device=dev)
+    ls_iter = 0                                                 # the same for every cluster still bracketing
     while ls_iter < max_ls:                                     # phase 1: bracket
         live = ~(done | bracketed)
         if not live.any():
@@ -675,6 +677,7 @@ def _batched_strong_wolfe(obj_func, rows, x, t, d, f, g, gtd, c1=1e-4, c2=0.9,
         lv, fl, gl = evaluate(live)
         f_new[lv], g_new[lv] = fl, gl
         n_evals[lv] += 1
+        ls_used[lv] += 1
         gtd_new = (g_new * d).sum(-1)
         ls_iter += 1
 
@@ -688,10 +691,10 @@ def _batched_strong_wolfe(obj_func, rows, x, t, d, f, g, gtd, c1=1e-4, c2=0.9,
     insuf = torch.zeros(Bsz, dtype=torch.bool, device=dev)
     ar = torch.arange(Bsz, device=dev)
 
-    while ls_iter < max_ls:                                     # phase 2: zoom
-        live = ~done
+    while True:                                                 # phase 2: zoom
+        live = ~done & (ls_used < max_ls)
         done |= live & ((br_t[:, 1] - br_t[:, 0]).abs() * d_norm < tolerance_change)
-        live = ~done
+        live = ~done & (ls_used < max_ls)
         if not live.any():
             break
 
@@ -710,8 +713,8 @@ def _batched_strong_wolfe(obj_func, rows, x, t, d, f, g, gtd, c1=1e-4, c2=0.9,
         lv, fl, gl = evaluate(live)
         f_new[lv], g_new[lv] = fl, gl
         n_evals[lv] += 1
+        ls_used[lv] += 1
         gtd_new = (g_new * d).sum(-1)
-        ls_iter += 1
 
         worse = live & ((f_new > (f + c1 * t * gtd)) | (f_new >= br_f[ar, low]))
         if worse.any():
@@ -732,8 +735,6 @@ def _batched_strong_wolfe(obj_func, rows, x, t, d, f, g, gtd, c1=1e-4, c2=0.9,
             idx, l = ar[better], low[better]
             br_t[idx, l], br_f[idx, l] = t[better], f_new[better]
             br_gtd[idx, l], br_g[idx, l] = gtd_new[better], g_new[better]
-        if done.all():
-            break
 
     return br_f[ar, low], br_g[ar, low], br_t[ar, low], n_evals
 
@@ -1648,6 +1649,25 @@ def handle(req):
 # Selftest
 # --------------------------------------------------------------------------------------
 
+def _line_search_step(rows):
+    """The step of the first row from a line search, where row 0 is a quadratic with its minimum
+    at 1, and row 1 is downhill forever, so it uses its whole budget and never brackets."""
+    def fg(x, rws):
+        quadratic = (rws == 0).unsqueeze(-1)
+        loss = torch.where(quadratic, (x - 1) ** 2, -x).sum(-1)
+        return loss, torch.where(quadratic, 2 * (x - 1), -torch.ones_like(x))
+
+    rows = torch.tensor(rows)
+    x = torch.zeros(len(rows), 1, dtype=torch.float64)
+    f, g = fg(x, rows)
+    d = -g
+    # this first step overshoots the quadratic, which then has to zoom back from t=0
+    t = torch.full((len(rows),), 100., dtype=torch.float64)
+    step = _batched_strong_wolfe(lambda xs, tt, dd, rws: fg(xs + tt.unsqueeze(-1) * dd, rws),
+                                 rows, x, t, d, f, g, (g * d).sum(-1))[2]
+    return float(step[0])
+
+
 def selftest():
     """Offline run on a small synthetic store, see python/test/diffSpliceLeafcutter.unit.spec.js."""
     import h5py
@@ -1712,6 +1732,8 @@ def selftest():
         "skipped clusters are counted": sum(res["skipped"].values()) == 3,
         "no testable cluster is an outcome, with its reasons": empty["status"] == "no_clusters"
         and empty["cluster_data"] == [] and sum(empty["skipped"].values()) == len(names),
+        "a line search does not depend on the other clusters in its batch":
+        _line_search_step([0]) == _line_search_step([0, 1]) == 0.5,
         "timings cover every stage": set(res["timings"]) == {
             "load_packages", "read_h5", "filter", "fit", "collect_results", "format_output", "total"},
         "timings stop at the filter with no testable cluster": set(empty["timings"]) == {
