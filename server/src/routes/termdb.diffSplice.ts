@@ -298,7 +298,9 @@ async function runDsFresh(
 		`clusters tested: ${result.cluster_data?.length ?? 0},`,
 		...(result.status ? [`status: ${result.status},`] : []),
 		'skipped:',
-		JSON.stringify(result.skipped ?? {})
+		JSON.stringify(result.skipped ?? {}),
+		'stages(s):',
+		JSON.stringify(result.timings)
 	)
 
 	return {
@@ -321,7 +323,7 @@ async function runDsFresh(
 export function getClusterJunctions(result: DsCacheResult, clusterId: string): DiffSpliceJunction[] {
 	const lst = result.junctionsByCluster
 	if (!lst || !Object.hasOwn(lst, clusterId)) throw new Error(`No junction data for cluster ${clusterId}`)
-	// a cluster id is chr:clu_*, see diffSpliceScreen.py
+	// a cluster id is chr:clu_*, see diffSpliceEdgeR.py
 	const chr = clusterId.split(':')[0]
 	return lst[clusterId].map(([start, stop, p, psi_control, psi_case]) => ({
 		chr,
@@ -359,9 +361,9 @@ function resolveMaxPerGroup(ds: any): number {
 
 // Decide which engine runs, and the label the response reports.
 export function pickDsEngine(method?: DiffSpliceMethod): { script: string; label: DiffSpliceMethod } {
-	if (method === 'leafcutter') return { script: 'diffSpliceRun.py', label: 'leafcutter' }
+	if (method === 'leafcutter') return { script: 'diffSpliceLeafcutter.py', label: 'leafcutter' }
 	if (method && method !== 'edgeR') throw new Error(`unknown differential splicing method '${method}'`)
-	return { script: 'diffSpliceScreen.py', label: 'edgeR' }
+	return { script: 'diffSpliceEdgeR.py', label: 'edgeR' }
 }
 
 /** Resolve the two sample groups + any confounder value arrays for differential splicing.
