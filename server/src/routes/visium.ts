@@ -95,7 +95,7 @@ function init({ genomes }) {
 			const action = req.params.action
 			if (action == 'image') {
 				await stat(png) // 404-ish error before streaming
-				res.set('Cache-Control', 'public, max-age=3600')
+				res.set('Cache-Control', 'no-cache')
 				res.sendFile(png)
 				return
 			}
