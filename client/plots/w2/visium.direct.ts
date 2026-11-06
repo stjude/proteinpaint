@@ -143,7 +143,7 @@ export async function init(
 		const features = spots.ids.map((id, i) => {
 			const f = new Feature(new Circle([spots.x[i], h - spots.y[i]], spots.radius))
 			f.set('i', i)
-			let style = new Style({ stroke: spotStroke })
+			let style = new Style({ stroke: spotStroke, fill: new Fill({ color: 'rgba(0,0,0,0)' }) })
 			if (byDominant) {
 				const k = dominantType(spots.proportions, i, types)
 				// a type filter hides the spots whose dominant type is not selected
