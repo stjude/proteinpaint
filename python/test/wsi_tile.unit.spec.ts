@@ -682,3 +682,18 @@ tape('similar rejects typeWeights of the wrong length or a negative weight', asy
 	t.ok(String(negative.error).includes('non-negative'), 'negative-weight error is explicit')
 	t.end()
 })
+
+// Visium fixture (image2): lowres tissue png + a 250-gene h5ad
+const visiumDir = path.resolve('server/test/tp/files/hg38/TermdbTest/spatial/TCGA-22-1017/image2')
+tape('visium_spots scales spots to the low-resolution image', async t => {
+	const job = {
+		action: 'visium_spots',
+		h5ad: path.join(visiumDir, 'image2_spatial.h5ad'),
+		png: path.join(visiumDir, 'image2_tissue_lowres_image.png')
+	}
+	const out = JSON.parse(await run_python('wsi_tile.py', JSON.stringify(job)))
+	t.equal(out.ids.length, 782, 'in-tissue spots')
+	t.ok(Math.max(...out.x) <= out.width && Math.max(...out.y) <= out.height, 'every spot lies inside the image')
+	t.ok(out.proportions.T?.length == 782, 'cell-type proportions present')
+	t.end()
+})

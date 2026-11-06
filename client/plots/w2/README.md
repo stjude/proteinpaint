@@ -76,6 +76,15 @@ cell type or summed gene counts). Selecting the method:
 - URL: `?method=sequence&image_file=<png>&spatial_data=<h5ad>` (tpmasterdir-relative,
   needs `features.wsi.allowDirectSlidePath`); `method=image` or absent = old behavior.
 
+Spot positions are scaled to the image the folder holds: `tissue_lowres_scalef` when the png's
+name contains `lowres`, else `tissue_hires_scalef`.
+
+TermdbTest fixture: `TCGA-22-1017/image2/` (in the same `spatial` folder, `sequenceFolder` points at
+it) holds a Space Ranger low-resolution png (`sequenceImageSuffix: 'tissue_lowres_image.png'`) and an
+`image2_spatial.h5ad` trimmed to 253 genes (the 250 most-expressed plus PTPRC/ACTA2/ACE2) so both
+files stay under 1 MB; 782 in-tissue spots, 15 cell types. `image1` there is image-based: a folder
+with a `.ome.tif` is `method=image`, one with a png + h5ad and no tif is `method=sequence`.
+
 ### Cell types in the `sequence` viewer
 
 Needs `obsm/cell_type_proportions` (one column per type, per-spot fractions).
