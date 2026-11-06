@@ -118,13 +118,12 @@ tape('Test rendering of two genes vs single gene set', function (test) {
 	async function runTests(aggregateMatrix: any) {
 		aggregateMatrix.on('postRender.test', null)
 		const rendered = getRendered(aggregateMatrix)
-
 		test.equal(rendered.error, '', 'Should not display an error')
 		test.deepEqual(rendered.rowLabels, ['TP53', 'KRAS'], 'Should render a row label for each gene')
 		test.deepEqual(rendered.colLabels, ['HALLMARK_ADIPOGENESIS'], 'Should render a column label for each gene set')
 		test.equal(rendered.dots, 2, 'Should render a dot for every row and column')
 
-		// if (test['_ok']) aggregateMatrix.Inner.app.destroy()
+		if (test['_ok']) aggregateMatrix.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -182,7 +181,7 @@ tape('Multiple sections and categories aggregate matrix', function (test) {
 		test.equal(rendered.colLabels.length, 2, 'Should render a column label for every column term')
 		test.equal(rendered.dots, 8, 'Should render a dot for every row and column')
 
-		// if (test['_ok']) aggregateMatrix.Inner.app.destroy()
+		if (test['_ok']) aggregateMatrix.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -251,7 +250,7 @@ tape('Gene variant rows by sex columns', function (test) {
 			'Should render one shared legend for the pie slices'
 		)
 
-		// if (test['_ok']) aggregateMatrix.Inner.app.destroy()
+		if (test['_ok']) aggregateMatrix.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -284,7 +283,7 @@ function testMatrix(
 						'Should render a dot for every row and column'
 					)
 					runTests(rendered)
-					// if (test['_ok']) aggregateMatrix.Inner.app.destroy()
+					if (test['_ok']) aggregateMatrix.Inner.app.destroy()
 					test.end()
 				}
 			}
@@ -382,7 +381,7 @@ tape('Gene variant pies with too many rows by sex columns', function (test) {
 			'Should draw every pie with a radius between the scaled sizes'
 		)
 
-		// if (test['_ok']) aggregateMatrix.Inner.app.destroy()
+		if (test['_ok']) aggregateMatrix.Inner.app.destroy()
 		test.end()
 	}
 })
