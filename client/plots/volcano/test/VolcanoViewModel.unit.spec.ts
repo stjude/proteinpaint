@@ -494,7 +494,7 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	const cell = (label: string) => row[cols.indexOf(label)]?.value
 	test.deepEqual(
 		cols,
-		['DMR', 'Gene(s)', 'Δβ', 'Peak Δβ', 'CpGs', 'Width (bp)', 'Excess Δβ', 'p vs matched background'],
+		['DMR', 'Gene(s)', 'Δβ', 'Peak Δβ', 'CpGs', 'Width (bp)', 'Excess Δβ', 'FDR vs matched background'],
 		'scan columns, in order, with a single p column named for the correction'
 	)
 	test.equal(cell('DMR'), 'chr1:1000-2000', 'the row is labelled by its coordinate')
@@ -503,9 +503,9 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	test.equal(cell('CpGs'), 14, 'CpG count under CpGs')
 	test.equal(cell('Width (bp)'), 1000, 'width under Width')
 	test.equal(cell('Excess Δβ'), -0.17, 'excess under Excess')
-	test.equal(cell('p vs matched background'), 0.012, 'the one p under the one p column')
+	test.equal(cell('FDR vs matched background'), 0.012, 'the one p under the one p column')
 	test.ok(vm.viewData.singlePValue, 'a scan has one p per row')
-	test.equal(vm.viewData.pValueLabel, 'p vs matched background', 'and names it after the correction')
+	test.equal(vm.viewData.pValueLabel, 'FDR vs matched background', 'and names it after the correction')
 	test.equal(vm.viewData.scan, scan, 'the scan summary is passed through for the view')
 	test.ok(vm.viewData.userActions.noShow.has('Confounding factors'), 'the scan offers no confounders')
 

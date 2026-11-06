@@ -126,6 +126,9 @@ export type TermdbDmrBatchSuccessResponse = {
 			/** Fraction of that background drifting at least this far in the same direction, with a
 			 * +1 pseudocount -- so the resolution floor is 1/(n+1) and never zero. */
 			bgP?: number
+			/** Benjamini-Hochberg q of bgP across every scored DMR of the scan (one family, all chromosomes).
+			 * The value significance is called on; present whenever bgP is. */
+			bgQ?: number
 			/** The region overlaps the body of at least one gene -- its span with 2kb trimmed from both
 			 * ends. Separate from `genes` because promoter and gene-body methylation relate to
 			 * transcription in opposite directions. */
@@ -179,11 +182,16 @@ export type TermdbDmrBatchSuccessResponse = {
 		windows: number
 		scored: number
 		unscored: number
+		/** DMRs at background FDR (bgQ) < 0.05 */
 		significant: number
-		/** The covariates actually matched on. The full method also matches solo-WCGW, replication
-		 * timing and lamina association, which need normal-B-cell reference tracks; where those are
-		 * absent the correction is weaker and must be described by what it did match. */
+		/** The covariates actually matched on: CpG density and width, plus 'solo-WCGW share' when the genome
+		 * has a sequence file. The full method also matches replication timing and lamina association, which
+		 * need reference tracks; where those are absent the correction must be described by what it did match. */
 		matchedOn: string[]
+		/** Share of background windows that score p < 0.05 against their own stratum's fitted null: ~0.05 when
+		 * the normal null fits the background, higher when the background's tails are heavier than normal (the
+		 * DMR p-values are then too small by about that factor). */
+		nullP05?: number
 	}
 	/** Artifact-region mask outcome. Present whenever the mask ran, including when it dropped
 	 * nothing, so a reader can tell "no artifacts here" from "the mask never ran". The dropped DMRs
