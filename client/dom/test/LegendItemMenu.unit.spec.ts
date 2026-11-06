@@ -70,7 +70,7 @@ tape('Menu options', test => {
 	options()[2].click()
 	test.deepEqual(result, [], 'Should show all items')
 
-	if (test._ok) {
+	if (test['_ok']) {
 		menu.tip.destroy()
 		target1.remove()
 		target2.remove()
@@ -87,7 +87,7 @@ tape('Menu is skipped for the only hidden item', test => {
 	menu.show({ target, key: 'b', keys, hiddenKeys: ['b'] })
 	test.deepEqual(result, [], 'Should show the only hidden item without a menu')
 
-	if (test._ok) {
+	if (test['_ok']) {
 		menu.tip.destroy()
 		target.remove()
 	}
