@@ -50,7 +50,9 @@ docker run -d \
 # sleep 12
 
 cd $COVDIR/../../client
-$XVFB npm run $COVTYPE:coverage
+# a failure is reported after the coverage report is copied
+CLIENT_STATUS=0
+$XVFB npm run $COVTYPE:coverage || CLIENT_STATUS=$?
 
 cd $COVDIR
 # close the server to trigger c8 to generate the coverage report for server tests
@@ -60,4 +62,15 @@ sleep 15
 docker cp ppcov:/home/root/pp/app/active/server/.coverage ./
 sleep 10
 docker stop ppcov
+
+# server/coverage.js logs how the server unit tests process exited, and launches the server either way
+if ! docker logs ppcov 2>&1 | grep -qx "server unit tests exited with code 0"; then
+  echo "the server unit tests failed or did not finish:"
+  docker logs ppcov 2>&1 | grep "server unit tests exited" || echo "no exit status was logged"
+  exit 1
+fi
+if (( CLIENT_STATUS != 0 )); then
+  echo "the client tests failed with exit code $CLIENT_STATUS"
+  exit $CLIENT_STATUS
+fi
 exit 0
