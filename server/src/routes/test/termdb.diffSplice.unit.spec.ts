@@ -172,9 +172,13 @@ tape('getClusterJunctions keeps a null p, as leafcutter has no per-junction test
 })
 
 tape('pickDsEngine runs the script of the requested method', t => {
-	t.deepEqual(pickDsEngine(), { script: 'diffSpliceScreen.py', label: 'edgeR' }, 'should default to edgeR')
-	t.deepEqual(pickDsEngine('edgeR'), { script: 'diffSpliceScreen.py', label: 'edgeR' }, 'should run the edgeR screen')
-	t.deepEqual(pickDsEngine('leafcutter'), { script: 'diffSpliceRun.py', label: 'leafcutter' }, 'should run leafcutter')
+	t.deepEqual(pickDsEngine(), { script: 'diffSpliceEdgeR.py', label: 'edgeR' }, 'should default to edgeR')
+	t.deepEqual(pickDsEngine('edgeR'), { script: 'diffSpliceEdgeR.py', label: 'edgeR' }, 'should run the edgeR screen')
+	t.deepEqual(
+		pickDsEngine('leafcutter'),
+		{ script: 'diffSpliceLeafcutter.py', label: 'leafcutter' },
+		'should run leafcutter'
+	)
 	t.throws(
 		() => pickDsEngine('limma' as any),
 		/unknown differential splicing method 'limma'/,
