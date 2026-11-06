@@ -26,20 +26,31 @@ function hasFilterTerm(filter, termIds: string[]): boolean {
 	return termIds.includes(filter.tvs?.term?.id)
 }
 
-// returns true if a group of type='filter' in a groupset of the termwrapper has a filter with a term.id in termIds[].
-// a categorical term query applies the filter of such a group, see termdb.sql.categorical.js, and the groupset may be
-// from tw.q.customset or tw.term.groupsetting.lst[], see get_active_groupset(). the filters of all cohorts are
-// checked, since the active cohort is from the request
+// returns the groupset that a term query applies, same as get_active_groupset() in termdb.sql.js,
+// except that undefined is returned instead of throwing, since the term query throws for such a tw.
+// not imported, since termdb.sql.js imports authApi
+function getActiveGroupset(tw) {
+	const { term, q } = tw || {}
+	if (!q || !term?.groupsetting || term.groupsetting.disabled) return
+	if (q.type == 'predefined-groupset') {
+		const lst = term.groupsetting.lst
+		return Number.isInteger(q.predefined_groupset_idx) && Array.isArray(lst)
+			? lst[q.predefined_groupset_idx]
+			: undefined
+	}
+	if (q.type == 'custom-groupset') return q.customset
+}
+
+// returns true if a group of type='filter' in the active groupset of the termwrapper has a filter with a term.id
+// in termIds[]. a categorical term query applies the filter of such a group, see termdb.sql.categorical.js.
+// the filters of all cohorts are checked, since the active cohort is from the request
 function hasGroupFilterTerm(tw, termIds: string[]): boolean {
-	const lst = tw?.term?.groupsetting?.lst
-	const groupsets = [tw?.q?.customset, ...(Array.isArray(lst) ? lst : [])]
-	for (const groupset of groupsets) {
-		if (!Array.isArray(groupset?.groups)) continue
-		for (const g of groupset.groups) {
-			if (g?.type != 'filter') continue
-			const byCohort = g.filter4activeCohort && typeof g.filter4activeCohort == 'object' ? g.filter4activeCohort : {}
-			if ([g.filter, ...Object.values(byCohort)].some(f => hasFilterTerm(f, termIds))) return true
-		}
+	const groups = getActiveGroupset(tw)?.groups
+	if (!Array.isArray(groups)) return false
+	for (const g of groups) {
+		if (g?.type != 'filter') continue
+		const byCohort = g.filter4activeCohort && typeof g.filter4activeCohort == 'object' ? g.filter4activeCohort : {}
+		if ([g.filter, ...Object.values(byCohort)].some(f => hasFilterTerm(f, termIds))) return true
 	}
 	return false
 }

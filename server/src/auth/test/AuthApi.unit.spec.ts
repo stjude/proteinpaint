@@ -1778,10 +1778,59 @@ tape('AuthApi.mayAdjustFilter: routeTerms with a group filter of a route termwra
 	authApi.mayAdjustFilter(q(), ds as any, [withFilter] as any)
 	test.equal(calls.pop(), undefined, 'should use the default for a group with a .filter that has a hidden term')
 
+	const otherCohort = customTw('otherTerm')
+	otherCohort.q.customset.groups[1] = {
+		name: 'g2',
+		type: 'filter',
+		filter4activeCohort: { c1: filter('hiddenTerm'), c2: filter('otherTerm') }
+	} as any
+	authApi.mayAdjustFilter(q(), ds as any, [otherCohort] as any)
+	test.equal(
+		calls.pop(),
+		undefined,
+		'should use the default for a hidden term in the filter of a cohort that is not active'
+	)
+
 	const valuesOnly = customTw('hiddenTerm')
 	valuesOnly.q.customset.groups[1].type = 'values'
 	authApi.mayAdjustFilter(q(), ds as any, [valuesOnly] as any)
 	test.deepEqual(calls.pop(), terms([valuesOnly]), 'should not check a group that is not type=filter')
+
+	// a groupset that the term query does not apply is not checked
+	const unused: [string, any][] = [
+		['values mode', { ...customTw('hiddenTerm'), q: { ...customTw('hiddenTerm').q, type: 'values' } }],
+		[
+			'disabled groupsetting',
+			{ ...customTw('hiddenTerm'), term: { ...customTw('hiddenTerm').term, groupsetting: { disabled: true } } }
+		],
+		['no groupsetting', { ...customTw('hiddenTerm'), term: { id: 'otherTerm', type: 'categorical' } }],
+		[
+			'a predefined q with an unused customset',
+			{
+				...customTw('hiddenTerm'),
+				q: { ...predefinedTw('otherTerm').q, customset: customTw('hiddenTerm').q.customset }
+			}
+		]
+	]
+	const twoSets = predefinedTw('otherTerm')
+	twoSets.term.groupsetting.lst.push({ name: 'set2', groups: groups('hiddenTerm') })
+	unused.push(['another predefined set', twoSets])
+	const customOverSets = customTw('otherTerm') as any
+	customOverSets.term.groupsetting = { lst: [{ name: 'set', groups: groups('hiddenTerm') }] }
+	unused.push(['a custom q with an unused predefined set', customOverSets])
+	const badIdx = predefinedTw('hiddenTerm') as any
+	badIdx.q.predefined_groupset_idx = 1
+	unused.push(['an out of bound predefined_groupset_idx', badIdx])
+	for (const [label, tw] of unused) {
+		authApi.mayAdjustFilter(q(), ds as any, [tw] as any)
+		test.deepEqual(calls.pop(), terms([tw]), `should use routeTwLst for ${label}`)
+	}
+
+	const usedSet = predefinedTw('otherTerm')
+	usedSet.term.groupsetting.lst.push({ name: 'set2', groups: groups('hiddenTerm') })
+	usedSet.q.predefined_groupset_idx = 1
+	authApi.mayAdjustFilter(q(), ds as any, [usedSet] as any)
+	test.equal(calls.pop(), undefined, 'should use the default for the predefined set at predefined_groupset_idx')
 
 	test.end()
 })
