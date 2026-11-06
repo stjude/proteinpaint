@@ -43,13 +43,15 @@ export function drawLocus(
 	data: LocusData,
 	tip: any,
 	groupColor: (group: string) => string,
-	onRowClick: (bin: MethylationLocusBin) => void
+	onRowClick: (bin: MethylationLocusBin) => void,
+	/** px per sample column; by default the columns fill about 900 px */
+	colWidth?: number
 ) {
 	const { gene, samples, bins } = data
 	// 5' at the top: on the minus strand the last bin holds the TSS
 	const rows = gene.strand == '-' ? [...bins].reverse() : bins
 	const hasGroup = samples.some(s => s.group !== undefined)
-	const cw = Math.max(1, Math.min(8, Math.floor(900 / samples.length)))
+	const cw = colWidth || Math.max(1, Math.min(8, Math.floor(900 / samples.length)))
 	const heatW = cw * samples.length
 	const x0 = layout.geneW
 	const yExpr = layout.top + (hasGroup ? layout.groupH + layout.gap : 0)
@@ -266,6 +268,34 @@ function drawGene(svg: any, data: LocusData, rows: MethylationLocusBin[], y0: nu
 	const gx = 70,
 		w = 14 // thickness of the sketch
 	const g = svg.append('g').attr('data-testid', 'sjpp-methylationLocus-gene')
+	/* the whole locus as an axis, so that the line of a bin in the flank before the TSS or after the 3' end
+	lands on something, with the length of each flank at its end */
+	g.append('line')
+		.attr('class', 'sjpp-methylationLocus-axis')
+		.attr('x1', gx)
+		.attr('x2', gx)
+		.attr('y1', y0)
+		.attr('y2', y0 + heatH)
+		.attr('stroke', '#aaa')
+		.attr('stroke-dasharray', '2,2')
+	const upstream = minus ? region.stop - gene.stop : gene.start - region.start
+	const downstream = minus ? gene.start - region.start : region.stop - gene.stop
+	const yTss = gy(minus ? gene.stop : gene.start)
+	for (const [y, text] of [
+		[y0 + 5, `−${kb(upstream)}`],
+		[y0 + heatH - 5, `+${kb(downstream)}`]
+	] as [number, string][]) {
+		// on a long gene the flank is a few pixels: its label would cover the TSS label
+		if (Math.abs(y - yTss) < 12) continue
+		g.append('text')
+			.attr('x', gx - w / 2 - 9)
+			.attr('y', y)
+			.attr('text-anchor', 'end')
+			.attr('dominant-baseline', 'central')
+			.attr('font-size', 9)
+			.attr('fill', '#777')
+			.text(text)
+	}
 	/* sketchGene draws left to right on a canvas, reversed on the minus strand so that 5' is on the left
 	either way. Its strand marks follow the strand on a forward scale, so the sketch is given '+': as
 	drawn, transcription runs left to right for both strands. The canvas goes into the svg as an image,
@@ -310,11 +340,18 @@ function drawGene(svg: any, data: LocusData, rows: MethylationLocusBin[], y0: nu
 	const fan = g.append('g').attr('stroke', '#999').attr('stroke-width', 0.5).attr('fill', 'none')
 	rows.forEach((b, row) => {
 		const yRow = y0 + row * layout.rowH + layout.rowH / 2
+		const mid = (b.start + b.stop) / 2
+		// from the sketch's edge inside the gene, from the axis in a flank
+		const x1 = mid >= gene.start && mid <= gene.stop ? gx + w / 2 + 2 : gx + 2
 		fan
 			.append('path')
 			.attr('class', 'sjpp-methylationLocus-fan')
-			.attr('d', `M${gx + w / 2 + 2},${gy((b.start + b.stop) / 2)} L${layout.geneW - 4},${yRow}`)
+			.attr('d', `M${x1},${gy(mid)} L${layout.geneW - 4},${yRow}`)
 	})
+}
+
+function kb(bp: number) {
+	return `${Math.round(bp / 100) / 10} kb`
 }
 
 /* the lines of the profile: the groups when there are any, else thirds of the samples by expression */
@@ -530,5 +567,7 @@ function round(v: number) {
 }
 
 function fmtQ(q: number) {
+	// R reports a p-value below its floor (about 2e-16) as 0
+	if (q < 1e-16) return '<1e-16'
 	return q < 0.001 ? q.toExponential(1) : q.toFixed(3)
 }

@@ -163,6 +163,15 @@ export class VolcanoPlotView {
 				)
 			)
 		}
+		// every gene's promoter and body methylation change against its expression change, for these groups
+		if (
+			hasExpression &&
+			this.interactions.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg'
+		) {
+			this.addActionButton('Methylation vs expression by gene', [tt.DNA_METHYLATION], () =>
+				this.interactions.launchStarburst()
+			)
+		}
 		/* Must match the label the view model built from the same helper, otherwise the
 		find() below silently misses and the count disappears from the action bar. */
 		const dmNoun = elementNoun(this.settings?.elementType)

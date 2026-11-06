@@ -10,6 +10,7 @@ import { drawLocus, colors, type LocusData } from '../view'
  *   - a click on a row passes that row's bin
  *   - marks only the other isoforms' distinct TSSs inside the locus
  *   - profile lines by thirds of expression, or by group with the group difference and rho within groups
+ *   - draws sample columns at a given width
  */
 
 function getHolder() {
@@ -116,6 +117,25 @@ tape('draws cells, bars, gene, and rho', test => {
 		1,
 		'should draw a rho bar only for the tested bin'
 	)
+	holder.remove()
+	test.end()
+})
+
+tape('column width', test => {
+	const holder = getHolder()
+	drawLocus(
+		holder,
+		getData(),
+		tip,
+		() => 'red',
+		() => {},
+		2
+	)
+	const widths = holder
+		.selectAll('[data-testid=sjpp-methylationLocus-heatmap] rect')
+		.nodes()
+		.map((n: any) => Number(n.getAttribute('width')))
+	test.deepEqual([...new Set(widths)], [2], 'should draw each sample column at the given width')
 	holder.remove()
 	test.end()
 })
@@ -236,6 +256,33 @@ tape('profile, difference and rho with two groups', test => {
 		['green', 'white'],
 		'should fill only the dot with q < 0.05'
 	)
+	holder.remove()
+	test.end()
+})
+
+tape('locus axis and flank lines', test => {
+	const holder = getHolder()
+	drawLocus(
+		holder,
+		getData(),
+		tip,
+		() => 'red',
+		() => {}
+	)
+	test.equal(holder.selectAll('.sjpp-methylationLocus-axis').size(), 1, 'should draw an axis over the whole locus')
+	const starts = (holder.selectAll('.sjpp-methylationLocus-fan').nodes() as SVGPathElement[]).map(p =>
+		Number(p.getAttribute('d')!.slice(1).split(',')[0])
+	)
+	// bin 0 (100-900) is in the flank before the gene (1000-5000); bin 1 has its middle inside the gene
+	test.ok(starts[0] < starts[1], 'should start the line of a flank bin at the axis, left of the sketch edge')
+	const labels = holder
+		.selectAll('[data-testid=sjpp-methylationLocus-gene] text')
+		.nodes()
+		.map((t: any) => t.textContent)
+	// 2 rows are 24 px: the TSS (1 kb into the 6 kb locus) is 4 px from the top, so the upstream label is
+	// left out to keep it off the TSS label, and the downstream one is drawn
+	test.ok(labels.includes('+1 kb'), 'should label the length of the downstream flank')
+	test.notOk(labels.includes('−1 kb'), 'should leave out a flank label that would cover the TSS label')
 	holder.remove()
 	test.end()
 })

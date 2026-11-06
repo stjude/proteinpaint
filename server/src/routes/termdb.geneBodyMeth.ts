@@ -184,6 +184,8 @@ export async function getGeneBodyDeltas(
 		chromosomes?: string[]
 		element_type?: string
 		corrected?: boolean
+		/** 'promoter' measures each gene's core promoter (see promoterLoci) instead of its body */
+		region?: 'promoter'
 		__protected__?: any
 	},
 	genomes: any
@@ -219,6 +221,8 @@ export async function getGeneBodyDeltas(
 			chromosomes,
 			element_type: q.element_type ?? null,
 			corrected: !!q.corrected,
+			// undefined for a body, which JSON drops, so the existing body entries keep their keys
+			region: q.region,
 			// corrected: the solo-WCGW shares come from the reference sequence
 			files: fingerprint(
 				[...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile, q.corrected ? sequenceFiles(genome) : [])
@@ -232,21 +236,51 @@ export async function getGeneBodyDeltas(
 	return result as Record<string, number>
 }
 
-async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Record<string, number>> {
-	/* Gene bodies, trimmed at both ends exactly as the scan's inGeneBody flag trims them, so
-	"gene body" means one thing across the two analyses. */
-	const rows: any[] = genome?.genedb?.db?.prepare('select name, chr, start, stop from gene2coord').all() || []
-	if (!rows.length) throw new Error('This genome has no gene2coord table.')
-	/* One locus per symbol, the longest body, chosen before fan-out. gene2coord can hold a symbol on
-	several contigs; the chromosome workers write into one object, so whichever finished last set
-	that gene's value and the ranking changed between recomputations. */
+/** Core promoter: the default isoform's TSS from PROMOTER_UP bp upstream to PROMOTER_DOWN bp downstream. It ends
+ * before GENE_BODY_PAD, where a gene body starts, so a promoter and a body never share a CpG. */
+export const PROMOTER_UP = 2000
+export const PROMOTER_DOWN = 500
+
+/** One core promoter per gene symbol, from the genes table's default isoforms: rows of {name, genemodel} where
+ * genemodel is the JSON of one isoform. The first default isoform of a symbol is kept, as genedb's own lookups do. */
+export function promoterLoci(rows: { name: string; genemodel: string }[]) {
 	const locusOf = new Map<string, { chr: string; start: number; stop: number }>()
 	for (const r of rows) {
-		const s = r.start + GENE_BODY_PAD
-		const e = r.stop - GENE_BODY_PAD
-		if (!(e > s)) continue // shorter than twice the pad: no body left
-		const prev = locusOf.get(r.name)
-		if (!prev || e - s > prev.stop - prev.start) locusOf.set(r.name, { chr: r.chr, start: s, stop: e })
+		if (locusOf.has(r.name)) continue
+		const gm = JSON.parse(r.genemodel)
+		const minus = gm.strand == '-'
+		const tss = minus ? gm.stop : gm.start
+		locusOf.set(r.name, {
+			chr: gm.chr,
+			start: Math.max(0, tss - (minus ? PROMOTER_DOWN : PROMOTER_UP)),
+			stop: tss + (minus ? PROMOTER_UP : PROMOTER_DOWN)
+		})
+	}
+	return locusOf
+}
+
+async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Record<string, number>> {
+	let locusOf: Map<string, { chr: string; start: number; stop: number }>
+	if (q.region == 'promoter') {
+		const rows: any[] = genome?.genedb?.db?.prepare('select name, genemodel from genes where isdefault=1').all() || []
+		if (!rows.length) throw new Error('This genome has no default isoforms.')
+		locusOf = promoterLoci(rows)
+	} else {
+		/* Gene bodies, trimmed at both ends exactly as the scan's inGeneBody flag trims them, so
+		"gene body" means one thing across the two analyses. */
+		const rows: any[] = genome?.genedb?.db?.prepare('select name, chr, start, stop from gene2coord').all() || []
+		if (!rows.length) throw new Error('This genome has no gene2coord table.')
+		/* One locus per symbol, the longest body, chosen before fan-out. gene2coord can hold a symbol on
+		several contigs; the chromosome workers write into one object, so whichever finished last set
+		that gene's value and the ranking changed between recomputations. */
+		locusOf = new Map()
+		for (const r of rows) {
+			const s = r.start + GENE_BODY_PAD
+			const e = r.stop - GENE_BODY_PAD
+			if (!(e > s)) continue // shorter than twice the pad: no body left
+			const prev = locusOf.get(r.name)
+			if (!prev || e - s > prev.stop - prev.start) locusOf.set(r.name, { chr: r.chr, start: s, stop: e })
+		}
 	}
 	const byChr = new Map<string, { name: string; start: number; stop: number }[]>()
 	for (const [name, l] of locusOf) {

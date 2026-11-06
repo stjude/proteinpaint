@@ -268,6 +268,21 @@ export class VolcanoInteractions {
 		})
 	}
 
+	/** Every gene's promoter and body methylation change against its expression change, for this volcano's groups */
+	launchStarburst() {
+		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		const s = config.settings.volcano
+		this.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'methylationStarburst',
+				tw: { q: { groups: config.tw.q.groups }, term: config.tw.term },
+				corrected: !!s.backgroundCorrection,
+				excludeSexChr: !!s.excludeSexChr
+			}
+		})
+	}
+
 	launchGeneSetEdit() {
 		const plotConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const holder = this.dom.actionsTip.d.append('div').style('padding', '5px') as any
