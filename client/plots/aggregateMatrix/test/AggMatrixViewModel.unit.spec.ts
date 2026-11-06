@@ -180,6 +180,10 @@ tape('Tooltip values', function (test) {
 tape('Pies in the dot positions', function (test) {
 	const { viewModel, mockAggregateMatrix } = getViewModel()
 	const settings = mockAggregateMatrix.state.config.settings.aggregateMatrix
+	Object.assign(mockAggregateMatrix.state.config, {
+		rows: { Genes: [{ term: { type: 'geneVariant' } }], Expression: [{ term: { type: 'geneExpression' } }] },
+		columns: { 'Cell type': [{ term: { type: 'categorical' } }] }
+	})
 	viewModel.viewData = viewModel.getDefaultViewData()
 	viewModel.setColorScale(settings, { min: 0, max: 10 })
 	viewModel.sizeScale = (v: number) => v
@@ -235,17 +239,22 @@ tape('Pies in the dot positions', function (test) {
 	}
 
 	viewModel.viewData.dotPositions = []
-	viewModel.getDotPositions([[dot('A'), dot('B')]], 10, settings, undefined)
-	test.ok(
-		viewModel.viewData.dotPositions.every(d => d.hasData && !d.pie),
-		'Should keep drawing circles for dots with data when there are no pies'
-	)
+	const ordinary = { ...dot('A'), row: 'KRAS', rowSection: 'Expression' }
+	viewModel.getDotPositions([[ordinary, dot('B', pie)]], 10, settings, undefined)
+	const [circle, mixedPie] = viewModel.viewData.dotPositions
+	test.ok(circle.hasData && !circle.pie, 'Should keep drawing a circle for a dot that is not a pie intersection')
+	test.equal(circle.tipData[3].value, 1, 'Should keep the values in the tooltip of a circle beside pies')
+	test.ok(mixedPie.hasData && mixedPie.pie, 'Should still draw the pies of the same matrix')
 	test.end()
 })
 
 tape('Pies without a color scale', function (test) {
 	const { viewModel, mockAggregateMatrix } = getViewModel()
 	const settings = mockAggregateMatrix.state.config.settings.aggregateMatrix
+	Object.assign(mockAggregateMatrix.state.config, {
+		rows: { Genes: [{ term: { type: 'geneVariant' } }] },
+		columns: { Sex: [{ term: { type: 'categorical' } }] }
+	})
 	viewModel.viewData = viewModel.getDefaultViewData()
 	viewModel.viewData.hasColorScale = false
 	viewModel.sizeScale = (v: number) => v

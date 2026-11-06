@@ -16,20 +16,28 @@ import type {
 
 type PieSlice = AggMatrixPie['slices'][number]
 
-/** True when the matrix is a pie chart, so any dot of it is a pie or is no data. */
-export function hasPies(data: AggMatrixDot[][]): boolean {
-	return data.some(row => row.some(dot => dot.pie))
+/** The term type of each section of an axis, by section name. */
+export type SectionTypes = Map<string, string | undefined>
+
+export function getSectionTypes(axis: any): SectionTypes {
+	return new Map(Object.entries<any[]>(axis || {}).map(([section, terms]) => [section, terms[0]?.term?.type]))
+}
+
+/** True when the dot is where a gene variant term meets a term of another type. Such a dot is a pie or it is no
+ * data. A dot of any other two terms is an ordinary dot, also in a matrix that has pies elsewhere. */
+export function isPieCell(dot: AggMatrixDot, rowTypes: SectionTypes, columnTypes: SectionTypes): boolean {
+	return (rowTypes.get(dot.rowSection) == GENE_VARIANT) !== (columnTypes.get(dot.colSection) == GENE_VARIANT)
 }
 
 /** What a dot adds to the view data when it has a pie.
  * - pie: what to draw. Not set when there is nothing to draw: the dot has no pie, or all of its slices are hidden.
  * - tipData: the number of samples and every slice, hidden ones too, for the tooltip.
- * - isNoData: the dot is treated as having no data. In a pie chart, a dot is a pie or it is no data, so it
- *   is blank and its tooltip reports that no data is available. */
+ * - isNoData: the dot is treated as having no data. A pie dot with nothing to draw is blank and its tooltip
+ *   reports that no data is available. */
 export function getDotPie(
 	dot: AggMatrixDot,
 	settings: AggregateMatrixSettings,
-	isPieChart: boolean,
+	isPie: boolean,
 	sampleType?: ValidAggMatrixResponse['sampleType']
 ) {
 	const position = dot.pie ? getPiePosition(dot.pie, settings) : undefined
@@ -37,7 +45,7 @@ export function getDotPie(
 	return {
 		pie,
 		tipData: dot.pie && pie ? getPieTipData(dot.pie, settings, sampleType) : [],
-		isNoData: isPieChart && !pie
+		isNoData: isPie && !pie
 	}
 }
 

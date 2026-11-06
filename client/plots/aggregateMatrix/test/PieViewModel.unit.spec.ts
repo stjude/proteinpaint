@@ -6,7 +6,8 @@ import {
 	getPieLegend,
 	getPiePosition,
 	getPieTipData,
-	hasPies,
+	getSectionTypes,
+	isPieCell,
 	isSliceHidden
 } from '../viewModel/PieViewModel.ts'
 
@@ -18,6 +19,7 @@ Tests:
     - Slice labels and colors
     - Pie tooltip
     - Dots of a pie chart
+    - Pie intersections
     - Pie legend
 */
 
@@ -174,9 +176,35 @@ tape('Dots of a pie chart', function (test) {
 	test.equal(hidden.isNoData, true, 'Should treat a pie whose slices are all hidden as no data')
 	test.equal(hidden.tipData.length, 0, 'Should not report the samples of a pie that is not shown')
 
-	test.equal(getDotPie(dot('A'), settings, false).isNoData, false, 'Should keep dots as data when there are no pies')
-	test.equal(hasPies([[dot('A'), dot('B', pie(10, 1))]]), true, 'Should find a pie in the data')
-	test.equal(hasPies([[dot('A'), dot('B')]]), false, 'Should find no pies in data without any')
+	test.equal(getDotPie(dot('A'), settings, false).isNoData, false, 'Should keep a dot that is not a pie as data')
+	test.end()
+})
+
+tape('Pie intersections', function (test) {
+	const rows = getSectionTypes({
+		Variants: [{ term: { type: 'geneVariant' } }],
+		Expression: [{ term: { type: 'geneExpression' } }]
+	})
+	const columns = getSectionTypes({
+		Sex: [{ term: { type: 'categorical' } }],
+		Genes: [{ term: { type: 'geneVariant' } }]
+	})
+	test.deepEqual(
+		[...rows],
+		[
+			['Variants', 'geneVariant'],
+			['Expression', 'geneExpression']
+		],
+		'Should map sections to types'
+	)
+	test.deepEqual([...getSectionTypes(undefined)], [], 'Should map nothing when there is no axis')
+
+	const at = (rowSection: string, colSection: string) => isPieCell({ rowSection, colSection } as any, rows, columns)
+	test.equal(at('Variants', 'Sex'), true, 'Should find a pie where a gene variant row meets another type')
+	test.equal(at('Expression', 'Genes'), true, 'Should find a pie where a gene variant column meets another type')
+	test.equal(at('Expression', 'Sex'), false, 'Should not find a pie where no term is a gene variant')
+	test.equal(at('Variants', 'Genes'), false, 'Should not find a pie where both terms are gene variants')
+	test.equal(at('Unknown', 'Unknown'), false, 'Should not find a pie for sections that are not in the config')
 	test.end()
 })
 

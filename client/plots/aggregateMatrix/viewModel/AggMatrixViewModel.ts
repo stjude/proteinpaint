@@ -5,7 +5,7 @@ import type { AggMatrixDot, AxisLayoutColumns, AxisLayoutRows, ValidAggMatrixRes
 import type { AggregateMatrixSettings } from '../settings/Settings.ts'
 import { roundValue } from '#shared/roundValue.js'
 import type { AggMatrixViewData, AggMatrixDotPosition } from './ViewModelDataTypes.ts'
-import { getDotPie, getPieLegend, hasPies } from './PieViewModel.ts'
+import { getDotPie, getPieLegend, getSectionTypes, isPieCell } from './PieViewModel.ts'
 import { cellToDotSize } from '../settings/defaults.ts'
 
 export class AggMatrixViewModel {
@@ -272,11 +272,17 @@ export class AggMatrixViewModel {
 		this.lastY = startY
 		this.lastX = startX
 
-		const isPieChart = hasPies(data)
+		const { rows, columns } = this.ag.state.config
+		const rowTypes = getSectionTypes(rows)
+		const columnTypes = getSectionTypes(columns)
 
 		for (const [i, row] of data.entries()) {
 			for (const dot of row) {
-				const { pie, tipData: pieTipData, isNoData } = getDotPie(dot, settings, isPieChart, sampleType)
+				const {
+					pie,
+					tipData: pieTipData,
+					isNoData
+				} = getDotPie(dot, settings, isPieCell(dot, rowTypes, columnTypes), sampleType)
 				const hasColorScale = this.viewData.hasColorScale
 				const noData = (hasColorScale && dot.colorValue === null) || dot.sizeValue === null || isNoData
 				const hasData = !noData
