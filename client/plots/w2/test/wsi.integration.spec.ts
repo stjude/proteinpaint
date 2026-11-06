@@ -43,6 +43,16 @@ async function waitForCondition(cond: () => boolean, message: string, ms = 15000
 	throw new Error(`${message} did not become true within ${ms}ms`)
 }
 
+/** Scrolls the map to the top of the window, and waits for the scale bar to be repositioned. The bar is hidden,
+ with no right/bottom set, while the map is out of view, such as below the earlier specs when all specs are run in
+ one page. The scroll event that runs the bar's reposition() fires in a later frame, so a bar that is already shown
+ would be measured at its earlier position without the wait for the frames. */
+async function scrollMapToTop(viewer: HTMLElement, bar: HTMLElement) {
+	viewer.scrollIntoView({ block: 'start' })
+	for (let i = 0; i < 2; i++) await new Promise(r => requestAnimationFrame(r))
+	await waitForCondition(() => bar.style.display == 'block', 'scale bar is shown once the map is scrolled into view')
+}
+
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		nav: { header_mode: 'hidden' },
@@ -208,13 +218,7 @@ tape('scale bar keeps its corner anchored (right/bottom) when zooming changes it
 			const dom = wsi.Inner.dom
 			await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
 			const [bar] = await waitForSelector(document.body, '.sjpp-wsi-scalebar')
-			// the bar is hidden, with no right/bottom set, while the map is scrolled out of view, such as below
-			// the earlier specs when all specs are run in one page; a scroll runs the bar's reposition()
-			dom.viewer.node().scrollIntoView({ block: 'start' })
-			await waitForCondition(
-				() => (bar as HTMLElement).style.display == 'block',
-				'scale bar is shown once the map is scrolled into view'
-			)
+			await scrollMapToTop(dom.viewer.node(), bar as HTMLElement)
 
 			// right/bottom, not left/top: a widening bar (update()'s own
 			// bar.style.width, picked fresh per zoom level) must grow away
@@ -291,15 +295,10 @@ tape('scale bar repositions on a layout shift that fires neither scroll nor resi
 			const dom = wsi.Inner.dom
 			await waitForSelector(dom.viewer.node(), '.ol-viewport canvas')
 			const [bar] = await waitForSelector(document.body, '.sjpp-wsi-scalebar')
-			// when all specs are run in one page, the map is below the earlier specs and the bar is hidden; scroll the
-			// map to the top, with room below it for the shift, and without scroll anchoring, which could undo the shift
+			// room below the map for the shift, and no scroll anchoring, which could undo the shift
 			document.body.style.paddingBottom = '100vh'
 			document.documentElement.style.overflowAnchor = 'none'
-			dom.viewer.node().scrollIntoView({ block: 'start' })
-			await waitForCondition(
-				() => (bar as HTMLElement).style.display == 'block',
-				'scale bar is shown once the map is scrolled into view'
-			)
+			await scrollMapToTop(dom.viewer.node(), bar as HTMLElement)
 			const rectBefore = (bar as HTMLElement).getBoundingClientRect()
 
 			// body-level padding, not a sibling inserted next to the viewer: it
