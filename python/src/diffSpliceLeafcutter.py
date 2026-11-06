@@ -1313,6 +1313,10 @@ def _build_design(x, confounders):
         cols.append(conf)
     x_null = np.concatenate(cols, axis=1)
     x_full = np.concatenate(cols + [x_only.to_numpy().astype(np.float64)], axis=1)
+    # a fit would still return a p and PSI for an effect that cannot be estimated
+    if np.linalg.matrix_rank(x_full) < x_full.shape[1]:
+        raise ValueError("The design is not of full rank: a covariate matches the two groups, "
+                         "or is determined by the other covariates")
     return (x_full.astype(np.float32), x_null.astype(np.float32),
             list(x_only.columns), x_only.shape[1])
 
@@ -1713,6 +1717,13 @@ def selftest():
         req = {"h5": h5, "group1": samples[:n1], "group2": samples[n1:]}
         res = handle(req)
         empty = handle({**req, "min_coverage": 100000})
+        # one covariate differs within each group, and one has exactly the split of the groups
+        with_covariate = handle({**req, "covariates": {s: {"c": i % 2} for i, s in enumerate(samples)}})
+        try:
+            handle({**req, "covariates": {s: {"c": int(i >= n1)} for i, s in enumerate(samples)}})
+            collinear_error = ""
+        except ValueError as e:
+            collinear_error = str(e)
 
     rows = {r["cluster_id"]: r for r in res["cluster_data"]}
     hit = rows["chr1:clu_0_+"]
@@ -1734,6 +1745,9 @@ def selftest():
         and empty["cluster_data"] == [] and sum(empty["skipped"].values()) == len(names),
         "a line search does not depend on the other clusters in its batch":
         _line_search_step([0]) == _line_search_step([0, 1]) == 0.5,
+        "a covariate that differs within the groups is fitted":
+        with_covariate["cluster_data"][0]["cluster_id"] == hit["cluster_id"],
+        "a covariate with the split of the groups is rejected": "not of full rank" in collinear_error,
         "timings cover every stage": set(res["timings"]) == {
             "load_packages", "read_h5", "filter", "fit", "collect_results", "format_output", "total"},
         "timings stop at the filter with no testable cluster": set(empty["timings"]) == {
