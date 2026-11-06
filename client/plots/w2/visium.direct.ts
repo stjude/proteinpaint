@@ -58,6 +58,32 @@ export function dominantType(props: VisiumSpots['proportions'], i: number, types
 	return best
 }
 
+/** Fill color of a spot whose dominant type (color `rgb`, "r, g, b") has proportion p (0-1): the color is blended with
+ white, so a 90% spot is a darker shade than a 30% one of the same type. Opaque, so the tissue image can't wash it out. */
+export function shadeColor(rgb: string, p: number): string {
+	const t = 0.15 + 0.85 * Math.min(1, Math.max(0, p)) // 0.15 = palest shade, still visible
+	const c = rgb.split(',').map(v => Math.round(Number(v) * t + 255 * (1 - t)))
+	return `rgba(${c.join(', ')}, 0.9)`
+}
+
+/** SVG path `d` of each pie slice (radius r, centered at r,r, clockwise from 12 o'clock); slices are
+ normalized by their sum, so proportions that don't total exactly 1 still fill the circle. */
+export function pieSlices(values: number[], r: number): string[] {
+	const total = values.reduce((a, v) => a + v, 0)
+	let a0 = 0
+	return values.map(v => {
+		const a1 = a0 + (v / total) * 2 * Math.PI
+		const pt = (a: number) => `${r + r * Math.sin(a)} ${r - r * Math.cos(a)}`
+		// an SVG arc can't draw a full circle in one piece: use two half arcs
+		const d =
+			v / total > 0.9999
+				? `M ${r} 0 A ${r} ${r} 0 1 1 ${r} ${2 * r} A ${r} ${r} 0 1 1 ${r} 0 Z`
+				: `M ${r} ${r} L ${pt(a0)} A ${r} ${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${pt(a1)} Z`
+		a0 = a1
+		return d
+	})
+}
+
 export async function init(
 	opts: {
 		/** query string addressing the sample on the visium route: either dataset mode
@@ -121,8 +147,10 @@ export async function init(
 			if (byDominant) {
 				const k = dominantType(spots.proportions, i, types)
 				// a type filter hides the spots whose dominant type is not selected
-				if (k >= 0 && shown.includes(types[k]))
-					style = new Style({ stroke: spotStroke, fill: new Fill({ color: `rgba(${typeRgb[types[k]]}, 0.7)` }) })
+				if (k >= 0 && shown.includes(types[k])) {
+					const color = shadeColor(typeRgb[types[k]], spots.proportions[types[k]][i] as number)
+					style = new Style({ stroke: spotStroke, fill: new Fill({ color }) })
+				}
 			} else if (byExpression) {
 				const n = counts.get(id) || 0
 				if (n > 0) {
@@ -178,6 +206,7 @@ export async function init(
 				const t = types[dominantType(spots.proportions, i, types)]
 				if (t) n[t] = (n[t] || 0) + 1
 			}
+			legend.append('div').style('margin-bottom', '2px').text('Dominant cell type; darker = higher %')
 			for (const t of shown) {
 				const row = legend.append('div')
 				row
@@ -213,18 +242,52 @@ export async function init(
 			if (!f) return void tip.style('display', 'none')
 			const i = f.get('i') as number
 			const lines = [`${spots.ids[i]}`, `array row ${spots.arrayRow[i]}, col ${spots.arrayCol[i]}`]
+			for (const g of Object.keys(perGene)) lines.push(`${g}: ${perGene[g][spots.ids[i]] || 0}`)
 			const props = types
 				.map(t => [t, spots.proportions[t][i]] as [string, number | null])
 				.filter(([, v]) => v != null && v >= 0.01)
-				.sort((a, b) => b[1]! - a[1]!)
-			for (const [t, v] of props) lines.push(`${t}: ${(v! * 100).toFixed(1)}%`)
-			for (const g of Object.keys(perGene)) lines.push(`${g}: ${perGene[g][spots.ids[i]] || 0}`)
+				.sort((a, b) => b[1]! - a[1]!) as [string, number][]
 			tip
 				.style('display', 'block')
 				.style('left', `${evt.pixel[0] + 12}px`)
 				.style('top', `${evt.pixel[1] + 12}px`)
 			tip.selectAll('*').remove()
 			for (const l of lines) tip.append('div').text(l)
+			if (!props.length) return
+			// pie of the spot's cell-type proportions; each slice's title shows its type and %
+			const R = 45
+			const row = tip.append('div').style('display', 'flex').style('gap', '8px').style('margin-top', '4px')
+			const svg = row
+				.append('svg')
+				.attr('width', 2 * R)
+				.attr('height', 2 * R)
+				.style('flex', 'none')
+			const paths = pieSlices(
+				props.map(p => p[1]),
+				R
+			)
+			props.forEach(([t, v], k) =>
+				svg
+					.append('path')
+					.attr('d', paths[k])
+					.attr('fill', `rgb(${typeRgb[t]})`)
+					.attr('stroke', 'white')
+					.attr('stroke-width', 0.5)
+					.append('title')
+					.text(`${t}: ${(v * 100).toFixed(1)}%`)
+			)
+			// legend of the types present in this spot, largest share first
+			const key = row.append('div')
+			for (const [t, v] of props) {
+				const r = key.append('div')
+				r.append('span')
+					.style('display', 'inline-block')
+					.style('width', '10px')
+					.style('height', '10px')
+					.style('margin-right', '4px')
+					.style('background', `rgb(${typeRgb[t]})`)
+				r.append('span').text(`${t} ${(v * 100).toFixed(1)}%`)
+			}
 		})
 	} catch (e: any) {
 		loading.remove()

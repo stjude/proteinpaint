@@ -180,6 +180,8 @@ class Wsi extends PlotBase implements RxComponent {
 					.split(',')
 					.map(s => s.trim())
 					.filter(g => genes.includes(g)) // keep only genes the h5 actually has
+				// a sequence-based sample with cell-type proportions opens colored by them
+				const typesOn = spImage.cellTypes ?? (spImage.method == 'sequence' && cellTypes.length > 0 ? true : undefined)
 				this.app.dispatch({
 					// one-time seeding edit; triggers a re-render with the seeded values
 					type: 'plot_edit',
@@ -192,8 +194,8 @@ class Wsi extends PlotBase implements RxComponent {
 								// dataset default (w2.cellTypes); the burger checkbox overrides
 								// after. Fills are mutually exclusive, so cell types on means
 								// expression fills off (hover counts stay either way)
-								showCellTypes: spImage.cellTypes ?? settings.showCellTypes,
-								showGeneExpression: spImage.cellTypes ? false : settings.showGeneExpression
+								showCellTypes: typesOn ?? settings.showCellTypes,
+								showGeneExpression: typesOn ? false : settings.showGeneExpression
 							}
 						}
 					}
