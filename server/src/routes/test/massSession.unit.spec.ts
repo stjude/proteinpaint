@@ -31,6 +31,17 @@ const hasCacheDir = fs.existsSync(path.join(serverconfig.cachedir, 'massSession'
 console.log('RESULT=' + JSON.stringify({ mounted: mounted.sort(), hasCacheDir }))
 `
 
+/** returns the --conditions and -C options in execArgv, with the value of an option that is given as a separate arg */
+function getConditionArgs(execArgv: string[]) {
+	const args: string[] = []
+	for (let i = 0; i < execArgv.length; i++) {
+		const a = execArgv[i]
+		if (a == '--conditions' || a == '-C') args.push(a, execArgv[++i])
+		else if (a.startsWith('--conditions=') || a.startsWith('-C=')) args.push(a)
+	}
+	return args
+}
+
 function loadRoutes(massSessionCacheOpts?: { maxAge?: number; maxSize?: number }) {
 	const cachedir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-massSession-'))
 	try {
@@ -38,7 +49,7 @@ function loadRoutes(massSessionCacheOpts?: { maxAge?: number; maxSize?: number }
 		if (massSessionCacheOpts) overrides.features = { cacheMonitor: { subdirs: { massSession: massSessionCacheOpts } } }
 		// the same export conditions as this process, such as sjpp/dev for the workspace sources, or none in the
 		// coverage container, where the installed workspace packages only have their dist files
-		const conditions = process.execArgv.filter(a => a.startsWith('--conditions'))
+		const conditions = getConditionArgs(process.execArgv)
 		const child = spawnSync(
 			process.execPath,
 			['--import', 'tsx', ...conditions, '--input-type=module', '--eval', childScript],
