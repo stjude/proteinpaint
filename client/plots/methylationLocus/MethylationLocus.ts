@@ -55,8 +55,13 @@ class MethylationLocus extends PlotBase implements RxComponent {
 		// the colors the groups were given in the group picker, else one per group so the profile lines differ
 		const fallback = ['#1b9e77', '#d95f02', '#7570b3', '#e7298a']
 		const groupColor = (g: string) => values[g]?.color || fallback[data.groups?.indexOf(g) ?? -1] || '#888'
-		this.dom.svg = drawLocus(this.dom.holder, data, this.tip, groupColor, bin =>
-			this.launchViolin(data.region.chr, bin)
+		this.dom.svg = drawLocus(
+			this.dom.holder,
+			data,
+			this.tip,
+			groupColor,
+			bin => this.launchViolin(data.region.chr, bin),
+			config.settings?.methylationLocus?.colWidth
 		)
 	}
 

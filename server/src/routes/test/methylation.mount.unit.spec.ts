@@ -9,6 +9,7 @@ import * as dmrGeneLink from '../termdb.dmrGeneLink.ts'
 import * as dmrLiterature from '../termdb.dmrLiterature.ts'
 import * as geneBodyMeth from '../termdb.geneBodyMeth.ts'
 import * as methylationLocus from '../termdb.methylationLocus.ts'
+import * as methylationStarburst from '../termdb.methylationStarburst.ts'
 
 /*
 Tests:
@@ -19,7 +20,17 @@ the methylation routes check the loaded genomes when augen sets up the routes, s
 sets the genomes before calling setRoutes()
 */
 
-const routes = [diffMeth, dmr, dmrBatch, dmrGeneDE, dmrGeneLink, dmrLiterature, geneBodyMeth, methylationLocus]
+const routes = [
+	diffMeth,
+	dmr,
+	dmrBatch,
+	dmrGeneDE,
+	dmrGeneLink,
+	dmrLiterature,
+	geneBodyMeth,
+	methylationLocus,
+	methylationStarburst
+]
 
 // returns the route methods that augen sets up from the methylation routes for the given genomes
 function getMounted(_genomes) {
@@ -62,7 +73,8 @@ tape('methylation routes are set up when a ds has ds.queries.dnaMethylation', te
 		'dmrGeneLink',
 		'dmrLiterature',
 		'geneBodyMeth',
-		'methylationLocus'
+		'methylationLocus',
+		'methylationStarburst'
 	]) {
 		expected.push('get /termdb/' + e, 'post /termdb/' + e)
 	}
