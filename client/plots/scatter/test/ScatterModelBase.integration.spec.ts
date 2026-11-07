@@ -40,9 +40,8 @@ tape('addGroup records the plot id and calls the server-side group API', async f
 	test.end()
 })
 
-tape('processData calls the lowess fetch for regression and sorts subcharts by configured order', async function (test) {
+tape('processData computes the lowess regression and sorts subcharts by configured order', async function (test) {
 	test.timeoutAfter(100)
-	const seen: any = {}
 	const scatter: any = getMockScatter({
 		config: {
 			term0: {
@@ -54,13 +53,7 @@ tape('processData calls the lowess fetch for regression and sorts subcharts by c
 				}
 			}
 		},
-		settings: { regression: 'Lowess' },
-		vocabApi: {
-			getLowessCurve: async ({ coords }) => {
-				seen.coords = coords
-				return [{ x: 1, y: 1 }, { x: 2, y: 2 }]
-			}
-		}
+		settings: { regression: 'Lowess' }
 	})
 	const model = new TestScatterModelBase(scatter)
 	const chartA: any = getMockChart({
@@ -92,8 +85,15 @@ tape('processData calls the lowess fetch for regression and sorts subcharts by c
 	await model.processData()
 
 	test.equal(model.charts[0].id, 'Chart-A', 'Should sort charts by configured term0 order before processing.')
-	test.ok(Array.isArray(seen.coords.X), 'Should send the lowess X coordinates to the server.')
-	test.ok(Array.isArray(seen.coords.Y), 'Should send the lowess Y coordinates to the server.')
-	test.equal(model.charts[0].regressionCurve.length, 2, 'Should store the server response on the chart.')
+	// the points of each chart are on a line, which lowess reproduces, in the pixel coordinates set by initAxes()
+	for (const chart of model.charts) {
+		const expected = chart.cohortSamples.map(c => model.getCoordinates(chart, c))
+		const curve = chart.regressionCurve
+		test.equal(curve.length, expected.length, `Should store a lowess point per sample of ${chart.id}.`)
+		test.ok(
+			curve.every((p, i) => Math.abs(p[0] - expected[i].x) < 1e-9 && Math.abs(p[1] - expected[i].y) < 1e-9),
+			`Should store the lowess curve through the points of ${chart.id}, which are on a line.`
+		)
+	}
 	test.end()
 })

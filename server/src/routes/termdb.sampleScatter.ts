@@ -22,7 +22,6 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { schemeCategory20, getColors, mclass, dt2label, morigin, isNumericTerm } from '#shared'
 import { authApi } from '#src/auth.js'
-import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '#src/utils.js'
 import { getDescrStats } from './termdb.descrstats.ts'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
@@ -711,12 +710,4 @@ async function mayExpandBySamplePlots(scatterplots: any) {
 		bySample: true, // marks this as a per-sample plot for loadFile (keeps the cloud as reference)
 		settings
 	}))
-}
-
-export async function trigger_getLowessCurve(q, res) {
-	const data = q.coords
-	const result = JSON.parse(await run_R('lowess.R', JSON.stringify(data)))
-	const lowessCurve: any = []
-	for (const [i, x] of Object.entries(result.x)) lowessCurve.push([x, result.y[i]])
-	return res.send(lowessCurve)
 }

@@ -3,6 +3,7 @@ import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear, scaleTime } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { regressionPoly } from 'd3-regression'
+import { lowess } from './lowess'
 import type { Scatter } from '../scatter'
 import { getDateFromNumber } from '#shared/terms.js'
 import type { ColorLegendItem, ScatterChart, ScatterDataResult, ScatterRanges, ShapeLegendItem } from '../scatterTypes'
@@ -293,8 +294,10 @@ export abstract class ScatterModelBase {
 			// We filter out any values that are explicitly defined in the term values
 			// This gives us the raw numerical data we need for scaling
 			let colorValues
-			if (config.colorTW.term.type == SINGLECELL_GENE_EXPRESSION ||
-				(config.colorTW.term.type == SINGLECELL_NUMERIC_VALUE && chart.data.src)) {
+			if (
+				config.colorTW.term.type == SINGLECELL_GENE_EXPRESSION ||
+				(config.colorTW.term.type == SINGLECELL_NUMERIC_VALUE && chart.data.src)
+			) {
 				colorValues = [chart.ranges.geMin, chart.ranges.geMax]
 			} else {
 				colorValues = chart.cohortSamples
@@ -336,7 +339,7 @@ export abstract class ScatterModelBase {
 			// Canvas responses carry the domain computed from the full cell distribution.
 			// Do not estimate percentiles from the two raw extrema returned with the image.
 			if (chart.data.src && 'colorDomain' in chart.data && chart.data.colorDomain) {
-				[min, max] = chart.data.colorDomain
+				;[min, max] = chart.data.colorDomain
 			}
 			// Create the color generator using d3's linear scale
 			// This maps our numerical range to a color gradient
@@ -389,13 +392,15 @@ export abstract class ScatterModelBase {
 					.order(3)
 				regressionCurve = regression(data)
 			} else if (regressionType == 'Lowess') {
-				const X: any = [],
-					Y: any = []
+				const X: number[] = [],
+					Y: number[] = []
 				for (const sample of data) {
+					// lowess() throws on a value that is not finite, such as a sample with no coordinate
+					if (!Number.isFinite(sample.x) || !Number.isFinite(sample.y)) continue
 					X.push(sample.x)
 					Y.push(sample.y)
 				}
-				regressionCurve = await this.scatter.vocabApi!.getLowessCurve({ coords: { X, Y } })
+				regressionCurve = lowess(X, Y)
 			} else {
 				throw `unsupported regression type='${regressionType}'`
 			}
