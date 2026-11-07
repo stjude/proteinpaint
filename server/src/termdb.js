@@ -2,7 +2,7 @@ import path from 'path'
 import * as termdbsql from './termdb.sql.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
-import { get_mds3variantData } from './mds3.variant.js'
+import { trigger_getLowessCurve } from '#routes/termdb.sampleScatter.ts'
 import { readTabixLines } from './utils.js'
 import { string2pos } from '#shared/common.js'
 import { authApi } from './auth.js'
@@ -57,7 +57,6 @@ export function handle_request_closure(genomes) {
 
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
 			if (q.for == 'numericDictTermCluster') return await get_numericDictTermCluster(q, req, res, ds, genome)
-			if (q.for == 'mds3variantData') return await get_mds3variantData(q, res, ds, genome)
 			if (q.for == 'getMultivalueTWs') return res.send(tdb.q.get_multivalue_tws(q.parent_id))
 			if (q.for == 'validateToken') {
 			}

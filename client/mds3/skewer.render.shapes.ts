@@ -4,12 +4,13 @@ import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
 import { select as d3select } from 'd3-selection'
 
 export const MCLASSES_ATTRIBUTE = 'mclasses'
-export const DISC_G_PREFIX = 'sjpp-mds3tk-disc-g-'
+export const DISC_G_PREFIX = 'sjpp-mds3tk-skewer-disc-g-'
 export const joinMlstBy = (d, key = 'mname') => {
 	return d?.mlst ? Array.from(new Set(d.mlst.map(mItem => mItem[key]))).join('-') : d[key]
 }
 
 export const getMClassesLabel = d => {
+	console.log(d)
 	return joinMlstBy(d, 'class')
 }
 
@@ -19,7 +20,6 @@ export const getMlstJoinLabel = (d, prefix) => {
 }
 
 export function renderSkewerShapes(tk: any, skewer: any, shapeG: Elem) {
-	console.log('here')
 	shapeG
 
 		.filter(d => d.dt == dtsnvindel || d.dt == dtsv || d.dt == dtfusionrna)
