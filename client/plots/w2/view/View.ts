@@ -84,8 +84,27 @@ export class View {
 			this.vocab.genome
 		}&sample_id=${encodeURIComponent(sample.sampleId)}&imageType=${image.type}`
 
+		if (image.type == 'spatial' && image.method == 'sequence') {
+			// sequence-based (Visium): hires png + spots, its own small viewer
+			const s = this.settings
+			const seq = await import('../visium.direct')
+			await seq.init(
+				{
+					query: params,
+					showCellTypes: s.showCellTypes,
+					cellTypeFilter: s.cellTypeFilter ?? undefined,
+					geneExpression: s.geneExpression ?? image.geneExpression,
+					hideExpressionFills: !s.showGeneExpression,
+					width: '100%',
+					height: s.viewerHeight
+				},
+				holder
+			)
+			return
+		}
+
 		if (image.type == 'spatial') {
-			// spatial (Xenium) image: reuse the direct viewer, which draws the
+			// image-based (Xenium) image: reuse the direct viewer, which draws the
 			// boundary/expression overlays, addressing the slide via the dataset.
 			// Burger-menu settings override the dataset's values (null = not edited yet)
 			const s = this.settings

@@ -1,0 +1,34 @@
+import tape from 'tape'
+import { dominantType, pieSlices, shadeColor } from '../visium.direct'
+
+tape('shadeColor is darker for a higher proportion and clamps', test => {
+	const sum = (s: string) =>
+		s
+			.match(/\d+/g)!
+			.slice(0, 3)
+			.reduce((a, v) => a + Number(v), 0)
+	test.ok(sum(shadeColor('31, 119, 180', 0.9)) < sum(shadeColor('31, 119, 180', 0.3)), '90% darker than 30%')
+	test.equal(shadeColor('31, 119, 180', 5), shadeColor('31, 119, 180', 1), 'clamped above 1')
+	test.end()
+})
+
+tape('\n', function (test) {
+	test.comment('-***- plots/w2/visium.direct -***-')
+	test.end()
+})
+
+tape('dominantType picks the largest proportion among the given types', test => {
+	const props = { A: [0.2, null, 0.1], B: [0.7, null, 0.1], C: [0.1, null, 0.8] }
+	test.equal(dominantType(props, 0, ['A', 'B', 'C']), 1, 'B dominates spot 0')
+	test.equal(dominantType(props, 0, ['A', 'C']), 0, 'restricted to A,C: A dominates')
+	test.equal(dominantType(props, 1, ['A', 'B', 'C']), -1, 'spot without proportions has no type')
+	test.equal(dominantType(props, 2, ['A', 'B', 'C']), 2, 'C dominates spot 2')
+	test.end()
+})
+
+tape('pieSlices gives one path per value, and a full circle for a single value', test => {
+	test.equal(pieSlices([0.5, 0.3, 0.2], 10).length, 3, 'one path per slice')
+	test.ok(pieSlices([0.7], 10)[0].includes('A 10 10'), 'single slice is a drawn circle')
+	test.ok(pieSlices([0.6, 0.4], 10)[0].includes('0 1 1'), 'slice over half the circle uses the large-arc flag')
+	test.end()
+})

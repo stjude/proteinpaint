@@ -34,6 +34,7 @@ import heapq       # bounded top-top_k heap in similar_regions(), see its note
 import io          # BytesIO: hand an in-memory JPEG-2000 codestream to PIL
 import json        # stdin job parsing / stdout result encoding
 import math        # ceil for edge-tile output sizes
+import os          # basename: which Visium scale factor fits the tissue image
 import re          # extract PhysicalSizeX/Y from the OME-XML metadata blob
 import sys         # stdin/argv access in main()
 import tempfile    # temp path for the one output JPEG per tile job
@@ -496,6 +497,41 @@ def genecounts(h5ad, gene):
         "cells": dict(zip(cell_ids.tolist(), vals.tolist())),
         "max": int(vals.max()) if vals.size else 0,  # legend upper bound
     }
+
+
+def visium_spots(h5ad, png):
+    """Sequence-based (Visium) spots of a consolidated .h5ad, positioned on its
+    tissue image `png` (the image is NOT stored in the h5ad). Only in-tissue spots are
+    returned; x/y/radius are image pixels (y down), i.e. obsm/spatial (full-res px) *
+    uns/spatial/<lib>/scalefactors/tissue_hires_scalef, or tissue_lowres_scalef when the
+    image is Space Ranger's low-resolution one (its file name contains 'lowres').
+    Optional obsm/cell_type_proportions comes back as {type: [per-spot value|null]}."""
+    import h5py
+    with h5py.File(h5ad, "r") as f:
+        lib = next(iter(f["uns/spatial"]))                  # the one library id
+        sf = f[f"uns/spatial/{lib}/scalefactors"]
+        scale = float(sf["tissue_lowres_scalef" if "lowres" in os.path.basename(png).lower() else "tissue_hires_scalef"][()])
+        keep = f["obs/in_tissue"][:] == 1 if "in_tissue" in f["obs"] else np.ones(f["obsm/spatial"].shape[0], bool)
+        xy = f["obsm/spatial"][:][keep] * scale
+        out = {
+            "ids": _h5ad_index(f, "obs")[keep].tolist(),
+            "x": np.round(xy[:, 0], 2).tolist(),
+            "y": np.round(xy[:, 1], 2).tolist(),
+            "arrayRow": f["obs/array_row"][:][keep].tolist(),
+            "arrayCol": f["obs/array_col"][:][keep].tolist(),
+            "radius": float(sf["spot_diameter_fullres"][()]) * scale / 2,
+            "proportions": {},
+        }
+        pg = "obsm/cell_type_proportions"
+        if pg in f:
+            order = f[pg].attrs["column-order"]
+            for t in order:
+                v = np.round(f[pg][t][:][keep], 4).astype(object)
+                v[np.isnan(v.astype(float))] = None        # JSON has no NaN
+                out["proportions"][str(t)] = v.tolist()
+    with Image.open(png) as im:
+        out["width"], out["height"] = im.size
+    return out
 
 
 def h5ad_annotations(h5ad, bbox=None):
@@ -1019,6 +1055,8 @@ def main():
         print(json.dumps(genecounts(job["h5"], job["gene"]), separators=(",", ":")))
     elif job["action"] == "genenames":
         print(json.dumps(genenames(job["h5"]), separators=(",", ":")))
+    elif job["action"] == "visium_spots":
+        print(json.dumps(visium_spots(job["h5ad"], job["png"]), separators=(",", ":")))
     elif job["action"] == "h5ad_csv":
         print(h5ad_csv(job["h5ad"], job["kind"], job.get("bbox")))  # temp csv path
     elif job["action"] == "h5ad_annotations":
