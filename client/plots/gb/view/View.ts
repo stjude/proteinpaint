@@ -236,7 +236,7 @@ export class View {
 
 	/* tricky logic */
 	async launchBlockWithTracks(tklst) {
-		if (!this.opts.vocabApi?.termdbConfig?.gbRecreateBlock && this.blockInstance) {
+		if (this.blockInstance) {
 			/* block instance is present
             this should be updating tracks in this block, by adding new ones listed in tklst[],
             and deleting old ones via a tricky method
@@ -292,7 +292,7 @@ export class View {
 			return
 		}
 
-		// is GDC, MMRF, and/or no block instance, create new block
+		// no block instance, create new block
 
 		this.dom.blockHolder.selectAll('*').remove()
 		const arg: any = {

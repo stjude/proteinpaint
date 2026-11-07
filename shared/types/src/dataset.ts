@@ -2390,9 +2390,6 @@ keep this setting here for reason of:
 	/** (client-side) enables the sunburst chart: zoomable rings of nested sample counts, one dictionary
 	term per ring */
 	sunburst?: SunburstConfig
-	/** (client-side) if true, the genome browser recreates its block on track change rather than
-	updating tracks in the existing block instance */
-	gbRecreateBlock?: boolean
 	/** option to disable mayAddDataAvailability() based on request path and query parameters */
 	disableAssayAvailability?: (path: string, query: { [key: string]: any }) => boolean
 	/* terms are shown in the dictionary based on term and user role.
