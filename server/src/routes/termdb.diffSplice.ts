@@ -55,10 +55,10 @@ export function hasJunctionClusterDs(genomes) {
  * Within this file the function order mirrors that flow:
  *   init → dsKeyInputs → getDsCacheResult → resolveDs → runDsFresh → helpers
  *
- * Two engines are planned: edgeR's diffSpliceDGE (the fast genome-wide screen) and the
- * leafcutter Dirichlet-multinomial test (exact, slower). Only edgeR is wired; `pickDsEngine`
- * is the single place the second one lands. Both are required to return CLUSTER rows of the
- * same shape — see DsCacheResult — so nothing downstream branches on which one ran.
+ * Two engines: edgeR's diffSpliceDGE (the fast genome-wide screen) and the leafcutter
+ * Dirichlet-multinomial test (exact, slower). `pickDsEngine` chooses between them. Both return
+ * CLUSTER rows of the same shape (see DsCacheResult).
+ * The one difference is that leafcutter has no per-junction p.
  */
 
 /** Max samples ONE GROUP may contribute to a run, counted AFTER filtering to samples that
@@ -240,13 +240,12 @@ async function runDsFresh(
 	/* TODO: benchmark the memory of a run, and admit it with admitRun() and a cost with its own maxMB, as DE and DM do;
 	until then it is bounded only by the sample limits above. */
 
-	// the label is what the response reports; diffSpliceScreen.py is edgeR-only and takes no method
-	const { label } = pickDsEngine(req.method)
+	// the label is what the response reports; each script runs one engine and takes no method
+	const { label, script } = pickDsEngine(req.method)
 
-	/* Key names are diffSpliceScreen.py's, not this route's -- that script is generated from the
-	leafcutter-ds tree ("do not edit here"), so the contract is its docstring and the mapping
-	happens on this side. group1 is the CONTROL group, group2 the CASE group; sample names go as
-	arrays, not the comma-joined strings the DE route hands to R. */
+	/* Key names are the scripts', not this route's: both take the same request, and the contract
+	is their docstrings. group1 is the CONTROL group, group2 the CASE group; sample names go as
+	arrays. */
 	const pyInput: any = {
 		h5: countsFile,
 		group1: groups.group1names,
@@ -278,13 +277,13 @@ async function runDsFresh(
 	}
 
 	const t0 = Date.now()
-	const result = JSON.parse(await run_python('diffSpliceScreen.py', JSON.stringify(pyInput)))
+	const result = JSON.parse(await run_python(script, JSON.stringify(pyInput)))
 	/* The script always exits 0 and reports failure in the body, because run_python discards the
 	response on a non-zero exit. Without this check a failed run reads as a successful one that
 	tested nothing, and the user is told "no clusters passed filtering" instead of the real error. */
 	if (result.ok === false) {
 		const detail = result.stderr ? `\n${result.stderr}` : ''
-		throw new Error(`diffSpliceScreen.py failed: ${result.error || 'unknown error'}${detail}`)
+		throw new Error(`${script} failed: ${result.error || 'unknown error'}${detail}`)
 	}
 	/* Nothing surviving the filters is an outcome of the user's groups and thresholds, not a
 	failure, so the script reports it as status "no_clusters" on a successful body with no rows.
@@ -299,7 +298,9 @@ async function runDsFresh(
 		`clusters tested: ${result.cluster_data?.length ?? 0},`,
 		...(result.status ? [`status: ${result.status},`] : []),
 		'skipped:',
-		JSON.stringify(result.skipped ?? {})
+		JSON.stringify(result.skipped ?? {}),
+		'stages(s):',
+		JSON.stringify(result.timings)
 	)
 
 	return {
@@ -322,7 +323,7 @@ async function runDsFresh(
 export function getClusterJunctions(result: DsCacheResult, clusterId: string): DiffSpliceJunction[] {
 	const lst = result.junctionsByCluster
 	if (!lst || !Object.hasOwn(lst, clusterId)) throw new Error(`No junction data for cluster ${clusterId}`)
-	// a cluster id is chr:clu_*, see diffSpliceScreen.py
+	// a cluster id is chr:clu_*, see diffSpliceEdgeR.py
 	const chr = clusterId.split(':')[0]
 	return lst[clusterId].map(([start, stop, p, psi_control, psi_case]) => ({
 		chr,
@@ -334,7 +335,7 @@ export function getClusterJunctions(result: DsCacheResult, clusterId: string): D
 	}))
 }
 
-/** The three leafcutter filters are absolute counts, and diffSpliceScreen.py casts them with
+/** The three leafcutter filters are absolute counts, and both scripts cast them with
  * int(): a fraction such as 0.02 would become 0, which disables the filter without any error.
  * Rejected here instead, before the value can reach the cache key or the script. An absent value
  * is allowed and leaves the script's own default in force. */
@@ -358,20 +359,11 @@ function resolveMaxPerGroup(ds: any): number {
 	return Number.isInteger(v) && v > 0 ? v : MAX_SAMPLES_PER_GROUP
 }
 
-/** Decide which engine runs, and the label the response reports.
- *
- * Returned as a pair, and resolved before the python input is built, for the same reason
- * pickDeEngine is: the label must describe what ACTUALLY ran, since a future rule here may
- * override what the client asked for. The client displays `response.method`, not its own
- * setting, so an override stays visible rather than silently mislabelling the run.
- *
- * leafcutter throws rather than falling back to edgeR: the two compute different quantities
- * (a Simes-adjusted exon-level p vs a Dirichlet-multinomial likelihood-ratio test), so
- * quietly substituting one would answer a different question than the one asked. */
-export function pickDsEngine(method?: DiffSpliceMethod): { engine: 'edgeR'; label: DiffSpliceMethod } {
-	if (method === 'leafcutter') throw new Error('the leafcutter engine is not yet available')
+// Decide which engine runs, and the label the response reports.
+export function pickDsEngine(method?: DiffSpliceMethod): { script: string; label: DiffSpliceMethod } {
+	if (method === 'leafcutter') return { script: 'diffSpliceLeafcutter.py', label: 'leafcutter' }
 	if (method && method !== 'edgeR') throw new Error(`unknown differential splicing method '${method}'`)
-	return { engine: 'edgeR', label: 'edgeR' }
+	return { script: 'diffSpliceEdgeR.py', label: 'edgeR' }
 }
 
 /** Resolve the two sample groups + any confounder value arrays for differential splicing.

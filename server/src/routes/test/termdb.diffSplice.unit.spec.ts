@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getClusterJunctions, resolveDsSampleGroups } from '../termdb.diffSplice.ts'
+import { getClusterJunctions, pickDsEngine, resolveDsSampleGroups } from '../termdb.diffSplice.ts'
 import { getAuthApi, authApi } from '#src/auth.js'
 
 /*
@@ -7,7 +7,9 @@ test sections:
 
 resolveDsSampleGroups lists the samples of a group that is defined by a filter
 getClusterJunctions returns the junctions of one cluster
+getClusterJunctions keeps a null p, as leafcutter has no per-junction test
 getClusterJunctions throws for a cluster without junction data
+pickDsEngine runs the script of the requested method
 */
 
 const names: Record<number, string> = { 1: 's1', 2: 's2', 3: 's3', 4: 's4' }
@@ -155,6 +157,32 @@ tape('getClusterJunctions returns the junctions of one cluster', t => {
 			{ chr: 'chr1', start: 1390864, stop: 1393500, p: 0.06, psi_control: 0.05, psi_case: null }
 		],
 		'should return only that cluster, with the chr of its id'
+	)
+	t.end()
+})
+
+tape('getClusterJunctions keeps a null p, as leafcutter has no per-junction test', t => {
+	const result: any = { junctionsByCluster: { 'chr1:clu_4_-': [[1, 2, null, 0.5, 0.25]] } }
+	t.deepEqual(
+		getClusterJunctions(result, 'chr1:clu_4_-'),
+		[{ chr: 'chr1', start: 1, stop: 2, p: null, psi_control: 0.5, psi_case: 0.25 }],
+		'should return a junction with a null p'
+	)
+	t.end()
+})
+
+tape('pickDsEngine runs the script of the requested method', t => {
+	t.deepEqual(pickDsEngine(), { script: 'diffSpliceEdgeR.py', label: 'edgeR' }, 'should default to edgeR')
+	t.deepEqual(pickDsEngine('edgeR'), { script: 'diffSpliceEdgeR.py', label: 'edgeR' }, 'should run the edgeR screen')
+	t.deepEqual(
+		pickDsEngine('leafcutter'),
+		{ script: 'diffSpliceLeafcutter.py', label: 'leafcutter' },
+		'should run leafcutter'
+	)
+	t.throws(
+		() => pickDsEngine('limma' as any),
+		/unknown differential splicing method 'limma'/,
+		'should throw for an unknown method'
 	)
 	t.end()
 })

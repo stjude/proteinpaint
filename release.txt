@@ -1,1 +1,2 @@
-
+Features:
+- Add leafcutter as a method of differential splicing analysis, along with edgeR

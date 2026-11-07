@@ -18,7 +18,11 @@ import { uiLabel } from '#shared'
 import { TermTypes, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { dofetch3 } from '#common/dofetch'
 import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
-import { scaleDsFilters, BACKGROUND_CORRECTION_TITLE } from '../plots/volcano/settings/defaults.ts'
+import {
+	scaleDsFilters,
+	getSpliceMethodOptions,
+	BACKGROUND_CORRECTION_TITLE
+} from '../plots/volcano/settings/defaults.ts'
 import { getGEunit } from '#tw/geneExpression'
 import { renderDataAvailability } from './groupDataAvailability.ts'
 
@@ -722,7 +726,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 
 				tip.clear().showunderoffset(itemDiv.node())
 				/* Shared with differential expression and methylation; termType selects the label
-				and drops the method radios. The per-group cap is enforced server-side and arrives
+				and the method radios. The per-group cap is enforced server-side and arrives
 				as preAnalysisData.alert, which hides the Run button. */
 				renderPreAnalysisData({
 					preAnalysisData,
@@ -892,17 +896,16 @@ export function renderPreAnalysisData(arg) {
 	const uiLabels = self?.app?.vocabApi?.termdbConfig?.uiLabels
 	const sampleLabel = uiLabels?.samples || 'samples'
 
-	/* the analysis methods, for expression only: methylation has a single engine (diffMeth.R), so there is
-	nothing to choose. Every method is listed, and one that cannot run on these groups is grayed out with
-	the reason as its tooltip: small groups rule out wilcoxon here, the server lists the methods that
-	would be refused for memory, and a cohort over the sample limit comes as the alert, which grays out
-	every method below. */
+	/* the analysis methods, for expression and splicing: methylation has a single engine (diffMeth.R), so
+	there is nothing to choose. Every method is listed, and one that cannot run on these groups is grayed
+	out with the reason as its tooltip: small groups rule out wilcoxon here, the server lists the methods
+	that would be refused for memory, and a cohort over the sample limit comes as the alert, which grays
+	out every method below. */
 	const sample_size_limit = 8
 	const lowMemoryMethods = preAnalysisData.lowMemoryMethods || []
 	const total = numControl + numCase
-	const options = !isGE
-		? []
-		: [
+	const options = isGE
+		? [
 				{ label: 'edgeR', value: 'edgeR' },
 				{ label: 'Wilcoxon', value: 'wilcoxon' },
 				{ label: 'Limma', value: 'limma' }
@@ -915,6 +918,9 @@ export function renderPreAnalysisData(arg) {
 						: ''
 				return reason ? { ...o, disabled: true, reason } : o
 		  })
+		: termType == TermTypes.JUNCTION
+		? getSpliceMethodOptions()
+		: []
 	// with every method grayed out there is nothing to run, so the alert hides the run button
 	if (options.length && options.every(o => o.disabled)) {
 		const msg = `Server memory is too low to run this analysis on ${total} ${sampleLabel}. Please select a smaller cohort.`
@@ -1076,7 +1082,7 @@ export function renderPreAnalysisData(arg) {
 			.text(`Run Differential ${termType2label(termType)} Analysis`)
 			.on('click', async () => {
 				const volcano = {}
-				// only expression carries a method; passing an undefined one would fail volcano settings validation
+				// methylation carries no method; passing an undefined one would fail volcano settings validation
 				if (selectedMethod) volcano.method = selectedMethod
 				/* splicing filters scale with the samples that will actually be tested, which only the
 				pre-analysis counts know: the raw groups include samples absent from the splicing h5 */

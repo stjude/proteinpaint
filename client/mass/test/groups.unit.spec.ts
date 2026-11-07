@@ -14,6 +14,7 @@ import {
 	getAvailabilityGroups,
 	renderPreAnalysisData
 } from '../groups'
+import { TermTypes } from '#types'
 
 /**
  * Tests:
@@ -583,6 +584,35 @@ tape('groups renderPreAnalysisData()', test => {
 	)
 	test.equal(over.run, null, 'should not show the run button over the limit')
 	test.ok(holder.text().includes(alert), 'should show the alert')
+
+	const renderSplicing = (alert?: string) => {
+		holder.selectAll('*').remove()
+		renderPreAnalysisData({
+			preAnalysisData: { data: { g1: 100, g2: 100 }, alert },
+			samplelstTW,
+			groups: [],
+			holder,
+			self: {},
+			termType: TermTypes.JUNCTION
+		})
+		return holder.selectAll('input[type=radio]').nodes() as HTMLInputElement[]
+	}
+	let splicing = renderSplicing()
+	test.deepEqual(
+		splicing.map(i => i.value),
+		['edgeR', 'leafcutter'],
+		'should list the 2 splicing methods'
+	)
+	test.ok(splicing[0].checked, 'should preselect edgeR for splicing')
+	test.ok(
+		renderSplicing(alert).every(i => i.disabled),
+		'should gray out the splicing methods with an alert'
+	)
+	splicing = renderSplicing()
+	test.ok(
+		splicing.every(i => !i.disabled),
+		'should offer the splicing methods again in the next menu without an alert'
+	)
 
 	if (test['_ok']) holder.remove()
 	test.end()
