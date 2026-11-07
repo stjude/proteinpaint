@@ -1672,8 +1672,16 @@ def _line_search_step(rows):
     return float(step[0])
 
 
+def _noisy_chunk(*args, _fit=_batched_chunk, **kwargs):
+    """_batched_chunk that also writes to both descriptors, as a library in a worker could."""
+    os.write(1, b"stray stdout from a worker\n")
+    os.write(2, b"stray stderr from a worker\n")
+    return _fit(*args, **kwargs)
+
+
 def selftest():
     """Offline run on a small synthetic store, see python/test/diffSpliceLeafcutter.unit.spec.js."""
+    from unittest import mock
     import h5py
 
     rng = np.random.default_rng(1)
@@ -1685,7 +1693,8 @@ def selftest():
 
     shifted = np.concatenate([rng.multinomial(200, [0.9, 0.1], size=n1),
                               rng.multinomial(200, [0.3, 0.7], size=n2)])
-    flat = [counts([0.5, 0.5]) for _ in range(3)]
+    # the three-intron cluster is fitted in a separate job from the two-intron ones
+    flat = [counts([0.5, 0.5]) for _ in range(3)] + [counts([0.4, 0.3, 0.3])]
     # one intron is seen in no sample, so the cluster has only one usable intron
     one_intron = counts([1.0, 0.0])
     # below the coverage threshold in every sample
@@ -1724,8 +1733,15 @@ def selftest():
             collinear_error = ""
         except ValueError as e:
             collinear_error = str(e)
+        # res ran in one process, because this store is below the threshold. _available_cpus is
+        # replaced too, so that a one-cpu machine still starts the workers.
+        with mock.patch.dict(globals(), {"MIN_CLUSTERS_FOR_WORKERS": 1, "_available_cpus": lambda: 2,
+                                         "_batched_chunk": _noisy_chunk}), \
+                mock.patch.object(multiprocessing, "get_context",
+                                  wraps=multiprocessing.get_context) as get_context:
+            two_workers = handle({**req, "threads": 2})
 
-    rows = {r["cluster_id"]: r for r in res["cluster_data"]}
+    rows ={r["cluster_id"]: r for r in res["cluster_data"]}
     hit = rows["chr1:clu_0_+"]
     junctions = res["junctions_by_cluster"]["chr1:clu_0_+"]
     checks = {
@@ -1739,7 +1755,7 @@ def selftest():
         and (hit["start"], hit["stop"]) == (1000, 1101),
         "junctions are 0-based with no p": [j[:3] for j in junctions] == [[999, 1099, None], [999, 1100, None]],
         "only the clusters that pass the filter are tested": sorted(rows) == [
-            f"chr1:clu_{i}_+" for i in range(4)],
+            f"chr1:clu_{i}_+" for i in range(5)],
         "skipped clusters are counted": sum(res["skipped"].values()) == 3,
         "no testable cluster is an outcome, with its reasons": empty["status"] == "no_clusters"
         and empty["cluster_data"] == [] and sum(empty["skipped"].values()) == len(names),
@@ -1748,6 +1764,10 @@ def selftest():
         "a covariate that differs within the groups is fitted":
         with_covariate["cluster_data"][0]["cluster_id"] == hit["cluster_id"],
         "a covariate with the split of the groups is rejected": "not of full rank" in collinear_error,
+        "workers are started when there are multiple jobs": get_context.called,
+        "two workers give the same results as one": two_workers["cluster_data"] == res["cluster_data"]
+        and two_workers["junctions_by_cluster"] == res["junctions_by_cluster"]
+        and two_workers["n_clusters_tested"] == res["n_clusters_tested"],
         "timings cover every stage": set(res["timings"]) == {
             "load_packages", "read_h5", "filter", "fit", "collect_results", "format_output", "total"},
         "timings stop at the filter with no testable cluster": set(empty["timings"]) == {

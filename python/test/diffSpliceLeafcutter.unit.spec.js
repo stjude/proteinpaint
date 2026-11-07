@@ -6,7 +6,9 @@
  * Unit test for python/src/diffSpliceLeafcutter.py, the leafcutter engine of differential splicing.
  *
  * The script's offline selftest fits a small synthetic store with one shifted cluster and asserts
- * the rows, the junctions, the timings and which clusters are tested.
+ * the rows, the junctions, the timings and which clusters are tested. It also runs with two spawned
+ * workers that write to stdout and stderr: the results must match one process, and run_python would
+ * reject the response, or JSON.parse would fail, if that output got out.
  */
 
 import tape from 'tape'
@@ -22,7 +24,7 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('selftest: fit, rows, junctions, timings and the cluster filter', async t => {
+tape('selftest: fit, rows, junctions, timings, the cluster filter and two workers', async t => {
 	const out = JSON.parse(await run_python(python_script, JSON.stringify({ selftest: true })))
 	t.equal(out.selftest, 'ok', out.error || 'offline run passed')
 	t.end()
