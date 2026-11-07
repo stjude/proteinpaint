@@ -1222,23 +1222,6 @@ export class TermdbVocab extends Vocab {
 		return result
 	}
 
-	async getLowessCurve(opts) {
-		// the scatter plot may still render when not in session,
-		// but not have an option to list samples
-		const headers = await this.mayGetAuthHeaders('termb')
-
-		// dofetch* mayAdjustRequest() will automatically
-		// convert to GET query params or POST body, as needed
-		const body = {
-			genome: this.state.vocab.genome,
-			dslabel: this.state.vocab.dslabel,
-			getLowessCurve: 1,
-			coords: opts.coords
-		}
-
-		return await this.dofetch3('termdb', { headers, body })
-	}
-
 	async getMultivalueTWs(opts) {
 		const headers = await this.mayGetAuthHeaders('termb')
 
