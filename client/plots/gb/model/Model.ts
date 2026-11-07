@@ -24,7 +24,6 @@ export class Model {
 		const body = {
 			genome: this.app.opts.state.vocab.genome,
 			dslabel: this.app.opts.state.vocab.dslabel,
-			for: 'mds3variantData',
 			chr: this.state.config.geneSearchResult.chr,
 			start: this.state.config.geneSearchResult.start,
 			stop: this.state.config.geneSearchResult.stop,
@@ -36,7 +35,7 @@ export class Model {
 
 		// using dofetch prevents the app from working with custom dataset; may change to vocab method later
 
-		const data = await dofetch3('termdb', { body })
+		const data = await dofetch3('termdb/mds3/variantData', { body })
 		if (data.error) throw data.error
 
 		return data

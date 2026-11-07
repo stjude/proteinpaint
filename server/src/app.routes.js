@@ -95,6 +95,7 @@ export const routeFiles = [
 	import('./routes/termdb.matrix.ts'),
 	import('./routes/termdb.mds3.ts'),
 	import('./routes/termdb.mds3.eventImage.ts'),
+	import('./routes/termdb.mds3.variantData.ts'),
 	import('./routes/termdb.numericcategories.ts'),
 	import('./routes/termdb.percentile.ts'),
 	import('./routes/termdb.profileFormScores.ts'),
