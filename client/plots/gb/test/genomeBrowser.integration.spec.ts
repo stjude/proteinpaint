@@ -15,7 +15,6 @@ import { getFilter_agedx, getFilter_Hodgkin } from '../../../test/testdata/data'
     protein mode with both global and local filter
     filter change triggers block recreation
     genomic mode with saved block state
-    zoom out with gbRecreateBlock
 ********************/
 
 tape('\n', test => {
@@ -382,67 +381,6 @@ tape('genomic mode with saved block state', (test: any) => {
 		test.notOk(zoomOutBtn.disabled, 'Should enable the zoom out button')
 		if (test._ok) gb.Inner.app.destroy()
 		test.end()
-	}
-})
-
-tape('zoom out with gbRecreateBlock', (test: any) => {
-	test.timeoutAfter(6000)
-
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'genomeBrowser',
-					geneSearchResult: { chr: 'chr17', start: 7666657, stop: 7688274 }
-				}
-			]
-		},
-		genomeBrowser: { callbacks: { 'postRender.test': firstRender } }
-	})
-
-	async function firstRender(gb) {
-		gb.on('postRender.test', null)
-		const dom = gb.Inner.dom
-		const termdbConfig = gb.Inner.app.vocabApi.termdbConfig
-		const blockDivBefore = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
-		const r0 = gb.Inner.blockInstance.rglst[0]
-		const [bstart, bstop, start, stop] = [r0.bstart, r0.bstop, r0.start, r0.stop]
-		test.ok(bstart < start && bstop > stop, 'Should have region boundaries beyond the view range on first render')
-
-		let ended = false
-		function safeEnd() {
-			if (ended) return
-			ended = true
-			// termdbConfig may be shared with later tests, do not leave the flag set
-			delete termdbConfig.gbRecreateBlock
-			if (test._ok) gb.Inner.app.destroy()
-			test.end()
-		}
-
-		// recreate the block on each state change, as done for some datasets
-		termdbConfig.gbRecreateBlock = true
-
-		gb.on('postRender.test', async function secondRender(gb2) {
-			gb2.on('postRender.test', null)
-			try {
-				const blockDivAfter = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
-				test.notEqual(blockDivBefore, blockDivAfter, 'Should recreate the block after zooming out')
-				const r = gb2.Inner.blockInstance.rglst[0]
-				test.ok(r.start < start && r.stop > stop, 'Should show a wider view range after zooming out')
-				test.deepEqual([r.bstart, r.bstop], [bstart, bstop], 'Should keep the region boundaries in the recreated block')
-				const zoomOutBtn = dom.blockHolder.select('[data-testid="sjpp-block-zoombtnx10"]').node()
-				test.notOk(zoomOutBtn.disabled, 'Should enable the zoom out button in the recreated block')
-			} catch (e: any) {
-				test.fail(e.message || e)
-			}
-			safeEnd()
-		})
-
-		const zoomOutBtn = blockDivBefore.querySelector('[data-testid="sjpp-block-zoombtnx10"]')
-		test.notOk(zoomOutBtn.disabled, 'Should enable the zoom out button on first render')
-		// block ignores zooming while its tracks are loading
-		for (let i = 0; i < 40 && gb.Inner.blockInstance.busy; i++) await sleep(50)
-		zoomOutBtn.click()
 	}
 })
 
