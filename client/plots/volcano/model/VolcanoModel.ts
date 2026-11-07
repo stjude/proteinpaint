@@ -92,6 +92,8 @@ export class VolcanoModel {
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
 			cpm_cutoff: this.settings.cpmCutoff,
+			// also read by the server for a contrast that keeps to the samples of a methylation analysis
+			...this.getSampleTypes(),
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DERequest> //remove Partial when storage_type is removed from DERequest
 		const pseudobulk = this.config.tw?.pseudobulk
@@ -115,6 +117,7 @@ export class VolcanoModel {
 			filter0: state.termfilter.filter0,
 			min_samples_per_group: this.settings.minSamplesPerGroup,
 			exclude_sex_chr: this.settings.excludeSexChr,
+			...this.getSampleTypes(),
 			/* Omitted rather than sent as 'promoter' when it is the default, so a request
 			from a promoter-only dataset is byte-identical to what this client sent before
 			the element picker existed. The server resolves an absent element_type to
@@ -172,12 +175,19 @@ export class VolcanoModel {
 			minSamplesPerIntron: this.settings.minSamplesPerIntron,
 			minSamplesPerGroup: this.settings.minSamplesPerGroup,
 			minCountsPerCluster: this.settings.minCountsPerCluster,
+			...this.getSampleTypes(),
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffSpliceRequest>
 
 		this.addConfounderTw(body)
 
 		return body
+	}
+
+	/** The sample types chosen in the panel that launched the plot, see initDaSampleTypes() in
+	 * mass/groups.js. Absent when every type was chosen, so the request is as before the selector. */
+	getSampleTypes(): { sampleTypes?: number[] } {
+		return this.config.sampleTypes ? { sampleTypes: this.config.sampleTypes } : {}
 	}
 
 	/** Parameters telling the server to run the `volcano` Rust renderer and return a

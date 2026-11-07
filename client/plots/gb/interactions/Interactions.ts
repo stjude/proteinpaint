@@ -156,6 +156,15 @@ export class Interactions {
 		})
 	}
 
+	/** null when every sample type is chosen, see View.mayRenderSampleTypes() */
+	setSampleTypes = (sampleTypes: number[] | null) => {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { sampleTypes }
+		})
+	}
+
 	launchGroupsFilter = groups => {
 		this.app.dispatch({
 			type: 'plot_edit',

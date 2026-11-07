@@ -12,7 +12,8 @@ import {
 	getGroupForRegion,
 	getOthersGroup,
 	getAvailabilityGroups,
-	renderPreAnalysisData
+	renderPreAnalysisData,
+	initDaSampleTypes
 } from '../groups'
 
 /**
@@ -23,6 +24,7 @@ import {
  *  - groups getSamplelstTW()
  *  - groups getAvailabilityGroups()
  *  - groups renderPreAnalysisData()
+ *  - groups initDaSampleTypes()
  */
 
 const mockGrp1Values = [
@@ -583,6 +585,75 @@ tape('groups renderPreAnalysisData()', test => {
 	)
 	test.equal(over.run, null, 'should not show the run button over the limit')
 	test.ok(holder.text().includes(alert), 'should show the alert')
+
+	// the sample types chosen above the panel go with the plot, and are left out when none were chosen
+	const dispatched: any[] = []
+	const self = { state: {}, app: { dispatch: (a: any) => dispatched.push(a) } }
+	for (const sampleTypes of [[2], undefined]) {
+		holder.selectAll('*').remove()
+		renderPreAnalysisData({
+			preAnalysisData: { data: { g1: 10, g2: 10 } },
+			samplelstTW,
+			groups: [],
+			holder,
+			termType: 'junction',
+			self,
+			sampleTypes
+		})
+		;(holder.select('[data-testid=sjpp-da-run-btn]').node() as HTMLElement).click()
+	}
+	test.deepEqual(dispatched[0].config.sampleTypes, [2], 'should send the chosen sample types to the plot')
+	test.notOk('sampleTypes' in dispatched[1].config, 'should not send sample types when none were chosen')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('groups initDaSampleTypes()', test => {
+	const holder: any = d3s.select('body').append('div')
+	const termdbConfig: any = {
+		sampleTypes: {
+			1: { name: 'Patient', parent_id: null },
+			2: { name: 'Diagnosis', parent_id: 1 },
+			3: { name: 'Relapse', parent_id: 1 }
+		}
+	}
+	const self = { app: { vocabApi: { termdbConfig } } }
+
+	const none = initDaSampleTypes(holder, undefined, self, () => {})
+	test.equal(holder.selectAll('input[type=checkbox]').size(), 0, 'should draw no row without a query')
+	test.equal(none.sampleTypes(), undefined, 'should send no sample types without a query')
+	initDaSampleTypes(holder, { sampleTypes: [1, 2] }, self, () => {})
+	test.equal(holder.selectAll('input[type=checkbox]').size(), 0, 'should draw no row when one type has a parent')
+
+	holder.selectAll('*').remove()
+	let changes = 0
+	const { sampleTypes, panelDiv } = initDaSampleTypes(holder, { sampleTypes: [1, 2, 3] }, self, () => changes++)
+	const boxes = holder.selectAll('input[type=checkbox]').nodes() as HTMLInputElement[]
+	test.equal(boxes.length, 2, 'should draw a checkbox for each sample type with a parent, not for the root type')
+	test.equal(sampleTypes(), undefined, 'should send no sample types when every type is checked')
+
+	boxes[1].click()
+	test.deepEqual(sampleTypes(), [2], 'should send the checked sample types')
+	test.equal(changes, 1, 'should call onChange when a sample type changes')
+
+	// the panel below has controls of its own, which must not fetch the counts again
+	const box = panelDiv.append('input').attr('type', 'checkbox').node()
+	box.click()
+	test.equal(changes, 1, 'should not call onChange for a change in the panel below')
+
+	holder.selectAll('*').remove()
+	termdbConfig.sampleTypeTerms = { visit: { name: 'Visit' } }
+	const byTerms = { visit: { Any: [1], Diagnosis: [2], Relapse: [3] } }
+	initDaSampleTypes(holder, { sampleTypes: [1, 2, 3], sampleTypesByTerms: byTerms }, self, () => {})
+	test.deepEqual(
+		holder
+			.selectAll('option')
+			.nodes()
+			.map((o: any) => o.value),
+		['any', 'Diagnosis', 'Relapse'],
+		'should offer no dropdown value of sample types without a parent alone'
+	)
 
 	if (test['_ok']) holder.remove()
 	test.end()

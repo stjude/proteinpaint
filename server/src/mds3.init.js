@@ -14,6 +14,7 @@ import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
 import { getH5samples } from './utils/h5samples.ts'
 import { withholdSampleNames } from './utils/sampleGroups.ts'
+import { getTermSampleTypeIds } from './utils/sampleTypes.ts'
 import { compute_mclass } from './vcf.mclass.js'
 import serverconfig, { mergeDsFeatures } from './serverconfig.js'
 import {
@@ -2005,6 +2006,8 @@ async function validate_query_ssGSEA(ds, genome) {
 			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
 			q.samples.push(si)
 		}
+		// for the sample type row of the geneset expression term picker
+		setQuerySampleTypes(q, q.samples, ds)
 		console.log(`${ds.label}: ssGSEA HDF5 file validated. Samples:`, samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate ssGSEA HDF5 file: ${error}`
@@ -2043,18 +2046,22 @@ async function validate_query_ssGSEA(ds, genome) {
 		const results = JSON.parse(tmp)
 		mayLog('ssGSEA h5 file', Date.now() - time1)
 
+		// the samples each term reads, after the request's sample filter and the term's sample types
+		const limitTermSamples = getTermSampleLimiter(param, q.samples, ds)
 		for (const tw of param.terms) {
 			const result = results.query_output[tw.term.id]?.samples
 			if (!result) {
 				console.warn(`No data found for geneset ${tw.term.id} in the response`)
 				continue
 			}
+			const termSamples = await limitTermSamples(tw.term)
 
 			const s2v = {}
 			for (const sampleName in result) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 				if (!sampleId) continue
 				if (limitSamples && !limitSamples.has(sampleId)) continue
+				if (termSamples && !termSamples.has(sampleId)) continue
 				s2v[sampleId] = result[sampleName]
 			}
 
@@ -2331,17 +2338,6 @@ export function getTermSampleLimiter(param, allSamples, ds) {
 		}
 		return byTypes.get(key)
 	}
-}
-
-/* term.sampleTypes as the dataset's sample type ids, or undefined when the term chose none */
-function getTermSampleTypeIds(term, ds) {
-	if (term.sampleTypes == null) return
-	if (!Array.isArray(term.sampleTypes)) throw new Error('term.sampleTypes must be an array')
-	return term.sampleTypes.map(st => {
-		const n = Number(st)
-		if (!Number.isInteger(n) || !ds.cohort?.termdb?.sampleTypes?.[n]) throw new Error(`invalid sample type='${st}'`)
-		return n
-	})
 }
 
 /* Pick which element matrix answers dnaMethylation term queries on a dataset that has no
@@ -4318,5 +4314,11 @@ async function validate_query_rnaseqGeneCount(ds) {
 	for (const n of q.allSampleSet) {
 		if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
 	}
+	// for the sample type selector of the differential expression panel; unknown names are skipped
+	setQuerySampleTypes(
+		q,
+		samples.map(sn => ds.cohort.termdb.q.sampleName2id(sn)),
+		ds
+	)
 	console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
 }

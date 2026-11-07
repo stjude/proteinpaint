@@ -323,6 +323,8 @@ export class VolcanoInteractions {
 			group2: getGroupForRegion(groups[1]),
 			group1Name: groups[0].name,
 			group2Name: groups[1].name,
+			// the scan's sample types, which are in its run's cache key as well
+			sampleTypes: config.sampleTypes,
 			settings: {
 				colors,
 				lambda: k?.lambda ?? s.lambda,
@@ -420,6 +422,9 @@ export class VolcanoInteractions {
 				blockIsProteinMode: false,
 				// cluster start/stop are the 1-based exon boundaries; the junctions are already 0-based
 				geneSearchResult: { chr: d.chr, start: Math.max(0, d.start - 1 - pad), stop: d.stop + pad },
+				// every track reads the samples of the analysis, as the cluster track does
+				...(config.sampleTypes ? { sampleTypes: config.sampleTypes } : {}),
+				activeTab: 'Splice Junction',
 				tracks: [
 					{
 						type: 'j2',

@@ -6,6 +6,7 @@ import { TermTypes } from '#types'
 import { importPlot } from '#plots/importPlot.js'
 import { capitalizeFirstLetter } from '#dom'
 import { getSelectableGETermTypes } from '#plots/GeneExpInput.ts'
+import { getDaTermTypes } from '#plots/diffAnalysis/enabledTermTypes.ts'
 
 class MassCharts {
 	static type = 'charts'
@@ -381,6 +382,15 @@ function getChartTypeList(self, state) {
 				const isAvailable = getSelectableGETermTypes(state.termdbConfig)
 				return isAvailable.length > 0 ? '' : 'none'
 			}
+		},
+		{
+			label: 'Differential Analysis',
+			// DA, as for the differential analysis menu of the Groups tab
+			chartType: 'DA',
+			clickTo: self.prepPlot,
+			// one form for every kind of data the dataset has, chosen in it
+			config: { chartType: 'DEinput', chooseTermType: true },
+			isVisible: () => (getDaTermTypes(state.termdbConfig).length ? '' : 'none')
 		},
 		{
 			label: 'Metabolite Intensity',

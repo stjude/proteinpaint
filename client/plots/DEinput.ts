@@ -14,20 +14,27 @@ import { getColors } from '#shared/common.js'
 import { color as d3color, rgb } from 'd3-color'
 import { make_radios, renderTable, Tabs } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { renderPreAnalysisData, getSamplelstTWFromFilters } from '#mass/groups'
+import { renderPreAnalysisData, getSamplelstTWFromFilters, initDaSampleTypes } from '#mass/groups'
 import { TermTypeGroups, termType2label } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { uiLabel } from '#shared'
+import { getDaTermTypes } from './diffAnalysis/enabledTermTypes.ts'
 
 const colorScale = getColors(5)
 
 /* Group-building submission UI for a two-group differential analysis.
 
-Serves both differential gene expression and differential DNA methylation, selected by
-config.termType (default gene expression, so existing callers are unchanged). The two differ
-in only three places, all branched on `isGE` below: which ds query proves the assay exists,
-which server route the pre-analysis hits, and the expression-source tabs (methylation has no
-pseudobulk counterpart). The group table, filter prompt and submit flow are shared.
+Serves differential gene expression, DNA methylation and splicing, selected by config.termType
+(default gene expression, so existing callers are unchanged). They differ in only four places:
+which ds query proves the assay exists, which server route the pre-analysis hits, the
+expression-source tabs (only gene expression has a pseudobulk counterpart), and the query whose
+sample types the sample type row offers (none for pseudobulk), as in the Groups tab. The group
+table, filter prompt and submit flow are shared.
+
+config.chooseTermType offers the kinds of data of the dataset as radios above the groups (see
+getDaTermTypes()), so one form serves every differential analysis, as Charts > Differential Analysis
+opens it. A change keeps the groups, which are filters, and the counts are fetched again for the new
+kind of data.
 
 config.filter limits the group picker, sample counts, and analysis to the plot's selected samples.
 The results view is a separate chart, 'differentialAnalysis'; this plot only builds groups
@@ -55,10 +62,14 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	groupsSeeded?: boolean
 	/** set once config.autoSubmit has triggered clickSubmit() */
 	autoSubmitted?: boolean
+	/** counts the pre-analysis requests and clears, so a reply that is no longer current is dropped */
+	preAnalysisRequests = 0
 	/** geneExpression (default) or dnaMethylation. Resolved in init() from state.config, NOT from
 	 * opts: mass/plot.js hands the component only {app, holder, header, id, ...}, so config fields
 	 * are not on opts and reading it in the constructor would silently always be undefined. */
 	termType!: string
+	/** the sample type row, see addSampleTypeRow(); none for pseudobulk */
+	sampleTypeRow?: { sampleTypes: () => number[] | null | undefined }
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
@@ -75,6 +86,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		// header text is set in init(), once state.config.termType is known
 		const header = this.opts?.header || undefined
 		const holder = this.opts.holder.append('div').style('margin', '10px')
+		const termTypeChoice = holder.append('div').style('margin-bottom', '15px')
 		const expressionSource = holder.append('div').style('margin-bottom', '15px')
 		const table = holder.append('div')
 		const btns = holder.append('div').style('margin-top', '5px')
@@ -90,7 +102,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			.style('display', 'none')
 			.style('margin-top', '20px')
 			.style('margin-left', '5px')
-		const dom = { header, expressionSource, table, addGroup, submit, loading, preAnalysis }
+		const dom = { header, termTypeChoice, expressionSource, table, addGroup, submit, loading, preAnalysis }
 		return dom
 	}
 
@@ -109,8 +121,36 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 	async init(appState) {
 		const state = this.getState(appState)
-		this.termType = state.config.termType || TermTypes.GENE_EXPRESSION
+		this.termType = state.config.termType || getDefaultTermType(this.app.vocabApi.termdbConfig)
 		this.dom.header?.html(`Differential ${termType2label(this.termType)}`)
+		if (state.config.chooseTermType) this.renderTermTypeChoice()
+		await this.renderExpressionSourceUI()
+	}
+
+	/** radios of the kinds of data, when the dataset has more than one; a choice is kept in the plot config */
+	renderTermTypeChoice() {
+		const types = getDaTermTypes(this.app.vocabApi.termdbConfig)
+		if (types.length < 2) return
+		this.dom.termTypeChoice.append('div').style('opacity', 0.7).text('Compare the groups by:')
+		make_radios({
+			holder: this.dom.termTypeChoice,
+			inputName: `sjpp-da-termtype-${this.id}`,
+			options: types.map(t => ({ label: termType2label(t), value: t, checked: t == this.termType })),
+			styles: { display: 'inline-block', padding: '3px 10px 3px 0px' },
+			callback: termType => this.app.dispatch({ type: 'plot_edit', id: this.id, config: { termType } })
+		})
+	}
+
+	/** a new kind of data: the source tabs or sample type row of that kind replace the old one, and groups
+	passed by the caller are counted again, as they were for the first kind */
+	async setTermType(termType: string) {
+		this.termType = termType
+		this.dom.header?.html(`Differential ${termType2label(termType)}`)
+		this.dom.expressionSource.selectAll('*').remove()
+		delete this.expressionSource
+		delete this.pseudobulk
+		delete this.sampleTypeRow
+		this.autoSubmitted = false
 		await this.renderExpressionSourceUI()
 	}
 
@@ -122,7 +162,10 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		so the throw permanently skips seeding and config.groups[] silently never appears. The
 		framework calls main() again right after init(), so nothing is lost by returning. */
 		if (!this.state) return
-		this.dom.preAnalysis.selectAll('*').remove()
+		// plot_prep skips getPlotConfig() when the config has more keys than chartType, so termType may be unset
+		const termType = this.state.config.termType || this.termType
+		if (termType != this.termType) await this.setTermType(termType)
+		this.clearPreAnalysis()
 		if (!this.expressionSource || (this.expressionSource === 'pseudobulk' && !this.pseudobulk)) {
 			this.dom.table.style('display', 'none')
 			this.dom.addGroup.style('display', 'none')
@@ -188,6 +231,14 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	async renderExpressionSourceUI() {
 		const config = this.app.vocabApi.termdbConfig
 
+		// splicing has one source, the junction counts, so there are no source tabs
+		if (this.termType == TermTypes.JUNCTION) {
+			const cluster = config.queries?.junction?.cluster
+			if (!cluster) throw new Error('No splice junction data configured for differential analysis')
+			this.expressionSource = 'bulk'
+			this.addSampleTypeRow(this.dom.expressionSource, cluster)
+			return
+		}
 		/* methylation has one source, the element matrices, and no pseudobulk counterpart, so there
 		is nothing to choose -- skip the tabs entirely. the ds gate mirrors the one the Groups menu
 		applies (mass/groups.js): a promoter matrix OR any element type is enough, so a ds offering
@@ -197,10 +248,12 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			if (!dm?.promoter && !dm?.elementTypes?.length)
 				throw new Error('No DNA methylation data configured for differential analysis')
 			this.expressionSource = 'bulk'
+			this.addSampleTypeRow(this.dom.expressionSource, dm)
 			return
 		}
 
-		const hasBulk = !!config.queries?.rnaseqGeneCount
+		const bulkQuery = config.queries?.rnaseqGeneCount
+		const hasBulk = !!bulkQuery
 		const terms = config.termType2terms?.[TermTypeGroups.PSEUDOBULK] || []
 		const hasPseudobulk = terms.length > 0
 		if (!hasBulk && !hasPseudobulk)
@@ -208,6 +261,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 		if (hasBulk && !hasPseudobulk) {
 			this.expressionSource = 'bulk'
+			this.addSampleTypeRow(this.dom.expressionSource, bulkQuery)
 			return
 		}
 
@@ -221,8 +275,10 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			{
 				label: 'Bulk RNA-seq',
 				active: true,
-				callback: async () => {
+				callback: async (_event, tab) => {
 					this.expressionSource = 'bulk'
+					tab.contentHolder.selectAll('*').remove()
+					this.addSampleTypeRow(tab.contentHolder, bulkQuery)
 					await this.main()
 				}
 			},
@@ -230,6 +286,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				label: 'Single-cell pseudobulk',
 				callback: async (_event, tab) => {
 					this.expressionSource = 'pseudobulk'
+					// a pseudobulk sample is a cell group, of no sample type
+					delete this.sampleTypeRow
 					tab.contentHolder.selectAll('*').remove()
 					this.renderPseudobulkSelection(tab.contentHolder, terms)
 					await this.main()
@@ -237,6 +295,12 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			}
 		]
 		await new Tabs({ holder: this.dom.expressionSource, tabs }).main()
+	}
+
+	/* The sample type row of the data type's query, see initDaSampleTypes() in mass/groups.js. A change clears the
+	counts below the groups, which Submit fetches again; the group table counts the group filters alone, so it stays */
+	addSampleTypeRow(holder, query) {
+		this.sampleTypeRow = initDaSampleTypes(holder, query, this, () => this.clearPreAnalysis())
 	}
 
 	renderPseudobulkSelection(holder, terms) {
@@ -464,7 +528,15 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		}
 	}
 
+	/** clears the sample counts and Run button below the groups, and drops a reply still on its way */
+	clearPreAnalysis() {
+		this.preAnalysisRequests++
+		this.dom.preAnalysis.selectAll('*').remove()
+		this.dom.loading.style('display', 'none')
+	}
+
 	async clickSubmit(groups) {
+		const request = ++this.preAnalysisRequests
 		this.dom.loading.style('display', 'block')
 		// ignore filter0 when cohort0 is used
 		const filter0 = this.hasCohort0 ? null : this.state.termfilter.filter0
@@ -476,7 +548,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				color: g.color,
 				filter: filterJoin([g.filter, this.state.termfilter.filter]),
 				filter0,
-				mapParent2Children: true // DE/DM data assumed to be at sample-level so map parent samples to child samples
+				mapParent2Children: true // DE/DM/DS data assumed to be at sample-level so map parent samples to child samples
 			})),
 			groups.map(g => g.name).join(' vs ')
 		)
@@ -493,8 +565,16 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			preAnalysis: true
 		}
 		if (this.expressionSource === 'pseudobulk') body.pseudobulk = this.pseudobulk
-		// both routes accept the same preAnalysis body and answer with the same {data:{groupName:n}}
-		const preAnalysisData = await dofetch3(this.isGE ? 'termdb/DE' : 'termdb/diffMeth', { body })
+		const sampleTypes = this.sampleTypeRow?.sampleTypes()
+		// no sample type left, which getSelectedSampleTypes() has alerted
+		if (sampleTypes === null) return this.dom.loading.style('display', 'none')
+		if (sampleTypes) body.sampleTypes = sampleTypes
+		const route =
+			this.termType == TermTypes.JUNCTION ? 'termdb/diffSplice' : this.isGE ? 'termdb/DE' : 'termdb/diffMeth'
+		// the routes accept the same preAnalysis body and answer with the same {data:{groupName:n}}
+		const preAnalysisData = await dofetch3(route, { body })
+		// the groups, sample types or data type changed, or Submit was clicked again, while this was on its way
+		if (request !== this.preAnalysisRequests) return
 
 		this.dom.loading.style('display', 'none')
 
@@ -507,7 +587,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			groups: samplelstTW.q.groups,
 			holder: this.dom.preAnalysis,
 			termType: this.termType,
-			self: this
+			self: this,
+			sampleTypes
 		})
 	}
 }
@@ -515,15 +596,20 @@ class DEinputPlot extends PlotBase implements RxComponent {
 export const DEinputInit = getCompInit(DEinputPlot)
 export const componentInit = DEinputInit
 
-const supportedTermTypes = new Set([TermTypes.GENE_EXPRESSION, TermTypes.DNA_METHYLATION])
+const supportedTermTypes = new Set([TermTypes.GENE_EXPRESSION, TermTypes.DNA_METHYLATION, TermTypes.JUNCTION])
+
+function getDefaultTermType(termdbConfig) {
+	return getDaTermTypes(termdbConfig)[0] || TermTypes.GENE_EXPRESSION
+}
 
 export async function getPlotConfig(opts, app?) {
 	if (opts.termType && !supportedTermTypes.has(opts.termType))
 		throw new Error(`termType='${opts.termType}' is not supported by DEinput`)
 	const config = {
 		chartType: 'DEinput',
-		// default keeps every existing caller on gene expression without passing anything
-		termType: opts.termType || TermTypes.GENE_EXPRESSION,
+		/* the first kind of data of the dataset, which is gene expression wherever it was before, so a caller
+		that passes no termType opens as it did */
+		termType: opts.termType || getDefaultTermType(app?.vocabApi?.termdbConfig),
 		settings: {}
 	}
 

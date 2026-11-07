@@ -22,6 +22,9 @@ export type DERequest = {
 	tw?: any
 	/** Term for confounding variable2 (if present) */
 	tw2?: any
+	/** test only the samples of these sample types; absent = every sample of a group's cases. Also
+	 * the sample types a methylation analysis kept, for a contrast with samplelst.matchMethylation */
+	sampleTypes?: number[]
 	/** Option to return early with actual number of samples with expression values */
 	preAnalysis?: boolean
 	/** Parameters for the server-side `da` Rust renderer: significance thresholds,

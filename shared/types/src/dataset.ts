@@ -904,6 +904,10 @@ type RnaseqGeneCount = {
 	/** sample names present in the counts matrix. may be a getter on api-backed datasets whose
 	 * sample list is populated asynchronously after launch */
 	allSampleSet?: Set<string>
+	/** sample types of the counts matrix's samples, set at init, for the panel's sample type selector */
+	sampleTypes?: number[]
+	/** termdb sampleTypesByTerms{} filtered for those entries with sample types present in .sampleTypes[] */
+	sampleTypesByTerms?: SampleTypesByTerms
 }
 
 type JunctionClusterQuery = {
@@ -917,6 +921,10 @@ type JunctionClusterQuery = {
 	maxSamplesPerGroup?: number
 	/** filled at init from the h5 */
 	allSampleSet?: Set<string>
+	/** sample types of the h5's samples, set at init, for the panel's sample type selector */
+	sampleTypes?: number[]
+	/** termdb sampleTypesByTerms{} filtered for those entries with sample types present in .sampleTypes[] */
+	sampleTypesByTerms?: SampleTypesByTerms
 }
 
 /** the metabolite query */
@@ -1595,6 +1603,10 @@ type Mds3Queries = {
 		/** path to h5 file, matrix of NES scores. rows are msigdb geneset ids, columns are rnaseq samples */
 		file: string
 		// in case a genome may have more than 1 geneset dbs, here may specify name of db that this result is based on */
+		/** sample types of the h5's samples, set at init, for the term picker's sample type row */
+		sampleTypes?: number[]
+		/** termdb sampleTypesByTerms{} filtered for those entries with sample types present in .sampleTypes[] */
+		sampleTypesByTerms?: SampleTypesByTerms
 	}
 	/** dna methylation beta value matrix
 	 */

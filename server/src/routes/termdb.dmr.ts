@@ -77,7 +77,8 @@ function init({ genomes }) {
 				list2,
 				eligibleMethylationSamples(ds, undefined),
 				ds,
-				q.__protected__
+				q.__protected__,
+				q.sampleTypes
 			)
 			// checked after id-to-name resolution, which is where a group actually shrinks
 			if (group1.length < 3 || group2.length < 3)
@@ -109,6 +110,7 @@ function init({ genomes }) {
 					dslabel: q.dslabel,
 					group1: q.group1,
 					group2: q.group2,
+					sampleTypes: q.sampleTypes,
 					filter: q.filter,
 					filter0: q.filter0,
 					scanChromosomes: runChroms,

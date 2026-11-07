@@ -20,6 +20,8 @@ export type TermdbDmrBatchRequest = {
 	 * sample ids are resolved server-side to matrix names */
 	group1: { sampleId: number | string }[] | SampleFilterGroup
 	group2: { sampleId: number | string }[] | SampleFilterGroup
+	/** keep only the samples of these sample types; absent = every sample of a group's cases */
+	sampleTypes?: number[]
 	filter0?: any
 	/** Windows to report DMRs in, from a run over the chromosomes they are on. Overlapping windows
 	 * are merged first. Ignored when scanChromosomes is given. */
