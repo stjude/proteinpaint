@@ -5,18 +5,21 @@ import type {
 	ValidAggMatrixResponse,
 	ValidGetDataResponse
 } from '#types'
-import { PSEUDOBULK } from '#types'
+import { GENE_VARIANT, PSEUDOBULK } from '#types'
+import { mclass } from '#shared/common.js'
 import { isDictionaryType, isNumericTerm } from '#shared/terms.js'
 import { get_bin_label } from '#shared/termdb.bins.js'
+import { expandsToValues, getAggMatrixTermId, getAggMatrixTermLabel, isPieOnly } from '#shared/aggregateMatrix.js'
 import { getData } from '../termdb.matrix.js'
 import { calculateAggregateMethod, calculateSampleBasedMethods } from './aggregateMethods.ts'
+import { PieCounter, mclassScheme } from './pieChartProcessing.ts'
 
 type ValueByRow = Record<string, number | null>
 type RowData = { id: string; label: string; section: string; tw: any; queryId: string }
 type ColData = { section: string; id: string; colorValues: ValueByRow; sizeValues: ValueByRow }
 type ProcessedData = { values: ValueByRow; min: number; max: number }
 export type AggregateMatrixDataRequest = TermdbAggregateMatrixRequest &
-	Required<Pick<TermdbAggregateMatrixRequest, 'rows' | 'gradientMethod' | 'sizeMethod'>>
+	Required<Pick<TermdbAggregateMatrixRequest, 'rows' | 'sizeMethod'>>
 
 export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): Promise<ValidAggMatrixResponse> {
 	const columnTerms = Object.values(q.columns).flat()
@@ -27,6 +30,9 @@ export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): 
 	if (pseudobulkColumns != columnTerms.length) {
 		throw new Error('Pseudobulk and sample-based columns cannot currently be combined in one aggregate matrix')
 	}
+	// only a matrix of pies goes without a gradient, and pies are made from sample intersections
+	const gradientMethod = q.gradientMethod
+	if (!gradientMethod) throw new Error('A gradient method is required')
 	const { rows, sections: rowSections, longestLabel: rowLongest } = makeRows(q)
 	const columns: ColData[] = []
 	const colSections: AxisSection[] = []
@@ -54,12 +60,12 @@ export async function getAggMatrixData(q: AggregateMatrixDataRequest, ds: any): 
 			let sizeData: ProcessedData
 			if (columnTw.term.type == PSEUDOBULK) {
 				const genes = rows.map(row => row.id)
-				colorData = await getPseudobulkData(columnTw, genes, q.gradientMethod, q, ds)
+				colorData = await getPseudobulkData(columnTw, genes, gradientMethod, q, ds)
 				sizeData = await getPseudobulkData(columnTw, genes, q.sizeMethod, q, ds)
 			} else {
-				const byMethod = await getSampleBasedData(columnTw, rows, [q.gradientMethod, q.sizeMethod], q, ds)
+				const byMethod = await getSampleBasedData(columnTw, rows, [gradientMethod, q.sizeMethod], q, ds)
 				colorData = summarizeValues(
-					byMethod.get(q.gradientMethod)!,
+					byMethod.get(gradientMethod)!,
 					rows.map(row => row.id)
 				)
 				sizeData = summarizeValues(
@@ -119,8 +125,8 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 		q,
 		ds
 	)
-	const rows = resolveAxisEntries(rowSources, response)
-	const columns = resolveAxisEntries(columnSources, response)
+	const rows = resolveAxisEntries(rowSources, response, ds)
+	const columns = resolveAxisEntries(columnSources, response, ds)
 	if (!rows.length || !columns.length) throw new Error('No aggregate matrix axis entries found')
 
 	const rowLookup = makeEntryLookup(rows)
@@ -130,7 +136,47 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 	const numericMatches = new Uint32Array(cellCount)
 	const sums = new Float64Array(cellCount)
 	const cohortCount = Object.keys(response.samples).length
+	/* Pies apply automatically when a gene variant term is on one axis and another kind of term is on the other.
+	 * The gene variant entry supplies the slices; the other entry decides which samples are in the dot. */
+	const isGeneVariant = (source: AxisSource) => source.tw.term.type == GENE_VARIANT
+	const rowGv = rowSources.filter(isGeneVariant)
+	const rowOther = rowSources.filter(s => !isGeneVariant(s))
+	const colGv = columnSources.filter(isGeneVariant)
+	const colOther = columnSources.filter(s => !isGeneVariant(s))
+	/* A gradient is never applied to a pie, so a matrix of nothing but pies has no color values and no color scale */
+	const hasColor = !isPieOnly(q.rows, q.columns)
+	if (hasColor && !q.gradientMethod) throw new Error('A gradient method is required')
+	const pieCounter =
+		(rowGv.length && colOther.length) || (colGv.length && rowOther.length) ? new PieCounter() : undefined
+	// one scheme per gene variant term, as each term's request says which values are uncomputable
+	const geneVariantSchemes = new Map<string, ReturnType<typeof mclassScheme>>()
+	const geneVariantSlices = (source: AxisSource) => {
+		if (!geneVariantSchemes.has(source.queryId)) geneVariantSchemes.set(source.queryId, mclassScheme(mclass, source.tw))
+		return geneVariantSchemes.get(source.queryId)!
+	}
 	for (const sample of Object.values<any>(response.samples)) {
+		if (pieCounter) {
+			const indexes = (sources: AxisSource[], lookup: Map<string, number>, requireVariant = true) =>
+				new Set(resolveSampleEntryIndexes(sample, sources, lookup, requireVariant))
+			const rowGvIndexes = indexes(rowGv, rowLookup, false)
+			const colGvIndexes = indexes(colGv, columnLookup, false)
+			for (const rowIndex of rowGvIndexes) {
+				for (const columnIndex of indexes(colOther, columnLookup)) {
+					const annotation = sample[rows[rowIndex].source.queryId]
+					pieCounter.add(rowIndex * columns.length + columnIndex, annotation, geneVariantSlices(rows[rowIndex].source))
+				}
+			}
+			for (const columnIndex of colGvIndexes) {
+				for (const rowIndex of indexes(rowOther, rowLookup)) {
+					const annotation = sample[columns[columnIndex].source.queryId]
+					pieCounter.add(
+						rowIndex * columns.length + columnIndex,
+						annotation,
+						geneVariantSlices(columns[columnIndex].source)
+					)
+				}
+			}
+		}
 		const rowIndexes = new Set(resolveSampleEntryIndexes(sample, rowSources, rowLookup))
 		const columnIndexes = new Set(resolveSampleEntryIndexes(sample, columnSources, columnLookup))
 		if (!columnIndexes.size) continue
@@ -150,6 +196,7 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 		}
 	}
 
+	const pies = pieCounter?.build()
 	let colorMin = Infinity
 	let colorMax = -Infinity
 	let sizeMin = Infinity
@@ -158,7 +205,11 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 		columns.map((column, columnIndex) => {
 			const index = rowIndex * columns.length + columnIndex
 			const stats = { matches: counts[index], numericMatches: numericMatches[index], cohortCount, sum: sums[index] }
-			const colorValue = q.gradientMethod == 'count' ? stats.matches : calculateAggregateMethod(q.gradientMethod, stats)
+			const colorValue = !hasColor
+				? null
+				: q.gradientMethod == 'count'
+				? stats.matches
+				: calculateAggregateMethod(q.gradientMethod!, stats)
 			const sizeValue = q.sizeMethod == 'count' ? stats.matches : calculateAggregateMethod(q.sizeMethod, stats)
 			if (colorValue !== null) {
 				if (colorValue < colorMin) colorMin = colorValue
@@ -168,25 +219,28 @@ async function getIntersectionMatrixData(q: AggregateMatrixDataRequest, ds: any)
 				if (sizeValue < sizeMin) sizeMin = sizeValue
 				if (sizeValue > sizeMax) sizeMax = sizeValue
 			}
+			const pie = pies?.get(index)
 			return {
 				rowSection: row.section,
 				row: row.id,
 				colSection: column.section,
 				column: column.id,
 				colorValue,
-				sizeValue
+				sizeValue,
+				...(pie && { pie })
 			}
 		})
 	)
 
 	return {
-		colorScale: validateScale(colorMin, colorMax),
+		...(hasColor && { colorScale: validateScale(colorMin, colorMax) }),
 		sizeScale: validateScale(sizeMin, sizeMax),
 		data,
 		axesLayout: {
 			rows: makeAxisLayout(rows, 'row'),
 			columns: makeAxisLayout(columns, 'column')
-		}
+		},
+		...(pies && response.sampleType && { sampleType: response.sampleType })
 	}
 }
 
@@ -208,21 +262,23 @@ function makeAxisSources(axis: Record<string, any[]>, prefix: string): AxisSourc
 				section,
 				tw,
 				queryId: `agg_${prefix}_${sources.length}`,
-				expand: isDictionaryType(tw.term.type)
+				expand: expandsToValues(tw.term.type)
 			})
 		}
 	}
 	return sources
 }
 
-function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataResponse): ResolvedAxisEntry[] {
+function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataResponse, ds: any): ResolvedAxisEntry[] {
 	const entries: ResolvedAxisEntry[] = []
 	for (const source of sources) {
 		if (!source.expand) {
-			const id = source.tw.term.gene || source.tw.term.id || source.tw.term.name
-			entries.push({ id, label: source.tw.term.name || id, section: source.section, source })
+			const id = getAggMatrixTermId(source.tw.term)
+			if (!id) throw new Error(`${source.tw.term.type} term has no identifier`)
+			entries.push({ id, label: getAggMatrixTermLabel(source.tw.term)!, section: source.section, source })
 			continue
 		}
+		const datasetTerm = getDatasetTerm(ds, source.tw.term)
 		const observed = new Set<string>()
 		for (const sample of Object.values<any>(response.samples)) {
 			const entry = sample[source.queryId]
@@ -231,12 +287,13 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 		const ref = response.refs?.byTermId?.[source.queryId]
 		const bins = ref?.bins || []
 		/** If there are configured bins, use them to determine the order of keys.
-		 * Otherwise, fall back to the key order from the reference. */
+		 * Otherwise, fall back to the key order from the reference, then to the order of the term's values.
+		 * Without these, the keys would be in the order of the samples in the response. */
 		const configuredKeys = bins.length
 			? bins.map(bin => String(get_bin_label(bin, source.tw.q)))
 			: Array.isArray(ref?.keyOrder)
 			? ref.keyOrder.map(String)
-			: []
+			: Object.keys(datasetTerm?.values || source.tw.term.values || {})
 		const orderedKeys = configuredKeys.filter(key => observed.has(key))
 		const orderedKeySet = new Set(orderedKeys)
 		for (const key of observed) {
@@ -247,7 +304,7 @@ function resolveAxisEntries(sources: AxisSource[], response: ValidGetDataRespons
 		for (const key of orderedKeys) {
 			entries.push({
 				id: key,
-				label: getValueLabel(source.tw.term, key),
+				label: getValueLabel(source.tw.term, key, datasetTerm),
 				section: source.section,
 				source,
 				key
@@ -266,17 +323,30 @@ function makeEntryLookup(entries: ResolvedAxisEntry[]) {
 	return lookup
 }
 
-function resolveSampleEntryIndexes(sample: any, sources: AxisSource[], lookup: Map<string, number>) {
+function resolveSampleEntryIndexes(
+	sample: any,
+	sources: AxisSource[],
+	lookup: Map<string, number>,
+	requireVariant = true
+) {
 	const indexes: number[] = []
 	for (const source of sources) {
 		const annotation = sample[source.queryId]
 		if (!annotation) continue
+		if (requireVariant && source.tw.term.type == GENE_VARIANT && !hasVariant(annotation)) continue
 		for (const key of getAnnotationKeys(annotation, source.tw.term)) {
 			const index = lookup.get(`${source.queryId}\0${source.expand ? String(key) : ''}`)
 			if (index !== undefined) indexes.push(index)
 		}
 	}
 	return indexes
+}
+
+/** A geneVariant annotation lists the status of every queried variant type, including wildtype (WT) and
+ * not tested (Blank). Only a variant of any other class makes the sample a match for the term. */
+export function hasVariant(annotation: any): boolean {
+	if (!Array.isArray(annotation?.values)) return false
+	return annotation.values.some(v => v?.class && v.class != mclass.WT.key && v.class != mclass.Blank.key)
 }
 
 function getAnnotationKeys(annotation: any, term?: any): (string | number)[] {
@@ -297,10 +367,23 @@ function getCanonicalValueKey(term: any, key: string | number) {
 	return key
 }
 
-function getValueLabel(term: any, key: string) {
-	const value = term.values?.[key]
+/** The dataset's own definition of a dictionary term, if it has one. The keys in the data come from the dataset,
+ * so its term.values are what name them. A term sent in a request may have values that differ from the dataset's. */
+function getDatasetTerm(ds: any, term: any) {
+	if (!term?.id) return
+	return ds.cohort?.termdb?.q?.termjsonByOneid?.(term.id)
+}
+
+function findValueLabel(term: any, key: string): string | undefined {
+	const value = term?.values?.[key]
 	if (value?.label) return value.label
-	return Object.entries<any>(term.values || {}).find(([, value]) => value.label === key)?.[1]?.label || key
+	return Object.entries<any>(term?.values || {}).find(([, value]) => value.label === key)?.[1]?.label
+}
+
+/** Label a key with the label in term.values of the dataset's term when it has one, then of the term in the request.
+ * A key without a label, such as a bin of a numeric term, is its own label. */
+export function getValueLabel(term: any, key: string, datasetTerm?: any) {
+	return findValueLabel(datasetTerm, key) ?? findValueLabel(term, key) ?? key
 }
 
 function makeAxisLayout(entries: ResolvedAxisEntry[], axis: 'row' | 'column') {
@@ -332,9 +415,9 @@ function makeRows(q: AggregateMatrixDataRequest) {
 	let longestLabel = ''
 	for (const section in q.rows) {
 		const terms = q.rows[section].map(tw => {
-			const id = tw.term?.['gene'] || tw.term.id
+			const id = getAggMatrixTermId(tw.term)
 			if (!id) throw new Error(`Row term has no identifier`)
-			const label = tw.term.name || id
+			const label = getAggMatrixTermLabel(tw.term)!
 			if (label.length > longestLabel.length) longestLabel = label
 			const row = { id, label, section, tw, queryId: `agg_row_${rows.length}` }
 			rows.push(row)

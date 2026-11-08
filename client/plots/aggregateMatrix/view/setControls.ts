@@ -1,27 +1,34 @@
-import type { AggregateMatrix } from "../AggregateMatrix"
+import type { AggregateMatrix } from '../AggregateMatrix'
 import { controlsInit } from '#plots/controls.js'
-import { validateMinMax } from '../settings/defaults.ts'
+import { validateMinMaxDotSetting } from '../settings/defaults.ts'
 import { capitalizeFirstLetter, DownloadMenu } from '#dom'
-
+import { isPieOnly } from '#shared/aggregateMatrix.js'
 
 export async function setControls(controlsDiv, ag: AggregateMatrix, initConfig: any) {
 	const settings = initConfig.settings.aggregateMatrix
 	const chartType = initConfig.chartType
 	const gradientLabel = capitalizeFirstLetter(settings.gradientMethod)
 
+	// a gradient is never applied to a pie, so a chart of only pies has no colors to set
+	const colorInputs = isPieOnly(initConfig.rows, initConfig.columns)
+		? []
+		: [
+				{
+					label: `${gradientLabel} start color`,
+					type: 'color',
+					chartType,
+					settingsKey: 'startColor'
+				},
+				{
+					label: `${gradientLabel} stop color`,
+					type: 'color',
+					chartType,
+					settingsKey: 'stopColor'
+				}
+		  ]
+
 	const inputs: any = [
-		{
-				label: `${gradientLabel} start color`,
-				type: 'color',
-				chartType,
-				settingsKey: 'startColor'
-		},
-		{
-				label: `${gradientLabel} stop color`,
-				type: 'color',
-				chartType,
-				settingsKey: 'stopColor'
-		},
+		...colorInputs,
 		{
 			label: 'Min dot size',
 			title: 'Set the minimum dot size. Number must be between 2 and 35',
@@ -35,7 +42,7 @@ export async function setControls(controlsDiv, ag: AggregateMatrix, initConfig: 
 			debounceInterval: 300,
 			processInput: (val: number) => {
 				const currentSettings = ag.state.config.settings.aggregateMatrix
-				const isValid = validateMinMax(currentSettings, val, currentSettings.maxDotSize)
+				const isValid = validateMinMaxDotSetting(currentSettings, val, currentSettings.maxDotSize)
 				if (isValid !== null) {
 					alert(isValid)
 					return currentSettings.minDotSize
@@ -56,7 +63,7 @@ export async function setControls(controlsDiv, ag: AggregateMatrix, initConfig: 
 			debounceInterval: 300,
 			processInput: (val: number) => {
 				const currentSettings = ag.state.config.settings.aggregateMatrix
-				const isValid = validateMinMax(currentSettings, currentSettings.minDotSize, val)
+				const isValid = validateMinMaxDotSetting(currentSettings, currentSettings.minDotSize, val)
 				if (isValid !== null) {
 					alert(isValid)
 					return currentSettings.maxDotSize
