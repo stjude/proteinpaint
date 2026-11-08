@@ -9,6 +9,7 @@ Features:
 - The server reads bigWig files in process, with @gmod/bbi, instead of running python/src/bigWigSummary.py with pyBigWig, which is removed from python/requirements.txt
 - A bigWig track shows "no data in view range" when no region in view has data, including a region on a chromosome that is not in the file or past its end, which was an error
 - Add leafcutter as a method of differential splicing analysis, along with edgeR
+- Aggregate matrix: draw a pie in each cell where a gene variant term meets a term of another type. A pie shows the variant classes of the samples in the cell. Its area follows the number of samples. Clicking a legend entry shows or hides a slice, shows only that slice, or shows all slices. The default pie sizes are fitted to the window when the plot is created. A matrix of only pies needs no gradient method and has no color scale. Additional work is planned.
 
 
 ## 2.226.0
