@@ -1,6 +1,6 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
-import { BACKGROUND_CORRECTION_TITLE, SCAN_Y_AXIS_OPTIONS } from './settings/defaults'
+import { BACKGROUND_CORRECTION_TITLE, SCAN_Y_AXIS_OPTIONS, getSpliceMethodOptions } from './settings/defaults'
 import {
 	PROTEOME_DAP,
 	DNA_METHYLATION,
@@ -427,8 +427,9 @@ export class VolcanoControlInputs {
 				type: 'radio',
 				chartType: 'volcano',
 				settingsKey: 'method',
-				title: 'Which engine computes the test',
-				options: this.getSpliceMethodOptions()
+				title:
+					'edgeR is a fast screen that also tests each junction. leafcutter is the exact test of a cluster: it takes longer, and has no p-value per junction.',
+				options: getSpliceMethodOptions()
 			},
 			{
 				label: 'Minimum counts per cluster',
@@ -481,12 +482,6 @@ export class VolcanoControlInputs {
 		]
 
 		this.inputs.splice(0, 0, ...dsInputs)
-	}
-
-	// only edgeR is wired; add leafcutter here later
-	getSpliceMethodOptions() {
-		if (this.termType !== JUNCTION) return
-		return [{ label: 'edgeR (diffSplice)', value: 'edgeR' }]
 	}
 
 	getMethodOptions() {

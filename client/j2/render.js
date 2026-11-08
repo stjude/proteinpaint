@@ -29,16 +29,8 @@ const hardcode_infoValue_canonical = 'canonical'
 export function renderTk(data, tk, block) {
 	if (data) {
 		// server returned fresh data
-		/* y of junctions: median read count for junctions from the server
-		for custom junctions, -log10 p or median read count when every junction has it, otherwise none and all are at the bottom
-		set before returning on no junctions, as the config menu uses it
-		*/
-		tk.sections.jug.yAxisKey =
-			tk.custom_data && data.junctions.every(j => Number.isFinite(j.negLog10p))
-				? 'negLog10p'
-				: !tk.custom_data || Number.isFinite(data.maxReadCount)
-				? 'medianReadCount'
-				: undefined
+		// set yAxisKey
+		tk.sections.jug.yAxisKey = getYAxisKey(data, tk)
 		if (data.junctions?.length == 0) {
 			tk.data = []
 			tk.leftlabels?.doms?.jug?.text('0 junctions')
@@ -144,7 +136,13 @@ export function renderTk(data, tk, block) {
 					.domain([tk.readcountCutoff || 1, tk.maxReadCount])
 					.range([tk.sections.jug.axisheight, 0])
 			: scaleLinear()
-					.domain([0, Math.max(1, ...tk.data.map(j => yValue(j, tk)))])
+					.domain([
+						0,
+						getYDomainMax(
+							tk.sections.jug.yAxisKey,
+							tk.data.map(j => yValue(j, tk))
+						)
+					])
 					.nice()
 					.range([tk.sections.jug.axisheight, 0])
 
@@ -346,6 +344,16 @@ jug2.filter(function(d){return d.rimwidth>0})
 	doForceLayout(tk, block, viewpxwidth).then(() => {
 		// done layout
 		set_all(tk)
+		tk.sections.jug.axis.selectAll('.sjpp-j2-ytitle').remove()
+		const yTitle = getYAxisTitle(tk.sections.jug.yAxisKey)
+		// left of the axis, as the tick labels are on the right
+		if (yTitle)
+			tk.sections.jug.axis
+				.append('text')
+				.attr('class', 'sjpp-j2-ytitle')
+				.attr('text-anchor', 'middle')
+				.attr('transform', `translate(-8, ${tk.sections.jug.axisheight / 2}) rotate(-90)`)
+				.text(yTitle)
 		axisstyle({
 			axis: tk.sections.jug.axis.transition().call(
 				axisRight()
@@ -481,6 +489,29 @@ function j2block(j, block, viewpxwidth) {
 /* y of a junction, see tk.sections.jug.yAxisKey in renderTk() */
 function yValue(j, tk) {
 	return tk.sections.jug.yAxisKey ? j[tk.sections.jug.yAxisKey] : 0
+}
+
+/* y of junctions: median read count for junctions from the server
+for custom junctions, the first that every junction has of -log10 p, |ΔPSI| and median read count,
+otherwise none and all are at the bottom
+*/
+function getYAxisKey(data, tk) {
+	if (!tk.custom_data) return 'medianReadCount'
+	if (data.junctions.every(j => Number.isFinite(j.negLog10p))) return 'negLog10p'
+	if (data.junctions.every(j => Number.isFinite(j.absDeltaPsi))) return 'absDeltaPsi'
+	return Number.isFinite(data.maxReadCount) ? 'medianReadCount' : undefined
+}
+
+/* title of the y axis, to tell significance from effect size as junctions look the same with either; none for read count */
+function getYAxisTitle(yAxisKey) {
+	if (yAxisKey == 'negLog10p') return '-log10(p)'
+	if (yAxisKey == 'absDeltaPsi') return '|ΔPSI|'
+}
+
+/* top of the linear y axis: the largest |ΔPSI|, or 1 if all are 0; at least 1 for other values */
+function getYDomainMax(yAxisKey, values) {
+	const max = Math.max(0, ...values)
+	return yAxisKey == 'absDeltaPsi' ? max || 1 : Math.max(1, max)
 }
 
 function setColor(tk) {

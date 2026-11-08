@@ -186,6 +186,15 @@ function validateDSSettings(termType: string, settings: DSVolcanoSettings | unde
 	}
 }
 
+/** The engines of differential splicing, for the launch menu and the volcano's control.
+ * A new array each time, as the launch menu marks its options as disabled. */
+export function getSpliceMethodOptions(): { label: string; value: DSVolcanoSettings['method'] }[] {
+	return [
+		{ label: 'edgeR (diffSplice)', value: 'edgeR' },
+		{ label: 'leafcutter', value: 'leafcutter' }
+	]
+}
+
 /** Default sample thresholds for n samples: max(5, 2% of n) per intron and max(3, 1% of n)
  * per group. n should be the number of samples with splicing data; a larger raw count can
  * push the thresholds above the group sizes and drop every cluster. */
