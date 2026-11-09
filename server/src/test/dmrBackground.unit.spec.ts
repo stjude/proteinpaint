@@ -1,6 +1,5 @@
 import tape from 'tape'
 import {
-	adjustBackgroundP,
 	buildExclusion,
 	scanCpgs,
 	soloWcgwFractions,
@@ -10,14 +9,18 @@ import {
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
 import { readFastaRegion } from '#src/fasta.ts'
-import { normalTwoSidedP } from '#src/utils/dmrStats.ts'
+import { benjaminiHochberg, normalTwoSidedP } from '#src/utils/dmrStats.ts'
 
 /*
 test sections:
 
 sampleBackground: windows avoid excluded space, match the DMR widths, and are deterministic
-scoreAgainstBackground: excess and empirical p, and the resolution floor
+scoreAgainstBackground: excess and fitted-null p, and the p floor
 scoreAgainstBackground: a stratum with too little background yields no score rather than a bad one
+soloWcgwFractions: 1-based inclusive regions, chunked sweep, no-throw fallback
+scoreAgainstBackground: solo-WCGW tertiles, cut among usable windows
+nullCheck: a tail heavier than the null past the calibration point is counted
+benjaminiHochberg: step-up q
 */
 
 /** The correction decides which DMRs survive as more than drift, so a window landing inside an
@@ -161,13 +164,15 @@ tape('soloWcgwFractions sweeps the fasta in chunks and matches a one-pass scan',
 	const txt = await readFastaRegion(file, 'chrA', 1, 1000)
 	const whole = txt.slice(txt.indexOf('\n') + 1).replace(/\n/g, '')
 	const ref = scanCpgs(whole, 0, 0, whole.length)
+	// in the matrix's coordinates: 1-based, inclusive, a DMR starting AT its first CpG's C
 	const regions = [
-		{ start: 0, stop: 999 },
+		{ start: 1, stop: 1000 },
 		{ start: 100, stop: 400 },
-		{ start: 500, stop: 520 }
+		{ start: 500, stop: 520 },
+		{ start: ref.pos[3] + 1, stop: ref.pos[3] + 1 }
 	]
 	const expect = regions.map(r => {
-		const idx = ref.pos.map((p, i) => i).filter(i => ref.pos[i] >= r.start && ref.pos[i] <= r.stop)
+		const idx = ref.pos.map((p, i) => i).filter(i => ref.pos[i] + 1 >= r.start && ref.pos[i] + 1 <= r.stop)
 		return idx.length ? idx.filter(i => ref.solo[i]).length / idx.length : null
 	})
 	// 97-base chunks put many chunk edges inside the regions
@@ -177,11 +182,34 @@ tape('soloWcgwFractions sweeps the fasta in chunks and matches a one-pass scan',
 	t.deepEqual([...swept.solo].map(Boolean), ref.solo, 'with the same solo-WCGW flags as a one-pass scan')
 	const got = await soloWcgwFractions(file, 'chrA', 1000, regions, 97)
 	t.deepEqual(got, expect, 'same shares as scanning the whole chromosome at once')
+	t.equal(got[3], ref.solo[3] ? 1 : 0, "a region starting at a CpG's 1-based position counts that CpG")
+	const none = [null, null, null, null]
 	t.deepEqual(
 		await soloWcgwFractions('NA', 'chrA', 1000, regions),
-		[null, null, null],
+		none,
 		'a genome without a sequence file gives no shares, so the strata fall back to density and width'
 	)
+	t.deepEqual(await soloWcgwFractions(file, 'chrZ', 1000, regions), none, 'so does a chromosome the fasta lacks')
+	t.deepEqual(
+		await soloWcgwFractions(file, 'chrA', 5000, regions),
+		none,
+		'and a chromosome length past the fasta, rather than failing the analysis'
+	)
+	t.end()
+})
+
+tape('solo-WCGW tertiles are cut among the windows that are scored', t => {
+	// 60 usable windows with shares 0 to 0.98, and 120 without probes, all at share 0
+	const usable = Array.from({ length: 60 }, (_, i) => ({
+		n_probes: 10,
+		start: 0,
+		stop: 1000,
+		delta: 0.05 + ((i % 3) - 1) * 0.01
+	}))
+	const empty = Array.from({ length: 120 }, () => ({ n_probes: 0, start: 0, stop: 1000, delta: null }))
+	const share = [...usable.map((_, i) => i / 60), ...empty.map(() => 0)]
+	const { strataUsed } = scoreAgainstBackground([], [...usable, ...empty], { dmrs: [], background: share })
+	t.equal(strataUsed, 3, 'a third of the usable windows in each tertile, so all three are scorable')
 	t.end()
 })
 
@@ -207,11 +235,10 @@ tape('scoreAgainstBackground matches on solo-WCGW share when given', t => {
 	t.end()
 })
 
-tape('adjustBackgroundP sets Benjamini-Hochberg q over all scored DMRs', t => {
-	const d: { bgP?: number; bgQ?: number }[] = [{ bgP: 0.01 }, { bgP: 0.04 }, { bgP: 0.03 }, { bgP: 0.5 }, {}]
-	adjustBackgroundP(d)
-	const q = d.map(x => (x.bgQ == null ? null : Math.round(x.bgQ * 1e6) / 1e6))
-	t.deepEqual(q, [0.04, 0.053333, 0.053333, 0.5, null], 'step-up q, monotone in p; an unscored DMR gets none')
+tape('benjaminiHochberg gives step-up q in input order', t => {
+	const q = benjaminiHochberg([0.01, 0.04, 0.03, 0.5]).map(x => Math.round(x * 1e6) / 1e6)
+	t.deepEqual(q, [0.04, 0.053333, 0.053333, 0.5], 'monotone in p')
+	t.deepEqual(benjaminiHochberg([]), [], 'an empty family')
 	t.end()
 })
 
@@ -226,21 +253,15 @@ tape('a stratum with no spread at all is not scored', t => {
 	t.end()
 })
 
-tape('nullCheck counts background windows against their own null', t => {
-	// 40 windows tightly at 0.05 +/- 0.001 and 2 far out: heavy tails the normal null does not expect
+tape('nullCheck counts a tail heavier than the null past the calibration point', t => {
+	// 95 windows at 0.04 / 0.05 / 0.06 and 5 far out: at p < 0.05 that reads as the 5% of a null that fits
 	const bg = [
-		...Array.from({ length: 40 }, (_, i) => ({
-			n_probes: 10,
-			start: 0,
-			stop: 1000,
-			delta: 0.05 + ((i % 3) - 1) * 0.001
-		})),
-		{ n_probes: 10, start: 0, stop: 1000, delta: 0.2 },
-		{ n_probes: 10, start: 0, stop: 1000, delta: -0.1 }
+		...spread(95),
+		...[0.3, -0.3, 0.35, -0.35, 0.4].map(v => ({ n_probes: 10, start: 0, stop: 1000, delta: 0.05 + v }))
 	]
 	const { nullCheck } = scoreAgainstBackground([], bg)
-	t.equal(nullCheck.windows, 42, 'every window of a usable stratum is checked')
-	t.equal(nullCheck.belowP05, 2, 'the two outliers score p < 0.05 against the fitted null')
+	t.equal(nullCheck.windows, 100, 'every window of a usable stratum is checked')
+	t.equal(nullCheck.belowP001, 5, '5% beyond p = 0.001, where a null that fit the tail would put 0.1%')
 	t.end()
 })
 
@@ -262,14 +283,7 @@ tape('tail calibration widens the null for a heavy-tailed background', t => {
 		stop: 1000,
 		delta: i < 80 ? 0.05 + ((i % 3) - 1) * 0.001 : 0.05 + (i % 2 ? 1 : -1) * (0.02 + (i - 80) * 0.002)
 	}))
-	const { nullCheck, scored } = scoreAgainstBackground(
-		[{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 0.08 }],
-		bg
-	)
-	t.ok(
-		nullCheck.belowP05 / nullCheck.windows <= 0.05,
-		`at most 5% of the background beyond p = 0.05 (${nullCheck.belowP05}/${nullCheck.windows})`
-	)
-	t.ok(scored[0]!.p > 0.05, 'so a DMR inside the background tails is not significant')
+	const { scored } = scoreAgainstBackground([{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 0.08 }], bg)
+	t.ok(scored[0]!.p > 0.05, 'a DMR inside the background tails is not significant')
 	t.end()
 })

@@ -28,6 +28,7 @@ Constraints carried over from that spec, because they are easy to get wrong:
  * the rust call meaningfully slower -- a window's delta is a binary search, not an analysis. */
 import { makeRng, median, normalTwoSidedP } from './dmrStats.ts'
 import { readFastaRegion } from '#src/fasta.ts'
+import { mayLog } from '#src/helpers.ts'
 
 /** Raised from 2000 when solo-WCGW joined the strata: a third matching variable splits each density x width
  * stratum in three, and a stratum needs MIN_BG windows to be scored at all. Cheap, as before. */
@@ -193,18 +194,34 @@ export async function sweepCpgs(genomefile: string, chr: string, chrLen: number,
 }
 
 /** Each region's share of its CpGs that are solo-WCGW, from the genome sequence: null for a region with no
- * CpG, and all null when the genome has no sequence file. Sweeps the chromosome once in chunks rather than
- * reading each region, since the regions -- every called DMR plus the background draw -- cover it. */
+ * CpG, and all null when the genome has no sequence file or this chromosome's sequence cannot be read (a
+ * chromosome missing from the fasta, a length that differs from chrlookup), so its strata fall back to density
+ * and width rather than failing the analysis. Never rejects: callers start it before the background run and
+ * await it after.
+ *
+ * Regions are in the methylation matrix's coordinates, as rust reads them: the 1-based position of each CpG's
+ * C, start and stop inclusive (a DMR's start IS its first CpG).
+ *
+ * Sweeps the whole chromosome rather than reading each region: on hg38's bgzipped fasta, reading 14,000
+ * DMR-sized spans of chr1 took 2.2 s against 1.6 s for the sweep, as every read decompresses a whole block. */
 export async function soloWcgwFractions(
 	genomefile: string | undefined,
 	chr: string,
-	chrLen: number,
+	chrLen: number | undefined,
 	regions: { start: number; stop: number }[],
 	/** sequence per read; only tests change it, to put chunk edges where they can be checked */
 	chunk = SWEEP_CHUNK
 ): Promise<(number | null)[]> {
-	if (!genomefile || genomefile == 'NA' || !regions.length) return regions.map(() => null)
-	const { pos, solo } = await sweepCpgs(genomefile, chr, chrLen, chunk)
+	const none = () => regions.map(() => null)
+	if (!genomefile || genomefile == 'NA' || !chrLen || !regions.length) return none()
+	let swept: Awaited<ReturnType<typeof sweepCpgs>>
+	try {
+		swept = await sweepCpgs(genomefile, chr, chrLen, chunk)
+	} catch (e: any) {
+		mayLog(`solo-WCGW shares unavailable for ${chr}, matching on density and width:`, e?.message || e)
+		return none()
+	}
+	const { pos, solo } = swept
 	const soloCum = new Int32Array(pos.length + 1) // soloCum[i] = solo-WCGW CpGs among pos[0..i)
 	for (let i = 0; i < solo.length; i++) soloCum[i + 1] = soloCum[i] + solo[i]
 	// first index of pos >= x
@@ -219,10 +236,23 @@ export async function soloWcgwFractions(
 		return lo
 	}
 	return regions.map(r => {
-		const a = lowerBound(r.start)
-		const b = lowerBound(r.stop + 1)
+		// pos is 0-based: the CpGs with pos + 1 in [start, stop]
+		const a = lowerBound(r.start - 1)
+		const b = lowerBound(r.stop)
 		return b > a ? (soloCum[b] - soloCum[a]) / (b - a) : null
 	})
+}
+
+/** soloWcgwFractions for each chromosome's regions, one chromosome at a time (a sweep holds its chromosome's
+ * CpGs). Shared by the scan's and the gene-body correction, so the two stay the same correction. */
+export async function soloWcgwShares(
+	genome: any,
+	parts: { chr: string; regions: { start: number; stop: number }[] }[]
+): Promise<(number | null)[][]> {
+	const out: (number | null)[][] = []
+	for (const { chr, regions } of parts)
+		out.push(await soloWcgwFractions(genome.genomefile, chr, genome.chrlookup?.[chr.toUpperCase()]?.len, regions))
+	return out
 }
 
 /** Stratum key: CpG density, width and, when the sequence gave it, the tertile of solo-WCGW share ('' when
@@ -249,12 +279,15 @@ function stratumOf(nProbes: number, width: number, soloTertile = ''): string {
  * Why a fitted null and not the fraction of background at least as extreme: that fraction cannot go below
  * 1/(n+1), about 1e-3 for a well-filled stratum, and a genome scan scores 10^5 DMRs, so no DMR could survive
  * a false-discovery adjustment however far it moved. The fitted null gives a continuous p. `nullCheck` counts
- * the background windows that score p < 0.05 against their own stratum: with the tail calibration it is at
- * most ~5%, and well under 5% means the background is lighter-tailed than normal there (conservative).
+ * the background windows that score p < 0.001 against their own stratum: ~0.1% when the normal null fits the
+ * tail, more when the background's tail is heavier than the null past the p = 0.05 point the calibration fixes.
+ * Not at p < 0.05, which the calibration holds at <= 5% whatever the tail does. It reaches only as deep as the
+ * background's size allows -- ~150 windows expected at p < 0.001 on a genome scan -- not to the far-tail p of
+ * the DMRs that pass FDR.
  *
  * `solo`, when given, holds each DMR's and each background window's solo-WCGW share (soloWcgwFractions, in
- * the same order). Strata then also split at the background's own tertiles of that share: cut points from
- * the background rather than fixed, so each tertile holds a third of the draw and stays scorable. */
+ * the same order). Strata then also split at the tertiles of that share among the background windows that
+ * are scored (probes and a delta), so each tertile holds a third of the usable draw and stays scorable. */
 export function scoreAgainstBackground(
 	// delta-beta, the scale the background windows are measured on; DMRcate's meandiff is logit2
 	dmrs: { no_cpgs: number; start: number; stop: number; delta_beta_mean: number | null }[],
@@ -265,10 +298,11 @@ export function scoreAgainstBackground(
 	strataUsed: number
 	unscored: number
 	soloMatched: boolean
-	nullCheck: { windows: number; belowP05: number }
+	nullCheck: { windows: number; belowP001: number }
 } {
+	const usable = (b: (typeof background)[number]) => b.delta != null && Number.isFinite(b.delta) && !!b.n_probes
 	const bgSolo = (solo?.background || [])
-		.filter((v): v is number => v != null && Number.isFinite(v))
+		.filter((v, i): v is number => v != null && Number.isFinite(v) && usable(background[i]))
 		.sort((a, b) => a - b)
 	const soloMatched = bgSolo.length >= 3
 	const cuts = soloMatched ? [bgSolo[Math.floor(bgSolo.length / 3)], bgSolo[Math.floor((2 * bgSolo.length) / 3)]] : []
@@ -277,10 +311,10 @@ export function scoreAgainstBackground(
 		!soloMatched ? '' : v == null ? 'none' : v < cuts[0] ? '0' : v < cuts[1] ? '1' : '2'
 	const byStratum = new Map<string, number[]>()
 	background.forEach((b, i) => {
-		if (b.delta == null || !Number.isFinite(b.delta) || !b.n_probes) return
+		if (!usable(b)) return
 		const k = stratumOf(b.n_probes, b.stop - b.start, tertile(solo?.background[i]))
 		const lst = byStratum.get(k) || []
-		lst.push(b.delta)
+		lst.push(b.delta!)
 		byStratum.set(k, lst)
 	})
 	/* Below this a stratum's centre and spread are not estimable and scoring against it would invent
@@ -288,7 +322,7 @@ export function scoreAgainstBackground(
 	const MIN_BG = 20
 	// each usable stratum's null, fitted once; a stratum with no spread at all cannot scale an excess
 	const nulls = new Map<string, { centre: number; scale: number }>()
-	const nullCheck = { windows: 0, belowP05: 0 }
+	const nullCheck = { windows: 0, belowP001: 0 }
 	for (const [k, bg] of byStratum) {
 		if (bg.length < MIN_BG) continue
 		const centre = median(bg)
@@ -304,7 +338,7 @@ export function scoreAgainstBackground(
 		if (!(scale > 0)) continue
 		nulls.set(k, { centre, scale })
 		nullCheck.windows += bg.length
-		nullCheck.belowP05 += bg.filter(v => normalTwoSidedP((v - centre) / scale) < 0.05).length
+		nullCheck.belowP001 += bg.filter(v => normalTwoSidedP((v - centre) / scale) < 0.001).length
 	}
 	let unscored = 0
 	const scored = dmrs.map((d, i) => {
@@ -318,19 +352,4 @@ export function scoreAgainstBackground(
 		return { excess, p: normalTwoSidedP(excess / n.scale), stratum: k }
 	})
 	return { scored, strataUsed: nulls.size, unscored, soloMatched, nullCheck }
-}
-
-/** Benjamini-Hochberg q for every scored DMR's background p, set as bgQ. Run ONCE over all DMRs of a scan,
- * after every chromosome is scored: a per-chromosome adjustment would hold each chromosome to its own
- * smaller family and pass more than the whole scan's FDR allows. An unscored DMR (no bgP) gets no q. */
-export function adjustBackgroundP(dmrs: { bgP?: number; bgQ?: number }[]): void {
-	const scored = dmrs.filter(d => d.bgP != null && Number.isFinite(d.bgP))
-	const m = scored.length
-	const order = scored.map((d, i) => i).sort((a, b) => scored[b].bgP! - scored[a].bgP!) // largest p first
-	let running = 1
-	order.forEach((idx, r) => {
-		const rank = m - r // 1-based rank in ascending p
-		running = Math.min(running, (scored[idx].bgP! * m) / rank)
-		scored[idx].bgQ = running
-	})
 }

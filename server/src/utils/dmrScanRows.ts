@@ -1,5 +1,6 @@
 import type { DiffMethEntry, DmrScanSummary, DmrScanYAxis, TermdbDmrBatchSuccessResponse } from '#types'
 import { DEFAULT_MIN_CPGS, DMR_SCAN_Y_AXES, clearsMinDeltaBeta } from '#types'
+import { benjaminiHochberg } from './dmrStats.ts'
 
 /* Turn a DMR scan (termdb/dmrBatch) into rows the differential-methylation volcano can render,
 plus the whole-scan summary its Statistics panel shows.
@@ -14,6 +15,13 @@ scan without a genome or a dataset. */
 export { DEFAULT_MIN_CPGS }
 
 type Dmr = TermdbDmrBatchSuccessResponse['regions'][number]['dmrs'][number]
+
+/** Whether the volcano plots a DMR of minCpgs+ CpGs: it needs a Δβ for x, and for y the background p under the
+ * correction, else the chosen region statistic. One test for the volcano rows, the background FDR family and the
+ * region view (termdb/dmr), so none of them counts a DMR another leaves out. */
+export function isPlottedDmr(d: Dmr, backgroundCorrection: boolean | undefined, yAxis: DmrScanYAxis): boolean {
+	return d.delta_beta_mean != null && (backgroundCorrection ? Number.isFinite(d.bgP) : d[yAxis] != null)
+}
 
 /* A one-chromosome scan is a view of the genome-wide run, not a run of its own. DMRcate calibrates its
 smoothed cutoff and its prior over every CpG tested, so a run of one chromosome calls different DMRs:
@@ -50,6 +58,8 @@ export function dmrScanToRows(
 		chromosomes: string[]
 		/** what DMRcate ran over, when the rows are a view of a larger run; default chromosomes */
 		runChromosomes?: string[]
+		/** the whole run, when payload is a view of it (restrictScanPayload); default payload */
+		run?: TermdbDmrBatchSuccessResponse
 		minCpgs?: number
 		/** |Δβ| below which a DMR is plotted but not counted; see DiffMethRequest.scan.minDeltaBeta */
 		minDeltaBeta?: number
@@ -79,16 +89,28 @@ export function dmrScanToRows(
 	the evidence of no change a p of 1 would claim. Counted, as withoutStatistic. And one with no Δβ, which has no
 	effect to plot: counted as withoutDeltaBeta, and left out of `shown` by clearsMinDeltaBeta too. */
 	const measured = kept.filter(d => d.delta_beta_mean != null)
-	const plotted = measured.filter(d => (opts.backgroundCorrection ? d.bgQ : d[yAxis]) != null)
+	const plotted = measured.filter(d => isPlottedDmr(d, opts.backgroundCorrection, yAxis))
+	/* The background FDR: Benjamini-Hochberg over every DMR the volcano plots, on every chromosome of the run
+	-- not only this view's, which would hold a chromosome to its own smaller family and pass more than the
+	scan's FDR allows, and not DMRcate's 2-4 CpG calls the CpG floor drops, which would inflate every q. DMRs
+	under Min Δβ stay in: they are plotted, and dropping hypotheses by Δβ, the quantity under test, would bias
+	q down. Keyed by object: a view shares the run's DMR objects, and the cached run is not written to. */
+	const bgQ = new Map<Dmr, number>()
+	if (opts.backgroundCorrection) {
+		const family = (opts.run || payload).regions
+			.flatMap(r => r.dmrs || [])
+			.filter(d => d.no_cpgs >= minCpgs && isPlottedDmr(d, true, yAxis))
+		const q = benjaminiHochberg(family.map(d => d.bgP!))
+		family.forEach((d, i) => bgQ.set(d, q[i]))
+	}
 
 	const rows: DiffMethEntry[] = plotted.map(d => {
 		/* y is the region statistic the reader picked. The default, the minimum smoothed FDR, is what
 		DMRcate calls regions by, but kernel pooling makes it astronomically small (1e-22 to below
 		double precision on DISCOVER chr17), so dots crowd the top of the axis; HMFDR, Stouffer and
 		Fisher combine the region's raw per-CpG p-values and spread out from 0. With the correction, y is
-		instead the Benjamini-Hochberg q of the empirical background p across the whole scan; the raw
-		background p stays on the DMR (bgP) for anyone who needs it. */
-		const p = (opts.backgroundCorrection ? d.bgQ : d[yAxis])!
+		instead the background FDR above; the raw background p stays on the DMR (bgP) for anyone who needs it. */
+		const p = (opts.backgroundCorrection ? bgQ.get(d) : d[yAxis])!
 		const id = `${d.chr}:${d.start}-${d.stop}`
 		const genes = d.genes?.length
 			? d.genes.join(', ') + (d.genesTruncated ? ` +${d.genesTruncated - d.genes.length} more` : '')
@@ -105,7 +127,7 @@ export function dmrScanToRows(
 			stay on the DMR. Both are set: a DMR with no Δβ is not among the rows. */
 			delta_beta: d.delta_beta_mean!,
 			fold_change: d.delta_beta_max!,
-			// one p per DMR: the chosen region statistic, or the background FDR (bgQ)
+			// one p per DMR: the chosen region statistic, or the background FDR
 			original_p_value: p,
 			adjusted_p_value: p,
 			no_cpgs: d.no_cpgs,
@@ -158,14 +180,14 @@ export function dmrScanToRows(
 		...(payload.binMethylation ? { binMethylation: payload.binMethylation } : {})
 	}
 	if (payload.backgroundCorrection) {
-		const scored = shown.filter(d => d.bgQ != null)
+		const scored = shown.filter(d => bgQ.has(d))
 		scan.backgroundCorrection = {
 			windows: payload.backgroundCorrection.windows,
 			matchedOn: payload.backgroundCorrection.matchedOn,
 			scored: scored.length,
 			unscored: shown.length - scored.length,
-			significant: scored.filter(d => d.bgQ! < 0.05).length,
-			...(payload.backgroundCorrection.nullP05 != null ? { nullP05: payload.backgroundCorrection.nullP05 } : {})
+			significant: scored.filter(d => bgQ.get(d)! < 0.05).length,
+			...(payload.backgroundCorrection.nullP001 != null ? { nullP001: payload.backgroundCorrection.nullP001 } : {})
 		}
 	}
 	/* Gene-body loss set: hypomethylated, in a gene body (span with 2kb trimmed off both ends). A
@@ -182,7 +204,7 @@ export function dmrScanToRows(
 	let regions = 0
 	for (const d of shown) {
 		if (d.direction != 'hypo' || !d.inGeneBody) continue
-		if (payload.backgroundCorrection && !(d.bgQ != null && d.bgQ < 0.05)) continue
+		if (payload.backgroundCorrection && !(bgQ.get(d)! < 0.05)) continue
 		regions++
 		/* bodyGenes, not genes: genes also lists promoter-only neighbours of an in-body region and is
 		capped for display, so it admitted the wrong mechanism and dropped body genes past the cap. */

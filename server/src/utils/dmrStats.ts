@@ -30,6 +30,19 @@ export function normalTwoSidedP(z: number): number {
 	return Math.min(1, Math.max(1e-300, erfc))
 }
 
+/** Benjamini-Hochberg q of each p, in input order: step-up, monotone in p. */
+export function benjaminiHochberg(p: number[]): number[] {
+	const m = p.length
+	const q = new Array<number>(m)
+	const order = p.map((_, i) => i).sort((a, b) => p[b] - p[a]) // largest p first
+	let running = 1
+	order.forEach((i, r) => {
+		running = Math.min(running, (p[i] * m) / (m - r)) // m - r: 1-based rank in ascending p
+		q[i] = running
+	})
+	return q
+}
+
 /** Exact median, not mutating the input: the caller's array is reused across permutation
  * iterations, so sorting it in place would reorder the pool being sampled from. */
 export function median(v: number[]): number {

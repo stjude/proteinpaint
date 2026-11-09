@@ -18,6 +18,7 @@ import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 import { scanChromosomes } from '../../routes/termdb.diffMeth.ts'
 import { runDmrBatch } from './termdb.dmrBatch.ts'
+import { isPlottedDmr } from '#src/utils/dmrScanRows.ts'
 
 export const payload: RoutePayload = {
 	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
@@ -127,11 +128,9 @@ function init({ genomes }) {
 			if (!run.constants) throw new Error('This DMR run predates region views; run the scan again.')
 			// the scan's CpG floor: a DMR the scan dropped is not drawn as one it counted
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
-			/* nor any other DMR the volcano leaves out of its rows: one with no Δβ, and one without the plotted
-			statistic -- the background p under the correction, else the scan's y axis */
+			// nor any other DMR the volcano leaves out of its rows, by the volcano's own test
 			const yAxis: DmrScanYAxis = DMR_SCAN_Y_AXES.includes(q.yAxis as DmrScanYAxis) ? q.yAxis! : 'min_smoothed_fdr'
-			const plotted = (d: Dmr) =>
-				d.no_cpgs >= minCpgs && d.delta_beta_mean != null && (q.backgroundCorrection ? d.bgP : d[yAxis]) != null
+			const plotted = (d: Dmr) => d.no_cpgs >= minCpgs && isPlottedDmr(d, q.backgroundCorrection, yAxis)
 			const dmrInput = {
 				matrices: [{ file: matrixFile, chrs: [q.chr] }],
 				...dmrcateValues(matrix),

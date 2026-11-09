@@ -266,7 +266,7 @@ export function scanChromosomes(req: DiffMethRequest, genome: any): string[] {
 
 The scan (termdb/dmrBatch) already does the expensive part and caches it; this maps its DMRs onto
 the rows the volcano renders -- delta-beta on x, DMRcate's smoothed FDR (or, corrected, the
-empirical p against matched intergenic background) on y -- so the PNG, the p-value table, hover,
+FDR against matched intergenic background) on y -- so the PNG, the p-value table, hover,
 highlight, download and the region drill-down are the ones every other element class uses, and the
 scan needs no UI of its own. Group sizes come from the same resolver the scan uses internally, so
 the volcano's caption and the scan agree on who was compared. */
@@ -320,6 +320,7 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	const { rows, scan } = dmrScanToRows(view, {
 		chromosomes,
 		runChromosomes,
+		run: payload,
 		minCpgs: req.scan?.minCpgs,
 		backgroundCorrection: !!req.scan?.backgroundCorrection,
 		yAxis: req.scan?.yAxis,
@@ -376,7 +377,7 @@ function scanChrSizes(chromosomes: string[], genome: any): Record<string, number
 }
 
 /* Where the DMRs are, along the whole genome: hyper above the line, hypo below, height = evidence,
--log10 of the q the volcano plots (DMRcate's HMFDR, or corrected the empirical p against
+-log10 of the q the volcano plots (DMRcate's HMFDR, or corrected the FDR against
 matched background), capped as GRIN2 caps it so a few extreme regions do not flatten the rest.
 Drawn from EVERY kept row rather than the volcano's capped dots, which would draw the wrong picture
 of 120,000 regions. Fixed size rather than the volcano's, because this figure is read as a strip

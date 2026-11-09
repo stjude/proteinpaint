@@ -72,13 +72,20 @@ const inlineAttributes = new Set([
 	'stroke-dasharray'
 ])
 
-function inlineSvgImages(svgNode) {
+export function inlineSvgImages(svgNode) {
 	for (const img of svgNode.querySelectorAll('image')) {
 		const href = img.getAttribute('xlink:href') || img.getAttribute('href') || ''
 		const m = href.match(/^data:image\/svg\+xml;charset=utf-8,(.*)$/)
 		if (!m) continue
+		// a source that is not percent-encoded (e.g. a raw width="100%") keeps the image
+		let text
+		try {
+			text = decodeURIComponent(m[1])
+		} catch {
+			continue
+		}
 		// parsed into its own inert document, then checked before any of it is moved
-		const svg = new DOMParser().parseFromString(decodeURIComponent(m[1]), 'image/svg+xml').documentElement
+		const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement
 		const nodes = [svg, ...svg.querySelectorAll('*')]
 		const allowed = nodes.every(
 			e => inlineElements.has(e.localName) && [...e.attributes].every(a => inlineAttributes.has(a.name))

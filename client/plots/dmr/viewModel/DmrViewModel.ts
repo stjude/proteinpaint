@@ -10,6 +10,7 @@ const signed = (v: number | null | undefined) => `${(v ?? 0) >= 0 ? '+' : ''}${(
 const BELOW_FLOOR_COLOR = '#d9d9d9'
 import type { TermdbDmrSuccessResponse, DmrDiagnostic } from '#types'
 import { clearsMinDeltaBeta } from '#types'
+import { escapeHtml } from '#dom'
 import type { DmrConfig, BedItem, LegendRow, DmrViewData } from '../DmrTypes.ts'
 
 export class DmrViewModel {
@@ -211,10 +212,8 @@ export class DmrViewModel {
 		const { minProbesForCi } = config.settings.dmr
 		/* colors and radius come from the plot config (a session can set them): escaped and coerced
 		so the markup below is well-formed whatever they hold */
-		const esc = (v: string) =>
-			String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 		const colors = Object.fromEntries(
-			Object.entries(config.settings.dmr.colors).map(([k, v]) => [k, esc(v)])
+			Object.entries(config.settings.dmr.colors).map(([k, v]) => [k, escapeHtml(v)])
 		) as typeof config.settings.dmr.colors
 		const r = Number(config.settings.dmr.dotRadius)
 		const dotRadius = Number.isFinite(r) && r > 0 ? r : 4

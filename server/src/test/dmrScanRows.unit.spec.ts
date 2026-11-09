@@ -12,6 +12,7 @@ test sections:
 
 uncorrected: CpG floor, one p per row, direction split, widths, gene-body loss set
 corrected: unscored DMRs leave the rows but stay counted; the correction adds a p gate to the set
+corrected: the background FDR family is every plotted DMR of the whole run at the CpG floor
 summarizeProfile: quantiles and moved-fraction of the genome-wide binned profile
 coarsenProfile: probe-weighted re-binning for display
 dmrBedjLines: the plain text bedj file of the kept DMRs
@@ -129,7 +130,6 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 				direction: 'hypo',
 				delta_beta_mean: -0.2,
 				bgP: 0.01,
-				bgQ: 0.02,
 				excess: -0.15,
 				inGeneBody: true,
 				bodyGenes: ['LOSS'],
@@ -142,11 +142,10 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 				direction: 'hypo',
 				delta_beta_mean: -0.2,
 				bgP: 0.01,
-				bgQ: 0.02,
 				genes: ['PROMOTER_ONLY']
 			}),
 			// hyper in a gene body -> not a loss
-			dmr({ start: 5000, stop: 6000, bgP: 0.01, bgQ: 0.02, inGeneBody: true, genes: ['GAIN'] }),
+			dmr({ start: 5000, stop: 6000, bgP: 0.01, inGeneBody: true, genes: ['GAIN'] }),
 			// hypo in a gene body but not significant
 			dmr({
 				start: 7000,
@@ -154,11 +153,10 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 				direction: 'hypo',
 				delta_beta_mean: -0.2,
 				bgP: 0.4,
-				bgQ: 0.5,
 				inGeneBody: true,
 				genes: ['NS']
 			}),
-			// unscored: no bgP, so no bgQ
+			// unscored: no bgP
 			dmr({ start: 9000, stop: 60000, no_cpgs: 900 })
 		],
 		{
@@ -166,7 +164,6 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 				windows: 2000,
 				scored: 4,
 				unscored: 1,
-				significant: 3,
 				matchedOn: ['CpG density', 'width']
 			}
 		}
@@ -179,13 +176,51 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 		{ windows: 2000, matchedOn: ['CpG density', 'width'], scored: 4, unscored: 1, significant: 3 },
 		'scored / unscored / significant are counted over kept DMRs'
 	)
-	t.equal(rows[0].original_p_value, 0.02, 'the plotted value is the background FDR (bgQ), not the raw p')
+	// p 0.01, 0.01, 0.01, 0.4 over a family of 4: q = 0.01 x 4 / 3
+	t.ok(Math.abs(rows[0].original_p_value - 0.04 / 3) < 1e-12, 'the plotted value is the background FDR, not the raw p')
 	t.equal(rows[0].excess, -0.15, 'and the excess rides along for the table')
 	t.deepEqual(
 		scan.geneBodyLoss,
 		{ regions: 1, genes: ['LOSS'] },
 		'only the hypo, in-body, significant region contributes genes'
 	)
+	t.end()
+})
+
+tape('corrected scan: the background FDR family is every plotted DMR of the whole run at the CpG floor', t => {
+	const run: any = payload([], { backgroundCorrection: { windows: 10, scored: 4, unscored: 1, matchedOn: ['width'] } })
+	run.regions = [
+		{
+			...run.regions[0],
+			chr: 'chr1',
+			dmrs: [
+				dmr({ chr: 'chr1', bgP: 0.5 }),
+				// under Min Δβ: plotted, so in the family
+				dmr({ chr: 'chr1', start: 3000, stop: 4000, delta_beta_mean: 0.01, bgP: 0.6 })
+			]
+		},
+		{
+			...run.regions[0],
+			chr: 'chr2',
+			dmrs: [
+				dmr({ chr: 'chr2', bgP: 0.01 }),
+				// under the CpG floor, and unscored: not plotted, so not in the family
+				dmr({ chr: 'chr2', start: 3000, stop: 3100, no_cpgs: 2, bgP: 1e-6 }),
+				dmr({ chr: 'chr2', start: 5000, stop: 6000 })
+			]
+		}
+	]
+	const { rows } = dmrScanToRows(restrictScanPayload(run, ['chr2']), {
+		chromosomes: ['chr2'],
+		runChromosomes: ['chr1', 'chr2'],
+		run,
+		backgroundCorrection: true,
+		minDeltaBeta: 0.1
+	})
+	t.equal(rows.length, 1, 'the view plots its one scored DMR at the floor')
+	// m = 3: not 1 (the view alone), nor 4 (with the 2-CpG call), nor 2 (without the one under Min Δβ)
+	t.ok(Math.abs(rows[0].original_p_value - 0.03) < 1e-12, `q = 0.01 x 3 (${rows[0].original_p_value})`)
+	t.notOk('bgQ' in run.regions[1].dmrs[0], 'the cached run is not written to')
 	t.end()
 })
 

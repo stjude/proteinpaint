@@ -119,16 +119,14 @@ export type TermdbDmrBatchSuccessResponse = {
 			direction: 'hyper' | 'hypo'
 			/** Genes whose span overlaps the DMR, in genomic order. Absent when none overlap or the
 			 * genome has no gene2coord table. Capped -- see genesTruncated. */
-			/** Observed delta-beta minus the mean drift of matched background in the same stratum.
-			 * Present only when backgroundCorrection was requested and the DMR's stratum had enough
-			 * background to estimate from. */
+			/** Observed delta-beta minus the median drift of matched background in the same stratum.
+			 * Present only when backgroundCorrection was requested and the DMR's stratum had background
+			 * enough, and spread enough, to estimate from. */
 			excess?: number
-			/** Fraction of that background drifting at least this far in the same direction, with a
-			 * +1 pseudocount -- so the resolution floor is 1/(n+1) and never zero. */
+			/** Two-sided p of excess against a normal null fitted to that stratum's background: scale 1.4826 x
+			 * its MAD, widened so 5% of the background lies beyond p = 0.05. Continuous, floored at 1e-300.
+			 * Unadjusted: the volcano (termdb/diffMeth) plots its Benjamini-Hochberg q over the DMRs it plots. */
 			bgP?: number
-			/** Benjamini-Hochberg q of bgP across every scored DMR of the scan (one family, all chromosomes).
-			 * The value significance is called on; present whenever bgP is. */
-			bgQ?: number
 			/** The region overlaps the body of at least one gene -- its span with 2kb trimmed from both
 			 * ends. Separate from `genes` because promoter and gene-body methylation relate to
 			 * transcription in opposite directions. */
@@ -182,16 +180,14 @@ export type TermdbDmrBatchSuccessResponse = {
 		windows: number
 		scored: number
 		unscored: number
-		/** DMRs at background FDR (bgQ) < 0.05 */
-		significant: number
 		/** The covariates actually matched on: CpG density and width, plus 'solo-WCGW share' when the genome
-		 * has a sequence file. The full method also matches replication timing and lamina association, which
+		 * has a sequence file, with 'of N chromosomes' when only some could split on it. The full method also matches replication timing and lamina association, which
 		 * need reference tracks; where those are absent the correction must be described by what it did match. */
 		matchedOn: string[]
-		/** Share of background windows that score p < 0.05 against their own stratum's fitted null: ~0.05 when
-		 * the normal null fits the background, higher when the background's tails are heavier than normal (the
-		 * DMR p-values are then too small by about that factor). */
-		nullP05?: number
+		/** Share of background windows that score p < 0.001 against their own stratum's fitted null: ~0.001 when
+		 * the normal null fits the tail, higher when the background's tail is heavier than the null past the
+		 * p = 0.05 point the scale is calibrated at (the DMR p-values are then too small). */
+		nullP001?: number
 	}
 	/** Artifact-region mask outcome. Present whenever the mask ran, including when it dropped
 	 * nothing, so a reader can tell "no artifacts here" from "the mask never ran". The dropped DMRs
