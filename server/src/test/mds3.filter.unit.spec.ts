@@ -13,7 +13,7 @@ combinePPfilterAndTid2value - tid2value only
 combinePPfilterAndTid2value - filter + tid2value combined
 combinePPfilterAndTid2value - filterObj + filter + tid2value combined
 mayLimitSamples - sampleTypes must be an array
-mayLimitSamples - sampleTypes array filters samples
+mayLimitSamples - sampleTypes alone does not filter samples
 mayLimitSamples - omitted sampleTypes does not filter
 */
 tape('\n', function (test) {
@@ -203,12 +203,12 @@ tape('mayLimitSamples - sampleTypes must be an array', async function (test) {
 	}
 	test.end()
 })
-tape('mayLimitSamples - sampleTypes array filters samples', async function (test) {
+tape('mayLimitSamples - sampleTypes alone does not filter samples', async function (test) {
 	const ds = getMockSampleTypeDs()
 	const result = await mayLimitSamples({ sampleTypes: [1] }, null, ds)
-	test.deepEqual([...result!].sort(), [10, 12], 'should return samples of the requested sample type')
+	test.equal(result, undefined, 'sample types alone do not apply filtering')
 	const limited = await mayLimitSamples({ sampleTypes: [1] }, [12, 13], ds)
-	test.deepEqual([...limited!], [12], 'should intersect with the supplied sample list')
+	test.equal(limited, undefined, 'sample types do not restrict the supplied sample list')
 	test.end()
 })
 tape('mayLimitSamples - omitted sampleTypes does not filter', async function (test) {

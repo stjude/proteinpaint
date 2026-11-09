@@ -135,10 +135,11 @@ tape('dnaMethylation term getters read each term for its own sample types', asyn
 		const q = ds.queries.dnaMethylation
 		for (const id of q.samples || q.elements.promoter.allSampleNames.map(Number))
 			ds.sampleId2Type.set(id, id % 2 ? 2 : 3)
-		const data = await q.get({ terms: [tw('odd', [2]), tw('even', [3]), tw('all')] }, ds)
+		const data = await q.get({ terms: [tw('odd', [2]), tw('even', [3]), tw('emptyTypes', []), tw('all')] }, ds)
 		const ids = $id => Object.keys(data.term2sample2value.get($id) || {}).map(Number)
 		t.ok(ids('odd').length && ids('odd').every(id => id % 2), `${label}: a type 2 term reads only type 2 samples`)
 		t.ok(ids('even').length && ids('even').every(id => !(id % 2)), `${label}: a type 3 term reads only type 3 samples`)
+		t.deepEqual(ids('emptyTypes'), ids('all'), `${label}: empty sample types keep all source values`)
 		t.equal(ids('all').length, ids('odd').length + ids('even').length, `${label}: a term without its own reads both`)
 	}
 	t.end()
