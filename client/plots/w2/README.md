@@ -96,9 +96,16 @@ Needs `obsm/cell_type_proportions` (one column per type, per-spot fractions).
 - **Fill:** each spot is colored by its dominant type (the largest proportion, not
   necessarily >50%). The shade follows that proportion (`shadeColor`): the type's color
   is blended toward white, so a 90% spot is darker than a 30% spot of the same type.
-- **Legend** (top-left of the map): one swatch per type with the number of spots where it
+- **Legend** (top-left of the map): one swatch per type, most common first, with the number of spots where it
   is dominant. Counts use all types, so a type filter does not change them; spots without
   proportions are not counted.
+- **Selected types (locating rare types):** with a type filter (`&cell_types=[...]`, or the mass UI's
+  "Types shown" dropdowns) a spot is a **circle** when its dominant type is one of the selected types,
+  and a **square** when a selected type is present (at least 1%) but not dominant, so types that
+  dominate few or no spots can still be located. Squares take the color of the largest selected type in
+  the spot (shaded no lighter than a 30% spot, so small shares stay visible); spots with none of the
+  selected types stay unfilled. The legend then shows `type (dominant / present-not-dominant)` counts.
+  Both marks hover the same way (`spotMark`).
 - **Hover:** the tooltip shows the barcode, array row/col and gene counts, then a pie
   chart of the spot's proportions (`pieSlices`, plain SVG) with a legend of the types
   present in that spot (at least 1%) and their percentages, largest first. Each slice's

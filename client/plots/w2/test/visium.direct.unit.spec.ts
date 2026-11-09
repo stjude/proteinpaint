@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { clampOpacity, dominantType, pieSlices, shadeColor } from '../visium.direct'
+import { spotMark, clampOpacity, dominantType, pieSlices, shadeColor } from '../visium.direct'
 
 tape('shadeColor is darker for a higher proportion and clamps', test => {
 	const sum = (s: string) =>
@@ -40,5 +40,18 @@ tape('clampOpacity clamps to 0-1 and defaults to opaque', test => {
 	test.equal(clampOpacity(0), 0, '0 is valid, not "missing"')
 	test.equal(clampOpacity(undefined), 1, 'missing = opaque')
 	test.equal(clampOpacity('abc'), 1, 'not a number = opaque')
+	test.end()
+})
+
+tape('spotMark: circle when the dominant type is selected, square when only present, else none', test => {
+	const props = { A: [0.7, 0.2, 0.005, null], B: [0.2, 0.6, 0.6, null], C: [0.1, 0.2, 0.395, null] }
+	const types = ['A', 'B', 'C']
+	test.deepEqual(spotMark(props, 0, types, ['A']), { type: 'A', shape: 'circle' }, 'A dominates spot 0')
+	test.deepEqual(spotMark(props, 1, types, ['A']), { type: 'A', shape: 'square' }, 'A present (20%) but B dominates')
+	test.equal(spotMark(props, 2, types, ['A']), null, 'A below the presence cutoff')
+	test.deepEqual(spotMark(props, 2, types, ['A', 'C']), { type: 'C', shape: 'square' }, 'largest present selected type')
+	test.deepEqual(spotMark(props, 1, types, ['A', 'C']), { type: 'A', shape: 'square' }, 'tie: first selected type wins')
+	test.equal(spotMark(props, 3, types, ['A']), null, 'spot without proportions')
+	test.deepEqual(spotMark(props, 1, types, types), { type: 'B', shape: 'circle' }, 'no filter: always a circle')
 	test.end()
 })

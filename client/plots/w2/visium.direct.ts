@@ -22,6 +22,7 @@ import VectorLayer from 'ol/layer/Vector.js'
 import VectorSource from 'ol/source/Vector.js'
 import Feature from 'ol/Feature.js'
 import Circle from 'ol/geom/Circle.js'
+import { fromExtent } from 'ol/geom/Polygon.js'
 import Projection from 'ol/proj/Projection.js'
 import { Fill, Stroke, Style } from 'ol/style.js'
 import { dofetch3 } from '#common/dofetch'
@@ -59,6 +60,26 @@ export function dominantType(props: VisiumSpots['proportions'], i: number, types
 	return best
 }
 
+/** a cell type counts as present in a spot from this proportion up (the tooltip pie uses the same cutoff) */
+export const PRESENT = 0.01
+
+/** How a spot is marked for the selected types `shown`: a circle when its dominant type (over ALL `types`) is
+ selected, else a square when some selected type is present (>= PRESENT) though not dominant, else null.
+ Squares only occur under a type filter: with every type shown, the dominant type is always selected.
+ `type` is the selected type to color by: the dominant one, or the largest present one for a square. */
+export function spotMark(
+	props: VisiumSpots['proportions'],
+	i: number,
+	types: string[],
+	shown: string[]
+): { type: string; shape: 'circle' | 'square' } | null {
+	const k = dominantType(props, i, types)
+	if (k >= 0 && shown.includes(types[k])) return { type: types[k], shape: 'circle' }
+	const j = dominantType(props, i, shown)
+	if (j >= 0 && (props[shown[j]][i] as number) >= PRESENT) return { type: shown[j], shape: 'square' }
+	return null
+}
+
 /** Fill color of a spot whose dominant type (color `rgb`, "r, g, b") has proportion p (0-1): the color is blended with
  white, so a 90% spot is a darker shade than a 30% one of the same type. Opaque, so the tissue image can't wash it out. */
 export function shadeColor(rgb: string, p: number): string {
@@ -94,7 +115,7 @@ export function clampOpacity(x: unknown): number {
 export async function init(
 	opts: {
 		/** query string addressing the sample on the visium route: either dataset mode
-		 (wsimage=&dslabel=&genome=&sample_id=) or direct mode (image_file=&spatial_data=), URI-encoded */
+         (wsimage=&dslabel=&genome=&sample_id=) or direct mode (image_file=&spatial_data=), URI-encoded */
 		query: string
 		/** fill spots by dominant cell type */
 		showCellTypes?: boolean
@@ -149,15 +170,25 @@ export async function init(
 		const byDominant = !!opts.showCellTypes && shown.length > 0
 		const byExpression = !byDominant && !opts.hideExpressionFills && maxCount > 0 // fills never overlap
 		const spotStroke = new Stroke({ color: 'rgba(255,255,255,0.7)', width: 0.5 })
+		const marks = byDominant ? spots.ids.map((_, i) => spotMark(spots.proportions, i, types, shown)) : []
 		const features = spots.ids.map((id, i) => {
-			const f = new Feature(new Circle([spots.x[i], h - spots.y[i]], spots.radius))
+			const cx = spots.x[i]
+			const cy = h - spots.y[i]
+			const mark = marks[i]
+			// circle = dominant selected type; square (same center, side = spot diameter) = present but not dominant
+			const geom =
+				mark?.shape == 'square'
+					? fromExtent([cx - spots.radius, cy - spots.radius, cx + spots.radius, cy + spots.radius])
+					: new Circle([cx, cy], spots.radius)
+			const f = new Feature(geom)
 			f.set('i', i)
 			let style = new Style({ stroke: spotStroke, fill: new Fill({ color: 'rgba(0,0,0,0)' }) })
 			if (byDominant) {
-				const k = dominantType(spots.proportions, i, types)
-				// a type filter hides the spots whose dominant type is not selected
-				if (k >= 0 && shown.includes(types[k])) {
-					const color = shadeColor(typeRgb[types[k]], spots.proportions[types[k]][i] as number)
+				// spots with none of the selected types stay unfilled
+				if (mark) {
+					// a square's type is by definition a minor share, so floor its shade at a 30% spot's: still visibly colored
+					const p = spots.proportions[mark.type][i] as number
+					const color = shadeColor(typeRgb[mark.type], mark.shape == 'square' ? Math.max(p, 0.3) : p)
 					style = new Style({ stroke: spotStroke, fill: new Fill({ color }) })
 				}
 			} else if (byExpression) {
@@ -212,13 +243,15 @@ export async function init(
 			.style('font-size', '0.8em')
 			.style('display', byDominant || byExpression ? 'block' : 'none')
 		if (byDominant) {
-			const n: { [t: string]: number } = {}
-			for (let i = 0; i < spots.ids.length; i++) {
-				const t = types[dominantType(spots.proportions, i, types)]
-				if (t) n[t] = (n[t] || 0) + 1
-			}
+			const n: { [t: string]: number } = {} // spots where the type is dominant (circles)
+			const sq: { [t: string]: number } = {} // spots where it is present but not dominant (squares)
+			for (const m of marks)
+				if (m) (m.shape == 'circle' ? n : sq)[m.type] = ((m.shape == 'circle' ? n : sq)[m.type] || 0) + 1
+			const filtered = shown.length < types.length
 			legend.append('div').style('margin-bottom', '2px').text('Dominant cell type; darker = higher %')
-			for (const t of shown) {
+			if (filtered) legend.append('div').style('margin-bottom', '2px').text('● dominant   ■ present, not dominant')
+			// most common dominant type first (stable: ties keep the type order); colors are fixed per type, so unaffected
+			for (const t of [...shown].sort((a, b) => (n[b] || 0) - (n[a] || 0))) {
 				const row = legend.append('div')
 				row
 					.append('span')
@@ -227,7 +260,7 @@ export async function init(
 					.style('height', '10px')
 					.style('margin-right', '4px')
 					.style('background', `rgb(${typeRgb[t]})`)
-				row.append('span').text(`${t} (${n[t] || 0})`)
+				row.append('span').text(filtered ? `${t} (${n[t] || 0} / ${sq[t] || 0})` : `${t} (${n[t] || 0})`)
 			}
 		} else if (byExpression) {
 			legend.text(`${genes.join(' + ')}: 1 – ${maxCount} counts`)
@@ -256,7 +289,7 @@ export async function init(
 			for (const g of Object.keys(perGene)) lines.push(`${g}: ${perGene[g][spots.ids[i]] || 0}`)
 			const props = types
 				.map(t => [t, spots.proportions[t][i]] as [string, number | null])
-				.filter(([, v]) => v != null && v >= 0.01)
+				.filter(([, v]) => v != null && v >= PRESENT)
 				.sort((a, b) => b[1]! - a[1]!) as [string, number][]
 			tip
 				.style('display', 'block')
