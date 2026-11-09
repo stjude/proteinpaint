@@ -122,7 +122,11 @@ tape('getJunctionData: reformats sn2rc for termdb.matrix', async test => {
 		},
 		{}
 	)
-	test.deepEqual(result.term2sample2value.get('junction-1'), { 'sample-1': 12 }, 'returns sample-to-count values')
+	test.deepEqual(
+		{ ...result.term2sample2value.get('junction-1') },
+		{ 'sample-1': 12 },
+		'returns sample-to-count values'
+	)
 	test.end()
 })
 
@@ -164,22 +168,24 @@ tape('getJunctionData: keeps the samples of the sample types chosen for each ter
 			terms: [
 				{ $id: 'all', term: junction },
 				{ $id: 'diagnosis', term: { ...junction, sampleTypes: [2] } },
-				{ $id: 'relapse', term: { ...junction, sampleTypes: ['3'] } }
+				{ $id: 'relapse', term: { ...junction, sampleTypes: [3] } },
+				{ $id: 'emptyTypes', term: { ...junction, sampleTypes: [] } }
 			]
 		},
 		listJunctions,
 		ds
 	)
 	test.deepEqual(
-		result.term2sample2value.get('all'),
+		{ ...result.term2sample2value.get('all') },
 		{ 1: 5, 2: 7, 3: 9, 4: 1 },
 		'a term without sample types reads every sample'
 	)
-	test.deepEqual(result.term2sample2value.get('diagnosis'), { 1: 5, 3: 9 }, 'a term reads only its sample types')
+	test.deepEqual({ ...result.term2sample2value.get('diagnosis') }, { 1: 5, 3: 9 }, 'a term reads only its sample types')
+	test.deepEqual({ ...result.term2sample2value.get('relapse') }, { 2: 7 }, 'a second term selects its own sample types')
 	test.deepEqual(
-		result.term2sample2value.get('relapse'),
-		{ 2: 7 },
-		'a sample type given as a numeric string matches too'
+		{ ...result.term2sample2value.get('emptyTypes') },
+		{ ...result.term2sample2value.get('all') },
+		'empty sample types keep all source values'
 	)
 
 	// sample ids that are strings, as on a dataset keyed by case uuid
@@ -198,20 +204,26 @@ tape('getJunctionData: keeps the samples of the sample types chosen for each ter
 			])
 		)
 	)
-	test.deepEqual(uuids.term2sample2value.get('d'), { 'uuid-a': 5 }, 'matches string sample ids as they are')
+	test.deepEqual({ ...uuids.term2sample2value.get('d') }, { 'uuid-a': 5 }, 'matches string sample ids as they are')
+	const filteredSamples = await getJunctionData(
+		{
+			terms: [{ $id: 'd', term: junction }],
+			filter: { type: 'tvslst', lst: [{ type: 'tvs', tvs: { term: { id: 'status' } } }] }
+		},
+		listJunctionsOf(
+			new Map([
+				[1, 5],
+				[2, 7]
+			])
+		),
+		{ cohort: { termdb: { filterSamples: async () => new Set([1]) } } }
+	)
+	test.deepEqual(
+		{ ...filteredSamples.term2sample2value.get('d') },
+		{ 1: 5 },
+		'request filtering compares object keys with numeric sample IDs'
+	)
 
-	const refuses = async (sampleTypes: any, d: any, expected: string, message: string) => {
-		try {
-			await getJunctionData({ terms: [{ $id: 'x', term: { ...junction, sampleTypes } }] }, listJunctions, d)
-			test.fail(message)
-		} catch (e: any) {
-			test.ok(String(e.message || e).includes(expected), message)
-			test.equal(e.status, 400, 'as an error of the request')
-		}
-	}
-	await refuses('2', ds, 'must be an array', 'refuses sample types that are not an array')
-	await refuses(['abc'], ds, "invalid sample type='abc'", 'refuses a sample type that is not an integer')
-	await refuses([9], ds, "invalid sample type='9'", 'refuses a sample type unknown to the dataset')
 	test.end()
 })
 

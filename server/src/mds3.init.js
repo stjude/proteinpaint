@@ -50,6 +50,7 @@ import { validate_query_geneExpression, validateQueryIsoformExpression } from '.
 import { validateSkipGeneNameValidation } from './geneRefValidation.ts'
 import { validateCheckAccessToSampleData } from './termdb.sampleAccess.ts'
 import { mayLimitSamples, combinePPfilterAndTid2value } from './mds3.filter.js'
+import { mayMapNonDictionaryData, id2sampleRef } from './termdb.matrix.ts'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGenes.ts'
@@ -2000,7 +2001,7 @@ async function validate_query_ld(ds, genome) {
 	if (!q.overlay.color_0) throw 'ld.overlay.color_0 missing'
 	if (!q.overlay.color_1) throw 'ld.overlay.color_1 missing'
 }
-async function validate_query_ssGSEA(ds, genome) {
+export async function validate_query_ssGSEA(ds, genome) {
 	const q = ds.queries.ssGSEA
 	if (!q) return
 	try {
@@ -2022,22 +2023,7 @@ async function validate_query_ssGSEA(ds, genome) {
 
 	// HDF5 validation successful, set up the getter function
 	q.get = async param => {
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
-		if (limitSamples?.size == 0) {
-			// Got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
-		}
-		const bySampleId = {}
-		const samples = q.samples || []
-		if (limitSamples) {
-			for (const sid of limitSamples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
-		} else {
-			for (const sid of samples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
-		}
+		const bySampleId = Object.create(null)
 		const term2sample2value = new Map()
 		const byTermId = {}
 
@@ -2060,17 +2046,25 @@ async function validate_query_ssGSEA(ds, genome) {
 				continue
 			}
 
-			const s2v = {}
+			const s2v = Object.create(null)
 			for (const sampleName in result) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 				if (!sampleId) continue
-				if (limitSamples && !limitSamples.has(sampleId)) continue
+				if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sampleId))) continue
+				if (!Number.isFinite(result[sampleName])) continue
 				s2v[sampleId] = result[sampleName]
 			}
 
-			if (Object.keys(s2v).length) {
-				term2sample2value.set(tw.$id, s2v)
+			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+			const limitSamples = await mayLimitSamples(param, null, ds)
+			const filteredValues = Object.create(null)
+			for (const [sid, value] of Object.entries(mappedValues)) {
+				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				filteredValues[sid] = value
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
+			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 		}
 		if (term2sample2value.size == 0) throw 'No data available for the input.'
 
@@ -2242,7 +2236,7 @@ export async function validate_query_dnaMethylation(ds, genome) {
 	q.get = async param => {
 		const term2sample2value = new Map()
 		const byTermId = {}
-		const bySampleId = {}
+		const bySampleId = Object.create(null)
 
 		// Get methylation term
 		const dnaMethylTws = param.terms.filter(tw => tw.term.type == TermTypes.DNA_METHYLATION)
@@ -2251,17 +2245,9 @@ export async function validate_query_dnaMethylation(ds, genome) {
 			return { term2sample2value, byTermId }
 		}
 
-		// the samples each term reads, after the request's sample filter and the term's sample types
-		const limitSamples = getTermSampleLimiter(param, q.samples, ds)
-		let anySample = false
+		const sampleNames = q.samples.map(sid => ds.cohort.termdb.q.id2sampleName(sid))
 		for (const tw of dnaMethylTws) {
-			const termSamples = await limitSamples(tw.term)
-			// all samples with methylation data when nothing limits them
-			const sampleIds = termSamples ? [...termSamples] : q.samples
-			if (!sampleIds.length) continue
-			anySample = true
-			const sampleNames = sampleIds.map(sid => ds.cohort.termdb.q.id2sampleName(sid))
-			for (const [i, sid] of sampleIds.entries()) bySampleId[sid] = { label: sampleNames[i] }
+			if (!sampleNames.length) continue
 
 			// Query methylation values
 			// TODO: python script should query all samples by default
@@ -2293,10 +2279,11 @@ export async function validate_query_dnaMethylation(ds, genome) {
 
 			// map sampleid to average value (M-value or beta depending on term unit)
 			const useM = q.unit === 'avg. M-value'
-			const s2v = {}
+			const s2v = Object.create(null)
 			for (const [i, sampleName] of sampleNames.entries()) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 				if (!sampleId) continue
+				if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sampleId))) continue
 				const values = sampleidx2values.get(i)
 				if (!values?.length) continue // skip samples with no beta values
 				if (useM) {
@@ -2308,38 +2295,22 @@ export async function validate_query_dnaMethylation(ds, genome) {
 					s2v[sampleId] = values.reduce((sum, v) => sum + v, 0) / values.length
 				}
 			}
-			if (Object.keys(s2v).length) {
-				term2sample2value.set(tw.$id, s2v)
+			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+			const limitSamples = await mayLimitSamples(param, null, ds)
+			const filteredValues = Object.create(null)
+			for (const [sid, value] of Object.entries(mappedValues)) {
+				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				filteredValues[sid] = value
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
+			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 		}
 
-		// Got 0 sample after filtering, must still return expected structure with no data
-		if (!anySample) return { term2sample2value, byTermId, bySampleId }
+		if (!sampleNames.length) return { term2sample2value, byTermId, bySampleId }
 		if (term2sample2value.size == 0) throw 'No data available for the input'
 
 		return { term2sample2value, byTermId, bySampleId }
-	}
-}
-
-/* Returns async term => the samples, of allSamples, that one term reads; undefined when nothing
-limits them. A term that chose its own sample types in the term picker reads only those: the
-request's sample types are the union over all its terms (see getSampleData() in termdb.matrix.ts),
-and a getter such as clustering's is handed every term at once, so without this a tumor-only row
-would read normal samples as well. One sample filter per distinct sample type selection.
-Also used by the junction term getter, see getJunctionData() in j2/validate.ts.
-
-term.sampleTypes arrives with the request, so it must be a list of the dataset's sample type ids;
-an id may come as a numeric string, and is matched as a number. */
-export function getTermSampleLimiter(param, allSamples, ds) {
-	const byTypes = new Map()
-	return async term => {
-		const sampleTypes = getTermSampleTypeIds(term, ds)
-		const key = JSON.stringify(sampleTypes ?? null)
-		if (!byTypes.has(key)) {
-			const termParam = sampleTypes ? { ...param, sampleTypes } : param
-			byTypes.set(key, await mayLimitSamples(termParam, allSamples, ds))
-		}
-		return byTypes.get(key)
 	}
 }
 
@@ -2421,24 +2392,6 @@ export function toReturnedUnit(v, storedBeta, returnsBeta) {
 }
 
 function makeElementMethylationGetter(q, nominated, ds) {
-	// Sample ids per matrix, resolved once each. Unknown names are skipped rather than
-	// fatal: a methylation cohort is routinely a subset of the dataset's samples.
-	const samplesByEntry = new Map()
-	const samplesOf = entry => {
-		if (!samplesByEntry.has(entry)) {
-			const ids = []
-			const names = []
-			for (const sn of entry.allSampleNames || []) {
-				const si = ds.cohort.termdb.q.sampleName2id(sn)
-				if (si === undefined || si === null) continue
-				ids.push(si)
-				names.push(sn)
-			}
-			samplesByEntry.set(entry, { ids, names })
-		}
-		return samplesByEntry.get(entry)
-	}
-
 	/* The unit the getter returns is the one q.unit advertises: the nominated entry's, unless the
 	dataset sets its own. M-values unless it says beta. */
 	const returnsBeta = /beta/i.test(q.unit || '')
@@ -2446,23 +2399,12 @@ function makeElementMethylationGetter(q, nominated, ds) {
 	return async param => {
 		const term2sample2value = new Map()
 		const byTermId = {}
-		const bySampleId = {}
+		const bySampleId = Object.create(null)
 		const tws = param.terms.filter(tw => tw.term.type == TermTypes.DNA_METHYLATION)
 
-		/* the names each term queries in its matrix, after the request's sample filter and the
-		term's own sample types (see getTermSampleLimiter()) */
-		const limitersByEntry = new Map()
 		for (const tw of tws) {
 			const entry = resolveElementEntryForTerm(q, tw.term, nominated)
-			const { ids, names } = samplesOf(entry)
-			if (!limitersByEntry.has(entry)) limitersByEntry.set(entry, getTermSampleLimiter(param, ids, ds))
-			const limitSamples = await limitersByEntry.get(entry)(tw.term)
-			const queryNames = []
-			for (const [i, sid] of ids.entries()) {
-				if (limitSamples && !limitSamples.has(sid)) continue
-				bySampleId[sid] = { label: names[i] }
-				queryNames.push(names[i])
-			}
+			const queryNames = entry.allSampleNames || []
 			if (!queryNames.length) continue
 
 			/* A region on a chromosome that has a CpG shard is read from the CpGs themselves. The
@@ -2487,10 +2429,11 @@ function makeElementMethylationGetter(q, nominated, ds) {
 					throw e
 				}
 				if (!Array.isArray(sites)) throw new Error('CpG methylation query returned unexpected format')
-				const s2v = {}
+				const s2v = Object.create(null)
 				for (const [i, sname] of shardNames.entries()) {
 					const sid = ds.cohort.termdb.q.sampleName2id(sname)
 					if (sid === undefined || sid === null) continue
+					if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sid))) continue
 					let sum = 0,
 						n = 0
 					for (const site of sites) {
@@ -2503,7 +2446,7 @@ function makeElementMethylationGetter(q, nominated, ds) {
 					// a CpG shard always stores betas
 					s2v[sid] = toReturnedUnit(sum / n, true, returnsBeta)
 				}
-				if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
+				await addMappedValues(tw, s2v)
 				continue
 			}
 			/* Located by coordinates, which every dnaMethylation term carries. The query script
@@ -2516,10 +2459,11 @@ function makeElementMethylationGetter(q, nominated, ds) {
 			if (!out.values.length) continue // term matched no element in this matrix; other terms may still resolve
 			const values = testedElementValues(tw.term, out)
 
-			const s2v = {}
+			const s2v = Object.create(null)
 			for (const [i, sname] of queryNames.entries()) {
 				const sid = ds.cohort.termdb.q.sampleName2id(sname)
 				if (sid === undefined || sid === null) continue
+				if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sid))) continue
 				// Average over the matched elements, skipping nulls so one uncovered element
 				// does not void a sample that the others do cover.
 				let sum = 0,
@@ -2538,9 +2482,21 @@ function makeElementMethylationGetter(q, nominated, ds) {
 				the getter is on the unit that q.unit advertises. */
 				s2v[sid] = toReturnedUnit(sum / n, /beta/i.test(entry.unit || ''), returnsBeta)
 			}
-			if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v)
+			await addMappedValues(tw, s2v)
 		}
 
+		async function addMappedValues(tw, s2v) {
+			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+			const limitSamples = await mayLimitSamples(param, null, ds)
+			const filteredValues = Object.create(null)
+			for (const [sid, value] of Object.entries(mappedValues)) {
+				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				filteredValues[sid] = value
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
+			}
+			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
+		}
 		// no methylation term, or no sample left by the filter: the expected structure with no data
 		if (!Object.keys(bySampleId).length) return { term2sample2value, byTermId, bySampleId }
 		if (term2sample2value.size == 0) throw 'No data available for the input'
@@ -2603,32 +2559,14 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 	}
 
 	q.get = async param => {
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
-		if (limitSamples?.size == 0) {
-			// got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Set(), byTermId: {}, bySampleId: {} }
-		}
-
-		// has at least 1 sample passing filter and with intensity data
-		// TODO what if there's just 1 sample not enough for clustering?
-		const bySampleId = {}
+		const bySampleId = Object.create(null)
 		const samples = q.samples || []
-		if (limitSamples) {
-			for (const sid of limitSamples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
-		} else {
-			// use all samples with exp data
-			for (const sid of samples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
-		}
 
 		const term2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
 		for (const tw of param.terms) {
 			if (!tw) continue
 
-			const s2v = {}
+			const s2v = Object.create(null)
 			const metabolite = tw.term.name
 			await utils.get_lines_txtfile({
 				args: [q.file],
@@ -2637,15 +2575,24 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 					if (l[0].toLowerCase() != metabolite.toLowerCase()) return
 					for (let i = 1; i < l.length; i++) {
 						const sampleId = samples[i - 1]
-						if (limitSamples && !limitSamples.has(sampleId)) continue // doing filtering and sample of current column is not used
+						if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sampleId))) continue
 						if (!l[i]) continue // blank string
 						const v = Number(l[i])
 						if (Number.isNaN(v)) throw 'exp value not number'
 						s2v[sampleId] = v
 					}
-					if (Object.keys(s2v).length) term2sample2value.set(tw.$id, s2v) // only add metabolite if it has data
 				}
 			})
+			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+			const limitSamples = await mayLimitSamples(param, null, ds)
+			const filteredValues = Object.create(null)
+			for (const [sid, value] of Object.entries(mappedValues)) {
+				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				filteredValues[sid] = value
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
+			}
+			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 		}
 		// pass blank byTermId to match with expected output structure
 		const byTermId = {}

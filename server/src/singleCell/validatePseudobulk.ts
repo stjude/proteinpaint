@@ -8,6 +8,7 @@ import { file_is_readable } from '#src/utils.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { getH5samples } from '../utils/h5samples.ts'
 import { mayLimitSamples } from '#src/mds3.filter.js'
+import { mayMapNonDictionaryData, id2sampleRef } from '#src/termdb.matrix.ts'
 import { validString } from '#src/routes/common.js'
 
 /**
@@ -154,29 +155,7 @@ export async function validatePseudobulk(ds: any) {
 		if (!thisCategory)
 			throw new Error(`pseudobulk[${_t.assay}]?.[${_t.memberId}]?.categories?.[${_t.category}] missing`)
 
-		const limitSamples = await mayLimitSamples(param, thisCategory[`${method}Samples`], ds)
-		if (limitSamples?.size == 0) {
-			// Got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: Object.create(null) }
-		}
-
-		// Set up sample IDs and labels
-		// null-prototype: sid is dataset content, not validated against reserved names, and the
-		// values assigned are objects -- bySampleId[sid] = ... would otherwise reassign
-		// bySampleId's own prototype instead of creating a real entry when sid is '__proto__'
 		const bySampleId = Object.create(null)
-		const samples = thisCategory[`${method}Samples`] || []
-		const formatSamples = (samples: string[]) => {
-			for (const sid of samples) {
-				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
-					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
-				} else {
-					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-				}
-			}
-		}
-		if (limitSamples) formatSamples(limitSamples)
-		else formatSamples(samples) // Use all samples with exp data
 
 		// Initialize data structure
 		const term2sample2value = new Map()
@@ -208,9 +187,9 @@ export async function validatePseudobulk(ds: any) {
 		if (!genesData) throw 'No expression data returned from HDF5 query'
 		const hasGenesArg = Array.isArray(param.dataTypeDetails?.genes)
 		const requestedGenes = hasGenesArg
-			? geneNames.map(gene => ({ gene, id: gene }))
-			: param.terms.filter(tw => tw.term.gene).map(tw => ({ gene: tw.term.gene, id: tw.$id }))
-		for (const { gene, id } of requestedGenes) {
+			? geneNames.map(gene => ({ gene, id: gene, tw: param.terms[0] }))
+			: param.terms.filter(tw => tw.term.gene).map(tw => ({ gene: tw.term.gene, id: tw.$id, tw }))
+		for (const { gene, id, tw } of requestedGenes) {
 			// Get this gene's data from the batch response
 			const geneResult = genesData[gene]
 			if (!geneResult) {
@@ -229,14 +208,21 @@ export async function validatePseudobulk(ds: any) {
 			for (const sampleName in samplesData) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 				if (!sampleId) continue
-				if (limitSamples && !limitSamples.has(sampleId)) continue
+				if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sampleId))) continue
 				if (!Number.isFinite(samplesData[sampleName])) continue // skip non-numeric values
 				s2v[sampleId] = samplesData[sampleName]
 			}
 
-			if (Object.keys(s2v).length) {
-				term2sample2value.set(id, s2v)
+			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+			const limitSamples = await mayLimitSamples(param, null, ds)
+			const filteredValues = Object.create(null)
+			for (const [sid, value] of Object.entries(mappedValues)) {
+				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				filteredValues[sid] = value
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
+			if (Object.keys(filteredValues).length) term2sample2value.set(id, filteredValues)
 		}
 		if (term2sample2value.size == 0) {
 			throw 'No data available for the input ' + geneNames.join(', ')

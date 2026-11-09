@@ -351,6 +351,8 @@ async function getSampleData(q, ds) {
 	// query sample data with its own method and append results to "samples"
 	for (const tw of nonDictTerms) {
 		if (tw.term?.type == 'snp') {
+			if (ds.cohort.termdb?.hasSampleAncestry)
+				throw new Error(`sample hierarchy mapping not supported for '${tw.term.type}' term`)
 			const sampleGTs = await getSnpData(tw, q)
 			const groupset = get_active_groupset(tw.term, tw.q)
 			for (const s of sampleGTs) {
@@ -368,6 +370,8 @@ async function getSampleData(q, ds) {
 				}
 			}
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
+			if (ds.cohort.termdb?.hasSampleAncestry)
+				throw new Error(`sample hierarchy mapping not supported for '${tw.term.type}' term`)
 			const sampleFilterSet = await mayGetSampleFilterSet4snplst(q, nonDictTerms) // conditionally returns a set of sample ids, FIXME *only* for snplst and snplocus data download in supported ds, not for anything else. TODO remove this bad quick fix
 
 			const _samples = new Map()
@@ -422,10 +426,10 @@ async function getSampleData(q, ds) {
 			}
 			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			for (const [dataId, values] of data.term2sample2value) {
-				for (const sampleId in values) {
+				for (const [sampleId, sampleValue] of Object.entries(values)) {
 					const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
-					if (!Number.isFinite(values[sampleId])) continue // skip non-numeric values
-					const value = Number(values[sampleId])
+					if (!Number.isFinite(sampleValue)) continue // skip non-numeric values
+					const value = Number(sampleValue)
 					let key = value
 					if (lstOfBins) {
 						// term is in binning mode. key should be changed into the label of the bin to which value belongs
@@ -523,6 +527,41 @@ async function getSampleData(q, ds) {
 	}
 
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
+}
+
+/** map sample hierarchy for non-dictionary data */
+export async function mayMapNonDictionaryData(tw, q, sample2value) {
+	const mapParent2Children = shouldMapParent2Children(tw, q.ds, q.sampleMapping, q.sampleTypes)
+	const mapChildren2Parent = shouldMapChildren2Parent(tw, q.ds, q.sampleMapping, q.sampleTypes)
+	if (!mapParent2Children && !mapChildren2Parent) return sample2value
+
+	const db = q.ds.cohort?.db
+	if (!db?.connection) throw new Error('sample hierarchy mapping requires sql db')
+	const sampleIds = Object.keys(sample2value)
+	const mappedValues = Object.create(null)
+	if (!sampleIds.length) return mappedValues
+
+	const source = mapParent2Children ? sql`sa.ancestor_id` : sql`sa.sample_id`
+	const target = mapParent2Children ? sql`sa.sample_id` : sql`sa.ancestor_id`
+	const rows = db.connection
+		.prepare(
+			sql`SELECT ${source} AS source, ${target} AS target
+			FROM sample_ancestry sa
+			JOIN sampleidmap sm ON ${target} = sm.id
+			WHERE ${source} IN (${sql.list(sampleIds)})
+			AND sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})`
+		)
+		.all()
+
+	for (const { source, target } of rows) {
+		if (mappedValues[target]) {
+			// multiple source values map to target value
+			// just using first one
+			continue
+		}
+		mappedValues[target] = sample2value[source]
+	}
+	return mappedValues
 }
 
 function twlstGeneCountReducer(sum, tw) {
@@ -1068,23 +1107,17 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
 		// for "samplelst" term, term.id is missing and must use term.name
 		const termId = tw.$id || tw.term.id || tw.term.name
 		const table = sql.id(t.tablename)
-		if (shouldMapParent2Children(tw, q.ds, q.sampleMapping, q.sampleTypes)) {
-			// need to map parent annotations onto child samples and
-			// term sample type is parent of query sample type
-			return sql`SELECT sa.sample_id as sample, key, value, ${termId} as term_id
+		const mapParent2Children = shouldMapParent2Children(tw, q.ds, q.sampleMapping, q.sampleTypes)
+		const mapChildren2Parent = shouldMapChildren2Parent(tw, q.ds, q.sampleMapping, q.sampleTypes)
+		if (mapParent2Children || mapChildren2Parent) {
+			const source = mapParent2Children ? sql`sa.ancestor_id` : sql`sa.sample_id`
+			const target = mapParent2Children ? sql`sa.sample_id` : sql`sa.ancestor_id`
+			return sql`SELECT ${target} as sample, key, value, ${termId} as term_id
 				FROM sample_ancestry sa
-				JOIN ${table} ON sa.ancestor_id = sample
-				JOIN sampleidmap sm ON sa.sample_id = sm.id
+				JOIN ${table} ON ${source} = sample
+				JOIN sampleidmap sm ON ${target} = sm.id
 				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})
-				${filterCTE ? sql`AND sa.sample_id IN ${filterCTE}` : sql``}`
-		}
-		if (shouldMapChildren2Parent(tw, q.ds, q.sampleMapping, q.sampleTypes)) {
-			return sql`SELECT sa.ancestor_id as sample, key, value, ${termId} as term_id
-				FROM sample_ancestry sa
-				JOIN ${table} ON sa.sample_id = sample
-				JOIN sampleidmap sm ON sa.ancestor_id = sm.id
-				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})
-				${filterCTE ? sql`AND sa.ancestor_id IN ${filterCTE}` : sql``}`
+				${filterCTE ? sql`AND ${target} IN ${filterCTE}` : sql``}`
 		}
 		// query annotations directly
 		return sql`SELECT sample, key, value, ${termId} as term_id

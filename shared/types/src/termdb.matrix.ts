@@ -8,10 +8,8 @@
  */
 
 /**
- * Hierarchy mapping direction. Omit for automatic inference; the server sets the direction only
- * when sample-type sets differ across terms, filter, or filter0 and need alignment.
- * sampleTypes contains the target types.
- * Root-level aggregation is controlled separately by mapChildren2Root.
+ * Sample hierarchy mapping direction; omit for automatic inference.
+ * term.sampleTypes identifies source types, and query sampleTypes identifies target types.
  */
 export type SampleMapping = 'parentToChildren' | 'childrenToParent'
 

@@ -57,15 +57,6 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		}
 	}
 
-	if (param.sampleTypes?.length) {
-		// filter samples by sample types
-		const sampleTypeSamples = new Set()
-		for (const [sampleId, sampleType] of ds.sampleId2Type) {
-			if (param.sampleTypes.includes(sampleType)) sampleTypeSamples.add(sampleId)
-		}
-		filterSamples = filterSamples ? filterSamples.intersection(sampleTypeSamples) : sampleTypeSamples
-	}
-
 	if (!filterSamples) return // no filtering done, use all samples
 
 	let useSet = filterSamples

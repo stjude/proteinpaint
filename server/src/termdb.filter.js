@@ -1,7 +1,13 @@
 import { getBin, dictionaryNumericTypes, dtTermTypes, isNonDictionaryType } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
-import { getSnpData, getData, shouldMapParent2Children, getSampleTypesSqlList } from './termdb.matrix.js'
+import {
+	getSnpData,
+	getData,
+	shouldMapParent2Children,
+	shouldMapChildren2Parent,
+	getSampleTypesSqlList
+} from './termdb.matrix.js'
 import { filterByItem, tvsUsesMafFilter } from './mds3.init.js'
 import { sql } from './sql.ts'
 
@@ -77,19 +83,19 @@ export async function getFilterCTEs(filter, ds, sampleMapping, sampleTypes, CTEn
 		} else if (item.tvs.term.type == TermTypes.GENE_EXPRESSION) {
 			f = await get_geneExpression(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (item.tvs.term.type == TermTypes.ISOFORM_EXPRESSION) {
-			f = await get_isoformExpression(item.tvs, CTEname_i, ds)
+			f = await get_isoformExpression(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
-			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
+			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (item.tvs.term.type == TermTypes.PROTEOME_ABUNDANCE) {
-			f = await get_proteomeAbundance(item.tvs, CTEname_i, ds)
+			f = await get_proteomeAbundance(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (item.tvs.term.type == TermTypes.SSGSEA) {
-			f = await get_ssGSEA(item.tvs, CTEname_i, ds)
+			f = await get_ssGSEA(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (item.tvs.term.type == TermTypes.DNA_METHYLATION) {
 			f = await get_dnaMethylation(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (item.tvs.term.type == TermTypes.JUNCTION) {
-			f = await get_junction(item.tvs, CTEname_i, ds)
+			f = await get_junction(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (item.tvs.term.type == TermTypes.PSEUDOBULK) {
-			f = await get_pseudobulk(item.tvs, CTEname_i, ds)
+			f = await get_pseudobulk(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (dtTermTypes.has(item.tvs.term.type)) {
 			f = await get_dtTerm(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (item.tvs.term.type == 'categorical') {
@@ -109,7 +115,7 @@ export async function getFilterCTEs(filter, ds, sampleMapping, sampleTypes, CTEn
 		} else if (item.tvs.term.type == 'termCollection') {
 			f = await get_termCollection(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (item.tvs.term.type == 'snp') {
-			f = await get_snp(item.tvs, CTEname_i, ds)
+			f = await get_snp(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else if (item.tvs.term.type == 'multivalue') {
 			f = get_multivalue(item.tvs, CTEname_i, ds, sampleMapping, sampleTypes)
 		} else {
@@ -160,12 +166,8 @@ function sampleIdsQuery(samples) {
 }
 
 /* a filter result of the samples by their ids, see sampleIdsQuery() */
-function sampleIdsResult(CTEname, samples, tvs, ds, sampleMapping, sampleTypes) {
-	let query = sampleIdsQuery(samples)
-	if (tvs && shouldMapParent2Children({ term: tvs.term }, ds, sampleMapping, sampleTypes)) {
-		query = getChildren(query, sampleTypes, ds)
-	}
-	return { CTEs: [toCTE(CTEname, query)], CTEname }
+function sampleIdsResult(CTEname, samples) {
+	return { CTEs: [toCTE(CTEname, sampleIdsQuery(samples))], CTEname }
 }
 
 // makesql_by_tvsfilter helpers
@@ -180,9 +182,7 @@ function get_categorical(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 		tvs.values.map(i => i.key),
 		{ allowEmpty: true }
 	)})`
-	if (shouldMapParent2Children({ term: tvs.term }, ds, sampleMapping, sampleTypes)) {
-		query = getChildren(query, sampleTypes, ds)
-	}
+	query = mayMapSamples(query, { term: tvs.term }, ds, sampleMapping, sampleTypes)
 	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
@@ -196,9 +196,7 @@ function get_survival(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 		{ allowEmpty: true }
 	)})`
 
-	if (shouldMapParent2Children({ term: tvs.term }, ds, sampleMapping, sampleTypes)) {
-		query = getChildren(query, sampleTypes, ds)
-	}
+	query = mayMapSamples(query, { term: tvs.term }, ds, sampleMapping, sampleTypes)
 	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
@@ -214,9 +212,7 @@ function get_samplelst(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 		samples.map(i => i.sampleId || i.sample),
 		{ allowEmpty: true }
 	)})`
-	if (shouldMapParent2Children({ term: tvs.term }, ds, sampleMapping, sampleTypes)) {
-		query = getChildren(query, sampleTypes, ds)
-	}
+	query = mayMapSamples(query, { term: tvs.term }, ds, sampleMapping, sampleTypes)
 	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
@@ -278,9 +274,7 @@ function isInRange(val, range, isnot) {
 
 function emptyFilterResult(CTEname, sampleMapping, ds, sampleTypes) {
 	let query = sql`SELECT id as sample FROM sampleidmap WHERE 0`
-	if (shouldMapParent2Children({}, ds, sampleMapping, sampleTypes)) {
-		query = getChildren(query, sampleTypes, ds)
-	}
+	query = mayMapSamples(query, {}, ds, sampleMapping, sampleTypes)
 	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
@@ -396,7 +390,9 @@ async function get_termCollection_nonDict_fraction(tvs, CTEname, ds, sampleMappi
 	}
 
 	if (!samplenames.length) return emptyFilterResult(CTEname, sampleMapping, ds, sampleTypes)
-	return sampleIdsResult(CTEname, samplenames, tvs, ds, sampleMapping, sampleTypes)
+	let query = sampleIdsQuery(samplenames)
+	query = mayMapSamples(query, { term: tvs.term }, ds, sampleMapping, sampleTypes)
+	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
 async function get_termCollection(tvs, CTEname, ds, sampleMapping, sampleTypes) {
@@ -455,17 +451,20 @@ async function get_termCollection(tvs, CTEname, ds, sampleMapping, sampleTypes) 
 
 	// no matching sample, e.g. none has a computable value: an empty IN () is invalid sql
 	if (!samplenames.length) return emptyFilterResult(CTEname, sampleMapping, ds, sampleTypes)
-	return sampleIdsResult(CTEname, samplenames, tvs, ds, sampleMapping, sampleTypes)
+	let query = sampleIdsQuery(samplenames)
+	query = mayMapSamples(query, { term: tvs.term }, ds, sampleMapping, sampleTypes)
+	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
-async function get_snp(tvs, CTEname, ds) {
+async function get_snp(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	// get sample genotypes for snp
 	const sampleGTs = await getSnpData({ term: tvs.term }, { ds })
 	// get genotypes of snp in filter
 	const filterGTs = tvs.values.map(v => v.key)
 	// filter for samples with genotypes in filter
 	const samples = sampleGTs.filter(s => filterGTs.includes(s.gt)).map(s => s.sample_id)
-	return sampleIdsResult(CTEname, samples)
+	const query = mayMapSamples(sampleIdsQuery(samples), { term: tvs.term }, ds, sampleMapping, sampleTypes)
+	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
 async function get_geneExpression(tvs, CTEname, ds, sampleMapping, sampleTypes) {
@@ -474,28 +473,33 @@ async function get_geneExpression(tvs, CTEname, ds, sampleMapping, sampleTypes) 
 	const data = await q.get({ terms: [{ $id, term: tvs.term }], sampleMapping, sampleTypes }, ds)
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
-async function get_isoformExpression(tvs, CTEname, ds) {
+async function get_isoformExpression(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	const q = ds.queries?.isoformExpression
 	if (!q) throw 'not supported'
-	const data = await q.get({ terms: [{ $id, term: tvs.term }] }, ds)
+	const data = await q.get({ terms: [{ $id, term: tvs.term }], sampleMapping, sampleTypes }, ds)
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
-async function get_metaboliteIntensity(tvs, CTEname, ds) {
+async function get_metaboliteIntensity(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	const q = ds.queries?.metaboliteIntensity
 	if (!q) throw 'not supported'
-	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	const data = await q.get({ terms: [{ $id, term: tvs.term }], sampleMapping, sampleTypes })
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
-async function get_proteomeAbundance(tvs, CTEname, ds) {
+async function get_proteomeAbundance(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	const q = ds.queries?.proteome
 	if (!q) throw 'not supported'
-	const data = await q.get({ terms: [{ $id, term: tvs.term }], dataTypeDetails: tvs.term.dataTypeDetails })
+	const data = await q.get({
+		terms: [{ $id, term: tvs.term }],
+		dataTypeDetails: tvs.term.dataTypeDetails,
+		sampleMapping,
+		sampleTypes
+	})
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
-async function get_ssGSEA(tvs, CTEname, ds) {
+async function get_ssGSEA(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	const q = ds.queries?.ssGSEA
 	if (!q) throw 'ssGSEA not supported'
-	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	const data = await q.get({ terms: [{ $id, term: tvs.term }], sampleMapping, sampleTypes })
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 async function get_dnaMethylation(tvs, CTEname, ds, sampleMapping, sampleTypes) {
@@ -503,20 +507,30 @@ async function get_dnaMethylation(tvs, CTEname, ds, sampleMapping, sampleTypes) 
 	// q.get exists only when the dataset has a dnaMethylation term getter configured (CpG-level .file
 	// or an element-matrix-backed fallback). If missing, the term type is not supported (or the request is stale)
 	if (!q?.get) throw 'dnaMethylation not supported'
-	// the getter reads the sample types chosen for the term itself, see getTermSampleLimiter()
 	const data = await q.get({ terms: [{ $id, term: tvs.term }], sampleMapping, sampleTypes }, ds)
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
-async function get_junction(tvs, CTEname, ds) {
+async function get_junction(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	const q = ds.queries?.junction
 	if (!q?.get) throw 'junction not supported'
-	const data = await q.get({ terms: [{ $id, term: tvs.term, q: tvs.q }] })
+	const data = await q.get({
+		terms: [{ $id, term: tvs.term, q: tvs.q }],
+		sampleMapping,
+		sampleTypes
+	})
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
-async function get_pseudobulk(tvs, CTEname, ds) {
+async function get_pseudobulk(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	const q = ds.queries?.singleCell?.pseudobulk
 	if (!q?.get) throw 'pseudobulk not supported'
-	const data = await q.get({ terms: [{ $id, term: tvs.term, q: tvs.q }] }, ds)
+	const data = await q.get(
+		{
+			terms: [{ $id, term: tvs.term, q: tvs.q }],
+			sampleMapping,
+			sampleTypes
+		},
+		ds
+	)
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 
@@ -617,9 +631,7 @@ so here need to allow both string and number as range.value
 					${rangeclauses.length ? sql`AND (${sql.join(rangeclauses, sql` OR `)})` : sql``}
 					${excludevalues?.length ? sql`AND value NOT IN (${sql.list(excludevalues)})` : sql``}`
 
-	if (shouldMapParent2Children({ term: tvs.term }, ds, sampleMapping, sampleTypes)) {
-		query = getChildren(query, sampleTypes, ds)
-	}
+	query = mayMapSamples(query, { term: tvs.term }, ds, sampleMapping, sampleTypes)
 
 	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
@@ -681,9 +693,7 @@ function get_multivalue(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 					{ allowEmpty: true }
 				)})
 			)`
-		const mappedQuery = shouldMapParent2Children({ term: tvs.term }, ds, sampleMapping, sampleTypes)
-			? getChildren(query, sampleTypes, ds)
-			: query
+		const mappedQuery = mayMapSamples(query, { term: tvs.term }, ds, sampleMapping, sampleTypes)
 		return { CTEs: [toCTE(CTEname, mappedQuery)], CTEname }
 	}
 	// default to join = 'or', more permissive/less likely to break,
@@ -708,19 +718,20 @@ function get_multivalue(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	let query = sql`SELECT sample
 	FROM anno_multivalue
 	WHERE term_id = ${tvs.term.id} AND ${tvs.isnot ? sql`NOT (${membershipTest})` : sql`(${membershipTest})`}`
-	if (shouldMapParent2Children({ term: tvs.term }, ds, sampleMapping, sampleTypes)) {
-		query = getChildren(query, sampleTypes, ds)
-	}
+	query = mayMapSamples(query, { term: tvs.term }, ds, sampleMapping, sampleTypes)
 	return { CTEs: [toCTE(CTEname, query)], CTEname }
 }
 
-function getChildren(query, sampleTypes, ds) {
-	const sampleTypeFilter = sampleTypes?.length
-		? sql`AND sm.sample_type IN (${getSampleTypesSqlList(sampleTypes, ds)})`
-		: sql``
-	return sql`SELECT sa.sample_id as sample
+function mayMapSamples(query, tw, ds, sampleMapping, sampleTypes) {
+	const mapParent2Children = shouldMapParent2Children(tw, ds, sampleMapping, sampleTypes)
+	const mapChildren2Parent = shouldMapChildren2Parent(tw, ds, sampleMapping, sampleTypes)
+	if (!mapParent2Children && !mapChildren2Parent) return query
+
+	const source = mapParent2Children ? sql`sa.ancestor_id` : sql`sa.sample_id`
+	const target = mapParent2Children ? sql`sa.sample_id` : sql`sa.ancestor_id`
+	return sql`SELECT DISTINCT ${target} as sample
 	FROM sample_ancestry sa
-	JOIN sampleidmap sm ON sa.sample_id = sm.id
-	WHERE sa.ancestor_id in (${query})
-	${sampleTypeFilter}`
+	JOIN sampleidmap sm ON ${target} = sm.id
+	WHERE ${source} in (${query})
+	AND sm.sample_type IN (${getSampleTypesSqlList(sampleTypes, ds)})`
 }

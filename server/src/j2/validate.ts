@@ -3,9 +3,9 @@ import { boxplot_getvalue } from '#shared/boxplot.js'
 import { JT_na, JT_canonical, JT_ir } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
-import { setFile, validateSampleHeader, getTermSampleLimiter } from '../mds3.init.js'
+import { setFile, validateSampleHeader } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
-import { resolveSampleMapping } from '../termdb.matrix.js'
+import { resolveSampleMapping, mayMapNonDictionaryData } from '../termdb.matrix.js'
 import { getH5samples } from '../utils/h5samples.ts'
 import { setQuerySampleTypes } from '#shared/terms.js'
 
@@ -303,13 +303,10 @@ async function validate_junction_cluster(ds: any, junctionQ: any) {
 export async function getJunctionData(
 	param: { terms?: any[]; [key: string]: any },
 	listJunctions: (param: any, keepList: { start: number; stop: number; strand: string }[]) => Promise<any>,
-	/** for the sample types of a term, see getTermSampleLimiter() */
 	ds: any
 ) {
 	if (!Array.isArray(param?.terms) || !param.terms.length) throw new Error('junction.get(): terms[] is required')
 	const term2sample2value = new Map<string, Record<string, number>>()
-	// the samples of each term's own sample types
-	const limitSamples = getTermSampleLimiter(param, undefined, ds)
 	for (const tw of param.terms) {
 		if (!tw?.$id) throw new Error('junction.get(): term wrapper $id is required')
 		const term = tw.term
@@ -338,13 +335,20 @@ export async function getJunctionData(
 		const sn2value = term.measure == JT_ir ? junction?.sn2ir : junction?.sn2rc
 		let samples: [string | number, number][] = [...(sn2value || [])]
 		/* the samples of the sample types chosen for this term in the term picker. Applied here, per term,
-		rather than through the request, whose sample types listJunctions() would apply to every term of it:
-		a request may hold terms that chose different sample types */
-		if (term.sampleTypes != null) {
-			const keep = await limitSamples(term)
-			if (keep) samples = samples.filter(([sid]) => keep.has(sid))
+		rather than through the request: listJunctions() resets the request's sample types to the default
+		ones, and a request may hold terms that chose different sample types */
+		if (term.sampleTypes?.length) {
+			sn2rc = sn2rc.filter(([sid]) => term.sampleTypes.includes(ds.sampleId2Type.get(sid)))
 		}
-		term2sample2value.set(tw.$id, Object.fromEntries(samples))
+		const s2v = Object.fromEntries(sn2rc.filter(([, value]) => Number.isFinite(value)))
+		const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+		const limitSamples = await mayLimitSamples(param, null, ds)
+		const filteredValues = Object.create(null)
+		for (const [sid, value] of Object.entries(mappedValues)) {
+			if (limitSamples && !limitSamples.has(Number(sid))) continue
+			filteredValues[sid] = value
+		}
+		if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 	}
 	return { term2sample2value }
 }

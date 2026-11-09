@@ -18,7 +18,7 @@ import { getH5samples } from '../utils/h5samples.ts'
 import serverconfig from '#src/serverconfig.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
-import { getData, id2sampleRef, resolveSampleMapping } from '#src/termdb.matrix.js'
+import { getData, id2sampleRef, resolveSampleMapping, mayMapNonDictionaryData } from '#src/termdb.matrix.js'
 import { termType2label, numericTypes, dictionaryNumericTypes, setQuerySampleTypes } from '#shared/terms.js'
 import { GENE_EXPRESSION, PROTEOME_ABUNDANCE } from '#types'
 import { formatElapsedTime } from '#shared/time.js'
@@ -373,30 +373,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 
 	// HDF5 validation successful, set up the getter function for geneExpression
 	q.get = async (param: TermdbClusterRequestGeneExpression) => {
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
-		if (limitSamples?.size == 0) {
-			// Got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: Object.create(null) }
-		}
-
-		// Set up sample IDs and labels
-		// null-prototype: sid is dataset content (q.samples/limitSamples), not validated against
-		// reserved names, and ref is an object -- bySampleId[sid] = ref would otherwise reassign
-		// bySampleId's own prototype instead of creating a real entry when sid is '__proto__'
 		const bySampleId = Object.create(null)
-		const samples = q.samples || []
-		if (limitSamples) {
-			for (const sid of limitSamples) {
-				const ref = id2sampleRef(sid, ds)
-				if (ref) bySampleId[sid] = ref
-			}
-		} else {
-			// Use all samples with exp data
-			for (const sid of samples) {
-				const ref = id2sampleRef(sid, ds)
-				if (ref) bySampleId[sid] = ref
-			}
-		}
 
 		// Initialize data structure
 		const term2sample2value = new Map()
@@ -435,24 +412,38 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 
 			// Extract just the samples data
 			const samplesData = geneResult.samples || {}
+
 			// Convert the gene data to the expected format
 			// null-prototype: sampleId is dataset content and the values are numbers, so a
 			// sampleId of '__proto__' would otherwise be a silent no-op (assigning a primitive to
 			// '__proto__' via bracket notation creates no own property), dropping that sample's data
 			const s2v = Object.create(null)
-
 			for (const sampleName in samplesData) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 				if (!sampleId) continue
-				if (limitSamples && !limitSamples.has(sampleId)) continue
+				// filter by sample type of term
+				if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sampleId))) continue
 				if (!Number.isFinite(samplesData[sampleName])) continue // skip non-numeric values
 				s2v[sampleId] = samplesData[sampleName]
 			}
 
-			if (Object.keys(s2v).length) {
-				term2sample2value.set(tw.$id, s2v)
+			// map data to target sample type
+			// must map data before filtering because
+			// limitSamples is already mapped
+			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+
+			// filter sample data
+			const limitSamples = await mayLimitSamples(param, null, ds)
+			const filteredValues = Object.create(null)
+			for (const [sid, value] of Object.entries(mappedValues)) {
+				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				filteredValues[sid] = value
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
+			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 		}
+
 		if (term2sample2value.size == 0) {
 			throw 'No data available for the input ' + param.terms?.map(tw => tw.term.gene).join(', ')
 		}
@@ -513,27 +504,7 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 
 	// HDF5 validation successful, set up the getter function for isoformExpression
 	q.get = async (param: TermdbClusterRequestIsoformExpression) => {
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
-		if (limitSamples?.size == 0) {
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: Object.create(null) }
-		}
-
-		// null-prototype: sid is dataset content (q.samples/limitSamples), not validated against
-		// reserved names, and ref is an object -- bySampleId[sid] = ref would otherwise reassign
-		// bySampleId's own prototype instead of creating a real entry when sid is '__proto__'
 		const bySampleId = Object.create(null)
-		const samples = q.samples || []
-		if (limitSamples) {
-			for (const sid of limitSamples) {
-				const ref = id2sampleRef(sid, ds)
-				if (ref) bySampleId[sid] = ref
-			}
-		} else {
-			for (const sid of samples) {
-				const ref = id2sampleRef(sid, ds)
-				if (ref) bySampleId[sid] = ref
-			}
-		}
 
 		const term2sample2value = new Map()
 		const byTermId = {}
@@ -574,13 +545,21 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 			for (const sampleName in samplesData) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 				if (!sampleId) continue
-				if (limitSamples && !limitSamples.has(sampleId)) continue
+				if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sampleId))) continue
+				if (!Number.isFinite(samplesData[sampleName])) continue
 				s2v[sampleId] = samplesData[sampleName]
 			}
 
-			if (Object.keys(s2v).length) {
-				term2sample2value.set(tw.$id, s2v)
+			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+			const limitSamples = await mayLimitSamples(param, null, ds)
+			const filteredValues = Object.create(null)
+			for (const [sid, value] of Object.entries(mappedValues)) {
+				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				filteredValues[sid] = value
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
+			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 		}
 		if (term2sample2value.size == 0) {
 			throw 'No data available for the input ' + param.terms?.map(tw => tw.term.isoform).join(', ')
