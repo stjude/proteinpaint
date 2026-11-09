@@ -60,6 +60,14 @@ export function dominantType(props: VisiumSpots['proportions'], i: number, types
 	return best
 }
 
+/** Largest count among the spots `ids` (0 if none has one). genecounts covers every observation in the h5ad,
+ including the out-of-tissue barcodes visium/spots leaves out, so the scale must not look at those. */
+export function maxOverSpots(counts: Map<string, number>, ids: string[]): number {
+	let max = 0
+	for (const id of ids) max = Math.max(max, counts.get(id) || 0)
+	return max
+}
+
 /** a cell type counts as present in a spot from this proportion up (the tooltip pie uses the same cutoff) */
 export const PRESENT = 0.01
 
@@ -165,7 +173,7 @@ export async function init(
 			for (const [id, n] of Object.entries(r.cells as { [id: string]: number }))
 				counts.set(id, (counts.get(id) || 0) + n)
 		}
-		const maxCount = Math.max(0, ...counts.values())
+		const maxCount = maxOverSpots(counts, spots.ids) // rendered spots only: genecounts also covers out-of-tissue barcodes
 
 		const byDominant = !!opts.showCellTypes && shown.length > 0
 		const byExpression = !byDominant && !opts.hideExpressionFills && maxCount > 0 // fills never overlap

@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { spotMark, clampOpacity, dominantType, pieSlices, shadeColor } from '../visium.direct'
+import { maxOverSpots, spotMark, clampOpacity, dominantType, pieSlices, shadeColor } from '../visium.direct'
 
 tape('shadeColor is darker for a higher proportion and clamps', test => {
 	const sum = (s: string) =>
@@ -62,3 +62,14 @@ tape(
 		test.end()
 	}
 )
+
+tape('maxOverSpots ignores counts of barcodes that are not drawn', test => {
+	const counts = new Map([
+		['in1', 3],
+		['in2', 5],
+		['outOfTissue', 99]
+	])
+	test.equal(maxOverSpots(counts, ['in1', 'in2', 'noCount']), 5, 'out-of-tissue 99 is not the max')
+	test.equal(maxOverSpots(counts, ['noCount']), 0, 'no drawn spot has a count')
+	test.end()
+})
