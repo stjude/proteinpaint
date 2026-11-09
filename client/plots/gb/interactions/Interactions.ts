@@ -91,8 +91,12 @@ export class Interactions {
 		}
 		let facetActiveTracksChanged = false
 		if (config.trackLst?.activeTracks && this.facetTrackNames.size) {
-			// active facet tracks are inuse; if user deletes such tracks from block ui, remove from activeTracks
-			const newLst = config.trackLst.activeTracks.filter(n => blockInstance.tklst.find(i => i.name == n))
+			/* active facet tracks are inuse; if user deletes such tracks from block ui, remove from activeTracks. One the
+			facet data leaves out, e.g. of a sample type that is not chosen or of a sample the filter leaves out, is not in
+			the block for that reason, and stays active to come back with it */
+			const newLst = config.trackLst.activeTracks.filter(
+				n => !this.facetTrackNames.has(n) || blockInstance.tklst.find(i => i.name == n)
+			)
 			// if user re-adds a facet track from block ui (e.g. block.tk.menu), add it back to activeTracks
 			for (const t of blockInstance.tklst) {
 				if (t.name && this.facetTrackNames.has(t.name) && !newLst.includes(t.name)) {
@@ -153,6 +157,24 @@ export class Interactions {
 			type: 'plot_edit',
 			id: this.id,
 			config: { junction: { shown } }
+		})
+	}
+
+	/** the tab shown, kept in the config without a rerender, see TabsRenderer.mayRenderTabs() */
+	saveActiveTab = (activeTab: string) => {
+		this.app.save({
+			type: 'plot_edit',
+			id: this.id,
+			config: { activeTab }
+		})
+	}
+
+	/** null when every sample type is chosen, see View.mayRenderSampleTypes() */
+	setSampleTypes = (sampleTypes: number[] | null) => {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { sampleTypes }
 		})
 	}
 

@@ -280,7 +280,9 @@ export async function makeTk(tk, block) {
 			callbackOnRender: tk.callbackOnRender,
 			hiddenMclassDt: tk.hiddenMclassDt,
 			hardcodeCnvOnly: tk.hardcodeCnvOnly, // still needed by legend.js
-			token: tk.token // for testing
+			token: tk.token, // for testing
+			// the sample types chosen in the genome browser, which a subtk of a sample category reads too
+			sampleTypes: tk.sampleTypes
 		}
 		if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
 		if (tk.legend.mclass?.hiddenvalues?.size) {
@@ -651,6 +653,7 @@ function addSampleFilterParameters(tk, par, headers, tid2value) {
 	if (tk.token) headers['X-Auth-Token'] = tk.token
 	if (tk.filter0) par.filter0 = tk.filter0
 	if (tk.filterObj) par.filterObj = tk.filterObj
+	if (tk.sampleTypes) par.sampleTypes = tk.sampleTypes
 	if (tid2value) par.tid2value = tid2value
 
 	// add in parameters that will filter samples

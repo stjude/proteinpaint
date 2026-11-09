@@ -5,7 +5,7 @@ import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
 import { setFile, validateSampleHeader, getTermSampleLimiter } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
-import { maySetMapParent2Children } from '../termdb.matrix.js'
+import { mapParent2ChildrenWithSampleTypes } from '../utils/sampleTypes.ts'
 import { getH5samples } from '../utils/h5samples.ts'
 import { setQuerySampleTypes } from '#shared/terms.js'
 
@@ -57,7 +57,8 @@ export async function validate_query_junction(ds: any, genome: any) {
 		// assuming genomic data in mds3 tk is at sample-level, so setting
 		// mapParent2Children=true to allow parent-level term data to be mapped
 		// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
-		maySetMapParent2Children(param, ds, true)
+		// with the sample types chosen in the genome browser
+		mapParent2ChildrenWithSampleTypes(param, ds)
 
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
@@ -260,6 +261,8 @@ export async function getJunctionData(
 			readcountCutoff: tw.q?.readcountCutoff ?? param.readcountCutoff
 		}
 		delete query.terms
+		// the term's own sample types are applied below, not those of the request, which may be for other terms
+		delete (query as any).sampleTypes
 		const keepList = [{ start: term.start, stop: term.stop, strand: term.strand }]
 		const result = await listJunctions(query, keepList)
 		const junction = result.junctions.find(
@@ -267,8 +270,8 @@ export async function getJunctionData(
 		)
 		let sn2rc: [string | number, number][] = junction ? [...(junction.sn2rc || [])] : []
 		/* the samples of the sample types chosen for this term in the term picker. Applied here, per term,
-		rather than through the request: listJunctions() resets the request's sample types to the default
-		ones, and a request may hold terms that chose different sample types */
+		rather than through the request, whose sample types listJunctions() would apply to every term of it:
+		a request may hold terms that chose different sample types */
 		if (term.sampleTypes != null) {
 			const keep = await limitSamples(term)
 			if (keep) sn2rc = sn2rc.filter(([sid]) => keep.has(sid))

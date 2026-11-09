@@ -12,6 +12,8 @@ export type TermdbFacetRequest = {
 	filter?: Filter
 	/** Optional terms to return per-sample annotations for */
 	twLst?: TermWrapper[]
+	/** the sample types chosen in the genome browser; absent lists the tracks of every sample */
+	sampleTypes?: number[]
 }
 
 export type TermdbFacetResponse = {

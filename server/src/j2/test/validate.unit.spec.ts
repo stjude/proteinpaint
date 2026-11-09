@@ -62,8 +62,12 @@ tape('getJunctionData: reformats sn2rc for termdb.matrix', async test => {
 		q: { readcountCutoff: 3 }
 	}
 	const result = await getJunctionData(
-		{ terms: [tw], filter: { type: 'tvslst', lst: [] } },
+		{ terms: [tw], filter: { type: 'tvslst', lst: [] }, sampleTypes: [1] },
 		async (query, keepList) => {
+			test.notOk(
+				'sampleTypes' in query,
+				'should not read the sample types of the request, which may be for other terms'
+			)
 			test.deepEqual(query.rglst, [{ chr: 'chr1', start: 100, stop: 200 }], 'queries the junction region')
 			test.equal(query.readcountCutoff, 3, 'passes the term read-count cutoff')
 			test.deepEqual(keepList, [{ start: 100, stop: 200, strand: '+' }], 'limits results to the selected junction')
@@ -157,6 +161,7 @@ tape('getJunctionData: keeps the samples of the sample types chosen for each ter
 			test.fail(message)
 		} catch (e: any) {
 			test.ok(String(e.message || e).includes(expected), message)
+			test.equal(e.status, 400, 'as an error of the request')
 		}
 	}
 	await refuses('2', ds, 'must be an array', 'refuses sample types that are not an array')

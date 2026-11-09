@@ -13,7 +13,8 @@ import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
 import { getH5samples } from './utils/h5samples.ts'
-import { withholdSampleNames } from './utils/sampleGroups.ts'
+import { withholdSampleNames, samplelstFilter } from './utils/sampleGroups.ts'
+import { getTermSampleTypeIds } from './utils/sampleTypes.ts'
 import { compute_mclass } from './vcf.mclass.js'
 import serverconfig, { mergeDsFeatures } from './serverconfig.js'
 import {
@@ -60,8 +61,10 @@ import {
 	getGvQueryRegion,
 	getGvQueryKey,
 	matchesGvQueryEntry,
-	setQuerySampleTypes
+	setQuerySampleTypes,
+	getDefaultSampleTypes
 } from '#shared/terms.js'
+import { filterJoin } from '#shared/filter.js'
 import { TermTypes } from '#types'
 import { isNumeric } from '#shared/helpers.js'
 import { validate_query_junction } from './j2/validate.ts'
@@ -568,7 +571,14 @@ function mayValidateSampleTypes(tdb) {
 async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
 	// makes sense to call barchart function as it adds counting logic over getData output
 
-	const filter = combinePPfilterAndTid2value(q, ds) // optional filter, based on optional parameters
+	let filter = combinePPfilterAndTid2value(q, ds) // optional filter, based on optional parameters
+	/* the sample types the track reads (see mapParent2ChildrenWithSampleTypes() in mds3.load.js), when they leave some
+	of the dataset's out: the totals then count the samples of those types only, as the counts of mutated samples do */
+	const sampleTypes = q.sampleTypes?.map(Number)
+	if (ds.sampleId2Type && sampleTypes?.length && getDefaultSampleTypes(ds).some(t => !sampleTypes.includes(t))) {
+		const list = [...ds.sampleId2Type].filter(([, t]) => sampleTypes.includes(t)).map(([sampleId]) => ({ sampleId }))
+		filter = filter ? filterJoin([filter, samplelstFilter(list)]) : samplelstFilter(list)
+	}
 
 	const termid2values = new Map()
 	// k: term id
@@ -2331,17 +2341,6 @@ export function getTermSampleLimiter(param, allSamples, ds) {
 		}
 		return byTypes.get(key)
 	}
-}
-
-/* term.sampleTypes as the dataset's sample type ids, or undefined when the term chose none */
-function getTermSampleTypeIds(term, ds) {
-	if (term.sampleTypes == null) return
-	if (!Array.isArray(term.sampleTypes)) throw new Error('term.sampleTypes must be an array')
-	return term.sampleTypes.map(st => {
-		const n = Number(st)
-		if (!Number.isInteger(n) || !ds.cohort?.termdb?.sampleTypes?.[n]) throw new Error(`invalid sample type='${st}'`)
-		return n
-	})
 }
 
 /* Pick which element matrix answers dnaMethylation term queries on a dataset that has no

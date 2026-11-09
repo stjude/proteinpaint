@@ -1,5 +1,14 @@
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { filterJoin } from '#filter'
+import {
+	getChosenSampleTypes,
+	getSampleTypeLabel,
+	getChildSampleTypeQuery,
+	mayRenderSampleTypeRow,
+	getTermSampleTypes,
+	getSampleTypeSelectValues,
+	getSampleTypesOfTermValues
+} from '#dom'
 import { TabsRenderer } from './TabsRenderer.ts'
 import { GeneSearchRenderer } from './GeneSearchRenderer.ts'
 
@@ -11,6 +20,8 @@ export class View {
 	opts: any
 	interactions: any
 	facetData: any[]
+	/** the chosen sample types for a track, and their label, {} for none or every one, which reads every sample */
+	trackSampleTypes: { sampleTypes?: number[]; sampleTypeLabel?: string }
 	constructor(state, blockInstance, data, dom, opts, interactions, facetData: any[] = []) {
 		this.state = state
 		this.blockInstance = blockInstance
@@ -19,9 +30,17 @@ export class View {
 		this.opts = opts
 		this.interactions = interactions
 		this.facetData = facetData
+		const termdbConfig = opts?.vocabApi?.termdbConfig
+		this.trackSampleTypes = state.sampleTypes
+			? {
+					sampleTypes: state.sampleTypes,
+					sampleTypeLabel: getSampleTypeLabel(getGbSampleTypeQuery(termdbConfig), state.sampleTypes, termdbConfig)
+			  }
+			: {}
 	}
 
 	async main() {
+		this.mayRenderSampleTypes()
 		const tabs = new TabsRenderer(this.state, this.dom, this.opts, this.interactions, this.facetData)
 		await tabs.main()
 		const geneSearch = new GeneSearchRenderer(this.state, this.dom.geneSearchDiv, this.opts, this.interactions)
@@ -87,6 +106,7 @@ export class View {
 					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
 				}
 				if (this.state.filter0) tk.filter0 = this.state.filter0
+				Object.assign(tk, this.trackSampleTypes)
 				if (this.state.config.mclassHiddenValues) {
 					tk.legend = { mclass: { hiddenvalues: new Set(this.state.config.mclassHiddenValues) } }
 				}
@@ -118,6 +138,7 @@ export class View {
 							t2.filterObj = structuredClone(subtk.filterObj)
 						}
 						if (this.state.filter0) t2.filter0 = this.state.filter0
+						Object.assign(t2, this.trackSampleTypes)
 						if (subtk.mclassHiddenValues) {
 							t2.legend = { mclass: { hiddenvalues: new Set(subtk.mclassHiddenValues) } }
 						}
@@ -148,6 +169,8 @@ export class View {
 				hiddentypes: this.state.config.junction.hiddentypes,
 				readcountCutoff: this.state.config.junction.readcountCutoff
 			}
+			// the label names the sample types on the junction terms of Details and Select
+			Object.assign(tk, this.trackSampleTypes)
 			if (this.state.filter?.lst?.length) tk.filter = structuredClone(this.state.filter)
 			tklst.push(tk)
 		}
@@ -160,6 +183,30 @@ export class View {
 		on by name. Cloned so the block's per-track state never lands in app state. */
 		for (const t of this.state.config.tracks || []) tklst.push(structuredClone(t))
 		return tklst
+	}
+
+	/* The sample type row of the genome browser, above its tabs and search: the sample types that every track of
+	sample-level data reads (mutation, splice junction, facet tracks), kept as ids in config.sampleTypes, which a
+	launcher such as the junction term picker's genome browser search may also set. A change rebuilds the block, see GB.main() */
+	mayRenderSampleTypes() {
+		/* only with a track that reads samples, or a facet table, whose list of tracks it narrows; otherwise a change
+		would only rebuild the block */
+		const { snvindel, svfusion, junction, trackLst } = this.state.config
+		if (!snvindel?.shown && !svfusion?.shown && !junction?.shown && !trackLst?.facets?.length) {
+			this.dom.sampleTypeDiv.selectAll('*').remove()
+			return
+		}
+		const termdbConfig = this.opts.vocabApi?.termdbConfig
+		const query = getGbSampleTypeQuery(termdbConfig)
+		const chosen = getChosenSampleTypes(query, this.state.config.sampleTypes)
+		const select = mayRenderSampleTypeRow(this.dom.sampleTypeDiv, query, termdbConfig, chosen)
+		if (!select) return
+		this.dom.sampleTypeDiv.on('change', () => {
+			// undefined when nothing is selectable, which getTermSampleTypes() has alerted
+			const termSampleTypes = getTermSampleTypes(select, query, termdbConfig)
+			if (termSampleTypes)
+				this.interactions.setSampleTypes(getChosenSampleTypes(query, termSampleTypes.sampleTypes) ?? null)
+		})
 	}
 
 	async launchCustomMds3tk() {
@@ -241,22 +288,38 @@ export class View {
             this should be updating tracks in this block, by adding new ones listed in tklst[],
             and deleting old ones via a tricky method
             */
+			/* the block track of the last tk above, so that a track shown again goes back to where it was first drawn.
+			Precomputed variant data updates its mds3 tk in place, which generateTracks() then leaves out of tklst[],
+			so that tk is the first one above */
+			let prev = this.data ? this.blockInstance.tklst.find(i => i.type == 'mds3') : undefined
 			for (const tk of tklst) {
-				let tki // index of this tk in block
+				let isTk // whether a block track is this tk
 				if (tk.dslabel) {
 					// Official tracks from the same dataset can have different types (e.g. mds3 and j2).
-					tki = this.blockInstance.tklst.findIndex(i => i.dslabel == tk.dslabel && i.type == tk.type)
+					isTk = i => i.dslabel == tk.dslabel && i.type == tk.type
 				} else if (tk.name) {
 					// identify tk by name
-					tki = this.blockInstance.tklst.findIndex(i => i.name == tk.name)
+					isTk = i => i.name == tk.name
 				} else {
 					throw 'tk missing dslabel & name'
 				}
+				const tki = this.blockInstance.tklst.findIndex(isTk) // index of this tk in block
 				if (tki == -1) {
 					// this tk is not in block, add to block
 					const t = this.blockInstance.block_addtk_template(tk)
+					// none for a template the block refused, which it has shown the error of
+					if (!t) continue
+					// the block appends it, below e.g. the gene track; move it to just after the tk above it, or first
+					const lst = this.blockInstance.tklst
+					lst.splice(lst.indexOf(t), 1)
+					lst.splice(prev ? lst.indexOf(prev) + 1 : 0, 0, t)
+					prev = t
 					this.blockInstance.tk_load(t)
+					continue
 				}
+				/* the last block track that is this tk: a mutation tk and its subtks share dslabel and type, so that a
+				track shown again goes below the subtks too */
+				prev = [...this.blockInstance.tklst].reverse().find(isTk)
 			}
 			if (this.state.config.trackLst?.removeTracks) {
 				// facet table marks these tracks for removal. they are all identified by tk.name
@@ -387,4 +450,25 @@ function furbishViewModeWithSnvindelComputeDetails(self, viewmode) {
 		return
 	}
 	throw 'unknown type of the only group'
+}
+
+/** the sample types the genome browser offers: the dataset's that have a parent, as its tracks of sample-level data
+ * map each case to its samples */
+export function getGbSampleTypeQuery(termdbConfig: any) {
+	const sampleTypes = Object.keys(termdbConfig?.sampleTypes || {}).map(Number)
+	return getChildSampleTypeQuery({ sampleTypes, sampleTypesByTerms: termdbConfig?.sampleTypesByTerms }, termdbConfig)
+}
+
+/** the sample types chosen for the genome browser, undefined for none or every one. With sample-types-by-terms
+ * dropdowns, those the dropdowns show, as they can show only some sets of sample types: one set by a launcher
+ * (e.g. the junction term picker, whose dropdowns hold only the junction file's types) or a saved session is read
+ * as the row draws it, so that the row and the tracks agree */
+export function getGbSampleTypes(config: any, termdbConfig: any): number[] | undefined {
+	const query = getGbSampleTypeQuery(termdbConfig)
+	const chosen = getChosenSampleTypes(query, config.sampleTypes)
+	if (!chosen || !query.sampleTypesByTerms) return chosen
+	// by term, the dropdown values, as the query has sampleTypesByTerms
+	const values = getSampleTypeSelectValues(query, chosen) as { [term: string]: string }
+	const shown = getSampleTypesOfTermValues(query.sampleTypesByTerms, values)
+	return getChosenSampleTypes(query, shown)
 }

@@ -4,6 +4,8 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import path from 'path'
 import serverconfig from './serverconfig.js'
 import { validateRglst } from './utils.js'
+import { mapParent2ChildrenWithSampleTypes } from './utils/sampleTypes.ts'
+import { combinePPfilterAndTid2value } from './mds3.filter.js'
 
 /*
 
@@ -112,11 +114,19 @@ function validateParam(q, ds, genome) {
 }
 
 async function getResultsWithMlst(q, ds) {
-	// bcf query parameter is reused
-	const param = {
-		rglst: [{ chr: q.chr, start: q.start, stop: q.stop }],
-		addFormatValues: true, // allows to add FORMAT including GT in each
-		variantFilter: q.variantFilter
+	/* the bcf query parameter of a filter. With the sample types chosen in the sample type row of the genome browser,
+	which byrange.get() keeps the samples of, as the filter maps its cases to them; one per filter, as the mapping
+	sets the sample types of the parameter */
+	const getParam = filterObj => {
+		const param = {
+			rglst: [{ chr: q.chr, start: q.start, stop: q.stop }],
+			addFormatValues: true, // allows to add FORMAT including GT in each
+			variantFilter: q.variantFilter,
+			filterObj,
+			sampleTypes: q.sampleTypes
+		}
+		mapParent2ChildrenWithSampleTypes(param, ds, combinePPfilterAndTid2value(param, ds))
+		return param
 	}
 
 	// g1 is always valid, g2 is optional
@@ -125,12 +135,10 @@ async function getResultsWithMlst(q, ds) {
 
 	// if there are two type=filter groups, must do byrange.get() for each group, then merge mlst from both queries
 	if (g1.type == 'filter' && g2?.type == 'filter') {
-		param.filterObj = getFilterObj(q, g1.filter)
-		const lst1 = await ds.queries.snvindel.byrange.get(param)
+		const lst1 = await ds.queries.snvindel.byrange.get(getParam(getFilterObj(q, g1.filter)))
 		const r1 = getMlstWithAlt(lst1)
 
-		param.filterObj = getFilterObj(q, g2.filter)
-		const lst2 = await ds.queries.snvindel.byrange.get(param)
+		const lst2 = await ds.queries.snvindel.byrange.get(getParam(getFilterObj(q, g2.filter)))
 		const r2 = getMlstWithAlt(lst2)
 
 		const mlst = mergeMlstFromTwoFilterGroups(r1.mlst, r2.mlst, q)
@@ -144,8 +152,7 @@ async function getResultsWithMlst(q, ds) {
 
 	// not both groups are type=filter, do just one query
 
-	param.filterObj = getFilterObj(q)
-	const mlst = await ds.queries.snvindel.byrange.get(param)
+	const mlst = await ds.queries.snvindel.byrange.get(getParam(getFilterObj(q)))
 	/*
 	{
 		chr/pos/class/dt/mname

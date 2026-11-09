@@ -31,7 +31,9 @@ export class Model {
 			details: this.state.config.snvindel.details,
 			filter: this.state.filter,
 			filter0: this.state.filter0,
-			variantFilter: this.state.config.variantFilter?.filter
+			variantFilter: this.state.config.variantFilter?.filter,
+			// chosen in the sample type row; absent when every sample type is shown
+			sampleTypes: this.state.sampleTypes
 		}
 
 		// using dofetch prevents the app from working with custom dataset; may change to vocab method later

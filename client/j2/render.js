@@ -7,7 +7,7 @@ import { bplen, IN_frame, JTypes, JT_canonical, JT_exonskip, JT_exonaltuse, JT_a
 import { getParameter } from './tk'
 import { dofetch3 } from '#common/dofetch'
 import { TermTypes } from '#types'
-import { makeJunctionCustomTerm } from '#termdb/handlers/junction.customTerm'
+import { makeJunctionCustomTerm, withSampleTypes } from '#termdb/handlers/junction.customTerm'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 /*
@@ -833,11 +833,13 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 			.text('Details')
 			.on('click', async () => {
 				tk.itemtip.hide()
+				// read for the sample types the track shows, chosen in the genome browser's sample type row
+				const term = tk.sampleTypes ? withSampleTypes(makeJunctionTerm(j), tk) : makeJunctionTerm(j)
 				await tk.massApp.dispatch({
 					type: 'plot_create',
 					config: {
 						chartType: 'summary',
-						term: { term: makeJunctionTerm(j), q: { mode: 'continuous' } }
+						term: { term, q: { mode: 'continuous' } }
 					}
 				})
 			})
@@ -1150,7 +1152,8 @@ function mayGroupSelect(tk, block, mainJ, otherJs, eventlabel, holder) {
 async function addJunctionCustomTerm(tk, junctions, button, msgDiv, eventlabel) {
 	await tk.massApp.dispatch({
 		type: 'add_customTerm',
-		obj: makeJunctionCustomTerm(junctions, eventlabel)
+		// read for the sample types the track shows, as Details is
+		obj: makeJunctionCustomTerm(junctions, eventlabel, tk)
 	})
 	button.remove()
 	msgDiv.text(

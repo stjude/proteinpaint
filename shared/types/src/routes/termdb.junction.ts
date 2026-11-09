@@ -34,6 +34,8 @@ export type TermdbJunctionsRequest = {
 	readcountCutoff?: number
 	/** comma-joined types to filter out junctions */
 	hiddenTypes?: string
+	/** the sample types to read, chosen for the genome browser track; absent reads every sample */
+	sampleTypes?: number[]
 }
 export type TermdbJunctionsDataResponse = {
 	junctions: Junction[]

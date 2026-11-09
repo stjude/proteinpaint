@@ -5,7 +5,7 @@ import { getCombinedTermFilter, getNormalRoot, filterJoin } from '#filter'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit } from '#plots/controls.js'
 import { Model } from './model/Model.ts'
-import { View } from './view/View.ts'
+import { View, getGbSampleTypes } from './view/View.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
 import { sanitizeTrackLstConfig } from './trackLst.ts'
 
@@ -56,6 +56,8 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			holder,
 			errDiv,
 			controls: controlsDiv.append('div'),
+			// the sample type row, for every track, see View.mayRenderSampleTypes()
+			sampleTypeDiv: mainDiv.append('div'),
 			tabsDiv: mainDiv.append('div'),
 			geneSearchDiv: mainDiv.append('div').style('margin', '20px 0px'),
 			blockHolder: mainDiv.append('div')
@@ -131,7 +133,9 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			config,
 			filter: getNormalRoot(termfilter.filter),
 			filter0: termfilter.filter0,
-			vocab: appState.vocab
+			vocab: appState.vocab,
+			// the sample types every track reads, chosen in the sample type row, see View.mayRenderSampleTypes()
+			sampleTypes: getGbSampleTypes(config, this.app.vocabApi.termdbConfig)
 		}
 	}
 
@@ -154,7 +158,9 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 
 		const filterSig = JSON.stringify({
 			filter: mergedTkFilter || null,
-			filter0: state.filter0 || null
+			filter0: state.filter0 || null,
+			// a change of sample types rebuilds every track, as a change of filter does
+			sampleTypes: state.sampleTypes || null
 		})
 
 		if (this._prevFilterSig && this._prevFilterSig !== filterSig && this.blockInstance) {
@@ -193,6 +199,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 					twLst: getFacetTwLst(state.config)
 				}
 				if (state.filter?.lst?.length) body.filter = state.filter
+				if (state.sampleTypes) body.sampleTypes = state.sampleTypes
 				const data = await this.app.vocabApi.dofetch3(
 					'termdb/facet',
 					{ headers, body },

@@ -115,6 +115,8 @@ function getParameter(tk, block) {
 		// {"op":"and","content":[{"op":"in","content":{"field":"cases.project.project_id","value":["TCGA-BRCA"]}}]}
 		par.filter0 = tk.filter0
 	}
+	// chosen in the sample type row of the genome browser; absent when every sample type is shown
+	if (tk.sampleTypes) par.sampleTypes = tk.sampleTypes
 	if (tk.filterObj) {
 		// json filter object
 		if (tk.filterObj?.lst.length) {
