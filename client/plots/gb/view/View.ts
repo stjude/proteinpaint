@@ -20,6 +20,8 @@ export class View {
 	opts: any
 	interactions: any
 	facetData: any[]
+	/** the chosen sample types for a track, and their label, {} for none or every one, which reads every sample */
+	trackSampleTypes: { sampleTypes?: number[]; sampleTypeLabel?: string }
 	constructor(state, blockInstance, data, dom, opts, interactions, facetData: any[] = []) {
 		this.state = state
 		this.blockInstance = blockInstance
@@ -28,6 +30,13 @@ export class View {
 		this.opts = opts
 		this.interactions = interactions
 		this.facetData = facetData
+		const termdbConfig = opts?.vocabApi?.termdbConfig
+		this.trackSampleTypes = state.sampleTypes
+			? {
+					sampleTypes: state.sampleTypes,
+					sampleTypeLabel: getSampleTypeLabel(getGbSampleTypeQuery(termdbConfig), state.sampleTypes, termdbConfig)
+			  }
+			: {}
 	}
 
 	async main() {
@@ -97,7 +106,7 @@ export class View {
 					// TODO this will cause mds3 tk to show a leftlabel to indicate the filtering, which should be hidden
 				}
 				if (this.state.filter0) tk.filter0 = this.state.filter0
-				Object.assign(tk, this.getTrackSampleTypes())
+				Object.assign(tk, this.trackSampleTypes)
 				if (this.state.config.mclassHiddenValues) {
 					tk.legend = { mclass: { hiddenvalues: new Set(this.state.config.mclassHiddenValues) } }
 				}
@@ -129,7 +138,7 @@ export class View {
 							t2.filterObj = structuredClone(subtk.filterObj)
 						}
 						if (this.state.filter0) t2.filter0 = this.state.filter0
-						Object.assign(t2, this.getTrackSampleTypes())
+						Object.assign(t2, this.trackSampleTypes)
 						if (subtk.mclassHiddenValues) {
 							t2.legend = { mclass: { hiddenvalues: new Set(subtk.mclassHiddenValues) } }
 						}
@@ -161,7 +170,7 @@ export class View {
 				readcountCutoff: this.state.config.junction.readcountCutoff
 			}
 			// the label names the sample types on the junction terms of Details and Select
-			Object.assign(tk, this.getTrackSampleTypes())
+			Object.assign(tk, this.trackSampleTypes)
 			if (this.state.filter?.lst?.length) tk.filter = structuredClone(this.state.filter)
 			tklst.push(tk)
 		}
@@ -180,6 +189,13 @@ export class View {
 	sample-level data reads (mutation, splice junction, facet tracks), kept as ids in config.sampleTypes, which a
 	launcher such as the junction term picker's genome browser search may also set. A change rebuilds the block, see GB.main() */
 	mayRenderSampleTypes() {
+		/* only with a track that reads samples, or a facet table, whose list of tracks it narrows; otherwise a change
+		would only rebuild the block */
+		const { snvindel, svfusion, junction, trackLst } = this.state.config
+		if (!snvindel?.shown && !svfusion?.shown && !junction?.shown && !trackLst?.facets?.length) {
+			this.dom.sampleTypeDiv.selectAll('*').remove()
+			return
+		}
 		const termdbConfig = this.opts.vocabApi?.termdbConfig
 		const query = getGbSampleTypeQuery(termdbConfig)
 		const chosen = getChosenSampleTypes(query, this.state.config.sampleTypes)
@@ -191,17 +207,6 @@ export class View {
 			if (termSampleTypes)
 				this.interactions.setSampleTypes(getChosenSampleTypes(query, termSampleTypes.sampleTypes) ?? null)
 		})
-	}
-
-	/** the chosen sample types for a track, {} for none or every one, which reads every sample */
-	getTrackSampleTypes(): { sampleTypes?: number[]; sampleTypeLabel?: string } {
-		const termdbConfig = this.opts.vocabApi?.termdbConfig
-		const sampleTypes = getGbSampleTypes(this.state, termdbConfig)
-		if (!sampleTypes) return {}
-		return {
-			sampleTypes,
-			sampleTypeLabel: getSampleTypeLabel(getGbSampleTypeQuery(termdbConfig), sampleTypes, termdbConfig)
-		}
 	}
 
 	async launchCustomMds3tk() {
@@ -302,6 +307,8 @@ export class View {
 				if (tki == -1) {
 					// this tk is not in block, add to block
 					const t = this.blockInstance.block_addtk_template(tk)
+					// none for a template the block refused, which it has shown the error of
+					if (!t) continue
 					// the block appends it, below e.g. the gene track; move it to just after the tk above it, or first
 					const lst = this.blockInstance.tklst
 					lst.splice(lst.indexOf(t), 1)
@@ -456,9 +463,9 @@ export function getGbSampleTypeQuery(termdbConfig: any) {
  * dropdowns, those the dropdowns show, as they can show only some sets of sample types: one set by a launcher
  * (e.g. the junction term picker, whose dropdowns hold only the junction file's types) or a saved session is read
  * as the row draws it, so that the row and the tracks agree */
-export function getGbSampleTypes(state: any, termdbConfig: any): number[] | undefined {
+export function getGbSampleTypes(config: any, termdbConfig: any): number[] | undefined {
 	const query = getGbSampleTypeQuery(termdbConfig)
-	const chosen = getChosenSampleTypes(query, state.config.sampleTypes)
+	const chosen = getChosenSampleTypes(query, config.sampleTypes)
 	if (!chosen || !query.sampleTypesByTerms) return chosen
 	// by term, the dropdown values, as the query has sampleTypesByTerms
 	const values = getSampleTypeSelectValues(query, chosen) as { [term: string]: string }

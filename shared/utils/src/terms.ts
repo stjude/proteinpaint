@@ -618,7 +618,7 @@ Origin first, then sample type, so the two read in the order the gene search UI 
 One definition for every term type, so that a pill, a plot title and a term name describe the
 same selection the same way -- see getTitleText() in client/tw/geneVariant.ts and
 client/tw/numeric.ts, and the term names of makeDNAMethRegionTerm() in client/tw/dnaMethylation.ts
-and withSampleTypes() in client/termdb/handlers/junction.ts.
+and withSampleTypes() in client/termdb/handlers/junction.customTerm.ts.
 
 q.originLabel is only set for a predefined groupset; the tvs of a custom groupset carry their
 own origins and name them in their own filter pills instead.

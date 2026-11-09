@@ -1,6 +1,7 @@
 import type { SampleTypes } from '#types'
 import { getSelectedCheckboxValues, renderCheckboxSelect } from './checkboxSelect.ts'
 import { table2col } from './table2col.js'
+import { getQuerySampleTypesByTerms } from '#shared/terms.js'
 
 /** renders a "Sample Type" row holding the sample type checkboxes or the
  * sample-types-by-terms dropdowns, for a query (e.g. queries.geneExpression or
@@ -23,28 +24,19 @@ export function mayRenderSampleTypeRow(holder: any, query: any, termdbConfig: an
 	return termSelects
 }
 
-/** a query's sample types (e.g. queries.junction) that have a parent, and its dropdown values left with any
- * of them: the types of the samples that data read by case, such as a genome browser
- * track, maps each case to */
+/** a query's sample types that have a parent, and its dropdown values left with any of them, without a dropdown left
+ * with none: the types of the samples that data read by case, such as a genome browser track, maps each case to */
 export function getChildSampleTypeQuery(query: any, termdbConfig: any) {
 	if (!query?.sampleTypes) return query
-	const hasParent = t => Number.isInteger(termdbConfig.sampleTypes?.[t]?.parent_id)
-	const q = { ...query, sampleTypes: query.sampleTypes.filter(hasParent) }
-	if (query.sampleTypesByTerms)
-		q.sampleTypesByTerms = Object.fromEntries(
-			Object.entries<any>(query.sampleTypesByTerms).map(([term, byValue]) => [
-				term,
-				Object.fromEntries(
-					Object.entries<number[]>(byValue)
-						.map(([v, types]) => [v, types.filter(hasParent)])
-						.filter(([, types]) => types.length)
-				)
-			])
-		)
-	return q
+	const sampleTypes = query.sampleTypes.filter(t => Number.isInteger(termdbConfig.sampleTypes?.[t]?.parent_id))
+	return {
+		...query,
+		sampleTypes,
+		sampleTypesByTerms: getQuerySampleTypesByTerms(query.sampleTypesByTerms, sampleTypes)
+	}
 }
 
-/** the ids of a kept choice of sample types (e.g. the genome browser's config.junction.sampleTypes, which a
+/** the ids of a kept choice of sample types (e.g. the genome browser's config.sampleTypes, which a
  * launcher may set from the sample types of another query) that the query has. undefined for none, or every
  * one, of them, which reads every sample */
 export function getChosenSampleTypes(query: any, sampleTypes?: number[] | null) {
@@ -69,7 +61,7 @@ export function getTermSampleTypes(sampleTypeSelect: any, query: any, termdbConf
 }
 
 /** the inverse of getSelectedSampleTypes(), to draw a choice kept as sample type ids (e.g. the genome browser's
- * config.junction.sampleTypes): the checkbox values to check, or by term of sampleTypesByTerms the dropdown value
+ * config.sampleTypes): the checkbox values to check, or by term of sampleTypesByTerms the dropdown value
  * whose sample types hold every given one, 'any' when no single value does */
 export function getSampleTypeSelectValues(query: any, sampleTypes: number[]) {
 	if (!query?.sampleTypesByTerms) return sampleTypes.map(String)

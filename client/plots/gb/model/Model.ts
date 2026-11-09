@@ -1,5 +1,4 @@
 import { dofetch3 } from '#common/dofetch'
-import { getGbSampleTypes } from '../view/View.ts'
 
 export class Model {
 	state: any
@@ -34,7 +33,7 @@ export class Model {
 			filter0: this.state.filter0,
 			variantFilter: this.state.config.variantFilter?.filter,
 			// chosen in the sample type row; absent when every sample type is shown
-			sampleTypes: getGbSampleTypes(this.state, this.app.vocabApi.termdbConfig)
+			sampleTypes: this.state.sampleTypes
 		}
 
 		// using dofetch prevents the app from working with custom dataset; may change to vocab method later

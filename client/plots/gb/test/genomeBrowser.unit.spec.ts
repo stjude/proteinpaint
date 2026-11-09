@@ -167,9 +167,13 @@ const sampleTypeConfig = {
 tape('sample type row of the genome browser', test => {
 	const choices: any[] = []
 	const interactions = { setSampleTypes: c => choices.push(c) }
-	const draw = (sampleTypes?: number[], termdbConfig: any = sampleTypeConfig) => {
+	const draw = (
+		sampleTypes?: number[],
+		termdbConfig: any = sampleTypeConfig,
+		tracks: any = { junction: { shown: true } }
+	) => {
 		const sampleTypeDiv: any = d3s.select('body').append('div')
-		const state = { config: { sampleTypes } }
+		const state = { config: { sampleTypes, ...tracks } }
 		new View(state, null, {}, { sampleTypeDiv }, { vocabApi: { termdbConfig } }, interactions).mayRenderSampleTypes()
 		return { sampleTypeDiv, boxes: sampleTypeDiv.selectAll('input[type=checkbox]').nodes() as HTMLInputElement[] }
 	}
@@ -198,16 +202,18 @@ tape('sample type row of the genome browser', test => {
 	})
 	test.equal(one.boxes.length, 0, 'should draw no row for a dataset of one sample type with a parent')
 
-	if (test['_ok']) for (const d of [first, again, one]) d.sampleTypeDiv.remove()
+	const noTrack = draw(undefined, sampleTypeConfig, { junction: { shown: false }, snvindel: { shown: false } })
+	test.equal(noTrack.boxes.length, 0, 'should draw no row when no track that reads samples is shown')
+
+	if (test['_ok']) for (const d of [first, again, one, noTrack]) d.sampleTypeDiv.remove()
 	test.end()
 })
 
 tape('every track reads the sample types of the genome browser', async test => {
 	const getTracks = async (sampleTypes?: number[]) => {
-		const state = {
-			config: { sampleTypes, snvindel: { shown: true }, junction: { shown: true } },
-			vocab: { dslabel: 'ds' }
-		}
+		const config = { sampleTypes, snvindel: { shown: true }, junction: { shown: true } }
+		// as GB.getState() computes it
+		const state = { config, vocab: { dslabel: 'ds' }, sampleTypes: getGbSampleTypes(config, sampleTypeConfig) }
 		const view = new View(state, null, null, {}, { vocabApi: { termdbConfig: sampleTypeConfig } }, {})
 		const tklst = await view.generateTracks()
 		return { mds3: tklst.find(t => t.type == 'mds3'), j2: tklst.find(t => t.type == 'j2') }
@@ -227,11 +233,13 @@ tape('every track reads the sample types of the genome browser', async test => {
 })
 
 tape('opening tab', async test => {
+	const saved: string[] = []
+	const interactions = { saveActiveTab: (label: string) => saved.push(label) }
 	const draw = async (activeTab?: string) => {
 		const tabsDiv: any = d3s.select('body').append('div')
 		const config = { snvindel: { shown: true }, junction: { shown: true }, activeTab }
 		const opts = { vocabApi: { termdbConfig: { queries: { junction: {} } } } }
-		await new TabsRenderer({ config }, { tabsDiv }, opts, {}).main()
+		await new TabsRenderer({ config }, { tabsDiv }, opts, interactions).main()
 		return tabsDiv
 	}
 	const active = div => div.select('button.sjpp-active').datum()?.label
@@ -240,6 +248,10 @@ tape('opening tab', async test => {
 	test.equal(active(plain), 'Mutation', 'should open at the first shown tab by default')
 	const junction = await draw('Splice Junction')
 	test.equal(active(junction), 'Splice Junction', 'should open at the tab named by config.activeTab')
+	saved.length = 0
+	;(junction.selectAll('button').nodes() as HTMLElement[]).find(b => b.textContent == 'Mutation')!.click()
+	await new Promise(r => setTimeout(r, 0))
+	test.deepEqual(saved, ['Mutation'], 'should keep a tab clicked as config.activeTab, for a redraw or a saved session')
 
 	if (test['_ok']) for (const d of [plain, junction]) d.remove()
 	test.end()
@@ -317,7 +329,7 @@ tape('sample types the dropdowns of the genome browser show', test => {
 			tissue: { Marrow: [2, 4], Blood: [3, 5] }
 		}
 	}
-	const read = (sampleTypes: number[]) => getGbSampleTypes({ config: { sampleTypes } }, termdbConfig)
+	const read = (sampleTypes: number[]) => getGbSampleTypes({ sampleTypes }, termdbConfig)
 	test.deepEqual(read([2]), [2], 'should read a choice that the dropdowns show, Baseline and Marrow')
 	test.deepEqual(read([2, 3]), [2, 3], 'should read a choice of one dropdown, Baseline and any tissue')
 	test.deepEqual(

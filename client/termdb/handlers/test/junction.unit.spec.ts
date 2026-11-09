@@ -81,8 +81,8 @@ tape('init() offers a genome browser search when there is no junction', async te
 })
 
 tape('the empty picker offers sample types for the genome browser it opens', async test => {
-	const termdbConfig = {
-		queries: { junction: { sampleTypes: [1, 2, 3] } },
+	const termdbConfig: any = {
+		queries: { junction: { sampleTypes: [2, 3] } },
 		sampleTypes: {
 			1: { name: 'patient', plural_name: 'patients', parent_id: null },
 			2: { name: 'diagnosis sample', plural_name: 'diagnosis samples', parent_id: 1 },
@@ -101,8 +101,20 @@ tape('the empty picker offers sample types for the genome browser it opens', asy
 	test.equal(
 		holder.selectAll('input[type=checkbox]').size(),
 		2,
-		'should draw a checkbox for each sample type with a parent above the search'
+		'should draw a checkbox for each sample type of the junction file above the search'
 	)
+	// a dataset whose sample types have no parent, e.g. tumor and normal samples
+	const flatConfig = {
+		queries: { junction: { sampleTypes: [1, 2] } },
+		sampleTypes: {
+			1: { name: 'tumor', plural_name: 'tumors', parent_id: null },
+			2: { name: 'normal', plural_name: 'normals', parent_id: null }
+		}
+	}
+	opts.app.vocabApi.termdbConfig = flatConfig
+	await new SearchHandler().init(opts)
+	test.equal(holder.selectAll('input[type=checkbox]').size(), 2, 'should offer sample types without a parent too')
+	opts.app.vocabApi.termdbConfig = termdbConfig
 
 	// the config the search dispatches, for the row as it is drawn
 	const query = { sampleTypes: [2, 3] }

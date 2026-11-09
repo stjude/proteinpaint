@@ -871,6 +871,8 @@ function dupRequest(q) {
 	return {
 		filterObj: q.filterObj,
 		filter0: q.filter0,
+		// the sample types the track reads, which the totals count the samples of
+		sampleTypes: q.sampleTypes,
 		// must include below for controlled data query
 		token: q.token,
 		sessionid: q.sessionid,

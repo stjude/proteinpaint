@@ -21,8 +21,9 @@ export class TabsRenderer {
 	}
 
 	async main() {
-		/* Preserve the currently active tab label before clearing. On the first draw, config.activeTab may
-		name the tab to open at, e.g. 'Splice Junction' from the junction term picker */
+		/* Preserve the currently active tab label before clearing. Without an active tab button, e.g. on the first draw,
+		config.activeTab names the tab last shown, see mayRenderTabs(), or the tab a launcher opens at, e.g. 'Splice
+		Junction' from the junction term picker */
 		let previousActiveTabLabel: string | null = this.state.config.activeTab || null
 		const existingActiveButton = this.dom.tabsDiv.select('button.sjpp-active')
 		if (!existingActiveButton.empty()) {
@@ -99,6 +100,13 @@ export class TabsRenderer {
 	async mayRenderTabs() {
 		const tabs = this.tabs
 		if (!tabs?.length) return
+		/* the tab shown, kept as config.activeTab, so that a redraw with the tabs collapsed, or a saved session, opens it
+		again rather than the tab a launcher opened at. Tabs calls this for the tab drawn active and for a click */
+		for (const tab of tabs) {
+			tab.callback = (_, t) => {
+				if (t.active && t.label != this.state.config.activeTab) this.interactions.saveActiveTab(t.label)
+			}
+		}
 		// has some tabs! initiate the tab ui, then at <div> of each tab, render contents
 		const toggles = new Tabs({
 			holder: this.dom.tabsDiv.append('div').style('border-bottom', 'solid 1px #ccc').style('padding-bottom', '20px'),

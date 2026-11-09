@@ -270,8 +270,8 @@ export async function getJunctionData(
 		)
 		let sn2rc: [string | number, number][] = junction ? [...(junction.sn2rc || [])] : []
 		/* the samples of the sample types chosen for this term in the term picker. Applied here, per term,
-		rather than through the request: listJunctions() resets the request's sample types to the default
-		ones, and a request may hold terms that chose different sample types */
+		rather than through the request, whose sample types listJunctions() would apply to every term of it:
+		a request may hold terms that chose different sample types */
 		if (term.sampleTypes != null) {
 			const keep = await limitSamples(term)
 			if (keep) sn2rc = sn2rc.filter(([sid]) => keep.has(sid))

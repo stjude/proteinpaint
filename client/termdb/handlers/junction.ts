@@ -1,13 +1,6 @@
 import { junctionCustomTermSource, withSampleTypes, type JunctionCustomTerm } from './junction.customTerm.ts'
 import { mayRenderFractionSelection } from './termCollectionFractionSelection.ts'
-import {
-	Menu,
-	addGeneSearchbox,
-	mayRenderSampleTypeRow,
-	getTermSampleTypes,
-	getChosenSampleTypes,
-	getChildSampleTypeQuery
-} from '#dom'
+import { Menu, addGeneSearchbox, mayRenderSampleTypeRow, getTermSampleTypes, getChosenSampleTypes } from '#dom'
 
 export class SearchHandler {
 	async init(opts) {
@@ -29,8 +22,10 @@ function render(opts, entries: JunctionCustomTerm[]) {
 	holder.selectAll('*').remove()
 	const div = holder.append('div').style('padding', '10px 0px')
 	const termdbConfig = opts.app.vocabApi.termdbConfig
-	// the sample types with a parent, as the genome browser offers them
-	const query = getChildSampleTypeQuery(termdbConfig?.queries?.junction, termdbConfig)
+	/* the sample types of the junction file. Not only those with a parent, as the genome browser offers: they are the
+	same on a dataset of samples of cases, whose junction samples have a parent, and a dataset of sample types without
+	parents still gets its choice. A genome browser opened below reads those it offers of the chosen ones */
+	const query = termdbConfig?.queries?.junction
 
 	if (!entries.length) {
 		renderNoJunctions(div, opts, query)

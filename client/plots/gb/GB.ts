@@ -133,7 +133,9 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			config,
 			filter: getNormalRoot(termfilter.filter),
 			filter0: termfilter.filter0,
-			vocab: appState.vocab
+			vocab: appState.vocab,
+			// the sample types every track reads, chosen in the sample type row, see View.mayRenderSampleTypes()
+			sampleTypes: getGbSampleTypes(config, this.app.vocabApi.termdbConfig)
 		}
 	}
 
@@ -158,7 +160,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			filter: mergedTkFilter || null,
 			filter0: state.filter0 || null,
 			// a change of sample types rebuilds every track, as a change of filter does
-			sampleTypes: getGbSampleTypes(state, this.app.vocabApi.termdbConfig) || null
+			sampleTypes: state.sampleTypes || null
 		})
 
 		if (this._prevFilterSig && this._prevFilterSig !== filterSig && this.blockInstance) {
@@ -197,8 +199,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 					twLst: getFacetTwLst(state.config)
 				}
 				if (state.filter?.lst?.length) body.filter = state.filter
-				const sampleTypes = getGbSampleTypes(state, this.app.vocabApi.termdbConfig)
-				if (sampleTypes) body.sampleTypes = sampleTypes
+				if (state.sampleTypes) body.sampleTypes = state.sampleTypes
 				const data = await this.app.vocabApi.dofetch3(
 					'termdb/facet',
 					{ headers, body },

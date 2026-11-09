@@ -960,7 +960,8 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	return [samples, byTermId]
 }
 
-function getSampleTypes(q, ds): { sampleTypes: Set<any>; childSampleTypes: Set<any> } {
+/* the sample types of the terms, filter and filter0 of a query, which maySetMapParent2Children() maps by */
+export function getSampleTypes(q, ds): { sampleTypes: Set<any>; childSampleTypes: Set<any> } {
 	const twLst = q.terms ? q.terms : q.tw ? [q.tw] : []
 	const filter = q.filter
 	const filter0 = q.filter0
