@@ -1,4 +1,5 @@
 import type { RoutePayload, IsoformLstRequest, IsoformLstResponse, RouteApi } from '#types'
+import serverconfig from '#src/serverconfig.js'
 
 const payload: RoutePayload = {
 	init,
@@ -18,7 +19,9 @@ export const api: RouteApi = {
 	}
 }
 
-// upper limit of the distinct isoforms of a request, well above the isoforms of any gene
+// upper limit of the distinct isoforms of a request, well above the isoforms of any gene;
+// not applied when serverconfig.features.ALLOW_isoformlst_unlimitedcount is true, for a server
+// whose app requests the isoforms of many genes at once
 const maxIsoforms = 1000
 
 function init({ genomes }) {
@@ -29,7 +32,7 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome'
 			if (!Array.isArray(q.lst)) throw '.lst missing'
 			const isoforms = [...new Set(q.lst)]
-			if (isoforms.length > maxIsoforms)
+			if (!serverconfig.features.ALLOW_isoformlst_unlimitedcount && isoforms.length > maxIsoforms)
 				throw `.lst has ${isoforms.length} isoforms, it must have ${maxIsoforms} or fewer`
 			const lst: any[] = []
 			for (const isoform of isoforms) {

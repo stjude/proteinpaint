@@ -1,4 +1,5 @@
 import tape from 'tape'
+import serverconfig from '#src/serverconfig.js'
 import { api as isoformlstApi } from '../isoformlst.ts'
 import { api as pdomainApi } from '../pdomain.ts'
 import { api as translategmApi } from '../translategm.ts'
@@ -9,6 +10,7 @@ Specs for the request limits of the genome-level routes
 
 test sections:
 - /isoformlst: distinct isoforms
+- /isoformlst: serverconfig.features.ALLOW_isoformlst_unlimitedcount
 - /pdomain: distinct isoforms
 - /translategm: gene and coding regions
 - /termdb/getpercentile: validatePercentiles()
@@ -74,6 +76,26 @@ tape('/isoformlst: distinct isoforms', async test => {
 	const overLimit = await send(isoformlstApi, g2, { lst: isoformNames(maxIsoforms + 1) })
 	test.ok(String(overLimit.error).includes('must have 1000 or fewer'), 'should reject too many isoforms')
 	test.equal(g2.looked.length, 0, 'should not look up any isoform when there are too many')
+	test.end()
+})
+
+tape('/isoformlst: serverconfig.features.ALLOW_isoformlst_unlimitedcount', async test => {
+	const original = serverconfig.features.ALLOW_isoformlst_unlimitedcount
+	try {
+		serverconfig.features.ALLOW_isoformlst_unlimitedcount = true
+		const g = getGenome()
+		const overLimit = await send(isoformlstApi, g, { lst: isoformNames(maxIsoforms + 1) })
+		test.equal(overLimit.error, undefined, 'should accept more than the maximum number of isoforms when true')
+		test.equal(overLimit.lst?.length, maxIsoforms + 1, 'should return every isoform when true')
+		test.equal(g.looked.length, maxIsoforms + 1, 'should look up every isoform when true')
+
+		serverconfig.features.ALLOW_isoformlst_unlimitedcount = false
+		const rejected = await send(isoformlstApi, getGenome(), { lst: isoformNames(maxIsoforms + 1) })
+		test.ok(String(rejected.error).includes('must have 1000 or fewer'), 'should reject too many isoforms when false')
+	} finally {
+		if (original === undefined) delete serverconfig.features.ALLOW_isoformlst_unlimitedcount
+		else serverconfig.features.ALLOW_isoformlst_unlimitedcount = original
+	}
 	test.end()
 })
 
