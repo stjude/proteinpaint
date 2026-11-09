@@ -118,6 +118,11 @@ export async function launch(arg: DiscoPlotArgs, genomeObj: Genome, holder: Sele
 			},
 			getTermdbConfig: () => {
 				return {}
+			},
+			// PlotBase calls app.vocabApi.create() for a plot-level vocabApi, so the mock needs it too,
+			// see the create() method in termdb/Vocab.js
+			create(componentGetAbortSignal: () => AbortSignal | undefined) {
+				return Object.create(this, { getAbortSignal: { value: () => componentGetAbortSignal() } })
 			}
 		},
 		state: {
