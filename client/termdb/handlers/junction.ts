@@ -1,7 +1,13 @@
-import { junctionCustomTermSource, type JunctionCustomTerm } from './junction.customTerm.ts'
+import { junctionCustomTermSource, withSampleTypes, type JunctionCustomTerm } from './junction.customTerm.ts'
 import { mayRenderFractionSelection } from './termCollectionFractionSelection.ts'
-import { mayRenderSampleTypeRow, getTermSampleTypes } from '#dom'
-import { getTermLabelSuffix } from '#shared/terms.js'
+import {
+	Menu,
+	addGeneSearchbox,
+	mayRenderSampleTypeRow,
+	getTermSampleTypes,
+	getChosenSampleTypes,
+	getChildSampleTypeQuery
+} from '#dom'
 
 export class SearchHandler {
 	async init(opts) {
@@ -22,16 +28,17 @@ function render(opts, entries: JunctionCustomTerm[]) {
 	const holder = opts.holder
 	holder.selectAll('*').remove()
 	const div = holder.append('div').style('padding', '10px 0px')
+	const termdbConfig = opts.app.vocabApi.termdbConfig
+	// the sample types with a parent, as the genome browser offers them
+	const query = getChildSampleTypeQuery(termdbConfig?.queries?.junction, termdbConfig)
 
 	if (!entries.length) {
-		div.append('div').text('Junctions selected from genome browser will be shown here.')
+		renderNoJunctions(div, opts, query)
 		return
 	}
 
 	/* the sample types to read the picked junction for, as for gene expression and methylation terms.
 	Drawn once: a delete redraws only the list below, so the choice stays */
-	const termdbConfig = opts.app.vocabApi.termdbConfig
-	const query = termdbConfig?.queries?.junction
 	const sampleTypeSelect = mayRenderSampleTypeRow(div.append('div'), query, termdbConfig)
 	/* a junction or event term, or the term wrapper of an event's fraction from the fraction chooser, with
 	the chosen sample types, see withSampleTypes() */
@@ -40,9 +47,9 @@ function render(opts, entries: JunctionCustomTerm[]) {
 		// nothing selectable, which getTermSampleTypes() has alerted
 		if (!termSampleTypes) return
 		/* every sample type of the junction file, or its only one, is the same as no choice: the term then
-		reads every sample, as before there was a selector, including any sample without a sample type */
-		const all =
-			!termSampleTypes.sampleTypes?.length || query.sampleTypes.every(t => termSampleTypes.sampleTypes!.includes(t))
+		reads every sample, as before there was a selector, including any sample without a sample type. A term
+		selected from a genome browser track that reads some sample types keeps them, unless others are chosen here */
+		const all = !getChosenSampleTypes(query, termSampleTypes.sampleTypes)
 		const apply = (term: any) => (all ? term : withSampleTypes(term, termSampleTypes))
 		return opts.callback(termOrTw.term ? { ...termOrTw, term: apply(termOrTw.term) } : apply(termOrTw))
 	}
@@ -75,6 +82,49 @@ function render(opts, entries: JunctionCustomTerm[]) {
 	renderList()
 }
 
+/* Junction terms are made only in a genome browser, by Select on a junction of its splice junction
+track, so a search here opens one, in the mass app that vocabApi belongs to. As in the gene
+expression picker, the sample type row is above the search: the genome browser opens with
+the chosen sample types, which a junction selected from its track keeps. */
+function renderNoJunctions(div, opts, query) {
+	const termdbConfig = opts.app.vocabApi.termdbConfig
+	const massApp = opts.app.vocabApi.app
+	// only the mass app, whose state lists plots, can open a genome browser; a standalone termdb app cannot
+	const canOpen = Array.isArray(massApp?.getState?.()?.plots) && opts.genomeObj
+	const sampleTypeSelect = canOpen ? mayRenderSampleTypeRow(div.append('div'), query, termdbConfig) : undefined
+	div.append('div').text('Junctions selected from genome browser will be shown here.')
+	if (!canOpen) return
+	const row = div.append('div').style('margin-top', '10px')
+	row.append('span').style('margin-right', '5px').text('Open genome browser at')
+	const geneSearch = addGeneSearchbox({
+		tip: new Menu({ padding: '0px' }),
+		genome: opts.genomeObj,
+		row,
+		callback: () => {
+			const { chr, start, stop } = geneSearch
+			if (!chr) return
+			const config = getGenomeBrowserConfig({ chr, start, stop }, sampleTypeSelect, query, termdbConfig)
+			if (config) massApp.dispatch({ type: 'plot_create', config })
+		}
+	})
+}
+
+/** the genome browser the search opens: at the found region, on its splice junction tab, with the sample
+ * types of the row (none, or every one, reads every sample). undefined when nothing is selectable, which
+ * getTermSampleTypes() has alerted */
+export function getGenomeBrowserConfig(geneSearchResult, sampleTypeSelect, query, termdbConfig) {
+	const termSampleTypes = getTermSampleTypes(sampleTypeSelect, query, termdbConfig)
+	if (!termSampleTypes) return
+	const sampleTypes = getChosenSampleTypes(query, termSampleTypes.sampleTypes)
+	return {
+		chartType: 'genomeBrowser',
+		blockIsProteinMode: false,
+		geneSearchResult,
+		activeTab: 'Splice Junction',
+		...(sampleTypes ? { sampleTypes } : {})
+	}
+}
+
 function renderJunction(holder, entry: JunctionCustomTerm, opts) {
 	const choice = holder.append('div')
 	choice
@@ -97,7 +147,8 @@ function renderJunctionEvent(holder, fractionDiv, entry: JunctionCustomTerm, opt
 		.style('display', 'inline-block')
 		.style('border-radius', '6px')
 		.style('margin', '1px 0')
-		.text(entry.eventlabel!)
+		// the event label, and the sample types it was selected for
+		.text(entry.name)
 		.on('click', () => selectJunctionEvent(holder, fractionDiv, entry, opts))
 	addDeleteButton(pillRow, entry, opts)
 	eventHolder
@@ -133,17 +184,4 @@ function addDeleteButton(holder, entry: JunctionCustomTerm, opts) {
 			await opts.app.vocabApi.deleteCustomTermById(entry.id)
 			opts.renderList()
 		})
-}
-
-/** A copy of a picked junction term, or of a splice event's termCollection, read for the chosen sample
- * types. A collection's member junctions get them too, since the server reads each member as a junction
- * term of its own. The caller leaves a term unchanged for no choice or a choice of every sample type. Like a methylation region term, the name says which
- * sample types, so that the same junction read for two of them is told apart where a plot labels terms
- * by name. */
-function withSampleTypes(term: any, termSampleTypes: { sampleTypes?: number[]; sampleTypeLabel?: string }) {
-	const { sampleTypes, sampleTypeLabel } = termSampleTypes
-	const t = { ...term, sampleTypes, sampleTypeLabel }
-	t.name = term.name + getTermLabelSuffix(t)
-	if (Array.isArray(term.termlst)) t.termlst = term.termlst.map(m => ({ ...m, sampleTypes }))
-	return t
 }

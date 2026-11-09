@@ -14,6 +14,7 @@ import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
 import { getH5samples } from './utils/h5samples.ts'
 import { withholdSampleNames } from './utils/sampleGroups.ts'
+import { getTermSampleTypeIds } from './utils/sampleTypes.ts'
 import { compute_mclass } from './vcf.mclass.js'
 import serverconfig, { mergeDsFeatures } from './serverconfig.js'
 import {
@@ -2331,17 +2332,6 @@ export function getTermSampleLimiter(param, allSamples, ds) {
 		}
 		return byTypes.get(key)
 	}
-}
-
-/* term.sampleTypes as the dataset's sample type ids, or undefined when the term chose none */
-function getTermSampleTypeIds(term, ds) {
-	if (term.sampleTypes == null) return
-	if (!Array.isArray(term.sampleTypes)) throw new Error('term.sampleTypes must be an array')
-	return term.sampleTypes.map(st => {
-		const n = Number(st)
-		if (!Number.isInteger(n) || !ds.cohort?.termdb?.sampleTypes?.[n]) throw new Error(`invalid sample type='${st}'`)
-		return n
-	})
 }
 
 /* Pick which element matrix answers dnaMethylation term queries on a dataset that has no

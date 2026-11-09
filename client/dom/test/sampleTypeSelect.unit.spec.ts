@@ -2,6 +2,9 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import {
 	getSelectedSampleTypesByTerms,
+	getChosenSampleTypes,
+	getSampleTypeLabel,
+	getSampleTypeSelectValues,
 	mayGetSampleTypeLabel,
 	mayRenderSampleTypeRow,
 	renderSampleTypesByTermsSelect
@@ -165,5 +168,85 @@ tape('mayRenderSampleTypeRow(): renders only when there is a choice', test => {
 	test.equal(holder.selectAll('input[type=checkbox]').size(), 0, 'clears the previous select')
 
 	holder.remove()
+	test.end()
+})
+
+tape('getSampleTypeSelectValues() and getSampleTypeLabel() draw and name sample type ids', test => {
+	const termdbConfig = {
+		sampleTypes: { 2: { plural_name: 'diagnosis samples' }, 3: { plural_name: 'relapse samples' } }
+	}
+	test.deepEqual(getSampleTypeSelectValues({ sampleTypes: [2, 3] }, [3]), ['3'], 'should give the checkbox values')
+	test.equal(
+		getSampleTypeLabel({ sampleTypes: [2, 3] }, [2, 3], termdbConfig),
+		'diagnosis samples, relapse samples',
+		'should name checkbox sample types by their plural names'
+	)
+
+	const query = {
+		sampleTypes: [2, 3, 4, 5],
+		sampleTypesByTerms: {
+			'samples.collection_event': sampleTypesByTerms['samples.collection_event'],
+			'samples.specimen_type': sampleTypesByTerms['samples.specimen_type']
+		}
+	}
+	test.deepEqual(
+		getSampleTypeSelectValues(query, [2, 4]),
+		{ 'samples.collection_event': 'Baseline', 'samples.specimen_type': 'Bone Marrow' },
+		'should give, by term, the dropdown value holding every sample type'
+	)
+	test.deepEqual(
+		getSampleTypeSelectValues(query, [2, 3]),
+		{ 'samples.collection_event': 'Baseline', 'samples.specimen_type': 'any' },
+		'should give any for a term with no single value holding them all'
+	)
+	test.equal(
+		getSampleTypeLabel(query, [2, 4], termdbConfig),
+		'Baseline Bone Marrow',
+		'should name dropdown sample types by their values'
+	)
+	termdbConfig.sampleTypes[5] = { plural_name: 'baseline blood samples' }
+	test.equal(
+		getSampleTypeLabel(query, [2, 5], termdbConfig),
+		'diagnosis samples, baseline blood samples',
+		'should name them by plural names when the dropdowns cannot select exactly them'
+	)
+	test.end()
+})
+
+tape('getChosenSampleTypes() keeps the ids of the query, and none for every one', test => {
+	const query = { sampleTypes: [2, 3, 4] }
+	test.deepEqual(getChosenSampleTypes(query, [3, 2]), [2, 3], 'should keep the chosen ids, in the query order')
+	test.deepEqual(getChosenSampleTypes(query, [2, 9]), [2], 'should drop an id the query does not have')
+	test.equal(getChosenSampleTypes(query, [9]), undefined, 'should read every sample when none is of the query')
+	test.equal(getChosenSampleTypes(query, [4, 3, 2]), undefined, 'should read every sample for every sample type')
+	test.equal(getChosenSampleTypes(query, null), undefined, 'should read every sample for no choice')
+	test.end()
+})
+
+tape('mayRenderSampleTypeRow() draws a chosen set of sample types', test => {
+	const holder: any = d3s.select('body').append('div')
+	const config = {
+		...termdbConfig,
+		sampleTypes: { 2: { name: 'Tumor', plural_name: 'Tumors' }, 3: { name: 'Normal', plural_name: 'Normals' } }
+	}
+	mayRenderSampleTypeRow(holder, { sampleTypes: [2, 3] }, config, [3])
+	const boxes = holder.selectAll('input[type=checkbox]').nodes() as HTMLInputElement[]
+	test.deepEqual(
+		boxes.map(b => b.checked),
+		[false, true],
+		'should check the chosen sample types alone'
+	)
+	test.equal(
+		(boxes[1].parentNode as HTMLElement).style.cursor,
+		'not-allowed',
+		'should mark the one checked box as the last one'
+	)
+
+	const query = { sampleTypes: [2, 3, 4, 5], sampleTypesByTerms }
+	const termSelects: any = mayRenderSampleTypeRow(holder, query, config, [2, 4])
+	test.equal(termSelects['samples.collection_event'].property('value'), 'Baseline', 'should set each dropdown')
+	test.equal(termSelects['samples.specimen_type'].property('value'), 'Bone Marrow', 'should set each dropdown')
+
+	if (test['_ok']) holder.remove()
 	test.end()
 })

@@ -68,6 +68,8 @@ export function getParameter(tk, block) {
 		filter: tk.filter,
 		readcountCutoff: tk.readcountCutoff
 	}
+	// chosen in the genome browser's sample type row; absent when every sample type is shown
+	if (tk.sampleTypes) par.sampleTypes = tk.sampleTypes
 
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 
