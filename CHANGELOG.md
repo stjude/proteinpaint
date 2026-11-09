@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Allow selecting sample types in the genome browser, for every track of sample-level data
+- Offer a search that opens a genome browser when no splice junction has been selected yet
+
+Fixes:
+- Show a genome browser track again at its earlier place when it is unchecked and checked again
+- Show the mutations of the samples of filtered cases in the genome browser mutation track, when the filter is on a case-level term
+
 
 ## 2.227.1
 
