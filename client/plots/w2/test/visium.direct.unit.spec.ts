@@ -1,5 +1,13 @@
 import tape from 'tape'
-import { maxOverSpots, spotMark, clampOpacity, dominantType, pieSlices, shadeColor } from '../visium.direct'
+import {
+	unknownTypes,
+	maxOverSpots,
+	spotMark,
+	clampOpacity,
+	dominantType,
+	pieSlices,
+	shadeColor
+} from '../visium.direct'
 
 tape('shadeColor is darker for a higher proportion and clamps', test => {
 	const sum = (s: string) =>
@@ -71,5 +79,12 @@ tape('maxOverSpots ignores counts of barcodes that are not drawn', test => {
 	])
 	test.equal(maxOverSpots(counts, ['in1', 'in2', 'noCount']), 5, 'out-of-tissue 99 is not the max')
 	test.equal(maxOverSpots(counts, ['noCount']), 0, 'no drawn spot has a count')
+	test.end()
+})
+
+tape('unknownTypes names the requested types the sample lacks', test => {
+	test.deepEqual(unknownTypes(['T', 'Tcell', 'B'], ['T', 'B']), ['Tcell'], 'only the unmatched name')
+	test.deepEqual(unknownTypes(undefined, ['T']), [], 'no filter: none unknown')
+	test.deepEqual(unknownTypes(['x'], []), ['x'], 'no proportions: all unknown (caller skips cell-type mode then)')
 	test.end()
 })

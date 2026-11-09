@@ -106,6 +106,9 @@ Needs `obsm/cell_type_proportions` (one column per type, per-spot fractions).
   still be located (shaded no lighter than a 30% spot, so small shares stay visible; the legend then
   shows `type (dominant / present-not-dominant)`). With several types selected there are no squares:
   a spot can hold more than one of them as non-dominant, which would be ambiguous (`spotMark`).
+  A filter naming types the sample lacks (e.g. a typo) keeps cell-type mode on: nothing matching is
+  filled, and an error lists the unknown names and the available ones — it never falls back to
+  expression fills. (A sample without proportions ignores `cell_types=`.)
 - **Hover:** the tooltip shows the barcode, array row/col and gene counts, then a pie
   chart of the spot's proportions (`pieSlices`, plain SVG) with a legend of the types
   present in that spot (at least 1%) and their percentages, largest first. Each slice's

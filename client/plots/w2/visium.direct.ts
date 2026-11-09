@@ -68,6 +68,11 @@ export function maxOverSpots(counts: Map<string, number>, ids: string[]): number
 	return max
 }
 
+/** the names in the requested type filter that the sample has no proportions for */
+export function unknownTypes(filter: string[] | undefined, types: string[]): string[] {
+	return (filter || []).filter(t => !types.includes(t))
+}
+
 /** a cell type counts as present in a spot from this proportion up (the tooltip pie uses the same cutoff) */
 export const PRESENT = 0.01
 
@@ -175,7 +180,15 @@ export async function init(
 		}
 		const maxCount = maxOverSpots(counts, spots.ids) // rendered spots only: genecounts also covers out-of-tissue barcodes
 
-		const byDominant = !!opts.showCellTypes && shown.length > 0
+		// cell-type mode is on whenever requested and the sample has proportions, even if the filter matches no type
+		// (then no spot is filled and the error below says why); never silently fall back to expression fills
+		const byDominant = !!opts.showCellTypes && types.length > 0
+		const unknown = unknownTypes(opts.cellTypeFilter, types)
+		if (byDominant && unknown.length)
+			sayerror(
+				holder,
+				`Unknown cell type${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}. Available: ${types.join(', ')}`
+			)
 		const byExpression = !byDominant && !opts.hideExpressionFills && maxCount > 0 // fills never overlap
 		const spotStroke = new Stroke({ color: 'rgba(255,255,255,0.7)', width: 0.5 })
 		const marks = byDominant ? spots.ids.map((_, i) => spotMark(spots.proportions, i, types, shown)) : []
@@ -249,7 +262,7 @@ export async function init(
 			.style('background', 'rgba(255,255,255,0.85)')
 			.style('padding', '4px 6px')
 			.style('font-size', '0.8em')
-			.style('display', byDominant || byExpression ? 'block' : 'none')
+			.style('display', (byDominant && shown.length > 0) || byExpression ? 'block' : 'none') // no legend when the filter matched no type
 		if (byDominant) {
 			const n: { [t: string]: number } = {} // spots where the type is dominant (circles)
 			const sq: { [t: string]: number } = {} // spots where it is present but not dominant (squares)
