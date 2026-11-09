@@ -28,6 +28,7 @@ import {
 	sampleBackground,
 	scoreAgainstBackground,
 	soloWcgwShares,
+	sequenceFiles,
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
 import { cacheOrRecompute, generateHash } from '#src/utils/cacheOrRecompute.ts'
@@ -314,7 +315,13 @@ export async function runDmrBatch(
 		/* how dmrcate reads the values (read counts, betas or M-values), from the dataset's platform and element unit:
 		changing either changes the model, with the files unchanged */
 		values: dmrcateValues(first),
-		files: fingerprint([...[...resolved.values()].map(r => r.matrixFile), ...maskFiles, genome?.genedb?.dbfile])
+		files: fingerprint([
+			...[...resolved.values()].map(r => r.matrixFile),
+			...maskFiles,
+			genome?.genedb?.dbfile,
+			// the correction's solo-WCGW shares come from the reference sequence
+			...(q.backgroundCorrection ? sequenceFiles(genome) : [])
+		])
 	}
 
 	const time1 = Date.now()

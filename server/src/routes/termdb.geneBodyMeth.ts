@@ -27,6 +27,7 @@ import {
 	sampleBackground,
 	scoreAgainstBackground,
 	soloWcgwShares,
+	sequenceFiles,
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
 import { genomes } from '#src/initGenomesDs.js'
@@ -218,7 +219,10 @@ export async function getGeneBodyDeltas(
 			chromosomes,
 			element_type: q.element_type ?? null,
 			corrected: !!q.corrected,
-			files: fingerprint([...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile))
+			// corrected: the solo-WCGW shares come from the reference sequence
+			files: fingerprint(
+				[...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile, q.corrected ? sequenceFiles(genome) : [])
+			)
 		},
 		cacheScope: sampleFilterScope(q, ds),
 		cacheSubdir: 'geneBodyMeth',

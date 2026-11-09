@@ -146,43 +146,49 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 			}),
 			// hyper in a gene body -> not a loss
 			dmr({ start: 5000, stop: 6000, bgP: 0.01, inGeneBody: true, genes: ['GAIN'] }),
-			// hypo in a gene body but not significant
+			// hypo in a gene body, raw p < 0.05 but q >= 0.05 -> not significant, not in the set
 			dmr({
 				start: 7000,
 				stop: 8000,
 				direction: 'hypo',
 				delta_beta_mean: -0.2,
-				bgP: 0.4,
+				bgP: 0.04,
 				inGeneBody: true,
+				bodyGenes: ['NS'],
 				genes: ['NS']
 			}),
 			// unscored: no bgP
-			dmr({ start: 9000, stop: 60000, no_cpgs: 900 })
+			dmr({ start: 9000, stop: 60000, no_cpgs: 900 }),
+			// scored and far from significant: they fill out the family
+			dmr({ start: 70000, stop: 71000, bgP: 0.9 }),
+			dmr({ start: 72000, stop: 73000, bgP: 0.9 })
 		],
 		{
 			backgroundCorrection: {
 				windows: 2000,
-				scored: 4,
+				scored: 6,
 				unscored: 1,
 				matchedOn: ['CpG density', 'width']
 			}
 		}
 	)
 	const { rows, scan } = dmrScanToRows(p, { ...opts, backgroundCorrection: true })
-	t.equal(scan.kept, 5, 'the unscored DMR is still a kept DMR')
-	t.equal(rows.length, 4, 'but has no p to plot, so it is not a row')
+	t.equal(scan.kept, 7, 'the unscored DMR is still a kept DMR')
+	t.equal(rows.length, 6, 'but has no p to plot, so it is not a row')
 	t.deepEqual(
 		scan.backgroundCorrection,
-		{ windows: 2000, matchedOn: ['CpG density', 'width'], scored: 4, unscored: 1, significant: 3 },
-		'scored / unscored / significant are counted over kept DMRs'
+		{ windows: 2000, matchedOn: ['CpG density', 'width'], scored: 6, unscored: 1, significant: 3 },
+		'scored / unscored / significant are counted over kept DMRs, significant on q rather than raw p'
 	)
-	// p 0.01, 0.01, 0.01, 0.4 over a family of 4: q = 0.01 x 4 / 3
-	t.ok(Math.abs(rows[0].original_p_value - 0.04 / 3) < 1e-12, 'the plotted value is the background FDR, not the raw p')
+	// p 0.01 x 3, 0.04, 0.9 x 2 over a family of 6: q = 0.01 x 6 / 3 for the first three
+	t.ok(Math.abs(rows[0].original_p_value - 0.02) < 1e-12, 'the plotted value is the background FDR, not the raw p')
+	const ns = rows.find(r => r.promoter_id == 'chr1:7000-8000')!
+	t.ok(ns.original_p_value >= 0.05, `raw p 0.04 is q ${ns.original_p_value.toFixed(3)}: not significant`)
 	t.equal(rows[0].excess, -0.15, 'and the excess rides along for the table')
 	t.deepEqual(
 		scan.geneBodyLoss,
 		{ regions: 1, genes: ['LOSS'] },
-		'only the hypo, in-body, significant region contributes genes'
+		'only the hypo, in-body, significant region contributes genes: NS beats raw p, not q'
 	)
 	t.end()
 })

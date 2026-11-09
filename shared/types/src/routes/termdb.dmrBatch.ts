@@ -186,7 +186,8 @@ export type TermdbDmrBatchSuccessResponse = {
 		matchedOn: string[]
 		/** Share of background windows that score p < 0.001 against their own stratum's fitted null: ~0.001 when
 		 * the normal null fits the tail, higher when the background's tail is heavier than the null past the
-		 * p = 0.05 point the scale is calibrated at (the DMR p-values are then too small). */
+		 * p = 0.05 point the scale is calibrated at (the DMR p-values are then too small). A check down to
+		 * p ~ 0.001 only: the background cannot validate the null's far tail, where significant DMRs sit. */
 		nullP001?: number
 	}
 	/** Artifact-region mask outcome. Present whenever the mask ran, including when it dropped

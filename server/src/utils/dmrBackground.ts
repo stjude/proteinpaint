@@ -243,6 +243,13 @@ export async function soloWcgwFractions(
 	})
 }
 
+/** The files solo-WCGW shares are read from, for a corrected result's cache key: adding, replacing or re-indexing
+ * the reference changes the shares. None for a genome without a sequence file. */
+export function sequenceFiles(genome: any): string[] {
+	const f = genome?.genomefile
+	return f && f != 'NA' ? [f, f + '.fai', f + '.gzi'] : []
+}
+
 /** soloWcgwFractions for each chromosome's regions, one chromosome at a time (a sweep holds its chromosome's
  * CpGs). Shared by the scan's and the gene-body correction, so the two stay the same correction. */
 export async function soloWcgwShares(
