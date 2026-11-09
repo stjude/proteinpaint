@@ -3,6 +3,7 @@ import type { RoutePayload, RouteApi } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import * as utils from '#src/utils.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
+import { id2sampleRef, mayMapNonDictionaryData } from '#src/termdb.matrix.ts'
 import serverconfig from '#src/serverconfig.js'
 import { sql } from '#src/sql.ts'
 import { genomes } from '#src/initGenomesDs.js'
@@ -442,51 +443,43 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 		const caseRows = queryDbRows(db, identifier, [...organismFilter, ...assayFilter, ...cohortCaseFilter])
 		const controlRows = queryDbRows(db, identifier, [...organismFilter, ...assayFilter, ...cohortControlFilter])
 
-		// Identify control sample IDs
-		for (const row of controlRows) {
-			const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
-			if (sid !== undefined) controlSampleIds.add(String(sid))
-		}
-
 		// Combine all rows
 		const allRows = [...caseRows, ...controlRows]
-
-		// Collect all sample IDs for mayLimitSamples
-		const allSampleIds: number[] = []
-		for (const row of allRows) {
-			const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
-			if (sid !== undefined) allSampleIds.push(sid)
-		}
-		const uniqueSampleIds = [...new Set(allSampleIds)]
-
-		const allowedSampleIds = await mayLimitSamples(param, uniqueSampleIds, ds)
-		if (allowedSampleIds?.size == 0) {
-			// got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
-		}
+		const controlRowSet = new Set(controlRows)
 
 		// accumulate sample values into a single s2v
-		const s2v = {}
+		const s2v = Object.create(null)
+		const controlValues = Object.create(null)
 		for (const row of allRows) {
 			const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
 			if (sid === undefined) continue
-			if (allowedSampleIds && !allowedSampleIds.has(sid)) continue
+			if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sid))) continue
+			if (!Number.isFinite(row.value)) continue
 			s2v[sid] = row.value
+			if (controlRowSet.has(row)) controlValues[sid] = true
 		}
-		if (Object.keys(s2v).length) {
-			term2sample2value.set(tw.$id, s2v)
+		const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+		const mappedControls = await mayMapNonDictionaryData(tw, { ...param, ds }, controlValues)
+		const limitSamples = await mayLimitSamples(param, null, ds)
+		const filteredValues = Object.create(null)
+		for (const [sid, value] of Object.entries(mappedValues)) {
+			if (limitSamples && !limitSamples.has(Number(sid))) continue
+			filteredValues[sid] = value
+			if (Object.hasOwn(mappedControls, sid)) controlSampleIds.add(sid)
 		}
+		if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 	}
 
 	// Build bySampleId from the samples we actually have data for
-	const bySampleId = {}
+	const bySampleId = Object.create(null)
 
 	if (term2sample2value.size == 0) {
 		throw `No data available for: ${param.terms?.map(t => t.term.name).join(', ')}`
 	}
 	for (const s2v of term2sample2value.values()) {
 		for (const sid of Object.keys(s2v)) {
-			bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(Number(sid)) }
+			const ref = id2sampleRef(sid, ds)
+			if (ref) bySampleId[sid] = ref
 		}
 	}
 	return { term2sample2value, controlSampleIds, bySampleId }

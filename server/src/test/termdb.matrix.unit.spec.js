@@ -1,5 +1,7 @@
 import tape from 'tape'
 import Database from 'better-sqlite3'
+import { mkdir, writeFile, unlink } from 'node:fs/promises'
+import { dirname, relative, join } from 'node:path'
 import {
 	divideTerms,
 	getData,
@@ -16,6 +18,7 @@ import {
 	mayMapChildren2Root,
 	dropRowsWithoutAnnotation,
 	shouldMapChildren2Parent,
+	mayMapNonDictionaryData,
 	mayMapChildren2Root
 } from '../termdb.matrix.js'
 import { getAuthApi, authApi } from '../auth.js'
@@ -23,6 +26,11 @@ import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
 import { sql, guardDb } from '../sql.ts'
 import { getFilterCTEs } from '../termdb.filter.js'
+import { trigger_getDefaultBins } from '../termdb.getDefaultBins.js'
+import { makeCacheid } from '../termdb.snp.js'
+import { snpgtCacheFile } from '../utils.js'
+import { validate_query_geneExpression } from '../routes/termdb.cluster.ts'
+import serverconfig from '../serverconfig.js'
 
 /*
 test sections:
@@ -195,8 +203,11 @@ tape('resolveSampleMapping: maps sister sample types to their common parent', t 
 	const unrelatedTerms = {
 		terms: [{ term: { id: 'a', sampleTypes: [2] } }, { term: { id: 'b', sampleTypes: [4] } }]
 	}
-	resolveSampleMapping(unrelatedTerms, ds)
-	t.notOk(Object.hasOwn(unrelatedTerms, 'sampleMapping'), 'different parent types do not enable mapping')
+	t.throws(
+		() => resolveSampleMapping(unrelatedTerms, ds),
+		/unable to infer sample mapping/,
+		'unrelated sample types without a common parent reject automatic mapping'
+	)
 	t.end()
 })
 
@@ -1254,7 +1265,482 @@ function makeNoDbDs({
 	return ds
 }
 
+function makeSampleMappingDs(valuesByTerm) {
+	const connection = guardDb(new Database(':memory:'), 'off')
+	connection.exec(`
+		CREATE TABLE sampleidmap (id INTEGER, sample_type INTEGER);
+		CREATE TABLE sample_ancestry (sample_id INTEGER, ancestor_id INTEGER);
+		INSERT INTO sampleidmap VALUES (10, 1), (20, 2), (30, 3), (40, 2);
+		INSERT INTO sample_ancestry VALUES (20, 10), (30, 10), (40, 10);
+	`)
+	const ds = makeNoDbDs()
+	ds.cohort.db = { connection }
+	ds.cohort.termdb.hasSampleAncestry = true
+	ds.cohort.termdb.sampleTypes = {
+		1: { name: 'Parent', plural_name: 'Parents', parent_id: null },
+		2: { name: 'Child A', plural_name: 'Children A', parent_id: 1 },
+		3: { name: 'Child B', plural_name: 'Children B', parent_id: 1 }
+	}
+	ds.cohort.termdb.term2SampleType = new Map([['parentExpression', { sampleType: 1, childSampleTypes: [2] }]])
+	const sampleTypesById = new Map([
+		[10, 1],
+		[20, 2],
+		[30, 3],
+		[40, 2]
+	])
+	const getterArgs = []
+	ds.queries.geneExpression.get = async args => {
+		getterArgs.push(args)
+		const tw = args.terms[0]
+		const values = Object.fromEntries(
+			Object.entries(valuesByTerm[tw.term.id]).filter(
+				([id]) => !tw.term.sampleTypes || tw.term.sampleTypes.includes(sampleTypesById.get(Number(id)))
+			)
+		)
+		return { term2sample2value: new Map([[tw.$id, await mayMapNonDictionaryData(tw, { ...args, ds }, values)]]) }
+	}
+	return { ds, connection, getterArgs }
+}
+
 const emptyFilter = () => ({ type: 'tvslst', in: true, join: '', lst: [] })
+
+tape('geneExpression getter: source sample types limit data before mapping', async t => {
+	const { ds, connection } = makeSampleMappingDs({})
+	ds.sampleId2Type = new Map([
+		[20, 2],
+		[30, 3]
+	])
+	ds.cohort.termdb.q.sampleName2id = name => (name === '2646' ? 20 : 30)
+	ds.queries.geneExpression = {
+		file: relative(
+			serverconfig.tpmasterdir,
+			join(import.meta.dirname, '../../test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5')
+		)
+	}
+	const tw = {
+		$id: 'expression',
+		term: { type: 'geneExpression', gene: 'DDX11L1', sampleTypes: [2] }
+	}
+	try {
+		await validate_query_geneExpression(ds, null)
+		const aligned = await ds.queries.geneExpression.get({ terms: [tw], sampleTypes: [3] })
+		t.deepEqual(
+			Object.keys(aligned.term2sample2value.get(tw.$id)),
+			['20'],
+			'source types, not request types, select data'
+		)
+		const parent = await ds.queries.geneExpression.get({
+			terms: [tw],
+			sampleTypes: [1],
+			sampleMapping: 'childrenToParent'
+		})
+		t.deepEqual(Object.keys(parent.term2sample2value.get(tw.$id)), ['10'], 'source expression maps to parent targets')
+		const untyped = await ds.queries.geneExpression.get({
+			terms: [{ ...tw, term: { ...tw.term, sampleTypes: undefined } }]
+		})
+		t.deepEqual(
+			Object.keys(untyped.term2sample2value.get(tw.$id)),
+			['20', '30'],
+			'missing term types keep all source data'
+		)
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
+tape('geneExpression getter: maps native data before target sample filtering', async t => {
+	await ensureOpenAuth()
+	const { ds, connection } = makeSampleMappingDs({})
+	connection.exec(`
+		ALTER TABLE sampleidmap ADD COLUMN name TEXT;
+		CREATE TABLE anno_categorical (sample INTEGER, term_id TEXT, value TEXT);
+		INSERT INTO anno_categorical VALUES (10, 'status', 'include'), (20, 'status', 'include'),
+			(30, 'status', 'include'), (40, 'status', 'exclude');
+	`)
+	ds.sampleId2Type = new Map([
+		[10, 1],
+		[20, 2],
+		[30, 3],
+		[40, 2]
+	])
+	ds.cohort.termdb.q.sampleName2id = name => (name === '2646' ? 20 : 40)
+	ds.queries.geneExpression = {
+		file: relative(
+			serverconfig.tpmasterdir,
+			join(import.meta.dirname, '../../test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5')
+		)
+	}
+	const tw = {
+		$id: 'expression',
+		term: { gene: 'DDX11L1', name: 'Expression', type: 'geneExpression', sampleTypes: [2] },
+		q: { mode: 'continuous' }
+	}
+	const filter = sampleTypes => ({
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: { id: 'status', name: 'Status', type: 'categorical', sampleTypes },
+					values: [{ key: 'include' }]
+				}
+			}
+		]
+	})
+	try {
+		await validate_query_geneExpression(ds, null)
+		const parent = await getData({ terms: [tw], filter: filter([3]) }, ds)
+		t.notOk(parent.error, 'parent filter is applied after child expression data maps')
+		t.deepEqual(Object.keys(parent.samples), ['10'], 'matrix keeps the mapped parent without mapping a second time')
+		t.ok(Number.isFinite(parent.samples[10].expression.value), 'mapped parent retains an expression value')
+
+		await ds.queries.geneExpression
+			.get({
+				terms: [tw],
+				sampleMapping: 'childrenToParent',
+				sampleTypes: [1],
+				filter: {
+					...filter([3]),
+					lst: [{ type: 'tvs', tvs: { ...filter([3]).lst[0].tvs, values: [{ key: 'absent' }] } }]
+				}
+			})
+			.then(
+				() => t.fail('gene expression retains its no-data error when all values are filtered out'),
+				error => t.ok(String(error).includes('No data available'), 'gene expression retains its no-data error')
+			)
+
+		const child = await ds.queries.geneExpression.get({
+			terms: [tw],
+			sampleTypes: [2],
+			filter: filter([2])
+		})
+		t.deepEqual(Object.keys(child.term2sample2value.get(tw.$id)), ['20'], 'aligned sample types are filtered normally')
+		t.deepEqual(Object.keys(child.bySampleId), ['20'], 'references contain only retained samples')
+
+		ds.cohort.termdb.q.sampleName2id = () => 10
+		const parentTw = { ...tw, term: { ...tw.term, sampleTypes: [1] } }
+		const children = await ds.queries.geneExpression.get({
+			terms: [parentTw],
+			sampleMapping: 'parentToChildren',
+			sampleTypes: [2],
+			filter: filter([2])
+		})
+		t.deepEqual(
+			Object.keys(children.term2sample2value.get(tw.$id)),
+			['20'],
+			'parent expression maps to children before the child filter removes excluded children'
+		)
+		t.deepEqual(Object.keys(children.bySampleId), ['20'], 'downward mapping references use filtered child IDs')
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
+tape('mayMapNonDictionaryData: accepts and returns sample2value objects', async t => {
+	const { ds, connection } = makeSampleMappingDs({})
+	const tw = { term: { type: 'geneExpression', sampleTypes: [2] } }
+	try {
+		const values = Object.freeze({ 20: 0, 40: 13 })
+		const q = { ds, sampleMapping: 'childrenToParent', sampleTypes: [1] }
+		const mapped = await mayMapNonDictionaryData(tw, q, values)
+		t.notOk(Array.isArray(mapped), 'mapped output is an object, not an entries array')
+		t.deepEqual({ ...mapped }, { 10: 0 }, 'the first value wins even when it is zero')
+		t.equal(Object.getPrototypeOf(mapped), null, 'mapped object has no inherited sample keys')
+		t.deepEqual(values, { 20: 0, 40: 13 }, 'source object is unchanged')
+		t.equal(
+			await mayMapNonDictionaryData(tw, { ds, sampleTypes: [2] }, values),
+			values,
+			'no-op returns the original object'
+		)
+		const empty = await mayMapNonDictionaryData(tw, q, {})
+		t.deepEqual(Object.keys(empty), [], 'empty input returns an empty object')
+		t.notOk(Array.isArray(empty), 'empty output is not an array')
+
+		const inherited = Object.create({ 20: 5 })
+		inherited[40] = 7
+		const ownValues = await mayMapNonDictionaryData(tw, q, inherited)
+		t.deepEqual({ ...ownValues }, { 10: 7 }, 'inherited source values are ignored')
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
+tape('getData: geneExpression values map in both sample hierarchy directions', async t => {
+	await ensureOpenAuth()
+	const valuesByTerm = {
+		parentExpression: { 10: 5 },
+		childExpressionA: { 20: 6 },
+		childExpressionB: { 30: 7 }
+	}
+	const { ds, connection, getterArgs } = makeSampleMappingDs(valuesByTerm)
+	try {
+		const parentTerm = {
+			$id: 'parentExpression',
+			term: { id: 'parentExpression', name: 'Parent expression', gene: 'P', type: 'geneExpression' },
+			q: { mode: 'continuous' }
+		}
+		const filter = emptyFilter()
+		const filter0 = {}
+		const children = await getData({ terms: [parentTerm], sampleMapping: 'parentToChildren', filter, filter0 }, ds)
+		t.equal(getterArgs[0].filter, filter, 'the request filter is passed unchanged to the getter')
+		t.equal(getterArgs[0].filter0, filter0, 'the hidden filter is passed unchanged to the getter')
+		t.equal(getterArgs[0].sampleMapping, 'parentToChildren', 'the resolved mapping direction is passed to the getter')
+		t.deepEqual(getterArgs[0].sampleTypes, [2], 'gene expression getter receives target sample types')
+		t.notOk(children.error, 'parent-to-children mapping succeeds')
+		t.deepEqual(
+			Object.keys(children.samples).sort(),
+			['20', '40'],
+			'parent values are copied to the requested child type'
+		)
+		t.equal(children.samples[20].parentExpression.value, 5, 'the first child receives the parent value')
+		t.equal(children.samples[40].parentExpression.value, 5, 'the second child receives the parent value')
+
+		const childTerms = [
+			{
+				$id: 'childExpressionA',
+				term: {
+					id: 'childExpressionA',
+					name: 'Child A expression',
+					gene: 'A',
+					type: 'geneExpression',
+					sampleTypes: [2]
+				},
+				q: { mode: 'continuous' }
+			},
+			{
+				$id: 'childExpressionB',
+				term: {
+					id: 'childExpressionB',
+					name: 'Child B expression',
+					gene: 'B',
+					type: 'geneExpression',
+					sampleTypes: [3]
+				},
+				q: { mode: 'continuous' }
+			}
+		]
+		const parentQuery = { terms: childTerms }
+		const parent = await getData(parentQuery, ds)
+		t.deepEqual(getterArgs[1].sampleTypes, [1], 'the first getter receives parent target types')
+		t.deepEqual(getterArgs[2].sampleTypes, [1], 'the sister getter receives the same parent target types')
+		t.deepEqual(parentQuery.sampleTypes, [1], 'mapping retains the parent target type')
+		t.notOk(parent.error, 'children-to-parent mapping succeeds')
+		t.deepEqual(Object.keys(parent.samples), ['10'], 'sibling term values map to their common parent')
+		t.equal(parent.samples[10].childExpressionA.value, 6, 'the first term keeps its value')
+		t.equal(parent.samples[10].childExpressionB.value, 7, 'the second term keeps its value')
+		t.equal(parent.sampleType.name, 'Parent', 'the response reports the mapped sample type')
+		const sameGeneTerms = childTerms.map(tw => ({ ...tw, term: { ...tw.term, gene: 'TP53' } }))
+		const sameGene = await getData({ terms: sameGeneTerms }, ds)
+		t.notOk(sameGene.error, 'the original getter returns data for the same gene with sister sample types')
+		t.equal(sameGene.samples[10].childExpressionA.value, 6, 'the first term keeps its source value after mapping')
+		t.equal(sameGene.samples[10].childExpressionB.value, 7, 'the second term keeps its source value after mapping')
+		t.deepEqual(Object.keys(parent.refs.bySampleId), ['10'], 'sample references use the mapped parent IDs')
+
+		valuesByTerm.childExpressionA = { 20: 6, 40: 8 }
+		const collision = await getData(
+			{
+				terms: [childTerms[0]],
+				sampleMapping: 'childrenToParent'
+			},
+			ds
+		)
+		t.notOk(collision.error, 'multiple source values can map to one sample')
+		t.equal(collision.samples[10].childExpressionA.value, 6, 'the first mapped value is retained')
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
+tape('getData: other numeric getters receive target sample types', async t => {
+	await ensureOpenAuth()
+	const ds = makeNoDbDs()
+	let getterArgs
+	ds.queries.isoformExpression = {
+		get: async args => {
+			getterArgs = args
+			return { term2sample2value: new Map([['isoform', { c1: 5 }]]) }
+		}
+	}
+	const tw = {
+		$id: 'isoform',
+		term: { type: 'isoformExpression', isoform: 'ENST1', sampleTypes: [2] },
+		q: { mode: 'continuous' }
+	}
+	ds.cohort.termdb.sampleTypes = { 3: { name: 'Other', plural_name: 'Others' } }
+	const data = await getData({ terms: [tw], sampleTypes: [3] }, ds)
+	t.notOk(data.error, 'the non-expression numeric getter still succeeds')
+	t.deepEqual(getterArgs.sampleTypes, [3], 'other getters receive query target types')
+	t.end()
+})
+
+tape('getData: non-dictionary numeric types retain getter-mapped target values', async t => {
+	await ensureOpenAuth()
+	const { ds, connection } = makeSampleMappingDs({})
+	try {
+		for (const type of [
+			'isoformExpression',
+			'metaboliteIntensity',
+			'proteomeAbundance',
+			'ssGSEA',
+			'dnaMethylation',
+			'junction',
+			'pseudobulk'
+		]) {
+			let args
+			const getter = {
+				get: async param => {
+					args = param
+					return { term2sample2value: new Map([['value', { 10: 6 }]]) }
+				}
+			}
+			if (type === 'proteomeAbundance') ds.queries.proteome = getter
+			else if (type === 'pseudobulk') ds.queries.singleCell = { pseudobulk: getter }
+			else ds.queries[type] = getter
+			const data = await getData(
+				{
+					sampleMapping: 'childrenToParent',
+					terms: [{ $id: 'value', term: { type, sampleTypes: [2] }, q: { mode: 'continuous' } }]
+				},
+				ds
+			)
+			t.notOk(data.error, `${type}: mapping succeeds`)
+			t.deepEqual(args.sampleTypes, [1], `${type}: getter receives target types`)
+			t.deepEqual(Object.keys(data.samples), ['10'], `${type}: values use target sample IDs`)
+			t.equal(data.samples[10].value.value, 6, `${type}: preserves the numeric value`)
+		}
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
+tape('getData: non-dictionary mapping preserves dictionary rows and numeric payload keys', async t => {
+	await ensureOpenAuth()
+	const { ds, connection } = makeSampleMappingDs({})
+	connection.exec(`
+		CREATE TABLE anno_categorical (sample INTEGER, term_id TEXT, value TEXT);
+		INSERT INTO anno_categorical VALUES (30, 'status', 'D');
+	`)
+	ds.queries.geneExpression.get = async () => ({
+		term2sample2value: new Map([
+			['geneA', { 10: 6 }],
+			['geneB', { 10: 9 }]
+		])
+	})
+	const terms = [
+		{ $id: 'status', term: { id: 'status', name: 'Status', type: 'categorical', sampleTypes: [3] }, q: {} },
+		{ $id: 'expression', term: { type: 'geneExpression', gene: 'G', sampleTypes: [2] }, q: { mode: 'continuous' } }
+	]
+	try {
+		const data = await getData({ terms }, ds)
+		t.notOk(data.error, 'inferred mapping succeeds')
+		t.deepEqual(Object.keys(data.samples), ['10'], 'dictionary and non-dictionary data share one target row')
+		t.deepEqual(data.samples[10].status, { key: 'D', value: 'D' }, 'dictionary annotation is not mapped again')
+		t.equal(data.samples[10].geneA.value, 6, 'first numeric payload key maps independently')
+		t.equal(data.samples[10].geneB.value, 9, 'second numeric payload key maps independently')
+		t.notOk(Object.hasOwn(data.samples[10], 'expression'), 'getter payload keys are not replaced with tw.$id')
+
+		const expression = terms[1]
+		const children = await getData(
+			{
+				terms: [{ ...expression, term: { ...expression.term, sampleTypes: [1] } }],
+				sampleMapping: 'parentToChildren',
+				mapChildren2Root: true
+			},
+			{
+				...ds,
+				queries: { geneExpression: { get: async () => ({ term2sample2value: new Map([['geneA', { 10: 5 }]]) }) } }
+			}
+		)
+		t.equal(
+			children.error,
+			'Parent level is not supported with numeric data',
+			'legacy numeric validation applies even with an explicit hierarchy direction'
+		)
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
+tape('getData: SNP-list and locus reject sample ancestry and preserve non-hierarchical data', async t => {
+	await ensureOpenAuth()
+	const { ds, connection } = makeSampleMappingDs({})
+	const cacheFile = snpgtCacheFile(makeCacheid(ds), ds)
+	try {
+		await mkdir(dirname(cacheFile), { recursive: true })
+		for (const type of ['snplst', 'snplocus']) {
+			await writeFile(
+				cacheFile,
+				[
+					'snp\tchr\tpos\tref\talt\teff\t20\t40',
+					'rs1\tchr1\t100\tA\tT\tT\tA/T\tT/T',
+					'rs2\tchr1\t200\tC\tG\tG\tC/C\tC/G'
+				].join('\n')
+			)
+			const tw = {
+				$id: 'snps',
+				term: { type, sampleTypes: [2] },
+				q: { cacheid: cacheFile.split('/').pop(), AFcutoff: 0, geneticModel: 0 }
+			}
+			for (const sampleMapping of [undefined, 'childrenToParent', 'parentToChildren']) {
+				const rejected = await getData({ terms: [tw], sampleMapping }, ds)
+				t.equal(
+					rejected.error,
+					`sample hierarchy mapping not supported for '${type}' term`,
+					`${type}: rejects ancestry even when mapping is ${sampleMapping}`
+				)
+			}
+			ds.cohort.termdb.hasSampleAncestry = false
+			try {
+				const data = await getData({ terms: [tw] }, ds)
+				t.notOk(data.error, `${type}: non-hierarchical query succeeds`)
+				t.deepEqual(Object.keys(data.samples), ['20', '40'], `${type}: source sample IDs are preserved`)
+				t.deepEqual({ ...data.samples[20].snps }, { rs1: 1, rs2: 0 }, `${type}: first genotype map is preserved`)
+				t.deepEqual({ ...data.samples[40].snps }, { rs1: 2, rs2: 1 }, `${type}: second genotype map is preserved`)
+			} finally {
+				ds.cohort.termdb.hasSampleAncestry = true
+			}
+		}
+	} finally {
+		await unlink(cacheFile)
+		connection.close()
+	}
+	t.end()
+})
+
+tape('default bins: numeric getters receive target types', async t => {
+	const ds = makeNoDbDs()
+	let args
+	ds.queries.isoformExpression = {
+		get: async param => {
+			args = param
+			return { term2sample2value: new Map([['isoform', { c1: 1, c2: 2, c3: 3 }]]) }
+		}
+	}
+	let response
+	await trigger_getDefaultBins(
+		{
+			sampleTypes: [1],
+			tw: { $id: 'isoform', term: { type: 'isoformExpression', sampleTypes: [2] }, q: {} }
+		},
+		ds,
+		{
+			send: data => {
+				response = data
+			}
+		}
+	)
+	t.notOk(response.error, 'bin calculation succeeds')
+	t.deepEqual(args.sampleTypes, [1], 'bins query the resolved target sample types')
+	t.end()
+})
 
 tape('getData: samplelst overlay resolves on a dataset without a sqlite db', async t => {
 	await ensureOpenAuth()
