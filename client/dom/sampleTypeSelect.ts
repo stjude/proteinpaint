@@ -197,7 +197,7 @@ export function getSelectedSampleTypesByTerms(termSelects, sampleTypesByTerms) {
 
 /* the sample types that dropdown values select: by term, those of its value, or of every value for 'any', then
 those common to every term. Once each, as a sample type is under several values of an 'any' term */
-function getSampleTypesOfTermValues(sampleTypesByTerms, values: { [term: string]: string }): number[] {
+export function getSampleTypesOfTermValues(sampleTypesByTerms, values: { [term: string]: string }): number[] {
 	const lists: number[][] = Object.entries(values).map(([term, value]) =>
 		value == 'any' ? Object.values<number[]>(sampleTypesByTerms[term]).flat() : sampleTypesByTerms[term][value]
 	)

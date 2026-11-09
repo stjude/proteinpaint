@@ -280,7 +280,9 @@ export async function makeTk(tk, block) {
 			callbackOnRender: tk.callbackOnRender,
 			hiddenMclassDt: tk.hiddenMclassDt,
 			hardcodeCnvOnly: tk.hardcodeCnvOnly, // still needed by legend.js
-			token: tk.token // for testing
+			token: tk.token, // for testing
+			// the sample types chosen in the genome browser, which a subtk of a sample category reads too
+			sampleTypes: tk.sampleTypes
 		}
 		if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
 		if (tk.legend.mclass?.hiddenvalues?.size) {

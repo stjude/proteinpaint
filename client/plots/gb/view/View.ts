@@ -5,7 +5,9 @@ import {
 	getSampleTypeLabel,
 	getChildSampleTypeQuery,
 	mayRenderSampleTypeRow,
-	getTermSampleTypes
+	getTermSampleTypes,
+	getSampleTypeSelectValues,
+	getSampleTypesOfTermValues
 } from '#dom'
 import { TabsRenderer } from './TabsRenderer.ts'
 import { GeneSearchRenderer } from './GeneSearchRenderer.ts'
@@ -281,19 +283,22 @@ export class View {
             this should be updating tracks in this block, by adding new ones listed in tklst[],
             and deleting old ones via a tricky method
             */
-			// the block track of the last tk above, so that a track shown again goes back to where it was first drawn
-			let prev
+			/* the block track of the last tk above, so that a track shown again goes back to where it was first drawn.
+			Precomputed variant data updates its mds3 tk in place, which generateTracks() then leaves out of tklst[],
+			so that tk is the first one above */
+			let prev = this.data ? this.blockInstance.tklst.find(i => i.type == 'mds3') : undefined
 			for (const tk of tklst) {
-				let tki // index of this tk in block
+				let isTk // whether a block track is this tk
 				if (tk.dslabel) {
 					// Official tracks from the same dataset can have different types (e.g. mds3 and j2).
-					tki = this.blockInstance.tklst.findIndex(i => i.dslabel == tk.dslabel && i.type == tk.type)
+					isTk = i => i.dslabel == tk.dslabel && i.type == tk.type
 				} else if (tk.name) {
 					// identify tk by name
-					tki = this.blockInstance.tklst.findIndex(i => i.name == tk.name)
+					isTk = i => i.name == tk.name
 				} else {
 					throw 'tk missing dslabel & name'
 				}
+				const tki = this.blockInstance.tklst.findIndex(isTk) // index of this tk in block
 				if (tki == -1) {
 					// this tk is not in block, add to block
 					const t = this.blockInstance.block_addtk_template(tk)
@@ -305,7 +310,9 @@ export class View {
 					this.blockInstance.tk_load(t)
 					continue
 				}
-				prev = this.blockInstance.tklst[tki]
+				/* the last block track that is this tk: a mutation tk and its subtks share dslabel and type, so that a
+				track shown again goes below the subtks too */
+				prev = [...this.blockInstance.tklst].reverse().find(isTk)
 			}
 			if (this.state.config.trackLst?.removeTracks) {
 				// facet table marks these tracks for removal. they are all identified by tk.name
@@ -445,7 +452,16 @@ export function getGbSampleTypeQuery(termdbConfig: any) {
 	return getChildSampleTypeQuery({ sampleTypes, sampleTypesByTerms: termdbConfig?.sampleTypesByTerms }, termdbConfig)
 }
 
-/** the sample types chosen for the genome browser, undefined for none or every one */
+/** the sample types chosen for the genome browser, undefined for none or every one. With sample-types-by-terms
+ * dropdowns, those the dropdowns show, as they can show only some sets of sample types: one set by a launcher
+ * (e.g. the junction term picker, whose dropdowns hold only the junction file's types) or a saved session is read
+ * as the row draws it, so that the row and the tracks agree */
 export function getGbSampleTypes(state: any, termdbConfig: any): number[] | undefined {
-	return getChosenSampleTypes(getGbSampleTypeQuery(termdbConfig), state.config.sampleTypes)
+	const query = getGbSampleTypeQuery(termdbConfig)
+	const chosen = getChosenSampleTypes(query, state.config.sampleTypes)
+	if (!chosen || !query.sampleTypesByTerms) return chosen
+	// by term, the dropdown values, as the query has sampleTypesByTerms
+	const values = getSampleTypeSelectValues(query, chosen) as { [term: string]: string }
+	const shown = getSampleTypesOfTermValues(query.sampleTypesByTerms, values)
+	return getChosenSampleTypes(query, shown)
 }

@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { computeBlockModeFlag } from '../GB.ts'
 import { getBlockState } from '../interactions/Interactions.ts'
-import { View } from '../view/View.ts'
+import { View, getGbSampleTypes } from '../view/View.ts'
 import { TabsRenderer } from '../view/TabsRenderer.ts'
 import * as d3s from 'd3-selection'
 import { makeJunctionTerm } from '../../../j2/render.js'
@@ -250,7 +250,7 @@ tape('a track shown again goes back to its place', async test => {
 		tklst: [
 			{ type: 'mds3', dslabel: 'ds' },
 			{ type: 'bedj', name: 'RefGene' }
-		],
+		] as any[],
 		block_addtk_template(tk) {
 			const t = { ...tk }
 			this.tklst.push(t)
@@ -259,7 +259,7 @@ tape('a track shown again goes back to its place', async test => {
 		tk_load() {}
 	}
 	const state = { config: {}, vocab: { dslabel: 'ds' } }
-	const view = new View(state, block, {}, {}, { vocabApi: { termdbConfig: {} } }, {})
+	const view = new View(state, block, null, {}, { vocabApi: { termdbConfig: {} } }, {})
 	const order = () => block.tklst.map((t: any) => t.name || t.type)
 
 	await view.launchBlockWithTracks([
@@ -271,5 +271,59 @@ tape('a track shown again goes back to its place', async test => {
 	block.tklst = [{ type: 'bedj', name: 'RefGene' }]
 	await view.launchBlockWithTracks([{ type: 'j2', dslabel: 'ds' }])
 	test.deepEqual(order(), ['j2', 'RefGene'], 'should put a track with none above it first')
+
+	block.tklst = [
+		{ type: 'mds3', dslabel: 'ds', name: 'main' },
+		{ type: 'mds3', dslabel: 'ds', name: 'subtk' },
+		{ type: 'bedj', name: 'RefGene' }
+	]
+	await view.launchBlockWithTracks([
+		{ type: 'mds3', dslabel: 'ds' },
+		{ type: 'mds3', dslabel: 'ds', subtk: true },
+		{ type: 'j2', dslabel: 'ds' }
+	])
+	test.deepEqual(
+		order(),
+		['main', 'subtk', 'j2', 'RefGene'],
+		'should put the junction track under the mutation subtracks'
+	)
+
+	// precomputed variant data: the mds3 tk is updated in place and is not in the list of tracks
+	block.tklst = [
+		{ type: 'mds3', dslabel: 'ds', name: 'Variants' },
+		{ type: 'bedj', name: 'RefGene' }
+	]
+	const precomputed = new View(state, block, { mlst: [] }, {}, { vocabApi: { termdbConfig: {} } }, {})
+	await precomputed.launchBlockWithTracks([{ type: 'j2', dslabel: 'ds' }])
+	test.deepEqual(
+		order(),
+		['Variants', 'j2', 'RefGene'],
+		'should put the junction track under a mutation track of precomputed data'
+	)
+	test.end()
+})
+
+tape('sample types the dropdowns of the genome browser show', test => {
+	const termdbConfig = {
+		sampleTypes: {
+			1: { name: 'Patient', plural_name: 'patients', parent_id: null },
+			2: { name: 'Baseline marrow', plural_name: 'baseline marrow samples', parent_id: 1 },
+			3: { name: 'Baseline blood', plural_name: 'baseline blood samples', parent_id: 1 },
+			4: { name: 'Relapse marrow', plural_name: 'relapse marrow samples', parent_id: 1 },
+			5: { name: 'Relapse blood', plural_name: 'relapse blood samples', parent_id: 1 }
+		},
+		sampleTypesByTerms: {
+			visit: { Baseline: [2, 3], Relapse: [4, 5] },
+			tissue: { Marrow: [2, 4], Blood: [3, 5] }
+		}
+	}
+	const read = (sampleTypes: number[]) => getGbSampleTypes({ config: { sampleTypes } }, termdbConfig)
+	test.deepEqual(read([2]), [2], 'should read a choice that the dropdowns show, Baseline and Marrow')
+	test.deepEqual(read([2, 3]), [2, 3], 'should read a choice of one dropdown, Baseline and any tissue')
+	test.deepEqual(
+		read([2, 5]),
+		undefined,
+		'should read every sample for a set that the dropdowns cannot show, as they show any visit and tissue'
+	)
 	test.end()
 })
