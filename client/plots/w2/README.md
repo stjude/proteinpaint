@@ -99,13 +99,13 @@ Needs `obsm/cell_type_proportions` (one column per type, per-spot fractions).
 - **Legend** (top-left of the map): one swatch per type, most common first, with the number of spots where it
   is dominant. Counts use all types, so a type filter does not change them; spots without
   proportions are not counted.
-- **Selected types (locating rare types):** with a type filter (`&cell_types=[...]`, or the mass UI's
-  "Types shown" dropdowns) a spot is a **circle** when its dominant type is one of the selected types,
-  and a **square** when a selected type is present (at least 1%) but not dominant, so types that
-  dominate few or no spots can still be located. Squares take the color of the largest selected type in
-  the spot (shaded no lighter than a 30% spot, so small shares stay visible); spots with none of the
-  selected types stay unfilled. The legend then shows `type (dominant / present-not-dominant)` counts.
-  Both marks hover the same way (`spotMark`).
+- **Selected types:** with a type filter (`&cell_types=[...]`, or the mass UI's "Types shown"
+  dropdowns) a spot is a **circle** when its dominant type is one of the selected types; spots with
+  none of them stay unfilled. With exactly **one** type selected, a spot where it is present (at least
+  1%) but not dominant is drawn as a **square** instead, so a type that dominates few or no spots can
+  still be located (shaded no lighter than a 30% spot, so small shares stay visible; the legend then
+  shows `type (dominant / present-not-dominant)`). With several types selected there are no squares:
+  a spot can hold more than one of them as non-dominant, which would be ambiguous (`spotMark`).
 - **Hover:** the tooltip shows the barcode, array row/col and gene counts, then a pie
   chart of the spot's proportions (`pieSlices`, plain SVG) with a legend of the types
   present in that spot (at least 1%) and their percentages, largest first. Each slice's

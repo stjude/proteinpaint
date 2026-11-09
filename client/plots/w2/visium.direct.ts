@@ -64,9 +64,10 @@ export function dominantType(props: VisiumSpots['proportions'], i: number, types
 export const PRESENT = 0.01
 
 /** How a spot is marked for the selected types `shown`: a circle when its dominant type (over ALL `types`) is
- selected, else a square when some selected type is present (>= PRESENT) though not dominant, else null.
- Squares only occur under a type filter: with every type shown, the dominant type is always selected.
- `type` is the selected type to color by: the dominant one, or the largest present one for a square. */
+ selected, else null. When exactly ONE type is selected, a spot where it is present (>= PRESENT) though not
+ dominant is a square instead: with several selected types a spot can hold more than one of them as
+ non-dominant, so there squares would be ambiguous and are not drawn. (With every type shown, the dominant
+ type is always selected, so there are no squares either.) `type` is the selected type to color by. */
 export function spotMark(
 	props: VisiumSpots['proportions'],
 	i: number,
@@ -75,8 +76,7 @@ export function spotMark(
 ): { type: string; shape: 'circle' | 'square' } | null {
 	const k = dominantType(props, i, types)
 	if (k >= 0 && shown.includes(types[k])) return { type: types[k], shape: 'circle' }
-	const j = dominantType(props, i, shown)
-	if (j >= 0 && (props[shown[j]][i] as number) >= PRESENT) return { type: shown[j], shape: 'square' }
+	if (shown.length == 1 && (props[shown[0]]?.[i] ?? 0) >= PRESENT) return { type: shown[0], shape: 'square' }
 	return null
 }
 
@@ -247,9 +247,9 @@ export async function init(
 			const sq: { [t: string]: number } = {} // spots where it is present but not dominant (squares)
 			for (const m of marks)
 				if (m) (m.shape == 'circle' ? n : sq)[m.type] = ((m.shape == 'circle' ? n : sq)[m.type] || 0) + 1
-			const filtered = shown.length < types.length
+			const squares = shown.length == 1 && types.length > 1 // squares are drawn for a single selected type only
 			legend.append('div').style('margin-bottom', '2px').text('Dominant cell type; darker = higher %')
-			if (filtered) legend.append('div').style('margin-bottom', '2px').text('● dominant   ■ present, not dominant')
+			if (squares) legend.append('div').style('margin-bottom', '2px').text('● dominant   ■ present, not dominant')
 			// most common dominant type first (stable: ties keep the type order); colors are fixed per type, so unaffected
 			for (const t of [...shown].sort((a, b) => (n[b] || 0) - (n[a] || 0))) {
 				const row = legend.append('div')
@@ -260,7 +260,7 @@ export async function init(
 					.style('height', '10px')
 					.style('margin-right', '4px')
 					.style('background', `rgb(${typeRgb[t]})`)
-				row.append('span').text(filtered ? `${t} (${n[t] || 0} / ${sq[t] || 0})` : `${t} (${n[t] || 0})`)
+				row.append('span').text(squares ? `${t} (${n[t] || 0} / ${sq[t] || 0})` : `${t} (${n[t] || 0})`)
 			}
 		} else if (byExpression) {
 			legend.text(`${genes.join(' + ')}: 1 – ${maxCount} counts`)
