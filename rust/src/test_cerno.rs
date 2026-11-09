@@ -4,10 +4,9 @@ fn main() {}
 
 #[cfg(test)]
 mod tests {
-    use crate::stats_functions::cerno;
+    use crate::stats_functions::{cerno, gene_order, ranked_genes};
     use flate2::read::GzDecoder;
     use json::JsonValue;
-    use std::cmp::Ordering;
     use std::collections::HashSet;
     use std::fs::File;
     use std::io::{BufReader, Read};
@@ -63,24 +62,8 @@ mod tests {
                     sample_coding_genes.push(item)
                 }
 
-                // Sort sample_coding_gene in descending order
-                sample_coding_genes
-                    .as_mut_slice()
-                    .sort_by(|a, b| (b.fold_change).partial_cmp(&a.fold_change).unwrap_or(Ordering::Equal));
-                let mut genes_descending = sample_coding_genes.clone();
-                // Sort sample_coding_gene in ascending order
-                sample_coding_genes
-                    .as_mut_slice()
-                    .sort_by(|a, b| (a.fold_change).partial_cmp(&b.fold_change).unwrap_or(Ordering::Equal));
-                let mut genes_ascending = sample_coding_genes.clone();
-
-                drop(sample_coding_genes); // sample_coding_genes no longer deleted, so the variable is deleted
-
-                // Assign ranks to each gene
-                for i in 0..genes_descending.len() {
-                    genes_descending[i].rank = Some(i + 1);
-                    genes_ascending[i].rank = Some(i + 1);
-                }
+                // as main() ranks them
+                let (genes_descending, genes_ascending) = ranked_genes(sample_coding_genes);
 
                 let modules_2_genes: &JsonValue = &json_string["MODULES2GENES"];
                 let expected_p_values_json: &JsonValue = &json_string["expected_p_values"]; // The expected p-value comes from the original tmod package in R
@@ -126,6 +109,55 @@ mod tests {
                 }
             }
             Err(error) => println!("Incorrect json:{}", error),
+        }
+    }
+
+    /// A gene set holding the top gene of either ranking is scored, and as tmod scores it: rank 1 gives ln(1/N), where
+    /// a 0-based rank gave ln(0) and the set was dropped as non-finite. Six genes, fold changes +3 to -3.
+    #[test]
+    fn cerno_scores_sets_holding_a_rank_one_gene() {
+        let genes = [
+            ("A", 3.0),
+            ("B", 2.0),
+            ("C", 1.0),
+            ("D", -1.0),
+            ("E", -2.0),
+            ("F", -3.0),
+        ]
+        .iter()
+        .map(|(name, fc)| gene_order {
+            gene_name: name.to_string(),
+            fold_change: *fc,
+            rank: None,
+        })
+        .collect();
+        let (genes_descending, genes_ascending) = ranked_genes(genes);
+        // tmod, for two genes ranked 1 and 2 of 6 in their direction: cerno = -2 (ln 1/6 + ln 2/6) = 2 ln 18,
+        // es = cerno / (2 N1), p = P(chi-squared, 4 df > cerno) = e^(-cerno/2) (1 + cerno/2) = (1 + ln 18) / 18
+        let cerno_expected = 2.0 * 18f32.ln();
+        let es_expected = cerno_expected / 4.0;
+        let p_expected = (1.0 + 18f32.ln()) / 18.0;
+        // up: A, B top the descending ranking (AUC 1); down: F, E top the ascending ranking (AUC 0)
+        for (set, auc_expected) in [(["A", "B"], 1.0), (["F", "E"], 0.0)] {
+            let (p_value, auc, es, matches, _gene_set_hits, _cerno_output) = cerno(
+                &genes_descending,
+                &genes_ascending,
+                set.iter().map(|g| g.to_string()).collect(),
+            );
+            assert_eq!(matches, 2.0, "{:?}: both genes matched", set);
+            assert!((auc - auc_expected).abs() < AUC_CUTOFF, "{:?}: auc {}", set, auc);
+            assert!(
+                (es - es_expected).abs() < ES_CUTOFF,
+                "{:?}: es {} (finite, so kept)",
+                set,
+                es
+            );
+            assert!(
+                (p_value - p_expected).abs() < P_VALUE_CUTOFF,
+                "{:?}: p {}",
+                set,
+                p_value
+            );
         }
     }
 }

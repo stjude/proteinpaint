@@ -144,28 +144,7 @@ fn main() -> Result<()> {
                         panic!("All query genes are non-coding");
                     }
 
-                    // Sort sample_coding_gene in descending order
-                    sample_coding_genes
-                        .as_mut_slice()
-                        .sort_by(|a, b| (b.fold_change).partial_cmp(&a.fold_change).unwrap_or(Ordering::Equal));
-                    let mut genes_descending = sample_coding_genes.clone();
-                    //println!("genes_descending:{:?}", genes_descending);
-
-                    // Sort sample_coding_gene in descending order
-                    sample_coding_genes
-                        .as_mut_slice()
-                        .sort_by(|a, b| (a.fold_change).partial_cmp(&b.fold_change).unwrap_or(Ordering::Equal));
-                    let mut genes_ascending = sample_coding_genes.clone();
-                    //println!("genes_ascending:{:?}", genes_ascending);
-
-                    drop(sample_coding_genes); // sample_coding_genes no longer deleted, so the variable is deleted
-
-                    // Assign ranks to each gene, from 1 as in tmod (ranks <- c(1:N)[x]): CERNO sums ln(rank/N), so a
-                    // 0-based rank gave the top gene ln(0) and dropped every gene set containing it as non-finite
-                    for i in 0..genes_descending.len() {
-                        genes_descending[i].rank = Some(i + 1);
-                        genes_ascending[i].rank = Some(i + 1)
-                    }
+                    let (genes_descending, genes_ascending) = stats_functions::ranked_genes(sample_coding_genes);
 
                     //println!("sample_genes:{:?}", sample_genes);
                     //println!("background_genes:{:?}", background_genes);
