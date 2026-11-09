@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { dominantType, pieSlices, shadeColor } from '../visium.direct'
+import { clampOpacity, dominantType, pieSlices, shadeColor } from '../visium.direct'
 
 tape('shadeColor is darker for a higher proportion and clamps', test => {
 	const sum = (s: string) =>
@@ -30,5 +30,15 @@ tape('pieSlices gives one path per value, and a full circle for a single value',
 	test.equal(pieSlices([0.5, 0.3, 0.2], 10).length, 3, 'one path per slice')
 	test.ok(pieSlices([0.7], 10)[0].includes('A 10 10'), 'single slice is a drawn circle')
 	test.ok(pieSlices([0.6, 0.4], 10)[0].includes('0 1 1'), 'slice over half the circle uses the large-arc flag')
+	test.end()
+})
+
+tape('clampOpacity clamps to 0-1 and defaults to opaque', test => {
+	test.equal(clampOpacity(0.4), 0.4, 'in range kept')
+	test.equal(clampOpacity(5), 1, 'clamped above')
+	test.equal(clampOpacity(-1), 0, 'clamped below')
+	test.equal(clampOpacity(0), 0, '0 is valid, not "missing"')
+	test.equal(clampOpacity(undefined), 1, 'missing = opaque')
+	test.equal(clampOpacity('abc'), 1, 'not a number = opaque')
 	test.end()
 })

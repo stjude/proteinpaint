@@ -8,6 +8,7 @@
    &cell_types=1            fill spots by their dominant cell type (needs obsm/cell_type_proportions);
                             a JSON array, e.g. &cell_types=["Epithelial","T"], shows only those types
    &gene_expression=A,B     fill spots by the summed counts of the listed genes
+   &image_opacity=0.4       opacity of the tissue image, 0 (transparent) to 1 (opaque, default)
 
  Only in-tissue spots are drawn, as circles at their true spot diameter over the image.
  Hovering a spot shows its barcode, array position, cell-type proportions and gene counts.
@@ -84,6 +85,12 @@ export function pieSlices(values: number[], r: number): string[] {
 	})
 }
 
+/** a usable image opacity: clamped to 0-1, and 1 (opaque) when missing or not a number */
+export function clampOpacity(x: unknown): number {
+	const n = Number(x)
+	return x == null || x === '' || Number.isNaN(n) ? 1 : Math.min(1, Math.max(0, n))
+}
+
 export async function init(
 	opts: {
 		/** query string addressing the sample on the visium route: either dataset mode
@@ -97,6 +104,8 @@ export async function init(
 		geneExpression?: string
 		/** genes load for the hover tooltip but no expression fill is drawn */
 		hideExpressionFills?: boolean
+		/** tissue image opacity, 0-1 (default 1) */
+		imageOpacity?: number
 		width?: string
 		height?: string
 	},
@@ -176,6 +185,7 @@ export async function init(
 			target: mapDiv.node(),
 			layers: [
 				new ImageLayer({
+					opacity: clampOpacity(opts.imageOpacity),
 					source: new ImageStatic({
 						url: `${host}/visium/image?${opts.query}`,
 						imageExtent: extent,

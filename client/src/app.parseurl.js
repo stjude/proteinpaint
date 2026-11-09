@@ -62,7 +62,8 @@ upon error, throw err message as a string
 					)}`,
 					showCellTypes: urlp.has('cell_types'),
 					cellTypeFilter,
-					geneExpression: gene
+					geneExpression: gene,
+					imageOpacity: urlp.has('image_opacity') ? Number(urlp.get('image_opacity')) : undefined
 				},
 				arg.holder
 			)

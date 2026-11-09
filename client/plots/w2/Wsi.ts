@@ -459,6 +459,17 @@ class Wsi extends PlotBase implements RxComponent {
 					]
 				},
 				{
+					// number: fade the tissue image so the spots stand out (sequence-based only)
+					label: 'Image opacity',
+					title: 'Opacity of the tissue image, from 0 (transparent) to 1 (opaque)',
+					type: 'number',
+					chartType: 'wsi',
+					settingsKey: 'imageOpacity',
+					min: 0,
+					max: 1,
+					step: 0.1
+				},
+				{
 					// number: how many zoomed-in levels show the boundary strokes
 					label: 'Annotation level',
 					title: 'Show boundaries only within the n most zoomed-in levels; 0 = always show',
@@ -468,7 +479,7 @@ class Wsi extends PlotBase implements RxComponent {
 					min: 0,
 					step: 1
 				}
-			].filter((i: any) => !(sequence && imageOnly.has(i.settingsKey)))
+			].filter((i: any) => !(sequence && imageOnly.has(i.settingsKey)) && (sequence || i.settingsKey != 'imageOpacity'))
 		})
 	}
 }
@@ -492,6 +503,7 @@ export function getDefaultWsiSettings(overrides = {}): Settings {
 		geneExpression: null, // null = seed from the data on first spatial render
 		annotationLevel: null, // null = dataset default
 		cellCountLimit: null, // null = wsi.direct.ts's own default
+		imageOpacity: 1, // sequence-based tissue image fully opaque
 		spatialMode: 'gene_expression' // per-gene overlays by default
 	}
 	return Object.assign(defaults, overrides) // dataset overrides win

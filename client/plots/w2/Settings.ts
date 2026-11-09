@@ -24,6 +24,8 @@ type Settings = {
 	/** cells-in-view above this count show the raster overlay instead of
 	 per-cell vector data; null = wsi.direct.ts's own default */
 	cellCountLimit: number | null
+	/** sequence-based (Visium) images only: opacity of the tissue image, 0 (invisible) to 1 (opaque) */
+	imageOpacity: number
 	/** overlay each gene in its own color, or sum all genes into one overlay */
 	spatialMode: 'gene_expression' | 'gene_groups'
 }

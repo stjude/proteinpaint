@@ -95,6 +95,7 @@ export class View {
 					cellTypeFilter: s.cellTypeFilter ?? undefined,
 					geneExpression: s.geneExpression ?? image.geneExpression,
 					hideExpressionFills: !s.showGeneExpression,
+					imageOpacity: s.imageOpacity,
 					width: '100%',
 					height: s.viewerHeight
 				},

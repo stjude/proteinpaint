@@ -85,6 +85,10 @@ it) holds a Space Ranger low-resolution png (`sequenceImageSuffix: 'tissue_lowre
 files stay under 1 MB; 782 in-tissue spots, 15 cell types. `image1` there is image-based: a folder
 with a `.ome.tif` is `method=image`, one with a png + h5ad and no tif is `method=sequence`.
 
+Tissue image opacity (`sequence` only): `imageOpacity` setting, 0 (transparent) to 1 (opaque, default),
+as the burger menu's "Image opacity" number input, or `&image_opacity=0.4` in the direct URL. Fading
+the image makes the colored spots stand out; out-of-range values are clamped, non-numbers mean 1.
+
 ### Cell types in the `sequence` viewer
 
 Needs `obsm/cell_type_proportions` (one column per type, per-spot fractions).
