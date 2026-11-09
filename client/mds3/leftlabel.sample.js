@@ -291,6 +291,7 @@ async function showDensity4oneTerm(termid, div, data, tk, block) {
 		}
 		createSubTk(tk, block, tvs)
 	}
+	div.attr('data-testid', 'sjpp-msd3tk-subtk-violin')
 	const vr = new violinRenderer({
 		holder: div,
 		rd: data.density_data,

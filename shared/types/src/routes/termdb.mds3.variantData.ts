@@ -15,10 +15,10 @@ export type TermdbMds3VariantDataRequest = {
 	variantFilter?: unknown
 }
 
-export type TermdbMds3VariantDataResponse =
-	| ErrorResponse
-	| {
-			mlst: Record<string, unknown>[]
-			skipMcountWithoutAlt: number
-			[key: string]: unknown
-	  }
+export type ValidMds3VariantReponse = {
+	mlst: Record<string, unknown>[]
+	skipMcountWithoutAlt: number
+	[key: string]: unknown
+}
+
+export type TermdbMds3VariantDataResponse = ErrorResponse | ValidMds3VariantReponse

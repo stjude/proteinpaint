@@ -10,7 +10,6 @@ export const joinMlstBy = (d, key = 'mname') => {
 }
 
 export const getMClassesLabel = d => {
-	console.log(d)
 	return joinMlstBy(d, 'class')
 }
 
