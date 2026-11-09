@@ -1,6 +1,14 @@
-import type { RoutePayload, RouteApi, MethylationStarburstRequest, MethylationStarburstResponse } from '#types'
+import type {
+	RoutePayload,
+	RouteApi,
+	MethylationStarburstRequest,
+	MethylationStarburstResponse,
+	StarburstPathways
+} from '#types'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
-import { getGeneBodyDeltas } from '#src/routes/termdb.geneBodyMeth.ts'
+import { getGeneBodyDeltas, getGeneBodyTests, type GeneBodyTest } from '#src/routes/termdb.geneBodyMeth.ts'
+import { layeredPathways } from '#src/utils/directionalPathways.ts'
+import { validGeneSetGroup } from '#src/utils/genesetGroups.ts'
 import { scanChromosomes } from '../../routes/termdb.diffMeth.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { resolveGroups } from '#src/utils/sampleGroups.ts'
@@ -15,7 +23,9 @@ they relate to transcription in opposite ways.
 
 Nothing here is new computation. Δβ per region is termdb/geneBodyMeth's mean delta over the region (raw, or its
 excess over matched background), and the fold change is the DE run the volcano would make on the same patients:
-both cached, so this joins them. The response holds gene-level values only. */
+both cached, so this joins them. The response holds gene-level values only.
+
+With a gene set group, it also tests gene sets on each layer and on the two merged, see getPathways(). */
 
 export const payload: RoutePayload = {
 	// only set up when at least one ds has ds.queries.dnaMethylation, see termdb.diffMeth.ts
@@ -64,23 +74,20 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 
 	// major chromosomes less chrM, which has no CpG shard
 	const chromosomes = scanChromosomes({ exclude_sex_chr: q.excludeSexChr } as any, genome)
-	const deltas = (region?: 'promoter') =>
-		getGeneBodyDeltas(
-			{
-				genome: q.genome,
-				dslabel: q.dslabel,
-				group1: samplelst.groups[0].values,
-				group2: samplelst.groups[1].values,
-				corrected: !!q.corrected,
-				chromosomes,
-				region,
-				__protected__: q.__protected__
-			},
-			genomes
-		)
-	// one after the other: each is a genome-wide rust fit admitted against server memory
+	const groupArgs = {
+		genome: q.genome,
+		dslabel: q.dslabel,
+		group1: samplelst.groups[0].values,
+		group2: samplelst.groups[1].values,
+		chromosomes,
+		__protected__: q.__protected__
+	}
+	const deltas = (region?: 'promoter') => getGeneBodyDeltas({ ...groupArgs, corrected: !!q.corrected, region }, genomes)
+	// one after the other: each is a genome-wide rust run admitted against server memory
 	const body = await deltas()
 	const promoter = await deltas('promoter')
+	if (q.geneSetGroup) validGeneSetGroup(genome, q.geneSetGroup)
+	const tests = q.geneSetGroup ? await getGeneBodyTests(groupArgs, genomes) : null
 
 	const { result } = await getDeCacheResult(
 		{
@@ -116,12 +123,71 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 		out.body.push(b)
 	}
 	if (!out.genes.length) throw new Error('No gene had both a methylation value and a fold change.')
+	const pathways = tests ? getPathways(genome, q.geneSetGroup!, (result as any)?.geneRows || [], tests) : undefined
 	mayLog(`methylationStarburst: ${out.genes.length} genes,`, formatElapsedTime(Date.now() - t0))
 	return {
 		...out,
 		sampleSize1: (result as any)?.sample_size1,
 		sampleSize2: (result as any)?.sample_size2,
 		deMethod: (result as any)?.method,
-		corrected: !!q.corrected
+		corrected: !!q.corrected,
+		pathways
+	}
+}
+
+/** genes at or below this p enter each layer's ranked list, as main H of the MMRF subtype figure; ActivePathways
+ * defaults to 0.1 */
+const PATHWAY_CUTOFF = 0.05
+const PATHWAY_SIZES: [number, number] = [10, 500]
+
+/* Gene sets tested on expression alone, on gene-body methylation alone, and on the two merged per gene by directional
+P-value merging with the constraint that they move the same way, as gene-body methylation follows transcription
+(Köhnke et al. 2026 drew ActivePathways' three this way; they merged promoter DMRs with the opposite constraint).
+Expression: the DE p and the sign of the fold change. Gene body: the per-patient test of termdb/geneBodyMeth
+(getGeneBodyTests: each patient's gene-body beta, centered on their median body, Welch's t between the groups), its p
+and the sign of t. Genes without both are left out of every layer, so the three share one background. */
+function getPathways(
+	genome: any,
+	geneSetGroup: string,
+	deRows: any[],
+	meth: Record<string, GeneBodyTest>
+): StarburstPathways {
+	const db = genome.termdbs.msigdb.cohort.db.connection
+	const genesOf = db.prepare('select genes from term2genes where id=?')
+	const sets: Record<string, string[]> = {}
+	for (const { id } of db.prepare('select id from terms where parent_id=?').all(geneSetGroup)) {
+		const row = genesOf.get(id)
+		if (row) sets[id] = JSON.parse(row.genes).map((g: any) => g.symbol)
+	}
+	const genes: string[] = []
+	const p: number[][] = []
+	const direction: number[][] = []
+	for (const r of deRows) {
+		const m = meth[r.gene_name]
+		if (!m || !Number.isFinite(r.original_p_value) || !Number.isFinite(r.fold_change)) continue
+		genes.push(r.gene_name)
+		p.push([r.original_p_value, m.p])
+		direction.push([Math.sign(r.fold_change), Math.sign(m.t)])
+	}
+	if (!genes.length) throw new Error('No gene had both a gene-body p-value and an expression p-value.')
+	const r = layeredPathways({
+		genes,
+		p,
+		direction,
+		constraints: [1, 1],
+		sets,
+		cutoff: PATHWAY_CUTOFF,
+		sizeRange: PATHWAY_SIZES
+	})
+	const sig = Math.log10(0.05)
+	return {
+		geneSetGroup,
+		genes: genes.length,
+		tested: r.sets.length,
+		passing: r.passing as [number, number, number],
+		brown: r.brown,
+		sets: r.sets
+			.filter(s => s.layers.some(l => l.log10q < sig))
+			.map(s => ({ ...s, layers: s.layers as StarburstPathways['sets'][0]['layers'], genes: s.genes.slice(0, 30) }))
 	}
 }

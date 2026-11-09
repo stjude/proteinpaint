@@ -4,7 +4,7 @@ import { GRIN2_MEMORY } from '#src/grin2/main.ts'
 import { DE_MEMORY } from '#src/routes/termdb.DE.ts'
 import { TOPVE_MEMORY } from '#src/routes/termdb.topVariablyExpressedGenes.ts'
 import { DM_MEMORY } from '../../../routes/termdb.diffMeth.ts'
-import { DMRCATE_MEMORY, DMRCATE_REGION_MEMORY } from '#src/utils/methylationMatrix.ts'
+import { DMRCATE_MEMORY, DMRCATE_REGION_MEMORY, DMRCATE_SAMPLE_TEST_MEMORY } from '#src/utils/methylationMatrix.ts'
 
 /*
 Every memory cost must be at or above the peak of each real run it was measured on, so that a cost changed later
@@ -148,6 +148,18 @@ tape('DM routes (dmrcate)', test => {
 		['densest 10 Mb, 76,344 CpGs', 90]
 	] as [string, number][])
 		covers(test, `region ${label}`, estimatePeakMB(DMRCATE_REGION_MEMORY, { rows: 1304718, cols: 415 }), peak)
+	// a gene-body sample test on MMRF (415 columns): [rows read, gene bodies, samples, peak MB], max RSS, 2026-11-06
+	for (const [rows, bodies, samples, peak] of [
+		[220325, 289, 242, 24] /* chr21, t(4;14) against the reference */,
+		[15923291, 21725, 242, 282] /* autosomes, t(4;14) against the reference */,
+		[15923291, 21725, 415, 366] /* autosomes, every sample */
+	])
+		covers(
+			test,
+			`gene-body test ${bodies} bodies x ${samples}`,
+			estimatePeakMB(DMRCATE_SAMPLE_TEST_MEMORY, { rows, cells: bodies * samples, cols: 415 }),
+			peak
+		)
 	test.end()
 })
 

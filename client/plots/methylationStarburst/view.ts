@@ -307,3 +307,170 @@ export function drawStarburst(
 	}
 	return svg
 }
+
+export type StarburstPathways = NonNullable<StarburstData['pathways']>
+
+const layerLabels = ['Expression', 'Gene body', 'Both, merged']
+/** signed -log10 q, blue for sets whose genes went down or lost methylation, orange up or gained (the figure's) */
+const CAP = 8
+const heat = scaleLinear<string>()
+	.domain([-CAP, -CAP / 2, 0, CAP / 2, CAP])
+	.range(['#2b6cb0', '#c6d6ea', '#ffffff', '#f4cfae', '#c2410c'])
+	.clamp(true)
+const SIG = Math.log10(0.05)
+
+/** HALLMARK_TNFA_SIGNALING_VIA_NFKB -> Tnfa signaling via nfkb */
+export function setLabel(id: string) {
+	const s = id
+		.replace(/^(HALLMARK|GOBP|GOMF|GOCC|REACTOME|WP)_/, '')
+		.replace(/_/g, ' ')
+		.toLowerCase()
+	return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/** The gene sets significant in any layer as three heatmap columns sharing rows, most significant merged first:
+ * expression, gene body, and both merged. Dots: q < 0.05; squares: significant only when merged. Returns the svg. */
+export function drawPathways(holder: any, pw: StarburstPathways, groups: [string, string], tip: any, maxRows = 40) {
+	const sets = [...pw.sets].sort((a, b) => a.layers[2].log10q - b.layers[2].log10q).slice(0, maxRows)
+	const cell = { w: 34, h: 15 }
+	// room above the cells for the column labels, drawn at 45 degrees
+	const m = { top: 112, left: 10 }
+	const labelX = m.left + 3 * cell.w + 8
+	const svg = holder
+		.append('svg')
+		.attr('data-testid', 'sjpp-methylationStarburst-pathways')
+		// room for the legend line under the columns
+		.attr('width', Math.max(labelX + 420, 780))
+		.attr('height', m.top + sets.length * cell.h + 78)
+		.style('font-family', 'Arial, sans-serif')
+	svg
+		.append('text')
+		.attr('x', m.left)
+		.attr('y', 16)
+		.attr('font-weight', 'bold')
+		.attr('font-size', 13)
+		.text(`Gene sets: ${pw.geneSetGroup}`)
+	svg
+		.append('text')
+		.attr('data-testid', 'sjpp-methylationStarburst-pathwayStats')
+		.attr('x', m.left)
+		.attr('y', 33)
+		.attr('font-size', 11)
+		.attr('fill', '#555')
+		.text(
+			`${pw.genes.toLocaleString()} genes with both, ${pw.tested.toLocaleString()} sets tested, ` +
+				`${pw.sets.length.toLocaleString()} at q < 0.05` +
+				(pw.sets.length > sets.length ? ` (top ${sets.length} shown)` : '') +
+				`; genes at p ≤ 0.05: ${pw.passing.map(n => n.toLocaleString()).join(', ')}`
+		)
+	layerLabels.forEach((label, j) =>
+		svg
+			.append('text')
+			.attr('transform', `translate(${m.left + j * cell.w + cell.w / 2},${m.top - 6}) rotate(-45)`)
+			.attr('font-size', 11)
+			.text(label)
+	)
+	const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`)
+	sets.forEach((s, i) => {
+		const merged = s.layers[2].log10q < SIG
+		const onlyMerged = merged && s.layers[0].log10q >= SIG && s.layers[1].log10q >= SIG
+		s.layers.forEach((l, j) => {
+			const c = g
+				.append('g')
+				.attr('class', 'sjpp-methylationStarburst-pathwayCell')
+				.attr('transform', `translate(${j * cell.w},${i * cell.h})`)
+			c.append('rect')
+				.attr('width', cell.w - 1)
+				.attr('height', cell.h - 1)
+				.attr('fill', heat(-l.log10q * (l.direction || 1)))
+				.attr('stroke', '#eee')
+			if (l.log10q < SIG)
+				c.append('circle')
+					.attr('class', 'sjpp-methylationStarburst-pathwaySig')
+					.attr('cx', cell.w / 2)
+					.attr('cy', cell.h / 2)
+					.attr('r', 2.5)
+			if (j == 2 && onlyMerged)
+				c.append('rect')
+					.attr('class', 'sjpp-methylationStarburst-pathwayMergedOnly')
+					.attr('x', cell.w / 2 - 5)
+					.attr('y', cell.h / 2 - 5)
+					.attr('width', 10)
+					.attr('height', 10)
+					.attr('fill', 'none')
+					.attr('stroke', '#000')
+			c.on('mouseover', (event: any) => {
+				tip.clear().show(event.clientX, event.clientY)
+				const table = table2col({ holder: tip.d })
+				table.addRow('Gene set', s.id)
+				table.addRow('Genes in set', `${s.size} with both layers`)
+				s.layers.forEach((x, k) =>
+					table.addRow(
+						layerLabels[k],
+						`q ${fmtQ(10 ** x.log10q)}, ${x.overlap} genes picked` +
+							(x.direction ? `, mostly ${x.direction > 0 ? (k == 1 ? 'gained' : 'up') : k == 1 ? 'lost' : 'down'}` : '')
+					)
+				)
+				if (s.genes.length) table.addRow('Merged, top genes', s.genes.slice(0, 15).join(', '))
+			}).on('mouseout', () => tip.hide())
+		})
+		g.append('text')
+			.attr('x', labelX - m.left)
+			.attr('y', i * cell.h + cell.h / 2 + 4)
+			.attr('font-size', 11)
+			.text(setLabel(s.id).slice(0, 70))
+			.append('title')
+			.text(s.id)
+	})
+
+	// legend: the color scale, then the marks
+	const ly = m.top + sets.length * cell.h + 22
+	const grad = `sjpp-starburst-heat-${Math.random().toString(36).slice(2)}`
+	const lg = svg.append('defs').append('linearGradient').attr('id', grad)
+	heat.range().forEach((c, k, a) =>
+		lg
+			.append('stop')
+			.attr('offset', k / (a.length - 1))
+			.attr('stop-color', c)
+	)
+	svg
+		.append('rect')
+		.attr('x', m.left)
+		.attr('y', ly)
+		.attr('width', 120)
+		.attr('height', 10)
+		.attr('fill', `url(#${grad})`)
+		.attr('stroke', '#999')
+	for (const [x, t] of [
+		[0, `≤ −${CAP}`],
+		[60, '0'],
+		[120, `≥ ${CAP}`]
+	] as [number, string][])
+		svg
+			.append('text')
+			.attr('x', m.left + x)
+			.attr('y', ly + 22)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', 10)
+			.text(t)
+	svg
+		.append('text')
+		.attr('x', m.left + 132)
+		.attr('y', ly + 9)
+		.attr('font-size', 11)
+		.text(
+			`signed −log10 q: lower or lost in ${groups[1]} (blue), higher or gained (orange); ● q < 0.05; □ only when merged`
+		)
+	for (const [k, line] of [
+		"Gene body: each patient's gene-body β, centered on their median, Welch t-test.",
+		`Merged: directional P-value merging, same direction (Brown df ${pw.brown.df.toFixed(1)} of 4).`
+	].entries())
+		svg
+			.append('text')
+			.attr('x', m.left + 132)
+			.attr('y', ly + 24 + 13 * k)
+			.attr('font-size', 10)
+			.attr('fill', '#777')
+			.text(line)
+	return svg
+}

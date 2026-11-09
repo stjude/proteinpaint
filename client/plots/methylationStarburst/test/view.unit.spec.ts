@@ -1,6 +1,14 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { drawStarburst, spearman, quadrants, type StarburstData } from '../view'
+import {
+	drawStarburst,
+	drawPathways,
+	setLabel,
+	spearman,
+	quadrants,
+	type StarburstData,
+	type StarburstPathways
+} from '../view'
 
 /*
 Tests:
@@ -9,6 +17,7 @@ Tests:
 	- draws a promoter and a body panel with stats, corner counts and the dots image
 	- highlighted genes are named where they have a value
 	- a click passes the nearest gene
+	- gene sets: three cells a set, most significant merged first, dots at q < 0.05, a square only when merged, a row cap
 */
 
 tape('\n', test => {
@@ -115,5 +124,66 @@ tape('click passes the nearest gene', test => {
 	test.equal(clicked, 'A', 'should pass the gene under the pointer')
 	holder.remove()
 	tip.d.remove()
+	test.end()
+})
+
+function getPathways(): StarburstPathways {
+	const layer = (log10q: number, direction = 1) => ({ log10q, direction, overlap: 5 })
+	return {
+		geneSetGroup: 'H: hallmark gene sets',
+		genes: 1000,
+		tested: 50,
+		passing: [400, 300, 350],
+		brown: { df: 3.5, scale: 1.1 },
+		sets: [
+			// significant in each layer and merged
+			{ id: 'HALLMARK_A_SET', size: 40, layers: [layer(-4), layer(-3, -1), layer(-6)], genes: ['G1', 'G2'] },
+			// significant only when merged
+			{ id: 'HALLMARK_B_SET', size: 30, layers: [layer(-1), layer(-1), layer(-2)], genes: ['G3'] },
+			// significant in expression alone
+			{ id: 'HALLMARK_C_SET', size: 20, layers: [layer(-8), layer(0, 0), layer(-1)], genes: [] }
+		]
+	}
+}
+
+tape('gene sets', test => {
+	const holder = d3s.select('body').append('div')
+	drawPathways(holder, getPathways(), ['ref', 'case'], {})
+	test.equal(holder.selectAll('.sjpp-methylationStarburst-pathwayCell').size(), 9, 'should draw three cells a set')
+	test.equal(
+		holder.selectAll('.sjpp-methylationStarburst-pathwaySig').size(),
+		5,
+		'should mark each cell at q < 0.05: 3, 1 and 1'
+	)
+	test.equal(
+		holder.selectAll('.sjpp-methylationStarburst-pathwayMergedOnly').size(),
+		1,
+		'should square the merged-only set'
+	)
+	const labels = holder
+		.selectAll('[data-testid=sjpp-methylationStarburst-pathways] g text')
+		.nodes()
+		.map((n: any) => n.firstChild.textContent)
+	test.deepEqual(labels, ['A set', 'B set', 'C set'], 'should order the sets by merged q, most significant first')
+	holder.remove()
+
+	const capped = d3s.select('body').append('div')
+	drawPathways(capped, getPathways(), ['ref', 'case'], {}, 2)
+	test.equal(capped.selectAll('.sjpp-methylationStarburst-pathwayCell').size(), 6, 'should draw up to maxRows sets')
+	test.ok(
+		capped.select('[data-testid=sjpp-methylationStarburst-pathwayStats]').text().includes('(top 2 shown)'),
+		'should say when sets are left out'
+	)
+	capped.remove()
+	test.end()
+})
+
+tape('setLabel', test => {
+	test.equal(
+		setLabel('HALLMARK_TNFA_SIGNALING_VIA_NFKB'),
+		'Tnfa signaling via nfkb',
+		'should drop the collection prefix'
+	)
+	test.equal(setLabel('GOBP_DNA_REPAIR'), 'Dna repair', 'should drop a GO prefix')
 	test.end()
 })

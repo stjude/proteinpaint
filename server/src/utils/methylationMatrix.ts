@@ -347,6 +347,24 @@ export async function admitDmrcateJobs(
 	return admitRun(label, cost, units, await getAvailableMemoryMB(), refusal)
 }
 
+/** Peak memory of one dmrcate sample_test run (termdb/geneBodyMeth's per-patient gene-body test), by its region x
+ * selected-sample cells (two sums and a level each), the rows of the files it reads, and the read buffer of the widest
+ * one (as DMRCATE_MEMORY); nothing per CpG is kept. Measured 2026-11-06 on MMRF (415 columns) as max RSS: 24 MB for
+ * chr21's 289 gene bodies x 242 samples (220,325 rows), 282 MB for 21,725 autosomal bodies x 242 and 366 MB x 415
+ * (15,923,291 rows). */
+export const DMRCATE_SAMPLE_TEST_MEMORY: MemoryCost = {
+	baseMB: 25,
+	perUnitMB: { rows: 0.00001, cells: 24 / 1048576, cols: DMRCATE_MEMORY.perUnitMB.cols }
+}
+
+/** Admits one dmrcate sample_test run over these files for `cells` region-sample pairs (DMRCATE_SAMPLE_TEST_MEMORY),
+ * reserving its memory until the returned release is called */
+export async function admitDmrcateSampleTest(files: string[], cells: number, refusal: string): Promise<() => void> {
+	const shapes = await Promise.all([...new Set(files)].map(matrixShape))
+	const units = { rows: shapes.reduce((n, s) => n + s[0], 0), cells, cols: Math.max(...shapes.map(s => s[1])) }
+	return admitRun('gene-body test', DMRCATE_SAMPLE_TEST_MEMORY, units, await getAvailableMemoryMB(), refusal)
+}
+
 /** Admits one dmrcate region-mode run on this matrix file (DMRCATE_REGION_MEMORY), reserving its memory until the
  * returned release is called */
 export async function admitDmrcateRegion(file: string, refusal: string): Promise<() => void> {

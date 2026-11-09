@@ -5,11 +5,12 @@ import { dofetch3 } from '#common/dofetch'
 import { withOthersGroup } from '#mass/groups'
 import { getDefaultVolcanoSettings } from '../volcano/settings/defaults'
 import type { MethylationStarburstResponse } from '#types'
-import { drawStarburst, type Cutoffs, type StarburstData } from './view'
+import { drawStarburst, drawPathways, type Cutoffs, type StarburstData } from './view'
 
 /* Methylation change against expression change per gene, core promoter and gene body side by side, for the two
 groups of a volcano. Opened from the differential methylation volcano; a click on a gene opens its locus view
-with the same groups. See server/src/routes/termdb.methylationStarburst.ts for the data. */
+with the same groups. With a gene set group chosen, gene sets tested on expression, on gene-body methylation and on
+the two merged are drawn under it. See server/src/routes/termdb.methylationStarburst.ts for the data. */
 
 class MethylationStarburst extends PlotBase implements RxComponent {
 	static type = 'methylationStarburst'
@@ -17,6 +18,7 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 	tip = new Menu({ padding: '5px' })
 	data?: StarburstData
 	dataKey?: string
+	pathwaySvg?: any
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
@@ -52,7 +54,8 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 			min_total_count: de.minTotalCount,
 			cpm_cutoff: de.cpmCutoff,
 			filter: termfilter?.filter,
-			filter0: termfilter?.filter0
+			filter0: termfilter?.filter0,
+			geneSetGroup: config.geneSetGroup || undefined
 		}
 		// a cutoff change redraws without asking the server again
 		const key = JSON.stringify(body)
@@ -62,7 +65,9 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 				.append('div')
 				.style('color', '#777')
 				.text(
-					'Computing promoter and gene-body methylation and expression for every gene. A first run takes a few minutes.'
+					'Computing promoter and gene-body methylation and expression for every gene' +
+						(body.geneSetGroup ? ', and gene-set enrichment' : '') +
+						'. A first run takes a few minutes.'
 				)
 			const data: MethylationStarburstResponse = await dofetch3('termdb/methylationStarburst', {
 				signal: this.api?.getAbortSignal(),
@@ -92,6 +97,10 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 				`${this.data!.sampleSize1} vs ${this.data!.sampleSize2} samples with methylation and expression; ` +
 					`DE by ${this.data!.deMethod || 'the volcano default'}. Click a gene for its locus view.`
 			)
+		const pw = this.data!.pathways
+		this.pathwaySvg = pw
+			? drawPathways(this.dom.holder.append('div').style('margin-top', '20px'), pw, names, this.tip)
+			: null
 	}
 
 	renderControls(s: Cutoffs) {
@@ -124,6 +133,20 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 			.property('checked', !!config.corrected)
 			.on('change', (event: any) => edit({ corrected: event.target.checked }))
 		l.append('span').text(' Δβ beyond matched background')
+		// gene sets: the genome's msigdb groups, as the GSEA plot lists them; '-' is its "none"
+		const groups = this.app.opts.genome?.termdbs?.msigdb?.analysisGenesetGroups
+		if (!groups?.length) return
+		const sl = div.append('label').style('margin-left', '15px').text('Gene sets ')
+		const select = sl
+			.append('select')
+			.attr('data-testid', 'sjpp-methylationStarburst-geneSetGroup')
+			.on('change', (event: any) => edit({ geneSetGroup: event.target.value == '-' ? null : event.target.value }))
+		for (const g of [{ label: 'None', value: '-' }, ...groups.filter(g => g.value != '-')])
+			select
+				.append('option')
+				.attr('value', g.value)
+				.property('selected', g.value == (config.geneSetGroup || '-'))
+				.text(g.label)
 	}
 
 	/* the gene's per-patient methylation and expression, with this plot's groups as the strip */
@@ -140,8 +163,11 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 	}
 
 	getChartImages() {
-		const svg = this.dom.svg
-		return svg && !svg.empty() ? [{ name: 'Methylation and expression by gene', svg }] : []
+		const out: { name: string; svg: any }[] = []
+		if (this.dom.svg && !this.dom.svg.empty())
+			out.push({ name: 'Methylation and expression by gene', svg: this.dom.svg })
+		if (this.pathwaySvg && !this.pathwaySvg.empty()) out.push({ name: 'Gene sets', svg: this.pathwaySvg })
+		return out
 	}
 }
 
