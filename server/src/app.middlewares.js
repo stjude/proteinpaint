@@ -308,7 +308,11 @@ const corsAllowedHeaders =
 	'Origin, X-Requested-With, Content-Type, Accept, Authorization' +
 	', origin, x-requested-with, content-type, accept, authorization' +
 	', X-Auth-Token, X-Ds-Access-Token, X-SjPPDs-Sessionid' +
-	', x-auth-token, x-ds-access-token, x-sjppds-sessionid'
+	', x-auth-token, x-ds-access-token, x-sjppds-sessionid' +
+	// distributed tracing headers that an embedder's browser monitoring, such as Datadog RUM, may add
+	// to a cross-origin request; CORS header names are matched case-insensitively by browsers
+	', traceparent, tracestate' +
+	', x-datadog-origin, x-datadog-parent-id, x-datadog-sampling-priority, x-datadog-trace-id, x-datadog-tags'
 
 // a 'null' request origin is only allowed when any embedder is allowed
 export function isNullOriginAllowed(req, allowedEmbedders) {
