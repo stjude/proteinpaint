@@ -201,8 +201,11 @@ function init({ genomes }) {
 				if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw badRequest('invalid imageType')
 				if (q.method && q.method != 'image' && q.method != 'sequence') throw badRequest('invalid method')
 				const spatial = q.imageType == 'spatial'
-				const base = spatial ? spatialBase : wsiBase
-				const ids = base ? await subdirs(base) : [] // each subfolder = one sample
+				const roots = spatial
+					? [q.method != 'sequence' ? spatialBase : undefined, q.method != 'image' ? sequenceBase : undefined]
+					: [wsiBase]
+				const sampleIds = await Promise.all(roots.filter((base): base is string => !!base).map(subdirs))
+				const ids = [...new Set(sampleIds.flat())] // each root's subfolders are sample IDs
 				const samples: WsiSampleSummary[] = []
 				for (const name of ids.sort()) {
 					// count each sample's images by enumerating only the requested
