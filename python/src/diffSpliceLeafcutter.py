@@ -1470,7 +1470,7 @@ def differential_splicing_batched(buf, intron_ids, cluster_ids, cluster_starts, 
             results = list(pool.imap_unordered(worker, jobs))
     stages.mark("fit")
 
-    use_of ={pos: use for pos, _, use in survivors}
+    use_of = {pos: use for pos, _, use in survivors}
     intron_index = pd.Index(intron_ids)
     tested, junc_frames = {}, []
     for r in results:
@@ -1529,7 +1529,8 @@ def portal_tables(cluster_table, junc_table, cluster_ids, cluster_genes):
     j["cluster"] = j["chr"] + ":" + j["clu"]
 
     groups = j.groupby("clu", sort=False)
-    top = j.loc[j["deltapsi"].abs().groupby(j["clu"], sort=False).idxmax()].set_index("clu")
+    # fillna: idxmax is NaN for a cluster whose PSI are all NaN, and .loc would then fail the request
+    top = j.loc[j["deltapsi"].abs().fillna(-1).groupby(j["clu"], sort=False).idxmax()].set_index("clu")
     gene_of = dict(zip(cluster_ids, cluster_genes))
     clusters = cluster_table.copy()
     clu = clusters.index.to_numpy()
@@ -1741,7 +1742,19 @@ def selftest():
                                   wraps=multiprocessing.get_context) as get_context:
             two_workers = handle({**req, "threads": 2})
 
-    rows ={r["cluster_id"]: r for r in res["cluster_data"]}
+    # a cluster whose PSI are all NaN, beside a normal one
+    nan_clusters = ["clu_a_+", "clu_b_+"]
+    nan_out, _ = portal_tables(
+        pd.DataFrame({"p": [0.01, 0.5], "p.adjust": [0.02, 0.5]}, index=nan_clusters),
+        pd.DataFrame({"cluster": [nan_clusters[0]] * 2 + [nan_clusters[1]] * 2,
+                      "intron": [f"chr1:{a}:{b}:{c}:NE" for a, b, c in [
+                          (100, 200, nan_clusters[0]), (100, 300, nan_clusters[0]),
+                          (500, 600, nan_clusters[1]), (500, 700, nan_clusters[1])]],
+                      "psi_0": [0.5, 0.5, np.nan, np.nan], "psi_case": [0.7, 0.3, np.nan, np.nan]}),
+        np.array(nan_clusters), np.array(["", ""]))
+    nan_row = {r["cluster_id"]: r for r in cluster_rows(nan_out, "control", "case")}.get("chr1:clu_b_+")
+
+    rows = {r["cluster_id"]: r for r in res["cluster_data"]}
     hit = rows["chr1:clu_0_+"]
     junctions = res["junctions_by_cluster"]["chr1:clu_0_+"]
     checks = {
@@ -1764,6 +1777,8 @@ def selftest():
         "a covariate that differs within the groups is fitted":
         with_covariate["cluster_data"][0]["cluster_id"] == hit["cluster_id"],
         "a covariate with the split of the groups is rejected": "not of full rank" in collinear_error,
+        "a cluster whose PSI are all NaN keeps its row and p": nan_row is not None
+        and nan_row["original_p_value"] == 0.5 and nan_row["delta_psi"] == 0.0,
         "workers are started when there are multiple jobs": get_context.called,
         "two workers give the same results as one": two_workers["cluster_data"] == res["cluster_data"]
         and two_workers["junctions_by_cluster"] == res["junctions_by_cluster"]
