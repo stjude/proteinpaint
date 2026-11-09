@@ -104,7 +104,8 @@ tape('getDeps(): a declared front package that is not installed', test => {
 tape('getPkgVer(), getHostImage(): read the current public/rev.txt and public/host-image.txt', test => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pp-healthrev-'))
 	try {
-		const version = getPkgVer('20260101.00:00', dir).split('-')[0]
+		// as health.ts reads it: a prerelease version (2.227.2-0) has its own '-', so it is not split off the result
+		const { version } = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../../package.json'), 'utf8'))
 		test.equal(
 			getPkgVer('20260101.00:00', dir),
 			`${version}-20260101.00:00`,
