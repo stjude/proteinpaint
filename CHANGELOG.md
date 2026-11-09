@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- A disco plot of custom data, from the app drawer or runpp({disco}), renders again, instead of showing "this.app.vocabApi.create is not a function"
+
+
 ## 2.227.0
 
 Features:
