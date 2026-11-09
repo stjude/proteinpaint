@@ -11,7 +11,7 @@ import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 import { resolveMethylationMatrix } from '#src/utils/methylationMatrix.ts'
 import { resolveGroups, buildGroupValues } from '#src/utils/sampleGroups.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import { run_R } from '@sjcrh/proteinpaint-r'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getStdDev } from './termdb.descrstats.ts'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 import { genomes } from '#src/initGenomesDs.js'
@@ -21,7 +21,7 @@ import { genomes } from '#src/initGenomesDs.js'
 The locus is the requested isoform (default: the gene's default isoform) with FLANK bp on each side, cut into NBINS runs of equal CpG
 count (query_beta_values.py, bins mode). A bin value is pooled methylated reads over pooled reads for
 the sample, so a deeply covered CpG weighs more than a thin one. Each bin is then correlated with
-expression across samples (Spearman, corr.R, BH-adjusted across bins).
+expression across samples (Spearman, rust corr, BH-adjusted across bins).
 
 Samples come from getData() with the request's filter, as for termdb/matrix, then are limited to the
 ones eligible for CpG methylation. The response names samples, so it requires canDisplaySampleIds(). */
@@ -156,7 +156,7 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 }
 
 /* Spearman rho of each bin's beta against expression, over the samples that pick() keeps, with BH
-across the bins (corr.R). A bin without enough values or without variance gets undefined. */
+across the bins (rust corr). A bin without enough values or without variance gets undefined. */
 async function correlateBins(
 	bins: MethylationLocusBin[],
 	samples: { value: number; group?: string }[],
@@ -175,8 +175,11 @@ async function correlateBins(
 	})
 	const result: ({ rho: number; q: number } | undefined)[] = bins.map(() => undefined)
 	if (!terms.length) return result
-	const out = JSON.parse(await run_R('corr.R', JSON.stringify({ method: 'spearman', terms })))
-	for (const t of out) result[Number(t.id)] = { rho: t.correlation, q: t.adjusted_p_value }
+	const out = JSON.parse(await run_rust('corr', JSON.stringify({ method: 'spearman', terms })))
+	// corr gives null where R gives NA; the checks above should prevent it, and such a bin gets no rho
+	for (const t of out)
+		if (t.correlation !== null && t.adjusted_p_value !== null)
+			result[Number(t.id)] = { rho: t.correlation, q: t.adjusted_p_value }
 	return result
 }
 

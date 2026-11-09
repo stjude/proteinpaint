@@ -1,1 +1,3 @@
-
+Features:
+- Gene locus view: per-sample DNA methylation along a gene next to its expression in the same samples. Samples are columns sorted by expression, and rows are bins of equal CpG count over the gene and its flanks, each with its Spearman correlation with expression. Clicking a row shows the gene's expression split by that bin's methylation. Opened from a DE or DM volcano dot, for datasets with CpG-level methylation and gene expression.
+- Methylation vs expression starburst: one point per gene, plotting the core-promoter and gene-body methylation change against the expression change between a volcano's two groups. With a gene set group selected, it also shows the gene sets enriched in expression, in gene-body methylation, and in the two merged when they move in the same direction. Opened from the DM volcano with "Methylation vs expression by gene".
