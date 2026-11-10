@@ -182,17 +182,33 @@ tape('termdb/wsiBySample filters by method and answers invalid input with 400', 
 		JSON.stringify({ ...ds, imageType: 'spatial', method: 'image' })
 	)
 	const mixedSample = 'TCGA-22-1017'
-	test.equal(allSpatial.body.samples.find(s => s.sampleId == mixedSample)?.count, 2, 'should count both spatial methods')
+	test.equal(
+		allSpatial.body.samples.find(s => s.sampleId == mixedSample)?.count,
+		2,
+		'should count both spatial methods'
+	)
 	test.equal(
 		imageSpatial.body.samples.find(s => s.sampleId == mixedSample)?.count,
 		1,
 		'should count only image-based entries when method=image'
 	)
 
+	const seqOnly = await post(
+		server,
+		'/termdb/wsiBySample',
+		JSON.stringify({ ...ds, sample_id: mixedSample, method: 'sequence' })
+	)
+	test.deepEqual(
+		seqOnly.body.images?.map(i => i.method),
+		['sequence'],
+		'should return only the sequence-based image of one sample when method=sequence'
+	)
+
 	for (const [label, q] of [
 		['a sample_id outside the image folder', { ...ds, sample_id: '..' }],
 		['an unknown imageType', { ...ds, sample_id: '2660', imageType: 'bogus' }],
-		['an unknown method in a spatial listing', { ...ds, imageType: 'spatial', method: 'bogus' }]
+		['an unknown method in a spatial listing', { ...ds, imageType: 'spatial', method: 'bogus' }],
+		['an unknown method for one sample', { ...ds, sample_id: mixedSample, method: 'bogus' }]
 	] as const) {
 		const res = await post(server, '/termdb/wsiBySample', JSON.stringify(q))
 		test.equal(res.status, 400, `should respond with 400 for ${label}`)

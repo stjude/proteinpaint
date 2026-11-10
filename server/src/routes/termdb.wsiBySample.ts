@@ -191,6 +191,10 @@ function init({ genomes }) {
 				return images
 			}
 
+			// filters are validated for every request form, so a typo is a 400, never "no filter"
+			if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw badRequest('invalid imageType')
+			if (q.method && q.method != 'image' && q.method != 'sequence') throw badRequest('invalid method')
+
 			if (!q.sample_id) {
 				// no sample given: by default, samples for the standalone Whole
 				// Slide Images plot — PLAIN slides on disk only (spatial images are
@@ -198,8 +202,6 @@ function init({ genomes }) {
 				// sample_id). imageType=spatial opts into listing SPATIAL samples
 				// instead — the w2 viewer's similar-region search uses this to
 				// offer the dataset's other spatial samples
-				if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw badRequest('invalid imageType')
-				if (q.method && q.method != 'image' && q.method != 'sequence') throw badRequest('invalid method')
 				const spatial = q.imageType == 'spatial'
 				const roots = spatial
 					? [q.method != 'sequence' ? spatialBase : undefined, q.method != 'image' ? sequenceBase : undefined]
@@ -220,7 +222,6 @@ function init({ genomes }) {
 
 			// optional root restriction (the standalone plot asks for 'wsi', the
 			// sc app for 'spatial'); absent = both kinds
-			if (q.imageType && q.imageType != 'spatial' && q.imageType != 'wsi') throw badRequest('invalid imageType')
 			// String(): numeric-looking sample names arrive as numbers from query parsing
 			const images = await getImages(String(q.sample_id), q.imageType, q.method)
 			res.status(200).json({ images } satisfies WsiBySampleResponse)
