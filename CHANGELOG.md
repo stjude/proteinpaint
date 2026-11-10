@@ -7,10 +7,13 @@ All notable changes to this project will be documented in this file.
 Features:
 - Allow selecting sample types in the genome browser, for every track of sample-level data
 - Offer a search that opens a genome browser when no splice junction has been selected yet
+- DMR volcano, with background correction: DMRs are also matched to background on their share of solo-WCGW CpGs, scored against a fitted null for each stratum, and called at FDR < 0.05 across the whole scan instead of at an unadjusted p < 0.05. The summary reports how well the null fits the background. Gene set enrichment of a corrected scan ranks gene bodies with the same matching.
+- DMR region views, block tracks and aggregated downloads stay vector and keep every chart in SVG exports. Heatmaps get a Blue-White-Orange color scale.
 
 Fixes:
 - Show a genome browser track again at its earlier place when it is unchecked and checked again
 - Show the mutations of the samples of filtered cases in the genome browser mutation track, when the filter is on a case-level term
+- CERNO gene set enrichment no longer drops the gene sets that contain the top-ranked gene.
 
 
 ## 2.227.1
