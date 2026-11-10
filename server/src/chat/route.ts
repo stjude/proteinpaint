@@ -40,6 +40,8 @@ export function init({ genomes }) {
 		// not part of the AI chat ChatRequest payload, so read them via a local cast.
 		const q: ChatRequest & {
 			omnisearch?: boolean
+			includeDict?: boolean
+			includeSamples?: boolean
 			cohortStr?: string
 			usecase?: any
 			treeFilter?: any

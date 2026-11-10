@@ -32,16 +32,17 @@ export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
  * path as the termdb findterm route); gene search uses searchGeneNames() below. */
 export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Promise<OmnisearchResult> {
 	const prompt = typeof q.prompt == 'string' ? q.prompt.trim() : ''
-	// The client gates dictionary + sample search to a longer minimum prompt length than gene search
-	// (client/mass/search.ts) and sends this flag; skip those searches when it is explicitly false so a
-	// short (gene-only) prompt never runs the dictionary lookup or the all-samples scan. Defaults to true
-	// for direct callers (unit tests) that don't set it.
-	const includeDictAndSampleSearch = q.includeDictAndSampleSearch !== false
+	// The client decides which searches run (client/mass/chat/search.ts) and sends one flag per optional type;
+	// each is skipped only when explicitly false. Dictionary search is gated to a longer minimum prompt than
+	// gene search; sample search (an all-samples scan) runs only when the user presses Enter. Both default to
+	// true for direct callers (unit tests) that don't set them.
+	const includeDict = q.includeDict !== false
+	const includeSamples = q.includeSamples !== false
 
 	// Dictionary variables — mirror trigger_findterm()'s DICTIONARY_VARIABLES path in server/src/termdb.js
 	let terms: any[] = []
 	let dictionaryTotal = 0
-	if (includeDictAndSampleSearch) {
+	if (includeDict) {
 		const str = prompt.toUpperCase()
 		const found = (await ds.cohort.termdb.q.findTermByName(str, q.cohortStr || '', q.usecase, q.treeFilter)) || []
 		const allTerms = filterTerms(req, ds, found.map(copy_term))
@@ -90,9 +91,9 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 			: null
 
 	// Samples — returns [] when the dataset does not allow displaying sample ids, or when the client gated
-	// out sample search for a short (gene-only) prompt. sampleTotal is the full match count (before the cap).
+	// out sample search (not an Enter press). sampleTotal is the full match count (before the cap).
 	const { matches: samples, total: sampleTotal } =
-		includeDictAndSampleSearch && prompt ? await searchSamples(req, ds, prompt) : { matches: [], total: 0 }
+		includeSamples && prompt ? await searchSamples(req, ds, prompt) : { matches: [], total: 0 }
 
 	// Per-type total match counts (before each type's display cap) so the client can show a
 	// "Displaying N out of M" note when a type's results were truncated.

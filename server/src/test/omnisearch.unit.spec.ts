@@ -202,6 +202,30 @@ tape('sample search: omits single-cell action for samples without single-cell da
 	t.end()
 })
 
+tape('sample search: skipped when includeSamples is false (search-as-you-type), dictionary unaffected', async t => {
+	await ensureOpenAuth()
+	const ds = makeSampleDs(true)
+	const data = await runOmnisearch({ prompt: '2646', includeSamples: false }, req, ds, genome)
+	t.deepEqual(data.samples, [], 'no samples should be returned when includeSamples is false')
+	t.equal(data.totals?.samples, 0, 'sample total should be 0 when the sample search is skipped')
+	t.end()
+})
+
+tape('dictionary search: skipped when includeDict is false, samples unaffected', async t => {
+	await ensureOpenAuth()
+	let dictCalls = 0
+	const ds = makeSampleDs(true)
+	ds.cohort.termdb.q.findTermByName = async () => {
+		dictCalls++
+		return []
+	}
+	const data = await runOmnisearch({ prompt: '2646', includeDict: false }, req, ds, genome)
+	t.equal(dictCalls, 0, 'the dictionary lookup should not run when includeDict is false')
+	t.deepEqual(data.dictionaryTerms, [], 'no dictionary terms should be returned')
+	t.equal(data.samples.length, 1, 'samples should still be searched when only includeDict is false')
+	t.end()
+})
+
 tape('sample search: flags samples with plain whole-slide images on disk', async t => {
 	await ensureOpenAuth()
 	// the TermdbTest fixture: wsimages/2660 holds a plain .svs; 2646 has no
