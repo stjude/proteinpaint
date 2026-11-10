@@ -285,6 +285,7 @@ export function skewer_make(tk, block) {
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
 		.classed('sja_aa_disckick', true)
 		.attr('fill', 'white')
+		.attr('data-testid', d => `sjpp-mds3tk-skewer-disc-kick-${d.mlst[0].mname}`)
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
 		.on('mousedown', event => {

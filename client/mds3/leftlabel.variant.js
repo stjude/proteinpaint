@@ -127,6 +127,7 @@ export function getVariantLabelText(data, tk, block) {
 }
 
 function menu_variants(data, tk, block) {
+	tk.menutip.d.attr('data-testid', 'sjpp-mds3tk-variant-menu')
 	if (data.variantAlerts?.length) {
 		for (const m of data.variantAlerts) {
 			tk.menutip.d
