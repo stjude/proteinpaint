@@ -4,7 +4,7 @@ import { interpolateRdBu } from 'd3-scale-chromatic'
 import { table2col } from '#dom/table2col'
 import { sketchGene } from '../../dom/sketchGm'
 import { exoncolor } from '#shared/common.js'
-import type { MethylationLocusBin, MethylationLocusResponse } from '#types'
+import type { MethylationLocusBin, MethylationLocusIsoform, MethylationLocusResponse } from '#types'
 
 /* Gene locus view, after MEXPRESS (Koch et al. 2015, BMC Genomics): samples are columns sorted by
 expression, CpG bins along the gene are rows, the gene is drawn vertically on the left with a line
@@ -13,7 +13,13 @@ from each row to its genomic span, and each row's correlation with expression is
 Beta uses the usual methylation heatmap colors, blue (unmethylated) to white to red (methylated). The
 rho bars are one neutral color, with the sign given by the side of zero, so blue and red mean beta only. */
 
-export type LocusData = Extract<MethylationLocusResponse, { bins: any }>
+// this plot always requests a gene, so the fields that depend on one are present
+export type LocusData = Omit<Extract<MethylationLocusResponse, { bins: any }>, 'samples'> & {
+	gene: MethylationLocusIsoform
+	isoforms: MethylationLocusIsoform[]
+	unit: string
+	samples: { name: string; value: number; group?: string }[]
+}
 
 export const colors = {
 	beta: (b: number) => interpolateRdBu(1 - b),

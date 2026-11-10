@@ -95,7 +95,11 @@ Kept per eligible set and per request (its q.__protected__ object), since the gr
 are resolved in separate buildGroupValues() calls. */
 const readableByRequest = new WeakMap<Set<string>, WeakMap<object, Promise<Set<string>>>>()
 
-function readableSamples(allSampleSet: Set<string>, ds: any, __protected__: any): Promise<Set<string>> | Set<string> {
+export function readableSamples(
+	allSampleSet: Set<string>,
+	ds: any,
+	__protected__: any
+): Promise<Set<string>> | Set<string> {
 	if (!ds.cohort?.termdb?.getAdditionalFilter) return allSampleSet
 	const resolve = async () => new Set<string>(await filterSampleNamesByAccess({ __protected__ }, ds, [...allSampleSet]))
 	// there is no request object to keep the result by

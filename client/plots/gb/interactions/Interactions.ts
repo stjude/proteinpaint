@@ -89,6 +89,10 @@ export class Interactions {
 				}
 			}
 		}
+		// the gene and sort chosen in the methylation track's menu
+		const dnameth = blockInstance.tklst.find(t => t.type == 'dnameth')
+		const savedDnameth = config.tracks?.find(t => t.type == 'dnameth')
+		if (dnameth && savedDnameth) Object.assign(savedDnameth, { gene: dnameth.gene, sortBy: dnameth.sortBy })
 		let facetActiveTracksChanged = false
 		if (config.trackLst?.activeTracks && this.facetTrackNames.size) {
 			/* active facet tracks are inuse; if user deletes such tracks from block ui, remove from activeTracks. One the

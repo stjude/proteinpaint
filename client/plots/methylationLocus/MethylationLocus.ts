@@ -4,7 +4,7 @@ import { Menu, isoformSelect } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { makeDNAMethRegionTerm } from '#tw/dnaMethylation'
 import type { MethylationLocusBin, MethylationLocusIsoform, MethylationLocusResponse } from '#types'
-import { drawLocus } from './view'
+import { drawLocus, type LocusData } from './view'
 
 /* Per-sample CpG methylation along one gene, next to the gene's expression in the same samples.
 Opened from a volcano dot; see server/src/routes/termdb.methylationLocus.ts for the data. */
@@ -36,7 +36,7 @@ class MethylationLocus extends PlotBase implements RxComponent {
 		this.dom.holder.selectAll('*').remove()
 		const loading = this.dom.holder.append('div').text('Loading...')
 		const { genome, dslabel } = this.app.vocabApi.vocab
-		const data: MethylationLocusResponse = await dofetch3('termdb/methylationLocus', {
+		const res: MethylationLocusResponse = await dofetch3('termdb/methylationLocus', {
 			signal: this.api?.getAbortSignal(),
 			body: {
 				genome,
@@ -49,7 +49,8 @@ class MethylationLocus extends PlotBase implements RxComponent {
 			}
 		})
 		loading.remove()
-		if ('error' in data) throw new Error(data.error)
+		if ('error' in res) throw new Error(res.error)
+		const data = res as LocusData
 		this.renderIsoformSelect(data.gene, data.isoforms)
 		const values = config.groupTw?.term?.values || {}
 		// the colors the groups were given in the group picker, else one per group so the profile lines differ

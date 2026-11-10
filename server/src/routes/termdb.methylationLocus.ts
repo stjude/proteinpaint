@@ -9,7 +9,7 @@ import { getData } from '#src/termdb.matrix.js'
 import { authApi } from '#src/auth.js'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 import { resolveMethylationMatrix } from '#src/utils/methylationMatrix.ts'
-import { resolveGroups, buildGroupValues } from '#src/utils/sampleGroups.ts'
+import { resolveGroups, buildGroupValues, readableSamples } from '#src/utils/sampleGroups.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getStdDev } from './termdb.descrstats.ts'
@@ -28,6 +28,10 @@ ones eligible for CpG methylation. The response names samples, so it requires ca
 
 const FLANK = 5000
 const NBINS = 40
+// largest q.region read; a wider one would pull every CpG of a chromosome arm for 40 columns
+const MAX_REGION = 2_000_000
+const MAX_BINS = 300
+const emptyFilter = { type: 'tvslst', in: true, join: '', lst: [] }
 // a bin needs this many samples with a value to be correlated, as in correlationVolcano
 const minArrayLength = 3
 
@@ -68,75 +72,105 @@ function init({ genomes }) {
 }
 
 async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promise<MethylationLocusResponse> {
-	const ge = ds.queries?.geneExpression
-	if (!ge) throw new Error('This dataset has no gene expression data')
-	if (typeof q.gene != 'string' || !q.gene) throw new Error('gene missing')
-	const models = genome.genedb.getjsonbyname
-		.all(q.gene)
-		.map(r => ({ ...JSON.parse(r.genemodel), isdefault: !!r.isdefault }))
-	if (!models.length) throw new Error(`Unknown gene: ${q.gene}`)
-	// the requested isoform, else the default one; expression stays gene-level either way
-	const gm = q.isoform ? models.find(g => g.isoform == q.isoform) : models.find(g => g.isdefault) || models[0]
-	if (!gm) throw new Error(`Unknown isoform of ${q.gene}: ${q.isoform}`)
-	const m = resolveMethylationMatrix(ds, gm.chr, undefined)
-	if (m.useElement) throw new Error(`No CpG-level methylation data on ${gm.chr}`)
-	const region = {
-		chr: gm.chr,
-		start: Math.max(0, gm.start - FLANK),
-		stop: gm.stop + FLANK
-	}
+	let gm, models, unit
+	if (q.gene !== undefined) {
+		if (typeof q.gene != 'string' || !q.gene) throw new Error('invalid gene')
+		if (!ds.queries?.geneExpression) throw new Error('This dataset has no gene expression data')
+		unit = ds.queries.geneExpression.unit || 'expression'
+		models = genome.genedb.getjsonbyname
+			.all(q.gene)
+			.map(r => ({ ...JSON.parse(r.genemodel), isdefault: !!r.isdefault }))
+		if (!models.length) throw new Error(`Unknown gene: ${q.gene}`)
+		// the requested isoform, else the default one; expression stays gene-level either way
+		gm = q.isoform ? models.find(g => g.isoform == q.isoform) : models.find(g => g.isdefault) || models[0]
+		if (!gm) throw new Error(`Unknown isoform of ${q.gene}: ${q.isoform}`)
+	} else if (!q.region) throw new Error('gene or region is required')
+	const region = q.region
+		? validateRegion(q.region, genome)
+		: { chr: gm.chr, start: Math.max(0, gm.start - FLANK), stop: gm.stop + FLANK }
+	const m = resolveMethylationMatrix(ds, region.chr, undefined)
+	if (m.useElement) throw new Error(`No CpG-level methylation data on ${region.chr}`)
+	const nbins = q.nbins === undefined ? NBINS : q.nbins
+	if (!Number.isInteger(nbins) || nbins < 1 || nbins > MAX_BINS) throw new Error('invalid nbins')
 
-	const exprTw = {
-		$id: 'expression',
-		term: { type: 'geneExpression', gene: q.gene, name: q.gene },
-		q: { mode: 'continuous' }
-	}
-	// true: map parent annotations to child samples, as the differential analyses do (resolveDaContext)
-	const data = await getData(
-		{
-			filter: q.filter,
-			filter0: q.filter0,
-			terms: [exprTw],
-			__protected__: q.__protected__
-		},
-		ds,
-		true
-	)
-	if (data.error) throw new Error(data.error)
 	const sample2group = await getSampleGroups(q, ds, m.eligible)
-
-	const samples: { name: string; value: number; group?: string }[] = []
-	for (const [sid, d] of Object.entries(data.samples as Record<string, any>)) {
-		const value = d[exprTw.$id]?.value
-		if (!Number.isFinite(value)) continue
-		const name = ds.cohort.termdb.q.id2sampleName(Number(sid))
-		if (!m.eligible.has(name)) continue
-		const s: { name: string; value: number; group?: string } = { name, value }
+	const samples: { name: string; value?: number; group?: string }[] = []
+	const add = (name: string, value?: number) => {
+		if (!m.eligible.has(name)) return
 		const group = sample2group.get(name)
-		if (group !== undefined) s.group = group
-		samples.push(s)
+		samples.push({ name, ...(value === undefined ? {} : { value }), ...(group === undefined ? {} : { group }) })
 	}
-	if (samples.length < minArrayLength) throw new Error(`Too few samples with both methylation and expression data`)
-	samples.sort((a, b) => a.value - b.value)
+	if (q.gene) {
+		const exprTw = {
+			$id: 'expression',
+			term: { type: 'geneExpression', gene: q.gene, name: q.gene },
+			q: { mode: 'continuous' }
+		}
+		// true: map parent annotations to child samples, as the differential analyses do (resolveDaContext)
+		const data = await getData(
+			{
+				filter: q.filter,
+				filter0: q.filter0,
+				terms: [exprTw],
+				__protected__: q.__protected__
+			},
+			ds,
+			true
+		)
+		if (data.error) throw new Error(data.error)
+		for (const [sid, d] of Object.entries(data.samples as Record<string, any>)) {
+			const value = d[exprTw.$id]?.value
+			if (Number.isFinite(value)) add(ds.cohort.termdb.q.id2sampleName(Number(sid)), value)
+		}
+		samples.sort((a, b) => a.value! - b.value!)
+	} else {
+		/* no gene: the samples that pass the filter, listed as the samples of a group defined by a filter
+		are, which works with and without a sample db and maps parents to children as above. isFilterGroup()
+		needs a filter object, so a request with only a filter0 gets an empty one. */
+		if (q.filter?.lst?.length || q.filter0) {
+			const [all] = await resolveGroups(
+				[{ name: 'all', filter: q.filter || emptyFilter, mapParent2Children: true }],
+				q,
+				ds
+			)
+			const { names } = await buildGroupValues(all.values, m.eligible, ds, null, null, null, null, q.__protected__)
+			for (const n of names) add(n)
+		} else {
+			// nothing to filter by: every eligible sample that the request may read
+			for (const n of await readableSamples(m.eligible, ds, q.__protected__)) add(n)
+		}
+	}
+	if (samples.length < minArrayLength)
+		throw new Error(`Too few samples with methylation${q.gene ? ' and expression' : ''} data`)
 
 	const input = {
 		h: m.matrixFile,
 		s: samples.map(s => s.name).join(','),
 		q: `${region.chr}:${region.start}-${region.stop}`,
-		bins: NBINS
+		bins: nbins
 	}
-	const bins: MethylationLocusBin[] = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input))).bins
+	let bins: MethylationLocusBin[]
+	try {
+		bins = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input))).bins
+	} catch (e: any) {
+		// the script exits with this when the range has no CpG, e.g. a view zoomed in between two
+		if (!String(e?.message || e).includes('No DNA methylation data for the provided range')) throw e
+		bins = []
+	}
 
-	for (const [i, r] of (await correlateBins(bins, samples, () => true)).entries()) {
+	if (!q.gene) return { region, samples, ...groupsOf(q, samples), bins }
+	const withValue = samples as { value: number; group?: string }[]
+
+	for (const [i, r] of (await correlateBins(bins, withValue, () => true)).entries()) {
 		if (r) Object.assign(bins[i], r)
 	}
 
 	/* rho within each group as well: across all samples, a difference between the groups in both
 	methylation and expression gives a strong rho in every bin even when neither moves with the
 	other inside a group (e.g. NSD2 across t(4;14)), and the per-group rho tells the two apart */
-	const groups = [...new Set((groupOrder(q) || []).filter(g => samples.some(s => s.group === g)))]
+	const { groups = [] } = groupsOf(q, samples)
 	for (const group of groups) {
-		const byBin = await correlateBins(bins, samples, s => s.group === group)
+		const byBin = await correlateBins(bins, withValue, s => s.group === group)
 		bins.forEach((b, i) => {
 			if (!b.byGroup) b.byGroup = []
 			b.byGroup.push({ group, ...(byBin[i] || {}) })
@@ -148,11 +182,27 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		gene: gm,
 		isoforms: models,
 		region,
-		unit: ge.unit || 'expression',
+		unit,
 		samples,
-		...(groups.length ? { groups } : {}),
+		...groupsOf(q, samples),
 		bins
 	}
+}
+
+// the requested groups that have samples, in request order
+function groupsOf(q: MethylationLocusRequest, samples: { group?: string }[]): { groups?: string[] } {
+	const groups = [...new Set((groupOrder(q) || []).filter(g => samples.some(s => s.group === g)))]
+	return groups.length ? { groups } : {}
+}
+
+// the chr goes into the python query string, so it must be one of the genome's
+function validateRegion(r: { chr: string; start: number; stop: number }, genome: any) {
+	const chr = typeof r?.chr == 'string' && genome.chrlookup[r.chr.toUpperCase()]?.name
+	if (!chr) throw new Error('invalid region.chr')
+	if (!Number.isInteger(r.start) || !Number.isInteger(r.stop) || r.start < 0 || r.stop <= r.start)
+		throw new Error('invalid region start/stop')
+	if (r.stop - r.start > MAX_REGION) throw new Error(`Zoom in to under ${MAX_REGION / 1e6} Mb to show methylation`)
+	return { chr, start: r.start, stop: r.stop }
 }
 
 /* Spearman rho of each bin's beta against expression, over the samples that pick() keeps, with BH

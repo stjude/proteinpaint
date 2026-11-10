@@ -12,6 +12,7 @@ import { getDNAMethUnit, getDNAMethTermName } from '#tw/dnaMethylation'
 import { elementNoun } from '../promoterLabel'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { dofetch3 } from '#common/dofetch'
+import { launchMethylationBrowser } from '../../../dnameth/launch'
 import { getGroupColors } from '../colors'
 import { downloadManhattanSvg } from '#plots/manhattan/manhattan.ts'
 
@@ -258,13 +259,9 @@ export class VolcanoInteractions {
 	/** Per-sample methylation along the gene next to its expression, with the volcano's groups as a strip */
 	launchMethylationLocus(gene: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		this.app.dispatch({
-			type: 'plot_create',
-			config: {
-				chartType: 'methylationLocus',
-				gene,
-				groupTw: { q: { groups: config.tw.q.groups, type: 'custom-samplelst' }, term: config.tw.term }
-			}
+		return launchMethylationBrowser(this.app, gene, {
+			q: { groups: config.tw.q.groups, type: 'custom-samplelst' },
+			term: config.tw.term
 		})
 	}
 

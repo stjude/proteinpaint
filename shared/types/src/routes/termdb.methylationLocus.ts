@@ -5,10 +5,15 @@ import type { TermWrapper } from '../terms/tw.ts'
 export type MethylationLocusRequest = {
 	genome: string
 	dslabel: string
-	/** gene symbol; the locus is an isoform of it with 5 kb added on each side */
-	gene: string
+	/** gene symbol: samples are sorted by its expression, which each bin is correlated with, and without a region
+	the locus is an isoform of it with 5 kb added on each side. Required unless region is given. */
+	gene?: string
 	/** isoform of the gene that sets the locus; default is the gene's default isoform. Expression stays gene-level. */
 	isoform?: string
+	/** the locus to read instead of the isoform and its flanks, e.g. the view range of a genome browser track */
+	region?: { chr: string; start: number; stop: number }
+	/** number of bins the locus is cut into, default 40; a locus with no more CpGs than this gets one bin per CpG */
+	nbins?: number
 	filter?: Filter
 	filter0?: any
 	/** optional samplelst tw (e.g. the two groups of a volcano), returned as each sample's group */
@@ -51,15 +56,15 @@ export type MethylationLocusIsoform = {
 
 export type MethylationLocusResponse =
 	| {
-			/** the isoform that sets the locus */
-			gene: MethylationLocusIsoform
+			/** the isoform that sets the locus; with isoforms, unit and samples[].value, present when a gene was requested */
+			gene?: MethylationLocusIsoform
 			/** every isoform of the gene, for choosing one and marking their TSSs */
-			isoforms: MethylationLocusIsoform[]
+			isoforms?: MethylationLocusIsoform[]
 			region: { chr: string; start: number; stop: number }
 			/** unit of samples[].value, e.g. TPM */
-			unit: string
-			/** columns of the view, ascending by expression */
-			samples: { name: string; value: number; group?: string }[]
+			unit?: string
+			/** ascending by the gene's expression (value) when a gene was requested */
+			samples: { name: string; value?: number; group?: string }[]
 			/** the requested groups that have samples here, in request order; with two, the difference is the second minus the first */
 			groups?: string[]
 			bins: MethylationLocusBin[]

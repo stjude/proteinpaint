@@ -2,6 +2,7 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from '../PlotBase'
 import { Menu } from '#dom'
 import { dofetch3 } from '#common/dofetch'
+import { launchMethylationBrowser } from '../../dnameth/launch'
 import { withOthersGroup } from '#mass/groups'
 import { getDefaultVolcanoSettings } from '../volcano/settings/defaults'
 import type { MethylationStarburstResponse } from '#types'
@@ -152,14 +153,7 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 	/* the gene's per-patient methylation and expression, with this plot's groups as the strip */
 	launchLocus(gene: string, groups: any[]) {
 		const { config } = this.state
-		this.app.dispatch({
-			type: 'plot_create',
-			config: {
-				chartType: 'methylationLocus',
-				gene,
-				groupTw: { q: { groups, type: 'custom-samplelst' }, term: config.tw.term }
-			}
-		})
+		return launchMethylationBrowser(this.app, gene, { q: { groups, type: 'custom-samplelst' }, term: config.tw.term })
 	}
 
 	getChartImages() {

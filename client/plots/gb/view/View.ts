@@ -181,7 +181,20 @@ export class View {
 		}
 		/* Tracks the launcher brought with it, e.g. a DMR scan's bedj file or a genome track switched
 		on by name. Cloned so the block's per-track state never lands in app state. */
-		for (const t of this.state.config.tracks || []) tklst.push(structuredClone(t))
+		for (const t of this.state.config.tracks || []) {
+			const tk = structuredClone(t)
+			// queries the dataset's samples, so follows the global filter as the j2 track above does
+			if (tk.type == 'dnameth')
+				Object.assign(tk, {
+					massApp: this.opts.app,
+					// keeps the gene and sort chosen in the track's menu in the state
+					callbackOnRender: () => this.interactions.maySaveTrackUpdatesToState(this.blockInstance),
+					dslabel: this.state.vocab.dslabel,
+					filter: this.state.filter,
+					filter0: this.state.filter0
+				})
+			tklst.push(tk)
+		}
 		return tklst
 	}
 
