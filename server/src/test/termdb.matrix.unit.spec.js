@@ -18,8 +18,7 @@ import {
 	mayMapChildren2Root,
 	dropRowsWithoutAnnotation,
 	shouldMapChildren2Parent,
-	mayMapNonDictionaryData,
-	mayMapChildren2Root
+	mayMapNonDictionaryData
 } from '../termdb.matrix.js'
 import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'

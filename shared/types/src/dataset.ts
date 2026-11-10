@@ -88,10 +88,14 @@ type bcfMafFile = {
 type SnvindelByIsoform = {
 	/** getter function to retrieve data. dynamically added or ds-supplied
 	first argument is required and allow for 2 additional ones
+	For per-term calls, mayGetGeneVariantData() passes skipSampleFiltering=true so sample filters
+	are applied after source samples are collected and hierarchy-mapped.
 	*/
 	get?: (f: any, f2?: any, f3?: any) => void
 	/** if true, all tw from one client query must be processed via one call to snvindel.byisoform.get()
 	and no longer processes each tw by calling mayGetGeneVariantData()
+	The getter owns source-type selection, hierarchy mapping and target filtering, and writes
+	target-sample annotations into the supplied samples object without replacing other terms.
 	*/
 	processTwsInOneQuery?: true
 }
@@ -112,7 +116,10 @@ type SnvindelByRange = {
 	bcfMafFile?: bcfMafFile
 	/** allow to apply special configurations to certain INFO fields of the bcf file */
 	infoFields?: InfoFieldEntry[]
-	/** getter function to retrieve data. dynamically added or ds-supplied */
+	/** getter function to retrieve data. dynamically added or ds-supplied.
+	When mayGetGeneVariantData() calls the getter, skipSampleFiltering=true defers sample filtering
+	until source samples have been collected and hierarchy-mapped.
+	*/
 	get?: (f: any, f2?: any) => void
 }
 

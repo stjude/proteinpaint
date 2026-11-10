@@ -3270,6 +3270,10 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 		a termwrapper on a geneVariant term
 		isoform and coord are optional; if missing is derived from gene symbol on the fly
 	q{}
+		.sampleMapping / .sampleTypes
+			target types/direction; tw.term.sampleTypes selects source types.
+			Getters defer sample filtering so source annotations can be grouped, mapped,
+			and filtered here.
 		.filter
 			pp filter obj
 		.filter0
@@ -3315,9 +3319,6 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		const sample2mlst = new Map() // collect genomic query results indexed by sample; key: sample id, value: array
 		const data = new Map() // to return
-		// get samples/cases that pass filter
-		// will be used in addDataAvailability() to filter samples
-		const sampleFilter = await mayLimitSamples(q, null, ds)
 
 		// collect dts to query
 		const dts = getDtsToQuery(tw, ds)
@@ -3377,7 +3378,6 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 				const itdMlst = await getItdByTerm(ds, gene, genome, q)
 				mlst.push(...itdMlst)
 			}
-
 			//////////////////////////////////////
 			// MUST NOT QUIT when mlst.length==0!
 			//////////////////////////////////////
@@ -3474,7 +3474,7 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 			if (!q.disableAssayAvailability) {
 				// add data availability for each dt
 				for (const dt of dts) {
-					mayAddDataAvailability(sample2mlst, dt, ds, gene, sampleFilter, tw)
+					mayAddDataAvailability(sample2mlst, dt, ds, gene, tw)
 				}
 			}
 		}
@@ -3486,7 +3486,9 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 			geneVariantFilter.lst = q.filter.lst.filter(item => dtTermTypes.has(item.tvs.term.type))
 		}*/
 		const groupset = get_active_groupset(tw.term, tw.q)
+		const sample2value = Object.create(null)
 		for (const [sample, mlst] of sample2mlst) {
+			if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sample))) continue
 			// may filter samples here by geneVariant data
 			// necessary for gdc, which uses a different filter
 			// structure during data query that is not compatible with
@@ -3512,17 +3514,24 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 				// store sample data
 				// key will be the name of the assigned group
-				data.set(sample, {
+				sample2value[sample] = {
 					sample,
 					[tw.$id]: { key: group.name, value: group.name, values }
-				})
+				}
 			} else {
 				// groupsetting is not active
-				data.set(sample, {
+				sample2value[sample] = {
 					sample,
 					[tw.$id]: { key: tw.term.name, values: mlst }
-				})
+				}
 			}
+		}
+
+		const mappedValues = await mayMapNonDictionaryData(tw, { ...q, ds }, sample2value)
+		const limitSamples = await mayLimitSamples(q, null, ds)
+		for (const [sid, value] of Object.entries(mappedValues)) {
+			if (limitSamples && !limitSamples.has(Number(sid))) continue
+			data.set(sid, value)
 		}
 
 		return data
@@ -3558,7 +3567,7 @@ function getDtsToQuery(tw, ds) {
 	return [...dts]
 }
 
-function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) {
+function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, tw) {
 	if (!ds.assayAvailability?.byDt) return // this ds is not equipped with assay availability by dt
 	const _dt = ds.assayAvailability.byDt[dtKey]
 	if (!_dt) return // this ds has assay availability but lacks setting for this dt. this is allowed e.g. we only specify availability for cnv but not snvindel.
@@ -3592,21 +3601,15 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter, tw) 
 
 	for (const dt of dts) {
 		for (const sid of dt.yesSamples) {
-			// sample has been assayed
-			// if sample does not have annotated mutation for dt
-			// then it will be annotated as wildtype
-			addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, sampleFilter, gene)
+			addDataAvailability(sid, sample2mlst, dtKey, 'WT', dt.origin, gene)
 		}
 		for (const sid of dt.noSamples) {
-			// sample has not been assayed
-			// annotate the sample as not tested
-			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, sampleFilter, gene)
+			addDataAvailability(sid, sample2mlst, dtKey, 'Blank', dt.origin, gene)
 		}
 	}
 }
 
-function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, gene) {
-	if (sampleFilter && !sampleFilter.has(sid)) return
+function addDataAvailability(sid, sample2mlst, dtKey, c, origin, gene) {
 	if (!sample2mlst.has(sid)) sample2mlst.set(sid, [])
 	const mlst = sample2mlst.get(sid)
 	// a status value records its query entry the same way a mutation does, see the m2{}
@@ -3987,10 +3990,15 @@ async function getSnvindelByTerm(ds, term, genome, q, opts = {}) {
 			filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 			sessionid: q.sessionid,
 			__abortSignal: q.__abortSignal,
+			__protected__: q.__protected__,
+			token: q.token,
+			tid2value: q.tid2value,
 			sampleMapping: q.sampleMapping,
 			sampleTypes: q.sampleTypes
 		},
-		ds.mayGetGeneVariantDataParam || {}
+		ds.mayGetGeneVariantDataParam || {},
+		// Defer sample filtering until source samples are mapped and filtered by the outer getter.
+		{ skipSampleFiltering: true }
 	)
 
 	if (ds.queries.snvindel.byisoform) {
@@ -4014,6 +4022,12 @@ async function getSnvindelByTerm(ds, term, genome, q, opts = {}) {
 }
 async function getSvfusionByTerm(ds, term, genome, q) {
 	const arg = {
+		// Defer sample filtering until source samples are mapped and filtered by the outer getter.
+		skipSampleFiltering: true,
+		__protected__: q.__protected__,
+		token: q.token,
+		tid2value: q.tid2value,
+		__abortSignal: q.__abortSignal,
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
@@ -4048,6 +4062,12 @@ async function getCnvByTw(ds, tw, genome, q) {
 	// note: when there is groupsetting, do not set cnvGainCutoff, cnvLossCutoff, or cnvMaxLength cutoffs here
 	// as these will be applied when filtering by groupsetting (see filterByItem())
 	const arg = {
+		// Defer sample filtering until source samples are mapped and filtered by the outer getter.
+		skipSampleFiltering: true,
+		__protected__: q.__protected__,
+		token: q.token,
+		tid2value: q.tid2value,
+		__abortSignal: q.__abortSignal,
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
@@ -4069,7 +4089,13 @@ async function getCnvByTw(ds, tw, genome, q) {
 }
 async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
+		// Defer sample filtering until source samples are mapped and filtered by the outer getter.
+		skipSampleFiltering: true,
+		__protected__: q.__protected__,
+		token: q.token,
+		tid2value: q.tid2value,
 		filter0: q.filter0,
+		filterObj: q.filter,
 		sampleMapping: q.sampleMapping,
 		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid,
@@ -4086,6 +4112,12 @@ async function getGenecnvByTerm(ds, term, genome, q) {
 async function getItdByTerm(ds, term, genome, q) {
 	if (!ds.queries.itd) throw 'queries.itd not defined'
 	const arg = {
+		// Defer sample filtering until source samples are mapped and filtered by the outer getter.
+		skipSampleFiltering: true,
+		__protected__: q.__protected__,
+		token: q.token,
+		tid2value: q.tid2value,
+		__abortSignal: q.__abortSignal,
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client

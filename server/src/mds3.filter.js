@@ -10,6 +10,7 @@ param={}
 	.filter = pp filter
 	.filter0 = gdc/mmrf filter
 	.sampleMapping = hierarchy mapping direction
+	.skipSampleFiltering = defer sample filtering to the caller
 _allSamples=[{name: int}] (NOTE new format: [int])
 	set of samples to use (e.g. samples from bcf/tabix file)
 	if provided, then only filtered samples in this set are returned
@@ -21,6 +22,8 @@ if filter is applied, return set of sample id
 if not filtering, undefined
 */
 export async function mayLimitSamples(param, _allSamples, ds) {
+	if (param.skipSampleFiltering) return
+
 	// sampleTypes is a request parameter and may be tampered with, so only accept an array
 	if (param.sampleTypes != null && !Array.isArray(param.sampleTypes)) throw new Error('sampleTypes must be an array')
 
