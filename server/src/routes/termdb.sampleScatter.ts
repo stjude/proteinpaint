@@ -100,8 +100,7 @@ export function init({ genomes }) {
 					filter0: q.filter0,
 					terms,
 					__protected__: q.__protected__,
-					__abortSignal: q.__abortSignal,
-					sampleMapping: 'parentToChildren'
+					__abortSignal: q.__abortSignal
 				},
 				ds
 			)

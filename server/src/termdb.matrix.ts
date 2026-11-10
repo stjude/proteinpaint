@@ -287,6 +287,8 @@ async function getSampleData(q, ds) {
 		// special handling of these tws
 		if (q.ds.queries?.snvindel?.byisoform?.processTwsInOneQuery) {
 			// special ds handling, must make one query with all tws, but not to process one tw a time
+			if (ds.cohort.termdb?.hasSampleAncestry)
+				throw new Error('sample hierarchy mapping not supported for batch geneVariant query')
 			await q.ds.queries.snvindel.byisoform.get(q, geneVariantTws, samples)
 		} else {
 			if (!q.ds.mayGetGeneVariantData) throw 'not supported by dataset: geneVariant'
