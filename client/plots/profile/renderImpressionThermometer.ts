@@ -11,8 +11,8 @@ export const IMPRESSION_MAX_SCORE = 10
 // the live db, but keeps the renderer from emitting `fill="undefined"` if it ever does).
 const FALLBACK_COLOR = '#888'
 
-// POC grey — the right (Point-of-Care) half of the vessel. Exported so the shared card legend
-// swatches the same grey the fill uses.
+// POC grey — the right (Point-of-Care) half of the vessel and the distribution chart's POC columns.
+// Exported so the distribution chart and the shared card legend use the same grey.
 export const POC_FILL = '#9e9e9e'
 
 /*
@@ -39,7 +39,7 @@ light one alike.
 */
 const HOVER_MS = 140
 
-function hoverFill(fill: string): ImpressionHover {
+export function hoverFill(fill: string): ImpressionHover {
 	const c = hsl(fill)
 	c.l = c.l > 0.6 ? c.l - 0.14 : c.l + 0.14
 	return { on: { fill: c.formatHex() }, off: { fill } }
@@ -338,7 +338,7 @@ export function renderImpressionThermometer(a: ImpressionThermometerArgs) {
 
 	/*
 	1) Distribution track: one band per performance zone, filling tube and bulb (the empty state).
-	Same colors, same 0.3 opacity and same discrete-band form the sibling response-distribution
+	Same colors, painted as given, and same discrete-band form the sibling response-distribution
 	chart uses, so the pair reads as one system. Bands are discrete rather than a blended gradient
 	because a module's zone shades are three tints of one hue — smoothing the boundaries away
 	leaves a single flat wash with no readable zones. Extents come from zoneExtent().
@@ -354,7 +354,6 @@ export function renderImpressionThermometer(a: ImpressionThermometerArgs) {
 			.attr('width', boxW)
 			.attr('height', bottom - top)
 			.attr('fill', z.color)
-			.attr('opacity', 0.3)
 	})
 
 	/*

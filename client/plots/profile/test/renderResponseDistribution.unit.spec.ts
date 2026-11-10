@@ -1,6 +1,7 @@
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { renderResponseDistribution } from '../renderResponseDistribution.js'
+import { POC_FILL } from '../renderImpressionThermometer.js'
 
 /*
 Tests for the response-distribution combo chart (SC line on the left axis, grey POC columns on
@@ -120,5 +121,38 @@ tape('data-testid carries the responder group suffix', function (test) {
 		)
 		holder.remove()
 	}
+	test.end()
+})
+
+tape('POC columns are all POC grey, and hover darkens then restores them', function (test) {
+	const holder = select('body').append('div')
+	renderResponseDistribution({
+		holder,
+		id: 'test-poc-grey',
+		groupLabel: 'Clinicians',
+		maxScore: 10,
+		scDistribution: dist([1, 5, 4, 5, 6, 7, 11, 8, 1, 1]),
+		pocDistribution: dist([14, 21, 58, 70, 99, 105, 121, 63, 24, 8]),
+		texts: TEXTS,
+		zones: ZONES,
+		colors: { sc: '#2381c3' },
+		attachTip
+	})
+	const fills: string[] = []
+	const hovers: any[] = []
+	holder.selectAll('rect.poc-column').each(function (this: any) {
+		const col = select(this)
+		fills.push(col.attr('fill'))
+		hovers.push(col.datum())
+	})
+	test.ok(
+		fills.length === 10 && fills.every(f => f === POC_FILL),
+		'every POC column uses the POC grey, whatever zone its rating is in'
+	)
+	test.ok(
+		hovers.every(d => d.off.fill === POC_FILL && d.on.fill !== POC_FILL),
+		'hover changes each column off the POC grey and restores it'
+	)
+	holder.remove()
 	test.end()
 })
