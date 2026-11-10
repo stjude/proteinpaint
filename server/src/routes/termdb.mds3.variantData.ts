@@ -104,7 +104,6 @@ export async function get_mds3variantData(q, ds, genome): Promise<ValidMds3Varia
 	const results = await getResultsWithMlst(q, ds)
 	/* results = {
 		mlst[]
-		skipMcountWithoutAlt: int
 		totalSampleCount_?: int
 	}
 	*/
@@ -171,7 +170,7 @@ function validateParam(q, ds, genome) {
 	}
 }
 
-async function getResultsWithMlst(q, ds) {
+async function getResultsWithMlst(q, ds): Promise<ValidMds3VariantReponse> {
 	/* the bcf query parameter of a filter. With the sample types chosen in the sample type row of the genome browser,
 	which byrange.get() keeps the samples of, as the filter maps its cases to them; one per filter, as the mapping
 	sets the sample types of the parameter */
@@ -194,18 +193,16 @@ async function getResultsWithMlst(q, ds) {
 	// if there are two type=filter groups, must do byrange.get() for each group, then merge mlst from both queries
 	if (g1.type == 'filter' && g2?.type == 'filter') {
 		const lst1 = await ds.queries.snvindel.byrange.get(getParam(getFilterObj(q, g1.filter)))
-		const r1 = getMlstWithAlt(lst1)
+		const mlst1 = getMlstWithAlt(lst1)
 
 		const lst2 = await ds.queries.snvindel.byrange.get(getParam(getFilterObj(q, g2.filter)))
-		const r2 = getMlstWithAlt(lst2)
+		const mlst2 = getMlstWithAlt(lst2)
 
-		const mlst = mergeMlstFromTwoFilterGroups(r1.mlst, r2.mlst)
-		const results: any = {
-			mlst,
-			totalSampleCount_group1: mlst2sampleCount(r1.mlst),
-			totalSampleCount_group2: mlst2sampleCount(r2.mlst)
+		return {
+			mlst: mergeMlstFromTwoFilterGroups(mlst1, mlst2),
+			totalSampleCount_group1: mlst2sampleCount(mlst1),
+			totalSampleCount_group2: mlst2sampleCount(mlst2)
 		}
-		return results
 	}
 
 	// not both groups are type=filter, do just one query
@@ -224,8 +221,8 @@ async function getResultsWithMlst(q, ds) {
 	}
 	*/
 
-	const results = getMlstWithAlt(mlst)
-	// results = {mlst[], skipMcountWithoutAlt}, and drop out m without any ALT
+	// drop out m without any ALT
+	const results: ValidMds3VariantReponse = { mlst: getMlstWithAlt(mlst) }
 
 	// if there's one group with type=filter, the filter is already included by getFilterObj() and all samples from mlst are from this filter; count number of samples and return to client
 	if (g1.type == 'filter') results.totalSampleCount_group1 = mlst2sampleCount(mlst)
@@ -268,19 +265,13 @@ function mergeMlstFromTwoFilterGroups(lst1, lst2) {
 }
 
 function getMlstWithAlt(mlst) {
-	const result: any = {
-		mlst: [],
-		skipMcountWithoutAlt: 0
-	}
+	const result: any[] = []
 	for (const m of mlst) {
 		const [a, b] = getAllelicCount(m)
-		if (a == 0) {
-			result.skipMcountWithoutAlt++
-			continue
-		}
+		if (a == 0) continue
 		m._altCount = a
 		m._refCount = b - a
-		result.mlst.push(m)
+		result.push(m)
 	}
 	return result
 }
