@@ -42,7 +42,7 @@ export class VolcanoViewModel {
 	numSignificantDown = 0
 	/** Present only when the "element class" was the de novo DMR scan. */
 	scan?: DmrScanSummary
-	/** One p per row (DAP's FDR, a scan's smoothed FDR or background p) rather than original +
+	/** One p per row (DAP's FDR, a scan's smoothed FDR or background FDR) rather than original +
 	 * adjusted. Decides the column set, the tooltip rows and the axis name. */
 	singlePValue: boolean
 	pValueLabel: string
@@ -180,7 +180,7 @@ export class VolcanoViewModel {
 		if (this.termType == tt.PROTEOME_DAP) return 'FDR'
 		if (this.scan)
 			return this.scan.backgroundCorrection
-				? 'p vs matched background'
+				? 'FDR vs matched background'
 				: // a scan from before the choice existed plotted the smoothed FDR
 				  SCAN_Y_AXIS_OPTIONS.find(o => o.value == (this.scan!.yAxis ?? 'min_smoothed_fdr'))!.label
 		return `${settings.pValueType} p-value`
@@ -703,9 +703,19 @@ export class VolcanoViewModel {
 					value: bc.windows
 				},
 				{ label: `DMRs scored against background (matched on ${bc.matchedOn.join(' and ')})`, value: bc.scored },
-				{ label: 'DMRs unscored: stratum too thin (not plotted)', value: bc.unscored },
+				// too few windows, no spread, or no reference CpG to place in a solo-WCGW tertile
+				{ label: 'DMRs unscored: no usable matched background (not plotted)', value: bc.unscored },
+				// how well the fitted null describes the background's own tail, past the p = 0.05 its scale is set at
+				...(bc.nullP001 != null
+					? [
+							{
+								label: 'Background windows at p < 0.001 vs their own null (~0.1% if the tail fits)',
+								value: `${(100 * bc.nullP001).toFixed(2)}%`
+							}
+					  ]
+					: []),
 				{
-					label: 'DMRs moving more than matched background (p < 0.05)',
+					label: 'DMRs moving more than matched background (FDR < 0.05)',
 					value: `${bc.significant.toLocaleString()} of ${bc.scored.toLocaleString()} (${(
 						(100 * bc.significant) /
 						Math.max(1, bc.scored)

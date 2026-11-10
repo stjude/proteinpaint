@@ -5,6 +5,44 @@ permutation null in dmrGeneDE and the background sampler in dmrBackground are do
 same correction", and a fix to the seeding or to the even-length median landing in one copy and not
 the others would quietly make that untrue. */
 
+/** Two-sided p of a standard-normal z: P(|Z| >= |z|) = erfc(|z| / sqrt 2). erfc by the Chebyshev fit of
+ * Numerical Recipes (erfcc), whose error is under 1.2e-7 RELATIVE to the value everywhere -- far into the tail,
+ * where an absolute-error approximation would turn a p of 1e-20 into noise or zero, and a multiple-testing
+ * adjustment needs those small p to be right. Floored at 1e-300 so -log10 stays finite. */
+export function normalTwoSidedP(z: number): number {
+	const x = Math.abs(z) / Math.SQRT2
+	const t = 1 / (1 + 0.5 * x)
+	const erfc =
+		t *
+		Math.exp(
+			-x * x -
+				1.26551223 +
+				t *
+					(1.00002368 +
+						t *
+							(0.37409196 +
+								t *
+									(0.09678418 +
+										t *
+											(-0.18628806 +
+												t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277))))))))
+		)
+	return Math.min(1, Math.max(1e-300, erfc))
+}
+
+/** Benjamini-Hochberg q of each p, in input order: step-up, monotone in p. */
+export function benjaminiHochberg(p: number[]): number[] {
+	const m = p.length
+	const q = new Array<number>(m)
+	const order = p.map((_, i) => i).sort((a, b) => p[b] - p[a]) // largest p first
+	let running = 1
+	order.forEach((i, r) => {
+		running = Math.min(running, (p[i] * m) / (m - r)) // m - r: 1-based rank in ascending p
+		q[i] = running
+	})
+	return q
+}
+
 /** Exact median, not mutating the input: the caller's array is reused across permutation
  * iterations, so sorting it in place would reorder the pool being sampled from. */
 export function median(v: number[]): number {

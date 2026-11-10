@@ -12,6 +12,7 @@ test sections:
 
 uncorrected: CpG floor, one p per row, direction split, widths, gene-body loss set
 corrected: unscored DMRs leave the rows but stay counted; the correction adds a p gate to the set
+corrected: the background FDR family is every plotted DMR of the whole run at the CpG floor
 summarizeProfile: quantiles and moved-fraction of the genome-wide binned profile
 coarsenProfile: probe-weighted re-binning for display
 dmrBedjLines: the plain text bedj file of the kept DMRs
@@ -135,47 +136,97 @@ tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss 
 				genes: ['LOSS']
 			}),
 			// hypo, beats background, but only clips a promoter -> not in the set
-			dmr({ start: 3000, stop: 4000, direction: 'hypo', delta_beta_mean: -0.2, bgP: 0.01, genes: ['PROMOTER_ONLY'] }),
+			dmr({
+				start: 3000,
+				stop: 4000,
+				direction: 'hypo',
+				delta_beta_mean: -0.2,
+				bgP: 0.01,
+				genes: ['PROMOTER_ONLY']
+			}),
 			// hyper in a gene body -> not a loss
 			dmr({ start: 5000, stop: 6000, bgP: 0.01, inGeneBody: true, genes: ['GAIN'] }),
-			// hypo in a gene body but not significant
+			// hypo in a gene body, raw p < 0.05 but q >= 0.05 -> not significant, not in the set
 			dmr({
 				start: 7000,
 				stop: 8000,
 				direction: 'hypo',
 				delta_beta_mean: -0.2,
-				bgP: 0.4,
+				bgP: 0.04,
 				inGeneBody: true,
+				bodyGenes: ['NS'],
 				genes: ['NS']
 			}),
 			// unscored: no bgP
-			dmr({ start: 9000, stop: 60000, no_cpgs: 900 })
+			dmr({ start: 9000, stop: 60000, no_cpgs: 900 }),
+			// scored and far from significant: they fill out the family
+			dmr({ start: 70000, stop: 71000, bgP: 0.9 }),
+			dmr({ start: 72000, stop: 73000, bgP: 0.9 })
 		],
 		{
 			backgroundCorrection: {
 				windows: 2000,
-				scored: 4,
+				scored: 6,
 				unscored: 1,
-				significant: 3,
 				matchedOn: ['CpG density', 'width']
 			}
 		}
 	)
 	const { rows, scan } = dmrScanToRows(p, { ...opts, backgroundCorrection: true })
-	t.equal(scan.kept, 5, 'the unscored DMR is still a kept DMR')
-	t.equal(rows.length, 4, 'but has no p to plot, so it is not a row')
+	t.equal(scan.kept, 7, 'the unscored DMR is still a kept DMR')
+	t.equal(rows.length, 6, 'but has no p to plot, so it is not a row')
 	t.deepEqual(
 		scan.backgroundCorrection,
-		{ windows: 2000, matchedOn: ['CpG density', 'width'], scored: 4, unscored: 1, significant: 3 },
-		'scored / unscored / significant are counted over kept DMRs'
+		{ windows: 2000, matchedOn: ['CpG density', 'width'], scored: 6, unscored: 1, significant: 3 },
+		'scored / unscored / significant are counted over kept DMRs, significant on q rather than raw p'
 	)
-	t.equal(rows[0].original_p_value, 0.01, 'p is now the background p')
+	// p 0.01 x 3, 0.04, 0.9 x 2 over a family of 6: q = 0.01 x 6 / 3 for the first three
+	t.ok(Math.abs(rows[0].original_p_value - 0.02) < 1e-12, 'the plotted value is the background FDR, not the raw p')
+	const ns = rows.find(r => r.promoter_id == 'chr1:7000-8000')!
+	t.ok(ns.original_p_value >= 0.05, `raw p 0.04 is q ${ns.original_p_value.toFixed(3)}: not significant`)
 	t.equal(rows[0].excess, -0.15, 'and the excess rides along for the table')
 	t.deepEqual(
 		scan.geneBodyLoss,
 		{ regions: 1, genes: ['LOSS'] },
-		'only the hypo, in-body, significant region contributes genes'
+		'only the hypo, in-body, significant region contributes genes: NS beats raw p, not q'
 	)
+	t.end()
+})
+
+tape('corrected scan: the background FDR family is every plotted DMR of the whole run at the CpG floor', t => {
+	const run: any = payload([], { backgroundCorrection: { windows: 10, scored: 4, unscored: 1, matchedOn: ['width'] } })
+	run.regions = [
+		{
+			...run.regions[0],
+			chr: 'chr1',
+			dmrs: [
+				dmr({ chr: 'chr1', bgP: 0.5 }),
+				// under Min Δβ: plotted, so in the family
+				dmr({ chr: 'chr1', start: 3000, stop: 4000, delta_beta_mean: 0.01, bgP: 0.6 })
+			]
+		},
+		{
+			...run.regions[0],
+			chr: 'chr2',
+			dmrs: [
+				dmr({ chr: 'chr2', bgP: 0.01 }),
+				// under the CpG floor, and unscored: not plotted, so not in the family
+				dmr({ chr: 'chr2', start: 3000, stop: 3100, no_cpgs: 2, bgP: 1e-6 }),
+				dmr({ chr: 'chr2', start: 5000, stop: 6000 })
+			]
+		}
+	]
+	const { rows } = dmrScanToRows(restrictScanPayload(run, ['chr2']), {
+		chromosomes: ['chr2'],
+		runChromosomes: ['chr1', 'chr2'],
+		run,
+		backgroundCorrection: true,
+		minDeltaBeta: 0.1
+	})
+	t.equal(rows.length, 1, 'the view plots its one scored DMR at the floor')
+	// m = 3: not 1 (the view alone), nor 4 (with the 2-CpG call), nor 2 (without the one under Min Δβ)
+	t.ok(Math.abs(rows[0].original_p_value - 0.03) < 1e-12, `q = 0.01 x 3 (${rows[0].original_p_value})`)
+	t.notOk('bgQ' in run.regions[1].dmrs[0], 'the cached run is not written to')
 	t.end()
 })
 

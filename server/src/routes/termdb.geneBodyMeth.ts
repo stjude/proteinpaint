@@ -26,6 +26,8 @@ import {
 	buildExclusion,
 	sampleBackground,
 	scoreAgainstBackground,
+	soloWcgwShares,
+	sequenceFiles,
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
 import { genomes } from '#src/initGenomesDs.js'
@@ -152,15 +154,17 @@ function init({ genomes }) {
 // 2: corrected mode added; raw entries carry corrected:false in the key
 // 3: one cohort for all chromosomes; major chromosomes only; one locus per gene symbol
 // 4: dmrcate reads background regions without the model, so a body keeps CpGs the model drops, such as zero variance
-const CACHE_VERSION = 4
+// 5: corrected deltas take the excess over the stratum's median (was the mean), from 6000 windows per chromosome
+// (was 2000), with strata also split on solo-WCGW share; a stratum with no spread leaves its genes out
+const CACHE_VERSION = 5
 
 /* Mean delta-beta over every gene body, keyed by gene symbol -- one signed number per gene across
 the whole genome. This is the gene-level reading of a methylation scan: a DMR list has many regions
 per gene, none for half of them, and more for long genes, so it cannot rank genes; the body mean
 can, and it is what the GSEA tab ranks on for a scan (see genesetEnrichment.ts).
 
-`corrected` scores each gene body against width- and CpG-density-matched intergenic background --
-the scan's own correction, pointed at fixed regions -- and returns the excess over that background
+`corrected` scores each gene body against width-, CpG-density- and solo-WCGW-matched intergenic background
+-- the scan's own correction, pointed at fixed regions -- and returns the excess over that background
 instead of the raw delta. Raw, the gain side of the ranking is led by silent, late-replicating gene
 families (olfactory receptors, keratins), which is where genome-wide drift lives; the excess asks
 whether a gene body moved more than a region like it drifted. Genes whose stratum holds too little
@@ -215,7 +219,10 @@ export async function getGeneBodyDeltas(
 			chromosomes,
 			element_type: q.element_type ?? null,
 			corrected: !!q.corrected,
-			files: fingerprint([...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile))
+			// corrected: the solo-WCGW shares come from the reference sequence
+			files: fingerprint(
+				[...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile, q.corrected ? sequenceFiles(genome) : [])
+			)
 		},
 		cacheScope: sampleFilterScope(q, ds),
 		cacheSubdir: 'geneBodyMeth',
@@ -316,6 +323,13 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 				}
 				parts.push({ chr, bodies, windows })
 			}
+			// solo-WCGW shares of bodies and windows, read from the sequence while rust measures them
+			const sharesP = q.corrected
+				? soloWcgwShares(
+						genome,
+						parts.map(p => ({ chr: p.chr, regions: [...p.bodies, ...p.windows] }))
+				  )
+				: null
 			const out = JSON.parse(
 				await runDmrcate(
 					{
@@ -334,8 +348,9 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 			)
 			if (out.error) throw new Error(`${jobChrs.join(',')}: ${out.error}`)
 			const bg: any[] = out.background || []
+			const shares = await sharesP
 			let offset = 0
-			for (const { bodies, windows } of parts) {
+			for (const [c, { bodies, windows }] of parts.entries()) {
 				const bodyRes = bg.slice(offset, offset + bodies.length)
 				const chrWindows = bg.slice(offset + bodies.length, offset + bodies.length + windows.length)
 				offset += bodies.length + windows.length
@@ -351,7 +366,8 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 						.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
 					const { scored } = scoreAgainstBackground(
 						measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, delta_beta_mean: b.delta })),
-						chrWindows
+						chrWindows,
+						{ dmrs: measured.map(({ j }) => shares![c][j]), background: shares![c].slice(bodies.length) }
 					)
 					measured.forEach(({ j }, k) => {
 						const sc = scored[k]

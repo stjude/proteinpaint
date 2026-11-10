@@ -27,6 +27,8 @@ import {
 	buildExclusion,
 	sampleBackground,
 	scoreAgainstBackground,
+	soloWcgwShares,
+	sequenceFiles,
 	BG_WINDOWS_PER_CHR
 } from '#src/utils/dmrBackground.ts'
 import { cacheOrRecompute, generateHash } from '#src/utils/cacheOrRecompute.ts'
@@ -133,7 +135,11 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 // global methylation carries each group's mean read depth
 // 11: element and array matrices with missing values take limma's prior for unequal residual df, and their DMRs'
 // meandiff/maxdiff are on the beta scale
-const CACHE_VERSION = 11
+// 12: background strata also split on solo-WCGW share, 6000 windows per chromosome; p from a fitted, tail-calibrated
+// empirical null (median/MAD) instead of the background fraction
+// 13: solo-WCGW shares count a region's CpGs by their 1-based position, tertiles from usable windows only; bgQ and
+// the summary's significant count left to the view; nullP001 replaces nullP05
+const CACHE_VERSION = 13
 
 /* Fingerprint the data files a result was computed from.
  *
@@ -241,7 +247,11 @@ export async function runDmrBatch(
 	const rawFrac = Number(q.excludeOptions?.overlapFrac)
 	const overlapFrac = Number.isFinite(rawFrac) ? Math.min(Math.max(rawFrac, 0), 1) : DEFAULT_OVERLAP_FRAC
 	let dmrsDropped = 0
-	const bgTotals = { windows: 0, scored: 0, unscored: 0, significant: 0 }
+	const bgTotals = { windows: 0, scored: 0, unscored: 0 }
+	// chromosomes scored, and those whose strata could also split on solo-WCGW share (needs the genome sequence)
+	const bgChrs = { scored: 0, soloMatched: 0 }
+	// background windows scored against their own stratum's null: the share at p < 0.001 checks its tail
+	const bgNull = { windows: 0, belowP001: 0 }
 
 	/* Built once for the request, not once per DMR: a genome scan calls >100,000 of them and
 	one sqlite round trip each would cost more than the model fits. Absent on a genome with no
@@ -305,7 +315,13 @@ export async function runDmrBatch(
 		/* how dmrcate reads the values (read counts, betas or M-values), from the dataset's platform and element unit:
 		changing either changes the model, with the files unchanged */
 		values: dmrcateValues(first),
-		files: fingerprint([...[...resolved.values()].map(r => r.matrixFile), ...maskFiles, genome?.genedb?.dbfile])
+		files: fingerprint([
+			...[...resolved.values()].map(r => r.matrixFile),
+			...maskFiles,
+			genome?.genedb?.dbfile,
+			// the correction's solo-WCGW shares come from the reference sequence
+			...(q.backgroundCorrection ? sequenceFiles(genome) : [])
+		])
 	}
 
 	const time1 = Date.now()
@@ -481,6 +497,11 @@ export async function runDmrBatch(
 						const matrices = input.matrices
 							.map(m => ({ ...m, chrs: m.chrs.filter(c => drawn.has(c)) }))
 							.filter(m => m.chrs.length)
+						// solo-WCGW shares of DMRs and windows, read from the sequence while rust measures the windows
+						const sharesP = soloWcgwShares(
+							genome,
+							draws.map(d => ({ chr: d.chr, regions: [...d.called, ...d.windows] }))
+						)
 						const bgRes = JSON.parse(
 							await runDmrcate(
 								{ ...input, matrices, background_regions: draws.flatMap(d => d.windows) },
@@ -490,11 +511,18 @@ export async function runDmrBatch(
 						)
 						if (bgRes.error) throw new Error(bgRes.error)
 						account('background', bgRes.diagnostic)
+						const shares = await sharesP
 						let bgOffset = 0
-						for (const { called, windows } of draws) {
+						draws.forEach(({ called, windows }, c) => {
+							// rust returns the windows in input order, so shares[c] lines up with called then background
 							const background = (bgRes.background || []).slice(bgOffset, bgOffset + windows.length)
 							bgOffset += windows.length
-							const { scored, unscored } = scoreAgainstBackground(called, background)
+							const { scored, unscored, soloMatched, nullCheck } = scoreAgainstBackground(called, background, {
+								dmrs: shares[c].slice(0, called.length),
+								background: shares[c].slice(called.length)
+							})
+							bgChrs.scored++
+							if (soloMatched) bgChrs.soloMatched++
 							called.forEach((d: any, i: number) => {
 								const sc = scored[i]
 								if (!sc) return
@@ -504,9 +532,12 @@ export async function runDmrBatch(
 							bgTotals.windows += background.length
 							bgTotals.scored += scored.filter(Boolean).length
 							bgTotals.unscored += unscored
-							bgTotals.significant += scored.filter(s2 => s2 && s2.p < 0.05).length
-						}
+							bgNull.windows += nullCheck.windows
+							bgNull.belowP001 += nullCheck.belowP001
+						})
 					}
+					/* No FDR here: its family is the DMRs a view plots, which depends on the view's CpG floor, so
+					dmrScanToRows adjusts bgP when it builds the rows. */
 				}
 				for (const { chr, windows, regions } of perChr) {
 					for (let i = 0; i < windows.length; i++) {
@@ -570,7 +601,22 @@ export async function runDmrBatch(
 					? { binBp: METHYLATION_BIN_BP, bins: result.bin_methylation || [] }
 					: undefined,
 				regionMask: maskFiles.length ? { sources: appliedNames, overlapFrac, dmrsDropped } : undefined,
-				backgroundCorrection: q.backgroundCorrection ? { ...bgTotals, matchedOn: ['CpG density', 'width'] } : undefined,
+				backgroundCorrection: q.backgroundCorrection
+					? {
+							...bgTotals,
+							matchedOn: [
+								'CpG density',
+								'width',
+								// only as far as it held: a chromosome without enough shares was matched on the two above
+								...(!bgChrs.soloMatched
+									? []
+									: bgChrs.soloMatched == bgChrs.scored
+									? ['solo-WCGW share']
+									: [`solo-WCGW share (${bgChrs.soloMatched} of ${bgChrs.scored} chromosomes)`])
+							],
+							...(bgNull.windows ? { nullP001: bgNull.belowP001 / bgNull.windows } : {})
+					  }
+					: undefined,
 				globalMethylation:
 					gm && Number.isFinite(gm.control_mean_beta) && Number.isFinite(gm.case_mean_beta)
 						? {

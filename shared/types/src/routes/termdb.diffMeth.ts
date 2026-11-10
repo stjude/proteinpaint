@@ -57,11 +57,11 @@ export type DiffMethRequest = {
 		/** one chromosome to scan; absent = every major chromosome except the mitochondrion */
 		chromosome?: string
 		/** score each DMR against matched intergenic background (termdb/dmrBatch
-		 * backgroundCorrection); the volcano's p then becomes that empirical p and DMRs whose
-		 * stratum held too little background are left out of the rows */
+		 * backgroundCorrection); the volcano's p then becomes the Benjamini-Hochberg q of that background p,
+		 * and DMRs whose stratum gave no usable background are left out of the rows */
 		backgroundCorrection?: boolean
 		/** the region statistic the volcano's y (and the scan Manhattan's) plots; ignored with
-		 * backgroundCorrection, whose empirical p is the y then. Absent = min_smoothed_fdr */
+		 * backgroundCorrection, whose background FDR is the y then. Absent = min_smoothed_fdr */
 		yAxis?: DmrScanYAxis
 		/** the volcano's Min Δβ: DMRs with a |Δβ| no larger stay on the volcano, as not significant, but are
 		 * not counted, nor drawn on the Manhattan or the browser track. Absent = 0 */
@@ -149,12 +149,22 @@ export type DmrScanSummary = {
 	globalMethylation?: TermdbDmrBatchSuccessResponse['globalMethylation']
 	regionMask?: { sources: string[]; overlapFrac: number; dmrsDropped: number }
 	/** present when the correction ran. `scored` and `significant` count the shown DMRs; `unscored`
-	 * shown DMRs had no background in their stratum and are not among the rows. `windows` is over the
-	 * whole run, also when `chromosomes` is one chromosome of it */
-	backgroundCorrection?: { windows: number; scored: number; unscored: number; significant: number; matchedOn: string[] }
+	 * shown DMRs had no usable background in their stratum -- too few windows, no spread, or no reference
+	 * CpG to place in a solo-WCGW tertile -- and are not among the rows. `windows` is over the whole run,
+	 * also when `chromosomes` is one chromosome of it */
+	backgroundCorrection?: {
+		windows: number
+		scored: number
+		unscored: number
+		/** shown DMRs at background FDR < 0.05 */
+		significant: number
+		matchedOn: string[]
+		/** background windows' own share at p < 0.001 against their stratum's null; ~0.001 when its tail fits */
+		nullP001?: number
+	}
 	/** genes under shown hypomethylated gene-body DMRs -- the set the expression test
 	 * (termdb/dmrGeneDE) runs on. With the background correction on, a region must also beat its
-	 * matched background (p<0.05), which makes this the stricter of two readings rather than the
+	 * matched background (FDR < 0.05), which makes this the stricter of two readings rather than the
 	 * only one. Absent when no DMR qualifies. */
 	geneBodyLoss?: { regions: number; genes: string[] }
 	/** The two groups cut to the samples with methylation data, as sample ids: the cohort any

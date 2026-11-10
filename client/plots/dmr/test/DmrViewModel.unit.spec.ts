@@ -1,6 +1,7 @@
 import tape from 'tape'
 import { DmrViewModel } from '../viewModel/DmrViewModel'
 import { getDefaultDMRSettings } from '../settings/defaults'
+import { inlineSvgImages } from '../../../src/block.svg.js'
 
 /*
 Tests:
@@ -8,6 +9,8 @@ Tests:
 	A masked DMR is labeled with its mask, with its own note
 	No depth sentence when the groups' depths are close, or when one group has no reads
 	A view saved with no scan says its DMRs come from the default genome-wide run
+	The per-CpG means track is SVG that the block's Export SVG inlines as vector, with and without a CI band
+	Export SVG keeps an SVG track image it may not inline: unlisted markup, or a source that is not percent-encoded
 */
 
 const dmr = (start: number, delta_beta_mean: number, direction = 'hyper') =>
@@ -74,5 +77,86 @@ tape('A view saved with no scan says its DMRs come from the default genome-wide 
 		vm().notes.some(n => n.startsWith('This view was saved')),
 		'a view opened from a scan does not'
 	)
+	test.end()
+})
+
+/** the per-CpG means track's image source, for 3 probes with LOESS curves */
+function betaTrackSrc(minProbesForCi: number): string {
+	const positions = [1000, 1100, 1200]
+	const curve = [0.2, 0.3, 0.4]
+	const config: any = {
+		group1Name: 'A',
+		group2Name: 'B',
+		scanChromosomes: ['chr1'],
+		settings: { dmr: getDefaultDMRSettings({ settings: { minProbesForCi } }) }
+	}
+	const diagnostic = {
+		probes: {
+			positions,
+			mean_group1: [0.2, null, 0.4],
+			mean_group2: [0.6, 0.7, 0.8],
+			sig: [true, false, true],
+			smoothed_sig: [true, false, true],
+			logFC: [1, 1, 1]
+		},
+		probe_spacings: [],
+		loess: {
+			positions,
+			group1_fitted: curve,
+			group1_ci_lower: curve.map(v => v - 0.1),
+			group1_ci_upper: curve.map(v => v + 0.1),
+			group2_fitted: curve,
+			group2_ci_lower: curve.map(v => v - 0.1),
+			group2_ci_upper: curve.map(v => v + 0.1)
+		}
+	}
+	const v = new DmrViewModel({ status: 'ok', dmrs: [], diagnostic } as any, config, { tracks: [] }, 'chr1', 900, 1300)
+		.viewData
+	return v.tklst.find((t: any) => t.imgData)!.imgData.src
+}
+
+/** an export's <svg> holding one track <image> with this source */
+function exportWith(src: string) {
+	const doc = new DOMParser().parseFromString('<svg xmlns="http://www.w3.org/2000/svg"/>', 'image/svg+xml')
+	const img = doc.createElementNS('http://www.w3.org/2000/svg', 'image')
+	for (const [k, v] of Object.entries({ x: '5', y: '10', width: '800', height: '150', href: src }))
+		img.setAttribute(k, v)
+	doc.documentElement.appendChild(img)
+	return doc.documentElement
+}
+
+tape('The per-CpG means track is SVG that Export SVG inlines as vector', test => {
+	for (const [minProbesForCi, band] of [
+		[2, 'with a CI band'],
+		[10, 'dashed, with no band']
+	] as [number, string][]) {
+		const svg = exportWith(betaTrackSrc(minProbesForCi))
+		inlineSvgImages(svg)
+		test.equal(svg.querySelectorAll('image').length, 0, `${band}: every element and attribute is inlined`)
+		const track = svg.querySelector('svg')!
+		test.equal(track.getAttribute('x'), '5', `${band}: placed where the image was`)
+		test.equal(track.querySelectorAll('circle').length, 5, `${band}: a dot per mean, none for a missing one`)
+		test.equal(track.querySelectorAll('polyline').length, 2, `${band}: a LOESS curve per group`)
+		test.equal(
+			track.querySelectorAll('polygon').length,
+			minProbesForCi == 2 ? 2 : 0,
+			`${band}: a band per group or none`
+		)
+	}
+	test.end()
+})
+
+tape('Export SVG keeps an SVG track image it may not inline', test => {
+	const enc = (svg: string) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
+	const ns = 'xmlns="http://www.w3.org/2000/svg"'
+	for (const [src, what] of [
+		[enc(`<svg ${ns}><script>1</script></svg>`), 'an element off the list'],
+		[enc(`<svg ${ns}><circle r="1" onclick="1"/></svg>`), 'an attribute off the list'],
+		[`data:image/svg+xml;charset=utf-8,<svg ${ns} width="100%"></svg>`, 'a source that is not percent-encoded']
+	]) {
+		const svg = exportWith(src)
+		test.doesNotThrow(() => inlineSvgImages(svg), `${what}: no error`)
+		test.equal(svg.querySelectorAll('image').length, 1, `${what}: stays an image`)
+	}
 	test.end()
 })

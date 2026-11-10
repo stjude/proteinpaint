@@ -417,6 +417,30 @@ pub struct gene_order {
     pub rank: Option<usize>,
 }
 
+/// The genes sorted by fold change, descending and ascending, each ranked from 1 as in tmod (ranks <- c(1:N)[x]):
+/// CERNO sums ln(rank/N), so a 0-based rank gave the top gene ln(0) and dropped every gene set containing it as
+/// non-finite. The ascending sort runs on the descending order, so ties keep that order.
+#[allow(dead_code)]
+pub fn ranked_genes(mut genes: Vec<gene_order>) -> (Vec<gene_order>, Vec<gene_order>) {
+    genes.sort_by(|a, b| {
+        b.fold_change
+            .partial_cmp(&a.fold_change)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let mut descending = genes.clone();
+    genes.sort_by(|a, b| {
+        a.fold_change
+            .partial_cmp(&b.fold_change)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let mut ascending = genes;
+    for i in 0..descending.len() {
+        descending[i].rank = Some(i + 1);
+        ascending[i].rank = Some(i + 1);
+    }
+    (descending, ascending)
+}
+
 #[allow(dead_code)]
 pub fn cerno(
     genes_descending: &Vec<gene_order>,

@@ -31,7 +31,7 @@ tape('rust GSEA cerno unit test upregulated', async function (test) {
 	const out = JSON.parse(Rustout)
 
 	const expJson = JSON.parse(
-		'{"HALLMARK_DNA_REPAIR":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_COMPLEMENT":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_COAGULATION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_CHOLESTEROL_HOMEOSTASIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_BILE_ACID_METABOLISM":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_APOPTOSIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_APICAL_SURFACE":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_APICAL_JUNCTION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_ANGIOGENESIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_ANDROGEN_RESPONSE":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_ALLOGRAFT_REJECTION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4},"HALLMARK_ADIPOGENESIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.8703704,"es":1.9278917,"geneset_size":4}}'
+		'{"HALLMARK_DNA_REPAIR":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_COMPLEMENT":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_COAGULATION":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_CHOLESTEROL_HOMEOSTASIS":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_BILE_ACID_METABOLISM":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_APOPTOSIS":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_APICAL_SURFACE":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_APICAL_JUNCTION":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_ANGIOGENESIS":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_ANDROGEN_RESPONSE":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_ALLOGRAFT_REJECTION":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4},"HALLMARK_ADIPOGENESIS":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.8518519,"es":1.8101087,"geneset_size":4}}'
 	)
 
 	//     // Pathway1
@@ -39,23 +39,23 @@ tape('rust GSEA cerno unit test upregulated', async function (test) {
 	const pathway1_out = out[pathway1_id]
 	const pathway1_exp_out = expJson[pathway1_id]
 	test.ok(
-		pathway1_out.pval - pathway1_exp_out.pval < p_value_cutoff,
+		Math.abs(pathway1_out.pval - pathway1_exp_out.pval) < p_value_cutoff,
 		`For ${pathway1_id}, original pvalue=${pathway1_out.pval}, expected pvalue=${pathway1_exp_out.pval}`
 	)
 	test.ok(
-		pathway1_out.fdr - pathway1_exp_out.fdr < p_value_cutoff,
+		Math.abs(pathway1_out.fdr - pathway1_exp_out.fdr) < p_value_cutoff,
 		`For ${pathway1_id}, original adj_pvalue=${pathway1_out.fdr}, expected adj_pvalue=${pathway1_exp_out.fdr}`
 	)
 	test.ok(
-		pathway1_out.geneset_size - pathway1_exp_out.geneset_size < geneset_size_cutoff,
+		Math.abs(pathway1_out.geneset_size - pathway1_exp_out.geneset_size) < geneset_size_cutoff,
 		`For ${pathway1_id}, original geneset_size=${pathway1_out.geneset_size}, expected geneset_size=${pathway1_exp_out.geneset_size}`
 	)
 	test.ok(
-		pathway1_out.es - pathway1_exp_out.es < es_cutoff,
+		Math.abs(pathway1_out.es - pathway1_exp_out.es) < es_cutoff,
 		`For ${pathway1_id}, original es=${pathway1_out.es}, expected es=${pathway1_exp_out.es}`
 	)
 	test.ok(
-		pathway1_out.auc - pathway1_exp_out.auc < auc_cutoff,
+		Math.abs(pathway1_out.auc - pathway1_exp_out.auc) < auc_cutoff,
 		`For ${pathway1_id}, original auc=${pathway1_out.auc}, expected auc=${pathway1_exp_out.auc}`
 	)
 
@@ -64,23 +64,23 @@ tape('rust GSEA cerno unit test upregulated', async function (test) {
 	const pathway2_out = out[pathway2_id]
 	const pathway2_exp_out = expJson[pathway2_id]
 	test.ok(
-		pathway2_out.pval - pathway2_exp_out.pval < p_value_cutoff,
+		Math.abs(pathway2_out.pval - pathway2_exp_out.pval) < p_value_cutoff,
 		`For ${pathway2_id}, original pvalue=${pathway2_out.pval}, expected pvalue=${pathway2_exp_out.pval}`
 	)
 	test.ok(
-		pathway2_out.fdr - pathway2_exp_out.fdr < p_value_cutoff,
+		Math.abs(pathway2_out.fdr - pathway2_exp_out.fdr) < p_value_cutoff,
 		`For ${pathway2_id}, original adj_pvalue=${pathway2_out.fdr}, expected adj_pvalue=${pathway2_exp_out.fdr}`
 	)
 	test.ok(
-		pathway2_out.geneset_size - pathway2_exp_out.geneset_size < geneset_size_cutoff,
+		Math.abs(pathway2_out.geneset_size - pathway2_exp_out.geneset_size) < geneset_size_cutoff,
 		`For ${pathway2_id}, original geneset_size=${pathway2_out.geneset_size}, expected geneset_size=${pathway2_exp_out.geneset_size}`
 	)
 	test.ok(
-		pathway2_out.es - pathway2_exp_out.es < es_cutoff,
+		Math.abs(pathway2_out.es - pathway2_exp_out.es) < es_cutoff,
 		`For ${pathway2_id}, original es=${pathway2_out.es}, expected es=${pathway2_exp_out.es}`
 	)
 	test.ok(
-		pathway2_out.auc - pathway2_exp_out.auc < auc_cutoff,
+		Math.abs(pathway2_out.auc - pathway2_exp_out.auc) < auc_cutoff,
 		`For ${pathway2_id}, original auc=${pathway2_out.auc}, expected auc=${pathway2_exp_out.auc}`
 	)
 
@@ -89,23 +89,23 @@ tape('rust GSEA cerno unit test upregulated', async function (test) {
 	const pathway3_out = out[pathway3_id]
 	const pathway3_exp_out = expJson[pathway3_id]
 	test.ok(
-		pathway3_out.pval - pathway3_exp_out.pval < p_value_cutoff,
+		Math.abs(pathway3_out.pval - pathway3_exp_out.pval) < p_value_cutoff,
 		`For ${pathway3_id}, original pvalue=${pathway3_out.pval}, expected pvalue=${pathway3_exp_out.pval}`
 	)
 	test.ok(
-		pathway3_out.fdr - pathway3_exp_out.fdr < p_value_cutoff,
+		Math.abs(pathway3_out.fdr - pathway3_exp_out.fdr) < p_value_cutoff,
 		`For ${pathway3_id}, original adj_pvalue=${pathway3_out.fdr}, expected adj_pvalue=${pathway3_exp_out.fdr}`
 	)
 	test.ok(
-		pathway3_out.geneset_size - pathway3_exp_out.geneset_size < geneset_size_cutoff,
+		Math.abs(pathway3_out.geneset_size - pathway3_exp_out.geneset_size) < geneset_size_cutoff,
 		`For ${pathway3_id}, original geneset_size=${pathway3_out.geneset_size}, expected geneset_size=${pathway3_exp_out.geneset_size}`
 	)
 	test.ok(
-		pathway3_out.es - pathway3_exp_out.es < es_cutoff,
+		Math.abs(pathway3_out.es - pathway3_exp_out.es) < es_cutoff,
 		`For ${pathway3_id}, original es=${pathway3_out.es}, expected es=${pathway3_exp_out.es}`
 	)
 	test.ok(
-		pathway3_out.auc - pathway3_exp_out.auc < auc_cutoff,
+		Math.abs(pathway3_out.auc - pathway3_exp_out.auc) < auc_cutoff,
 		`For ${pathway3_id}, original auc=${pathway3_out.auc}, expected auc=${pathway3_exp_out.auc}`
 	)
 	test.end()
@@ -124,7 +124,7 @@ tape('rust GSEA cerno unit test downregulated', async function (test) {
 	const out = JSON.parse(Rustout)
 
 	const expJson = JSON.parse(
-		'{"HALLMARK_DNA_REPAIR":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_COMPLEMENT":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_COAGULATION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_CHOLESTEROL_HOMEOSTASIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_BILE_ACID_METABOLISM":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_APOPTOSIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_APICAL_SURFACE":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_APICAL_JUNCTION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_ANGIOGENESIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_ANDROGEN_RESPONSE":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_ALLOGRAFT_REJECTION":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4},"HALLMARK_ADIPOGENESIS":{"pval":0.14545453,"fdr":0.14545453,"leading_edge":"BCR","auc":0.16666667,"es":1.9278917,"geneset_size":4}}'
+		'{"HALLMARK_DNA_REPAIR":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_COMPLEMENT":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_COAGULATION":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_CHOLESTEROL_HOMEOSTASIS":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_BILE_ACID_METABOLISM":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_APOPTOSIS":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_APICAL_SURFACE":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_APICAL_JUNCTION":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_ANGIOGENESIS":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_ANDROGEN_RESPONSE":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_ALLOGRAFT_REJECTION":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4},"HALLMARK_ADIPOGENESIS":{"pval":0.16363636,"fdr":0.16363636,"leading_edge":"BCR","auc":0.14814815,"es":1.8101087,"geneset_size":4}}'
 	)
 
 	//     // Pathway1

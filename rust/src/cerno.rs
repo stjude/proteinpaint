@@ -144,27 +144,7 @@ fn main() -> Result<()> {
                         panic!("All query genes are non-coding");
                     }
 
-                    // Sort sample_coding_gene in descending order
-                    sample_coding_genes
-                        .as_mut_slice()
-                        .sort_by(|a, b| (b.fold_change).partial_cmp(&a.fold_change).unwrap_or(Ordering::Equal));
-                    let mut genes_descending = sample_coding_genes.clone();
-                    //println!("genes_descending:{:?}", genes_descending);
-
-                    // Sort sample_coding_gene in descending order
-                    sample_coding_genes
-                        .as_mut_slice()
-                        .sort_by(|a, b| (a.fold_change).partial_cmp(&b.fold_change).unwrap_or(Ordering::Equal));
-                    let mut genes_ascending = sample_coding_genes.clone();
-                    //println!("genes_ascending:{:?}", genes_ascending);
-
-                    drop(sample_coding_genes); // sample_coding_genes no longer deleted, so the variable is deleted
-
-                    // Assign ranks to each gene
-                    for i in 0..genes_descending.len() {
-                        genes_descending[i].rank = Some(i);
-                        genes_ascending[i].rank = Some(i)
-                    }
+                    let (genes_descending, genes_ascending) = stats_functions::ranked_genes(sample_coding_genes);
 
                     //println!("sample_genes:{:?}", sample_genes);
                     //println!("background_genes:{:?}", background_genes);
