@@ -15,6 +15,7 @@ combinePPfilterAndTid2value - filterObj + filter + tid2value combined
 mayLimitSamples - sampleTypes must be an array
 mayLimitSamples - sampleTypes alone does not filter samples
 mayLimitSamples - omitted sampleTypes does not filter
+mayLimitSamples - skipSampleFiltering defers filtering
 */
 tape('\n', function (test) {
 	test.comment('-***- src/mds3.filter specs -***-')
@@ -185,6 +186,45 @@ tape('combinePPfilterAndTid2value - filterObj + filter + tid2value combined', fu
 		['diagnosis', 'race', 'sex'],
 		'combined filter should include tvs from filterObj, filter, and tid2value'
 	)
+	test.end()
+})
+tape('mayLimitSamples - skipSampleFiltering defers filtering', async function (test) {
+	let filterCalls = 0
+	let validationCalls = 0
+	const ds = {
+		validate_filter0: filter => {
+			validationCalls++
+			return filter
+		},
+		cohort: {
+			termdb: {
+				filterSamples: async () => {
+					filterCalls++
+					return new Set([10, 11])
+				}
+			}
+		}
+	}
+	const param = {
+		filterObj: { type: 'tvslst', lst: [makeTvs({ id: 'sex', type: 'categorical' }, 'M')] },
+		filter0: { cohort: 'hidden' }
+	}
+	test.equal(
+		await mayLimitSamples({ ...param, skipSampleFiltering: true }, [10], ds),
+		undefined,
+		'skip flag returns no restriction even with filters and a supplied sample list'
+	)
+	test.equal(validationCalls, 0, 'deferred filters are not validated here')
+	test.equal(filterCalls, 0, 'deferred filters are not queried here')
+	for (const skipSampleFiltering of [false, undefined]) {
+		test.deepEqual(
+			await mayLimitSamples({ ...param, skipSampleFiltering }, [10], ds),
+			new Set([10]),
+			'false or absent flag preserves filtering and sample intersection'
+		)
+	}
+	test.equal(validationCalls, 2, 'normal calls still validate the hidden filter')
+	test.equal(filterCalls, 2, 'normal calls still query matching samples')
 	test.end()
 })
 tape('mayLimitSamples - sampleTypes must be an array', async function (test) {
