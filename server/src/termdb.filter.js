@@ -220,7 +220,7 @@ function get_samplelst(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 // performed by get_dtTerm()
 async function get_geneVariant(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	const tw = { $id, term: tvs.term, q: {} }
-	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
+	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename, sampleMapping, sampleTypes })
 	/*
 	data here is map of sampleId-mutationData pairs, e.g.
 	63 => { sample: 63, TP53: { key: 'TP53', values: [Array], label: 'TP53' } },
@@ -260,7 +260,7 @@ async function get_geneVariant(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 		}
 		if (includeSample) samplenames.push(key)
 	}
-	return sampleIdsResult(CTEname, samplenames, tvs, ds, sampleMapping, sampleTypes)
+	return sampleIdsResult(CTEname, samplenames)
 }
 
 function isInRange(val, range, isnot) {
