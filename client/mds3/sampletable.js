@@ -89,7 +89,6 @@ export async function displaySampleTable(samples, args) {
 	//if (args.maxHeight) params.maxHeight = args.maxHeight
 
 	params.columnButtons = []
-
 	if (args.tk.mds.queries?.singleSampleMutation) {
 		const width = window.innerWidth
 		const height = screen.height
@@ -348,6 +347,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 async function createDiscoInSandbox(tk, block, sample, thisMutation) {
 	// create ad-hoc sandbox; if newChartHolder is present, plot into it
 	const sandbox = newSandboxDiv(tk.newChartHolder || block.holder0)
+	sandbox.app_div.attr('data-testid', 'sjpp-mds3tk-sandbox-Disco')
 	const headerTexts = [sample.sample_id] // for sandbox header
 	if (thisMutation) {
 		// mutation of this sample is provided (tooltip currently shows info about this mutation)

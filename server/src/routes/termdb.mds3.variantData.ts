@@ -1,13 +1,72 @@
+import type {
+	RouteApi,
+	RoutePayload,
+	TermdbMds3VariantDataRequest,
+	TermdbMds3VariantDataResponse,
+	ValidMds3VariantReponse
+} from '#types'
 import { filterJoin } from '#shared/filter.js'
-import { get_rows_by_one_key } from './termdb.sql.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import path from 'path'
-import serverconfig from './serverconfig.js'
-import { validateRglst } from './utils.js'
-import { mapParent2ChildrenWithSampleTypes } from './utils/sampleTypes.ts'
-import { combinePPfilterAndTid2value } from './mds3.filter.js'
+import { genomes } from '#src/initGenomesDs.js'
+import { validGenomeDs } from '#routes/common.ts'
+import { get_rows_by_one_key } from '#src/termdb.sql.js'
+import { validateRglst } from '#src/utils.js'
+import { mapParent2ChildrenWithSampleTypes } from '#src/utils/sampleTypes.ts'
+import { combinePPfilterAndTid2value } from '#src/mds3.filter.js'
+
+export const payload: RoutePayload = {
+	get init() {
+		return hasMds3VariantDataDs(genomes) ? init : null
+	},
+	request: {
+		typeId: 'TermdbMds3VariantDataRequest',
+		checker: validTermdbMds3VariantDataRequest
+	},
+	response: { typeId: 'TermdbMds3VariantDataResponse' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/mds3/variantData',
+	methods: {
+		get: payload,
+		post: payload
+	}
+}
+
+export function hasMds3VariantDataDs(genomes) {
+	return Object.values(genomes).some((genome: any) =>
+		[...Object.values(genome.datasets || {}), ...Object.values(genome.termdbs || {})].some(
+			(ds: any) => ds.queries?.snvindel?.details
+		)
+	)
+}
+
+export function validTermdbMds3VariantDataRequest(input): TermdbMds3VariantDataRequest {
+	const ids = validGenomeDs(input)
+	if (typeof input.chr != 'string' || !input.chr) throw 'q.chr missing'
+	return { ...input, ...ids }
+}
+
+function init({ genomes }) {
+	return async (req: any, res: any): Promise<void> => {
+		const q: TermdbMds3VariantDataRequest = req.query
+		try {
+			const genome = genomes[q.genome]
+			if (!genome) throw 'invalid genome name'
+			const ds = genome.datasets?.[q.dslabel] || genome.termdbs?.[q.dslabel]
+			if (!ds) throw 'invalid dataset name'
+			if (!ds.cohort?.termdb) throw '.cohort.termdb not found on this dataset'
+			const results = await get_mds3variantData(q, ds, genome)
+			res.send(results satisfies TermdbMds3VariantDataResponse)
+		} catch (e: any) {
+			if (e.stack) console.log(e.stack)
+			res.send({ status: e.status || 400, error: e.message || e } satisfies TermdbMds3VariantDataResponse)
+		}
+	}
+}
 
 /*
+the variant data of a region, for the numeric mode of the mds3 track
 
 q{}
 	.chr/start/stop
@@ -39,13 +98,12 @@ get_mds3variantData
 			AFtest_adjust_race
 */
 
-export async function get_mds3variantData(q, res, ds, genome) {
+export async function get_mds3variantData(q, ds, genome): Promise<ValidMds3VariantReponse> {
 	validateParam(q, ds, genome)
 
 	const results = await getResultsWithMlst(q, ds)
 	/* results = {
 		mlst[]
-		skipMcountWithoutAlt: int
 		totalSampleCount_?: int
 	}
 	*/
@@ -67,13 +125,12 @@ export async function get_mds3variantData(q, res, ds, genome) {
 		delete m._refCount
 	}
 
-	res.send(results)
+	return results
 }
 
 function validateParam(q, ds, genome) {
 	// the client only requests this for a dataset with snvindel.details{}, see termdb.config.ts
 	if (!ds.queries?.snvindel?.details) throw 'snvindel.details not supported by this dataset'
-	if (!q.chr) throw 'q.chr missing'
 	q.start = Number(q.start)
 	q.stop = Number(q.stop) // somehow q.stop can be string
 	if (!Number.isInteger(q.start) || !Number.isInteger(q.stop)) throw 'q.start/stop is not integer'
@@ -113,7 +170,7 @@ function validateParam(q, ds, genome) {
 	}
 }
 
-async function getResultsWithMlst(q, ds) {
+async function getResultsWithMlst(q, ds): Promise<ValidMds3VariantReponse> {
 	/* the bcf query parameter of a filter. With the sample types chosen in the sample type row of the genome browser,
 	which byrange.get() keeps the samples of, as the filter maps its cases to them; one per filter, as the mapping
 	sets the sample types of the parameter */
@@ -136,18 +193,16 @@ async function getResultsWithMlst(q, ds) {
 	// if there are two type=filter groups, must do byrange.get() for each group, then merge mlst from both queries
 	if (g1.type == 'filter' && g2?.type == 'filter') {
 		const lst1 = await ds.queries.snvindel.byrange.get(getParam(getFilterObj(q, g1.filter)))
-		const r1 = getMlstWithAlt(lst1)
+		const mlst1 = getMlstWithAlt(lst1)
 
 		const lst2 = await ds.queries.snvindel.byrange.get(getParam(getFilterObj(q, g2.filter)))
-		const r2 = getMlstWithAlt(lst2)
+		const mlst2 = getMlstWithAlt(lst2)
 
-		const mlst = mergeMlstFromTwoFilterGroups(r1.mlst, r2.mlst, q)
-		const results = {
-			mlst,
-			totalSampleCount_group1: mlst2sampleCount(r1.mlst),
-			totalSampleCount_group2: mlst2sampleCount(r2.mlst)
+		return {
+			mlst: mergeMlstFromTwoFilterGroups(mlst1, mlst2),
+			totalSampleCount_group1: mlst2sampleCount(mlst1),
+			totalSampleCount_group2: mlst2sampleCount(mlst2)
 		}
-		return results
 	}
 
 	// not both groups are type=filter, do just one query
@@ -166,8 +221,8 @@ async function getResultsWithMlst(q, ds) {
 	}
 	*/
 
-	const results = getMlstWithAlt(mlst)
-	// results = {mlst[], skipMcountWithoutAlt}, and drop out m without any ALT
+	// drop out m without any ALT
+	const results: ValidMds3VariantReponse = { mlst: getMlstWithAlt(mlst) }
 
 	// if there's one group with type=filter, the filter is already included by getFilterObj() and all samples from mlst are from this filter; count number of samples and return to client
 	if (g1.type == 'filter') results.totalSampleCount_group1 = mlst2sampleCount(mlst)
@@ -185,9 +240,8 @@ function mlst2sampleCount(mlst) {
 	return sset.size
 }
 
-function mergeMlstFromTwoFilterGroups(lst1, lst2, q) {
-	const [g1, g2] = q.details.groups
-	const mlst = [] // after merging
+function mergeMlstFromTwoFilterGroups(lst1, lst2) {
+	const mlst: any[] = [] // after merging
 	for (const m1 of lst1) {
 		m1.groupData = [{ refCount: m1._refCount, altCount: m1._altCount }]
 		const m2 = lst2.find(i => i.chr == m1.chr && i.pos == m1.pos && i.ref == m1.ref && i.alt == m1.alt)
@@ -211,19 +265,13 @@ function mergeMlstFromTwoFilterGroups(lst1, lst2, q) {
 }
 
 function getMlstWithAlt(mlst) {
-	const result = {
-		mlst: [],
-		skipMcountWithoutAlt: 0
-	}
+	const result: any[] = []
 	for (const m of mlst) {
 		const [a, b] = getAllelicCount(m)
-		if (a == 0) {
-			result.skipMcountWithoutAlt++
-			continue
-		}
+		if (a == 0) continue
 		m._altCount = a
 		m._refCount = b - a
-		result.mlst.push(m)
+		result.push(m)
 	}
 	return result
 }
@@ -233,7 +281,7 @@ merge filterObj from multiple sources to one (and use in byrange.get())
 1. q.filter, mass global filter
 2. q.details.groups[].type=='filter'
 */
-function getFilterObj(q, gf) {
+function getFilterObj(q, gf?) {
 	const lst = [q.filter]
 	if (gf) {
 		lst.push(gf)
@@ -392,7 +440,7 @@ function compute_2groups_valueDiff(ds, details, mlst) {
 
 function getGroupsData(ds, details, m, pop2average) {
 	// from m{}, get data for groups defined in q.details.groups[]
-	const groupData = [] // one element for each of q.details.groups[], in the same order
+	const groupData: any[] = [] // one element for each of q.details.groups[], in the same order
 	for (const g of details.groups) {
 		if (g.type == 'info') {
 			if (!g.key) throw 'group.key missing for type=info'
@@ -502,7 +550,7 @@ async function mayGet_pop2average(ds, details, results) {
 		pop2average.set(p.key, o)
 	}
 	// after sum, make average
-	for (const [k, v] of pop2average) {
+	for (const v of pop2average.values()) {
 		v.average /= poptotal
 	}
 
@@ -518,7 +566,7 @@ async function may_apply_fishertest(mlst) {
 	const step = 200
 	for (let i = 0; i < Math.ceil(mlst.length / step); i++) {
 		// for all m in this step, generate rust input
-		const input = []
+		const input: any[] = []
 		for (let j = i * step; j < (i + 1) * step; j++) {
 			const m = mlst[j]
 			if (!m) break // reached the end
