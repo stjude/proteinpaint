@@ -32,7 +32,10 @@ tape('renderLocusHeatmap', t => {
 				label: 'rho',
 				domain: [-1, 1],
 				bars: [{ v: 1, color: 'black' }, { v: -0.5, color: 'black' }, null],
-				dots: [{ col: 0, v: 0, color: 'green', filled: true }]
+				dots: [
+					{ col: 0, v: 0, color: 'green', filled: true },
+					{ col: 0, v: 0, color: 'red', filled: false }
+				]
 			},
 			{ label: 'mean', domain: [0, 1], lines: [{ color: 'red', values: [0, null, 1] }] }
 		],
@@ -57,7 +60,13 @@ tape('renderLocusHeatmap', t => {
 		],
 		'bars run from zero, up for a positive value and down for a negative one'
 	)
-	t.equal(r.statisticsG.selectAll('circle').size(), 1, 'a dot per given dot')
+	const dots = r.statisticsG.selectAll('circle').nodes()
+	t.equal(dots.length, 2, 'a dot per given dot')
+	t.deepEqual(
+		dots.map((d: any) => `${d.getAttribute('fill')} ${d.getAttribute('fill-opacity')}`),
+		['red 0.25', 'green 1'],
+		'a dot that is not filled is faded and under a filled one'
+	)
 	t.equal(r.statisticsG.select('path').attr('d'), 'M50,40M250,0', 'a missing value breaks a line')
 	t.equal(r.heatmapG.selectAll('image').size(), 1, 'the heatmap is one image')
 	const ann = tk.annotationColG.selectAll('image').nodes()
@@ -75,13 +84,16 @@ tape('renderLocusHeatmap', t => {
 	t.equal(r.leftG.selectAll('text').size(), 4, 'a label per statistics row and the names of tall rows are on the left')
 
 	// second column (100-200 px); the heatmap spans y 88-188
-	const hit = r.heatmapG.select('rect').node()
+	const hit = r.heatmapG.select('rect[fill=transparent]').node()
 	const box = hit.getBoundingClientRect()
 	const move = (y: number) =>
 		hit.dispatchEvent(new MouseEvent('mousemove', { clientX: box.left + 150, clientY: box.top + y, bubbles: true }))
 	move(160)
 	t.deepEqual(hover, [1, 1], 'hover reports the column and row under the pointer')
 	t.equal(lines[1].getAttribute('stroke'), '#000', 'and highlights the line of that column')
+	const outline = r.heatmapG.select('rect[fill=none]')
+	t.equal(outline.attr('display'), null, 'outlines that column')
+	t.equal(Number(outline.attr('x')), 100, 'at its place in the heatmap')
 	move(10)
 	t.deepEqual(hover, [1, -1], 'over a statistics row, the column and no row')
 

@@ -168,17 +168,20 @@ function render(tk: any, block: any): number {
 			label: `ρ with ${unit}`,
 			domain: [-top, top],
 			// one neutral color, so that blue and red mean beta only; faded when not significant
-			bars: bins.map(b =>
-				b.rho === undefined ? null : { v: b.rho, color: '#333', opacity: b.q! < 0.05 ? 0.85 : 0.3 }
-			),
-			/* rho within each group over the bar of all samples: a dot near 0 on a long bar means the bar
-			comes from the difference between the groups */
-			dots: bins.flatMap((b, col) =>
-				(b.byGroup || []).flatMap(g =>
-					g.rho === undefined ? [] : [{ col, v: g.rho, color: groupColor(g.group), filled: g.q! < 0.05 }]
-				)
-			)
+			bars: bins.map(b => (b.rho === undefined ? null : { v: b.rho, color: '#333', opacity: b.q! < 0.05 ? 0.85 : 0.3 }))
 		})
+		/* rho within each group, in a row of its own under the bars and on their scale: dots near 0 under a long
+		bar mean the bar comes from the difference between the groups */
+		if (groups.length)
+			stats.push({
+				label: 'ρ within a group',
+				domain: [-top, top],
+				dots: bins.flatMap((b, col) =>
+					(b.byGroup || []).flatMap(g =>
+						g.rho === undefined ? [] : [{ col, v: g.rho, color: groupColor(g.group), filled: g.q! < 0.05 }]
+					)
+				)
+			})
 	}
 	if (hasGene) {
 		// R reports a p-value below its floor as 0
@@ -240,14 +243,16 @@ function render(tk: any, block: any): number {
 		],
 		onHover: (event, col, row) => {
 			const b = bins[col]
-			// the block's cursor bar on the genomic span of the bin
+			/* the block's cursor bar on the genomic span of the bin, from where the bin's line ends: above that, the
+			pointer's x is a column, which the renderer outlines */
 			const x0 = block.seekcoord(region.chr, b.start)[0]?.x,
 				x1 = block.seekcoord(region.chr, b.stop)[0]?.x
 			if (x0 !== undefined && x1 !== undefined)
 				block.cursorhlbar
 					.attr('x', block.leftheadw + block.lpad + Math.min(x0, x1))
 					.attr('width', Math.max(2, Math.abs(x1 - x0) + block.exonsf))
-					.attr('height', block.totalheight())
+					.attr('y', tk.yoff + height)
+					.attr('height', Math.max(0, block.totalheight() - tk.yoff - height))
 			tk.tip.clear()
 			const table = table2col({ holder: tk.tip.d })
 			if (row >= 0) {
@@ -274,7 +279,8 @@ function render(tk: any, block: any): number {
 		},
 		onOut: () => {
 			tk.tip.hide()
-			block.cursorhlbar.attr('width', 0)
+			// back to the full height for the block's own use of the bar
+			block.cursorhlbar.attr('width', 0).attr('y', 0)
 		},
 		onClick: col => {
 			if (!canViolin) return
@@ -340,7 +346,7 @@ function renderLegend(tk: any, data: LocusData, series: Series[]) {
 	if (data.gene) item('width:12px;height:12px;background:#333;opacity:.3', 'ρ faded if q ≥ 0.05')
 	if (data.gene) item('width:16px;height:6px;background:#555', `log2(${data.unit}+1)`)
 	if (data.gene && data.groups?.length)
-		item('width:7px;height:7px;border:1px solid #555;border-radius:50%', 'ρ within a group (filled if q < 0.05)')
+		item('width:7px;height:7px;background:#555;border-radius:50%', 'ρ within a group (faded if q ≥ 0.05)')
 }
 
 /* the gene's expression split by this bin's methylation, in the summary violin */

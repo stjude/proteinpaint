@@ -19,6 +19,7 @@ export type LocusHeatmapStat = {
 	bars?: ({ v: number; color: string; opacity?: number } | null)[]
 	/** lines across the columns, e.g. the mean of a group of rows */
 	lines?: { color: string; values: (number | null)[] }[]
+	/** a filled dot is solid, the others are faded */
 	dots?: { col: number; v: number; color: string; filled: boolean }[]
 }
 
@@ -114,13 +115,17 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 			})
 			g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', l.color).attr('stroke-width', 1.5)
 		}
-		for (const d of s.dots || [])
+		/* solid or faded, which still reads when the dots are a few px wide, as a ring does not. The solid ones
+		are drawn last, with a white edge that sets them off from the bars and from each other. */
+		for (const d of [...(s.dots || [])].sort((a, b) => Number(a.filled) - Number(b.filled)))
 			g.append('circle')
 				.attr('cx', (d.col + 0.5) * cw)
 				.attr('cy', sy(d.v))
-				.attr('r', Math.min(3, Math.max(1.5, cw / 2 - 1)))
-				.attr('fill', d.filled ? d.color : 'white')
-				.attr('stroke', d.color)
+				.attr('r', Math.min(3.5, Math.max(2.5, cw / 2)))
+				.attr('fill', d.color)
+				.attr('fill-opacity', d.filled ? 1 : 0.25)
+				.attr('stroke', d.filled ? 'white' : 'none')
+				.attr('stroke-width', 0.5)
 		leftLabel(
 			k * (r.statisticsHeight + statGap) + r.statisticsHeight / 2 + (k ? 0 : 6),
 			`${s.label} (${s.domain[0]} to ${s.domain[1]})`
@@ -203,8 +208,19 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 					.attr('stroke', '#999')
 					.attr('stroke-width', 0.5)
 	)
-	const highlight = (col: number) =>
+	// the column under the pointer: an outline over the statistics rows and the heatmap, and its line
+	const outline = r.heatmapG
+		.append('rect')
+		.attr('width', cw)
+		.attr('height', y2)
+		.attr('fill', 'none')
+		.attr('stroke', '#000')
+		.attr('pointer-events', 'none')
+		.attr('display', 'none')
+	const highlight = (col: number) => {
+		outline.attr('x', col * cw).attr('display', col < 0 ? 'none' : null)
 		lines.forEach((l, i) => l?.attr('stroke', i == col ? '#000' : '#999').attr('stroke-width', i == col ? 1.5 : 0.5))
+	}
 
 	/* one hit layer over the statistics rows and the heatmap: hover reads the column and row under the
 	pointer, so the cells need no listeners. row is -1 above the heatmap. */
