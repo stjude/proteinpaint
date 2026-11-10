@@ -1,3 +1,21 @@
+// Capability registry: everything about the dataset that does not change between searches is decided
+// ONCE here (from termdbConfig, in the component's init()) and never re-derived per result or per click.
+//  - which item types are searchable (drives the "you can search for" note)
+//  - which gene action buttons can ever appear (survival allowed? protein/genomic/both browser views?)
+// Per-gene availability (which data types THIS gene has) still comes from the server's search result
+// and is checked by each action's `available()`.
+//
+// To add a gene action: add one entry to the matching category in GENE_CATEGORIES below.
+//
+// NOT YET IMPLEMENTED (kept out of the render code on purpose):
+//  - Survival for the SNV/indel/CNV/SV/fusion category: resolve the term wrapper as launchGeneVariantPlot
+//    does, then launchSurvivalWithCovariate('term2', tw).
+//  - Survival for DNA methylation: pass the region picker's resolved term to launchSurvivalWithCovariate.
+//  - PSEUDO BULK category: needs server-side work first. GeneDataTypeAvailability
+//    (shared/types/src/routes/termdb.chat.ts) and getGeneDataTypes (server/src/chat/search.ts) do not know
+//    about ds.queries.singleCell.pseudobulk, and a pseudobulk term needs assay+memberId+category
+//    (shared/types/src/terms/pseudobulk.ts), not a flat per-gene boolean.
+
 import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
 import type {
 	Capabilities,
