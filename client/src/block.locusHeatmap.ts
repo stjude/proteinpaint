@@ -39,6 +39,8 @@ export type LocusHeatmapData = {
 	stats?: LocusHeatmapStat[]
 	/** columns on the right of the heatmap, each with a color per row; with widths (0 to 1), a bar per row */
 	annotations?: { label: string; colors: string[]; widths?: number[] }[]
+	/** rows that start a new block of rows, e.g. the first sample of a group: a gap is drawn above each */
+	rowBreaks?: number[]
 	/** lines of text on the left of the heatmap, shown when the rows are too thin for their names */
 	note?: string[]
 	/** col and row under the pointer */
@@ -175,6 +177,19 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 			.text(a.label)
 		ax += w + 3
 	}
+
+	// a gap across the heatmap and the annotation columns, under the hit layer
+	for (const row of data.rowBreaks || [])
+		for (const [g, width] of [
+			[r.heatmapG, block.width],
+			[tk.annotationColG, ax]
+		])
+			g.append('line')
+				.attr('x2', width)
+				.attr('y1', y1 + row * rh)
+				.attr('y2', y1 + row * rh)
+				.attr('stroke', 'white')
+				.attr('stroke-width', 2)
 
 	const lines = data.cols.map((c, i) =>
 		c.x === undefined

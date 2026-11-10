@@ -16,7 +16,7 @@ export type MethylationLocusRequest = {
 	nbins?: number
 	filter?: Filter
 	filter0?: any
-	/** optional samplelst tw (e.g. the two groups of a volcano), returned as each sample's group */
+	/** optional samplelst tw (e.g. the two groups of a volcano), returned as each sample's group; samples in no group are left out */
 	groupTw?: TermWrapper
 	__protected__?: any
 }

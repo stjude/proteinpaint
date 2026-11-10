@@ -23,6 +23,7 @@ tape('renderLocusHeatmap', t => {
 	let hover: number[] = []
 	const data: LocusHeatmapData = {
 		rows: ['s1', 's2'],
+		rowBreaks: [1],
 		cols: [{ x: 10, values: [0, 1] }, { x: 20, dy: 30, values: [null, 0.5] }, { values: [1, 1] }],
 		color: v => (v > 0.5 ? 'red' : 'blue'),
 		missingColor: 'gray',
@@ -62,6 +63,10 @@ tape('renderLocusHeatmap', t => {
 	const ann = tk.annotationColG.selectAll('image').nodes()
 	t.equal(ann.length, 2, 'one image per annotation column')
 	t.ok(Number(ann[1].getAttribute('width')) > Number(ann[0].getAttribute('width')), 'a column of bars is wider')
+	const gap = r.heatmapG.selectAll('line').nodes()
+	t.equal(gap.length, 1, 'a gap per row break across the heatmap')
+	t.equal(Number(gap[0].getAttribute('y1')), 138, 'above the row that starts the block')
+	t.equal(tk.annotationColG.selectAll('line').size(), 1, 'and across the annotation columns')
 	const lines = r.linkageG.selectAll('line').nodes()
 	t.equal(lines.length, 2, 'no line for the column without x')
 	t.equal(Number(lines[0].getAttribute('x1')), 50, 'a line starts under the middle of its column')

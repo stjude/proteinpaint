@@ -98,6 +98,8 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 	const add = (name: string, value?: number) => {
 		if (!m.eligible.has(name)) return
 		const group = sample2group.get(name)
+		// with groups, the view is their comparison: a sample in none of them is left out
+		if (sample2group.size && group === undefined) return
 		samples.push({ name, ...(value === undefined ? {} : { value }), ...(group === undefined ? {} : { group }) })
 	}
 	if (q.gene) {

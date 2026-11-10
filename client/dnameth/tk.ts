@@ -227,6 +227,11 @@ function render(tk: any, block: any): number {
 		})),
 		color: betaColor,
 		missingColor,
+		// sorted by group: a gap where the next group starts
+		rowBreaks:
+			tk.sortBy == 'group'
+				? idx.flatMap((j, i) => (i && samples[j].group !== samples[idx[i - 1]].group ? [i] : []))
+				: [],
 		stats,
 		annotations,
 		note: [
