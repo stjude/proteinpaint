@@ -295,6 +295,7 @@ export async function init(
 		// hover tooltip
 		const tip = mapDiv
 			.append('div')
+			.attr('data-testid', 'sjpp-visium-tooltip')
 			.style('position', 'absolute')
 			.style('pointer-events', 'none')
 			.style('z-index', '20')
@@ -325,6 +326,7 @@ export async function init(
 			const row = tip.append('div').style('display', 'flex').style('gap', '8px').style('margin-top', '4px')
 			const svg = row
 				.append('svg')
+				.attr('data-testid', 'sjpp-visium-pie')
 				.attr('width', 2 * R)
 				.attr('height', 2 * R)
 				.style('flex', 'none')
