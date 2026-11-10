@@ -145,6 +145,7 @@ export async function init(
 	},
 	holder: any
 ) {
+	holder = holder.append('div')
 	const loading = holder.append('div').style('margin', '20px').text('Loading spots …')
 	try {
 		const spots: VisiumSpots = await dofetch3(`visium/spots?${opts.query}`)
