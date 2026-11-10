@@ -267,7 +267,10 @@ class Wsi extends PlotBase implements RxComponent {
 		if (image.method == 'sequence') {
 			// cell types = the spots' proportion columns
 			const r = await dofetch3(`visium/spots?${base}`).catch(() => null)
-			if (!r?.proportions) return (this.cellTypeNames = [])
+			if (!r?.proportions) {
+				this.cellTypesFile = undefined
+				return (this.cellTypeNames = [])
+			}
 			this.cellTypesFile = src
 			return (this.cellTypeNames = Object.keys(r.proportions))
 		}
