@@ -295,12 +295,11 @@ class _CapturedIO:
         self._buf.close()
 
 
-def cluster_rows(df, name1, name2, extras=None):
+def cluster_rows(df, name1, name2):
     """Cluster table -> DiffSpliceEntry rows.
 
     `df` needs cluster, genes, n_junc, p, fdr, deltapsi, top_intron, psi_<name1>,
-    psi_<name2>, chr, start, stop. `extras` optionally maps a cluster id to the
-    engine-specific `leafcutter` object.
+    psi_<name2>, chr, start, stop.
     """
     def num(v, default=None):
         if v is None:
@@ -344,8 +343,6 @@ def cluster_rows(df, name1, name2, extras=None):
             "start": int(num(r.get("start"), 0)),
             "stop": int(num(r.get("stop"), 0)),
         }
-        if extras and cid in extras:
-            row["leafcutter"] = extras[cid]
         rows.append(row)
     return rows
 

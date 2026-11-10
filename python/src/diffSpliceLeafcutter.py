@@ -441,7 +441,7 @@ def _batched_lbfgs(theta, fg, lr=1.0, max_iter=BATCHED_MAX_ITER, max_eval=None,
             good = ys > 1e-10
             if n_hist == cap and cap < history_size:
                 grow = min(cap * 2, history_size) - cap
-                old_y = torch.cat([old_y, torch.zeros(n_hist and len(old_y), grow, D,
+                old_y = torch.cat([old_y, torch.zeros(len(old_y), grow, D,
                                                       device=dev, dtype=dt)], 1)
                 old_s = torch.cat([old_s, torch.zeros(len(old_s), grow, D,
                                                       device=dev, dtype=dt)], 1)
@@ -660,11 +660,11 @@ def _collapse_pack(y_np, cell_of, C, J):
 
 def _collapse_pack_subset(pack, idx):
     """Restrict a pack to a subset of clusters (used by the smart-init and refit paths)."""
-    vi, vb = _ragged_take(pack['v_offsets'], pack['v_counts'], idx)
-    ti, tb = _ragged_take(pack['t_offsets'], pack['t_counts'], idx)
+    vi, _ = _ragged_take(pack['v_offsets'], pack['v_counts'], idx)
+    ti, _ = _ragged_take(pack['t_offsets'], pack['t_counts'], idx)
     out = dict(pack)
     out['B'] = len(idx)
-    for k, src, sel, blk in (('v', vi, vi, vb), ('t', ti, ti, tb)):
+    for k, sel in (('v', vi), ('t', ti)):
         cnt = pack[k + '_counts'][idx]
         out[k + '_counts'] = cnt
         out[k + '_offsets'] = torch.cat([torch.zeros(1, dtype=torch.long),

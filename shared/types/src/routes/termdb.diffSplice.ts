@@ -41,8 +41,6 @@ export type DiffSpliceEntry = DataEntry & {
 	chr: string
 	start: number
 	stop: number
-	/** engine-specific extras; never read by the volcano */
-	leafcutter?: { junction_effects: { intron: string; dpsi: number }[]; status: string }
 }
 
 export type DiffSplicePreAnalysisResponse = {
