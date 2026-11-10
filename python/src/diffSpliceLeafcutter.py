@@ -676,7 +676,7 @@ def _collapse_pack_subset(pack, idx):
 
 
 class _CollapsedFg:
-    """fg(theta, rows) for the collapsed form, with the row subset cached.
+    """fg(theta, rows) for the collapsed form.
 
     The optimizer re-subsets on every line search step, so the flat packs are sorted by
     cluster and a subset is three vector ops over exactly the entries about to be read --
@@ -691,27 +691,22 @@ class _CollapsedFg:
         self.conc_shape, self.conc_rate = conc_shape, conc_rate
         self.lg_shape = float(torch.lgamma(torch.tensor(float(conc_shape))))
         self.CJ = pack['C'] * J
-        self._rows = None
-        self._cache = None
 
     def _select(self, rows):
         p = self.pack
         vi, vb = _ragged_take(p['v_offsets'], p['v_counts'], rows)
         ti, tb = _ragged_take(p['t_offsets'], p['t_counts'], rows)
-        self._cache = dict(
+        return dict(
             x=self.x[rows],
             v_flat=vb * self.CJ + p['v_local'][vi], v_val=p['v_val'][vi],
             v_mul=p['v_mul'][vi], v_b=vb,
             t_flat=tb * p['C'] + p['t_local'][ti], t_val=p['t_val'][ti],
             t_mul=p['t_mul'][ti], t_b=tb, n=len(rows))
-        self._rows = rows
 
     def __call__(self, theta, rows=None):
         if rows is None:
             rows = torch.arange(self.pack['B'])
-        if self._rows is not rows:
-            self._select(rows)
-        c = self._cache
+        c = self._select(rows)
         th = theta.detach().requires_grad_(True)
         beta, conc = _unpack(th, self.P, self.J, self.A_qr, self.conc_max)
 
@@ -1105,7 +1100,7 @@ def differential_splicing_batched(buf, intron_ids, cluster_ids, cluster_starts, 
 
     use_of = {pos: use for pos, _, use in survivors}
     intron_index = pd.Index(intron_ids)
-    tested, junc_frames = {}, []
+    tested, pieces = {}, []
     for r in results:
         for b, pos in enumerate(r['positions']):
             clu = cluster_ids[pos]
@@ -1116,25 +1111,30 @@ def differential_splicing_batched(buf, intron_ids, cluster_ids, cluster_starts, 
                 'full_exit_status': BATCHED_EXIT[int(r['full_exit'][b])],
                 'df': r['df'], 'p': float(r['p'][b]),
             }
-            s, e = int(cluster_starts[pos]), int(cluster_starts[pos + 1])
-            use = use_of[pos]
-            nj = int(use.sum())
-            frame = pd.DataFrame({'cluster': [clu] * nj,
-                                  'intron': intron_index[s:e][use],
-                                  'psi_0': r['psi_0'][b, :nj]})
-            for k, col in enumerate(x_cols):
-                frame['logef_' + str(col)] = r['logef'][b, :nj, k]
-            for k, col in enumerate(x_cols):
-                frame['psi_' + str(col)] = r['psi'][b, :nj, k]
-            junc_frames.append(frame)
+            pieces.append((pos, r, b))
 
     # results arrive in completion order; keep the input cluster order
     order = [c for c in cluster_ids if c in tested]
     cluster_table = pd.DataFrame([tested[c] for c in order], index=order)
     cluster_table['p.adjust'] = robust_fdr(cluster_table['p'], method='bh')
 
-    junc_table = pd.concat(junc_frames, axis=0)
-    junc_table = junc_table.set_index('cluster').loc[order].reset_index()
+    # One table from flat columns, not one per cluster.
+    # Sorting by position puts the junctions in the input cluster order, as the clusters are.
+    pieces.sort(key=lambda piece: piece[0])
+    nj = [int(use_of[pos].sum()) for pos, _, _ in pieces]
+
+    def column(values):
+        return np.concatenate([values(r, b)[:n] for (_, r, b), n in zip(pieces, nj)])
+
+    cols = {'cluster': np.repeat(np.array([cluster_ids[pos] for pos, _, _ in pieces], dtype=object), nj),
+            'intron': np.concatenate([intron_index[int(cluster_starts[pos]):int(cluster_starts[pos + 1])][use_of[pos]]
+                                      for pos, _, _ in pieces]),
+            'psi_0': column(lambda r, b: r['psi_0'][b])}
+    for k, col in enumerate(x_cols):
+        cols['logef_' + str(col)] = column(lambda r, b: r['logef'][b, :, k])
+    for k, col in enumerate(x_cols):
+        cols['psi_' + str(col)] = column(lambda r, b: r['psi'][b, :, k])
+    junc_table = pd.DataFrame(cols)
     stages.mark("collect_results")
     return cluster_table, junc_table, status_df
 
