@@ -4,21 +4,21 @@ import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import type { ChatRequest, ChatResponse } from '#types'
 import type { MassAppApi } from '../types/mass'
-import { buildCapabilities, describeSearchable } from './registry.ts'
-import { buildResultRows } from './rows.ts'
+import { initHandlers } from './handlers/index.ts'
+import type { HandlerDeps, OmnisearchHandler } from './handlers/types.ts'
+import { buildResultList, renderEntry, describeSearchable } from './results.ts'
 import { planSearch, fetchOmnisearch, SEARCH_DEBOUNCE_MS, type SearchPlan } from './search.ts'
 import { debounce } from 'debounce'
 import { ResultsPopup } from './popup.ts'
 import { Launcher } from './launcher.ts'
-import { renderRow, type RenderDeps } from './renderers.ts'
 
 const MIN_PROMPT_LENGTH_FOR_CHAT = 5 // Set a minimum prompt length for chat submission
 
 /** The mass SEARCH / CHAT tab: a search-as-you-type omnisearch (dictionary variables, genes, samples,
  * genomic regions) that launches plots, plus, when the dataset supports it, an AI chat.
- * Module map: search.ts (what to search + server call), rows.ts (server data -> rows), registry.ts
- * (dataset capabilities, built once in init), renderers.ts (rows -> DOM), popup.ts (results popup),
- * launcher.ts (what the buttons do). */
+ * Module map: handlers/ (one per result kind: when it is searched, its rows, what clicking does),
+ * search.ts (merge the handlers' requests + server call), results.ts (generic headings/notes/list),
+ * popup.ts (results popup), launcher.ts (plot launchers shared by handlers). */
 class MassAiChatBot implements RxComponent {
 	static type = 'chat'
 	type: string
@@ -27,8 +27,10 @@ class MassAiChatBot implements RxComponent {
 	dom!: any
 	state: any
 	id!: string
-	/** dataset capabilities, built once in init() */
-	caps!: ReturnType<typeof buildCapabilities>
+	/** one per result kind, initialized once from the dataset config in init() */
+	handlers!: OmnisearchHandler[]
+	/** chat (LLM) is available for this dataset */
+	isChat = false
 	popup!: ResultsPopup
 	launcher!: Launcher
 	/** aborts the in-flight omnisearch request when a newer search, or a clear, supersedes it */
@@ -55,7 +57,9 @@ class MassAiChatBot implements RxComponent {
 	async init() {
 		// No server request here: each search resolves dictionary terms, genes, samples and a typed coordinate
 		// in a single request. Everything that depends only on the dataset is decided once, here.
-		this.caps = buildCapabilities(this.app.getState().termdbConfig)
+		const termdbConfig = this.app.getState().termdbConfig
+		this.isChat = Boolean(termdbConfig?.queries?.chat)
+		this.handlers = initHandlers({ app: this.app, termdbConfig })
 		this.initDom()
 	}
 
@@ -67,7 +71,7 @@ class MassAiChatBot implements RxComponent {
 				.attr('class', 'sjpp_show_scrollbar')
 				.style('margin', '5px 20px 0px 20px')
 				// no white space needed for search only; grows to fit the selected gene's action buttons
-				.style('height', this.caps.isChat ? '200px' : 'auto')
+				.style('height', this.isChat ? '200px' : 'auto')
 				.style('max-height', '200px')
 				.style('overflow', 'auto')
 				.style('scroll-behavior', 'smooth')
@@ -81,20 +85,20 @@ class MassAiChatBot implements RxComponent {
 			.style('padding', '17px')
 			.style('border-radius', '34px')
 			.attr('size', 70)
-			.attr('placeholder', this.caps.isChat ? 'Ask a question' : 'Search an item')
+			.attr('placeholder', this.isChat ? 'Ask a question' : 'Search an item')
 		this.dom.inputNode = inputSel.node()
 
-		// tells the user what can be searched; generated from the same capabilities that gate the search
+		// tells the user what can be searched; generated from the same handlers that gate the search
 		subheader
 			.append('div')
 			.attr('data-testid', 'sjpp-mass-omnisearch-searchable')
 			.style('margin', '-5px 20px 10px 20px')
 			.style('font-size', '.8em')
 			.style('opacity', 0.6)
-			.text(describeSearchable(this.caps.searchable))
+			.text(describeSearchable(this.handlers))
 
 		this.popup = new ResultsPopup(this.dom.inputNode, {
-			noMatchText: this.caps.isChat ? 'No match. Using the chatbot...' : 'No match'
+			noMatchText: this.isChat ? 'No match. Using the chatbot...' : 'No match'
 		})
 		this.launcher = new Launcher({
 			app: this.app,
@@ -108,7 +112,7 @@ class MassAiChatBot implements RxComponent {
 			// search-as-you-type: debounced; never searches samples
 			.on('keyup.search', (event: KeyboardEvent) => {
 				if (keyupEnter(event)) return
-				const plan = planSearch((event.target as HTMLInputElement).value, { enter: false })
+				const plan = planSearch(this.handlers, (event.target as HTMLInputElement).value, { enter: false })
 				if (!plan) {
 					debouncedSearch.clear()
 					this.searchAbort?.abort() // drop any in-flight request for text that is no longer there
@@ -120,10 +124,10 @@ class MassAiChatBot implements RxComponent {
 			.on('keyup.submit', async (event: KeyboardEvent) => {
 				if (!keyupEnter(event)) return
 				const value = (event.target as HTMLInputElement).value
-				if (this.caps.isChat) return void (await this.submitChat(value.trim()))
+				if (this.isChat) return void (await this.submitChat(value.trim()))
 				// search-only: Enter runs the full search immediately, including samples
 				debouncedSearch.clear()
-				const plan = planSearch(value, { enter: true })
+				const plan = planSearch(this.handlers, value, { enter: true })
 				if (plan) await this.runSearch(plan)
 				else this.popup.hide()
 			})
@@ -144,15 +148,13 @@ class MassAiChatBot implements RxComponent {
 				cohortStr: this.getState(this.app.getState()).cohortStr,
 				usecase: this.opts.usecase,
 				treeFilter: this.app.vocabApi.state?.treeFilter,
-				coordCandidates: plan.coordCandidates,
-				includeDict: plan.includeDict,
-				includeSamples: plan.includeSamples,
+				...plan.request,
 				signal
 			})
 			if (signal.aborted) return // belt and braces: a reused cached response can still resolve after abort
-			const rows = buildResultRows(data)
-			if (!rows.length) this.popup.showNoMatch()
-			else this.popup.showRows(rows, (tr, row) => renderRow(tr, row, this.getRenderDeps()))
+			const list = buildResultList(this.handlers, data)
+			if (!list.length) this.popup.showNoMatch()
+			else this.popup.showRows(list, (tr, entry) => renderEntry(tr, entry, this.getHandlerDeps()))
 		} catch (e: any) {
 			if (signal.aborted) return // superseded: not an error to show
 			if (e.stack) console.log(e.stack)
@@ -161,9 +163,9 @@ class MassAiChatBot implements RxComponent {
 		}
 	}
 
-	private getRenderDeps(): RenderDeps {
+	private getHandlerDeps(): HandlerDeps {
 		return {
-			caps: this.caps,
+			app: this.app,
 			launcher: this.launcher,
 			popup: this.popup,
 			addBubble: arg => this.addBubble(arg)

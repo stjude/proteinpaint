@@ -202,6 +202,18 @@ tape('sample search: omits single-cell action for samples without single-cell da
 	t.end()
 })
 
+tape('gene search: skipped when includeGenes is false, found by default', async t => {
+	const skipped = await runOmnisearch({ prompt: gene, includeGenes: false }, req, ds, genome)
+	t.deepEqual(skipped.genes, [], 'no genes should be returned when includeGenes is false')
+	t.equal(skipped.totals?.genes, 0, 'gene total should be 0 when the gene search is skipped')
+	const found = await runOmnisearch({ prompt: gene }, req, ds, genome)
+	t.ok(
+		found.genes.some(g => g.gene == gene),
+		'genes are searched when the flag is omitted'
+	)
+	t.end()
+})
+
 tape('sample search: skipped when includeSamples is false (search-as-you-type), dictionary unaffected', async t => {
 	await ensureOpenAuth()
 	const ds = makeSampleDs(true)

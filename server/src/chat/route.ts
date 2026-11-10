@@ -41,6 +41,7 @@ export function init({ genomes }) {
 		const q: ChatRequest & {
 			omnisearch?: boolean
 			includeDict?: boolean
+			includeGenes?: boolean
 			includeSamples?: boolean
 			cohortStr?: string
 			usecase?: any

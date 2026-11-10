@@ -38,6 +38,8 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 	// true for direct callers (unit tests) that don't set them.
 	const includeDict = q.includeDict !== false
 	const includeSamples = q.includeSamples !== false
+	// gene search likewise: the client skips it when the prompt is outside the gene length bounds
+	const includeGenes = q.includeGenes !== false
 
 	// Dictionary variables — mirror trigger_findterm()'s DICTIONARY_VARIABLES path in server/src/termdb.js
 	let terms: any[] = []
@@ -63,7 +65,7 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 		datasetDataTypes.snvindel ||
 		datasetDataTypes.cnv ||
 		datasetDataTypes.svfusion
-	const allGeneNames = prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
+	const allGeneNames = includeGenes && prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
 	const genesTotal = allGeneNames.length
 	const geneNames = allGeneNames.slice(0, MAX_GENE_MATCHES) // cap displayed genes; genesTotal reports the full count
 	// Resolve data types per gene (one gene may have e.g. SNV/indel data while another does not), and
