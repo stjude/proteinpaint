@@ -138,7 +138,7 @@ tape('built-in getters screen the sample id for path traversal', async test => {
 	test.end()
 })
 
-tape('validate_query_singleCell: native sample list includes plot and spatial-only samples once', async test => {
+tape('validate_query_singleCell: native sample list includes plot and image-only samples once', async test => {
 	const oldTpMasterDir = serverconfig.tpmasterdir
 	const tmpdir = await fs.mkdtemp(path.join(os.tmpdir(), 'pp-sc-samples-'))
 	serverconfig.tpmasterdir = tmpdir
@@ -150,14 +150,14 @@ tape('validate_query_singleCell: native sample list includes plot and spatial-on
 		await fs.writeFile(path.join(tmpdir, 'sc', 'plot-only.tsv'), 'cell\tx\ty\n')
 		await fs.writeFile(path.join(tmpdir, 'sc', 'plot-and-spatial.tsv'), 'cell\tx\ty\n')
 		await fs.mkdir(path.join(tmpdir, 'spatial', 'plot-and-spatial'))
-		await fs.mkdir(path.join(tmpdir, 'spatial', 'spatial-only'))
+		await fs.mkdir(path.join(tmpdir, 'spatial', 'image-only'))
 		await fs.mkdir(path.join(tmpdir, 'sequence', 'sequence-only'))
 		await fs.mkdir(path.join(tmpdir, 'sequence', 'sequence-only', 'image'))
 
 		const sample2id = new Map([
 			['plot-only', 1],
 			['plot-and-spatial', 2],
-			['spatial-only', 3],
+			['image-only', 3],
 			['sequence-only', 4]
 		])
 		const ds = {
@@ -189,8 +189,8 @@ tape('validate_query_singleCell: native sample list includes plot and spatial-on
 
 		test.deepEqual(
 			sampleNames,
-			['plot-and-spatial', 'plot-only', 'sequence-only', 'spatial-only'],
-			'should include plot-only, plot+spatial, spatial-only, and sequence-only samples'
+			['image-only', 'plot-and-spatial', 'plot-only', 'sequence-only'],
+			'should include plot-only, plot+spatial, image-only, and sequence-only samples'
 		)
 		test.equal(
 			re.samples.filter(s => s.sample == 'plot-and-spatial').length,
