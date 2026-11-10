@@ -151,7 +151,8 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 
 	// row names when the rows are tall enough to read, else the note
 	if (rh >= 9) data.rows.forEach((name, j) => leftLabel(y1 + (j + 0.5) * rh, name, Math.min(11, rh)))
-	else (data.note || []).forEach((text, i) => leftLabel(y1 + 8 + i * 14, text))
+	// under the track's label when the heatmap starts at the top
+	else (data.note || []).forEach((text, i) => leftLabel(Math.max(y1, 16) + 8 + i * 14, text))
 
 	let ax = 0
 	for (const a of data.annotations || []) {

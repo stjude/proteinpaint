@@ -159,7 +159,7 @@ function loadTk_finish_closure(tk, block) {
 		}
 
 		// derive tk height
-		tk.height_main = tk.sections.jug.height + tk.toppad + tk.bottompad
+		tk.height_main = (tk.heatmapHeight || 0) + tk.sections.jug.height + tk.toppad + tk.bottompad
 
 		if (data) {
 			updateLegend(data, tk, block)
@@ -167,7 +167,7 @@ function loadTk_finish_closure(tk, block) {
 
 		// measure tk label and left labels, as the tk name may be long
 		setLeftlabelsMaxWidth(tk)
-		;(tk.leftLabelMaxwidth = tk.leftlabels.maxwidth + tk.leftlabels.xoff),
+		;(tk.leftLabelMaxwidth = Math.max(tk.leftlabels.maxwidth + tk.leftlabels.xoff, tk.heatmapLeftWidth || 0)),
 			block.tkcloakoff(tk, { error: data ? data.error : null })
 		block.block_setheight()
 		block.setllabel()
@@ -259,6 +259,24 @@ function configPanel(tk, block) {
 			.style('font-size', '.7em')
 			.style('color', '#858585')
 			.text('For a junction, samples with read count lower than cutoff will not be shown.')
+	}
+
+	// heatmap of samples by the most frequent junctions; the read counts by sample are from the server
+	if (!tk.custom_data) {
+		const row = holder.append('div').style('margin-bottom', '15px')
+		const id = Math.random()
+		row
+			.append('input')
+			.attr('type', 'checkbox')
+			.style('margin-right', '10px')
+			.attr('id', id)
+			.property('checked', !!tk.sampleHeatmap)
+			.on('change', () => {
+				tk.sampleHeatmap = !tk.sampleHeatmap
+				tk.tkconfigtip.hide()
+				loadTk(tk, block)
+			})
+		row.append('label').text('Heatmap of samples by the most frequent junctions').attr('for', id)
 	}
 
 	// height

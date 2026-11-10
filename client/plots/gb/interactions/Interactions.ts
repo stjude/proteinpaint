@@ -93,6 +93,9 @@ export class Interactions {
 		const dnameth = blockInstance.tklst.find(t => t.type == 'dnameth')
 		const savedDnameth = config.tracks?.find(t => t.type == 'dnameth')
 		if (dnameth && savedDnameth) Object.assign(savedDnameth, { gene: dnameth.gene, sortBy: dnameth.sortBy })
+		// the heatmap choice of the junction track's menu
+		const j2 = blockInstance.tklst.find(t => t.type == 'j2' && t.dslabel == state.vocab?.dslabel)
+		if (j2 && config.junction) config.junction.sampleHeatmap = !!j2.sampleHeatmap
 		let facetActiveTracksChanged = false
 		if (config.trackLst?.activeTracks && this.facetTrackNames.size) {
 			/* active facet tracks are inuse; if user deletes such tracks from block ui, remove from activeTracks. One the

@@ -1,5 +1,6 @@
 import type { RouteApi, RoutePayload, TermdbJunctionsRequest, TermdbJunctionsResponse } from '#types'
 import { genomes } from '#src/initGenomesDs.js'
+import { authApi } from '#src/auth.js'
 
 /*
 list junctions from a locus
@@ -43,6 +44,8 @@ export function init({ genomes }) {
 			if (!ds) throw 'invalid dslabel'
 			if (!ds.queries?.junction) throw 'junction query not supported'
 			const result = await ds.queries.junction.listJunctions(q)
+			// the matrix has a row per sample: only for a user who may see sample names
+			if (result.matrix && !authApi.canDisplaySampleIds(req, ds)) delete result.matrix
 			res.send(result satisfies TermdbJunctionsResponse)
 		} catch (e: any) {
 			res.send({ status: e.status || 400, error: e.message || String(e) } satisfies TermdbJunctionsResponse)

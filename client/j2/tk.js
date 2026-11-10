@@ -76,6 +76,8 @@ export function getParameter(tk, block) {
 	rangequery_rglst(tk, block, par)
 
 	if (tk.legend?.type?.hiddenvalues?.size) par.hiddenTypes = [...tk.legend.type.hiddenvalues].join(',')
+	// read counts by sample of the most frequent junctions, see renderHeatmap()
+	if (tk.sampleHeatmap) par.matrixTop = tk.heatmapTop || 20
 
 	return [par, headers]
 }

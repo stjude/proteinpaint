@@ -36,12 +36,27 @@ export type TermdbJunctionsRequest = {
 	hiddenTypes?: string
 	/** the sample types to read, chosen for the genome browser track; absent reads every sample */
 	sampleTypes?: number[]
+	/** also return matrix{} of read counts by sample, for this many junctions found in the most samples */
+	matrixTop?: number
 }
 export type TermdbJunctionsDataResponse = {
 	junctions: Junction[]
 	/** max read count from all allowed samples */
 	maxReadCount: number
 	alert?: string
+	/** read counts by sample of the junctions found in the most samples, when matrixTop was requested */
+	matrix?: {
+		/** names of the samples that the request covers; absent when the user may not see sample names */
+		samples?: (string | number)[]
+		/** most frequent first */
+		junctions: {
+			start: number
+			stop: number
+			strand: string
+			/** per sample, aligned with samples[]; 0 for a sample without the junction or below readcountCutoff */
+			readcounts: number[]
+		}[]
+	}
 }
 export type TermdbJunctionsResponse = TermdbJunctionsDataResponse | ErrorResponse
 

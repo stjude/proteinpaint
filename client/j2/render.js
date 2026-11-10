@@ -9,6 +9,8 @@ import { dofetch3 } from '#common/dofetch'
 import { TermTypes } from '#types'
 import { makeJunctionCustomTerm, withSampleTypes } from '#termdb/handlers/junction.customTerm'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { interpolateBlues } from 'd3-scale-chromatic'
+import { renderLocusHeatmap } from '../src/block.locusHeatmap'
 
 /*
  */
@@ -31,9 +33,12 @@ export function renderTk(data, tk, block) {
 		// server returned fresh data
 		// set yAxisKey
 		tk.sections.jug.yAxisKey = getYAxisKey(data, tk)
+		// kept for redraws without data
+		tk.matrix = data.matrix
 		if (data.junctions?.length == 0) {
 			tk.data = []
 			tk.leftlabels?.doms?.jug?.text('0 junctions')
+			renderHeatmap(tk, block)
 			return
 		}
 		if (tk.sections.jug.yAxisKey == 'medianReadCount' && !Number.isFinite(data.maxReadCount))
@@ -45,6 +50,7 @@ export function renderTk(data, tk, block) {
 			tk.data = []
 			data.junctions = [] // for tk._finish() to show "No splice junctions"
 			tk.leftlabels.doms.jug.text('0 junctions')
+			renderHeatmap(tk, block)
 			return
 		}
 		// tk.data[] set
@@ -341,9 +347,13 @@ jug2.filter(function(d){return d.rimwidth>0})
 			showOneJunction(d, tk, tk.itemtip.d.append('div'), block, true)
 		})
 
+	// now for the track's height, and again once the layout has moved the discs
+	renderHeatmap(tk, block)
+
 	doForceLayout(tk, block, viewpxwidth).then(() => {
 		// done layout
 		set_all(tk)
+		renderHeatmap(tk, block)
 		tk.sections.jug.axis.selectAll('.sjpp-j2-ytitle').remove()
 		const yTitle = getYAxisTitle(tk.sections.jug.yAxisKey)
 		// left of the axis, as the tick labels are on the right
@@ -367,6 +377,64 @@ jug2.filter(function(d){return d.rimwidth>0})
 			showline: true
 		})
 	})
+}
+
+/* With tk.sampleHeatmap, a heatmap above the junctions: samples are rows, and the columns are the junctions in view
+that are found in the most samples (tk.heatmapTop of them, by the server), each linked to its disc. A cell is the
+read count of the junction in the sample, on a log scale from white (none) to dark blue (the highest shown).
+The junctions, their axis and left labels move down by its height, kept as tk.heatmapHeight for tk._finish(). */
+function renderHeatmap(tk, block) {
+	const jug = tk.sections.jug
+	const cols = []
+	if (tk.sampleHeatmap && tk.matrix && tk.data?.length) {
+		const byKey = new Map(tk.data.map(j => [j.start + '.' + j.stop + '.' + j.strand, j]))
+		for (const m of tk.matrix.junctions) {
+			// absent when the junction is not in the view range, see rawdata2track()
+			const j = byKey.get(m.start + '.' + m.stop + '.' + m.strand)
+			if (j) cols.push({ j, readcounts: m.readcounts })
+		}
+		// as the discs are laid out, so that the links cross less
+		cols.sort((a, b) => a.j.x - b.j.x)
+	}
+	if (!cols.length && !tk.rows) return // never drawn: nothing to clear or move back
+	const n = cols.length ? cols[0].readcounts.length : 0
+	// samples with the most reads over these junctions on top
+	const weight = Array.from({ length: n }, (_, i) => cols.reduce((sum, c) => sum + Math.log2(c.readcounts[i] + 1), 0))
+	const idx = weight.map((_, i) => i).sort((a, b) => weight[b] - weight[a])
+	const max = Math.max(1, ...cols.flatMap(c => c.readcounts))
+	const coord = j => `${j.chr}:${j.start + 1}-${j.stop + 1} ${j.strand}`
+	const h = renderLocusHeatmap(tk, block, {
+		rows: idx.map(i => String(tk.matrix.samples?.[i] ?? '')),
+		cols: cols.map(c => ({
+			x: c.j.x,
+			// to the top of the disc: its center is at the y of its value on the axis
+			dy: jug.axisheight - c.j.axisy - c.j.radius,
+			values: idx.map(i => Math.log(c.readcounts[i] + 1) / Math.log(max + 1))
+		})),
+		color: v => (v ? interpolateBlues(0.15 + 0.85 * v) : 'white'),
+		missingColor: 'white',
+		note: [`${n} samples`, `${cols.length} most frequent junctions`, `read count 0 to ${max}, log scale`],
+		onHover: (event, col, row) => {
+			const c = cols[col]
+			tk.data.forEach(j => d3select(j.disc).attr('fill-opacity', j == c.j ? 0.9 : discopacity))
+			tk.hovertip.clear()
+			const table = table2col({ holder: tk.hovertip.d })
+			if (row >= 0 && tk.matrix.samples) table.addRow('Sample', tk.matrix.samples[idx[row]])
+			table.addRow('Junction', coord(c.j))
+			if (row >= 0) table.addRow('Read count', c.readcounts[idx[row]])
+			table.addRow('Samples', c.j.sampleCount)
+			tk.hovertip.show(event.clientX, event.clientY)
+		},
+		onOut: () => {
+			tk.hovertip.hide()
+			tk.data.forEach(j => d3select(j.disc).attr('fill-opacity', discopacity))
+		}
+	})
+	tk.heatmapHeight = h
+	// for tk._finish(), which sets the width of the left labels
+	tk.heatmapLeftWidth = tk.rows.leftG.node().getBBox().width
+	d3select(jug.g.node().parentNode).attr('transform', `translate(0,${h})`)
+	tk.leftlabels.g.attr('transform', `translate(0,${17 + h})`)
 }
 
 function rawdata2track(raw, tk, block) {

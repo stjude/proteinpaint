@@ -167,7 +167,10 @@ export class View {
 				termdbConfig: this.opts.vocabApi?.termdbConfig,
 				filter0: this.state.filter0,
 				hiddentypes: this.state.config.junction.hiddentypes,
-				readcountCutoff: this.state.config.junction.readcountCutoff
+				readcountCutoff: this.state.config.junction.readcountCutoff,
+				sampleHeatmap: this.state.config.junction.sampleHeatmap,
+				// keeps the heatmap choice of the track's menu in the state
+				callbackOnRender: () => this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 			}
 			// the label names the sample types on the junction terms of Details and Select
 			Object.assign(tk, this.trackSampleTypes)
