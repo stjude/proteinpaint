@@ -595,8 +595,8 @@ async function mayInitTermdb(tk, block) {
 			tk.mds.has_skewer = true
 		} else if (
 			tk.mds.termdbConfig.queries.svfusion &&
-			!tk.hiddenMclassDt.has(dtsv) &&
-			!tk.hiddenMclassDt.has(dtfusionrna)
+			!tk.hiddenMclassDt.has(mclasssv) &&
+			!tk.hiddenMclassDt.has(mclassfusionrna)
 		) {
 			tk.mds.has_skewer = true
 		}

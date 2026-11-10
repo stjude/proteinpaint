@@ -102,7 +102,7 @@ export async function displaySampleTable(samples, args) {
 				args.tk.menutip.hide() // when from sample leftlabel
 				let thisMutation
 				if (samples[i].ssm_id_lst?.[0]) {
-					thisMutation = (args.tk.skewer.rawmlst || args.tk.custom_variants).find(
+					thisMutation = (args.tk.skewer?.rawmlst || args.tk.custom_variants)?.find(
 						m => m.ssm_id == samples[i].ssm_id_lst[0]
 					)
 				}
@@ -181,7 +181,7 @@ async function make_singleSampleTable(s, arg) {
 		cell1.text(arg.tk.mds.termdbConfig?.lollipop?.sample || 'Sample')
 		let m // mutation carried by this sample. if found, pass to createDiscoInSandbox for showing aachange on disco sandbox header for showing context
 		if (s.ssm_id_lst?.[0]) {
-			m = arg.tk.skewer.rawmlst.find(i => i.ssm_id == s.ssm_id_lst[0])
+			m = arg.tk.skewer?.rawmlst?.find(i => i.ssm_id == s.ssm_id_lst[0])
 		}
 		printSampleName(s, arg.tk, cell2, arg.block, m)
 	}
@@ -220,7 +220,7 @@ async function make_singleSampleTable(s, arg) {
 				//const td = table.addRow({spanTwoColumns:true})
 				const [td1, td] = table.addRow()
 				td.style('padding-top', '20px')
-				const m = arg.tk.skewer.rawmlst.find(i => i.ssm_id == ssmid)
+				const m = arg.tk.skewer?.rawmlst?.find(i => i.ssm_id == ssmid)
 				if (m) {
 					// found m object by id, can make a better display
 					if (m.dt == dtsnvindel) {

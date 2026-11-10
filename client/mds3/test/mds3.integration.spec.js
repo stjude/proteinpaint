@@ -501,7 +501,7 @@ tape('Official - hardcodeCnvOnly', test => {
 	async function callbackOnRender(tk, bb) {
 		test.equal(bb.usegm.name, gene, 'block.usegm.name=' + gene)
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
-		test.ok(tk.skewer.rawmlst.length == 0, 'cnv-only: skewer.rawmlst.length ==0')
+		test.notOk(tk.skewer, 'cnv-only: tk.skewer is not created')
 		test.ok(tk.cnv.cnvLst.length > 0, 'cnv-only: cnv.cnvLst.length >0')
 		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
 		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
