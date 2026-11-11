@@ -4,8 +4,9 @@ diffSpliceLeafcutter.py -- genome-wide leafcutter differential splicing for the 
     run_python('diffSpliceLeafcutter.py', JSON.stringify(req))
 
 The Dirichlet-multinomial likelihood-ratio test over every testable cluster. 
-The requests, h5 reader, filter thresholds and row format match with diffSpliceEdgeR.py , 
-so that both test the same clusters and return the same rows: a change to one of these has to be made in both.
+The h5 reader, the request input and the row format are shared with diffSpliceEdgeR.py in
+diffSpliceCommon.py. The cluster filter is written in each script and has to match, so that both
+test the same clusters: a change to its thresholds or order has to be made in both.
 
 
 REQUEST
@@ -59,7 +60,6 @@ try:
     import multiprocessing
     import tempfile
     import time
-    import traceback
     from collections import Counter
     from functools import partial
     from timeit import default_timer as timer
@@ -82,6 +82,9 @@ try:
         pass          # already fixed by an earlier parallel region; nothing to do
     _load_seconds = timer() - _t_load
 
+    from diffSpliceCommon import (StageTimes, _available_cpus, _encode_covariates, _read_sample_list,
+                                  cluster_rows, get_intron_meta, main, read_h5_samples)
+
 except Exception as _import_error:
     json.dump({"ok": False,
                "error": f"{type(_import_error).__name__}: {_import_error}",
@@ -90,376 +93,6 @@ except Exception as _import_error:
               sys.stdout)
     sys.stdout.write("\n")
     raise SystemExit(0)
-
-
-# --------------------------------------------------------------------------------------
-# The h5 reader and the sample input
-# --------------------------------------------------------------------------------------
-
-def get_intron_meta(introns):
-    """ Make a data.frame of meta data about the introns
-    
-    introns Names of the introns
-    Returns: Data.frame with chr, start, end, cluster_name
-    """
-    intron_meta = pd.Series(introns).str.split(":", expand = True)
-    if intron_meta.shape[1] == 4:
-        intron_meta.columns = ['chr', 'start', 'end', 'cluster']
-    elif intron_meta.shape[1] == 5:
-        intron_meta.columns = ['chr', 'start', 'end', 'cluster', 'annotation']
-    return intron_meta
-
-
-def _load_into_memory(path):
-    """
-    Reopen a store with HDF5's in-memory driver, so every later read is served from this
-    process's own RAM.
-
-    On a shared filesystem a strided read costs far more than reading everything: measured on
-    GPFS for a 0.92 GB / 2525-sample cohort, `cat` ran at 42-85 MB/s while h5py's 186
-    per-sample reads of the 67 MB actually wanted took 235 s. Warming the OS page cache first
-    was not enough -- 0.92 GB did not stay resident, and the reads still spent ~33 s waiting.
-    Holding the image in the process removes the dependency on the page cache entirely; it
-    costs one sequential pass plus `size` bytes of RAM.
-    """
-    import h5py
-    return h5py.File(path, "r", driver="core", backing_store=False)
-
-
-def read_h5_samples(h5_path, sample_names, row_ranges=None, prefetch="auto"):
-    """
-    Read the given samples out of the HDF5 store.
-
-    Returns (buf, intron_ids, cluster_ids, cluster_starts) where buf is [samples x introns].
-    Samples are read one row at a time: handing h5py a list of indices instead builds a
-    union of hyperslabs and is dramatically slower for the same bytes (measured 0.4s vs 3.9s
-    on a 927k x 200 store).
-    """
-    import h5py
-    with h5py.File(h5_path, "r") as f:
-        stored = [s.decode() if isinstance(s, bytes) else str(s) for s in f["samples"][:]]
-        pos = {s: i for i, s in enumerate(stored)}
-        missing = [s for s in sample_names if s not in pos]
-        if missing:
-            raise KeyError(f"{len(missing)} sample(s) not in {h5_path}, e.g. {missing[:5]}")
-        cols = [pos[s] for s in sample_names]
-
-        d = f["X"]
-        # files built before the layout attribute existed are introns x samples
-        layout = f.attrs.get("layout", "introns_x_samples")
-        if isinstance(layout, bytes):
-            layout = layout.decode()
-        transposed = (layout == "samples_x_introns")
-        n_all = d.shape[1] if transposed else d.shape[0]
-        n_all_samples = d.shape[0] if transposed else d.shape[1]
-
-        if row_ranges is None:
-            keep = None
-            n_introns = n_all
-        else:
-            # only the introns of the requested clusters -- makes gene drill-down sub-second
-            keep = np.concatenate([np.arange(a, b) for a, b in row_ranges])
-            n_introns = len(keep)
-
-        # A sample's chunks are adjacent on disk but different samples are not, so 186 of
-        # 2525 samples means 186 reads scattered over the file. They cost the same bytes in
-        # any order, but issuing them in increasing sample index walks the file forwards,
-        # which is the only pattern a shared filesystem's readahead can help with.
-        read_order = np.argsort(cols, kind="stable")
-
-        size = os.path.getsize(h5_path)
-        if prefetch == "auto":
-            # Skip it for the metadata-only calls, for stores too big to hold in RAM
-            # alongside the result, and when nearly every sample is wanted (the loop below is
-            # then already one forward pass). Note this does NOT depend on row_ranges: the
-            # reads below pull whole sample rows either way, so a --gene or --chrom subset
-            # pays exactly the same scattered-read cost that the load is there to avoid.
-            prefetch = (len(cols) >= 8 and size <= 8e9
-                        and len(cols) < 0.8 * n_all_samples)
-        mem = None
-        if prefetch:
-            t_pf = timer()
-            mem = _load_into_memory(h5_path)
-            d = mem["X"]
-            print(f"  loaded {size/1e9:.2f} GB into memory ({len(cols)} of {n_all_samples} "
-                  f"samples wanted, so reading in place would be scattered) "
-                  f"[{timer()-t_pf:.1f}s]")
-
-        buf = np.empty((len(cols), n_introns), dtype=d.dtype)
-        # Legacy introns x samples stores put a sample's chunks n_samples chunks apart, so a
-        # per-sample d[:, j] is one scattered read per chunk per sample. Reading whole
-        # chunk-row blocks instead makes every read sequential -- but it decompresses ALL
-        # n_samples columns, so it only pays when the caller wants most of them. On a
-        # 2525-sample cohort asked for 186 samples that is a 13.6x amplification, and it
-        # measured 3x SLOWER on GPFS than the scattered reads (414s vs 132s). Rebuilding
-        # with `build` is what actually fixes such a file.
-        if not transposed:
-            print(f"  note: {os.path.basename(h5_path)} has the legacy introns x samples "
-                  f"layout; rebuild it with `build` to make each sample contiguous on disk")
-        if transposed:
-            # each sample is one contiguous run of chunks: read it in one go
-            for k in read_order:
-                col = d[cols[k], :]
-                buf[k, :] = col if keep is None else col[keep]
-        elif keep is None and d.shape[1] / max(1, len(cols)) <= 3:
-            cr = d.chunks[0] if d.chunks else max(1, 2 ** 18)
-            per_read = max(1, int(2e9 // max(1, cr * d.shape[1] * d.dtype.itemsize)))
-            step = cr * per_read
-            take = np.asarray(cols)
-            for i0 in range(0, n_introns, step):
-                i1 = min(i0 + step, n_introns)
-                buf[:, i0:i1] = d[i0:i1, :][:, take].T
-        else:
-            # few enough samples (or few enough introns, on a gene drill-down) that paying
-            # the seeks beats decompressing everything
-            for k in read_order:
-                col = d[:, cols[k]]
-                buf[k, :] = col if keep is None else col[keep]
-
-        if mem is not None:
-            mem.close()
-
-        all_ids = np.array([s.decode() if isinstance(s, bytes) else str(s)
-                            for s in f["intron_ids"][:]])
-        intron_ids = all_ids if keep is None else all_ids[keep]
-        cluster_ids = np.array([s.decode() if isinstance(s, bytes) else str(s)
-                                for s in f["cluster_ids"][:]])
-        cluster_starts = f["cluster_starts"][:]
-        if "cluster_genes" in f:
-            cluster_genes = np.array([s.decode() if isinstance(s, bytes) else str(s)
-                                      for s in f["cluster_genes"][:]])
-        else:
-            cluster_genes = np.array([""] * len(cluster_ids))
-    return buf, intron_ids, cluster_ids, cluster_starts, cluster_genes
-
-
-def _available_cpus():
-    """CPUs this process may actually use -- respects SLURM/cgroup affinity, unlike cpu_count()."""
-    try:
-        return len(os.sched_getaffinity(0))   # Linux
-    except AttributeError:
-        return os.cpu_count() or 1
-
-
-def _read_sample_list(path):
-    """A path to a one-name-per-line file, or an already-materialised list of names."""
-    if isinstance(path, (list, tuple)):
-        names = [str(s).split()[0] for s in path if str(s).strip()]
-    else:
-        with open(path) as f:
-            names = [ln.split()[0] for ln in f
-                     if ln.strip() and not ln.lstrip().startswith('#')]
-    if not names:
-        raise ValueError(f"{path} contains no sample names")
-    dup = [s for s, n in Counter(names).items() if n > 1]
-    if dup:
-        raise ValueError(f"{path} lists duplicate samples: {dup[:5]}")
-    return names
-
-
-def _encode_covariates(path, samples):
-    """Whitespace-delimited, no header: column 0 is the sample name, the rest are covariates.
-    Numeric columns are standardized, non-numeric are one-hot encoded (first level dropped)."""
-    from sklearn.preprocessing import StandardScaler, OneHotEncoder
-    from sklearn.compose import ColumnTransformer
-
-    def _onehot():
-        # sklearn renamed this keyword in 1.2 (sparse -> sparse_output)
-        try:
-            return OneHotEncoder(drop='first', sparse_output=False)
-        except TypeError:
-            return OneHotEncoder(drop='first', sparse=False)
-
-    if isinstance(path, dict):
-        # {sample: {name: value}} or {sample: [values]} -- the shape a portal has on hand
-        cov = pd.DataFrame.from_dict(path, orient="index")
-    else:
-        cov = pd.read_table(path, header=None, sep=r'\s+')
-        cov = cov.set_index(cov.columns[0])
-    cov.columns = [str(c) for c in cov.columns]
-    missing = [s for s in samples if s not in cov.index]
-    if missing:
-        raise KeyError(f"{len(missing)} sample(s) missing from {path}, e.g. {missing[:5]}")
-    cov = cov.loc[samples]
-
-    transformations = []
-    for col in cov.columns:
-        if pd.api.types.is_numeric_dtype(cov[col]):
-            transformations.append((col, StandardScaler(), [col]))
-        else:
-            transformations.append((col, _onehot(), [col]))
-    out = ColumnTransformer(transformations).fit_transform(cov)
-    out = pd.DataFrame(out).reset_index(drop=True)  # positional, aligned with `samples`
-    if out.isna().any().any():
-        raise ValueError(f"{path} has missing values for the selected samples")
-    return out
-
-
-# --------------------------------------------------------------------------------------
-# The response: timings, the row format, and the JSON boundary
-# --------------------------------------------------------------------------------------
-
-class StageTimes:
-    """Elapsed seconds per stage, returned as `timings` in the response for the route to log."""
-
-    def __init__(self, load_seconds):
-        self.load_seconds = load_seconds
-        self.seconds = {"load_packages": round(load_seconds, 2)}
-        self.start = self.last = timer()
-
-    def mark(self, stage):
-        """Record the time since the previous mark as this stage."""
-        now = timer()
-        self.seconds[stage] = round(now - self.last, 2)
-        self.last = now
-
-    def report(self):
-        return {**self.seconds, "total": round(self.load_seconds + self.last - self.start, 2)}
-
-
-class _CapturedIO:
-    """Swallow everything the pipeline writes while keeping a private channel for the
-    response.
-
-    Both fds move, not just stderr: the analysis prints progress to STDOUT, which would
-    land in front of the JSON the route parses. fd 1 is duplicated first so the response
-    still has somewhere to go, then fd 1 and fd 2 both point at a temp file for the
-    duration -- at the descriptor level, so output from R, from spawned workers, and from
-    C/C++ below the Python layer is caught too. Those are what would otherwise reach
-    run_python and turn a successful run into a rejection.
-    """
-
-    def __enter__(self):
-        self._buf = tempfile.TemporaryFile(mode="w+b")
-        self.response = os.fdopen(os.dup(1), "w")      # the real stdout, kept aside
-        self._saved = (os.dup(1), os.dup(2))
-        sys.stdout.flush()
-        sys.stderr.flush()
-        os.dup2(self._buf.fileno(), 1)
-        os.dup2(self._buf.fileno(), 2)
-        self._py = (sys.stdout, sys.stderr)
-        sys.stdout = open(os.devnull, "w")
-        sys.stderr = open(os.devnull, "w")
-        return self
-
-    def tail(self, limit=4000):
-        try:
-            self._buf.flush()
-            self._buf.seek(0)
-            data = self._buf.read().decode("utf-8", "replace").strip()
-        except Exception:
-            return ""
-        return data[-limit:] if len(data) > limit else data
-
-    def __exit__(self, *exc):
-        for f in (sys.stdout, sys.stderr):
-            try:
-                f.close()
-            except Exception:
-                pass
-        sys.stdout, sys.stderr = self._py
-        out_fd, err_fd = self._saved
-        os.dup2(out_fd, 1)
-        os.close(out_fd)
-        os.dup2(err_fd, 2)
-        os.close(err_fd)
-        return False
-
-    def close(self):
-        self._buf.close()
-
-
-def cluster_rows(df, name1, name2, extras=None):
-    """Cluster table -> DiffSpliceEntry rows.
-
-    `df` needs cluster, genes, n_junc, p, fdr, deltapsi, top_intron, psi_<name1>,
-    psi_<name2>, chr, start, stop. `extras` optionally maps a cluster id to the
-    engine-specific `leafcutter` object.
-    """
-    def num(v, default=None):
-        if v is None:
-            return default
-        try:
-            f = float(v)
-        except (TypeError, ValueError):
-            return default
-        return default if not np.isfinite(f) else f
-
-    def txt(v):
-        return "" if v is None or (isinstance(v, float) and not np.isfinite(v)) else str(v)
-
-    rows = []
-    for r in df.to_dict(orient="records"):
-        p = num(r.get("p"))
-        fdr = num(r.get("fdr"), p)
-        dpsi = num(r.get("deltapsi"), 0.0)
-        if p is None:
-            continue                       # untested: it belongs in `skipped`, not here
-        cid = txt(r.get("cluster"))
-        genes = txt(r.get("genes"))
-        row = {
-            # --- DataEntry ---
-            "adjusted_p_value": fdr,
-            "original_p_value": p,
-            # the volcano's x axis and the unit foldChangeCutoff is read in
-            "fold_change": dpsi,
-            "gene_id": cid,
-            # never empty: getGenesColor throws without it
-            "gene_name": genes or cid,
-            # --- DiffSpliceEntry ---
-            "cluster_id": cid,
-            "genes": genes,
-            "n_junc": int(num(r.get("n_junc"), 0)),
-            "delta_psi": dpsi,
-            "top_intron": txt(r.get("top_intron")),
-            "psi_control": num(r.get(f"psi_{name1}"), 0.0),
-            "psi_case": num(r.get(f"psi_{name2}"), 0.0),
-            "chr": txt(r.get("chr")),
-            "start": int(num(r.get("start"), 0)),
-            "stop": int(num(r.get("stop"), 0)),
-        }
-        if extras and cid in extras:
-            row["leafcutter"] = extras[cid]
-        rows.append(row)
-    return rows
-
-
-def main(handler):
-    """Read one JSON object from stdin, write one JSON object to stdout, nothing else.
-
-    Always exits 0 with a JSON body: run_python treats a non-zero exit as a hard failure
-    and discards the response, so a rejected request has to come back as data.
-    """
-    cap = _CapturedIO()
-    try:
-        with cap:
-            try:
-                raw = sys.__stdin__.read()
-                if not raw.strip():
-                    raise ValueError("empty request: expected one JSON object on stdin")
-                req = json.loads(raw)
-                if not isinstance(req, dict):
-                    raise ValueError(
-                        f"request must be a JSON object, got {type(req).__name__}")
-                body = handler(req)
-                body.setdefault("ok", True)
-            except Exception as e:           # noqa: BLE001 -- this is the boundary
-                detail = cap.tail()
-                body = {"ok": False,
-                        "error": f"{type(e).__name__}: {e}",
-                        "traceback": traceback.format_exc()[-4000:],
-                        "cluster_data": [], "num_controls": 0, "num_cases": 0,
-                        "skipped": {}}
-                if detail:
-                    body["stderr"] = detail
-            out = cap.response
-            json.dump(body, out)
-            out.write("\n")
-            out.flush()
-            out.close()
-    finally:
-        cap.close()
-    return 0
 
 
 # Below this many clusters the fit takes less time than starting workers, each of which has to
@@ -808,7 +441,7 @@ def _batched_lbfgs(theta, fg, lr=1.0, max_iter=BATCHED_MAX_ITER, max_eval=None,
             good = ys > 1e-10
             if n_hist == cap and cap < history_size:
                 grow = min(cap * 2, history_size) - cap
-                old_y = torch.cat([old_y, torch.zeros(n_hist and len(old_y), grow, D,
+                old_y = torch.cat([old_y, torch.zeros(len(old_y), grow, D,
                                                       device=dev, dtype=dt)], 1)
                 old_s = torch.cat([old_s, torch.zeros(len(old_s), grow, D,
                                                       device=dev, dtype=dt)], 1)
@@ -1027,11 +660,11 @@ def _collapse_pack(y_np, cell_of, C, J):
 
 def _collapse_pack_subset(pack, idx):
     """Restrict a pack to a subset of clusters (used by the smart-init and refit paths)."""
-    vi, vb = _ragged_take(pack['v_offsets'], pack['v_counts'], idx)
-    ti, tb = _ragged_take(pack['t_offsets'], pack['t_counts'], idx)
+    vi, _ = _ragged_take(pack['v_offsets'], pack['v_counts'], idx)
+    ti, _ = _ragged_take(pack['t_offsets'], pack['t_counts'], idx)
     out = dict(pack)
     out['B'] = len(idx)
-    for k, src, sel, blk in (('v', vi, vi, vb), ('t', ti, ti, tb)):
+    for k, sel in (('v', vi), ('t', ti)):
         cnt = pack[k + '_counts'][idx]
         out[k + '_counts'] = cnt
         out[k + '_offsets'] = torch.cat([torch.zeros(1, dtype=torch.long),
@@ -1043,7 +676,7 @@ def _collapse_pack_subset(pack, idx):
 
 
 class _CollapsedFg:
-    """fg(theta, rows) for the collapsed form, with the row subset cached.
+    """fg(theta, rows) for the collapsed form.
 
     The optimizer re-subsets on every line search step, so the flat packs are sorted by
     cluster and a subset is three vector ops over exactly the entries about to be read --
@@ -1058,27 +691,22 @@ class _CollapsedFg:
         self.conc_shape, self.conc_rate = conc_shape, conc_rate
         self.lg_shape = float(torch.lgamma(torch.tensor(float(conc_shape))))
         self.CJ = pack['C'] * J
-        self._rows = None
-        self._cache = None
 
     def _select(self, rows):
         p = self.pack
         vi, vb = _ragged_take(p['v_offsets'], p['v_counts'], rows)
         ti, tb = _ragged_take(p['t_offsets'], p['t_counts'], rows)
-        self._cache = dict(
+        return dict(
             x=self.x[rows],
             v_flat=vb * self.CJ + p['v_local'][vi], v_val=p['v_val'][vi],
             v_mul=p['v_mul'][vi], v_b=vb,
             t_flat=tb * p['C'] + p['t_local'][ti], t_val=p['t_val'][ti],
             t_mul=p['t_mul'][ti], t_b=tb, n=len(rows))
-        self._rows = rows
 
     def __call__(self, theta, rows=None):
         if rows is None:
             rows = torch.arange(self.pack['B'])
-        if self._rows is not rows:
-            self._select(rows)
-        c = self._cache
+        c = self._select(rows)
         th = theta.detach().requires_grad_(True)
         beta, conc = _unpack(th, self.P, self.J, self.A_qr, self.conc_max)
 
@@ -1470,9 +1098,9 @@ def differential_splicing_batched(buf, intron_ids, cluster_ids, cluster_starts, 
             results = list(pool.imap_unordered(worker, jobs))
     stages.mark("fit")
 
-    use_of ={pos: use for pos, _, use in survivors}
+    use_of = {pos: use for pos, _, use in survivors}
     intron_index = pd.Index(intron_ids)
-    tested, junc_frames = {}, []
+    tested, pieces = {}, []
     for r in results:
         for b, pos in enumerate(r['positions']):
             clu = cluster_ids[pos]
@@ -1483,25 +1111,30 @@ def differential_splicing_batched(buf, intron_ids, cluster_ids, cluster_starts, 
                 'full_exit_status': BATCHED_EXIT[int(r['full_exit'][b])],
                 'df': r['df'], 'p': float(r['p'][b]),
             }
-            s, e = int(cluster_starts[pos]), int(cluster_starts[pos + 1])
-            use = use_of[pos]
-            nj = int(use.sum())
-            frame = pd.DataFrame({'cluster': [clu] * nj,
-                                  'intron': intron_index[s:e][use],
-                                  'psi_0': r['psi_0'][b, :nj]})
-            for k, col in enumerate(x_cols):
-                frame['logef_' + str(col)] = r['logef'][b, :nj, k]
-            for k, col in enumerate(x_cols):
-                frame['psi_' + str(col)] = r['psi'][b, :nj, k]
-            junc_frames.append(frame)
+            pieces.append((pos, r, b))
 
     # results arrive in completion order; keep the input cluster order
     order = [c for c in cluster_ids if c in tested]
     cluster_table = pd.DataFrame([tested[c] for c in order], index=order)
     cluster_table['p.adjust'] = robust_fdr(cluster_table['p'], method='bh')
 
-    junc_table = pd.concat(junc_frames, axis=0)
-    junc_table = junc_table.set_index('cluster').loc[order].reset_index()
+    # One table from flat columns, not one per cluster.
+    # Sorting by position puts the junctions in the input cluster order, as the clusters are.
+    pieces.sort(key=lambda piece: piece[0])
+    nj = [int(use_of[pos].sum()) for pos, _, _ in pieces]
+
+    def column(values):
+        return np.concatenate([values(r, b)[:n] for (_, r, b), n in zip(pieces, nj)])
+
+    cols = {'cluster': np.repeat(np.array([cluster_ids[pos] for pos, _, _ in pieces], dtype=object), nj),
+            'intron': np.concatenate([intron_index[int(cluster_starts[pos]):int(cluster_starts[pos + 1])][use_of[pos]]
+                                      for pos, _, _ in pieces]),
+            'psi_0': column(lambda r, b: r['psi_0'][b])}
+    for k, col in enumerate(x_cols):
+        cols['logef_' + str(col)] = column(lambda r, b: r['logef'][b, :, k])
+    for k, col in enumerate(x_cols):
+        cols['psi_' + str(col)] = column(lambda r, b: r['psi'][b, :, k])
+    junc_table = pd.DataFrame(cols)
     stages.mark("collect_results")
     return cluster_table, junc_table, status_df
 
@@ -1529,7 +1162,8 @@ def portal_tables(cluster_table, junc_table, cluster_ids, cluster_genes):
     j["cluster"] = j["chr"] + ":" + j["clu"]
 
     groups = j.groupby("clu", sort=False)
-    top = j.loc[j["deltapsi"].abs().groupby(j["clu"], sort=False).idxmax()].set_index("clu")
+    # fillna: idxmax is NaN for a cluster whose PSI are all NaN, and .loc would then fail the request
+    top = j.loc[j["deltapsi"].abs().fillna(-1).groupby(j["clu"], sort=False).idxmax()].set_index("clu")
     gene_of = dict(zip(cluster_ids, cluster_genes))
     clusters = cluster_table.copy()
     clu = clusters.index.to_numpy()
@@ -1741,7 +1375,19 @@ def selftest():
                                   wraps=multiprocessing.get_context) as get_context:
             two_workers = handle({**req, "threads": 2})
 
-    rows ={r["cluster_id"]: r for r in res["cluster_data"]}
+    # a cluster whose PSI are all NaN, beside a normal one
+    nan_clusters = ["clu_a_+", "clu_b_+"]
+    nan_out, _ = portal_tables(
+        pd.DataFrame({"p": [0.01, 0.5], "p.adjust": [0.02, 0.5]}, index=nan_clusters),
+        pd.DataFrame({"cluster": [nan_clusters[0]] * 2 + [nan_clusters[1]] * 2,
+                      "intron": [f"chr1:{a}:{b}:{c}:NE" for a, b, c in [
+                          (100, 200, nan_clusters[0]), (100, 300, nan_clusters[0]),
+                          (500, 600, nan_clusters[1]), (500, 700, nan_clusters[1])]],
+                      "psi_0": [0.5, 0.5, np.nan, np.nan], "psi_case": [0.7, 0.3, np.nan, np.nan]}),
+        np.array(nan_clusters), np.array(["", ""]))
+    nan_row = {r["cluster_id"]: r for r in cluster_rows(nan_out, "control", "case")}.get("chr1:clu_b_+")
+
+    rows = {r["cluster_id"]: r for r in res["cluster_data"]}
     hit = rows["chr1:clu_0_+"]
     junctions = res["junctions_by_cluster"]["chr1:clu_0_+"]
     checks = {
@@ -1764,6 +1410,8 @@ def selftest():
         "a covariate that differs within the groups is fitted":
         with_covariate["cluster_data"][0]["cluster_id"] == hit["cluster_id"],
         "a covariate with the split of the groups is rejected": "not of full rank" in collinear_error,
+        "a cluster whose PSI are all NaN keeps its row and p": nan_row is not None
+        and nan_row["original_p_value"] == 0.5 and nan_row["delta_psi"] == 0.0,
         "workers are started when there are multiple jobs": get_context.called,
         "two workers give the same results as one": two_workers["cluster_data"] == res["cluster_data"]
         and two_workers["junctions_by_cluster"] == res["junctions_by_cluster"]
