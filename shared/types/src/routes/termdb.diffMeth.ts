@@ -10,6 +10,12 @@ import type { DmrRunResources, TermdbDmrBatchSuccessResponse } from './termdb.dm
  * p-values -- harmonic mean, Stouffer and Fisher. */
 export const DMR_SCAN_Y_AXES = ['min_smoothed_fdr', 'HMFDR', 'Stouffer', 'Fisher'] as const
 export type DmrScanYAxis = (typeof DMR_SCAN_Y_AXES)[number]
+/** The y axis of a scan that does not choose one. HMFDR, not the min smoothed FDR DMRcate calls regions by: kernel
+ * pooling makes the smoothed FDR grow with a region's CpG count until it underflows to 0, so the most significant
+ * DMRs tie at the top of the plot and are long blocks rather than strong changes (MMRF t(4;14): 4,716 tied at 0, a
+ * median 115 CpGs against 19 for the rest; rank correlation of -log10 with CpG count 0.71 against 0.48 for HMFDR,
+ * which has no ties). */
+export const DEFAULT_DMR_SCAN_Y_AXIS: DmrScanYAxis = 'HMFDR'
 
 export const DMR_SCAN_ELEMENT_TYPE = 'dmr_scan'
 
@@ -61,13 +67,20 @@ export type DiffMethRequest = {
 		 * and DMRs whose stratum gave no usable background are left out of the rows */
 		backgroundCorrection?: boolean
 		/** the region statistic the volcano's y (and the scan Manhattan's) plots; ignored with
-		 * backgroundCorrection, whose background FDR is the y then. Absent = min_smoothed_fdr */
+		 * backgroundCorrection, whose background FDR is the y then. Absent = DEFAULT_DMR_SCAN_Y_AXIS */
 		yAxis?: DmrScanYAxis
 		/** the volcano's Min Δβ: DMRs with a |Δβ| no larger stay on the volcano, as not significant, but are
 		 * not counted, nor drawn on the Manhattan or the browser track. Absent = 0 */
 		minDeltaBeta?: number
 		/** drop DMRs called from fewer CpGs than this before rendering; absent = DEFAULT_MIN_CPGS */
 		minCpgs?: number
+		/** Keep only the DMRs linked to a gene. 'expressed': a gene that either group expresses (median at or above
+		 * the server's MIN_EXPRESSION), linked by position -- the genes a DMR overlaps, or else its nearest gene within
+		 * the server's LINK_MAX_BP. 'correlated': the expressed gene within LINK_MAX_BP whose per-patient expression
+		 * correlates best with the DMR's per-patient beta within the groups, at pair FDR <= 0.05. Each row then carries
+		 * its `expression` link and the summary its `expression` counts. Absent = every DMR. Not part of the scan's
+		 * cache key; the correlations are cached on their own. */
+		geneFilter?: 'expressed' | 'correlated'
 		/** display width of the methylome-wide profile's bins, in bp. Several native bins are
 		 * averaged into one at render time; absent or at/below the native width draws them as
 		 * computed. Not part of any cache key -- changing it redraws a cached scan. */
@@ -167,6 +180,32 @@ export type DmrScanSummary = {
 	 * matched background (FDR < 0.05), which makes this the stricter of two readings rather than the
 	 * only one. Absent when no DMR qualifies. */
 	geneBodyLoss?: { regions: number; genes: string[] }
+	/** With scan.geneFilter: how the DMRs that would otherwise be shown split by their linked gene. Only
+	 * `expressed` remain in the rows and every count above; `silent` were linked to a gene below minExpression in
+	 * both groups, `unlinked` overlap no gene and have none within linkMaxBp. `samples` are the samples per group
+	 * with expression data, `unit` the dataset's expression unit. */
+	expression?: {
+		/** how DMRs were linked: 'position' for geneFilter 'expressed', 'correlation' for 'correlated'. Under
+		 * correlation `expressed` counts the DMRs linked at pair FDR <= 0.05, `silent` those with an expressed gene in
+		 * reach but none correlated, `unlinked` those with no expressed gene in reach */
+		linkBy: 'position' | 'correlation'
+		/** geneFilter 'correlated': pairs tested and passing, and the decoy pairs (genes on other chromosomes) passing
+		 * the same p cutoff, with the FDR that rate implies for the cis links */
+		correlation?: {
+			pairs: number
+			significantPairs: number
+			transPairs: number
+			transBelowCut: number
+			estFdr: number | null
+		}
+		minExpression: number
+		linkMaxBp: number
+		samples: [number, number]
+		unit?: string
+		expressed: number
+		silent: number
+		unlinked: number
+	}
 	/** The two groups cut to the samples with methylation data, as sample ids: the cohort any
 	 * expression step after a scan should run on, so both readings come from the same patients.
 	 * A group that the request defined by a filter comes back as that filter, with `sampleCount`
@@ -268,8 +307,8 @@ export type DiffMethEntry = DataEntry & {
 	start: number
 	/** Element end coordinate (exclusive) */
 	stop: number
-	/** Group 1 (control) mean beta, over observed cells only. Absent on a DMR-scan row, which
-	 * carries the difference but not the two means. */
+	/** Group 1 (control) mean beta, over observed cells only. On a DMR-scan row, over the region's CpGs, from scans
+	 * cached since DMRs carry it. */
 	mean_beta_control?: number
 	/** Group 2 (case) mean beta, over observed cells only */
 	mean_beta_case?: number
@@ -285,6 +324,17 @@ export type DiffMethEntry = DataEntry & {
 	excess?: number
 	/** DMR-scan rows only: the least kernel-smoothed FDR in the region, which DMRcate called it by */
 	min_smoothed_fdr?: number
+	/** DMR-scan rows only, with scan.geneFilter: the gene the DMR is linked to (the most expressed it overlaps,
+	 * else the nearest), bp to it (0 = overlaps), and its median expression in each group */
+	expression?: {
+		gene: string
+		distance: number
+		group1: number | null
+		group2: number | null
+		/** geneFilter 'correlated': the within-group Spearman rho of the DMR's beta with the gene, and its pair FDR */
+		rho?: number
+		q?: number
+	}
 }
 
 /** What diffMeth.R actually tested, as opposed to what was asked for. Emitted by the R script

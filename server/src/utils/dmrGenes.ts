@@ -13,7 +13,7 @@ sqlite round trip per DMR would be ~123,000 of them on a genome scan. */
  * gene cluster otherwise fills the column with names nobody reads. */
 export const MAX_GENES_PER_DMR = 6
 
-type GeneIndex = Map<string, { start: number[]; stop: number[]; name: string[]; maxSpan: number }>
+export type GeneIndex = Map<string, { start: number[]; stop: number[]; name: string[]; maxSpan: number }>
 
 /** Build a per-chromosome, start-sorted index of gene spans. Returns null when the genome has no
  * gene2coord table, which is not an error -- the column is simply omitted. */
@@ -108,4 +108,48 @@ export function genesInBody(idx: GeneIndex, chr: string, start: number, stop: nu
 		if (be > bs && be > start && bs < stop) out.push(c.name[i])
 	}
 	return out.reverse()
+}
+
+/** Every gene whose span lies within maxDistance bp of a region, with that distance (0 when it overlaps), in genomic
+ * order. gene2coord carries no strand, so this is distance to the nearer END of a gene, not to its TSS. */
+export function genesNear(
+	idx: GeneIndex,
+	chr: string,
+	start: number,
+	stop: number,
+	maxDistance: number
+): { name: string; distance: number }[] {
+	const c = idx.get(chr)
+	if (!c) return []
+	// first gene starting past the reach; everything within it starts before that
+	const reach = stop + maxDistance
+	let lo = 0
+	let hi = c.start.length
+	while (lo < hi) {
+		const mid = (lo + hi) >> 1
+		if (c.start[mid] <= reach) lo = mid + 1
+		else hi = mid
+	}
+	const out: { name: string; distance: number }[] = []
+	const floor = start - maxDistance - c.maxSpan
+	for (let i = lo - 1; i >= 0 && c.start[i] >= floor; i--) {
+		const distance = Math.max(0, c.start[i] - stop, start - c.stop[i])
+		if (distance <= maxDistance) out.push({ name: c.name[i], distance })
+	}
+	return out.reverse()
+}
+
+/** The gene nearest a region that overlaps none, or null when no gene lies within maxDistance. Ties go to the gene
+ * upstream in genomic order. */
+export function nearestGene(
+	idx: GeneIndex,
+	chr: string,
+	start: number,
+	stop: number,
+	maxDistance: number
+): { name: string; distance: number } | null {
+	let best: { name: string; distance: number } | null = null
+	for (const g of genesNear(idx, chr, start, stop, maxDistance))
+		if (g.distance > 0 && (!best || g.distance < best.distance)) best = g
+	return best
 }

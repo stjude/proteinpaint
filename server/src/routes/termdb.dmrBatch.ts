@@ -140,7 +140,9 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 // 13: solo-WCGW shares count a region's CpGs by their 1-based position, tertiles from usable windows only; bgQ and
 // the summary's significant count left to the view; nullP001 replaces nullP05
 // 14: dmrcate places sample names at the columns meta/samples/col_idx gives them
-const CACHE_VERSION = 14
+// 15: DMRs and background windows carry the control group's mean beta, and background strata also split on it
+// (BASELINE_BINS quantiles), from 20000 windows per chromosome
+const CACHE_VERSION = 15
 
 /* Fingerprint the data files a result was computed from.
  *
@@ -250,7 +252,7 @@ export async function runDmrBatch(
 	let dmrsDropped = 0
 	const bgTotals = { windows: 0, scored: 0, unscored: 0 }
 	// chromosomes scored, and those whose strata could also split on solo-WCGW share (needs the genome sequence)
-	const bgChrs = { scored: 0, soloMatched: 0 }
+	const bgChrs = { scored: 0, soloMatched: 0, baselineMatched: 0 }
 	// background windows scored against their own stratum's null: the share at p < 0.001 checks its tail
 	const bgNull = { windows: 0, belowP001: 0 }
 
@@ -518,12 +520,17 @@ export async function runDmrBatch(
 							// rust returns the windows in input order, so shares[c] lines up with called then background
 							const background = (bgRes.background || []).slice(bgOffset, bgOffset + windows.length)
 							bgOffset += windows.length
-							const { scored, unscored, soloMatched, nullCheck } = scoreAgainstBackground(called, background, {
-								dmrs: shares[c].slice(0, called.length),
-								background: shares[c].slice(called.length)
-							})
+							const { scored, unscored, soloMatched, baselineMatched, nullCheck } = scoreAgainstBackground(
+								called,
+								background,
+								{
+									dmrs: shares[c].slice(0, called.length),
+									background: shares[c].slice(called.length)
+								}
+							)
 							bgChrs.scored++
 							if (soloMatched) bgChrs.soloMatched++
+							if (baselineMatched) bgChrs.baselineMatched++
 							called.forEach((d: any, i: number) => {
 								const sc = scored[i]
 								if (!sc) return
@@ -613,7 +620,12 @@ export async function runDmrBatch(
 									? []
 									: bgChrs.soloMatched == bgChrs.scored
 									? ['solo-WCGW share']
-									: [`solo-WCGW share (${bgChrs.soloMatched} of ${bgChrs.scored} chromosomes)`])
+									: [`solo-WCGW share (${bgChrs.soloMatched} of ${bgChrs.scored} chromosomes)`]),
+								...(!bgChrs.baselineMatched
+									? []
+									: bgChrs.baselineMatched == bgChrs.scored
+									? ['baseline β']
+									: [`baseline β (${bgChrs.baselineMatched} of ${bgChrs.scored} chromosomes)`])
 							],
 							...(bgNull.windows ? { nullP001: bgNull.belowP001 / bgNull.windows } : {})
 					  }

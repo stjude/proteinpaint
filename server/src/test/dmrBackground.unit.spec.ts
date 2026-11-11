@@ -19,6 +19,7 @@ scoreAgainstBackground: excess and fitted-null p, and the p floor
 scoreAgainstBackground: a stratum with too little background yields no score rather than a bad one
 soloWcgwFractions: 1-based inclusive regions, chunked sweep, no-throw fallback
 scoreAgainstBackground: solo-WCGW tertiles, cut among usable windows
+scoreAgainstBackground: baseline beta quantiles, from the regions' own control means
 nullCheck: a tail heavier than the null past the calibration point is counted
 benjaminiHochberg: step-up q
 */
@@ -232,6 +233,38 @@ tape('scoreAgainstBackground matches on solo-WCGW share when given', t => {
 		'matched: a solo-rich DMR drifting like solo-rich windows has no excess'
 	)
 	t.equal(matched.soloMatched, true, 'reported as solo-matched')
+	t.end()
+})
+
+tape('scoreAgainstBackground matches on baseline beta when the regions carry it', t => {
+	/* one density x width stratum, as on MMRF t(4;14): windows that start low (control beta 0.2) gain +0.20,
+	windows that start high (0.8) do not move */
+	const background = Array.from({ length: 200 }, (_, i) => ({
+		n_probes: 10,
+		start: 0,
+		stop: 1000,
+		ctrl: i < 100 ? 0.2 : 0.8,
+		delta: (i < 100 ? 0.2 : 0) + ((i % 3) - 1) * 0.005
+	}))
+	const dmrs = [
+		{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 0.2, beta_ctrl_mean: 0.2 },
+		{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 0.2, beta_ctrl_mean: 0.8 },
+		{ no_cpgs: 10, start: 0, stop: 1000, delta_beta_mean: 0.2, beta_ctrl_mean: null }
+	]
+	const r = scoreAgainstBackground(dmrs, background)
+	t.equal(r.baselineMatched, true, 'reported as baseline-matched')
+	t.ok(Math.abs(r.scored[0]!.excess) < 1e-9, 'a low-baseline DMR gaining like low-baseline windows has no excess')
+	t.ok(Math.abs(r.scored[1]!.excess - 0.2) < 1e-9, 'the same gain from a high baseline is all excess')
+	t.equal(r.scored[2], null, 'a DMR without a baseline is not placed in a guessed bin')
+	const without = scoreAgainstBackground(
+		dmrs.slice(0, 2),
+		background.map(({ ctrl: _ctrl, ...b }) => b)
+	)
+	t.equal(without.baselineMatched, false, 'windows without a baseline: not matched on it')
+	t.ok(
+		Math.abs(without.scored[0]!.excess - without.scored[1]!.excess) < 1e-9,
+		'and the two DMRs score alike, as before baselines existed'
+	)
 	t.end()
 })
 

@@ -1407,6 +1407,9 @@ struct Dmr {
     meandiff: f64,
     delta_beta_max: Option<f64>,
     delta_beta_mean: Option<f64>,
+    /// the control group's mean beta over the same CpGs as delta_beta_mean: the region's baseline, which the
+    /// matched-background correction stratifies on, since how far a region drifts depends on where it starts
+    beta_ctrl_mean: Option<f64>,
     direction: &'static str,
 }
 
@@ -1441,10 +1444,12 @@ fn region_stats(segs: &[Segment], g: &Genome, p: &[f64], fdr: &[f64], min_cpgs: 
             let span = &g.cpgs[s.lo..=s.hi];
             let diff = |c: &Cpg| if g.beta_diff { c.delta_beta() } else { c.log_fc };
             let meandiff = span.iter().map(diff).sum::<f64>() / len(s);
-            let (mut dn, mut dsum, mut dmax) = (0usize, 0.0, f64::NAN);
-            for d in span.iter().map(|c| c.delta_beta()).filter(|d| d.is_finite()) {
+            let (mut dn, mut dsum, mut csum, mut dmax) = (0usize, 0.0, 0.0, f64::NAN);
+            for c in span.iter().filter(|c| c.delta_beta().is_finite()) {
+                let d = c.delta_beta();
                 dn += 1;
                 dsum += d;
+                csum += c.beta_ctrl as f64;
                 if dmax.is_nan() || d.abs() > dmax.abs() {
                     dmax = d;
                 }
@@ -1462,6 +1467,7 @@ fn region_stats(segs: &[Segment], g: &Genome, p: &[f64], fdr: &[f64], min_cpgs: 
                 meandiff,
                 delta_beta_max: fin(dmax),
                 delta_beta_mean: if dn > 0 { Some(dsum / dn as f64) } else { None },
+                beta_ctrl_mean: if dn > 0 { Some(csum / dn as f64) } else { None },
                 // Ours, not a DMRcate column: the sign of the display delta-beta, which every figure
                 // plots. meandiff is a log-ratio with a +0.5 pseudocount, which pulls shallow samples
                 // toward 0, so where the groups differ in read depth its sign can follow depth rather
@@ -1525,23 +1531,28 @@ fn bin_methylation(g: &Genome, bin_bp: i64) -> Vec<(String, i64, u64, f64, f64)>
     out
 }
 
-/* Mean beta-scale difference over the rows inside a window, and how many there were. The
+/* Mean beta-scale difference over the rows inside a window, how many there were, and the control group's mean
+beta over those rows (the window's baseline, measured as a DMR's beta_ctrl_mean is). The
 matched-background correction asks "did this region move more than a region like it would have
 drifted anyway?", which needs delta-beta for thousands of windows that are NOT DMRs. */
-fn window_delta(g: &Genome, chroms: &HashMap<&str, usize>, qchr: &str, qstart: i64, qstop: i64) -> (usize, f64) {
+fn window_delta(g: &Genome, chroms: &HashMap<&str, usize>, qchr: &str, qstart: i64, qstop: i64) -> (usize, f64, f64) {
     let Some(&k) = chroms.get(qchr) else {
-        return (0, f64::NAN);
+        return (0, f64::NAN, f64::NAN);
     };
     let (lo, hi) = rows_in(&g.cpgs, &g.chroms[k], qstart, qstop);
-    let (mut n, mut sum) = (0usize, 0.0f64);
+    let (mut n, mut sum, mut ctrl) = (0usize, 0.0f64, 0.0f64);
     for c in &g.cpgs[lo..hi] {
         let d = c.delta_beta();
         if d.is_finite() {
             sum += d;
+            ctrl += c.beta_ctrl as f64;
             n += 1;
         }
     }
-    (n, if n > 0 { sum / n as f64 } else { f64::NAN })
+    if n == 0 {
+        return (0, f64::NAN, f64::NAN);
+    }
+    (n, sum / n as f64, ctrl / n as f64)
 }
 
 /* Each sample's methylation over each region, for a test between the groups ("sample_test" with
@@ -2082,6 +2093,31 @@ fn main() {
             Ok(r) => r,
             Err(e) => bail!("{}", e),
         };
+        if p["sample_levels"].as_bool().unwrap_or(false) {
+            // the levels themselves, regions x samples in `names` order (cases first), for a caller that relates
+            // them to something per sample (expression); 4 decimals, null where under min_reads. Written straight
+            // to a string: as serde Values a genome's chromosome of DMRs x a cohort would take ~30x the memory.
+            use std::fmt::Write as _;
+            let mut out = String::with_capacity(levels.len() * 7 + 1024);
+            out.push_str(&format!(
+                "{{\"samples\":{},\"n_probes\":{},\"levels\":[",
+                json!(names),
+                json!(n_probes)
+            ));
+            for (i, v) in levels.iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                if v.is_finite() {
+                    let _ = write!(out, "{:.4}", v);
+                } else {
+                    out.push_str("null");
+                }
+            }
+            let _ = write!(out, "],\"diagnostic\":{}}}", diagnostic(rows));
+            println!("{}", out);
+            return;
+        }
         let tests = sample_region_tests(&mut levels, cases.len(), names.len());
         let bg: Vec<Value> = background
             .iter()
@@ -2108,8 +2144,8 @@ fn main() {
         let bg: Vec<Value> = background
             .iter()
             .map(|(c, s, e)| {
-                let (n, d) = window_delta(&g, &chroms, c, *s, *e);
-                json!({"chr": c, "start": s, "stop": e, "n_probes": n, "delta": r5(d)})
+                let (n, d, ctrl) = window_delta(&g, &chroms, c, *s, *e);
+                json!({"chr": c, "start": s, "stop": e, "n_probes": n, "delta": r5(d), "ctrl": r5(ctrl)})
             })
             .collect();
         println!("{}", json!({"background": bg, "diagnostic": diagnostic(g.cpgs.len())}));
@@ -2612,6 +2648,8 @@ mod tests {
         let d = region_stats(&segs, &g, &p, &fdr, 2);
         let db = 0.6f32 as f64 - 0.2f32 as f64;
         assert_eq!((d[0].meandiff, d[0].maxdiff), (db, db));
+        // the baseline is the control mean over the same CpGs as delta_beta_mean
+        assert_eq!(d[0].beta_ctrl_mean, Some(0.2f32 as f64));
     }
 
     /* 30 rows x 8 samples (4 case, 4 control) of M-values, about 10% missing, so the residual df

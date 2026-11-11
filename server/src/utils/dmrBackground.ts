@@ -30,9 +30,18 @@ import { makeRng, median, normalTwoSidedP } from './dmrStats.ts'
 import { readFastaRegion } from '#src/fasta.ts'
 import { mayLog } from '#src/helpers.ts'
 
-/** Raised from 2000 when solo-WCGW joined the strata: a third matching variable splits each density x width
- * stratum in three, and a stratum needs MIN_BG windows to be scored at all. Cheap, as before. */
-export const BG_WINDOWS_PER_CHR = 6000
+/** Raised from 2000 when solo-WCGW joined the strata, and from 6000 when baseline beta did: each matching variable
+ * splits every stratum again (solo-WCGW in three, baseline in BASELINE_BINS), and a stratum needs MIN_BG windows to
+ * be scored at all. Cheap, as before: a window's delta is a binary search, and the run reads the genome either way. */
+export const BG_WINDOWS_PER_CHR = 20000
+
+/* Baseline beta: the control group's mean beta over a region's CpGs. How far a region drifts depends on where it
+starts. On MMRF t(4;14) the 100 kb bins whose control beta is under 0.17 gain a median +0.18, those over 0.75 lose
+0.05, and the DMRs with the most evidence are long blocks sitting at a control beta of ~0.2: regions that are
+hypomethylated in the reference group and partly regain methylation in t(4;14). Density, width and solo-WCGW share
+only partly predict that baseline, so it is matched on directly. Quantiles of the background's own baselines, as
+for solo-WCGW, so every bin holds an equal share of the usable draw. */
+const BASELINE_BINS = 5
 
 /** Padding either side of a transcript, so a window abutting a promoter is not called intergenic. */
 const TSS_PAD = 2000
@@ -127,6 +136,23 @@ export function sampleBackground(
 }
 
 type Scored = { excess: number; p: number; stratum: string }
+
+/** Bin a value at the k-quantiles of `ref` (the scored background's values): '0'..'k-1', 'none' for a region
+ * without a value, '' for every region when ref has fewer than k values -- the variable then is not matched on. */
+function quantileBinner(ref: number[], k: number): { matched: boolean; bin: (v: number | null | undefined) => string } {
+	const sorted = ref.filter(Number.isFinite).sort((a, b) => a - b)
+	if (sorted.length < k) return { matched: false, bin: () => '' }
+	const cuts = Array.from({ length: k - 1 }, (_, i) => sorted[Math.floor(((i + 1) * sorted.length) / k)])
+	return {
+		matched: true,
+		bin: v => {
+			if (v == null || !Number.isFinite(v)) return 'none'
+			let i = 0
+			while (i < cuts.length && v >= cuts[i]) i++
+			return String(i)
+		}
+	}
+}
 
 /* Solo-WCGW CpGs: a CpG with no other CpG within SOLO_FLANK bp on either side, flanked by A or T on both
 sides (W-CG-W). It is the sequence context that loses methylation most readily in late-replicating,
@@ -262,16 +288,16 @@ export async function soloWcgwShares(
 	return out
 }
 
-/** Stratum key: CpG density, width and, when the sequence gave it, the tertile of solo-WCGW share ('' when
- * not). Density and width are the structural properties; the solo-WCGW tertile matches on the sequence
- * context that drifts most. The spec's replication timing and lamina association still need reference
- * tracks this deployment does not carry, so the correction must be described as matched on what
- * `matchedOn` lists and no more. */
-function stratumOf(nProbes: number, width: number, soloTertile = ''): string {
+/** Stratum key: CpG density, width, and when available the tertile of solo-WCGW share and the quantile bin of
+ * baseline beta ('' when not). Density and width are the structural properties; the solo-WCGW tertile matches on
+ * the sequence context that drifts most, the baseline bin on where the region starts from. The spec's replication
+ * timing and lamina association still need reference tracks this deployment does not carry, so the correction must
+ * be described as matched on what `matchedOn` lists and no more. */
+function stratumOf(nProbes: number, width: number, soloTertile = '', baselineBin = ''): string {
 	const dens = width > 0 ? (nProbes / width) * 1000 : 0
 	const d = dens <= 0 ? 0 : Math.min(5, Math.floor(Math.log2(dens + 1)))
 	const w = Math.min(5, Math.floor(Math.log10(Math.max(width, 1))))
-	return `${d}:${w}:${soloTertile}`
+	return `${d}:${w}:${soloTertile}:${baselineBin}`
 }
 
 /** Score each DMR against background in its own stratum, by an empirical null in the sense of Efron (JASA
@@ -294,32 +320,43 @@ function stratumOf(nProbes: number, width: number, soloTertile = ''): string {
  *
  * `solo`, when given, holds each DMR's and each background window's solo-WCGW share (soloWcgwFractions, in
  * the same order). Strata then also split at the tertiles of that share among the background windows that
- * are scored (probes and a delta), so each tertile holds a third of the usable draw and stays scorable. */
+ * are scored (probes and a delta), so each tertile holds a third of the usable draw and stays scorable.
+ *
+ * Baseline beta, when the regions carry it (a DMR's beta_ctrl_mean, a window's ctrl), splits strata the same way, at
+ * BASELINE_BINS quantiles of the usable windows' baselines. */
 export function scoreAgainstBackground(
 	// delta-beta, the scale the background windows are measured on; DMRcate's meandiff is logit2
-	dmrs: { no_cpgs: number; start: number; stop: number; delta_beta_mean: number | null }[],
-	background: { n_probes: number; start: number; stop: number; delta: number | null }[],
+	dmrs: {
+		no_cpgs: number
+		start: number
+		stop: number
+		delta_beta_mean: number | null
+		beta_ctrl_mean?: number | null
+	}[],
+	background: { n_probes: number; start: number; stop: number; delta: number | null; ctrl?: number | null }[],
 	solo?: { dmrs: (number | null)[]; background: (number | null)[] }
 ): {
 	scored: (Scored | null)[]
 	strataUsed: number
 	unscored: number
 	soloMatched: boolean
+	baselineMatched: boolean
 	nullCheck: { windows: number; belowP001: number }
 } {
 	const usable = (b: (typeof background)[number]) => b.delta != null && Number.isFinite(b.delta) && !!b.n_probes
-	const bgSolo = (solo?.background || [])
-		.filter((v, i): v is number => v != null && Number.isFinite(v) && usable(background[i]))
-		.sort((a, b) => a - b)
-	const soloMatched = bgSolo.length >= 3
-	const cuts = soloMatched ? [bgSolo[Math.floor(bgSolo.length / 3)], bgSolo[Math.floor((2 * bgSolo.length) / 3)]] : []
 	// a region with no CpG in the sequence has no share; it gets its own label rather than a guessed tertile
-	const tertile = (v: number | null | undefined) =>
-		!soloMatched ? '' : v == null ? 'none' : v < cuts[0] ? '0' : v < cuts[1] ? '1' : '2'
+	const solos = quantileBinner(
+		(solo?.background || []).filter((v, i): v is number => v != null && usable(background[i])),
+		3
+	)
+	const baseline = quantileBinner(
+		background.filter(b => usable(b) && b.ctrl != null).map(b => b.ctrl!),
+		BASELINE_BINS
+	)
 	const byStratum = new Map<string, number[]>()
 	background.forEach((b, i) => {
 		if (!usable(b)) return
-		const k = stratumOf(b.n_probes, b.stop - b.start, tertile(solo?.background[i]))
+		const k = stratumOf(b.n_probes, b.stop - b.start, solos.bin(solo?.background[i]), baseline.bin(b.ctrl))
 		const lst = byStratum.get(k) || []
 		lst.push(b.delta!)
 		byStratum.set(k, lst)
@@ -349,7 +386,7 @@ export function scoreAgainstBackground(
 	}
 	let unscored = 0
 	const scored = dmrs.map((d, i) => {
-		const k = stratumOf(d.no_cpgs, d.stop - d.start, tertile(solo?.dmrs[i]))
+		const k = stratumOf(d.no_cpgs, d.stop - d.start, solos.bin(solo?.dmrs[i]), baseline.bin(d.beta_ctrl_mean))
 		const n = nulls.get(k)
 		if (!n || d.delta_beta_mean == null) {
 			unscored++
@@ -358,5 +395,12 @@ export function scoreAgainstBackground(
 		const excess = d.delta_beta_mean - n.centre
 		return { excess, p: normalTwoSidedP(excess / n.scale), stratum: k }
 	})
-	return { scored, strataUsed: nulls.size, unscored, soloMatched, nullCheck }
+	return {
+		scored,
+		strataUsed: nulls.size,
+		unscored,
+		soloMatched: solos.matched,
+		baselineMatched: baseline.matched,
+		nullCheck
+	}
 }

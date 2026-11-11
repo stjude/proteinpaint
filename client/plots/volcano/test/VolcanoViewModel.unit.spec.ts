@@ -451,6 +451,8 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 		adjusted_p_value: 0.012,
 		no_cpgs: 14,
 		excess: -0.17,
+		mean_beta_control: 0.62,
+		mean_beta_case: 0.41,
 		pixel_x: 10,
 		pixel_y: 10
 	}
@@ -494,7 +496,17 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	const cell = (label: string) => row[cols.indexOf(label)]?.value
 	test.deepEqual(
 		cols,
-		['DMR', 'Gene(s)', 'Δβ', 'Peak Δβ', 'CpGs', 'Width (bp)', 'Excess Δβ', 'FDR vs matched background'],
+		[
+			'DMR',
+			'Gene(s)',
+			'Δβ',
+			'Peak Δβ',
+			'CpGs',
+			'Width (bp)',
+			'Excess Δβ',
+			'Mean β (group 1)',
+			'FDR vs matched background'
+		],
 		'scan columns, in order, with a single p column named for the correction'
 	)
 	test.equal(cell('DMR'), 'chr1:1000-2000', 'the row is labelled by its coordinate')
@@ -503,6 +515,7 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	test.equal(cell('CpGs'), 14, 'CpG count under CpGs')
 	test.equal(cell('Width (bp)'), 1000, 'width under Width')
 	test.equal(cell('Excess Δβ'), -0.17, 'excess under Excess')
+	test.equal(cell('Mean β (group 1)'), 0.62, 'the baseline under its column')
 	test.equal(cell('FDR vs matched background'), 0.012, 'the one p under the one p column')
 	test.ok(vm.viewData.singlePValue, 'a scan has one p per row')
 	test.equal(vm.viewData.pValueLabel, 'FDR vs matched background', 'and names it after the correction')
@@ -559,6 +572,43 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	test.ok(
 		plain.viewData.statsData.some(d => d.label == 'Gene-body loss regions → genes'),
 		'the gene-body set is reported without the background wording'
+	)
+
+	// expressed genes only: the link and both groups' expression get columns, the hidden DMRs get stats rows
+	const ex = new VolcanoViewModel(
+		{ ...mockConfig, termType: 'dnaMethylation' } as any,
+		{
+			...mockResponse,
+			scan: {
+				...scan,
+				expression: {
+					minExpression: 1,
+					linkMaxBp: 100000,
+					samples: [300, 40],
+					unit: 'TPM',
+					expressed: 2,
+					silent: 5,
+					unlinked: 7
+				}
+			},
+			data: {
+				...mockResponse.data,
+				dots: [{ ...scanDot, expression: { gene: 'GENEC', distance: 34000, group1: 0.5, group2: 4.2 } }] as any
+			}
+		} as any,
+		settings as any
+	)
+	const exCols = ex.pValueTable.columns.map(c => c.label)
+	const exCell = (label: string) => ex.pValueTable.rows[0][exCols.indexOf(label)]?.value
+	test.equal(ex.pValueTable.rows[0].length, exCols.length, 'every expression column has a cell')
+	test.equal(exCell('Linked gene'), 'GENEC (34 Kb away)', 'a linked gene shows how far it is')
+	test.deepEqual([exCell('Expression (group 1)'), exCell('Expression (group 2)')], [0.5, 4.2], 'and each group median')
+	const exStats = ex.viewData.statsData.map(d => `${d.label}: ${d.value}`)
+	test.ok(
+		exStats.includes('DMRs linked to a gene expressed in either group (median ≥ 1 TPM): shown: 2') &&
+			exStats.includes('DMRs linked only to genes below that: hidden: 5') &&
+			exStats.includes('DMRs with no gene overlapping or within 100 kb: hidden: 7'),
+		'stats say how many DMRs the filter hid and why'
 	)
 
 	test.end()

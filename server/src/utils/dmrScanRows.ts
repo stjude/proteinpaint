@@ -1,6 +1,7 @@
 import type { DiffMethEntry, DmrScanSummary, DmrScanYAxis, TermdbDmrBatchSuccessResponse } from '#types'
-import { DEFAULT_MIN_CPGS, DMR_SCAN_Y_AXES, clearsMinDeltaBeta } from '#types'
+import { DEFAULT_DMR_SCAN_Y_AXIS, DEFAULT_MIN_CPGS, DMR_SCAN_Y_AXES, clearsMinDeltaBeta } from '#types'
 import { benjaminiHochberg } from './dmrStats.ts'
+import { isExpressed, LINK_MAX_BP, MIN_EXPRESSION, type DmrExpressionLink } from './dmrExpression.ts'
 
 /* Turn a DMR scan (termdb/dmrBatch) into rows the differential-methylation volcano can render,
 plus the whole-scan summary its Statistics panel shows.
@@ -65,13 +66,24 @@ export function dmrScanToRows(
 		minDeltaBeta?: number
 		backgroundCorrection?: boolean
 		yAxis?: string
+		/** with scan.expressedOnly: each DMR's link to an expressed gene (dmrExpression.ts linkDmr), null when it has
+		 * no gene; only DMRs whose link is expressed are kept in the rows and every count */
+		expression?: {
+			links: Map<Dmr, DmrExpressionLink | null>
+			samples: [number, number]
+			unit?: string
+			/** which linked DMRs to keep; default isExpressed */
+			keep?: (l: DmrExpressionLink) => boolean
+			linkBy?: 'position' | 'correlation'
+			correlation?: NonNullable<DmrScanSummary['expression']>['correlation']
+		}
 	}
 ): { rows: DiffMethEntry[]; scan: DmrScanSummary } {
 	const minCpgs = Math.max(1, Math.floor(opts.minCpgs ?? DEFAULT_MIN_CPGS))
 	// from the request: anything but one of DMRcate's region statistics gets the default
 	const yAxis: DmrScanYAxis = DMR_SCAN_Y_AXES.includes(opts.yAxis as DmrScanYAxis)
 		? (opts.yAxis as DmrScanYAxis)
-		: 'min_smoothed_fdr'
+		: DEFAULT_DMR_SCAN_Y_AXIS
 	const called: Dmr[] = payload.regions.flatMap(r => r.dmrs || [])
 	const kept = called.filter(d => d.no_cpgs >= minCpgs)
 	/* What is counted: the kept DMRs whose beta moved at least the volcano's Min Δβ. The rest stay on
@@ -79,7 +91,16 @@ export function dmrScanToRows(
 	nor put in the gene set: where the groups differ in read depth, DMRcate's pseudocount log-ratio
 	calls DMRs with no beta change (DISCOVER CSF: 87% of calls moved beta by less than 0.1). */
 	const minDeltaBeta = Math.max(0, Number(opts.minDeltaBeta) || 0)
-	const shown = kept.filter(d => clearsMinDeltaBeta(d.delta_beta_mean, minDeltaBeta))
+	const shownAll = kept.filter(d => clearsMinDeltaBeta(d.delta_beta_mean, minDeltaBeta))
+	/* The expressed-genes filter narrows what is shown, as the Δβ floor does, and leaves the tests alone: the
+	background FDR below is over every plotted DMR, so switching it on does not change any DMR's q. */
+	const expr = opts.expression
+	const expressed = (d: Dmr) => {
+		if (!expr) return true
+		const l = expr.links.get(d)
+		return !!l && (expr.keep ? expr.keep(l) : isExpressed(l))
+	}
+	const shown = expr ? shownAll.filter(expressed) : shownAll
 	/* With the correction on, the plotted p IS the background FDR, so a DMR whose stratum held too
 	little background to score has no y coordinate and is left out of the rows. Counted as
 	unscored rather than silently dropped: those are the widest and most CpG-dense regions,
@@ -104,7 +125,7 @@ export function dmrScanToRows(
 		family.forEach((d, i) => bgQ.set(d, q[i]))
 	}
 
-	const rows: DiffMethEntry[] = plotted.map(d => {
+	const rows: DiffMethEntry[] = plotted.filter(expressed).map(d => {
 		/* y is the region statistic the reader picked. The default, the minimum smoothed FDR, is what
 		DMRcate calls regions by, but kernel pooling makes it astronomically small (1e-22 to below
 		double precision on DISCOVER chr17), so dots crowd the top of the axis; HMFDR, Stouffer and
@@ -132,7 +153,12 @@ export function dmrScanToRows(
 			adjusted_p_value: p,
 			no_cpgs: d.no_cpgs,
 			min_smoothed_fdr: d.min_smoothed_fdr,
-			...(d.excess != null ? { excess: d.excess } : {})
+			...(d.excess != null ? { excess: d.excess } : {}),
+			// the region's baseline and where the second group took it; delta_beta_mean is over the same CpGs
+			...(d.beta_ctrl_mean != null
+				? { mean_beta_control: d.beta_ctrl_mean, mean_beta_case: d.beta_ctrl_mean + d.delta_beta_mean! }
+				: {}),
+			...(expr?.links.get(d) ? { expression: expr.links.get(d)! } : {})
 		}
 	})
 
@@ -212,6 +238,20 @@ export function dmrScanToRows(
 	}
 	// omitted rather than reported as "0 -> 0": nothing to run the expression test on
 	if (regions) scan.geneBodyLoss = { regions, genes: [...genes] }
+	if (expr) {
+		const unlinked = shownAll.filter(d => !expr.links.get(d)).length
+		scan.expression = {
+			linkBy: expr.linkBy || 'position',
+			...(expr.correlation ? { correlation: expr.correlation } : {}),
+			minExpression: MIN_EXPRESSION,
+			linkMaxBp: LINK_MAX_BP,
+			samples: expr.samples,
+			...(expr.unit ? { unit: expr.unit } : {}),
+			expressed: shown.length,
+			silent: shownAll.length - shown.length - unlinked,
+			unlinked
+		}
+	}
 	return { rows, scan }
 }
 

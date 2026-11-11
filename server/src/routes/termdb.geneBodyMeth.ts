@@ -158,14 +158,15 @@ function init({ genomes }) {
 // 5: corrected deltas take the excess over the stratum's median (was the mean), from 6000 windows per chromosome
 // (was 2000), with strata also split on solo-WCGW share; a stratum with no spread leaves its genes out
 // 6: dmrcate places sample names at the columns meta/samples/col_idx gives them
-const CACHE_VERSION = 6
+// 7: corrected strata also split on baseline beta (the control group's mean), from 20000 windows per chromosome
+const CACHE_VERSION = 7
 
 /* Mean delta-beta over every gene body, keyed by gene symbol -- one signed number per gene across
 the whole genome. This is the gene-level reading of a methylation scan: a DMR list has many regions
 per gene, none for half of them, and more for long genes, so it cannot rank genes; the body mean
 can, and it is what the GSEA tab ranks on for a scan (see genesetEnrichment.ts).
 
-`corrected` scores each gene body against width-, CpG-density- and solo-WCGW-matched intergenic background
+`corrected` scores each gene body against width-, CpG-density-, solo-WCGW- and baseline-beta-matched intergenic background
 -- the scan's own correction, pointed at fixed regions -- and returns the excess over that background
 instead of the raw delta. Raw, the gain side of the ranking is led by silent, late-replicating gene
 families (olfactory receptors, keratins), which is where genome-wide drift lives; the excess asks
@@ -428,7 +429,13 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 						.map((b: any, j: number) => ({ j, b }))
 						.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
 					const { scored } = scoreAgainstBackground(
-						measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, delta_beta_mean: b.delta })),
+						measured.map(({ b }) => ({
+							no_cpgs: b.n_probes,
+							start: b.start,
+							stop: b.stop,
+							delta_beta_mean: b.delta,
+							beta_ctrl_mean: b.ctrl
+						})),
 						chrWindows,
 						{ dmrs: measured.map(({ j }) => shares![c][j]), background: shares![c].slice(bodies.length) }
 					)

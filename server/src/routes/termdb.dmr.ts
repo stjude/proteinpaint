@@ -1,5 +1,5 @@
 import type { RoutePayload, RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse, DmrScanYAxis } from '#types'
-import { DMR_SCAN_Y_AXES } from '#types'
+import { DEFAULT_DMR_SCAN_Y_AXIS, DMR_SCAN_Y_AXES } from '#types'
 
 type Dmr = TermdbDmrSuccessResponse['dmrs'][number]
 import { invalidcoord } from '#shared/common.js'
@@ -129,7 +129,7 @@ function init({ genomes }) {
 			// the scan's CpG floor: a DMR the scan dropped is not drawn as one it counted
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
 			// nor any other DMR the volcano leaves out of its rows, by the volcano's own test
-			const yAxis: DmrScanYAxis = DMR_SCAN_Y_AXES.includes(q.yAxis as DmrScanYAxis) ? q.yAxis! : 'min_smoothed_fdr'
+			const yAxis: DmrScanYAxis = DMR_SCAN_Y_AXES.includes(q.yAxis as DmrScanYAxis) ? q.yAxis! : DEFAULT_DMR_SCAN_Y_AXIS
 			const plotted = (d: Dmr) => d.no_cpgs >= minCpgs && isPlottedDmr(d, q.backgroundCorrection, yAxis)
 			const dmrInput = {
 				matrices: [{ file: matrixFile, chrs: [q.chr] }],

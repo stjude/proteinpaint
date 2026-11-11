@@ -67,6 +67,8 @@ export const cacheRegistry = {
 	/* per-gene gene-body methylation deltas for a contrast: `serverconfig.dmrBatchConcurrency` rust
 	invocations (default 2) per job, one matrix file each */
 	geneBodyMeth: { type: 'compute', maxPending: 2 },
+	/* DMR-to-gene correlations of a scan: per-chromosome dmrcate sample-level runs, one job at a time */
+	dmrGeneCorr: { type: 'compute', maxPending: 2 },
 	gsea: { type: 'compute', maxPending: 5 },
 	grin2: { type: 'compute', maxPending: 5 },
 	topve: { type: 'compute', maxPending: 5 },

@@ -1,5 +1,6 @@
 import type { DiffMethEntry } from '#types'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
+import { bplen } from '#shared/common.js'
 
 /** Display label for a differential methylation promoter.
  *
@@ -84,4 +85,9 @@ export function formatPromoterLabel(d: Partial<DiffMethEntry> | undefined): stri
 	   mistaken for an index. Genes with one promoter carry no index at all. */
 	const idx = id.match(/\.(p\d+)_[^_]*:\d+-\d+$/)
 	return idx ? `${idx[1]} · ${region}` : region
+}
+
+/** A DMR's linked gene for display: the name, and how far away when the DMR does not overlap it */
+export function linkedGeneLabel(e: { gene: string; distance: number }): string {
+	return e.distance ? `${e.gene} (${bplen(e.distance)} away)` : e.gene
 }

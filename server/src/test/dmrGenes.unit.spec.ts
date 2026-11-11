@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { genesAt, genesInBody, buildGeneIndex, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
+import { genesAt, genesInBody, buildGeneIndex, nearestGene, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
 
 /*
 test sections:
@@ -7,6 +7,7 @@ test sections:
 genesAt: overlap, including genes that start long before the DMR
 genesAt: boundaries and absent chromosomes
 buildGeneIndex: a genome without gene2coord degrades rather than throwing
+nearestGene: the closer gene either side, within a distance, past long upstream genes
 */
 
 /** A scan reports coordinates; the gene name is what makes a row actionable. The case that breaks
@@ -77,5 +78,32 @@ tape('a genome without gene2coord degrades quietly', t => {
 		'missing gene2coord table => no index; the column is simply omitted'
 	)
 	t.ok(MAX_GENES_PER_DMR > 0, 'the per-DMR cap is set')
+	t.end()
+})
+
+tape('nearestGene: the closer gene either side, within the distance', t => {
+	const i = idx([
+		['LONG', 'chr1', 0, 500_000],
+		['UP', 'chr1', 900_000, 990_000],
+		['DOWN', 'chr1', 1_030_000, 1_100_000]
+	])
+	t.deepEqual(
+		nearestGene(i, 'chr1', 1_000_000, 1_001_000, 100_000),
+		{ name: 'UP', distance: 10_000 },
+		'upstream is closer'
+	)
+	t.deepEqual(
+		nearestGene(i, 'chr1', 1_015_000, 1_016_000, 100_000),
+		{ name: 'DOWN', distance: 14_000 },
+		'downstream is closer'
+	)
+	t.equal(nearestGene(i, 'chr1', 1_000_000, 1_001_000, 5_000), null, 'nothing within the distance')
+	t.equal(nearestGene(i, 'chr2', 1_000_000, 1_001_000, 100_000), null, 'a chromosome without genes')
+	// LONG ends 50 kb before the DMR though it starts 550 kb before it, past a short gene's reach
+	t.deepEqual(
+		nearestGene(idx([['LONG', 'chr1', 0, 500_000]]), 'chr1', 550_000, 551_000, 100_000),
+		{ name: 'LONG', distance: 50_000 },
+		'a long gene is found by its end'
+	)
 	t.end()
 })

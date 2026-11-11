@@ -285,6 +285,30 @@ export class VolcanoControlInputs {
 				title: BACKGROUND_CORRECTION_TITLE
 			},
 			{
+				label: 'DMRs shown',
+				type: 'radio',
+				chartType: 'volcano',
+				settingsKey: 'scanGeneFilter',
+				getDisplayStyle: scanOnly,
+				title:
+					'Which DMRs to show, by the genes they may act on. Methylation change in silent genes and gene deserts may be real, but it says nothing about a gene. Applied to the cached scan, so it redraws rather than refits; the correlation is computed once per scan and groups, which takes a minute or two.',
+				options: [
+					{ value: '', label: 'All' },
+					{
+						value: 'expressed',
+						label: 'Near an expressed gene',
+						title:
+							"Keep the DMRs linked to a gene that either group expresses (median of at least 1, in the dataset's expression unit). A DMR is linked to the genes it overlaps, or when it overlaps none, to the nearest gene within 100 kb, which is right for only about half of distal elements."
+					},
+					{
+						value: 'correlated',
+						label: 'Correlated with a nearby gene',
+						title:
+							"Keep the DMRs whose methylation tracks the expression of an expressed gene within 100 kb across patients: Spearman's rho within each group, so the group difference itself does not count, at FDR 0.05 over all DMR-gene pairs. Statistics also tests decoy genes on other chromosomes, which estimates how many links tumor purity and other patient-wide factors alone would produce."
+					}
+				]
+			},
+			{
 				label: 'Y axis',
 				type: 'radio',
 				chartType: 'volcano',

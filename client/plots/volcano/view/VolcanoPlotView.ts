@@ -7,7 +7,7 @@ import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 import { onDeltaBetaAxis } from '../settings/defaults'
-import { formatPromoterLabel, elementNoun } from '../promoterLabel'
+import { formatPromoterLabel, elementNoun, linkedGeneLabel } from '../promoterLabel'
 import { plotManhattan, manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { geneBodyLossTest } from '../interactions/geneBodyLossDE'
@@ -1010,6 +1010,29 @@ export class VolcanoPlotView {
 			if ('promoter_id' in d)
 				addTooltipRow(table, elementNoun(this.settings?.elementType).one, formatPromoterLabel(d as any))
 			if (d.gene_name) addTooltipRow(table, 'Gene(s)', d.gene_name)
+			const e = (d as any).expression
+			if (e) {
+				addTooltipRow(table, 'Linked gene', linkedGeneLabel(e))
+				addTooltipRow(
+					table,
+					'Its expression, group 1 → 2',
+					`${e.group1 == null ? '–' : roundValueAuto(e.group1)} → ${e.group2 == null ? '–' : roundValueAuto(e.group2)}`
+				)
+				if (e.rho != null)
+					addTooltipRow(
+						table,
+						'ρ with its expression, within groups',
+						`${roundValueAuto(e.rho)} (q ${roundValueAuto(e.q)})`
+					)
+			}
+			// a scan DMR's baseline and where the second group took it
+			const m1 = (d as any).mean_beta_control
+			if (m1 != null && 'no_cpgs' in d)
+				addTooltipRow(
+					table,
+					'Mean β, group 1 → 2',
+					`${roundValueAuto(m1)} → ${roundValueAuto((d as any).mean_beta_case)}`
+				)
 		} else if (this.termType === tt.PROTEOME_DAP) {
 			addTooltipRow(table, 'Identifier', d.gene_name)
 			if ('gene' in d) addTooltipRow(table, 'Gene', (d as any).gene)

@@ -3,8 +3,11 @@ import fs from 'fs'
 import { randomUUID } from 'crypto'
 import serverconfig from '#src/serverconfig.js'
 import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, DmrScanSummary } from '#types'
-import { DMR_SCAN_ELEMENT_TYPE, clearsMinDeltaBeta } from '#types'
+import { DEFAULT_MIN_CPGS, DMR_SCAN_ELEMENT_TYPE, clearsMinDeltaBeta } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
+import { groupExpressionMedians, linkDmr } from '#src/utils/dmrExpression.ts'
+import { getDmrGeneCorrelations, MAX_Q as CORRELATION_MAX_Q } from '#src/utils/dmrGeneCorrelation.ts'
+import { buildGeneIndex } from '#src/utils/dmrGenes.ts'
 import {
 	dmrScanToRows,
 	restrictScanPayload,
@@ -317,7 +320,53 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 		req.__protected__
 	)
 	const view = chromosomes.length < runChromosomes.length ? restrictScanPayload(payload, chromosomes) : payload
+	/* Keep the DMRs linked to a gene. Expressed: link each DMR of the view by position and read every gene's median in
+	each group, not cached -- under a second for MMRF's 19,856 genes. Correlated: link it to the nearby gene its
+	per-patient beta tracks, computed once per scan and groups (dmrGeneCorrelation.ts) and cached on its own, so the
+	scan's cache stays independent of expression data either way. */
+	let expression: Parameters<typeof dmrScanToRows>[1]['expression']
+	const geneFilter = req.scan?.geneFilter
+	if (geneFilter == 'expressed' || geneFilter == 'correlated') {
+		const { medians, samples, unit } = await groupExpressionMedians(ds, group1, group2)
+		const links = new Map()
+		if (geneFilter == 'expressed') {
+			const idx = buildGeneIndex(genome)
+			for (const r of view.regions) for (const d of r.dmrs || []) links.set(d, linkDmr(d, idx, medians))
+			expression = { links, samples, unit }
+		} else {
+			// every DMR of the run at the default CpG floor, so one computation serves every view and display floor above it
+			const corr = await getDmrGeneCorrelations({
+				genome,
+				ds,
+				scanCacheId: cacheId,
+				dmrs: payload.regions.flatMap(r => r.dmrs || []).filter(d => d.no_cpgs >= DEFAULT_MIN_CPGS),
+				group1,
+				group2
+			})
+			for (const r of view.regions)
+				for (const d of r.dmrs || []) {
+					const c = corr.links[`${d.chr}:${d.start}-${d.stop}`]
+					const [g1, g2] = c ? medians.get(c.gene) ?? [null, null] : [null, null]
+					links.set(d, c ? { gene: c.gene, distance: c.distance, group1: g1, group2: g2, rho: c.rho, q: c.q } : null)
+				}
+			expression = {
+				links,
+				samples: corr.samples,
+				unit,
+				linkBy: 'correlation',
+				keep: l => l.q! <= CORRELATION_MAX_Q,
+				correlation: {
+					pairs: corr.pairs,
+					significantPairs: corr.significantPairs,
+					transPairs: corr.trans.pairs,
+					transBelowCut: corr.trans.belowCut,
+					estFdr: corr.trans.estFdr
+				}
+			}
+		}
+	}
 	const { rows, scan } = dmrScanToRows(view, {
+		expression,
 		chromosomes,
 		runChromosomes,
 		run: payload,

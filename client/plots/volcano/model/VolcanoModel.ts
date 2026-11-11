@@ -133,6 +133,8 @@ export class VolcanoModel {
 							// display only: the rows are rebuilt from the cached scan on every request
 							yAxis: this.settings.scanYAxis,
 							minCpgs: this.settings.minCpgs,
+							// display only, like minCpgs: which of the cached scan's DMRs are shown
+							...(this.settings.scanGeneFilter ? { geneFilter: this.settings.scanGeneFilter } : {}),
 							// display only, like yAxis: what the scan counts, not what it runs
 							minDeltaBeta: this.settings.deltaBetaCutoff,
 							profileBinBp: this.settings.profileBinBp,

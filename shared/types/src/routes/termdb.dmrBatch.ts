@@ -114,6 +114,9 @@ export type TermdbDmrBatchSuccessResponse = {
 			 * region. Not DMRcate's: carried for display, as the effect a reader interprets. */
 			delta_beta_max: number | null
 			delta_beta_mean: number | null
+			/** The control group's (group 1's) mean beta over the same CpGs: where the region starts from, which the
+			 * background correction matches on. Absent from runs cached before it existed. */
+			beta_ctrl_mean?: number | null
 			/** the sign of delta_beta_mean, which every figure plots; meandiff's when no cell is covered.
 			 * Not meandiff's otherwise: its pseudocount log-ratio follows read depth where groups differ in it */
 			direction: 'hyper' | 'hypo'

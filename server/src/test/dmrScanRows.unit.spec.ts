@@ -1,4 +1,6 @@
 import tape from 'tape'
+import { linkDmr, isExpressed } from '#src/utils/dmrExpression.ts'
+import { buildGeneIndex } from '#src/utils/dmrGenes.ts'
 import {
 	dmrScanToRows,
 	restrictScanPayload,
@@ -19,6 +21,8 @@ dmrBedjLines: the plain text bedj file of the kept DMRs
 y follows the requested region statistic, the smoothed FDR by default
 restrictScanPayload: a chromosome view keeps the run calls and counts only its own
 restrictScanPayload keeps the facts of the whole run, which the client labels as such
+expressedOnly: DMRs linked to a silent gene or to none leave the rows and the counts, not the background FDR
+linkDmr: the most expressed overlapping gene, else the nearest within LINK_MAX_BP
 */
 
 /** The scan reaches the volcano only through this mapping, so a mistake here is a wrong figure
@@ -82,8 +86,8 @@ tape('uncorrected scan: CpG floor, one p per row, summary counts', t => {
 	t.equal(rows[0].gene_name, 'A, B', 'genes are joined for the Gene(s) column')
 	t.equal(rows[0].delta_beta, 0.2, 'x is the mean delta-beta')
 	t.equal(rows[0].fold_change, 0.3, 'fold_change carries the peak delta-beta, same sign')
-	t.equal(rows[0].original_p_value, 1e-10, "p is DMRcate's min smoothed FDR by default")
-	t.equal(rows[0].adjusted_p_value, 1e-10, 'and is the same under either p-value type')
+	t.equal(rows[0].original_p_value, 1e-300, 'p is HMFDR by default')
+	t.equal(rows[0].adjusted_p_value, 1e-300, 'and is the same under either p-value type')
 	t.deepEqual(scan.width, { median: 3000, q1: 1000, q3: 3000 }, 'width quantiles over kept DMRs')
 	t.equal(scan.resources, undefined, 'a result computed before cost accounting carries no resources')
 	const res = {
@@ -321,13 +325,14 @@ tape('dmrBedjLines', t => {
 	t.end()
 })
 
-tape('y follows the requested region statistic, the smoothed FDR by default', t => {
+tape('y follows the requested region statistic, HMFDR by default', t => {
 	const p = payload([dmr({ HMFDR: 0.003, Stouffer: 0.02, Fisher: null, min_smoothed_fdr: 1e-40 })])
 	const y = (yAxis?: string) => {
 		const { rows, scan } = dmrScanToRows(p, { chromosomes: ['chr1'], yAxis })
 		return [rows[0].original_p_value, scan.yAxis]
 	}
-	t.deepEqual(y(), [1e-40, 'min_smoothed_fdr'], 'default: the smoothed FDR DMRcate calls regions by')
+	t.deepEqual(y(), [0.003, 'HMFDR'], 'default: HMFDR, which does not grow with CpG count as the smoothed FDR does')
+	t.deepEqual(y('min_smoothed_fdr'), [1e-40, 'min_smoothed_fdr'])
 	t.deepEqual(y('HMFDR'), [0.003, 'HMFDR'])
 	t.deepEqual(y('Stouffer'), [0.02, 'Stouffer'])
 	const fisher = dmrScanToRows(p, { chromosomes: ['chr1'], yAxis: 'Fisher' })
@@ -337,7 +342,7 @@ tape('y follows the requested region statistic, the smoothed FDR by default', t 
 		'a statistic the run could not compute leaves the DMR off the rows, counted, rather than at p = 1'
 	)
 	t.notOk(dmrScanToRows(p, { chromosomes: ['chr1'] }).scan.withoutStatistic, 'absent when every DMR has it')
-	t.deepEqual(y('no_cpgs'), [1e-40, 'min_smoothed_fdr'], 'anything else from the request gets the default')
+	t.deepEqual(y('no_cpgs'), [0.003, 'HMFDR'], 'anything else from the request gets the default')
 	t.equal(
 		dmrScanToRows(p, { chromosomes: ['chr1'] }).rows[0].min_smoothed_fdr,
 		1e-40,
@@ -432,5 +437,106 @@ tape('a DMR with no Δβ is left out of the rows, counts and track, and counted 
 	t.deepEqual([scan.kept, scan.shown, scan.withoutDeltaBeta], [2, 1, 1], 'kept, but not shown, at no floor either')
 	t.deepEqual([scan.hyper, scan.hypo], [1, 0], 'and not counted by its fallback direction')
 	t.equal(dmrBedjLines(p, 5).trim().split('\n').length, 1, 'nor on the browser track')
+	t.end()
+})
+
+tape('expressedOnly: silent and unlinked DMRs leave the rows and the counts, not the background FDR', t => {
+	const on = dmr({ start: 1000, stop: 2000, beta_ctrl_mean: 0.2, delta_beta_mean: 0.25, bgP: 0.001 })
+	const silent = dmr({ start: 5000, stop: 6000, direction: 'hypo', delta_beta_mean: -0.2, bgP: 0.002 })
+	const none = dmr({ start: 9000, stop: 9500, bgP: 0.5 })
+	const p = payload([on, silent, none], { backgroundCorrection: { windows: 10, matchedOn: ['width'] } })
+	const links = new Map<any, any>([
+		[on, { gene: 'ON', distance: 0, group1: 0.5, group2: 12 }],
+		[silent, { gene: 'OFF', distance: 30000, group1: 0.2, group2: 0.4 }],
+		[none, null]
+	])
+	const all = dmrScanToRows(p, { ...opts, backgroundCorrection: true })
+	const { rows, scan } = dmrScanToRows(p, {
+		...opts,
+		backgroundCorrection: true,
+		expression: { links, samples: [300, 40], unit: 'TPM' }
+	})
+	t.deepEqual(
+		rows.map(r => r.promoter_id),
+		['chr1:1000-2000'],
+		'only the DMR whose gene one group expresses is a row'
+	)
+	t.deepEqual(rows[0].expression, links.get(on), 'which carries its link')
+	t.equal(rows[0].mean_beta_control, 0.2, 'and its baseline')
+	t.ok(Math.abs(rows[0].mean_beta_case! - 0.45) < 1e-12, 'and where the second group took it')
+	t.deepEqual([scan.shown, scan.hyper, scan.hypo], [1, 1, 0], 'counts follow the filter')
+	t.deepEqual(
+		scan.expression,
+		{
+			linkBy: 'position',
+			minExpression: 1,
+			linkMaxBp: 100000,
+			samples: [300, 40],
+			unit: 'TPM',
+			expressed: 1,
+			silent: 1,
+			unlinked: 1
+		},
+		'the summary says what was hidden and why'
+	)
+	t.equal(
+		rows[0].original_p_value,
+		all.rows.find(r => r.promoter_id == 'chr1:1000-2000')!.original_p_value,
+		'the background q is over every plotted DMR, so filtering does not change it'
+	)
+	t.notOk(all.rows[0].expression, 'without the filter rows carry no link')
+	t.end()
+})
+
+tape('linkDmr: the most expressed overlapping gene, else the nearest within reach', t => {
+	const idx = buildGeneIndex({
+		genedb: {
+			db: {
+				prepare: () => ({
+					all: () => [
+						{ name: 'NEAR', chr: 'chr1', start: 40_000, stop: 50_000 },
+						{ name: 'FAR', chr: 'chr1', start: 900_000, stop: 950_000 }
+					]
+				})
+			}
+		}
+	})
+	const medians = new Map<string, [number | null, number | null]>([
+		['A', [0.1, 0.2]],
+		['B', [3, 0.5]],
+		['NEAR', [0, 2]]
+	])
+	const l = linkDmr({ chr: 'chr1', start: 1, stop: 2, genes: ['A', 'B', 'MISSING'] }, idx, medians)
+	t.deepEqual(l, { gene: 'B', distance: 0, group1: 3, group2: 0.5 }, 'the most expressed of the overlapped genes')
+	t.ok(isExpressed(l), 'expressed in group 1 is enough')
+	t.deepEqual(
+		linkDmr({ chr: 'chr1', start: 60_000, stop: 61_000 }, idx, medians),
+		{ gene: 'NEAR', distance: 10_000, group1: 0, group2: 2 },
+		'no overlapped gene: the nearest, with its distance'
+	)
+	t.equal(linkDmr({ chr: 'chr1', start: 500_000, stop: 501_000 }, idx, medians), null, 'none within reach')
+	const missing = linkDmr({ chr: 'chr1', start: 1, stop: 2, genes: ['MISSING'] }, idx, medians)
+	t.deepEqual(missing, { gene: 'MISSING', distance: 0, group1: null, group2: null }, 'a gene without expression data')
+	t.notOk(isExpressed(missing), 'is not counted as expressed')
+	t.end()
+})
+
+tape('expression.keep: a correlation link is kept by its q, not by the gene being expressed', t => {
+	const a = dmr({ start: 1000, stop: 2000 })
+	const b = dmr({ start: 5000, stop: 6000 })
+	const links = new Map<any, any>([
+		[a, { gene: 'A', distance: 0, group1: 0.2, group2: 0.3, rho: 0.5, q: 0.001 }],
+		[b, { gene: 'B', distance: 0, group1: 50, group2: 60, rho: 0.1, q: 0.4 }]
+	])
+	const { rows, scan } = dmrScanToRows(payload([a, b]), {
+		...opts,
+		expression: { links, samples: [10, 10], linkBy: 'correlation', keep: l => l.q! <= 0.05 }
+	})
+	t.deepEqual(
+		rows.map(r => r.expression?.gene),
+		['A'],
+		'the correlated DMR stays though its gene is under the expression floor; the uncorrelated one goes'
+	)
+	t.deepEqual([scan.expression!.linkBy, scan.expression!.silent], ['correlation', 1], 'and is counted as hidden')
 	t.end()
 })

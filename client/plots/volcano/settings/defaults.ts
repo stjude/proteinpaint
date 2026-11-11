@@ -2,7 +2,7 @@ import { roundValue } from '#shared/roundValue.js'
 // the sample limits of a run, shared with the server, which enforces them
 import { maxSampleCutoff, sampleLimitAlert } from '#shared'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
-import { DEFAULT_MIN_CPGS, DMR_SCAN_ELEMENT_TYPE } from '#types'
+import { DEFAULT_DMR_SCAN_Y_AXIS, DEFAULT_MIN_CPGS, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import type { DmrScanYAxis } from '#types'
 import type {
 	ValidatedVolcanoSettings,
@@ -18,7 +18,7 @@ export const DMRCATE_DEFAULTS = { lambda: 1000, C: 2, fdrCutoff: 0.05 }
 /** Tooltip of the scan's background correction, shown by the volcano's control and by the
  * pre-analysis panel (mass/groups.js). */
 export const BACKGROUND_CORRECTION_TITLE =
-	'Score each DMR against intergenic regions of similar width and CpG density instead of against zero. The y axis then asks "did this region move more than comparable background did" rather than "did it move". The two questions agree unless methylation shifts across the whole genome between the groups; when it does, they can disagree, even on whether a region is hyper- or hypomethylated. DMRs with too little matched background to score are counted in Statistics but not plotted. The scan takes longer with this on.'
+	'Score each DMR against intergenic regions of similar width, CpG density and baseline methylation (the first group\'s mean β) instead of against zero. The y axis then asks "did this region move more than comparable background did" rather than "did it move". The two questions agree unless methylation shifts across the whole genome between the groups; when it does, they can disagree, even on whether a region is hyper- or hypomethylated. DMRs with too little matched background to score are counted in Statistics but not plotted. The scan takes longer with this on.'
 
 /** The scan's y-axis choices: DMRcate's region statistics, in the order the menu lists them, with what
  * each measures in plain words for the option's tooltip. Checked against DMRcate 3.6.0's dmrcate(): it
@@ -128,8 +128,9 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>, o
 	DEFAULT_MIN_CPGS, shared with the server fallback so both mean the same untouched scan. */
 	defaults.scanChromosome = ''
 	defaults.backgroundCorrection = false
-	// what the scan plotted before the choice existed
-	defaults.scanYAxis = 'min_smoothed_fdr'
+	defaults.scanYAxis = DEFAULT_DMR_SCAN_Y_AXIS
+	// off: it needs expression data, and hides most of a scan on a cohort with a genome-wide shift
+	defaults.scanGeneFilter = ''
 	defaults.minCpgs = DEFAULT_MIN_CPGS
 	defaults.lambda = DMRCATE_DEFAULTS.lambda
 	defaults.C = DMRCATE_DEFAULTS.C

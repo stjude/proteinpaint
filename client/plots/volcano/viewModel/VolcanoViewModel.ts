@@ -11,7 +11,7 @@ import { bplen } from '#shared/common.js'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum, SCAN_Y_AXIS_OPTIONS, onDeltaBetaAxis } from '../settings/defaults'
-import { formatPromoterLabel, elementNoun } from '../promoterLabel'
+import { formatPromoterLabel, elementNoun, linkedGeneLabel } from '../promoterLabel'
 import { getGroupColors } from '../colors'
 import { DATermTypes as tt, enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
 
@@ -401,7 +401,18 @@ export class VolcanoViewModel {
 							{ value: roundValueAuto(d.fold_change) },
 							{ value: d.no_cpgs },
 							{ value: d.stop - d.start },
-							...(this.scan.backgroundCorrection ? [{ value: d.excess == null ? '' : roundValueAuto(d.excess) }] : [])
+							...(this.scan.backgroundCorrection ? [{ value: d.excess == null ? '' : roundValueAuto(d.excess) }] : []),
+							{ value: d.mean_beta_control == null ? '' : roundValueAuto(d.mean_beta_control) },
+							...(this.scan.expression
+								? [
+										{ value: d.expression ? linkedGeneLabel(d.expression) : '' },
+										{ value: d.expression?.group1 == null ? '' : roundValueAuto(d.expression.group1) },
+										{ value: d.expression?.group2 == null ? '' : roundValueAuto(d.expression.group2) },
+										...(this.scan.expression.correlation
+											? [{ value: d.expression?.rho == null ? '' : roundValueAuto(d.expression.rho) }]
+											: [])
+								  ]
+								: [])
 						)
 					} else {
 						row.splice(
@@ -723,6 +734,51 @@ export class VolcanoViewModel {
 				}
 			)
 		}
+		const ex = s.expression
+		if (ex) {
+			const unit = ex.unit ? ` ${ex.unit}` : ''
+			const reach = `${ex.linkMaxBp / 1000} kb`
+			const c = ex.correlation
+			rows.push(
+				{
+					label: c
+						? `Samples with methylation and expression (group 1, group 2)`
+						: `Samples with expression data (group 1, group 2)`,
+					value: `${ex.samples[0].toLocaleString()}, ${ex.samples[1].toLocaleString()}`
+				},
+				...(c
+					? [
+							{
+								label: `DMRs correlated with an expressed gene within ${reach} (pair FDR ≤ 0.05): shown`,
+								value: ex.expressed
+							},
+							{ label: `DMRs with expressed genes in reach, none correlated: hidden`, value: ex.silent },
+							{
+								label: `DMRs with no gene expressed (median ≥ ${ex.minExpression}${unit}) within ${reach}: hidden`,
+								value: ex.unlinked
+							},
+							{
+								label: 'DMR-gene pairs tested → at FDR ≤ 0.05',
+								value: `${c.pairs.toLocaleString()} → ${c.significantPairs.toLocaleString()}`
+							},
+							{
+								// how many links patient-wide factors (purity, cell mix) alone would give
+								label: 'Decoy pairs (genes on other chromosomes) passing the same cutoff',
+								value: `${c.transBelowCut.toLocaleString()} of ${c.transPairs.toLocaleString()}${
+									c.estFdr == null ? '' : `, implying an FDR of ${(100 * c.estFdr).toFixed(1)}%`
+								}`
+							}
+					  ]
+					: [
+							{
+								label: `DMRs linked to a gene expressed in either group (median ≥ ${ex.minExpression}${unit}): shown`,
+								value: ex.expressed
+							},
+							{ label: `DMRs linked only to genes below that: hidden`, value: ex.silent },
+							{ label: `DMRs with no gene overlapping or within ${reach}: hidden`, value: ex.unlinked }
+					  ])
+			)
+		}
 		if (s.geneBodyLoss)
 			rows.push({
 				// the correction adds the background gate, so the label must say which set this is
@@ -800,7 +856,17 @@ export class VolcanoViewModel {
 					{ label: 'Peak Δβ', sortable: true },
 					{ label: 'CpGs', sortable: true },
 					{ label: 'Width (bp)', sortable: true },
-					...(this.scan.backgroundCorrection ? [{ label: 'Excess Δβ', sortable: true }] : [])
+					...(this.scan.backgroundCorrection ? [{ label: 'Excess Δβ', sortable: true }] : []),
+					// where the region starts: the same Δβ means different things at 0.1→0.3 and 0.7→0.9
+					{ label: 'Mean β (group 1)', sortable: true },
+					...(this.scan.expression
+						? [
+								{ label: 'Linked gene', sortable: true },
+								{ label: 'Expression (group 1)', sortable: true },
+								{ label: 'Expression (group 2)', sortable: true },
+								...(this.scan.expression.correlation ? [{ label: 'ρ with expression', sortable: true }] : [])
+						  ]
+						: [])
 				)
 			} else {
 				this.pValueTable.columns.splice(
