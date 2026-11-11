@@ -226,32 +226,36 @@ function recorder() {
 	return { calls, record, deps }
 }
 
-tape('every plot button chains its term type into the plot; survival takes it as term2', async t => {
-	const { calls, record, deps } = recorder()
-	const h = makeHandler({ allowedTermTypes: ['survival', 'geneVariant'] })
-	// replace the parts that load heavy code or render UI
-	const variantTw = { term: { id: 'TP53' }, q: {} }
-	const regionTerm = { type: 'dnaMethylation', chr: 'chr17', start: 1, stop: 2 }
-	h.getGeneVariantTw = (async () => variantTw) as any
-	h.pickMethylationTerm = (async (_d: any, _g: string, _c: any, onTerm: any) => onTerm(regionTerm)) as any
-	h.launchSurvivalWithTerm2 = record('launchSurvivalWithTerm2') as any
+tape(
+	'every plot button chains its term type into the plot; survival takes it as term2 and gets the clicked button',
+	async t => {
+		const { calls, record, deps } = recorder()
+		const h = makeHandler({ allowedTermTypes: ['survival', 'geneVariant'] })
+		// replace the parts that load heavy code or render UI
+		const variantTw = { term: { id: 'TP53' }, q: {} }
+		const regionTerm = { type: 'dnaMethylation', chr: 'chr17', start: 1, stop: 2 }
+		h.getGeneVariantTw = (async () => variantTw) as any
+		h.pickMethylationTerm = (async (_d: any, _g: string, _c: any, onTerm: any) => onTerm(regionTerm)) as any
+		h.launchSurvivalWithTerm2 = record('launchSurvivalWithTerm2') as any
 
-	const row = geneRow({ geneExpression: true, snvindel: true, dnaMethylation: true })
-	for (const { actions } of h.categoriesFor(row)) {
-		for (const a of actions) await a.run(h, deps, row)
+		const button: any = { clicked: true }
+		const row = geneRow({ geneExpression: true, snvindel: true, dnaMethylation: true })
+		for (const { actions } of h.categoriesFor(row)) {
+			for (const a of actions) await a.run(h, deps, row, button)
+		}
+
+		const expTw = { term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' } }
+		t.deepEqual(calls[0], ['launchPlot', { chartType: 'summary', term: expTw }], 'expression summary')
+		t.deepEqual(calls[1], ['launchSurvivalWithTerm2', deps, expTw, button], 'expression survival')
+		t.deepEqual(calls[2], ['launchPlot', { chartType: 'summary', term: variantTw }], 'variant summary')
+		t.deepEqual(calls[3], ['launchSurvivalWithTerm2', deps, variantTw, button], 'variant survival')
+		t.deepEqual(calls[4], ['launchGenomeBrowserView', 'protein', { gene: 'TP53' }], 'protein view')
+		t.deepEqual(calls[5], ['launchGenomeBrowserView', 'genomic', { coord }], 'genome view')
+		t.deepEqual(calls[6], ['launchPlot', { chartType: 'summary', term: { term: regionTerm } }], 'methylation summary')
+		t.deepEqual(calls[7], ['launchSurvivalWithTerm2', deps, { term: regionTerm }, button], 'methylation survival')
+		t.end()
 	}
-
-	const expTw = { term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' } }
-	t.deepEqual(calls[0], ['launchPlot', { chartType: 'summary', term: expTw }], 'expression summary')
-	t.deepEqual(calls[1], ['launchSurvivalWithTerm2', deps, expTw], 'expression survival')
-	t.deepEqual(calls[2], ['launchPlot', { chartType: 'summary', term: variantTw }], 'variant summary')
-	t.deepEqual(calls[3], ['launchSurvivalWithTerm2', deps, variantTw], 'variant survival')
-	t.deepEqual(calls[4], ['launchGenomeBrowserView', 'protein', { gene: 'TP53' }], 'protein view')
-	t.deepEqual(calls[5], ['launchGenomeBrowserView', 'genomic', { coord }], 'genome view')
-	t.deepEqual(calls[6], ['launchPlot', { chartType: 'summary', term: { term: regionTerm } }], 'methylation summary')
-	t.deepEqual(calls[7], ['launchSurvivalWithTerm2', deps, { term: regionTerm }], 'methylation survival')
-	t.end()
-})
+)
 
 tape('testids per term type and plot', t => {
 	const h = makeHandler({ allowedTermTypes: ['survival', 'geneVariant'] })

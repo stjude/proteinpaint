@@ -5,7 +5,8 @@ import type { HandlerDeps } from './types.ts'
 export function addActionButton(
 	parent: any,
 	deps: Pick<HandlerDeps, 'popup'>,
-	opts: { label: string; testid: string; onClick: () => Promise<void> }
+	/** onClick gets the button's own node, so a picker can open right under it */
+	opts: { label: string; testid: string; onClick: (button: HTMLElement) => Promise<void> }
 ) {
 	return parent
 		.append('span')
@@ -17,5 +18,7 @@ export function addActionButton(
 		.style('border-radius', '5px')
 		.style('cursor', 'pointer')
 		.text(opts.label)
-		.on('click', () => void opts.onClick().catch(e => deps.popup.showError(e)))
+		.on('click', function (this: HTMLElement) {
+			opts.onClick(this).catch(e => deps.popup.showError(e))
+		})
 }

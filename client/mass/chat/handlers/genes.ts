@@ -41,7 +41,8 @@ export type GeneActionDef = {
 	testid: (gene: string) => string
 	/** per-gene gate, evaluated from the server-provided data types of that gene */
 	available: (row: GeneRow) => boolean
-	run: (handler: SearchResultHandler, deps: HandlerDeps, row: GeneRow) => Promise<void>
+	/** `button` is the clicked button, for a picker that opens under it */
+	run: (handler: SearchResultHandler, deps: HandlerDeps, row: GeneRow, button?: HTMLElement) => Promise<void>
 }
 
 /** A term type of a gene (gene expression, variants, DNA methylation, later pseudobulk). It only knows how to
@@ -74,7 +75,7 @@ export type GenePlotTypeDef = {
 	label: string
 	enabled: (flags: DatasetFlags) => boolean
 	/** `tw` is the gene's term wrapper from a GeneTermTypeDef */
-	launch: (handler: SearchResultHandler, deps: HandlerDeps, tw: any) => Promise<void>
+	launch: (handler: SearchResultHandler, deps: HandlerDeps, tw: any, button?: HTMLElement) => Promise<void>
 }
 
 /** The row of buttons of one term type after the dataset gates are applied */
@@ -121,7 +122,7 @@ const PLOT_TYPES: GenePlotTypeDef[] = [
 		id: 'survival',
 		label: 'Survival',
 		enabled: flags => flags.hasSurvival,
-		launch: (h, d, tw) => h.launchSurvivalWithTerm2(d, tw)
+		launch: (h, d, tw, button) => h.launchSurvivalWithTerm2(d, tw, button)
 	}
 ]
 
@@ -261,7 +262,7 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 					testid: gene =>
 						`sjpp-mass-chat-gene-${termType.testidKey}-${plot.id == 'summary' ? '' : plot.id + '-'}${gene}`,
 					available: () => true,
-					run: (h, d, r) => termType.withTerm(h, d, r, tw => plot.launch(h, d, tw))
+					run: (h, d, r, button) => termType.withTerm(h, d, r, tw => plot.launch(h, d, tw, button))
 				}))
 				return {
 					category: termType,
@@ -302,7 +303,7 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 				addActionButton(line, deps, {
 					label: action.label,
 					testid: action.testid(row.gene),
-					onClick: () => action.run(this, deps, row)
+					onClick: button => action.run(this, deps, row, button)
 				})
 			}
 		}
@@ -378,12 +379,11 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 		return getLoneTermByType(termdbConfig, activeCohort)?.survival
 	}
 
-	/** Survival plot with `term2` (the gene's term) as the overlay. That term exists: the row is only shown for
-	 * term types in allowedTermTypes, and this button only for a supported chart type. If the dataset has just one survival term
-	 * the plot is dispatched with it. Otherwise the user first picks the outcome: the termdb tree opens, since
-	 * survival's getPlotConfig() requires config.term to already be a resolved term wrapper (mirrors charts.ts's
-	 * showTree_select1term). */
-	async launchSurvivalWithTerm2(deps: HandlerDeps, term2: any) {
+	/** Survival plot with `term2` (the gene's term, from the row's term type) as the overlay. If the dataset has
+	 * just one survival term, the plot is dispatched with it as term. Otherwise the user first picks the outcome:
+	 * the termdb tree opens under the clicked `button`, since survival's getPlotConfig() requires config.term to
+	 * already be a resolved term wrapper (mirrors charts.ts's showTree_select1term). */
+	async launchSurvivalWithTerm2(deps: HandlerDeps, term2: any, button?: HTMLElement) {
 		const lone = await this.getLoneSurvivalTerm(deps)
 		if (lone) {
 			await deps.launcher.launchPlot({
@@ -395,7 +395,8 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 		}
 		const { app, popup } = deps
 		popup.tip.clear()
-		popup.tip.showunder(popup.inputNode)
+		// the survival term picker opens under the Survival button that was clicked
+		popup.tip.showunder(button || popup.inputNode)
 		const action: any = { type: 'plot_create', config: { chartType: 'survival', term2 } }
 		const termdb = await import('../../../termdb/app')
 		termdb.appInit({
