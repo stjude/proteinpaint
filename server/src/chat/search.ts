@@ -1,4 +1,4 @@
-import type { GeneMatch, GeneDataTypeAvailability, OmnisearchResult, SampleMatch } from '#types'
+import type { GeneMatch, GeneDataTypeAvailability, OmnisearchResult, OmnisearchResultKey, SampleMatch } from '#types'
 import { filterTerms } from '#src/termdb.server.init.ts'
 import { copy_term, get_AllSamplesByName } from '#src/termdb.js'
 import { sampleHasPlainSlides } from '../routes/termdb.wsiBySample.ts'
@@ -32,19 +32,15 @@ export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
  * path as the termdb findterm route); gene search uses searchGeneNames() below. */
 export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Promise<OmnisearchResult> {
 	const prompt = typeof q.prompt == 'string' ? q.prompt.trim() : ''
-	// The client decides which searches run (client/mass/chat/search.ts) and sends one flag per optional type;
-	// each is skipped only when explicitly false. Dictionary search is gated to a longer minimum prompt than
-	// gene search; sample search (an all-samples scan) runs only when the user presses Enter. Both default to
-	// true for direct callers (unit tests) that don't set them.
-	const includeDict = q.includeDict !== false
-	const includeSamples = q.includeSamples !== false
-	// gene search likewise: the client skips it when the prompt is outside the gene length bounds
-	const includeGenes = q.includeGenes !== false
+	// The client decides which result kinds to search (client/mass/chat/search.ts) and lists them in q.include
+	// (see OmnisearchRequest). Without a list only the cheap searches run: sample search is an all-samples scan
+	// and a coordinate needs the client's candidates, so each is searched only when explicitly listed.
+	const include = new Set<OmnisearchResultKey>(q.include ?? DEFAULT_INCLUDE)
 
 	// Dictionary variables — mirror trigger_findterm()'s DICTIONARY_VARIABLES path in server/src/termdb.js
 	let terms: any[] = []
 	let dictionaryTotal = 0
-	if (includeDict) {
+	if (include.has('dictionaryTerms')) {
 		const str = prompt.toUpperCase()
 		const found = (await ds.cohort.termdb.q.findTermByName(str, q.cohortStr || '', q.usecase, q.treeFilter)) || []
 		const allTerms = filterTerms(req, ds, found.map(copy_term))
@@ -65,7 +61,7 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 		datasetDataTypes.snvindel ||
 		datasetDataTypes.cnv ||
 		datasetDataTypes.svfusion
-	const allGeneNames = includeGenes && prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
+	const allGeneNames = include.has('genes') && prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
 	const genesTotal = allGeneNames.length
 	const geneNames = allGeneNames.slice(0, MAX_GENE_MATCHES) // cap displayed genes; genesTotal reports the full count
 	// Resolve data types per gene (one gene may have e.g. SNV/indel data while another does not), and
@@ -84,18 +80,18 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 	})
 
 	// Genomic coordinate typed as the prompt (e.g. "chr7:100000-200000") — resolved here (not on the
-	// client) so string2pos and the genome object stay server-side. Only resolved when the client sent
-	// candidate spellings (q.coordCandidates), i.e. its coordinate regex passed, AND the dataset has a
-	// genome browser genomic view (snvindel/cnv/svfusion and gbRestrictMode !== 'protein').
+	// client) so string2pos and the genome object stay server-side. Only resolved when 'coord' is included, the
+	// client sent candidate spellings (q.coordCandidates, i.e. its coordinate regex passed), AND the dataset has
+	// a genome browser genomic view (snvindel/cnv/svfusion and gbRestrictMode !== 'protein').
 	const coord =
-		datasetDataTypes.genomeBrowser && ds.queries?.gbRestrictMode !== 'protein'
+		include.has('coord') && datasetDataTypes.genomeBrowser && ds.queries?.gbRestrictMode !== 'protein'
 			? resolveCoordFromCandidates(q.coordCandidates, genome)
 			: null
 
-	// Samples — returns [] when the dataset does not allow displaying sample ids, or when the client gated
-	// out sample search (not an Enter press). sampleTotal is the full match count (before the cap).
+	// Samples — returns [] when the dataset does not allow displaying sample ids, or when 'samples' is not
+	// included (not an Enter press). sampleTotal is the full match count (before the cap).
 	const { matches: samples, total: sampleTotal } =
-		includeSamples && prompt ? await searchSamples(req, ds, prompt) : { matches: [], total: 0 }
+		include.has('samples') && prompt ? await searchSamples(req, ds, prompt) : { matches: [], total: 0 }
 
 	// Per-type total match counts (before each type's display cap) so the client can show a
 	// "Displaying N out of M" note when a type's results were truncated.
@@ -383,6 +379,8 @@ async function getSingleCellSamples(ds: any, q: any): Promise<Map<string, { sID:
 		return new Map()
 	}
 }
+/** the result kinds searched when a request does not list any */
+const DEFAULT_INCLUDE: OmnisearchResultKey[] = ['dictionaryTerms', 'genes']
 const MAX_SAMPLE_MATCHES = 10
 const MAX_GENE_MATCHES = 50
 const MAX_DICT_MATCHES = 10

@@ -4,8 +4,8 @@ import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import type { ChatRequest, ChatResponse } from '#types'
 import type { MassAppApi } from '../types/mass'
-import { initHandlers } from './handlers/index.ts'
-import type { HandlerDeps, OmnisearchHandler } from './handlers/types.ts'
+import { initHandlers } from './loadHandlers.ts'
+import type { HandlerDeps, OmnisearchHandler } from './types.ts'
 import { buildResultList, renderEntry, describeSearchable } from './results.ts'
 import { planSearch, fetchOmnisearch, SEARCH_DEBOUNCE_MS, type SearchPlan } from './search.ts'
 import { debounce } from 'debounce'
@@ -50,16 +50,17 @@ class MassAiChatBot implements RxComponent {
 					? ''
 					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.slice().sort().join(','),
 			search: appState.search,
-			nav: appState.nav
+			nav: appState.nav,
+			termdbConfig: appState.termdbConfig
 		}
 	}
 
-	async init() {
+	async init(appState) {
 		// No server request here: each search resolves dictionary terms, genes, samples and a typed coordinate
 		// in a single request. Everything that depends only on the dataset is decided once, here.
-		const termdbConfig = this.app.getState().termdbConfig
+		const termdbConfig = appState.termdbConfig
 		this.isChat = Boolean(termdbConfig?.queries?.chat)
-		this.handlers = initHandlers({ app: this.app, termdbConfig })
+		this.handlers = await initHandlers({ app: this.app, termdbConfig })
 		this.initDom()
 	}
 

@@ -88,6 +88,7 @@ tape('typed coordinate (with candidates) resolves to chr/start/stop', async func
 		genome,
 		dslabel,
 		prompt: coordPrompt,
+		include: ['coord'],
 		coordCandidates: [coordPrompt, `${bareChr}:${TP53_COORD.start}-${TP53_COORD.stop}`]
 	})
 
@@ -129,7 +130,7 @@ tape('sample search returns matching samples', async function (test) {
 	test.timeoutAfter(10000)
 	// TermdbTest allows displaying sample ids, so the matched sample is returned with its id; a dataset
 	// that disallows it (authApi.canDisplaySampleIds) returns [] here instead.
-	const data = await fetchOmnisearch({ genome, dslabel, prompt: SAMPLE_NAME })
+	const data = await fetchOmnisearch({ genome, dslabel, prompt: SAMPLE_NAME, include: ['samples'] })
 
 	test.ok(Array.isArray(data.samples), 'samples should be an array')
 	const match = (data.samples || []).find(s => s.name == SAMPLE_NAME)

@@ -1,4 +1,12 @@
-import type { ChatRequest, ChatResponse, LlmConfig, QueryClassification, RouteApi, RoutePayload } from '#types'
+import type {
+	ChatRequest,
+	ChatResponse,
+	LlmConfig,
+	OmnisearchRequest,
+	QueryClassification,
+	RouteApi,
+	RoutePayload
+} from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { readJSONFile, parse_geneset_db, getChatRelatedPlotTypes } from './utils.ts'
@@ -38,15 +46,13 @@ export function init({ genomes }) {
 	return async (req, res) => {
 		// omnisearch/cohortStr/usecase/treeFilter drive the mass omnisearch (see runOmnisearch); they are
 		// not part of the AI chat ChatRequest payload, so read them via a local cast.
-		const q: ChatRequest & {
-			omnisearch?: boolean
-			includeDict?: boolean
-			includeGenes?: boolean
-			includeSamples?: boolean
-			cohortStr?: string
-			usecase?: any
-			treeFilter?: any
-		} = req.query
+		const q: ChatRequest &
+			OmnisearchRequest & {
+				omnisearch?: boolean
+				cohortStr?: string
+				usecase?: any
+				treeFilter?: any
+			} = req.query
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'

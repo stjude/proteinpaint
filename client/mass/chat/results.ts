@@ -1,32 +1,32 @@
 // Generic result list: groups each handler's rows under a heading, adds the "Displaying N out of M" note
 // when the server capped a kind, and renders heading/note rows. Everything specific to a result kind lives
 // in its handler (./handlers); nothing here knows about genes, samples, etc.
-import type { OmnisearchResult } from '#types'
-import type { HandlerDeps, OmnisearchHandler } from './handlers/types.ts'
+import type { OmnisearchResult, OmnisearchResultKey } from '#types'
+import type { HandlerDeps, OmnisearchHandler } from './types.ts'
 
 export type ListEntry =
 	| { type: 'heading'; name: string }
 	| { type: 'note'; name: string; testid: string }
 	| { type: 'item'; handler: OmnisearchHandler; row: any }
 
-/** Build the popup's rows: for each enabled handler with results, a heading, its rows, and a truncation
+/** Build the popup's rows: for each handler with results, a heading, its rows, and a truncation
  * note when the server's total exceeds what it returned. Group order is handler order. */
 export function buildResultList(handlers: OmnisearchHandler[], data: OmnisearchResult): ListEntry[] {
 	const list: ListEntry[] = []
 	const earlier: Record<string, any[]> = {}
 	for (const handler of handlers) {
-		if (!handler.enabled) continue
 		const rows = handler.buildRows(data, earlier)
-		earlier[handler.id] = rows
+		earlier[handler.key] = rows
 		if (!rows.length) continue
 		list.push({ type: 'heading', name: handler.heading })
 		for (const row of rows) list.push({ type: 'item', handler, row })
 		const returned = handler.countReturned ? handler.countReturned(data) : rows.length
-		const total = (data.totals as Record<string, number> | undefined)?.[handler.key]
+		// the server reports a total for some result keys only (not for coord)
+		const total = (data.totals as Partial<Record<OmnisearchResultKey, number>> | undefined)?.[handler.key]
 		if (typeof total == 'number' && total > returned) {
 			list.push({
 				type: 'note',
-				testid: `sjpp-mass-chat-note-${handler.id}`,
+				testid: `sjpp-mass-chat-note-${handler.key}`,
 				name: `Displaying ${rows.length} out of a total of ${total} ${handler.noun} matches`
 			})
 		}
@@ -63,8 +63,8 @@ export function renderEntry(tr: any, entry: ListEntry, deps: HandlerDeps) {
 
 /** Text of the note under the search box, e.g.
  * "Searchable: Dictionary variables, Genes, Samples (press Enter to search), Genomic regions (chr:start-stop)".
- * Built from the enabled handlers, so it cannot drift from what the search actually does. */
+ * Built from the loaded handlers (those the dataset supports), so it cannot drift from what the search does. */
 export function describeSearchable(handlers: OmnisearchHandler[]): string {
-	const parts = handlers.filter(h => h.enabled).map(h => (h.hint ? `${h.label} (${h.hint})` : h.label))
+	const parts = handlers.map(h => (h.hint ? `${h.label} (${h.hint})` : h.label))
 	return `Searchable: ${parts.join(', ')}`
 }

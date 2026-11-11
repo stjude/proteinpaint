@@ -1,9 +1,7 @@
-// Result kind: dictionary variables (the dataset's clinical/phenotype terms). Click a term to open a
-// summary (or survival) plot of it.
 import type { OmnisearchResult } from '#types'
 import { escapeHtml } from '../../../dom/escapeHtml.ts'
-import { MIN_PROMPT_LENGTH_FOR_DICT_SEARCH, withinLength } from './constants.ts'
-import { inactive, type HandlerDeps, type HandlerPlan, type OmnisearchHandler, type SearchInput } from './types.ts'
+import { MIN_PROMPT_LENGTH_FOR_DICT_SEARCH, withinLength } from '../constants.ts'
+import type { HandlerDeps, OmnisearchHandler, SearchInput } from '../types.ts'
 
 export type DictRow = {
 	name: string
@@ -14,19 +12,25 @@ export type DictRow = {
 	ancestors: string
 }
 
-export class DictionaryHandler implements OmnisearchHandler<DictRow> {
-	readonly id = 'dictionary'
+// Result kind: dictionary variables (the dataset's clinical/phenotype terms). Click a term to open a
+// summary (or survival) plot of it.
+
+/** Whether this dataset has dictionary terms to search: every dataset does. */
+export function includeResult(_termdbConfig: any): boolean {
+	return true
+}
+
+export class SearchResultHandler implements OmnisearchHandler<DictRow> {
 	readonly key = 'dictionaryTerms' as const
 	readonly heading = 'Dictionary'
 	readonly noun = 'dictionary variable'
 	readonly label = 'Dictionary variables'
-	enabled = true // every dataset has a dictionary
 
 	init() {}
 
-	plan({ prompt, enter }: SearchInput): HandlerPlan {
-		const active = enter || withinLength(prompt, MIN_PROMPT_LENGTH_FOR_DICT_SEARCH)
-		return active ? { active, request: { includeDict: true } } : inactive({ includeDict: false })
+	/** Typing: from the dictionary minimum length up to the max; Enter ignores the length gates. */
+	includeInSearch({ prompt, enter }: SearchInput) {
+		return enter || withinLength(prompt, MIN_PROMPT_LENGTH_FOR_DICT_SEARCH)
 	}
 
 	buildRows(data: OmnisearchResult): DictRow[] {

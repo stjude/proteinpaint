@@ -1,19 +1,20 @@
 import tape from 'tape'
 import { planSearch } from '../search.ts'
-import { initHandlers } from '../handlers/index.ts'
+import { initHandlers } from '../loadHandlers.ts'
 import {
 	MAX_PROMPT_LENGTH_FOR_OMNISEARCH,
 	MIN_PROMPT_LENGTH_FOR_GENE_SEARCH,
 	MIN_PROMPT_LENGTH_FOR_DICT_SEARCH
-} from '../handlers/constants.ts'
+} from '../constants.ts'
 
-/* Tests (planSearch merges every handler's contribution into one request; the real handlers are used)
+/* Tests (planSearch builds one request whose `include` list is the keys of the handlers that search the text;
+   the real handlers are used)
 	- empty / whitespace -> null
 	- typing: below the gene minimum -> null; at it, genes only; at the dictionary minimum adds dictionary
 	- samples are never searched while typing, only on Enter
 	- over the max length -> null, but a coordinate is still planned
-	- Enter: every enabled kind is searched, length gates ignored
-	- disabled kinds are switched off in the request
+	- Enter: every loaded kind is searched, length gates ignored
+	- a kind the dataset cannot use has no handler, so its key is never included
 */
 
 const config = {
@@ -21,7 +22,7 @@ const config = {
 	displaySampleIds: true,
 	queries: { snvindel: {} }
 }
-const handlers = initHandlers({ app: {}, termdbConfig: config })
+const handlers = await initHandlers({ app: {}, termdbConfig: config })
 
 tape('\n', t => {
 	t.comment('-***- mass/chat/search -***-')
@@ -41,14 +42,14 @@ tape('planSearch() typing: below the gene minimum is not searched', t => {
 
 tape('planSearch() typing: the gene minimum is a gene-only search', t => {
 	const plan = planSearch(handlers, 'p'.repeat(MIN_PROMPT_LENGTH_FOR_GENE_SEARCH), { enter: false })
-	t.deepEqual(plan?.request, { includeDict: false, includeGenes: true, includeSamples: false })
+	t.deepEqual(plan?.request, { include: ['genes'] })
 	t.end()
 })
 
 tape('planSearch() typing: the dictionary minimum adds dictionary but never samples', t => {
 	const plan = planSearch(handlers, ` ${'r'.repeat(MIN_PROMPT_LENGTH_FOR_DICT_SEARCH)} `, { enter: false })
 	t.equal(plan?.prompt, 'r'.repeat(MIN_PROMPT_LENGTH_FOR_DICT_SEARCH), 'prompt is trimmed')
-	t.deepEqual(plan?.request, { includeDict: true, includeGenes: true, includeSamples: false })
+	t.deepEqual(plan?.request, { include: ['dictionaryTerms', 'genes'] })
 	t.end()
 })
 
@@ -57,24 +58,24 @@ tape('planSearch() typing: over the max length is not searched, a coordinate sti
 	const plan = planSearch(handlers, 'chr17:7666657-7688274', { enter: false })
 	t.ok(plan, 'a long coordinate is searched')
 	t.deepEqual(plan?.request.coordCandidates, ['chr17:7666657-7688274', '17:7666657-7688274'])
-	t.equal(plan?.request.includeSamples, false, 'a coordinate typed without Enter still does not search samples')
-	t.equal(plan?.request.includeDict, false, 'nor the dictionary, which is over its length gate')
+	t.deepEqual(
+		plan?.request.include,
+		['coord'],
+		'only the coordinate: not samples (no Enter), not the dictionary or genes (too long)'
+	)
 	t.end()
 })
 
-tape('planSearch() Enter: searches every enabled kind and ignores length gates', t => {
+tape('planSearch() Enter: searches every loaded kind and ignores length gates', t => {
 	const short = planSearch(handlers, 'a', { enter: true })
-	t.deepEqual(short?.request, { includeDict: true, includeGenes: true, includeSamples: true })
+	t.deepEqual(short?.request, { include: ['dictionaryTerms', 'genes', 'samples'] }, 'not coord: "a" is no coordinate')
 	t.ok(planSearch(handlers, 'a'.repeat(MAX_PROMPT_LENGTH_FOR_OMNISEARCH + 10), { enter: true }), 'a long sample name')
 	t.end()
 })
 
-tape('planSearch() disabled kinds are switched off in the request', t => {
-	const minimal = initHandlers({ app: {}, termdbConfig: {} })
-	const plan = planSearch(minimal, 'abc', { enter: true })
-	t.equal(plan?.request.includeSamples, false, 'samples are off when the dataset does not display sample ids')
-	t.equal(plan?.request.includeGenes, false, 'genes are off when the dataset has no gene data')
-	t.equal(plan?.request.includeDict, true)
-	t.notOk('coordCandidates' in (plan?.request || {}))
+tape('planSearch() a kind the dataset cannot use has no handler, so its key is never included', async t => {
+	// e.g. no gene data, no sample ids, no genomic data: only the dictionary remains
+	const minimal = await initHandlers({ app: {}, termdbConfig: {} })
+	t.deepEqual(planSearch(minimal, 'abc', { enter: true })?.request, { include: ['dictionaryTerms'] })
 	t.end()
 })

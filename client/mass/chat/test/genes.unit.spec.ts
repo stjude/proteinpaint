@@ -1,23 +1,22 @@
 import tape from 'tape'
 import {
-	GeneHandler,
+	SearchResultHandler as GeneHandler,
 	getDatasetFlags,
 	hasAnyGeneAction,
-	hasGeneData,
+	includeResult,
 	variantCategoryLabel,
 	variantDtCandidates,
 	type GeneRow
-} from '../handlers/gene.ts'
-import { MIN_PROMPT_LENGTH_FOR_GENE_SEARCH, MAX_PROMPT_LENGTH_FOR_OMNISEARCH } from '../handlers/constants.ts'
+} from '../handlers/genes.ts'
+import { MIN_PROMPT_LENGTH_FOR_GENE_SEARCH, MAX_PROMPT_LENGTH_FOR_OMNISEARCH } from '../constants.ts'
 
 /* Tests
-	getDatasetFlags() / hasGeneData() / hasAnyGeneAction()
+	getDatasetFlags() / includeResult() / hasAnyGeneAction()
 	init()
-		- enabled only when the dataset has gene data
 		- Survival button only when the dataset allows survival
 		- protein / genomic / both browser buttons follow gbRestrictMode
-	plan()
-		- typing: gene length bounds; Enter ignores them; request always carries includeGenes
+	includeInSearch()
+		- typing: gene length bounds; Enter ignores them
 	buildRows()
 		- skips genes with no action, genes also in the dictionary rows, duplicates; missing coord -> null
 	countReturned()
@@ -50,7 +49,7 @@ const labelsFor = (h: GeneHandler, row: GeneRow) => h.categoriesFor(row).flatMap
 const empty = { dictionaryTerms: [], genes: [], samples: [] }
 
 tape('\n', t => {
-	t.comment('-***- mass/chat/handlers/gene -***-')
+	t.comment('-***- mass/chat/handlers/genes -***-')
 	t.end()
 })
 
@@ -58,28 +57,22 @@ tape('getDatasetFlags() survival gate and gbRestrictMode', t => {
 	t.equal(getDatasetFlags({ allowedTermTypes: ['survival', 'categorical'] }).hasSurvival, true)
 	t.equal(getDatasetFlags({ allowedTermTypes: ['categorical'] }).hasSurvival, false)
 	t.equal(getDatasetFlags(undefined).hasSurvival, false, 'a missing config is not an error')
-	t.equal(getDatasetFlags({ queries: { gbRestrictMode: 'protein' } }).gbMode, 'protein')
-	t.equal(getDatasetFlags({ queries: { gbRestrictMode: 'genomic' } }).gbMode, 'genomic')
-	t.equal(getDatasetFlags({ queries: {} }).gbMode, 'both', 'unset -> both views')
-	t.equal(getDatasetFlags({ queries: { gbRestrictMode: 'bogus' } }).gbMode, 'both', 'unknown value -> both views')
+	t.equal(getDatasetFlags({ queries: { gbRestrictMode: 'protein' } }).gbRestrictMode, 'protein')
+	t.equal(getDatasetFlags({ queries: { gbRestrictMode: 'genomic' } }).gbRestrictMode, 'genomic')
+	t.equal(getDatasetFlags({ queries: {} }).gbRestrictMode, undefined, 'unset -> both views')
+	t.equal(getDatasetFlags({ queries: { gbRestrictMode: 'bogus' } }).gbRestrictMode, undefined, 'unknown -> both views')
 	t.end()
 })
 
-tape('hasGeneData() and hasAnyGeneAction()', t => {
-	t.equal(hasGeneData({}), false)
-	t.equal(hasGeneData({ allowedTermTypes: ['geneExpression'] }), true)
-	t.equal(hasGeneData({ allowedTermTypes: ['dnaMethylation'] }), true, 'methylation alone is gene data')
-	t.equal(hasGeneData({ queries: { cnv: {} } }), true)
+tape('includeResult() and hasAnyGeneAction()', t => {
+	t.equal(includeResult({}), false)
+	t.equal(includeResult({ allowedTermTypes: ['geneExpression'] }), true)
+	t.equal(includeResult({ allowedTermTypes: ['dnaMethylation'] }), true, 'methylation alone is gene data')
+	t.equal(includeResult({ queries: { cnv: {} } }), true)
 	t.equal(hasAnyGeneAction(noTypes), false)
 	t.equal(hasAnyGeneAction(undefined), false)
 	t.equal(hasAnyGeneAction({ ...noTypes, dnaMethylation: true }), true)
 	t.equal(hasAnyGeneAction({ ...noTypes, genomeBrowser: true }), true)
-	t.end()
-})
-
-tape('init() enabled follows gene data', t => {
-	t.equal(makeHandler({ allowedTermTypes: ['geneExpression'] }).enabled, true)
-	t.equal(makeHandler({}).enabled, false)
 	t.end()
 })
 
@@ -102,21 +95,12 @@ tape('init() browser buttons follow gbRestrictMode', t => {
 	t.end()
 })
 
-tape('plan() typing follows the gene length bounds; Enter ignores them', t => {
+tape('includeInSearch() typing follows the gene length bounds; Enter ignores them', t => {
 	const h = makeHandler({ allowedTermTypes: ['geneExpression'] })
-	const short = h.plan({ prompt: 'p'.repeat(MIN_PROMPT_LENGTH_FOR_GENE_SEARCH - 1), enter: false })
-	t.equal(short.active, false)
-	t.deepEqual(short.request, { includeGenes: false }, 'switched off server-side')
-	t.deepEqual(h.plan({ prompt: 'tp', enter: false }), { active: true, request: { includeGenes: true } })
-	t.equal(h.plan({ prompt: 'a'.repeat(MAX_PROMPT_LENGTH_FOR_OMNISEARCH + 1), enter: false }).active, false)
-	t.equal(h.plan({ prompt: 'a', enter: true }).active, true, 'Enter ignores the length gates')
-	t.end()
-})
-
-tape('plan() a disabled handler never searches', t => {
-	const plan = makeHandler({}).plan({ prompt: 'TP53', enter: true })
-	t.equal(plan.active, false)
-	t.deepEqual(plan.request, { includeGenes: false })
+	t.equal(h.includeInSearch({ prompt: 'p'.repeat(MIN_PROMPT_LENGTH_FOR_GENE_SEARCH - 1), enter: false }), false)
+	t.equal(h.includeInSearch({ prompt: 'tp', enter: false }), true)
+	t.equal(h.includeInSearch({ prompt: 'a'.repeat(MAX_PROMPT_LENGTH_FOR_OMNISEARCH + 1), enter: false }), false)
+	t.equal(h.includeInSearch({ prompt: 'a', enter: true }), true, 'Enter ignores the length gates')
 	t.end()
 })
 
@@ -134,7 +118,7 @@ tape('buildRows() filters and dedupes', t => {
 				{ gene: 'RISK', dataTypes: expOnly, coord: null } // also a dictionary row
 			]
 		},
-		{ dictionary: [{ name: 'Risk' }] }
+		{ dictionaryTerms: [{ name: 'Risk' }] }
 	)
 	t.deepEqual(
 		rows.map(r => r.gene),

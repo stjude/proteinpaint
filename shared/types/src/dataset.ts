@@ -1556,6 +1556,8 @@ export type SpatialQuery = {
 	cellTypes?: boolean
 }
 
+export type GBRestrictMode = 'protein' | 'genomic'
+
 type Mds3Queries = {
 	/** (gb=genomebrowser) controls gb chart button menu genesearchbox behavior, 
 	add some additional options after a gene is found, and mode of gb launched from the menu
@@ -1573,7 +1575,7 @@ type Mds3Queries = {
 		when searching coord, gb goes into genomic mode
 		when searching gene, show an option in chart btn menu to select protein or genomic view
 	*/
-	gbRestrictMode?: 'protein' | 'genomic'
+	gbRestrictMode?: GBRestrictMode
 	snvindel?: SnvIndelQuery
 	svfusion?: SvFusion
 	cnv?: CnvSegmentQuery

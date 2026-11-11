@@ -184,7 +184,7 @@ function addTrackFacets(ds: any, facets: any[]) {
 tape('sample search: returns the matching sample when the dataset allows displaying sample ids', async t => {
 	await ensureOpenAuth()
 	const ds = addSingleCellSamples(makeSampleDs(true), [{ sample: '2646', experiments: [{ experimentID: 'exp-1' }] }])
-	const data = await runOmnisearch({ prompt: '2646' }, req, ds, genome)
+	const data = await runOmnisearch({ prompt: '2646', include: ['samples'] }, req, ds, genome)
 	t.ok(Array.isArray(data.samples), 'samples should be an array')
 	t.deepEqual(
 		data.samples,
@@ -197,33 +197,35 @@ tape('sample search: returns the matching sample when the dataset allows display
 tape('sample search: omits single-cell action for samples without single-cell data', async t => {
 	await ensureOpenAuth()
 	const ds = addSingleCellSamples(makeSampleDs(true), [{ sample: '3416' }])
-	const data = await runOmnisearch({ prompt: '2646' }, req, ds, genome)
+	const data = await runOmnisearch({ prompt: '2646', include: ['samples'] }, req, ds, genome)
 	t.deepEqual(data.samples, [{ id: 41, name: '2646' }], 'should not include single-cell data for another sample')
 	t.end()
 })
 
-tape('gene search: skipped when includeGenes is false, found by default', async t => {
-	const skipped = await runOmnisearch({ prompt: gene, includeGenes: false }, req, ds, genome)
-	t.deepEqual(skipped.genes, [], 'no genes should be returned when includeGenes is false')
+tape('gene search: skipped when genes are not included, found by default', async t => {
+	const skipped = await runOmnisearch({ prompt: gene, include: ['dictionaryTerms'] }, req, ds, genome)
+	t.deepEqual(skipped.genes, [], 'no genes should be returned when genes are not included')
 	t.equal(skipped.totals?.genes, 0, 'gene total should be 0 when the gene search is skipped')
 	const found = await runOmnisearch({ prompt: gene }, req, ds, genome)
 	t.ok(
 		found.genes.some(g => g.gene == gene),
-		'genes are searched when the flag is omitted'
+		'genes are searched when include is omitted'
 	)
 	t.end()
 })
 
-tape('sample search: skipped when includeSamples is false (search-as-you-type), dictionary unaffected', async t => {
+tape('sample search: opt-in, so skipped unless samples are included', async t => {
 	await ensureOpenAuth()
 	const ds = makeSampleDs(true)
-	const data = await runOmnisearch({ prompt: '2646', includeSamples: false }, req, ds, genome)
-	t.deepEqual(data.samples, [], 'no samples should be returned when includeSamples is false')
-	t.equal(data.totals?.samples, 0, 'sample total should be 0 when the sample search is skipped')
+	for (const q of [{ prompt: '2646', include: ['dictionaryTerms', 'genes'] }, { prompt: '2646' }]) {
+		const data = await runOmnisearch(q, req, ds, genome)
+		t.deepEqual(data.samples, [], `no samples should be returned for ${JSON.stringify(q)}`)
+		t.equal(data.totals?.samples, 0, 'sample total should be 0 when the sample search is skipped')
+	}
 	t.end()
 })
 
-tape('dictionary search: skipped when includeDict is false, samples unaffected', async t => {
+tape('dictionary search: skipped when dictionary terms are not included, samples unaffected', async t => {
 	await ensureOpenAuth()
 	let dictCalls = 0
 	const ds = makeSampleDs(true)
@@ -231,10 +233,10 @@ tape('dictionary search: skipped when includeDict is false, samples unaffected',
 		dictCalls++
 		return []
 	}
-	const data = await runOmnisearch({ prompt: '2646', includeDict: false }, req, ds, genome)
-	t.equal(dictCalls, 0, 'the dictionary lookup should not run when includeDict is false')
+	const data = await runOmnisearch({ prompt: '2646', include: ['samples'] }, req, ds, genome)
+	t.equal(dictCalls, 0, 'the dictionary lookup should not run when dictionary terms are not included')
 	t.deepEqual(data.dictionaryTerms, [], 'no dictionary terms should be returned')
-	t.equal(data.samples.length, 1, 'samples should still be searched when only includeDict is false')
+	t.equal(data.samples.length, 1, 'samples should still be searched when listed')
 	t.end()
 })
 
@@ -248,7 +250,7 @@ tape('sample search: flags samples with plain whole-slide images on disk', async
 		['2660', 42],
 		['2646', 41]
 	])
-	const data = await runOmnisearch({ prompt: '26' }, req, ds, genome)
+	const data = await runOmnisearch({ prompt: '26', include: ['samples'] }, req, ds, genome)
 	const byName = Object.fromEntries(data.samples.map((s: any) => [s.name, s]))
 	t.equal(byName['2660']?.wsimages, true, '2660 (has a plain slide on disk) should be flagged')
 	t.equal('wsimages' in byName['2646'], false, '2646 (no plain slides) should not carry the flag')
@@ -257,7 +259,7 @@ tape('sample search: flags samples with plain whole-slide images on disk', async
 
 tape('sample search: no wsimages flag when the dataset has no wsiFolder', async t => {
 	await ensureOpenAuth()
-	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(true), genome)
+	const data = await runOmnisearch({ prompt: '2646', include: ['samples'] }, req, makeSampleDs(true), genome)
 	t.equal('wsimages' in (data.samples[0] || {}), false, 'should not flag samples without ds.queries.w2.wsiFolder')
 	t.end()
 })
@@ -274,14 +276,14 @@ tape('sample search: returns assays from track-list facets for the matched sampl
 			]
 		}
 	])
-	const data = await runOmnisearch({ prompt: '2646' }, req, ds, genome)
+	const data = await runOmnisearch({ prompt: '2646', include: ['samples'] }, req, ds, genome)
 	t.deepEqual(data.samples, [{ id: 41, name: '2646', assays: [{ facet: 'Test Facet', names: ['RNA', 'DNA'] }] }])
 	t.end()
 })
 
 tape('sample search: returns no samples when the dataset does not allow displaying sample ids', async t => {
 	await ensureOpenAuth()
-	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(false), genome)
+	const data = await runOmnisearch({ prompt: '2646', include: ['samples'] }, req, makeSampleDs(false), genome)
 	t.deepEqual(data.samples, [], 'should return no samples even though "2646" matches a sample name')
 	t.end()
 })
@@ -290,7 +292,7 @@ tape('sample search: returns samples when displaySampleIds is a function that pe
 	// the role policy is evaluated (function form); returning true enables sample search
 	await ensureOpenAuth()
 	const data = await runOmnisearch(
-		{ prompt: '2646' },
+		{ prompt: '2646', include: ['samples'] },
 		req,
 		makeSampleDs(() => true),
 		genome
@@ -304,7 +306,7 @@ tape('sample search: returns no samples when displaySampleIds forbids this role 
 	// even though the sample name matches. This is the profile user/public case.
 	await ensureOpenAuth()
 	const data = await runOmnisearch(
-		{ prompt: '2646' },
+		{ prompt: '2646', include: ['samples'] },
 		req,
 		makeSampleDs(car => car?.role === 'admin'),
 		genome
@@ -432,7 +434,7 @@ tape('sample restriction: public (no authorized sites) yields no filter -> denie
 tape('coordinate search for genome browser: a typed coordinate resolves only when candidates are sent', async t => {
 	// with coordCandidates (the client regex passed) the server resolves the coordinate via string2pos
 	const withCandidates = await runOmnisearch(
-		{ prompt: coordPrompt, coordCandidates: [coordPrompt, '17:7666657-7688274'] },
+		{ prompt: coordPrompt, include: ['coord'], coordCandidates: [coordPrompt, '17:7666657-7688274'] },
 		req,
 		ds,
 		genome
@@ -443,8 +445,17 @@ tape('coordinate search for genome browser: a typed coordinate resolves only whe
 	t.equal(withCandidates.coord?.stop, 7688274, 'resolved stop should match')
 
 	// without coordCandidates the server does not resolve a coordinate (gated on the client regex)
-	const noCandidates = await runOmnisearch({ prompt: coordPrompt }, req, ds, genome)
+	const noCandidates = await runOmnisearch({ prompt: coordPrompt, include: ['coord'] }, req, ds, genome)
 	t.notOk(noCandidates.coord, 'coord should NOT be resolved when no coordCandidates are sent')
+
+	// and candidates alone do nothing unless 'coord' is included
+	const notIncluded = await runOmnisearch(
+		{ prompt: coordPrompt, coordCandidates: [coordPrompt, '17:7666657-7688274'] },
+		req,
+		ds,
+		genome
+	)
+	t.notOk(notIncluded.coord, "coord should NOT be resolved when 'coord' is not included")
 	t.end()
 })
 

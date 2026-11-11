@@ -1,15 +1,10 @@
+
+import type { GBRestrictMode, OmnisearchResult } from '#types'
+import { addActionButton } from '../buttons.ts'
+import type { Coord, HandlerDeps, OmnisearchHandler, SearchInput } from '../types.ts'
+
 // Result kind: a typed genomic region ("chr7:100000-200000"). Not a list: the server resolves at most one
 // coordinate. Opens the genome browser in genomic view. No protein view: a bare region is not tied to a gene.
-import type { OmnisearchResult } from '#types'
-import { addActionButton } from '../buttons.ts'
-import { inactive, type Coord, type HandlerCtx, type HandlerDeps, type HandlerPlan } from './types.ts'
-import type { OmnisearchHandler, SearchInput } from './types.ts'
-
-export type RegionRow = { name: string; coord: Coord }
-
-export function formatCoord(coord: Coord): string {
-	return `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`
-}
 
 /** Genomic coordinate shape-filter + "chr" prefix toggling. Matches a typed "chr:start-stop" range
  * (e.g. "chr7:100000-200000" or, with the prefix omitted, "7:100000-200000") and returns the candidate
@@ -27,26 +22,31 @@ export function parseCoordCandidates(prompt: string): string[] | null {
 	return chrCandidates.map(chr => `${chr}:${start}-${stop}`)
 }
 
-export class GenomicRegionHandler implements OmnisearchHandler<RegionRow> {
-	readonly id = 'coord'
+/** Whether this dataset can open a typed region: a region needs the genome browser's genomic view, i.e. some
+ * genomic-alteration data and not a dataset restricted to the protein view. */
+export function includeResult(termdbConfig: any): boolean {
+	const q = termdbConfig?.queries || {}
+	const restrict: GBRestrictMode | undefined = q.gbRestrictMode
+	return Boolean(q.snvindel || q.cnv || q.svfusion) && restrict != 'protein'
+}
+
+export class SearchResultHandler implements OmnisearchHandler<RegionRow> {
 	readonly key = 'coord' as const
 	readonly heading = 'Genomic region'
 	readonly noun = 'genomic region'
 	readonly label = 'Genomic regions'
 	readonly hint = 'chr:start-stop'
-	enabled = false
 
-	/** A region needs the genome browser's genomic view: some genomic-alteration data, and not a dataset
-	 * restricted to the protein view. */
-	init({ termdbConfig }: HandlerCtx) {
-		const q = termdbConfig?.queries || {}
-		this.enabled = Boolean(q.snvindel || q.cnv || q.svfusion) && q.gbRestrictMode != 'protein'
+	init() {}
+
+	/** No length gate: whether the text is a coordinate range decides. */
+	includeInSearch({ prompt }: SearchInput) {
+		return parseCoordCandidates(prompt) !== null
 	}
 
-	/** No length gate: the regex decides. */
-	plan({ prompt }: SearchInput): HandlerPlan {
-		const coordCandidates = this.enabled ? parseCoordCandidates(prompt) : null
-		return coordCandidates ? { active: true, request: { coordCandidates } } : inactive()
+	/** The candidate spellings the server tries (see parseCoordCandidates). */
+	requestExtras({ prompt }: SearchInput) {
+		return { coordCandidates: parseCoordCandidates(prompt) ?? undefined }
 	}
 
 	buildRows(data: OmnisearchResult): RegionRow[] {
@@ -62,4 +62,10 @@ export class GenomicRegionHandler implements OmnisearchHandler<RegionRow> {
 			onClick: () => deps.launcher.launchGenomeBrowserView('genomic', { coord: row.coord })
 		})
 	}
+}
+
+export type RegionRow = { name: string; coord: Coord }
+
+export function formatCoord(coord: Coord): string {
+	return `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`
 }

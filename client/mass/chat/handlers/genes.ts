@@ -15,13 +15,12 @@
 //    (shared/types/src/routes/termdb.chat.ts) and getGeneDataTypes (server/src/chat/search.ts) do not know
 //    about ds.queries.singleCell.pseudobulk, and a pseudobulk term needs assay+memberId+category
 //    (shared/types/src/terms/pseudobulk.ts), not a flat per-gene boolean.
-import type { GeneDataTypeAvailability, OmnisearchResult } from '#types'
+import { TermTypes, type GeneDataTypeAvailability, type OmnisearchResult, type GBRestrictMode } from '#types'
 import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
 import { escapeHtml } from '../../../dom/escapeHtml.ts'
 import { addActionButton } from '../buttons.ts'
-import { MIN_PROMPT_LENGTH_FOR_GENE_SEARCH, withinLength } from './constants.ts'
-import { inactive, type Coord, type HandlerCtx, type HandlerDeps, type HandlerPlan } from './types.ts'
-import type { OmnisearchHandler, SearchInput } from './types.ts'
+import { MIN_PROMPT_LENGTH_FOR_GENE_SEARCH, withinLength } from '../constants.ts'
+import type { Coord, HandlerCtx, HandlerDeps, OmnisearchHandler, SearchInput } from '../types.ts'
 
 export type GeneRow = {
 	name: string
@@ -31,10 +30,12 @@ export type GeneRow = {
 	coord: Coord | null
 }
 
-export type GbMode = 'protein' | 'genomic' | 'both'
-
 /** Dataset-wide flags derived once from termdbConfig. */
-export type DatasetFlags = { hasSurvival: boolean; gbMode: GbMode }
+export type DatasetFlags = {
+	hasSurvival: boolean
+	/** the one genome browser view the dataset allows; undefined when it allows both */
+	gbRestrictMode?: GBRestrictMode
+}
 
 /** One launchable button for a selected gene. */
 export type GeneActionDef = {
@@ -45,7 +46,7 @@ export type GeneActionDef = {
 	enabled: (flags: DatasetFlags) => boolean
 	/** per-gene gate, evaluated from the server-provided data types of that gene */
 	available: (row: GeneRow) => boolean
-	run: (handler: GeneHandler, deps: HandlerDeps, row: GeneRow) => Promise<void>
+	run: (handler: SearchResultHandler, deps: HandlerDeps, row: GeneRow) => Promise<void>
 }
 
 export type GeneCategoryDef = {
@@ -121,7 +122,7 @@ const GENE_CATEGORIES: GeneCategoryDef[] = [
 				id: 'geneVariant-protein',
 				label: 'Protein view',
 				testid: gene => `sjpp-mass-chat-gene-protein-${gene}`,
-				enabled: flags => flags.gbMode != 'genomic',
+				enabled: flags => flags.gbRestrictMode != 'genomic',
 				available: row => presentVariantTypes(row).length > 0,
 				run: (_h, d, row) => d.launcher.launchGenomeBrowserView('protein', { gene: row.gene })
 			},
@@ -129,7 +130,7 @@ const GENE_CATEGORIES: GeneCategoryDef[] = [
 				id: 'geneVariant-genomic',
 				label: 'Genome view',
 				testid: gene => `sjpp-mass-chat-gene-genomic-${gene}`,
-				enabled: flags => flags.gbMode != 'protein',
+				enabled: flags => flags.gbRestrictMode != 'protein',
 				// a genomic view needs the gene's locus; hide the button when the server could not resolve it
 				available: row => presentVariantTypes(row).length > 0 && Boolean(row.coord),
 				run: (_h, d, row) => d.launcher.launchGenomeBrowserView('genomic', { coord: row.coord })
@@ -156,17 +157,19 @@ const GENE_CATEGORIES: GeneCategoryDef[] = [
 export function getDatasetFlags(termdbConfig: any): DatasetFlags {
 	const allowed: string[] = termdbConfig?.allowedTermTypes || []
 	const restrict = termdbConfig?.queries?.gbRestrictMode
-	const gbMode: GbMode = restrict == 'protein' || restrict == 'genomic' ? restrict : 'both'
-	return { hasSurvival: allowed.includes('survival'), gbMode }
+	// anything but a known restriction (including a missing one) allows both views
+	const gbRestrictMode: GBRestrictMode | undefined = restrict == 'protein' || restrict == 'genomic' ? restrict : undefined
+	return { hasSurvival: allowed.includes(TermTypes.SURVIVAL), gbRestrictMode }
 }
 
-/** True when the dataset has any gene data type to act on (mirrors the server's hasGeneData). */
-export function hasGeneData(termdbConfig: any): boolean {
+/** Whether this dataset has genes to search: it has any gene data type to act on (mirrors the server's
+ * hasGeneData). */
+export function includeResult(termdbConfig: any): boolean {
 	const allowed: string[] = termdbConfig?.allowedTermTypes || []
 	const q = termdbConfig?.queries || {}
 	return (
-		allowed.includes('geneExpression') ||
-		allowed.includes('dnaMethylation') ||
+		allowed.includes(TermTypes.GENE_EXPRESSION) ||
+		allowed.includes(TermTypes.DNA_METHYLATION) ||
 		Boolean(q.snvindel || q.cnv || q.svfusion)
 	)
 }
@@ -178,19 +181,16 @@ export function hasAnyGeneAction(dt: Partial<GeneDataTypeAvailability> | undefin
 	return Boolean(dt.geneExpression || dt.snvindel || dt.cnv || dt.svfusion || dt.genomeBrowser || dt.dnaMethylation)
 }
 
-export class GeneHandler implements OmnisearchHandler<GeneRow> {
-	readonly id = 'genes'
+export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 	readonly key = 'genes' as const
 	readonly heading = 'Genes'
 	readonly noun = 'gene'
 	readonly label = 'Genes'
-	enabled = false
-	flags: DatasetFlags = { hasSurvival: false, gbMode: 'both' }
+	flags: DatasetFlags = { hasSurvival: false }
 	/** categories keeping only the actions this dataset allows; categories left with none are dropped */
 	categories: GeneCategoryDef[] = []
 
 	init({ termdbConfig }: HandlerCtx) {
-		this.enabled = hasGeneData(termdbConfig)
 		this.flags = getDatasetFlags(termdbConfig)
 		this.categories = GENE_CATEGORIES.map(cat => ({
 			...cat,
@@ -198,15 +198,15 @@ export class GeneHandler implements OmnisearchHandler<GeneRow> {
 		})).filter(cat => cat.actions.length)
 	}
 
-	plan({ prompt, enter }: SearchInput): HandlerPlan {
-		const active = this.enabled && (enter || withinLength(prompt, MIN_PROMPT_LENGTH_FOR_GENE_SEARCH))
-		return active ? { active, request: { includeGenes: true } } : inactive({ includeGenes: false })
+	/** Typing: from the gene minimum length up to the max; Enter ignores the length gates. */
+	includeInSearch({ prompt, enter }: SearchInput) {
+		return enter || withinLength(prompt, MIN_PROMPT_LENGTH_FOR_GENE_SEARCH)
 	}
 
 	/** One row per gene. Genes with no available action and repeated genes are skipped. A gene whose name
 	 * also appears among the dictionary rows is skipped too: the dictionary row is the more specific match. */
 	buildRows(data: OmnisearchResult, earlier: Record<string, any[]> = {}): GeneRow[] {
-		const dictionaryNames = new Set<string>((earlier.dictionary || []).map(r => String(r.name).toUpperCase()))
+		const dictionaryNames = new Set<string>((earlier.dictionaryTerms || []).map(r => String(r.name).toUpperCase()))
 		const rows = new Map<string, GeneRow>()
 		for (const g of Array.isArray(data.genes) ? data.genes : []) {
 			const gene = g?.gene

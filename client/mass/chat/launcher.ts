@@ -1,7 +1,4 @@
-// Plot launchers shared by more than one handler. Launchers used by a single result kind (e.g. the gene
-// variant plot) live in that kind's handler. A typed dependency object replaces the old `self: any`;
-// nothing here reads or writes component state except through `LauncherDeps`.
-import type { Coord } from './handlers/types.ts'
+import type { Coord } from './types.ts'
 import type { ResultsPopup } from './popup.ts'
 
 export type LauncherDeps = {
@@ -11,6 +8,9 @@ export type LauncherDeps = {
 	getActiveTab: () => number | undefined
 }
 
+// Plot launchers shared by more than one handler. Launchers used by a single result kind (e.g. the gene
+// variant plot) live in that kind's handler. A typed dependency object replaces the old `self: any`;
+// nothing here reads or writes component state except through `LauncherDeps`.
 export class Launcher {
 	constructor(private deps: LauncherDeps) {}
 

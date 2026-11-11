@@ -1,12 +1,11 @@
 import tape from 'tape'
-import { SampleHandler, SAMPLE_ACTIONS, type SampleRow } from '../handlers/sample.ts'
+import { SearchResultHandler as SampleHandler, includeResult, SAMPLE_ACTIONS, type SampleRow } from '../handlers/samples.ts'
 
 /* Tests
-	init() / enabled
-		- enabled only when the dataset displays sample ids
-	plan()
-		- searched only on Enter, and only when enabled
-		- the request always carries includeSamples (true or false)
+	includeResult()
+		- only when the dataset displays sample ids
+	includeInSearch()
+		- searched only on Enter
 	buildRows()
 		- maps server fields, drops unnamed entries
 	SAMPLE_ACTIONS
@@ -14,43 +13,28 @@ import { SampleHandler, SAMPLE_ACTIONS, type SampleRow } from '../handlers/sampl
 		- configs launch the expected charts
 */
 
-function makeHandler(termdbConfig: any) {
-	const h = new SampleHandler()
-	h.init({ app: {}, termdbConfig })
-	return h
-}
-
 tape('\n', t => {
-	t.comment('-***- mass/chat/handlers/sample -***-')
+	t.comment('-***- mass/chat/handlers/samples -***-')
 	t.end()
 })
 
-tape('init() enabled only when the dataset displays sample ids', t => {
-	t.equal(makeHandler({ displaySampleIds: true }).enabled, true)
-	t.equal(makeHandler({ displaySampleIds: false }).enabled, false)
-	t.equal(makeHandler({}).enabled, false)
-	t.equal(makeHandler(undefined).enabled, false, 'a missing config is not an error')
+tape('includeResult() only when the dataset displays sample ids', t => {
+	t.equal(includeResult({ displaySampleIds: true }), true)
+	t.equal(includeResult({ displaySampleIds: false }), false)
+	t.equal(includeResult({}), false)
+	t.equal(includeResult(undefined), false, 'a missing config is not an error')
 	t.end()
 })
 
-tape('plan() searches samples only on Enter', t => {
-	const h = makeHandler({ displaySampleIds: true })
-	t.deepEqual(h.plan({ prompt: '2646', enter: true }), { active: true, request: { includeSamples: true } })
-	const typing = h.plan({ prompt: '2646', enter: false })
-	t.equal(typing.active, false, 'never searched while typing')
-	t.deepEqual(typing.request, { includeSamples: false }, 'and switched off server-side')
-	t.end()
-})
-
-tape('plan() a disabled handler never searches, even on Enter', t => {
-	const plan = makeHandler({}).plan({ prompt: '2646', enter: true })
-	t.equal(plan.active, false)
-	t.deepEqual(plan.request, { includeSamples: false })
+tape('includeInSearch() searches samples only on Enter', t => {
+	const h = new SampleHandler()
+	t.equal(h.includeInSearch({ prompt: '2646', enter: true }), true)
+	t.equal(h.includeInSearch({ prompt: '2646', enter: false }), false, 'never searched while typing')
 	t.end()
 })
 
 tape('buildRows() maps server fields and drops unnamed entries', t => {
-	const rows = makeHandler({ displaySampleIds: true }).buildRows({
+	const rows = new SampleHandler().buildRows({
 		dictionaryTerms: [],
 		genes: [],
 		samples: [

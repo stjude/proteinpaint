@@ -1,32 +1,30 @@
 import tape from 'tape'
 import { buildResultList, describeSearchable } from '../results.ts'
-import type { OmnisearchHandler } from '../handlers/types.ts'
-import { initHandlers } from '../handlers/index.ts'
+import type { OmnisearchResultKey } from '#types'
+import type { OmnisearchHandler } from '../types.ts'
+import { initHandlers } from '../loadHandlers.ts'
 
 /* Tests (generic list logic, with fake handlers: it must not depend on any real result kind)
 	buildResultList()
 		- no rows -> empty list
-		- each enabled handler with rows gets a heading then its items, in handler order
-		- disabled handlers contribute nothing and are not asked to build rows
+		- each handler with rows gets a heading then its items, in handler order
 		- truncation note only when the server total exceeds what the handler reports as returned
 		- countReturned overrides rows.length when comparing with the total
 		- later handlers see the rows built by earlier ones
 	describeSearchable()
-		- lists enabled handlers with their hints
+		- lists the loaded handlers with their hints
 	initHandlers()
-		- display order and which handlers a dataset enables
+		- display order; handlers the dataset cannot use are dropped
 */
 
-function fake(id: string, rows: any[], opts: Partial<OmnisearchHandler> = {}): OmnisearchHandler {
+function fake(key: OmnisearchResultKey, rows: any[], opts: Partial<OmnisearchHandler> = {}): OmnisearchHandler {
 	return {
-		id,
-		key: 'genes',
-		heading: id.toUpperCase(),
-		noun: id,
-		label: id,
-		enabled: true,
+		key,
+		heading: key.toUpperCase(),
+		noun: key,
+		label: key,
 		init() {},
-		plan: () => ({ active: true, request: {} }),
+		includeInSearch: () => true,
 		buildRows: () => rows,
 		renderRow() {},
 		...opts
@@ -40,42 +38,28 @@ tape('\n', t => {
 })
 
 tape('buildResultList() empty', t => {
-	t.deepEqual(buildResultList([fake('a', [])], data()), [])
+	t.deepEqual(buildResultList([fake('genes', [])], data()), [])
 	t.deepEqual(buildResultList([], data()), [])
 	t.end()
 })
 
 tape('buildResultList() headings and items in handler order', t => {
-	const a = fake('a', [{ n: 1 }, { n: 2 }])
-	const b = fake('b', [{ n: 3 }])
+	const a = fake('dictionaryTerms', [{ n: 1 }, { n: 2 }])
+	const b = fake('genes', [{ n: 3 }])
 	const list = buildResultList([a, b], data())
 	t.deepEqual(
 		list.map(e => (e.type == 'heading' ? `#${e.name}` : e.type == 'item' ? e.row.n : e.type)),
-		['#A', 1, 2, '#B', 3]
+		['#DICTIONARYTERMS', 1, 2, '#GENES', 3]
 	)
 	t.equal((list[1] as any).handler, a, 'an item carries its handler for rendering')
 	t.end()
 })
 
-tape('buildResultList() skips disabled handlers without building rows', t => {
-	let called = false
-	const off = fake('off', [{ n: 1 }], {
-		enabled: false,
-		buildRows: () => {
-			called = true
-			return [{ n: 1 }]
-		}
-	})
-	t.deepEqual(buildResultList([off], data()), [])
-	t.equal(called, false, 'buildRows is not called')
-	t.end()
-})
-
 tape('buildResultList() truncation note', t => {
-	const h = fake('a', [{}, {}], { key: 'genes', noun: 'gene' })
+	const h = fake('genes', [{}, {}], { noun: 'gene' })
 	const capped: any = buildResultList([h], data({ genes: 7 })).find(e => e.type == 'note')
 	t.equal(capped?.name, 'Displaying 2 out of a total of 7 gene matches')
-	t.equal(capped?.testid, 'sjpp-mass-chat-note-a')
+	t.equal(capped?.testid, 'sjpp-mass-chat-note-genes')
 	t.notOk(
 		buildResultList([h], data({ genes: 2 })).some(e => e.type == 'note'),
 		'no note when the total equals what was returned'
@@ -90,7 +74,7 @@ tape('buildResultList() truncation note', t => {
 tape('buildResultList() countReturned overrides rows.length', t => {
 	// the server returned 2 of 5 total; one was dropped client-side. The note must still appear (5 > 2)
 	// and report the 1 displayed row.
-	const h = fake('a', [{}], { key: 'genes', noun: 'gene', countReturned: () => 2 })
+	const h = fake('genes', [{}], { noun: 'gene', countReturned: () => 2 })
 	const note: any = buildResultList([h], data({ genes: 5 })).find(e => e.type == 'note')
 	t.equal(note?.name, 'Displaying 1 out of a total of 5 gene matches')
 	t.notOk(
@@ -102,45 +86,58 @@ tape('buildResultList() countReturned overrides rows.length', t => {
 
 tape('buildResultList() later handlers see earlier rows', t => {
 	let seen: any
-	const a = fake('a', [{ name: 'x' }])
-	const b = fake('b', [{ n: 1 }], {
+	const a = fake('dictionaryTerms', [{ name: 'x' }])
+	const b = fake('genes', [{ n: 1 }], {
 		buildRows: (_d, earlier) => {
 			seen = { ...earlier } // snapshot: the map keeps growing as later handlers are built
 			return [{ n: 1 }]
 		}
 	})
 	buildResultList([a, b], data())
-	t.deepEqual(seen, { a: [{ name: 'x' }] })
+	t.deepEqual(seen, { dictionaryTerms: [{ name: 'x' }] })
 	t.end()
 })
 
-tape('describeSearchable() lists enabled handlers with their hints', t => {
+tape('describeSearchable() lists handlers with their hints', t => {
 	t.equal(
 		describeSearchable([
-			fake('a', [], { label: 'Dictionary variables' }),
-			fake('b', [], { label: 'Samples', hint: 'press Enter to search' }),
-			fake('c', [], { label: 'Off', enabled: false })
+			fake('dictionaryTerms', [], { label: 'Dictionary variables' }),
+			fake('samples', [], { label: 'Samples', hint: 'press Enter to search' })
 		]),
 		'Searchable: Dictionary variables, Samples (press Enter to search)'
 	)
 	t.end()
 })
 
-tape('initHandlers() order and per-dataset enablement', t => {
-	const all = initHandlers({
+tape('initHandlers() order, and handlers the dataset cannot use are dropped', async t => {
+	const all = await initHandlers({
 		app: {},
 		termdbConfig: { allowedTermTypes: ['geneExpression'], displaySampleIds: true, queries: { snvindel: {} } }
 	})
 	t.deepEqual(
-		all.map(h => h.id),
-		['dictionary', 'genes', 'samples', 'coord'],
+		all.map(h => h.key),
+		['dictionaryTerms', 'genes', 'samples', 'coord'],
 		'display order'
 	)
 	t.equal(
 		describeSearchable(all),
 		'Searchable: Dictionary variables, Genes, Samples (press Enter to search), Genomic regions (chr:start-stop)'
 	)
-	const minimal = initHandlers({ app: {}, termdbConfig: {} })
+	const minimal = await initHandlers({ app: {}, termdbConfig: {} })
+	t.deepEqual(
+		minimal.map(h => h.key),
+		['dictionaryTerms'],
+		'a dataset with no gene data, sample ids or genomic data keeps only the dictionary handler'
+	)
 	t.equal(describeSearchable(minimal), 'Searchable: Dictionary variables', 'dictionary is always searchable')
+	const noGbGenomic = await initHandlers({
+		app: {},
+		termdbConfig: { allowedTermTypes: ['geneExpression'], queries: { snvindel: {}, gbRestrictMode: 'protein' } }
+	})
+	t.deepEqual(
+		noGbGenomic.map(h => h.key),
+		['dictionaryTerms', 'genes'],
+		'a protein-only genome browser drops the genomic region handler'
+	)
 	t.end()
 })

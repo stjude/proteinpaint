@@ -2,8 +2,7 @@
 // every sample name), and only for datasets that display sample ids. The server also enforces access.
 import type { OmnisearchResult } from '#types'
 import { addActionButton } from '../buttons.ts'
-import { inactive, type HandlerCtx, type HandlerDeps, type HandlerPlan } from './types.ts'
-import type { OmnisearchHandler, SearchInput } from './types.ts'
+import type { HandlerDeps, OmnisearchHandler, SearchInput } from '../types.ts'
 
 export type SampleRow = {
 	name: string
@@ -55,23 +54,23 @@ export const SAMPLE_ACTIONS: {
 	}
 ]
 
-export class SampleHandler implements OmnisearchHandler<SampleRow> {
-	readonly id = 'samples'
+/** Whether this dataset has samples to search: only datasets that display sample ids. */
+export function includeResult(termdbConfig: any): boolean {
+	return Boolean(termdbConfig?.displaySampleIds)
+}
+
+export class SearchResultHandler implements OmnisearchHandler<SampleRow> {
 	readonly key = 'samples' as const
 	readonly heading = 'Samples'
 	readonly noun = 'sample'
 	readonly label = 'Samples'
 	readonly hint = 'press Enter to search'
-	enabled = false
 
-	init({ termdbConfig }: HandlerCtx) {
-		this.enabled = Boolean(termdbConfig?.displaySampleIds)
-	}
+	init() {}
 
-	plan({ enter }: SearchInput): HandlerPlan {
-		return this.enabled && enter
-			? { active: true, request: { includeSamples: true } }
-			: inactive({ includeSamples: false })
+	/** Only on Enter: the server scans every sample name, so this is never searched while typing. */
+	includeInSearch({ enter }: SearchInput) {
+		return enter
 	}
 
 	/** The server only sends samples when the dataset allows displaying sample ids, so no permission check is

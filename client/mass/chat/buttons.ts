@@ -1,4 +1,4 @@
-import type { HandlerDeps } from './handlers/types.ts'
+import type { HandlerDeps } from './types.ts'
 
 /** Append a clickable action button to `parent`. Errors thrown by onClick are shown in the popup. Every
  * result button is made here so styling, test ids and error handling live in one place. */
