@@ -503,6 +503,10 @@ export default function (): Mds3 {
 				// and expression (the per-file *FileSuffix fallbacks exist for
 				// datasets without one; this fixture's companion CSVs/h5 were removed)
 				spatialDataFileSuffix: 'spatial.h5ad',
+				// sequence-based (Visium) images share the folder: an image folder holding a
+				// png + h5ad but no .ome.tif (image2) is Visium; one with a .ome.tif (image1) is image-based
+				sequenceFolder: 'files/hg38/TermdbTest/spatial',
+				sequenceImageSuffix: 'tissue_lowres_image.png',
 				// default viewer settings, overridable in the burger menu
 				cellTypes: true,
 				annotationLevel: 1

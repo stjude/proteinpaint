@@ -37,7 +37,10 @@ upon error, throw err message as a string
 		// ?image_file=SVS/slide.svs — direct whole-slide viewer, no dataset/genome.
 		// The format (SVS, OME-TIFF, ...) is deduced server-side from the file
 		// extension, case-insensitively (wsi_tile.py open_slide()).
-		const _ = await import('../plots/w2/wsi.direct')
+		// method=image (default) | sequence: image-based tiled slide vs sequence-based (Visium) spots
+		const method = urlp.get('method') || 'image'
+		if (method != 'image' && method != 'sequence') throw `invalid method=${method}, expected image or sequence`
+		const _ = await import(method == 'sequence' ? '../plots/w2/visium.direct' : '../plots/w2/wsi.direct')
 		// cell_types= value -> the type filter list. =1 fills all types. A JSON
 		// array (cell_types=["Tumor","T cell, activated"]) is the unambiguous
 		// form — urlmap() already parses it, so type names may contain commas.
@@ -50,6 +53,22 @@ upon error, throw err message as a string
 				: (Array.isArray(cellTypesValue) ? cellTypesValue : String(cellTypesValue).split(','))
 						.map(t => String(t).trim())
 						.filter(Boolean)
+		if (method == 'sequence') {
+			const gene = urlp.get('gene_expression')
+			await _.init(
+				{
+					query: `image_file=${encodeURIComponent(urlp.get('image_file'))}&spatial_data=${encodeURIComponent(
+						urlp.get('spatial_data') || ''
+					)}`,
+					showCellTypes: urlp.has('cell_types'),
+					cellTypeFilter,
+					geneExpression: gene,
+					imageOpacity: urlp.has('image_opacity') ? Number(urlp.get('image_opacity')) : undefined
+				},
+				arg.holder
+			)
+			return
+		}
 		await _.init(
 			{
 				slide: urlp.get('image_file'),
