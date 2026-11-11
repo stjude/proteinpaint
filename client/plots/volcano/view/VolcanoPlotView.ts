@@ -975,13 +975,18 @@ export class VolcanoPlotView {
 				onClick: async () => interactions.launchMethylationLocus({ gene: gene! }, this.viewData.scan?.bedjFile)
 			},
 			{
-				// a methylation hit that names no gene: the same track on its region, without expression
+				/* a methylation hit that names no gene, or any on a dataset without expression: the same track on
+				its region, without expression */
 				label: `Methylation at ${(d as any).chr}:${(d as any).start}-${(d as any).stop}`,
-				isVisible: () =>
-					termType === tt.DNA_METHYLATION &&
-					!gene &&
-					Number.isFinite((d as any).start) &&
-					interactions.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg',
+				isVisible: () => {
+					const q = interactions.app.vocabApi.termdbConfig?.queries
+					return (
+						termType === tt.DNA_METHYLATION &&
+						(!gene || !q?.geneExpression) &&
+						Number.isFinite((d as any).start) &&
+						q?.dnaMethylation?.regionAnalysis == 'cpg'
+					)
+				},
 				onClick: async () => {
 					const dm = d as any
 					return interactions.launchMethylationLocus(

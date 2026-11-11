@@ -383,7 +383,7 @@ jug2.filter(function(d){return d.rimwidth>0})
 that are found in the most samples (tk.heatmapTop of them, by the server), each linked to its disc. A cell is the
 read count of the junction in the sample, on a log scale from white (none) to dark blue (the highest shown).
 The junctions, their axis and left labels move down by its height, kept as tk.heatmapHeight for tk._finish(). */
-function renderHeatmap(tk, block) {
+export function renderHeatmap(tk, block) {
 	const jug = tk.sections.jug
 	const cols = []
 	if (tk.sampleHeatmap && tk.matrix && tk.data?.length) {

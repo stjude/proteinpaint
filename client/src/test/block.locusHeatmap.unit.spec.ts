@@ -37,7 +37,14 @@ tape('renderLocusHeatmap', t => {
 					{ col: 0, v: 0, color: 'red', filled: false }
 				]
 			},
-			{ label: 'mean', domain: [0, 1], lines: [{ color: 'red', values: [0, null, 1] }] }
+			{
+				label: 'mean',
+				domain: [0, 1],
+				lines: [
+					{ color: 'red', values: [0, null, 1] },
+					{ color: 'blue', values: [0, 1, null] }
+				]
+			}
 		],
 		annotations: [
 			{ label: 'a', colors: ['red', 'blue'] },
@@ -67,7 +74,14 @@ tape('renderLocusHeatmap', t => {
 		['red 0.25', 'green 1'],
 		'a dot that is not filled is faded and under a filled one'
 	)
-	t.equal(r.statisticsG.select('path').attr('d'), 'M50,40M250,0', 'a missing value breaks a line')
+	t.deepEqual(
+		r.statisticsG
+			.selectAll('path')
+			.nodes()
+			.map(p => p.getAttribute('d')),
+		['M0,40h100M200,0h100', 'M50,40L150,0'],
+		'a value with none next to it is a dash as wide as its column, and values next to each other are joined'
+	)
 	t.equal(r.heatmapG.selectAll('image').size(), 1, 'the heatmap is one image')
 	const ann = tk.annotationColG.selectAll('image').nodes()
 	t.equal(ann.length, 2, 'one image per annotation column')

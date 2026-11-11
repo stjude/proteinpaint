@@ -11,7 +11,7 @@ import { layeredPathways } from '#src/utils/directionalPathways.ts'
 import { validGeneSetGroup } from '#src/utils/genesetGroups.ts'
 import { scanChromosomes } from '../../routes/termdb.diffMeth.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
-import { resolveGroups } from '#src/utils/sampleGroups.ts'
+import { resolveGroups, samplesOfRequest } from '#src/utils/sampleGroups.ts'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { genomes } from '#src/initGenomesDs.js'
@@ -71,7 +71,9 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 	keeps them, which on MMRF is 312 vs 45 against 276 vs 41 for a t(4;14) contrast. */
 	const rna: Set<string> | undefined = ds.queries?.rnaseqGeneCount?.allSampleSet
 	if (!rna) throw new Error('This dataset has no gene expression counts.')
-	const both = new Set([...eligibleMethylationSamples(ds, undefined)].filter(n => rna.has(n)))
+	const eligible = new Set([...eligibleMethylationSamples(ds, undefined)].filter(n => rna.has(n)))
+	// of those, the samples that the request's filter leaves, as the methylation track shows them
+	const both = new Set(await samplesOfRequest(q, ds, eligible))
 	const samplelst = await matchedSamplelst({ groups: await resolveGroups(groups, q, ds) }, both, ds, q.__protected__)
 
 	// major chromosomes less chrM, which has no CpG shard

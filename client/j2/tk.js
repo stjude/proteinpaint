@@ -1,6 +1,6 @@
 import { dofetch3 } from '#common/dofetch'
 import { makeTk } from './makeTk'
-import { renderTk } from './render'
+import { renderTk, renderHeatmap } from './render'
 import { rangequery_rglst } from '../mds3/tk'
 //import { make_leftlabels } from './leftlabel'
 
@@ -53,6 +53,12 @@ export async function loadTk(tk, block) {
 		tk._finish(data)
 	} catch (e) {
 		if (tk.clear) tk.clear() // if the error is thrown upon initiating the track, clear() function may not have been added
+		if (tk.rows) {
+			// a heatmap was drawn: gone with the junctions it was of, and the junctions move back up
+			tk.data = []
+			delete tk.matrix
+			renderHeatmap(tk, block)
+		}
 		if (tk._finish) tk._finish({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
 	}

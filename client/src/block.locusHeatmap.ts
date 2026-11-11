@@ -105,12 +105,13 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 				.attr('fill-opacity', b.opacity ?? 1)
 		})
 		for (const l of s.lines || []) {
-			// a gap in the values breaks the line
+			// a gap in the values breaks the line; a value with none next to it is a dash as wide as its column
 			let d = '',
 				pen = 'M'
 			l.values.forEach((v, i) => {
 				if (v === null) return (pen = 'M')
-				d += `${pen}${(i + 0.5) * cw},${sy(v)}`
+				if (pen == 'M' && (l.values[i + 1] ?? null) === null) d += `M${i * cw},${sy(v)}h${cw}`
+				else d += `${pen}${(i + 0.5) * cw},${sy(v)}`
 				pen = 'L'
 			})
 			g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', l.color).attr('stroke-width', 1.5)

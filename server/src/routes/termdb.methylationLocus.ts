@@ -9,7 +9,7 @@ import { getData } from '#src/termdb.matrix.js'
 import { authApi } from '#src/auth.js'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 import { resolveMethylationMatrix } from '#src/utils/methylationMatrix.ts'
-import { resolveGroups, buildGroupValues, readableSamples } from '#src/utils/sampleGroups.ts'
+import { resolveGroups, buildGroupValues, samplesOfRequest } from '#src/utils/sampleGroups.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getStdDev } from './termdb.descrstats.ts'
@@ -31,7 +31,6 @@ const NBINS = 40
 // largest q.region read; a wider one would pull every CpG of a chromosome arm for 40 columns
 const MAX_REGION = 2_000_000
 const MAX_BINS = 300
-const emptyFilter = { type: 'tvslst', in: true, join: '', lst: [] }
 // a bin needs this many samples with a value to be correlated, as in correlationVolcano
 const minArrayLength = 3
 
@@ -130,21 +129,8 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		}
 		samples.sort((a, b) => a.value! - b.value!)
 	} else {
-		/* no gene: the samples that pass the filter, listed as the samples of a group defined by a filter
-		are, which works with and without a sample db and maps parents to children as above. isFilterGroup()
-		needs a filter object, so a request with only a filter0 gets an empty one. */
-		if (q.filter?.lst?.length || q.filter0) {
-			const [all] = await resolveGroups(
-				[{ name: 'all', filter: q.filter || emptyFilter, mapParent2Children: true }],
-				q,
-				ds
-			)
-			const { names } = await buildGroupValues(all.values, m.eligible, ds, null, null, null, null, q.__protected__)
-			for (const n of names) add(n)
-		} else {
-			// nothing to filter by: every eligible sample that the request may read
-			for (const n of await readableSamples(m.eligible, ds, q.__protected__)) add(n)
-		}
+		// no gene: every eligible sample that the request may read and that its filter leaves
+		for (const n of await samplesOfRequest(q, ds, m.eligible)) add(n)
 	}
 	const what = `methylation${q.gene ? ' and expression' : ''} data`
 	if (samples.length < minArrayLength) throw new Error(`Too few samples with ${what}`)

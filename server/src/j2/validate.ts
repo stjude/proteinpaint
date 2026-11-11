@@ -91,7 +91,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 			(!Number.isInteger(param.matrixTop) || param.matrixTop < 1 || param.matrixTop > maxMatrixTop)
 		)
 			throw new Error(`matrixTop must be an integer from 1 to ${maxMatrixTop}`)
-		// with matrixTop, the [column, read count] pairs of each junction, until the most frequent junctions are known
+		// with matrixTop, the [column, read count] pairs of the junctions found in the most samples so far
 		const rcByJunction = new Map<Junction, [number, number][]>()
 		for (const r of param.rglst || []) {
 			await utils.readTabixLines({
@@ -175,7 +175,15 @@ export async function validate_query_junction(ds: any, genome: any) {
 						}
 					}
 					junctions.push(j)
-					if (param.matrixTop) rcByJunction.set(j, pairs)
+					if (param.matrixTop) {
+						rcByJunction.set(j, pairs)
+						// no more than the matrix can hold: the junction in the fewest samples goes, of a tie the later one
+						if (rcByJunction.size > param.matrixTop) {
+							let least = j
+							for (const k of rcByJunction.keys()) if (k.sampleCount! <= least.sampleCount!) least = k
+							rcByJunction.delete(least)
+						}
+					}
 					// todo terminate when exceeds limit
 				}
 			})
@@ -189,7 +197,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 			if (!limitSamples || limitSamples.has(s.name)) columns.push(i + 5)
 		})
 		const rowOf = new Map(columns.map((c, row) => [c, row]))
-		const top = [...junctions].sort((a, b) => b.sampleCount! - a.sampleCount!).slice(0, param.matrixTop)
+		const top = [...rcByJunction.keys()].sort((a, b) => b.sampleCount! - a.sampleCount!)
 		const matrix = {
 			samples: columns.map(c => {
 				const id = q.samples[c - 5].name

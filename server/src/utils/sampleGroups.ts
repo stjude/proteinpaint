@@ -117,6 +117,17 @@ export function samplelstFilter(list: { sampleId: number | string }[]): any {
 	return { type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term } }] }
 }
 
+/** The samples of `eligible`, by name, that a request may read and that its filter and filter0 select.
+ * The samples of the filter are listed as those of a group defined by a filter are (resolveGroups),
+ * which works with and without a sample db and maps parents to children as the differential analyses do. */
+export async function samplesOfRequest(q: any, ds: any, eligible: Set<string>): Promise<Iterable<string>> {
+	if (!q.filter?.lst?.length && !q.filter0) return readableSamples(eligible, ds, q.__protected__)
+	// isFilterGroup() needs a filter object, so a request with only a filter0 gets an empty one
+	const filter = q.filter || { type: 'tvslst', in: true, join: '', lst: [] }
+	const [all] = await resolveGroups([{ name: 'all', filter, mapParent2Children: true }], q, ds)
+	return (await buildGroupValues(all.values, eligible, ds, null, null, null, null, q.__protected__)).names
+}
+
 /** Walk one sample group's values and collect names + confounder values.
  * A name is included iff every configured confounder (tw, tw2) has data
  * for that sample — the two early-return guards enforce that without a

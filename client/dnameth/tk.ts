@@ -90,9 +90,9 @@ export async function loadTk(tk: any, block: any) {
 }
 
 /* The scan's DMRs in the view range, from its track file. Read with the block's bedj request, in data mode. Without
-the file, or with a file that is gone from the cache, there is no DMR row. */
-async function loadDmrs(tk: any, block: any, data: LocusData): Promise<Dmr[]> {
-	if (!tk.dmrFile || data.groups?.length != 2) return []
+the file, or with a file that cannot be read, e.g. one gone from the cache, there are none (undefined) and no DMR row. */
+async function loadDmrs(tk: any, block: any, data: LocusData): Promise<Dmr[] | undefined> {
+	if (!tk.dmrFile || data.groups?.length != 2) return
 	try {
 		const res = await dofetch3('tkbedj', {
 			method: 'POST',
@@ -104,6 +104,7 @@ async function loadDmrs(tk: any, block: any, data: LocusData): Promise<Dmr[]> {
 				rglst: [data.region]
 			})
 		})
+		if (res.error) return
 		const dmrs: Dmr[] = []
 		for (const i of res.items || []) {
 			// the item's own values; a file written before it carried them has them only in its name,
@@ -116,7 +117,7 @@ async function loadDmrs(tk: any, block: any, data: LocusData): Promise<Dmr[]> {
 		}
 		return dmrs
 	} catch (_e) {
-		return []
+		return
 	}
 }
 
@@ -256,7 +257,7 @@ function render(tk: any, block: any): number {
 		b =>
 			dmrs.filter(d => d.start <= b.stop && d.stop >= b.start).sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta))[0]
 	)
-	if (tk.dmrFile && twoGroups)
+	if (tk.dmrs && twoGroups)
 		stats.push({
 			label: 'DMR Δβ',
 			domain: [-0.5, 0.5],
@@ -401,7 +402,7 @@ function renderLegend(tk: any, data: LocusData, series: Series[]) {
 	item(`width:12px;height:12px;background:${missingColor}`, 'too few reads')
 	for (const s of series) item(`width:16px;height:2px;background:${s.color}`, `mean β, ${s.label}`)
 	if (data.groups?.length == 2) item('', `Δβ = ${data.groups[1]} minus ${data.groups[0]}`)
-	if (tk.dmrFile && data.groups?.length == 2) {
+	if (tk.dmrs && data.groups?.length == 2) {
 		item(`width:12px;height:12px;background:${HYPER_COLOR}`, 'bin in a hypermethylated DMR of the scan')
 		item(`width:12px;height:12px;background:${HYPO_COLOR}`, 'in a hypomethylated DMR')
 	}
