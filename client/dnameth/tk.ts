@@ -3,7 +3,7 @@ import { Menu, table2col, addGeneSearchbox } from '#dom'
 import { interpolateRdBu } from 'd3-scale-chromatic'
 import { legend_newrow } from '#src/block.legend'
 import { makeDNAMethRegionTerm } from '#tw/dnaMethylation'
-import { renderLocusHeatmap, type LocusHeatmapStat } from '../src/block.locusHeatmap'
+import { renderLocusHeatmap, initLocusHeatmapRows, type LocusHeatmapStat } from '../src/block.locusHeatmap'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import type { MethylationLocusBin, MethylationLocusResponse } from '#types'
 
@@ -122,6 +122,8 @@ async function loadDmrs(tk: any, block: any, data: LocusData): Promise<Dmr[] | u
 }
 
 function init(tk: any, block: any) {
+	// the rows of the shared locus heatmap renderer, as the junction track has them
+	initLocusHeatmapRows(tk)
 	tk.tip = new Menu({ padding: '5px' })
 	// the gene matches of the config menu, which stays open under it
 	tk.geneTip = new Menu({ padding: '0px', parent_menu: tk.tkconfigtip.d.node() })

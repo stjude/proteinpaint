@@ -4,12 +4,16 @@ import { scaleLinear } from 'd3-scale'
 /* A heatmap of rows (e.g. samples) by equal-width columns (e.g. CpG bins, or splice junctions) as part
 of a block track, with a line from each column down to its place in the genomic view. From top to bottom:
 
-	tk.rows.statisticsG   optional rows of a value per column, each tk.rows.statisticsHeight tall
-	tk.rows.heatmapG      the matrix, tk.rows.heatmapHeight; tk.annotationColG on its right
-	tk.rows.linkageG      the lines, tk.rows.linkageHeight
+	tk.rows.statistics   optional rows of a value per column, each statRowHeight tall
+	tk.rows.heatmap      the matrix, with its annotation columns on the right
+	tk.rows.linkage      the lines
 
-The heights can be preset on tk.rows. The track supplies the data and adds whatever goes below, and
-sets its own height from the returned one. */
+Each is { g, height, data }, with the height drawn: 0 when there is nothing to draw. The heatmap also has
+leftG and rightG for its labels and annotation columns, and leftWidth, the width of the labels on the left
+of the statistics rows and the heatmap. tk.rows.heatmap.height can be preset, else it is 300. A track sets
+the rows up with initLocusHeatmapRows(), keeps its own data for them in `data`, and may keep its other rows
+in tk.rows too: the junction track keeps its junctions in tk.rows.jug. It adds whatever goes below, and sets
+its own height from locusHeatmapHeight(). */
 
 /** a row above the heatmap with a value per column */
 export type LocusHeatmapStat = {
@@ -52,35 +56,47 @@ export type LocusHeatmapData = {
 
 const annW = 12, // width of an annotation column of colors
 	annBarW = 40, // and of one of bars
-	statGap = 4
+	statRowHeight = 40,
+	statGap = 4,
+	linkageHeight = 60
 
-/** draws into tk.glider, tk.gleft and tk.gright, and returns the height drawn */
-export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData): number {
+/** tk.rows.statistics, heatmap and linkage, in tk.glider, tk.gleft and tk.gright; other rows of tk.rows are kept */
+export function initLocusHeatmapRows(tk: any) {
 	const r = (tk.rows ||= {})
-	r.statisticsHeight ||= 40
-	r.heatmapHeight ||= 300
-	r.linkageHeight ||= 60
-	if (!r.heatmapG) {
-		const g = tk.glider.append('g')
-		r.statisticsG = g.append('g')
-		r.heatmapG = g.append('g')
-		r.linkageG = g.append('g')
-		r.leftG = tk.gleft.append('g')
-		tk.annotationColG = tk.gright.append('g')
-	}
-	for (const g of [r.statisticsG, r.heatmapG, r.linkageG, r.leftG, tk.annotationColG]) g.selectAll('*').remove()
+	const g = tk.glider.append('g')
+	r.statistics = { ...r.statistics, g: g.append('g'), height: 0 }
+	r.heatmap = { height: 0, ...r.heatmap, g: g.append('g'), leftG: tk.gleft.append('g'), rightG: tk.gright.append('g') }
+	r.heatmap.leftWidth = 0
+	r.linkage = { ...r.linkage, g: g.append('g'), height: 0 }
+}
+
+/** the height of the statistics rows, the heatmap and the linkage, as last drawn */
+export function locusHeatmapHeight(tk: any): number {
+	const r = tk.rows || {}
+	return (r.statistics?.height || 0) + (r.heatmap?.height || 0) + (r.linkage?.height || 0)
+}
+
+/** draws into tk.rows.statistics, heatmap and linkage, see initLocusHeatmapRows(), and returns the height drawn */
+export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData): number {
+	if (!tk.rows?.heatmap?.g) initLocusHeatmapRows(tk)
+	const { statistics, heatmap, linkage } = tk.rows
+	for (const g of [statistics.g, heatmap.g, linkage.g, heatmap.leftG, heatmap.rightG]) g.selectAll('*').remove()
 	const nc = data.cols.length,
 		nr = data.rows.length
-	if (!nc || !nr) return 0
+	if (!nc || !nr) {
+		statistics.height = heatmap.height = linkage.height = heatmap.leftWidth = 0
+		return 0
+	}
 
 	const stats = data.stats || []
 	// without statistics rows, the annotation columns still start below the track's config handle
-	const y1 = stats.length ? stats.length * (r.statisticsHeight + statGap) : data.annotations?.length ? 16 : 0
-	const y2 = y1 + r.heatmapHeight
+	const y1 = stats.length ? stats.length * (statRowHeight + statGap) : data.annotations?.length ? 16 : 0
+	heatmap.height ||= 300
+	const y2 = y1 + heatmap.height
 	const cw = block.width / nc,
-		rh = r.heatmapHeight / nr
+		rh = heatmap.height / nr
 	const leftLabel = (y: number, text: string, size = 11) =>
-		r.leftG
+		heatmap.leftG
 			.append('text')
 			.attr('x', block.tkleftlabel_xshift)
 			.attr('y', y)
@@ -90,8 +106,8 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 			.text(text)
 
 	stats.forEach((s, k) => {
-		const g = r.statisticsG.append('g').attr('transform', `translate(0,${k * (r.statisticsHeight + statGap)})`)
-		const sy = scaleLinear().domain(s.domain).range([r.statisticsHeight, 0]).clamp(true)
+		const g = statistics.g.append('g').attr('transform', `translate(0,${k * (statRowHeight + statGap)})`)
+		const sy = scaleLinear().domain(s.domain).range([statRowHeight, 0]).clamp(true)
 		const base = sy(0)
 		g.append('line').attr('x2', block.width).attr('y1', base).attr('y2', base).attr('stroke', '#ccc')
 		;(s.bars || []).forEach((b, i) => {
@@ -128,7 +144,7 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 				.attr('stroke', d.filled ? 'white' : 'none')
 				.attr('stroke-width', 0.5)
 		leftLabel(
-			k * (r.statisticsHeight + statGap) + r.statisticsHeight / 2 + (k ? 0 : 6),
+			k * (statRowHeight + statGap) + statRowHeight / 2 + (k ? 0 : 6),
 			`${s.label} (${s.domain[0]} to ${s.domain[1]})`
 		)
 	})
@@ -152,10 +168,10 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 			.attr('x', x)
 			.attr('y', y1)
 			.attr('width', width)
-			.attr('height', r.heatmapHeight)
+			.attr('height', heatmap.height)
 			.attr('preserveAspectRatio', 'none')
 			.style('image-rendering', 'pixelated')
-	image(r.heatmapG, canvas, 0, block.width)
+	image(heatmap.g, canvas, 0, block.width)
 
 	// row names when the rows are tall enough to read, else the note
 	if (rh >= 9) data.rows.forEach((name, j) => leftLabel(y1 + (j + 0.5) * rh, name, Math.min(11, rh)))
@@ -173,9 +189,9 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 			actx.fillStyle = color
 			actx.fillRect(0, j, a.widths ? Math.max(1, Math.round(a.widths[j] * w)) : w, 1)
 		})
-		image(tk.annotationColG, c, ax, w)
+		image(heatmap.rightG, c, ax, w)
 		// under the column and reading down, clear of the config handle above
-		tk.annotationColG
+		heatmap.rightG
 			.append('text')
 			.attr('transform', `translate(${ax + annW / 2},${y2 + 4}) rotate(90)`)
 			.attr('dominant-baseline', 'central')
@@ -187,8 +203,8 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 	// a gap across the heatmap and the annotation columns, under the hit layer
 	for (const row of data.rowBreaks || [])
 		for (const [g, width] of [
-			[r.heatmapG, block.width],
-			[tk.annotationColG, ax]
+			[heatmap.g, block.width],
+			[heatmap.rightG, ax]
 		])
 			g.append('line')
 				.attr('x2', width)
@@ -200,17 +216,17 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 	const lines = data.cols.map((c, i) =>
 		c.x === undefined
 			? null
-			: r.linkageG
+			: linkage.g
 					.append('line')
 					.attr('x1', (i + 0.5) * cw)
 					.attr('y1', y2 + 2)
 					.attr('x2', c.x)
-					.attr('y2', y2 + r.linkageHeight + (c.dy || 0))
+					.attr('y2', y2 + linkageHeight + (c.dy || 0))
 					.attr('stroke', '#999')
 					.attr('stroke-width', 0.5)
 	)
 	// the column under the pointer: an outline over the statistics rows and the heatmap, and its line
-	const outline = r.heatmapG
+	const outline = heatmap.g
 		.append('rect')
 		.attr('width', cw)
 		.attr('height', y2)
@@ -226,13 +242,13 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 	/* one hit layer over the statistics rows and the heatmap: hover reads the column and row under the
 	pointer, so the cells need no listeners. row is -1 above the heatmap. */
 	const at = (event: any): [number, number] => {
-		const [mx, my] = pointer(event, r.heatmapG.node())
+		const [mx, my] = pointer(event, heatmap.g.node())
 		return [
 			Math.min(nc - 1, Math.max(0, Math.floor(mx / cw))),
 			my < y1 ? -1 : Math.min(nr - 1, Math.floor((my - y1) / rh))
 		]
 	}
-	r.heatmapG
+	heatmap.g
 		.append('rect')
 		.attr('width', block.width)
 		.attr('height', y2)
@@ -251,6 +267,9 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 		})
 		.on('click', (event: any) => data.onClick?.(...at(event)))
 
-	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth || 0, r.leftG.node().getBBox().width)
-	return y2 + r.linkageHeight
+	heatmap.leftWidth = heatmap.leftG.node().getBBox().width
+	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth || 0, heatmap.leftWidth)
+	statistics.height = y1
+	linkage.height = linkageHeight
+	return locusHeatmapHeight(tk)
 }

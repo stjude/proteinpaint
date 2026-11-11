@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { renderLocusHeatmap, type LocusHeatmapData } from '../block.locusHeatmap'
+import { renderLocusHeatmap, locusHeatmapHeight, type LocusHeatmapData } from '../block.locusHeatmap'
 
 /**
  * Tests
@@ -13,7 +13,7 @@ function getTk() {
 		glider: svg.append('g'),
 		gleft: svg.append('g'),
 		gright: svg.append('g'),
-		rows: { heatmapHeight: 100 }
+		rows: { heatmap: { height: 100 } }
 	} as any
 }
 
@@ -54,10 +54,16 @@ tape('renderLocusHeatmap', t => {
 		onHover: (_, col, row) => (hover = [col, row])
 	}
 	const height = renderLocusHeatmap(tk, block, data)
-	const r = tk.rows
+	const { statistics, heatmap, linkage } = tk.rows
 	// two statistics rows of 40 + 4 gap, heatmap 100, linkage 60
 	t.equal(height, 248, 'returns the height of the rows')
-	const bars = r.statisticsG.selectAll('rect').nodes()
+	t.deepEqual(
+		[statistics.height, heatmap.height, linkage.height, locusHeatmapHeight(tk)],
+		[88, 100, 60, 248],
+		'and keeps the height of each row, which add up to it'
+	)
+	t.ok(heatmap.leftWidth > 0, 'and the width of the labels on the left')
+	const bars = statistics.g.selectAll('rect').nodes()
 	t.equal(bars.length, 2, 'one bar per column with a value')
 	t.deepEqual(
 		bars.map(b => [Number(b.getAttribute('y')), Number(b.getAttribute('height'))]),
@@ -67,7 +73,7 @@ tape('renderLocusHeatmap', t => {
 		],
 		'bars run from zero, up for a positive value and down for a negative one'
 	)
-	const dots = r.statisticsG.selectAll('circle').nodes()
+	const dots = statistics.g.selectAll('circle').nodes()
 	t.equal(dots.length, 2, 'a dot per given dot')
 	t.deepEqual(
 		dots.map((d: any) => `${d.getAttribute('fill')} ${d.getAttribute('fill-opacity')}`),
@@ -75,47 +81,52 @@ tape('renderLocusHeatmap', t => {
 		'a dot that is not filled is faded and under a filled one'
 	)
 	t.deepEqual(
-		r.statisticsG
+		statistics.g
 			.selectAll('path')
 			.nodes()
 			.map(p => p.getAttribute('d')),
 		['M0,40h100M200,0h100', 'M50,40L150,0'],
 		'a value with none next to it is a dash as wide as its column, and values next to each other are joined'
 	)
-	t.equal(r.heatmapG.selectAll('image').size(), 1, 'the heatmap is one image')
-	const ann = tk.annotationColG.selectAll('image').nodes()
+	t.equal(heatmap.g.selectAll('image').size(), 1, 'the heatmap is one image')
+	const ann = heatmap.rightG.selectAll('image').nodes()
 	t.equal(ann.length, 2, 'one image per annotation column')
 	t.ok(Number(ann[1].getAttribute('width')) > Number(ann[0].getAttribute('width')), 'a column of bars is wider')
-	const gap = r.heatmapG.selectAll('line').nodes()
+	const gap = heatmap.g.selectAll('line').nodes()
 	t.equal(gap.length, 1, 'a gap per row break across the heatmap')
 	t.equal(Number(gap[0].getAttribute('y1')), 138, 'above the row that starts the block')
-	t.equal(tk.annotationColG.selectAll('line').size(), 1, 'and across the annotation columns')
-	const lines = r.linkageG.selectAll('line').nodes()
+	t.equal(heatmap.rightG.selectAll('line').size(), 1, 'and across the annotation columns')
+	const lines = linkage.g.selectAll('line').nodes()
 	t.equal(lines.length, 2, 'no line for the column without x')
 	t.equal(Number(lines[0].getAttribute('x1')), 50, 'a line starts under the middle of its column')
 	t.equal(Number(lines[0].getAttribute('x2')), 10, 'and ends at the x of the column')
 	t.equal(Number(lines[1].getAttribute('y2')) - Number(lines[0].getAttribute('y2')), 30, 'dy extends a line')
-	t.equal(r.leftG.selectAll('text').size(), 4, 'a label per statistics row and the names of tall rows are on the left')
+	t.equal(
+		heatmap.leftG.selectAll('text').size(),
+		4,
+		'a label per statistics row and the names of tall rows are on the left'
+	)
 
 	// second column (100-200 px); the heatmap spans y 88-188
-	const hit = r.heatmapG.select('rect[fill=transparent]').node()
+	const hit = heatmap.g.select('rect[fill=transparent]').node()
 	const box = hit.getBoundingClientRect()
 	const move = (y: number) =>
 		hit.dispatchEvent(new MouseEvent('mousemove', { clientX: box.left + 150, clientY: box.top + y, bubbles: true }))
 	move(160)
 	t.deepEqual(hover, [1, 1], 'hover reports the column and row under the pointer')
 	t.equal(lines[1].getAttribute('stroke'), '#000', 'and highlights the line of that column')
-	const outline = r.heatmapG.select('rect[fill=none]')
+	const outline = heatmap.g.select('rect[fill=none]')
 	t.equal(outline.attr('display'), null, 'outlines that column')
 	t.equal(Number(outline.attr('x')), 100, 'at its place in the heatmap')
 	move(10)
 	t.deepEqual(hover, [1, -1], 'over a statistics row, the column and no row')
 
-	tk.rows.heatmapHeight = 10
+	heatmap.height = 10
 	renderLocusHeatmap(tk, block, data)
-	t.equal(r.leftG.selectAll('text').size(), 3, 'thin rows: the note instead of the row names')
+	t.equal(heatmap.leftG.selectAll('text').size(), 3, 'thin rows: the note instead of the row names')
 
 	t.equal(renderLocusHeatmap(tk, block, { ...data, cols: [] }), 0, 'no columns: height 0')
-	t.equal(r.heatmapG.selectAll('*').size(), 0, 'and the rows are cleared')
+	t.equal(heatmap.g.selectAll('*').size(), 0, 'and the rows are cleared')
+	t.equal(locusHeatmapHeight(tk), 0, 'and their heights are 0')
 	t.end()
 })

@@ -6,6 +6,7 @@ import { getFilterName } from '../mds3/filterName'
 import { fillTermWrapper } from '#termsetting'
 import { rehydrateFilter } from '../filter/rehydrateFilter'
 import { makelabel, setLeftlabelsMaxWidth } from '../mds3/leftlabel'
+import { initLocusHeatmapRows, locusHeatmapHeight } from '../src/block.locusHeatmap'
 
 /*
  */
@@ -70,8 +71,9 @@ export async function makeTk(tk, block) {
 
 	{
 		const g = tk.glider.append('g')
-		tk.sections = {
-			// sections from top to bottom.
+		/* rows from top to bottom: the heatmap of samples by junction, see renderHeatmap(), drawn by the shared
+		locus heatmap renderer, which sets up its rows; then the junctions */
+		tk.rows = {
 			jug: {
 				height: 0, // total height of the jug section
 				g: g.append('g'),
@@ -79,6 +81,7 @@ export async function makeTk(tk, block) {
 				yAxisKey: undefined // key of the junction attribute for y axis, set in renderTk()
 			}
 		}
+		initLocusHeatmapRows(tk)
 	}
 	setH(tk, 'axisheight', 200)
 	setH(tk, 'legheight', 50)
@@ -100,7 +103,7 @@ export async function makeTk(tk, block) {
 
 	tk.clear = () => {
 		// called in loadTk, when uninitialized is true
-		tk.sections.jug.g.selectAll('*').remove()
+		tk.rows.jug.g.selectAll('*').remove()
 	}
 
 	// config
@@ -112,15 +115,15 @@ export async function makeTk(tk, block) {
 }
 
 function setH(tk, prop, v) {
-	// custom value is defined at tk.prop. it's moved to tk.sections.jug.prop
+	// custom value is defined at tk.prop. it's moved to tk.rows.jug.prop
 	const customv = tk[prop]
 	if (customv != undefined) {
 		if (!Number.isFinite(customv) || customv <= 0) throw new Error('invalid tk.' + prop)
-		tk.sections.jug[prop] = customv
+		tk.rows.jug[prop] = customv
 		delete tk[prop]
 		return
 	}
-	tk.sections.jug[prop] = v // no custom value. use default
+	tk.rows.jug[prop] = v // no custom value. use default
 }
 
 function loadTk_finish_closure(tk, block) {
@@ -136,21 +139,21 @@ function loadTk_finish_closure(tk, block) {
 
 			if (data.error) {
 				// has error e.g. server snafu. set skewer height to show error msg later
-				tk.sections.jug.height = 40
+				tk.rows.jug.height = 40
 			} else {
 				// no error. detect if has data or not
 				if (data.junctions?.length == 0) {
-					tk.sections.jug.g.selectAll('*').remove()
-					tk.sections.jug.axis.selectAll('*').remove()
-					tk.sections.jug.g.transition().attr('transform', 'translate(0,0)')
-					tk.sections.jug.g
+					tk.rows.jug.g.selectAll('*').remove()
+					tk.rows.jug.axis.selectAll('*').remove()
+					tk.rows.jug.g.transition().attr('transform', 'translate(0,0)')
+					tk.rows.jug.g
 						.append('text')
 						.text('No splice junctions')
 						.attr('y', 25)
 						.attr('x', block.width / 2)
 						.attr('text-anchor', 'middle')
 						.attr('dominant-baseline', 'center')
-					tk.sections.jug.height = 40
+					tk.rows.jug.height = 40
 				}
 				if (data.alert) {
 					console.log('TODO print this alert in tk', data.alert)
@@ -159,7 +162,7 @@ function loadTk_finish_closure(tk, block) {
 		}
 
 		// derive tk height
-		tk.height_main = (tk.heatmapHeight || 0) + tk.sections.jug.height + tk.toppad + tk.bottompad
+		tk.height_main = locusHeatmapHeight(tk) + tk.rows.jug.height + tk.toppad + tk.bottompad
 
 		if (data) {
 			updateLegend(data, tk, block)
@@ -167,7 +170,7 @@ function loadTk_finish_closure(tk, block) {
 
 		// measure tk label and left labels, as the tk name may be long
 		setLeftlabelsMaxWidth(tk)
-		;(tk.leftLabelMaxwidth = Math.max(tk.leftlabels.maxwidth + tk.leftlabels.xoff, tk.heatmapLeftWidth || 0)),
+		;(tk.leftLabelMaxwidth = Math.max(tk.leftlabels.maxwidth + tk.leftlabels.xoff, tk.rows.heatmap.leftWidth)),
 			block.tkcloakoff(tk, { error: data ? data.error : null })
 		block.block_setheight()
 		block.setllabel()
@@ -281,7 +284,7 @@ function configPanel(tk, block) {
 
 	// height
 	{
-		const k = tk.sections.jug
+		const k = tk.rows.jug
 		const row = holder.append('div').style('margin-bottom', '15px')
 		row.append('span').text('Track height')
 		row
@@ -308,7 +311,7 @@ function configPanel(tk, block) {
 	}
 
 	// log scale of read count
-	if (tk.sections.jug.yAxisKey == 'medianReadCount') {
+	if (tk.rows.jug.yAxisKey == 'medianReadCount') {
 		const row = holder.append('div').style('margin-bottom', '1px')
 		const id = Math.random()
 		const input = row
