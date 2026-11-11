@@ -40,11 +40,11 @@ export class Interactions {
 		/* on a dataset with CpG-level methylation, the methylation track starts on at the gene or position searched,
 		with the gene for its expression. It is turned off from the Methylation tab, see launchMethylationTrack() */
 		const tracks = this.app.getState().plots.find(p => p.id === this.id)?.tracks || []
-		if (
-			this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg' &&
-			!tracks.some(t => t.type == 'dnameth')
-		)
-			config.tracks = [...tracks, { type: 'dnameth', name: 'Methylation', gene: this.expressionGene(result) }]
+		if (this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg') {
+			// a track switched on before the search keeps its settings and takes the gene
+			const tk = tracks.find(t => t.type == 'dnameth') || { type: 'dnameth', name: 'Methylation' }
+			config.tracks = [...tracks.filter(t => t.type != 'dnameth'), { ...tk, gene: this.expressionGene(result) }]
+		}
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
@@ -102,6 +102,8 @@ export class Interactions {
 		const dnameth = blockInstance.tklst.find(t => t.type == 'dnameth')
 		const savedDnameth = config.tracks?.find(t => t.type == 'dnameth')
 		if (dnameth && savedDnameth) Object.assign(savedDnameth, { gene: dnameth.gene, sortBy: dnameth.sortBy })
+		// removed with the block's Remove Track: gone from the state too, so that it does not come back
+		else if (savedDnameth) config.tracks = config.tracks.filter(t => t.type != 'dnameth')
 		// the heatmap choice of the junction track's menu
 		const j2 = blockInstance.tklst.find(t => t.type == 'j2' && t.dslabel == state.vocab?.dslabel)
 		if (j2 && config.junction) config.junction.sampleHeatmap = !!j2.sampleHeatmap

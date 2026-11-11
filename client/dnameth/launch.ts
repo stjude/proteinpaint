@@ -4,12 +4,14 @@ import { dofetch3 } from '#common/dofetch'
  * expression in the track, or on a region.
  *
  * groupTw: the groups of the track
- * dmrFile: the track file of a scan of those groups, for the track's DMR row */
+ * dmrFile: the track file of a scan of those groups, for the track's DMR row
+ * filter: the sample filter of the plot this is opened from, when that plot has its own */
 export async function launchMethylationBrowser(
 	app: any,
 	at: { gene: string } | { chr: string; start: number; stop: number },
 	groupTw?: any,
-	dmrFile?: string
+	dmrFile?: string,
+	filter?: any
 ) {
 	let gene: string | undefined, region: { chr: string; start: number; stop: number }
 	if ('gene' in at) {
@@ -37,6 +39,7 @@ export async function launchMethylationBrowser(
 			// genomic mode: the CpGs of interest are mostly outside the exons
 			blockIsProteinMode: false,
 			geneSearchResult: region,
+			filter,
 			...off,
 			tracks: [{ type: 'dnameth', name: 'Methylation', gene, groupTw, dmrFile }]
 		}

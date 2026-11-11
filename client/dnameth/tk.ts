@@ -61,6 +61,7 @@ export async function loadTk(tk: any, block: any) {
 				nbins: Math.max(1, Math.min(300, Math.floor(block.width / (tk.minColWidth || 8)))),
 				filter: tk.filter,
 				filter0: tk.filter0,
+				sampleTypes: tk.sampleTypes,
 				groupTw: tk.groupTw
 			}
 		})
@@ -75,6 +76,9 @@ export async function loadTk(tk: any, block: any) {
 	} catch (e: any) {
 		if (loadId != tk.loadId) return
 		error = e.message || e
+		// nothing of the range before stays to be drawn again, e.g. by a change of sort
+		delete tk.data
+		delete tk.sortOptions
 		renderLocusHeatmap(tk, block, { rows: [], cols: [], color: betaColor, missingColor })
 	}
 	tk.height_main = tk.toppad + height + tk.bottompad
@@ -159,7 +163,7 @@ function configMenu(tk: any, block: any) {
 		tk.sortBy = event.target.value
 		tk.tkconfigtip.hide()
 		// same data and height: no request
-		render(tk, block)
+		if (tk.data) render(tk, block)
 		tk.callbackOnRender?.(tk, block)
 	})
 	for (const o of tk.sortOptions || [])
@@ -416,7 +420,10 @@ function launchViolin(tk: any, chr: string, bin: MethylationLocusBin) {
 			chartType: 'summary',
 			childType: 'violin',
 			term: { q: { mode: 'continuous' }, term: { type: 'geneExpression', gene: tk.gene, name: tk.gene } },
-			term2: { q: { mode: 'discrete' }, term: term2 }
+			term2: { q: { mode: 'discrete' }, term: term2 },
+			// the track's cohort: divided by its groups, which leaves out a sample in none, under the plot's own filter
+			...(tk.groupTw ? { term0: structuredClone(tk.groupTw) } : {}),
+			filter: tk.plotFilter
 		}
 	})
 }

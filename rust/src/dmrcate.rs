@@ -89,7 +89,22 @@ Element matrix:       rows are regulatory elements (promoters, cCREs), carrying 
 Both are sorted by chromosome then start, so a chromosome's rows are one contiguous slice
 either way -- which is all the chunked fit below needs. */
 fn read_h5_metadata(file: &File) -> Result<H5Meta, String> {
-    let samples = read_str_1d(file, "meta/samples/names")?;
+    let mut samples = read_str_1d(file, "meta/samples/names")?;
+    // samples are used by position as matrix columns: put each name at the column that
+    // meta/samples/col_idx gives it. A matrix without it stores the names in column order.
+    if let Ok(ds) = file.dataset("meta/samples/col_idx") {
+        let cols = ds.read_1d::<i64>().map_err(|e| e.to_string())?;
+        let mut by_col = vec![String::new(); samples.len()];
+        if cols.len() != samples.len() {
+            return Err("meta/samples/col_idx and names differ in length".into());
+        }
+        for (name, &c) in samples.iter().zip(cols.iter()) {
+            *by_col
+                .get_mut(c as usize)
+                .ok_or("meta/samples/col_idx is out of range")? = name.clone();
+        }
+        samples = by_col;
+    }
     let starts: Vec<i64> = file
         .dataset("meta/start")
         .map_err(|e| e.to_string())?
@@ -2940,6 +2955,28 @@ mod tests {
             .write_scalar(&cl)
             .unwrap();
         path.to_string_lossy().into_owned()
+    }
+
+    #[test]
+    fn sample_names_follow_their_stored_columns() {
+        let path = cpg_matrix(
+            "colidx",
+            &["A", "B", "C"],
+            &[10],
+            ndarray::arr2(&[[0.1f32, 0.2, 0.3]]),
+            ndarray::arr2(&[[1u16, 1, 1]]),
+        );
+        let file = File::open_rw(&path).unwrap();
+        // A is column 2, B column 0, C column 1
+        file.group("meta/samples")
+            .unwrap()
+            .new_dataset_builder()
+            .with_data(&ndarray::arr1(&[2i64, 0, 1]))
+            .create("col_idx")
+            .unwrap();
+        assert_eq!(read_h5_metadata(&file).unwrap().samples, ["B", "C", "A"]);
+        drop(file);
+        std::fs::remove_file(&path).unwrap();
     }
 
     #[test]

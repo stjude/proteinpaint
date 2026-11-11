@@ -95,8 +95,12 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 
 	const sample2group = await getSampleGroups(q, ds, m.eligible)
 	const samples: { name: string; value?: number; group?: string }[] = []
+	// the sample types chosen in the genome browser, when the dataset has sample types
+	if (q.sampleTypes != null && !Array.isArray(q.sampleTypes)) throw new Error('sampleTypes must be an array')
+	const types = ds.sampleId2Type?.size && q.sampleTypes?.length ? new Set(q.sampleTypes.map(Number)) : undefined
 	const add = (name: string, value?: number) => {
 		if (!m.eligible.has(name)) return
+		if (types && !types.has(ds.sampleId2Type.get(ds.cohort.termdb.q.sampleName2id(name)))) return
 		const group = sample2group?.get(name)
 		// with groups, the view is their comparison: a sample in none of them is left out
 		if (sample2group && group === undefined) return

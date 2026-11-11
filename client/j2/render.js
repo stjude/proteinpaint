@@ -387,10 +387,10 @@ function renderHeatmap(tk, block) {
 	const jug = tk.sections.jug
 	const cols = []
 	if (tk.sampleHeatmap && tk.matrix && tk.data?.length) {
-		const byKey = new Map(tk.data.map(j => [j.start + '.' + j.stop + '.' + j.strand, j]))
+		const byKey = new Map(tk.data.map(j => [j.chr + '.' + j.start + '.' + j.stop + '.' + j.strand, j]))
 		for (const m of tk.matrix.junctions) {
 			// absent when the junction is not in the view range, see rawdata2track()
-			const j = byKey.get(m.start + '.' + m.stop + '.' + m.strand)
+			const j = byKey.get(m.chr + '.' + m.start + '.' + m.stop + '.' + m.strand)
 			if (j) cols.push({ j, readcounts: m.readcounts })
 		}
 		// as the discs are laid out, so that the links cross less

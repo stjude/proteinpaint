@@ -158,7 +158,9 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 		return launchMethylationBrowser(
 			this.app,
 			{ gene },
-			{ q: { groups, type: 'custom-samplelst' }, term: config.tw.term }
+			{ q: { groups, type: 'custom-samplelst' }, term: config.tw.term },
+			undefined,
+			config.filter
 		)
 	}
 

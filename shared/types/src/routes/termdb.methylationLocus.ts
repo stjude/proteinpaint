@@ -16,6 +16,8 @@ export type MethylationLocusRequest = {
 	nbins?: number
 	filter?: Filter
 	filter0?: any
+	/** ids of the sample types to show, on a dataset with sample types; all when absent */
+	sampleTypes?: number[]
 	/** optional samplelst tw (e.g. the two groups of a volcano), returned as each sample's group; samples in no group are left out */
 	groupTw?: TermWrapper
 	__protected__?: any

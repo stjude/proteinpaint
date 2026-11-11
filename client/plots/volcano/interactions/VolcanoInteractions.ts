@@ -267,7 +267,8 @@ export class VolcanoInteractions {
 			this.app,
 			at,
 			{ q: { groups, type: 'custom-samplelst' }, term: config.tw.term },
-			dmrFile
+			dmrFile,
+			config.filter
 		)
 	}
 

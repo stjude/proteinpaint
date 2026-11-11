@@ -50,6 +50,7 @@ export type TermdbJunctionsDataResponse = {
 		samples?: (string | number)[]
 		/** most frequent first */
 		junctions: {
+			chr: string
 			start: number
 			stop: number
 			strand: string

@@ -198,7 +198,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 			junctions: top.map(j => {
 				const readcounts = new Array(columns.length).fill(0)
 				for (const [c, rc] of rcByJunction.get(j)!) readcounts[rowOf.get(c)!] = rc
-				return { start: j.start, stop: j.stop, strand: j.strand, readcounts }
+				return { chr: j.chr, start: j.start, stop: j.stop, strand: j.strand, readcounts }
 			})
 		}
 		return { junctions, maxReadCount, matrix }

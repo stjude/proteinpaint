@@ -194,7 +194,10 @@ export class View {
 					callbackOnRender: () => this.interactions.maySaveTrackUpdatesToState(this.blockInstance),
 					dslabel: this.state.vocab.dslabel,
 					filter: this.state.filter,
-					filter0: this.state.filter0
+					filter0: this.state.filter0,
+					// the plot's own filter, for a plot the track opens
+					plotFilter: this.state.config.filter,
+					...this.trackSampleTypes
 				})
 			tklst.push(tk)
 		}
@@ -207,8 +210,9 @@ export class View {
 	mayRenderSampleTypes() {
 		/* only with a track that reads samples, or a facet table, whose list of tracks it narrows; otherwise a change
 		would only rebuild the block */
-		const { snvindel, svfusion, junction, trackLst } = this.state.config
-		if (!snvindel?.shown && !svfusion?.shown && !junction?.shown && !trackLst?.facets?.length) {
+		const { snvindel, svfusion, junction, trackLst, tracks } = this.state.config
+		const dnameth = tracks?.some(t => t.type == 'dnameth')
+		if (!snvindel?.shown && !svfusion?.shown && !junction?.shown && !trackLst?.facets?.length && !dnameth) {
 			this.dom.sampleTypeDiv.selectAll('*').remove()
 			return
 		}
