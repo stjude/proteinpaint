@@ -413,7 +413,11 @@ function renderLegend(tk: any, data: LocusData, series: Series[]) {
 
 /* the gene's expression split by this bin's methylation, in the summary violin */
 function launchViolin(tk: any, chr: string, bin: MethylationLocusBin) {
-	const term2 = makeDNAMethRegionTerm({ chr, start: bin.start, stop: bin.stop }, tk.massApp.vocabApi, {})
+	// with the sample types of the track, so that the violin has the samples of the heatmap
+	const term2 = makeDNAMethRegionTerm({ chr, start: bin.start, stop: bin.stop }, tk.massApp.vocabApi, {
+		sampleTypes: tk.sampleTypes,
+		sampleTypeLabel: tk.sampleTypeLabel
+	})
 	tk.massApp.dispatch({
 		type: 'plot_create',
 		config: {

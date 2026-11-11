@@ -139,7 +139,8 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 // empirical null (median/MAD) instead of the background fraction
 // 13: solo-WCGW shares count a region's CpGs by their 1-based position, tertiles from usable windows only; bgQ and
 // the summary's significant count left to the view; nullP001 replaces nullP05
-const CACHE_VERSION = 13
+// 14: dmrcate places sample names at the columns meta/samples/col_idx gives them
+const CACHE_VERSION = 14
 
 /* Fingerprint the data files a result was computed from.
  *

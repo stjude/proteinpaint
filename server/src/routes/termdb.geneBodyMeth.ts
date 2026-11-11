@@ -157,7 +157,8 @@ function init({ genomes }) {
 // 4: dmrcate reads background regions without the model, so a body keeps CpGs the model drops, such as zero variance
 // 5: corrected deltas take the excess over the stratum's median (was the mean), from 6000 windows per chromosome
 // (was 2000), with strata also split on solo-WCGW share; a stratum with no spread leaves its genes out
-const CACHE_VERSION = 5
+// 6: dmrcate places sample names at the columns meta/samples/col_idx gives them
+const CACHE_VERSION = 6
 
 /* Mean delta-beta over every gene body, keyed by gene symbol -- one signed number per gene across
 the whole genome. This is the gene-level reading of a methylation scan: a DMR list has many regions

@@ -146,8 +146,11 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 			for (const n of await readableSamples(m.eligible, ds, q.__protected__)) add(n)
 		}
 	}
-	if (samples.length < minArrayLength)
-		throw new Error(`Too few samples with methylation${q.gene ? ' and expression' : ''} data`)
+	const what = `methylation${q.gene ? ' and expression' : ''} data`
+	if (samples.length < minArrayLength) throw new Error(`Too few samples with ${what}`)
+	// a comparison of groups needs every group asked for
+	const empty = groupOrder(q)?.find(g => !samples.some(s => s.group === g))
+	if (empty !== undefined) throw new Error(`No sample of group "${empty}" has ${what}`)
 
 	const input = {
 		h: m.matrixFile,
@@ -170,7 +173,7 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		bins = []
 	}
 
-	if (!q.gene) return { region, samples, ...groupsOf(q, samples), bins }
+	if (!q.gene) return { region, samples, ...groupsOf(q), bins }
 	const withValue = samples as { value: number; group?: string }[]
 
 	for (const [i, r] of (await correlateBins(bins, withValue, () => true)).entries()) {
@@ -180,7 +183,7 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 	/* rho within each group as well: across all samples, a difference between the groups in both
 	methylation and expression gives a strong rho in every bin even when neither moves with the
 	other inside a group (e.g. NSD2 across t(4;14)), and the per-group rho tells the two apart */
-	const { groups = [] } = groupsOf(q, samples)
+	const { groups = [] } = groupsOf(q)
 	for (const group of groups) {
 		const byBin = await correlateBins(bins, withValue, s => s.group === group)
 		bins.forEach((b, i) => {
@@ -196,14 +199,14 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		region,
 		unit,
 		samples,
-		...groupsOf(q, samples),
+		...groupsOf(q),
 		bins
 	}
 }
 
-// the requested groups that have samples, in request order
-function groupsOf(q: MethylationLocusRequest, samples: { group?: string }[]): { groups?: string[] } {
-	const groups = [...new Set((groupOrder(q) || []).filter(g => samples.some(s => s.group === g)))]
+// the requested groups, in request order; each has samples, see above
+function groupsOf(q: MethylationLocusRequest): { groups?: string[] } {
+	const groups = [...new Set(groupOrder(q) || [])]
 	return groups.length ? { groups } : {}
 }
 
