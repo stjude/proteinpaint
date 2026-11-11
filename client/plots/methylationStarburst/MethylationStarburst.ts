@@ -153,7 +153,11 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 	/* the gene's per-patient methylation and expression, with this plot's groups as the strip */
 	launchLocus(gene: string, groups: any[]) {
 		const { config } = this.state
-		return launchMethylationBrowser(this.app, gene, { q: { groups, type: 'custom-samplelst' }, term: config.tw.term })
+		return launchMethylationBrowser(
+			this.app,
+			{ gene },
+			{ q: { groups, type: 'custom-samplelst' }, term: config.tw.term }
+		)
 	}
 
 	getChartImages() {

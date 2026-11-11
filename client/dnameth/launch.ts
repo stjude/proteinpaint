@@ -1,22 +1,40 @@
 import { dofetch3 } from '#common/dofetch'
 
-/** Open a genome browser on a gene and its 5 kb flanks, with the dnameth track (./tk.ts) for that gene */
-export async function launchMethylationBrowser(app: any, gene: string, groupTw?: any) {
-	const data = await dofetch3('genelookup', { body: { deep: 1, input: gene, genome: app.vocabApi.vocab.genome } })
-	if (data.error) throw new Error(data.error)
-	const gm = data.gmlst?.find((g: any) => g.isdefault) || data.gmlst?.[0]
-	if (!gm) throw new Error(`Unknown gene: ${gene}`)
+/** Open a genome browser with the dnameth track (./tk.ts): on a gene and its 5 kb flanks, with the gene's
+ * expression in the track, or on a region.
+ *
+ * groupTw: the groups of the track
+ * dmrFile: the track file of a scan of those groups, for the track's DMR row */
+export async function launchMethylationBrowser(
+	app: any,
+	at: { gene: string } | { chr: string; start: number; stop: number },
+	groupTw?: any,
+	dmrFile?: string
+) {
+	let gene: string | undefined, region: { chr: string; start: number; stop: number }
+	if ('gene' in at) {
+		gene = at.gene
+		const data = await dofetch3('genelookup', { body: { deep: 1, input: gene, genome: app.vocabApi.vocab.genome } })
+		if (data.error) throw new Error(data.error)
+		const gm = data.gmlst?.find((g: any) => g.isdefault) || data.gmlst?.[0]
+		if (!gm) throw new Error(`Unknown gene: ${gene}`)
+		region = { chr: gm.chr, start: Math.max(0, gm.start - 5000), stop: gm.stop + 5000 }
+	} else {
+		// room on each side, as wide as the region itself
+		const pad = Math.max(5000, at.stop - at.start)
+		region = { chr: at.chr, start: Math.max(0, at.start - pad), stop: at.stop + pad }
+	}
 	app.dispatch({
 		type: 'plot_create',
 		config: {
 			chartType: 'genomeBrowser',
 			// genomic mode: the CpGs of interest are mostly outside the exons
 			blockIsProteinMode: false,
-			geneSearchResult: { chr: gm.chr, start: Math.max(0, gm.start - 5000), stop: gm.stop + 5000 },
+			geneSearchResult: region,
 			// the dataset's mutation and junction tracks start off, so that the heatmap is next to the gene
 			snvindel: { shown: false },
 			junction: { shown: false },
-			tracks: [{ type: 'dnameth', name: 'Methylation', gene, groupTw }]
+			tracks: [{ type: 'dnameth', name: 'Methylation', gene, groupTw, dmrFile }]
 		}
 	})
 }

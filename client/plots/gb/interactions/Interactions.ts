@@ -32,14 +32,23 @@ export class Interactions {
 	}
 
 	onGeneSearch = (result, blockIsProteinMode) => {
+		const config: any = {
+			geneSearchResult: result,
+			blockIsProteinMode,
+			block: { rglst: [] }
+		}
+		/* on a dataset with CpG-level methylation, the methylation track starts on at the gene or position searched,
+		with the gene for its expression. It is turned off from the Methylation tab, see launchMethylationTrack() */
+		const tracks = this.app.getState().plots.find(p => p.id === this.id)?.tracks || []
+		if (
+			this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg' &&
+			!tracks.some(t => t.type == 'dnameth')
+		)
+			config.tracks = [...tracks, { type: 'dnameth', name: 'Methylation', gene: result?.geneSymbol }]
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
-			config: {
-				geneSearchResult: result,
-				blockIsProteinMode,
-				block: { rglst: [] }
-			}
+			config
 		})
 	}
 
@@ -164,6 +173,19 @@ export class Interactions {
 			type: 'plot_edit',
 			id: this.id,
 			config: { junction: { shown } }
+		})
+	}
+
+	/* The methylation track is one of config.tracks[], where a launcher also puts it, e.g. with the groups of a
+	volcano. Shown from the tab, it takes the gene of the gene search, for that gene's expression. */
+	launchMethylationTrack = shown => {
+		const config = this.app.getState().plots.find(p => p.id === this.id)
+		const tracks = (config.tracks || []).filter(t => t.type != 'dnameth')
+		if (shown) tracks.push({ type: 'dnameth', name: 'Methylation', gene: config.geneSearchResult?.geneSymbol })
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { tracks }
 		})
 	}
 

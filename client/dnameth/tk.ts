@@ -4,6 +4,7 @@ import { interpolateRdBu } from 'd3-scale-chromatic'
 import { legend_newrow } from '#src/block.legend'
 import { makeDNAMethRegionTerm } from '#tw/dnaMethylation'
 import { renderLocusHeatmap, type LocusHeatmapStat } from '../src/block.locusHeatmap'
+import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import type { MethylationLocusBin, MethylationLocusResponse } from '#types'
 
 /* Block track of per-sample CpG methylation in the view range: samples are rows, CpG bins are columns.
@@ -12,6 +13,8 @@ tk.dslabel   required
 tk.gene      optional; with it, each bin is correlated with the gene's expression (rho and -log10 q rows),
              expression is a column of bars, and samples can be sorted by it
 tk.groupTw   optional samplelst tw: a column of group colors, mean beta per group, and with two groups their difference
+tk.dmrFile   optional, with two groups: the bedj file, in the server's cache, of the DMRs that a genome-wide scan of
+             those groups called (DmrScanSummary.bedjFile). A row marks the bins inside a DMR.
 tk.sortBy    'expression' | 'group' | 'beta' (mean beta in view); default is the first one available
 tk.minColWidth   px, default 8: the view is cut into as many bins of equal CpG count as fit at this width, so the
              bins shrink on zooming in, down to one CpG per column
@@ -24,6 +27,8 @@ so that the genome is horizontal. Data is from termdb/methylationLocus. */
 type LocusData = Extract<MethylationLocusResponse, { bins: any }>
 /** a line of the mean beta row: a group, or a third of the samples by expression */
 type Series = { label: string; color: string; pick: (j: number) => boolean }
+/** a DMR of the scan, as its bedj item names it */
+type Dmr = { start: number; stop: number; hyper: boolean; delta: number; nCpg: number }
 
 const groupColors = ['#1b9e77', '#d95f02', '#7570b3', '#e7298a']
 // the usual methylation colors: blue unmethylated, white, red methylated
@@ -63,6 +68,9 @@ export async function loadTk(tk: any, block: any) {
 		if ('error' in data) throw new Error(data.error)
 		if (!data.bins.length) throw new Error('No CpG in view range')
 		tk.data = data
+		const dmrs = await loadDmrs(tk, block, data)
+		if (loadId != tk.loadId) return
+		tk.dmrs = dmrs
 		height = render(tk, block)
 	} catch (e: any) {
 		if (loadId != tk.loadId) return
@@ -75,6 +83,40 @@ export async function loadTk(tk: any, block: any) {
 	block.setllabel()
 	// lets the host keep tk.gene and tk.sortBy, e.g. the genome browser plot in its state
 	tk.callbackOnRender?.(tk, block)
+}
+
+/* The scan's DMRs in the view range, from its track file. Read with the block's bedj request, in data mode. Without
+the file, or with a file that is gone from the cache, there is no DMR row. */
+async function loadDmrs(tk: any, block: any, data: LocusData): Promise<Dmr[]> {
+	if (!tk.dmrFile || data.groups?.length != 2) return []
+	try {
+		const res = await dofetch3('tkbedj', {
+			method: 'POST',
+			body: JSON.stringify({
+				genome: block.genome.name,
+				file: tk.dmrFile,
+				isCache: true,
+				getdata: true,
+				rglst: [data.region]
+			})
+		})
+		const dmrs: Dmr[] = []
+		for (const i of res.items || []) {
+			// the name is "Δβ -0.175, 10 CpGs, GENE ..."
+			const m = /^Δβ ([-+]?[\d.]+), (\d+) CpGs/.exec(i.name || '')
+			if (m)
+				dmrs.push({
+					start: i.start,
+					stop: i.stop,
+					hyper: i.category == 'hyper',
+					delta: Number(m[1]),
+					nCpg: Number(m[2])
+				})
+		}
+		return dmrs
+	} catch (_e) {
+		return []
+	}
 }
 
 function init(tk: any, block: any) {
@@ -206,6 +248,18 @@ function render(tk: any, block: any): number {
 				return d === null ? null : { v: d, color: betaColor(d > 0 ? 0.85 : 0.15) }
 			})
 		})
+	// the DMR that each bin is in: of several, the one with the largest difference
+	const dmrs: Dmr[] = twoGroups ? tk.dmrs || [] : []
+	const dmrOf = bins.map(
+		b =>
+			dmrs.filter(d => d.start <= b.stop && d.stop >= b.start).sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta))[0]
+	)
+	if (tk.dmrFile && twoGroups)
+		stats.push({
+			label: 'DMR Δβ',
+			domain: [-0.5, 0.5],
+			bars: dmrOf.map(d => (d ? { v: d.delta, color: d.hyper ? HYPER_COLOR : HYPO_COLOR } : null))
+		})
 
 	const annotations: { label: string; colors: string[]; widths?: number[] }[] = []
 	if (hasGene) {
@@ -274,6 +328,8 @@ function render(tk: any, block: any): number {
 				const d = diff(b, series)
 				table.addRow('Δβ', d === null ? 'no data' : round(d))
 			}
+			const dmr = dmrOf[col]
+			if (dmr) table.addRow('DMR', `${region.chr}:${dmr.start}-${dmr.stop}, Δβ ${round(dmr.delta)}, ${dmr.nCpg} CpGs`)
 			if (canViolin) table.addRow('', 'Click for a violin plot')
 			tk.tip.show(event.clientX, event.clientY)
 		},
@@ -343,6 +399,10 @@ function renderLegend(tk: any, data: LocusData, series: Series[]) {
 	item(`width:12px;height:12px;background:${missingColor}`, 'too few reads')
 	for (const s of series) item(`width:16px;height:2px;background:${s.color}`, `mean β, ${s.label}`)
 	if (data.groups?.length == 2) item('', `Δβ = ${data.groups[1]} minus ${data.groups[0]}`)
+	if (tk.dmrFile && data.groups?.length == 2) {
+		item(`width:12px;height:12px;background:${HYPER_COLOR}`, 'bin in a hypermethylated DMR of the scan')
+		item(`width:12px;height:12px;background:${HYPO_COLOR}`, 'in a hypomethylated DMR')
+	}
 	if (data.gene) item('width:12px;height:12px;background:#333;opacity:.3', 'ρ faded if q ≥ 0.05')
 	if (data.gene) item('width:16px;height:6px;background:#555', `log2(${data.unit}+1)`)
 	if (data.gene && data.groups?.length)

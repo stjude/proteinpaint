@@ -256,13 +256,16 @@ export class VolcanoInteractions {
 		})
 	}
 
-	/** Per-sample methylation along the gene next to its expression, with the volcano's groups as a strip */
-	launchMethylationLocus(gene: string) {
+	/** Per-sample methylation along a gene, next to its expression, or over a region, with the volcano's groups as a
+	 * strip. dmrFile: the track file of this volcano's scan, whose DMRs the track then marks */
+	launchMethylationLocus(at: { gene: string } | { chr: string; start: number; stop: number }, dmrFile?: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		return launchMethylationBrowser(this.app, gene, {
-			q: { groups: config.tw.q.groups, type: 'custom-samplelst' },
-			term: config.tw.term
-		})
+		return launchMethylationBrowser(
+			this.app,
+			at,
+			{ q: { groups: config.tw.q.groups, type: 'custom-samplelst' }, term: config.tw.term },
+			dmrFile
+		)
 	}
 
 	/** Every gene's promoter and body methylation change against its expression change, for this volcano's groups */

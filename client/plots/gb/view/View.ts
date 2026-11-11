@@ -354,6 +354,11 @@ export class View {
 				const i = this.blockInstance.tklst.findIndex(t => t.type == 'j2' && t.dslabel == this.state.vocab.dslabel)
 				if (i != -1) this.blockInstance.tk_remove(i)
 			}
+			// the methylation track is one of config.tracks[]: without it there, it was turned off
+			if (!this.state.config.tracks?.some(t => t.type == 'dnameth')) {
+				const i = this.blockInstance.tklst.findIndex(t => t.type == 'dnameth' && t.dslabel == this.state.vocab.dslabel)
+				if (i != -1) this.blockInstance.tk_remove(i)
+			}
 			// tricky! if snvindel.shown is false, means user has toggled it off. thus find all mds3 tk and remove them
 			if (this.state.config.snvindel && !this.state.config.snvindel.shown) {
 				let found = true

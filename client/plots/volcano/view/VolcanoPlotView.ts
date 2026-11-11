@@ -813,7 +813,8 @@ export class VolcanoPlotView {
 				const tbl = table2col({ holder: container.append('table') })
 				this.addTooltipRows(d, tbl)
 			},
-			getRowKey: d => d.gene_name
+			// a methylation hit is known by its element or region: it may name no gene, or share one with other hits
+			getRowKey: d => (this.termType === tt.DNA_METHYLATION && (d as any).promoter_id) || d.gene_name
 		}).attach()
 	}
 
@@ -971,7 +972,23 @@ export class VolcanoPlotView {
 						!!q?.geneExpression
 					)
 				},
-				onClick: async () => interactions.launchMethylationLocus(gene!)
+				onClick: async () => interactions.launchMethylationLocus({ gene: gene! }, this.viewData.scan?.bedjFile)
+			},
+			{
+				// a methylation hit that names no gene: the same track on its region, without expression
+				label: `Methylation at ${(d as any).chr}:${(d as any).start}-${(d as any).stop}`,
+				isVisible: () =>
+					termType === tt.DNA_METHYLATION &&
+					!gene &&
+					Number.isFinite((d as any).start) &&
+					interactions.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg',
+				onClick: async () => {
+					const dm = d as any
+					return interactions.launchMethylationLocus(
+						{ chr: dm.chr, start: dm.start, stop: dm.stop },
+						this.viewData.scan?.bedjFile
+					)
+				}
 			}
 		]
 		return all.filter(o => o.isVisible()).map(({ label, onClick }) => ({ label, onClick }))

@@ -90,11 +90,23 @@ export class TabsRenderer {
 		if (this.state.config.junction) {
 			tabs.push({ label: 'Splice Junction', active: this.state.config.junction.shown })
 		}
+		if (this.hasCpgMethylation()) {
+			tabs.push({ label: 'Methylation', active: this.hasMethylationTrack() })
+		}
 		if (this.state.config.ld) {
 			const shown = this.state.config.ld.tracks.some(t => t.shown)
 			tabs.push({ label: 'LD Map', active: shown })
 		}
 		this.tabs = tabs
+	}
+
+	// the dataset has CpG-level methylation, which the methylation track (client/dnameth) reads
+	hasCpgMethylation() {
+		return this.opts.vocabApi?.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg'
+	}
+
+	hasMethylationTrack() {
+		return !!this.state.config.tracks?.some(t => t.type == 'dnameth')
 	}
 
 	async mayRenderTabs() {
@@ -167,6 +179,22 @@ export class TabsRenderer {
 				holder: div,
 				callback: this.interactions.launchJunctionTrack
 			})
+		}
+		if (this.hasCpgMethylation()) {
+			const div = tabs[tabsIdx++].contentHolder.append('div')
+			make_one_checkbox({
+				labeltext: 'Show methylation track',
+				checked: this.hasMethylationTrack(),
+				holder: div,
+				callback: this.interactions.launchMethylationTrack
+			})
+			div
+				.append('div')
+				.style('opacity', 0.5)
+				.style('margin-top', '5px')
+				.text(
+					"Per-sample DNA methylation over the view range, shown by default after a search. After a gene search, it is shown next to that gene's expression; the gene can be changed in the track's CONFIG menu."
+				)
 		}
 		if (this.state.config.ld) {
 			/* tricky: duplicate ld.tracks[] and scope it here, to pass to dispatch
