@@ -19,6 +19,7 @@ import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '#plots/regression/regression.results.ts'
 import { rgb } from 'd3-color'
 import { renderShapePicker } from './leftlabel.variant'
+import { testIdPrefix } from './skewer.render.shapes'
 
 /*	
 ********************** EXPORTED
@@ -64,7 +65,7 @@ export function initLegend(tk, block) {
 
 	const [tr, td, td0] = legend_newrow(block, tk.name)
 	tk.legend.headTd = td0 // for updating tk name in legend when filterObj updates
-
+	td0.attr('data-testid', testIdPrefix + 'dataset-sublegend-header')
 	tk.tr_legend = tr // to be compatible with block.tk_remove()
 
 	const table = td.append('table').style('border-spacing', '5px').style('border-collapse', 'separate')
