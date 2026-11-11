@@ -1,17 +1,10 @@
 // Result kind: genes. Selecting a gene shows one row of action buttons per category the dataset supports AND
 // this gene has (gene expression, variants, DNA methylation). The term-type differences live here.
 //
-// Dataset-wide gates (survival allowed? protein/genomic/both browser views?) are decided ONCE in init().
-// Per-gene availability (which data types THIS gene has) comes from the server's result and is checked by
-// each action's `available()`.
-//
-// To add a gene action: add one entry to the matching category in GENE_CATEGORIES below.
+// See _README.md for the design (term types, plots, when a button is shown) and what every handler exports.
 //
 // NOT YET IMPLEMENTED (kept out of the render code on purpose):
-//  - Survival for the SNV/indel/CNV/SV/fusion category: resolve the term wrapper as launchGeneVariantPlot
-//    does, then launchSurvivalWithCovariate('term2', tw).
-//  - Survival for DNA methylation: pass the region picker's resolved term to launchSurvivalWithCovariate.
-//  - PSEUDO BULK category: needs server-side work first. GeneDataTypeAvailability
+//  - PSEUDO BULK category (Summary, Survival): needs server-side work first. GeneDataTypeAvailability
 //    (shared/types/src/routes/termdb.chat.ts) and getGeneDataTypes (server/src/chat/search.ts) do not know
 //    about ds.queries.singleCell.pseudobulk, and a pseudobulk term needs assay+memberId+category
 //    (shared/types/src/terms/pseudobulk.ts), not a flat per-gene boolean.
@@ -32,7 +25,11 @@ export type GeneRow = {
 
 /** Dataset-wide flags derived once from termdbConfig. */
 export type DatasetFlags = {
+	/** survival plots are allowed: allowedTermTypes includes 'survival' (the plot can also be launched from the
+	 * data dictionary, so supportedChartTypes is not used) */
 	hasSurvival: boolean
+	/** the dataset has gene variant terms, which the variant Summary plot needs */
+	hasGeneVariant: boolean
 	/** the one genome browser view the dataset allows; undefined when it allows both */
 	gbRestrictMode?: GBRestrictMode
 }
@@ -42,18 +39,49 @@ export type GeneActionDef = {
 	id: string
 	label: string
 	testid: (gene: string) => string
-	/** dataset-wide gate, evaluated once in init() */
-	enabled: (flags: DatasetFlags) => boolean
 	/** per-gene gate, evaluated from the server-provided data types of that gene */
 	available: (row: GeneRow) => boolean
 	run: (handler: SearchResultHandler, deps: HandlerDeps, row: GeneRow) => Promise<void>
 }
 
-export type GeneCategoryDef = {
+/** A term type of a gene (gene expression, variants, DNA methylation, later pseudobulk). It only knows how to
+ * produce this gene's term; the plot buttons (PLOT_TYPES) are the same for every term type and are chained on. */
+export type GeneTermTypeDef = {
 	id: string
+	/** middle part of the plot buttons' data-testid, e.g. `sjpp-mass-chat-gene-<testidKey>-survival-<gene>` */
+	testidKey: string
 	/** row label, may depend on which variant types this gene has */
 	label: (row: GeneRow) => string
-	actions: GeneActionDef[]
+	/** per-gene gate: does this gene have this term type? */
+	available: (row: GeneRow) => boolean
+	/** dataset-wide gate for this term type's plot buttons, evaluated once in init() */
+	enabled: (flags: DatasetFlags) => boolean
+	/** produce the gene's term wrapper and pass it on. Callback style because some term types need user input
+	 * first (DNA methylation picks a region). */
+	withTerm: (
+		handler: SearchResultHandler,
+		deps: HandlerDeps,
+		row: GeneRow,
+		onTerm: (tw: any) => Promise<void>
+	) => Promise<void>
+	/** buttons that are not plots of the term, e.g. genome browser views */
+	extraActions?: Array<GeneActionDef & { enabled: (flags: DatasetFlags) => boolean }>
+}
+
+/** A plot that can be made from any term type. Gated once per dataset. */
+export type GenePlotTypeDef = {
+	id: 'summary' | 'survival'
+	label: string
+	enabled: (flags: DatasetFlags) => boolean
+	/** `tw` is the gene's term wrapper from a GeneTermTypeDef */
+	launch: (handler: SearchResultHandler, deps: HandlerDeps, tw: any) => Promise<void>
+}
+
+/** The row of buttons of one term type after the dataset gates are applied */
+export type GeneCategoryDef = {
+	termType: GeneTermTypeDef
+	plots: GenePlotTypeDef[]
+	extras: GeneActionDef[]
 }
 
 /** Variant sub-types a gene can have, in display order. svfusion maps to two dts (SV and fusion). */
@@ -81,48 +109,46 @@ export function variantDtCandidates(row: GeneRow): number[] {
 	return presentVariantTypes(row).flatMap(v => [...v.dts])
 }
 
-const geneExpressionTw = (row: GeneRow) => ({ term: { gene: row.gene, name: row.name, type: 'geneExpression' } })
+/** Plot types, chained onto every term type below. Survival always takes the gene's term as term2. */
+const PLOT_TYPES: GenePlotTypeDef[] = [
+	{
+		id: 'summary',
+		label: 'Summary',
+		enabled: () => true,
+		launch: (_h, d, tw) => d.launcher.launchPlot({ chartType: 'summary', term: tw })
+	},
+	{
+		id: 'survival',
+		label: 'Survival',
+		enabled: flags => flags.hasSurvival,
+		launch: (h, d, tw) => h.launchSurvivalWithTerm2(d, tw)
+	}
+]
 
-const GENE_CATEGORIES: GeneCategoryDef[] = [
+/** To add a term type (e.g. pseudobulk): add one entry. It gets the plot buttons for free. */
+const TERM_TYPES: GeneTermTypeDef[] = [
 	{
 		id: 'geneExpression',
+		testidKey: 'exp',
 		label: () => 'Gene Expression',
-		actions: [
-			{
-				id: 'geneExpression-summary',
-				label: 'Summary',
-				testid: gene => `sjpp-mass-chat-gene-exp-${gene}`,
-				enabled: () => true,
-				available: row => Boolean(row.dataTypes?.geneExpression),
-				run: (_h, d, row) => d.launcher.launchPlot({ chartType: 'summary', term: geneExpressionTw(row) })
-			},
-			{
-				id: 'geneExpression-survival',
-				label: 'Survival',
-				testid: gene => `sjpp-mass-chat-gene-exp-survival-${gene}`,
-				enabled: flags => flags.hasSurvival,
-				available: row => Boolean(row.dataTypes?.geneExpression),
-				run: (h, d, row) => h.launchSurvivalWithCovariate(d, 'term2', geneExpressionTw(row))
-			}
-		]
+		available: row => Boolean(row.dataTypes?.geneExpression),
+		enabled: () => true,
+		withTerm: (_h, _d, row, onTerm) => onTerm({ term: { gene: row.gene, name: row.name, type: 'geneExpression' } })
 	},
 	{
 		id: 'geneVariant',
+		testidKey: 'variant',
 		label: variantCategoryLabel,
-		actions: [
-			{
-				id: 'geneVariant-summary',
-				label: 'Summary',
-				testid: gene => `sjpp-mass-chat-gene-variant-${gene}`,
-				enabled: () => true,
-				available: row => presentVariantTypes(row).length > 0,
-				run: (h, d, row) => h.launchGeneVariantPlot(d, row.gene, variantDtCandidates(row))
-			},
+		available: row => presentVariantTypes(row).length > 0,
+		// the variant term is a geneVariant term, which the dataset must allow
+		enabled: flags => flags.hasGeneVariant,
+		withTerm: async (h, d, row, onTerm) => onTerm(await h.getGeneVariantTw(d, row.gene, variantDtCandidates(row))),
+		extraActions: [
 			{
 				id: 'geneVariant-protein',
 				label: 'Protein view',
 				testid: gene => `sjpp-mass-chat-gene-protein-${gene}`,
-				enabled: flags => flags.gbRestrictMode != 'genomic',
+				enabled: flags => !flags.gbRestrictMode || flags.gbRestrictMode == 'protein',
 				available: row => presentVariantTypes(row).length > 0,
 				run: (_h, d, row) => d.launcher.launchGenomeBrowserView('protein', { gene: row.gene })
 			},
@@ -130,7 +156,7 @@ const GENE_CATEGORIES: GeneCategoryDef[] = [
 				id: 'geneVariant-genomic',
 				label: 'Genome view',
 				testid: gene => `sjpp-mass-chat-gene-genomic-${gene}`,
-				enabled: flags => flags.gbRestrictMode != 'protein',
+				enabled: flags => !flags.gbRestrictMode || flags.gbRestrictMode == 'genomic',
 				// a genomic view needs the gene's locus; hide the button when the server could not resolve it
 				available: row => presentVariantTypes(row).length > 0 && Boolean(row.coord),
 				run: (_h, d, row) => d.launcher.launchGenomeBrowserView('genomic', { coord: row.coord })
@@ -139,17 +165,11 @@ const GENE_CATEGORIES: GeneCategoryDef[] = [
 	},
 	{
 		id: 'dnaMethylation',
+		testidKey: 'methylation',
 		label: () => 'DNA methylation',
-		actions: [
-			{
-				id: 'dnaMethylation-summary',
-				label: 'Summary',
-				testid: gene => `sjpp-mass-chat-gene-methylation-${gene}`,
-				enabled: () => true,
-				available: row => Boolean(row.dataTypes?.dnaMethylation),
-				run: (h, d, row) => h.launchMethylationPlot(d, row.gene, row.coord)
-			}
-		]
+		available: row => Boolean(row.dataTypes?.dnaMethylation),
+		enabled: () => true,
+		withTerm: (h, d, row, onTerm) => h.pickMethylationTerm(d, row.gene, row.coord, term => onTerm({ term }))
 	}
 ]
 
@@ -158,8 +178,13 @@ export function getDatasetFlags(termdbConfig: any): DatasetFlags {
 	const allowed: string[] = termdbConfig?.allowedTermTypes || []
 	const restrict = termdbConfig?.queries?.gbRestrictMode
 	// anything but a known restriction (including a missing one) allows both views
-	const gbRestrictMode: GBRestrictMode | undefined = restrict == 'protein' || restrict == 'genomic' ? restrict : undefined
-	return { hasSurvival: allowed.includes(TermTypes.SURVIVAL), gbRestrictMode }
+	const gbRestrictMode: GBRestrictMode | undefined =
+		restrict == 'protein' || restrict == 'genomic' ? restrict : undefined
+	return {
+		hasSurvival: allowed.includes(TermTypes.SURVIVAL),
+		hasGeneVariant: allowed.includes(TermTypes.GENE_VARIANT),
+		gbRestrictMode
+	}
 }
 
 /** Whether this dataset has genes to search: it has any gene data type to act on (mirrors the server's
@@ -186,16 +211,18 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 	readonly heading = 'Genes'
 	readonly noun = 'gene'
 	readonly label = 'Genes'
-	flags: DatasetFlags = { hasSurvival: false }
-	/** categories keeping only the actions this dataset allows; categories left with none are dropped */
+	flags: DatasetFlags = { hasSurvival: false, hasGeneVariant: false }
+	/** one entry per term type: the plot buttons and extra buttons this dataset allows. Term types left with
+	 * none are dropped. */
 	categories: GeneCategoryDef[] = []
 
 	init({ termdbConfig }: HandlerCtx) {
 		this.flags = getDatasetFlags(termdbConfig)
-		this.categories = GENE_CATEGORIES.map(cat => ({
-			...cat,
-			actions: cat.actions.filter(a => a.enabled(this.flags))
-		})).filter(cat => cat.actions.length)
+		this.categories = TERM_TYPES.map(termType => ({
+			termType,
+			plots: termType.enabled(this.flags) ? PLOT_TYPES.filter(p => p.enabled(this.flags)) : [],
+			extras: (termType.extraActions || []).filter(a => a.enabled(this.flags))
+		})).filter(c => c.plots.length || c.extras.length)
 	}
 
 	/** Typing: from the gene minimum length up to the max; Enter ignores the length gates. */
@@ -222,15 +249,26 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 		return Array.isArray(data.genes) ? data.genes.length : 0
 	}
 
-	/** The categories (and their actions) to show for one gene: the dataset-enabled ones filtered by what
-	 * this gene has. Empty categories are omitted. */
+	/** The rows to show for one gene: the dataset-enabled buttons of each term type this gene has, plot buttons
+	 * first. Each plot button chains the term type's term into the plot. Empty rows are omitted. */
 	categoriesFor(row: GeneRow) {
 		return this.categories
-			.map(category => ({
-				category,
-				label: category.label(row),
-				actions: category.actions.filter(a => a.available(row))
-			}))
+			.filter(c => c.termType.available(row))
+			.map(({ termType, plots, extras }) => {
+				const plotActions: GeneActionDef[] = plots.map(plot => ({
+					id: `${termType.id}-${plot.id}`,
+					label: plot.label,
+					testid: gene =>
+						`sjpp-mass-chat-gene-${termType.testidKey}-${plot.id == 'summary' ? '' : plot.id + '-'}${gene}`,
+					available: () => true,
+					run: (h, d, r) => termType.withTerm(h, d, r, tw => plot.launch(h, d, tw))
+				}))
+				return {
+					category: termType,
+					label: termType.label(row),
+					actions: [...plotActions, ...extras].filter(a => a.available(row))
+				}
+			})
 			.filter(c => c.actions.length)
 	}
 
@@ -270,10 +308,10 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 		}
 	}
 
-	/** Mutated-vs-wildtype barchart for one gene, restricted to a variant data type. dtCandidates are tried
-	 * in order (svfusion has two dts) until a matching predefined groupset is found, since fillTermWrapper
-	 * throws when the dataset lacks a groupset for a given dt. */
-	async launchGeneVariantPlot(deps: HandlerDeps, gene: string, dtCandidates: number[]) {
+	/** The term wrapper of one gene's variants, restricted to one variant data type. dtCandidates are tried in
+	 * order (svfusion has two dts) until a matching predefined groupset is found, since fillTermWrapper throws
+	 * when the dataset lacks a groupset for a given dt. */
+	async getGeneVariantTw(deps: HandlerDeps, gene: string, dtCandidates: number[]) {
 		const { fillTermWrapper } = await import('#termsetting')
 		let tw: any
 		let lastErr: any
@@ -296,12 +334,17 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 			}
 		}
 		if (!tw) throw lastErr
-		await deps.launcher.launchPlot({ chartType: 'summary', term: tw })
+		return tw
 	}
 
 	/** DNA methylation: show a genome browser at the gene's default coordinates inline in the popup with a
-	 * "Submit Region" button; on submit, open a summary plot of the region-based dnaMethylation term. */
-	async launchMethylationPlot(deps: HandlerDeps, gene: string, coord: Coord | null) {
+	 * "Submit Region" button; on submit, `onTerm` gets the region-based dnaMethylation term. */
+	async pickMethylationTerm(
+		deps: HandlerDeps,
+		gene: string,
+		coord: Coord | null,
+		onTerm: (term: any) => Promise<void>
+	) {
 		// coord is the gene's default coordinate, resolved server-side (GeneMatch.coord)
 		if (!coord) throw new Error(`Could not resolve coordinates for gene "${gene}"`)
 		// reuse the termdb search handler's region picker and term builder (client/termdb/handlers/dnaMethylation.ts)
@@ -322,20 +365,38 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 			stop: coord.stop,
 			onSubmit: async region => {
 				const term = makeMethylationRegionTerm(sampleTypeSelect, vocabApi, region)
-				if (term) await deps.launcher.launchPlot({ chartType: 'summary', term: { term } })
+				if (term) await onTerm(term)
 			}
 		})
 	}
 
-	/** Open the termdb tree to pick a survival outcome term, then dispatch a survival plot with
-	 * `covariateField` pre-set to `covariateTw`. survival's getPlotConfig() requires config.term to already be
-	 * a resolved term wrapper, so unlike launchPlot() this can't dispatch directly: it must collect the
-	 * outcome term first (mirrors charts.ts's showTree_select1term). */
-	async launchSurvivalWithCovariate(deps: HandlerDeps, covariateField: 'term2', covariateTw: any) {
+	/** The dataset's only survival term for the active cohort, or undefined when it has none or several
+	 * (termdbConfig.loneTermByType, computed by the server; the same lookup the cox regression uses). */
+	async getLoneSurvivalTerm(deps: HandlerDeps) {
+		const { getLoneTermByType } = await import('#plots/regression/Regression.ts')
+		const { termdbConfig, activeCohort } = deps.app.getState()
+		return getLoneTermByType(termdbConfig, activeCohort)?.survival
+	}
+
+	/** Survival plot with `term2` (the gene's term) as the overlay. That term exists: the row is only shown for
+	 * term types in allowedTermTypes, and this button only for a supported chart type. If the dataset has just one survival term
+	 * the plot is dispatched with it. Otherwise the user first picks the outcome: the termdb tree opens, since
+	 * survival's getPlotConfig() requires config.term to already be a resolved term wrapper (mirrors charts.ts's
+	 * showTree_select1term). */
+	async launchSurvivalWithTerm2(deps: HandlerDeps, term2: any) {
+		const lone = await this.getLoneSurvivalTerm(deps)
+		if (lone) {
+			await deps.launcher.launchPlot({
+				chartType: 'survival',
+				term: { term: structuredClone(lone) },
+				term2
+			})
+			return
+		}
 		const { app, popup } = deps
 		popup.tip.clear()
 		popup.tip.showunder(popup.inputNode)
-		const action: any = { type: 'plot_create', config: { chartType: 'survival', [covariateField]: covariateTw } }
+		const action: any = { type: 'plot_create', config: { chartType: 'survival', term2 } }
 		const termdb = await import('../../../termdb/app')
 		termdb.appInit({
 			vocabApi: app.vocabApi,

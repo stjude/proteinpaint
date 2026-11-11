@@ -2,16 +2,8 @@ import type { OmnisearchRequest, OmnisearchResult, OmnisearchResultKey } from '#
 import type { ResultsPopup } from './popup.ts'
 import type { Launcher } from './launcher.ts'
 
-// The omnisearch is organized by RESULT KEY: one handler per field of the server's OmnisearchResult
-// (dictionaryTerms, genes, samples, coord). The same key names the handler file in ./handlers, the entry in a
-// request's `include` list, and the result field the handler renders. A result kind is not a term type or a data
-// type: a gene result can launch gene expression, variant and methylation plots; a sample or a genomic region
-// has no term type at all. So the term-type differences live INSIDE the handler that needs them (handlers/genes.ts).
-//
-// To add a result kind (e.g. genesets): add the result field to OmnisearchResult (shared/types), write
-// handlers/<key>.ts exporting `includeResult(termdbConfig)` and a `SearchResultHandler` class that implements
-// OmnisearchHandler, and add <key> to RESULT_KEYS in loadHandlers.ts. To add an action for an existing kind (e.g.
-// pseudobulk for a gene): edit that kind's handler only.
+// The omnisearch is organized by RESULT KEY, one handler per field of the server's OmnisearchResult. See
+// handlers/_README.md for the design, how handlers are loaded, and how to add one.
 
 export type Coord = { chr: string; start: number; stop: number }
 

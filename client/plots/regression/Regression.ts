@@ -213,7 +213,7 @@ const coxOutcomeTypes = ['survival', 'condition']
 
 // returns termdbConfig.loneTermByType{} entry for the active cohort, or undefined when the ds has
 // no lone term or the cohort key cannot be determined
-function getLoneTermByType(termdbConfig, activeCohort?) {
+export function getLoneTermByType(termdbConfig, activeCohort?) {
 	if (!termdbConfig?.loneTermByType) return // no lone term in this dataset
 	// a caller may not know the active cohort (e.g. getPlotConfig() when restoring a session),
 	// in which case the cohort key cannot be determined for a ds with subcohorts
