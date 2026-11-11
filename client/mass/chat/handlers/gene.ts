@@ -304,17 +304,25 @@ export class GeneHandler implements OmnisearchHandler<GeneRow> {
 	async launchMethylationPlot(deps: HandlerDeps, gene: string, coord: Coord | null) {
 		// coord is the gene's default coordinate, resolved server-side (GeneMatch.coord)
 		if (!coord) throw new Error(`Could not resolve coordinates for gene "${gene}"`)
-		const { embedMethylationRegionPicker } = await import('../methylationPicker.ts')
+		// reuse the termdb search handler's region picker and term builder (client/termdb/handlers/dnaMethylation.ts)
+		const { embedRegionPicker, makeMethylationRegionTerm } = await import('../../../termdb/handlers/dnaMethylation.ts')
+		const { mayRenderSampleTypeRow } = await import('#dom')
+		const { vocabApi } = deps.app
 		const holder = deps.popup.openPicker(gene)
-		await embedMethylationRegionPicker({
+		const sampleTypeSelect = mayRenderSampleTypeRow(
+			holder.append('div'),
+			vocabApi.termdbConfig?.queries.dnaMethylation,
+			vocabApi.termdbConfig
+		)
+		await embedRegionPicker({
 			holder: holder.append('div'),
 			genomeObj: deps.app.opts.genome,
-			vocabApi: deps.app.vocabApi,
 			chr: coord.chr,
 			start: coord.start,
 			stop: coord.stop,
-			callback: async (term: any) => {
-				await deps.launcher.launchPlot({ chartType: 'summary', term: { term } })
+			onSubmit: async region => {
+				const term = makeMethylationRegionTerm(sampleTypeSelect, vocabApi, region)
+				if (term) await deps.launcher.launchPlot({ chartType: 'summary', term: { term } })
 			}
 		})
 	}
