@@ -9,7 +9,7 @@ import type { MethylationStarburstResponse } from '#types'
 import { drawStarburst, drawPathways, type Cutoffs, type StarburstData } from './view'
 
 /* Methylation change against expression change per gene, core promoter and gene body side by side, for the two
-groups of a volcano. Opened from the differential methylation volcano; a click on a gene opens its locus view
+groups of a volcano. Opened from the differential methylation volcano; a click on a gene opens the methylation track at it
 with the same groups. With a gene set group chosen, gene sets tested on expression, on gene-body methylation and on
 the two merged are drawn under it. See server/src/routes/termdb.methylationStarburst.ts for the data. */
 
@@ -96,7 +96,7 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 			.style('opacity', 0.7)
 			.text(
 				`${this.data!.sampleSize1} vs ${this.data!.sampleSize2} samples with methylation and expression; ` +
-					`DE by ${this.data!.deMethod || 'the volcano default'}. Click a gene for its locus view.`
+					`DE by ${this.data!.deMethod || 'the volcano default'}. Click a gene for its methylation track.`
 			)
 		const pw = this.data!.pathways
 		this.pathwaySvg = pw

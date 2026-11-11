@@ -50,8 +50,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'Disco':
 			return await import('./disco/Disco.ts')
 
-		case 'methylationLocus':
-			return await import('./methylationLocus/MethylationLocus.ts')
 		case 'methylationStarburst':
 			return await import('./methylationStarburst/MethylationStarburst.ts')
 

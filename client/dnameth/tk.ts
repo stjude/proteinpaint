@@ -21,7 +21,7 @@ tk.minColWidth   px, default 8: the view is cut into as many bins of equal CpG c
 tk.filter, tk.filter0
 tk.massApp   optional; with it and a gene, a click on a bin opens a violin of expression by the bin's methylation
 
-Rows above the heatmap follow the gene locus view after MEXPRESS (Koch et al. 2015, BMC Genomics), turned
+Rows above the heatmap follow MEXPRESS (Koch et al. 2015, BMC Genomics), turned
 so that the genome is horizontal. Data is from termdb/methylationLocus. */
 
 type LocusData = Extract<MethylationLocusResponse, { bins: any }>

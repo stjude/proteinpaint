@@ -271,7 +271,7 @@ export function drawStarburst(
 				table.addRow(`Δβ, ${other}`, fmt(data[other][i]))
 				table.addRow('log2 fold change', fmt(fc[j], 2))
 				table.addRow('DE q', fmtQ(q[j]))
-				tip.d.append('div').style('font-size', '0.8em').style('opacity', 0.7).text('Click for the locus view')
+				tip.d.append('div').style('font-size', '0.8em').style('opacity', 0.7).text('Click for the methylation track')
 			})
 			.on('mouseout', () => {
 				ring.style('display', 'none')

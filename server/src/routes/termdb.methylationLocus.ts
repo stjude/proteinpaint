@@ -179,7 +179,7 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		})
 	}
 
-	// whole gene models, which the client draws (sketchGene) and lists (isoformSelect)
+	// the gene models as the genome's gene db stores them
 	return {
 		gene: gm,
 		isoforms: models,
