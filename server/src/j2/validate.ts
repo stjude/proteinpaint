@@ -9,6 +9,9 @@ import { mapParent2ChildrenWithSampleTypes } from '../utils/sampleTypes.ts'
 import { getH5samples } from '../utils/h5samples.ts'
 import { setQuerySampleTypes } from '#shared/terms.js'
 
+// most junctions that listJunctions() returns read counts by sample for
+const maxMatrixTop = 100
+
 export async function validate_query_junction(ds: any, genome: any) {
 	const tmp = ds.queries?.junction // fixme: tmp-to-q avoids tsc err
 	if (!tmp) return
@@ -83,6 +86,13 @@ export async function validate_query_junction(ds: any, genome: any) {
 
 		const junctions: Junction[] = [] // list of junctions to be returned
 		let maxReadCount = 0
+		if (
+			param.matrixTop !== undefined &&
+			(!Number.isInteger(param.matrixTop) || param.matrixTop < 1 || param.matrixTop > maxMatrixTop)
+		)
+			throw new Error(`matrixTop must be an integer from 1 to ${maxMatrixTop}`)
+		// with matrixTop, the [column, read count] pairs of the junctions found in the most samples so far
+		const rcByJunction = new Map<Junction, [number, number][]>()
 		for (const r of param.rglst || []) {
 			await utils.readTabixLines({
 				file: q.file,
@@ -133,12 +143,14 @@ export async function validate_query_junction(ds: any, genome: any) {
 						strand
 					}
 					const readcounts: number[] = [] // array of read counts of samples carrying this junction
+					const pairs: [number, number][] = []
 
 					let lastRCcolumn // remembers i for last sample with valid read count. helps to get singleton sample name
 					for (let i = 5; i < l.length; i++) {
 						const r = getSampleReadcount(l[i], i)
 						if (!r) continue
 						readcounts.push(r[0])
+						if (param.matrixTop) pairs.push([i, r[0]])
 						maxReadCount = Math.max(maxReadCount, r[0])
 						lastRCcolumn = i
 					}
@@ -163,11 +175,41 @@ export async function validate_query_junction(ds: any, genome: any) {
 						}
 					}
 					junctions.push(j)
+					if (param.matrixTop) {
+						rcByJunction.set(j, pairs)
+						// no more than the matrix can hold: the junction in the fewest samples goes, of a tie the later one
+						if (rcByJunction.size > param.matrixTop) {
+							let least = j
+							for (const k of rcByJunction.keys()) if (k.sampleCount! <= least.sampleCount!) least = k
+							rcByJunction.delete(least)
+						}
+					}
 					// todo terminate when exceeds limit
 				}
 			})
 		}
-		return { junctions, maxReadCount }
+		// no matrix with keepLst: its junctions carry sn2rc instead, and have no sampleCount to rank by
+		if (!param.matrixTop || keepLst?.length) return { junctions, maxReadCount }
+
+		// the columns of the samples that the request covers
+		const columns: number[] = []
+		q.samples.forEach((s: any, i: number) => {
+			if (!limitSamples || limitSamples.has(s.name)) columns.push(i + 5)
+		})
+		const rowOf = new Map(columns.map((c, row) => [c, row]))
+		const top = [...rcByJunction.keys()].sort((a, b) => b.sampleCount! - a.sampleCount!)
+		const matrix = {
+			samples: columns.map(c => {
+				const id = q.samples[c - 5].name
+				return ds.cohort?.termdb?.q?.id2sampleName?.(id) || id
+			}),
+			junctions: top.map(j => {
+				const readcounts = new Array(columns.length).fill(0)
+				for (const [c, rc] of rcByJunction.get(j)!) readcounts[rowOf.get(c)!] = rc
+				return { chr: j.chr, start: j.start, stop: j.stop, strand: j.strand, readcounts }
+			})
+		}
+		return { junctions, maxReadCount, matrix }
 	}
 	/*
 	called by getData() and return sample level numeric values in required format

@@ -382,3 +382,34 @@ tape('Test #13: Multiple CpG IDs and Single Sample', async t => {
 
 	t.end()
 })
+
+tape('Test #14: Genomic range in equal-CpG bins', async t => {
+	const range = { h: termdb_test_file, s: '1,2,3', q: 'chr17:7660000-7700000' }
+	try {
+		const matrix = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(range)))
+		const { bins } = JSON.parse(await run_python('query_beta_values.py', JSON.stringify({ ...range, bins: 3 })))
+		t.equal(bins.length, 3, 'Should return 3 bins')
+		t.equal(
+			bins.reduce((n, b) => n + b.nCpg, 0),
+			matrix.length,
+			'Bin CpG counts should add up to the CpGs in the range'
+		)
+		// without a depth matrix, each CpG with a value counts once, so a bin value is the mean of its rows
+		let row = 0
+		for (const b of bins) {
+			const rows = matrix.slice(row, row + b.nCpg)
+			row += b.nCpg
+			for (let j = 0; j < 3; j++) {
+				const vals = rows.map(r => r[j]).filter(v => v !== null)
+				const mean = vals.reduce((a, v) => a + v, 0) / vals.length
+				t.ok(
+					Math.abs(b.beta[j] - mean) < 1e-6,
+					`Bin ${b.start}-${b.stop}, sample ${j + 1} should be the mean of its CpGs`
+				)
+			}
+		}
+	} catch (err) {
+		t.fail(`Python script failed: ${String(err)}`)
+	}
+	t.end()
+})

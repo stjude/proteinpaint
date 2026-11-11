@@ -2587,6 +2587,8 @@ seekrange(chr,start,stop) {
 					return
 				}
 				break
+			case client.tkt.dnameth:
+				break
 			case client.tkt.mdsexpressionrank:
 				const e8 = mdsexpressionrankfromtemplate(tk, template, this)
 				if (e8) {
@@ -2767,6 +2769,8 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.j2:
 				j2_maketk(tk, this)
+				break
+			case client.tkt.dnameth:
 				break
 			case client.tkt.mdsexpressionrank:
 				mdsexpressionrankmaketk(tk, this)
@@ -3122,6 +3126,9 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.j2:
 				j2_load(tk, this)
+				break
+			case client.tkt.dnameth:
+				import('../dnameth/tk').then(_ => _.loadTk(tk, this))
 				break
 			case client.tkt.mdsexpressionrank:
 				mdsexpressionrankload(tk, this)

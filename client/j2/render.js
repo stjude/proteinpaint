@@ -9,6 +9,8 @@ import { dofetch3 } from '#common/dofetch'
 import { TermTypes } from '#types'
 import { makeJunctionCustomTerm, withSampleTypes } from '#termdb/handlers/junction.customTerm'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { interpolateBlues } from 'd3-scale-chromatic'
+import { renderLocusHeatmap, locusHeatmapHeight } from '../src/block.locusHeatmap'
 
 /*
  */
@@ -30,13 +32,16 @@ export function renderTk(data, tk, block) {
 	if (data) {
 		// server returned fresh data
 		// set yAxisKey
-		tk.sections.jug.yAxisKey = getYAxisKey(data, tk)
+		tk.rows.jug.yAxisKey = getYAxisKey(data, tk)
+		// kept for redraws without data
+		tk.rows.heatmap.data = data.matrix
 		if (data.junctions?.length == 0) {
 			tk.data = []
 			tk.leftlabels?.doms?.jug?.text('0 junctions')
+			renderHeatmap(tk, block)
 			return
 		}
-		if (tk.sections.jug.yAxisKey == 'medianReadCount' && !Number.isFinite(data.maxReadCount))
+		if (tk.rows.jug.yAxisKey == 'medianReadCount' && !Number.isFinite(data.maxReadCount))
 			throw new Error('data.maxReadCount is not number')
 		// kept for redraws without data, e.g. changing track height or log scale in the config menu
 		tk.maxReadCount = data.maxReadCount
@@ -45,6 +50,7 @@ export function renderTk(data, tk, block) {
 			tk.data = []
 			data.junctions = [] // for tk._finish() to show "No splice junctions"
 			tk.leftlabels.doms.jug.text('0 junctions')
+			renderHeatmap(tk, block)
 			return
 		}
 		// tk.data[] set
@@ -58,12 +64,12 @@ export function renderTk(data, tk, block) {
 
 	setColor(tk)
 
-	tk.sections.jug.g.selectAll('*').remove()
+	tk.rows.jug.g.selectAll('*').remove()
 
 	// do not clear leftaxis, leave it to transition
 
 	// all graphs go in here
-	const mg = tk.sections.jug.g
+	const mg = tk.rows.jug.g
 
 	tk.data.sort((a, b) => {
 		return a._x - b._x
@@ -130,39 +136,39 @@ export function renderTk(data, tk, block) {
 	this may leave some white space above the disks (median positioned)
 	but will allow the hover boxplot to fully show
 	*/
-	tk.sections.jug.yscale =
-		tk.sections.jug.yAxisKey == 'medianReadCount'
+	tk.rows.jug.yscale =
+		tk.rows.jug.yAxisKey == 'medianReadCount'
 			? (tk.yscaleUseLog ? scaleLog() : scaleLinear())
 					.domain([tk.readcountCutoff || 1, tk.maxReadCount])
-					.range([tk.sections.jug.axisheight, 0])
+					.range([tk.rows.jug.axisheight, 0])
 			: scaleLinear()
 					.domain([
 						0,
 						getYDomainMax(
-							tk.sections.jug.yAxisKey,
+							tk.rows.jug.yAxisKey,
 							tk.data.map(j => yValue(j, tk))
 						)
 					])
 					.nice()
-					.range([tk.sections.jug.axisheight, 0])
+					.range([tk.rows.jug.axisheight, 0])
 
 	// fill axis-y for those junction without previous axisy
 	for (const j of tk.data) {
 		if (j.axisy == undefined) {
-			j.axisy = tk.sections.jug.axisheight - tk.sections.jug.yscale(yValue(j, tk))
+			j.axisy = tk.rows.jug.axisheight - tk.rows.jug.yscale(yValue(j, tk))
 		}
 	}
 
 	// set y position, also pad height for lower discs
 	// all vertical heights set
-	tk.sections.jug.height = tk.sections.jug.axisheight + tk.sections.jug.neckheight + tk.sections.jug.legheight
+	tk.rows.jug.height = tk.rows.jug.axisheight + tk.rows.jug.neckheight + tk.rows.jug.legheight
 
 	// svg
-	mg.attr('transform', `translate(0,${tk.sections.jug.height})`)
+	mg.attr('transform', `translate(0,${tk.rows.jug.height})`)
 
 	{
 		// top line
-		const topy = -tk.sections.jug.legheight - tk.sections.jug.neckheight - tk.sections.jug.axisheight
+		const topy = -tk.rows.jug.legheight - tk.rows.jug.neckheight - tk.rows.jug.axisheight
 		mg.append('line')
 			.attr('x1', 0)
 			.attr('y1', topy)
@@ -174,19 +180,19 @@ export function renderTk(data, tk, block) {
 		// bottom line
 		mg.append('line')
 			.attr('x1', 0)
-			.attr('y1', topy + tk.sections.jug.axisheight)
-			.attr('y2', topy + tk.sections.jug.axisheight)
+			.attr('y1', topy + tk.rows.jug.axisheight)
+			.attr('y2', topy + tk.rows.jug.axisheight)
 			.attr('x2', viewpxwidth)
 			.attr('stroke', '#858585')
 			.attr('stroke-opacity', 0.2)
 			.attr('shape-rendering', 'crispEdges')
 		let v = 10
-		while (tk.sections.jug.yAxisKey == 'medianReadCount' && v <= tk.maxReadCount) {
+		while (tk.rows.jug.yAxisKey == 'medianReadCount' && v <= tk.maxReadCount) {
 			// order of magnitude line
 			mg.append('line')
 				.attr('x1', 0)
-				.attr('y1', topy + tk.sections.jug.yscale(v))
-				.attr('y2', topy + tk.sections.jug.yscale(v))
+				.attr('y1', topy + tk.rows.jug.yscale(v))
+				.attr('y2', topy + tk.rows.jug.yscale(v))
 				.attr('x2', viewpxwidth)
 				.attr('stroke', '#858585')
 				.attr('stroke-opacity', 0.2)
@@ -213,7 +219,7 @@ export function renderTk(data, tk, block) {
 		.append('line')
 		.attr('stroke', d => d.color)
 		.attr('x1', d => set_leg_x1(d))
-		.attr('y2', -tk.sections.jug.legheight)
+		.attr('y2', -tk.rows.jug.legheight)
 		.attr('stroke-opacity', lineopacity)
 		.attr('class', 'sja_jug_leg1')
 		.each(function (d) {
@@ -225,7 +231,7 @@ export function renderTk(data, tk, block) {
 		.append('line')
 		.attr('stroke', d => d.color)
 		.attr('x2', d => set_leg_x2(d))
-		.attr('y1', -tk.sections.jug.legheight)
+		.attr('y1', -tk.rows.jug.legheight)
 		.attr('stroke-opacity', lineopacity)
 		.attr('class', 'sja_jug_leg2')
 		.each(function (d) {
@@ -249,7 +255,7 @@ export function renderTk(data, tk, block) {
 		.attr('y1', d => d.radius)
 		.attr('y2', d => {
 			// use previous value
-			return tk.sections.jug.neckheight + d.axisy
+			return tk.rows.jug.neckheight + d.axisy
 		})
 		.attr('stroke-opacity', lineopacity)
 		.each(function (d) {
@@ -341,32 +347,93 @@ jug2.filter(function(d){return d.rimwidth>0})
 			showOneJunction(d, tk, tk.itemtip.d.append('div'), block, true)
 		})
 
+	// now for the track's height, and again once the layout has moved the discs
+	renderHeatmap(tk, block)
+
 	doForceLayout(tk, block, viewpxwidth).then(() => {
 		// done layout
 		set_all(tk)
-		tk.sections.jug.axis.selectAll('.sjpp-j2-ytitle').remove()
-		const yTitle = getYAxisTitle(tk.sections.jug.yAxisKey)
+		renderHeatmap(tk, block)
+		tk.rows.jug.axis.selectAll('.sjpp-j2-ytitle').remove()
+		const yTitle = getYAxisTitle(tk.rows.jug.yAxisKey)
 		// left of the axis, as the tick labels are on the right
 		if (yTitle)
-			tk.sections.jug.axis
+			tk.rows.jug.axis
 				.append('text')
 				.attr('class', 'sjpp-j2-ytitle')
 				.attr('text-anchor', 'middle')
-				.attr('transform', `translate(-8, ${tk.sections.jug.axisheight / 2}) rotate(-90)`)
+				.attr('transform', `translate(-8, ${tk.rows.jug.axisheight / 2}) rotate(-90)`)
 				.text(yTitle)
 		axisstyle({
-			axis: tk.sections.jug.axis.transition().call(
+			axis: tk.rows.jug.axis.transition().call(
 				axisRight()
-					.scale(tk.sections.jug.yscale)
+					.scale(tk.rows.jug.yscale)
 					.ticks(
-						tk.sections.jug.yAxisKey ? Math.floor(tk.sections.jug.axisheight / 20) : 0,
-						tk.sections.jug.yAxisKey == 'medianReadCount' ? '.0f' : undefined
+						tk.rows.jug.yAxisKey ? Math.floor(tk.rows.jug.axisheight / 20) : 0,
+						tk.rows.jug.yAxisKey == 'medianReadCount' ? '.0f' : undefined
 					)
 			),
 			color: 'black',
 			showline: true
 		})
 	})
+}
+
+/* With tk.sampleHeatmap, a heatmap above the junctions: samples are rows, and the columns are the junctions in view
+that are found in the most samples (tk.heatmapTop of them, by the server), each linked to its disc. A cell is the
+read count of the junction in the sample, on a log scale from white (none) to dark blue (the highest shown).
+The junctions, their axis and left labels move down by its height, which tk._finish() adds to the track's. The read
+counts are tk.rows.heatmap.data, kept for redraws without a request. */
+export function renderHeatmap(tk, block) {
+	const jug = tk.rows.jug
+	const cols = []
+	const matrix = tk.rows.heatmap.data
+	if (tk.sampleHeatmap && matrix && tk.data?.length) {
+		const byKey = new Map(tk.data.map(j => [j.chr + '.' + j.start + '.' + j.stop + '.' + j.strand, j]))
+		for (const m of matrix.junctions) {
+			// absent when the junction is not in the view range, see rawdata2track()
+			const j = byKey.get(m.chr + '.' + m.start + '.' + m.stop + '.' + m.strand)
+			if (j) cols.push({ j, readcounts: m.readcounts })
+		}
+		// as the discs are laid out, so that the links cross less
+		cols.sort((a, b) => a.j.x - b.j.x)
+	}
+	if (!cols.length && !locusHeatmapHeight(tk)) return // not drawn: nothing to clear or move back
+	const n = cols.length ? cols[0].readcounts.length : 0
+	// samples with the most reads over these junctions on top
+	const weight = Array.from({ length: n }, (_, i) => cols.reduce((sum, c) => sum + c.readcounts[i], 0))
+	const idx = weight.map((_, i) => i).sort((a, b) => weight[b] - weight[a])
+	const max = Math.max(1, ...cols.flatMap(c => c.readcounts))
+	const coord = j => `${j.chr}:${j.start + 1}-${j.stop + 1} ${j.strand}`
+	const h = renderLocusHeatmap(tk, block, {
+		rows: idx.map(i => String(matrix.samples?.[i] ?? '')),
+		cols: cols.map(c => ({
+			x: c.j.x,
+			// to the top of the disc: its center is at the y of its value on the axis
+			dy: jug.axisheight - c.j.axisy - c.j.radius,
+			values: idx.map(i => Math.log(c.readcounts[i] + 1) / Math.log(max + 1))
+		})),
+		color: v => (v ? interpolateBlues(0.15 + 0.85 * v) : 'white'),
+		missingColor: 'white',
+		note: [`${n} samples`, `${cols.length} most frequent junctions`, `read count 0 to ${max}, log scale`],
+		onHover: (event, col, row) => {
+			const c = cols[col]
+			tk.data.forEach(j => d3select(j.disc).attr('fill-opacity', j == c.j ? 0.9 : discopacity))
+			tk.hovertip.clear()
+			const table = table2col({ holder: tk.hovertip.d })
+			if (row >= 0 && matrix.samples) table.addRow('Sample', matrix.samples[idx[row]])
+			table.addRow('Junction', coord(c.j))
+			if (row >= 0) table.addRow('Read count', c.readcounts[idx[row]])
+			table.addRow('Samples', c.j.sampleCount)
+			tk.hovertip.show(event.clientX, event.clientY)
+		},
+		onOut: () => {
+			tk.hovertip.hide()
+			tk.data.forEach(j => d3select(j.disc).attr('fill-opacity', discopacity))
+		}
+	})
+	d3select(jug.g.node().parentNode).attr('transform', `translate(0,${h})`)
+	tk.leftlabels.g.attr('transform', `translate(0,${17 + h})`)
 }
 
 function rawdata2track(raw, tk, block) {
@@ -486,9 +553,9 @@ function j2block(j, block, viewpxwidth) {
 	return false
 }
 
-/* y of a junction, see tk.sections.jug.yAxisKey in renderTk() */
+/* y of a junction, see tk.rows.jug.yAxisKey in renderTk() */
 function yValue(j, tk) {
-	return tk.sections.jug.yAxisKey ? j[tk.sections.jug.yAxisKey] : 0
+	return tk.rows.jug.yAxisKey ? j[tk.rows.jug.yAxisKey] : 0
 }
 
 /* y of junctions: median read count for junctions from the server
@@ -542,15 +609,15 @@ function set_leg_x2(d) {
 	return d.x1 - d.x
 }
 function set_stem_y2(d, tk) {
-	return tk.sections.jug.neckheight + tk.sections.jug.axisheight - tk.sections.jug.yscale(d.medianReadCount)
+	return tk.rows.jug.neckheight + tk.rows.jug.axisheight - tk.rows.jug.yscale(d.medianReadCount)
 }
 function set_jug2(d, tk) {
-	return 'translate(0,-' + (tk.sections.jug.legheight + tk.sections.jug.neckheight + d.axisy) + ')'
+	return 'translate(0,-' + (tk.rows.jug.legheight + tk.rows.jug.neckheight + d.axisy) + ')'
 }
 
 function set_all(tk) {
 	// must update axisy to current value
-	const mg = tk.sections.jug
+	const mg = tk.rows.jug
 	tk.data.forEach(j => (j.axisy = mg.axisheight - mg.yscale(yValue(j, tk))))
 
 	const dur = 500
@@ -607,7 +674,7 @@ function doForceLayout(tk, block, viewpxwidth) {
 			junction: j,
 			tox: tox,
 			x: tox,
-			y: tk.sections.jug.axisheight - tk.sections.jug.yscale(yValue(j, tk))
+			y: tk.rows.jug.axisheight - tk.rows.jug.yscale(yValue(j, tk))
 		})
 		sumdiscwidth += j.radius2 * 2
 	})
@@ -625,7 +692,7 @@ function doForceLayout(tk, block, viewpxwidth) {
 				'y',
 				d3force
 					.forceY(d => {
-						return tk.sections.jug.axisheight - tk.sections.jug.yscale(yValue(d.junction, tk))
+						return tk.rows.jug.axisheight - tk.rows.jug.yscale(yValue(d.junction, tk))
 					})
 					.strength(1)
 			)
@@ -693,11 +760,11 @@ function mouseoverBoxplot(j, tk) {
 	// mouse over disc show boxplot for read count
 	if (!j.readcountBoxplot) return
 	const color = 'black'
-	const p5 = tk.sections.jug.yscale(j.readcountBoxplot[0])
-	const p25 = tk.sections.jug.yscale(j.readcountBoxplot[1])
-	const p50 = tk.sections.jug.yscale(j.readcountBoxplot[2])
-	const p75 = tk.sections.jug.yscale(j.readcountBoxplot[3])
-	const p95 = tk.sections.jug.yscale(j.readcountBoxplot[4])
+	const p5 = tk.rows.jug.yscale(j.readcountBoxplot[0])
+	const p25 = tk.rows.jug.yscale(j.readcountBoxplot[1])
+	const p50 = tk.rows.jug.yscale(j.readcountBoxplot[2])
+	const p75 = tk.rows.jug.yscale(j.readcountBoxplot[3])
+	const p95 = tk.rows.jug.yscale(j.readcountBoxplot[4])
 	const w = 10
 	tk.pica.g.selectAll('*').remove()
 	tk.pica.g.attr('transform', 'translate(' + j.x + ',' + p50 + ')')

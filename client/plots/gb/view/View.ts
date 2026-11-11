@@ -167,7 +167,10 @@ export class View {
 				termdbConfig: this.opts.vocabApi?.termdbConfig,
 				filter0: this.state.filter0,
 				hiddentypes: this.state.config.junction.hiddentypes,
-				readcountCutoff: this.state.config.junction.readcountCutoff
+				readcountCutoff: this.state.config.junction.readcountCutoff,
+				sampleHeatmap: this.state.config.junction.sampleHeatmap,
+				// keeps the heatmap choice of the track's menu in the state
+				callbackOnRender: () => this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 			}
 			// the label names the sample types on the junction terms of Details and Select
 			Object.assign(tk, this.trackSampleTypes)
@@ -181,7 +184,23 @@ export class View {
 		}
 		/* Tracks the launcher brought with it, e.g. a DMR scan's bedj file or a genome track switched
 		on by name. Cloned so the block's per-track state never lands in app state. */
-		for (const t of this.state.config.tracks || []) tklst.push(structuredClone(t))
+		for (const t of this.state.config.tracks || []) {
+			const tk = structuredClone(t)
+			// queries the dataset's samples, so follows the global filter as the j2 track above does
+			if (tk.type == 'dnameth')
+				Object.assign(tk, {
+					massApp: this.opts.app,
+					// keeps the gene and sort chosen in the track's menu in the state
+					callbackOnRender: () => this.interactions.maySaveTrackUpdatesToState(this.blockInstance),
+					dslabel: this.state.vocab.dslabel,
+					filter: this.state.filter,
+					filter0: this.state.filter0,
+					// the plot's own filter, for a plot the track opens
+					plotFilter: this.state.config.filter,
+					...this.trackSampleTypes
+				})
+			tklst.push(tk)
+		}
 		return tklst
 	}
 
@@ -191,8 +210,9 @@ export class View {
 	mayRenderSampleTypes() {
 		/* only with a track that reads samples, or a facet table, whose list of tracks it narrows; otherwise a change
 		would only rebuild the block */
-		const { snvindel, svfusion, junction, trackLst } = this.state.config
-		if (!snvindel?.shown && !svfusion?.shown && !junction?.shown && !trackLst?.facets?.length) {
+		const { snvindel, svfusion, junction, trackLst, tracks } = this.state.config
+		const dnameth = tracks?.some(t => t.type == 'dnameth')
+		if (!snvindel?.shown && !svfusion?.shown && !junction?.shown && !trackLst?.facets?.length && !dnameth) {
 			this.dom.sampleTypeDiv.selectAll('*').remove()
 			return
 		}
@@ -336,6 +356,11 @@ export class View {
 			}
 			if (this.state.config.junction && !this.state.config.junction.shown) {
 				const i = this.blockInstance.tklst.findIndex(t => t.type == 'j2' && t.dslabel == this.state.vocab.dslabel)
+				if (i != -1) this.blockInstance.tk_remove(i)
+			}
+			// the methylation track is one of config.tracks[]: without it there, it was turned off
+			if (!this.state.config.tracks?.some(t => t.type == 'dnameth')) {
+				const i = this.blockInstance.tklst.findIndex(t => t.type == 'dnameth' && t.dslabel == this.state.vocab.dslabel)
 				if (i != -1) this.blockInstance.tk_remove(i)
 			}
 			// tricky! if snvindel.shown is false, means user has toggled it off. thus find all mds3 tk and remove them

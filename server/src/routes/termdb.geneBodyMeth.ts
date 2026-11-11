@@ -10,6 +10,7 @@ import {
 	eligibleMethylationSamples,
 	validateChromosomes,
 	admitDmrcateJobs,
+	admitDmrcateSampleTest,
 	dmrcateDeadline,
 	runDmrcate,
 	dmrcateValues,
@@ -156,7 +157,8 @@ function init({ genomes }) {
 // 4: dmrcate reads background regions without the model, so a body keeps CpGs the model drops, such as zero variance
 // 5: corrected deltas take the excess over the stratum's median (was the mean), from 6000 windows per chromosome
 // (was 2000), with strata also split on solo-WCGW share; a stratum with no spread leaves its genes out
-const CACHE_VERSION = 5
+// 6: dmrcate places sample names at the columns meta/samples/col_idx gives them
+const CACHE_VERSION = 6
 
 /* Mean delta-beta over every gene body, keyed by gene symbol -- one signed number per gene across
 the whole genome. This is the gene-level reading of a methylation scan: a DMR list has many regions
@@ -173,21 +175,38 @@ background are left out rather than scored badly.
 Cached because it is ~33s of rust across 24 chromosomes and the same contrast asks for it from the
 causality test and from GSEA. Keyed on the samples, the chromosomes and the files read, the same
 way the scan cache is. */
-export async function getGeneBodyDeltas(
-	q: {
-		genome: string
-		dslabel: string
-		/** each an array of {sampleId}, or a group defined by a filter, see resolveGroups() */
-		group1: any
-		group2: any
-		filter0?: any
-		chromosomes?: string[]
-		element_type?: string
-		corrected?: boolean
-		__protected__?: any
-	},
+export async function getGeneBodyDeltas(q: GeneBodyQuery, genomes: any): Promise<Record<string, number>> {
+	return await getCachedGeneBodies(q, genomes, false)
+}
+
+type GeneBodyQuery = {
+	genome: string
+	dslabel: string
+	/** each an array of {sampleId}, or a group defined by a filter, see resolveGroups() */
+	group1: any
+	group2: any
+	filter0?: any
+	chromosomes?: string[]
+	element_type?: string
+	corrected?: boolean
+	/** 'promoter' measures each gene's core promoter (see promoterLoci) instead of its body */
+	region?: 'promoter'
+	__protected__?: any
+}
+
+/** a gene body's test across patients: Welch's t and two-sided p of group2 against group1, and the difference of
+ * their centered means (beta) */
+export type GeneBodyTest = { t: number; p: number; delta: number }
+
+/* Every gene body tested across patients, keyed by gene symbol: see computeGeneBodyTests. Cached as the deltas are. */
+export async function getGeneBodyTests(
+	q: Omit<GeneBodyQuery, 'corrected' | 'region'>,
 	genomes: any
-): Promise<Record<string, number>> {
+): Promise<Record<string, GeneBodyTest>> {
+	return await getCachedGeneBodies(q, genomes, true)
+}
+
+async function getCachedGeneBodies(q: GeneBodyQuery, genomes: any, test: boolean): Promise<any> {
 	const genome = genomes[q.genome]
 	if (!genome) throw new Error('unknown genome')
 	const ds = genome.datasets?.[q.dslabel]
@@ -219,6 +238,10 @@ export async function getGeneBodyDeltas(
 			chromosomes,
 			element_type: q.element_type ?? null,
 			corrected: !!q.corrected,
+			// undefined for a body, which JSON drops, so the existing body entries keep their keys
+			region: q.region,
+			// likewise undefined for the deltas
+			test: test || undefined,
 			// corrected: the solo-WCGW shares come from the reference sequence
 			files: fingerprint(
 				[...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile, q.corrected ? sequenceFiles(genome) : [])
@@ -227,26 +250,61 @@ export async function getGeneBodyDeltas(
 		cacheScope: sampleFilterScope(q, ds),
 		cacheSubdir: 'geneBodyMeth',
 		// the validated list, so the compute cannot see the raw one
-		computeFresh: async () => computeGeneBodyDeltas({ ...q, chromosomes }, genome, ds)
+		computeFresh: async () => (test ? computeGeneBodyTests : computeGeneBodyDeltas)({ ...q, chromosomes }, genome, ds)
 	})
-	return result as Record<string, number>
+	return result
 }
 
-async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Record<string, number>> {
-	/* Gene bodies, trimmed at both ends exactly as the scan's inGeneBody flag trims them, so
-	"gene body" means one thing across the two analyses. */
-	const rows: any[] = genome?.genedb?.db?.prepare('select name, chr, start, stop from gene2coord').all() || []
-	if (!rows.length) throw new Error('This genome has no gene2coord table.')
-	/* One locus per symbol, the longest body, chosen before fan-out. gene2coord can hold a symbol on
-	several contigs; the chromosome workers write into one object, so whichever finished last set
-	that gene's value and the ranking changed between recomputations. */
+/** Core promoter: the default isoform's TSS from PROMOTER_UP bp upstream to PROMOTER_DOWN bp downstream. It ends
+ * before GENE_BODY_PAD, where a gene body starts, so a promoter and a body never share a CpG. */
+export const PROMOTER_UP = 2000
+export const PROMOTER_DOWN = 500
+
+/** One core promoter per gene symbol, from the genes table's default isoforms: rows of {name, genemodel} where
+ * genemodel is the JSON of one isoform. The first default isoform of a symbol is kept, as genedb's own lookups do;
+ * with chrs, the first one on those chromosomes. */
+export function promoterLoci(rows: { name: string; genemodel: string }[], chrs?: Set<string>) {
 	const locusOf = new Map<string, { chr: string; start: number; stop: number }>()
 	for (const r of rows) {
-		const s = r.start + GENE_BODY_PAD
-		const e = r.stop - GENE_BODY_PAD
-		if (!(e > s)) continue // shorter than twice the pad: no body left
-		const prev = locusOf.get(r.name)
-		if (!prev || e - s > prev.stop - prev.start) locusOf.set(r.name, { chr: r.chr, start: s, stop: e })
+		if (locusOf.has(r.name)) continue
+		const gm = JSON.parse(r.genemodel)
+		if (chrs && !chrs.has(gm.chr)) continue
+		const minus = gm.strand == '-'
+		const tss = minus ? gm.stop : gm.start
+		locusOf.set(r.name, {
+			chr: gm.chr,
+			start: Math.max(0, tss - (minus ? PROMOTER_DOWN : PROMOTER_UP)),
+			stop: tss + (minus ? PROMOTER_UP : PROMOTER_DOWN)
+		})
+	}
+	return locusOf
+}
+
+/** each chromosome's gene bodies, or with 'promoter' core promoters, one locus per gene symbol */
+function lociByChr(genome: any, region?: 'promoter') {
+	let locusOf: Map<string, { chr: string; start: number; stop: number }>
+	if (region == 'promoter') {
+		const rows: any[] = genome?.genedb?.db?.prepare('select name, genemodel from genes where isdefault=1').all() || []
+		if (!rows.length) throw new Error('This genome has no default isoforms.')
+		// a symbol's rows on the major chromosomes only: the first may be on a fix or alt contig, which has no matrix
+		const major = new Set(validateChromosomes(genome, undefined, true))
+		locusOf = promoterLoci(rows, major)
+	} else {
+		/* Gene bodies, trimmed at both ends exactly as the scan's inGeneBody flag trims them, so
+		"gene body" means one thing across the two analyses. */
+		const rows: any[] = genome?.genedb?.db?.prepare('select name, chr, start, stop from gene2coord').all() || []
+		if (!rows.length) throw new Error('This genome has no gene2coord table.')
+		/* One locus per symbol, the longest body, chosen before fan-out. gene2coord can hold a symbol on
+		several contigs; the chromosome workers write into one object, so whichever finished last set
+		that gene's value and the ranking changed between recomputations. */
+		locusOf = new Map()
+		for (const r of rows) {
+			const s = r.start + GENE_BODY_PAD
+			const e = r.stop - GENE_BODY_PAD
+			if (!(e > s)) continue // shorter than twice the pad: no body left
+			const prev = locusOf.get(r.name)
+			if (!prev || e - s > prev.stop - prev.start) locusOf.set(r.name, { chr: r.chr, start: s, stop: e })
+		}
 	}
 	const byChr = new Map<string, { name: string; start: number; stop: number }[]>()
 	for (const [name, l] of locusOf) {
@@ -254,6 +312,11 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 		lst.push({ name, start: l.start, stop: l.stop })
 		byChr.set(l.chr, lst)
 	}
+	return byChr
+}
+
+async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Record<string, number>> {
+	const byChr = lociByChr(genome, q.region)
 
 	/* The validated list the cache key was built from, and with none requested the genome's major
 	chromosomes -- not every contig gene2coord names, which fanned out unkeyed fits over alternate and
@@ -380,4 +443,65 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 		releaseMemory()
 	}
 	return deltaOf
+}
+
+/* Each patient's methylated reads over all reads of each gene body (rust dmrcate's sample_test, at least 20 reads),
+centered on the patient's median body so that a genome-wide shift does not count, then Welch's t-test between the
+groups per body. The deltas compare group means, which says how far a body moved; this says whether the patients of
+the two groups differ there beyond how much they vary, the p-value a gene-level test needs (the starburst's gene sets).
+One rust run over every matrix file, so each patient's median is genome-wide; it keeps two sums per body and patient
+and nothing per CpG. */
+async function computeGeneBodyTests(q: any, genome: any, ds: any): Promise<Record<string, GeneBodyTest>> {
+	const byChr = lociByChr(genome)
+	const chrs: string[] = (q.chromosomes?.length ? q.chromosomes : validateChromosomes(genome, undefined, true)).filter(
+		(c: string) => byChr.has(c)
+	)
+	if (!chrs.length) throw new Error('No chromosome has gene bodies to test.')
+	const { group1, group2 } = await resolveGroupNames(
+		q.group1,
+		q.group2,
+		eligibleMethylationSamples(ds, q.element_type),
+		ds,
+		q.__protected__
+	)
+	if (group1.length < 3 || group2.length < 3) throw new Error('Each group needs at least 3 samples.')
+	const jobs = new Map<string, string[]>()
+	for (const chr of chrs) {
+		const file = resolveMethylationMatrix(ds, chr, q.element_type).matrixFile
+		jobs.set(file, [...(jobs.get(file) || []), chr])
+	}
+	const bodies = chrs.flatMap(chr => byChr.get(chr)!.map(b => ({ chr, ...b })))
+	const matrix = resolveMethylationMatrix(ds, chrs[0], q.element_type)
+	const releaseMemory = await admitDmrcateSampleTest(
+		[...jobs.keys()],
+		bodies.length * (group1.length + group2.length),
+		'Server memory is too low to test gene-body methylation right now. Try again later.'
+	)
+	try {
+		const out = JSON.parse(
+			await runDmrcate(
+				{
+					matrices: [...jobs].map(([file, chrs]) => ({ file, chrs })),
+					...dmrcateValues(matrix),
+					background_regions: bodies.map(b => ({ chr: b.chr, start: b.start, stop: b.stop })),
+					sample_test: true,
+					// reads where the matrix has depth; values, one a CpG, where it does not (an array)
+					min_reads: matrix.hasDepth ? 20 : 3,
+					case: group2.join(','),
+					control: group1.join(',')
+				},
+				'Compare smaller groups.',
+				dmrcateDeadline()
+			)
+		)
+		if (out.error) throw new Error(out.error)
+		const testOf: Record<string, GeneBodyTest> = {}
+		;(out.background as any[]).forEach((r, i) => {
+			// at least 5 CpGs, as the deltas require
+			if (r.p != null && r.n_probes >= 5) testOf[bodies[i].name] = { t: r.t, p: r.p, delta: r.delta }
+		})
+		return testOf
+	} finally {
+		releaseMemory()
+	}
 }

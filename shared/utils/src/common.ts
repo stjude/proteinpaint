@@ -705,7 +705,8 @@ export const tkt = {
 	mds3: 'mds3', //
 	bam: 'bam',
 	ld: 'ld',
-	j2: 'j2' // mds3 cohort junction
+	j2: 'j2', // mds3 cohort junction
+	dnameth: 'dnameth' // per-sample CpG methylation heatmap
 }
 
 export function validtkt(what) {

@@ -13,6 +13,8 @@
 //   region      + "region", "constants", "dmrs": one region of a run already made, recomputed
 //               locally from the run's constants, so every CpG reads exactly as it did in the run.
 //   background  + "background_regions": mean delta-beta per window, no model.
+//               With "sample_test": each sample's depth-weighted beta per region, centered on the sample's
+//               median region, and a Welch test between the groups per region (sample_region_tests).
 //
 // A matrix holds betas with read depth per cell (a WGBS CpG matrix), M-values ("mvalues": true, an
 // element matrix), or betas alone ("betas": true, an array's CpG matrix or an element matrix of
@@ -87,7 +89,22 @@ Element matrix:       rows are regulatory elements (promoters, cCREs), carrying 
 Both are sorted by chromosome then start, so a chromosome's rows are one contiguous slice
 either way -- which is all the chunked fit below needs. */
 fn read_h5_metadata(file: &File) -> Result<H5Meta, String> {
-    let samples = read_str_1d(file, "meta/samples/names")?;
+    let mut samples = read_str_1d(file, "meta/samples/names")?;
+    // samples are used by position as matrix columns: put each name at the column that
+    // meta/samples/col_idx gives it. A matrix without it stores the names in column order.
+    if let Ok(ds) = file.dataset("meta/samples/col_idx") {
+        let cols = ds.read_1d::<i64>().map_err(|e| e.to_string())?;
+        let mut by_col = vec![String::new(); samples.len()];
+        if cols.len() != samples.len() {
+            return Err("meta/samples/col_idx and names differ in length".into());
+        }
+        for (name, &c) in samples.iter().zip(cols.iter()) {
+            *by_col
+                .get_mut(c as usize)
+                .ok_or("meta/samples/col_idx is out of range")? = name.clone();
+        }
+        samples = by_col;
+    }
     let starts: Vec<i64> = file
         .dataset("meta/start")
         .map_err(|e| e.to_string())?
@@ -1527,6 +1544,194 @@ fn window_delta(g: &Genome, chroms: &HashMap<&str, usize>, qchr: &str, qstart: i
     (n, if n > 0 { sum / n as f64 } else { f64::NAN })
 }
 
+/* Each sample's methylation over each region, for a test between the groups ("sample_test" with
+"background_regions"). The background mode's delta compares group means and has no test; here each
+sample's own level over a region is its depth-weighted beta, the methylated reads over all reads of
+the region's CpGs (sum beta x depth / sum depth), as a gene locus view's bin is, from at least
+`min_reads` reads. A matrix without depth counts each value once. Nothing per CpG is kept: memory
+is two sums per region and sample. Returns those levels (regions x samples, cases first, NaN when
+not measured), each region's covered CpGs, and the rows read. */
+fn sample_region_levels(
+    jobs: &[MatrixJob],
+    names: &[&str],
+    values: Values,
+    regions: &[(String, i64, i64)],
+    min_reads: f64,
+) -> Result<(Vec<f64>, Vec<usize>, usize), String> {
+    let (nr, ns) = (regions.len(), names.len());
+    let (mut sum_bd, mut sum_d) = (vec![0f64; nr * ns], vec![0f64; nr * ns]);
+    let mut n_probes = vec![0usize; nr];
+    let mut rows_read = 0usize;
+    // each chromosome's regions by start, for one sweep along its rows; regions may overlap
+    let mut by_chr: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (i, (c, _, _)) in regions.iter().enumerate() {
+        by_chr.entry(c.as_str()).or_default().push(i);
+    }
+    for v in by_chr.values_mut() {
+        v.sort_by_key(|&i| regions[i].1);
+    }
+    const CHUNK: usize = 2000;
+    for job in jobs {
+        let file = File::open(&job.file).map_err(|e| format!("HDF5 open {}: {}", job.file, e))?;
+        let meta = read_h5_metadata(&file)?;
+        let col: HashMap<&str, usize> = meta.samples.iter().enumerate().map(|(i, s)| (s.as_str(), i)).collect();
+        // (place among `names`, column in this file); a sample this file lacks is not measured here
+        let pairs: Vec<(usize, usize)> = names
+            .iter()
+            .enumerate()
+            .filter_map(|(k, n)| col.get(n).map(|&c| (k, c)))
+            .collect();
+        let ds = file.dataset("beta/values").map_err(|e| format!("beta/values: {}", e))?;
+        let dds = if values == Values::Counts {
+            Some(
+                file.dataset("depth/values")
+                    .map_err(|e| format!("depth/values: {}", e))?,
+            )
+        } else {
+            None
+        };
+        let mut pfx = 0usize;
+        for (name, &n) in meta.chr_names.iter().zip(&meta.chr_rows) {
+            let lo_row = pfx;
+            pfx += n;
+            let Some(idx) = by_chr.get(name.as_str()) else { continue };
+            if !job.chrs.iter().any(|c| c == name) {
+                continue;
+            }
+            // only the rows from the first region's start to the last region's stop
+            let starts = &meta.starts[lo_row..lo_row + n];
+            let first = idx.iter().map(|&i| regions[i].1).min().unwrap_or(0);
+            let last = idx.iter().map(|&i| regions[i].2).max().unwrap_or(-1);
+            let (a, b) = (
+                lo_row + starts.partition_point(|&s| s < first),
+                lo_row + starts.partition_point(|&s| s <= last),
+            );
+            let (mut next, mut open) = (0usize, Vec::<usize>::new());
+            let mut cs = a;
+            while cs < b {
+                let ce = (cs + CHUNK).min(b);
+                let beta = ds
+                    .read_slice_2d::<f32, _>(hdf5::Selection::from((cs..ce, ..)))
+                    .map_err(|e| format!("HDF5 read: {}", e))?;
+                let depth = match &dds {
+                    Some(d) => Some(
+                        d.read_slice_2d::<u16, _>(hdf5::Selection::from((cs..ce, ..)))
+                            .map_err(|e| format!("HDF5 depth read: {}", e))?,
+                    ),
+                    None => None,
+                };
+                rows_read += ce - cs;
+                for r in 0..(ce - cs) {
+                    // the regions holding this row, [start, stop] as rows_in() reads a window
+                    let pos = meta.starts[cs + r];
+                    while next < idx.len() && regions[idx[next]].1 <= pos {
+                        open.push(idx[next]);
+                        next += 1;
+                    }
+                    open.retain(|&i| regions[i].2 >= pos);
+                    if open.is_empty() {
+                        continue;
+                    }
+                    let brow = beta.row(r);
+                    let mut covered = false;
+                    for &(k, c) in &pairs {
+                        let v = brow[c] as f64;
+                        let (b, d) = match &depth {
+                            Some(dep) => (v, dep.row(r)[c] as f64),
+                            None if values == Values::MValues => (v.exp2() / (1.0 + v.exp2()), 1.0),
+                            None => (v, 1.0),
+                        };
+                        if !(d > 0.0) || !b.is_finite() {
+                            continue;
+                        }
+                        covered = true;
+                        for &i in &open {
+                            sum_bd[i * ns + k] += b * d;
+                            sum_d[i * ns + k] += d;
+                        }
+                    }
+                    if covered {
+                        for &i in &open {
+                            n_probes[i] += 1;
+                        }
+                    }
+                }
+                cs = ce;
+            }
+        }
+    }
+    let levels = sum_bd
+        .iter()
+        .zip(&sum_d)
+        .map(|(&bd, &d)| if d >= min_reads { bd / d } else { f64::NAN })
+        .collect();
+    Ok((levels, n_probes, rows_read))
+}
+
+/// The middle value, or the mean of the two middle ones, as numpy's median; NaN when empty.
+fn median_of(v: &mut [f64]) -> f64 {
+    if v.is_empty() {
+        return f64::NAN;
+    }
+    v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let m = v.len() / 2;
+    if v.len() % 2 == 1 {
+        v[m]
+    } else {
+        (v[m - 1] + v[m]) / 2.0
+    }
+}
+
+/// Welch's t of a minus b, with the Welch-Satterthwaite df, as scipy's ttest_ind(equal_var=False);
+/// NaN with fewer than two values in a group or no variance in either.
+fn welch(a: &[f64], b: &[f64]) -> (f64, f64) {
+    if a.len() < 2 || b.len() < 2 {
+        return (f64::NAN, f64::NAN);
+    }
+    let mean_var = |x: &[f64]| {
+        let m = x.iter().sum::<f64>() / x.len() as f64;
+        (m, x.iter().map(|v| (v - m).powi(2)).sum::<f64>() / (x.len() - 1) as f64)
+    };
+    let ((ma, va), (mb, vb)) = (mean_var(a), mean_var(b));
+    let (sa, sb) = (va / a.len() as f64, vb / b.len() as f64);
+    if !(sa + sb > 0.0) {
+        return (f64::NAN, f64::NAN);
+    }
+    let df = (sa + sb).powi(2) / (sa * sa / (a.len() - 1) as f64 + sb * sb / (b.len() - 1) as f64);
+    ((ma - mb) / (sa + sb).sqrt(), df)
+}
+
+/* The test on those levels: each sample centered on its own median region, so a sample whose whole
+genome sits higher or lower (t(4;14) gains about 0.09 everywhere) does not make every region differ,
+then Welch's t-test of cases against controls per region, two-sided. Run over every requested
+matrix at once, the median is the sample's over all the regions given. Per region: the samples
+measured in each group, the difference of the centered group means (delta), t, df and p. */
+fn sample_region_tests(levels: &mut [f64], n_case: usize, ns: usize) -> Vec<(usize, usize, f64, f64, f64, f64)> {
+    let nr = if ns == 0 { 0 } else { levels.len() / ns };
+    for k in 0..ns {
+        let mut v: Vec<f64> = (0..nr).map(|i| levels[i * ns + k]).filter(|x| x.is_finite()).collect();
+        let m = median_of(&mut v);
+        for i in 0..nr {
+            levels[i * ns + k] -= m;
+        }
+    }
+    (0..nr)
+        .map(|i| {
+            let row = &levels[i * ns..(i + 1) * ns];
+            let case: Vec<f64> = row[..n_case].iter().copied().filter(|x| x.is_finite()).collect();
+            let ctrl: Vec<f64> = row[n_case..].iter().copied().filter(|x| x.is_finite()).collect();
+            let (t, df) = welch(&case, &ctrl);
+            let mean = |x: &[f64]| x.iter().sum::<f64>() / x.len() as f64;
+            let p = if t.is_finite() {
+                (2.0 * pt_upper(t.abs(), df)).min(1.0)
+            } else {
+                f64::NAN
+            };
+            (case.len(), ctrl.len(), mean(&case) - mean(&ctrl), t, df, p)
+        })
+        .collect()
+}
+
 /// LOESS (locally weighted scatterplot smoothing) with tricube weights and local linear fit.
 /// Returns (fitted, ci_lower, ci_upper) evaluated at `eval_at` positions, clamped to [0,1].
 fn loess_fit(pos: &[i64], vals: &[f64], eval_at: &[f64], span: f64) -> Option<(Vec<f64>, Vec<f64>, Vec<f64>)> {
@@ -1869,6 +2074,29 @@ fn main() {
     }
 
     let background = parse_ranges(&p["background_regions"]);
+    if p["sample_test"].as_bool().unwrap_or(false) {
+        // each sample's level over each region and a Welch test between the groups, no model
+        let names: Vec<&str> = cases.iter().chain(&ctrls).copied().collect();
+        let min_reads = p["min_reads"].as_f64().unwrap_or(20.0);
+        let (mut levels, n_probes, rows) = match sample_region_levels(&jobs, &names, values, &background, min_reads) {
+            Ok(r) => r,
+            Err(e) => bail!("{}", e),
+        };
+        let tests = sample_region_tests(&mut levels, cases.len(), names.len());
+        let bg: Vec<Value> = background
+            .iter()
+            .zip(tests)
+            .zip(n_probes)
+            .map(|(((c, s, e), (nc, nk, delta, t, df, pv)), n)| {
+                json!({"chr": c, "start": s, "stop": e, "n_probes": n, "n_case": nc, "n_ctrl": nk,
+                    "delta": r5(delta), "t": r5(t), "df": r5(df),
+                    // unrounded: a gene's p can be far below 1e-5
+                    "p": if pv.is_finite() { json!(pv) } else { Value::Null }})
+            })
+            .collect();
+        println!("{}", json!({"background": bg, "diagnostic": diagnostic(rows)}));
+        return;
+    }
     let windows = parse_ranges(&p["windows"]);
     if windows.is_empty() {
         // the background correction only needs each window's delta-beta, not the model
@@ -2692,5 +2920,159 @@ mod tests {
             region_read_range(&starts, 10_000, 10_000, f64::MAX, 0.2),
             (0, starts.len())
         );
+    }
+
+    /// a CpG matrix file as build_cpg_matrix.py writes one: beta and depth, sample names, starts and
+    /// the chromosome row spans
+    fn cpg_matrix(
+        tag: &str,
+        samples: &[&str],
+        starts: &[i64],
+        beta: ndarray::Array2<f32>,
+        depth: ndarray::Array2<u16>,
+    ) -> String {
+        let path = std::env::temp_dir().join(format!("dmrcate-{}-{}.h5", tag, std::process::id()));
+        let file = File::create(&path).unwrap();
+        let bg = file.create_group("beta").unwrap();
+        bg.new_dataset_builder().with_data(&beta).create("values").unwrap();
+        let dg = file.create_group("depth").unwrap();
+        dg.new_dataset_builder().with_data(&depth).create("values").unwrap();
+        let meta = file.create_group("meta").unwrap();
+        let names: Vec<VarLenUnicode> = samples.iter().map(|s| s.parse().unwrap()).collect();
+        let sg = meta.create_group("samples").unwrap();
+        sg.new_dataset_builder()
+            .with_data(&ndarray::Array1::from(names))
+            .create("names")
+            .unwrap();
+        meta.new_dataset_builder()
+            .with_data(&ndarray::Array1::from(starts.to_vec()))
+            .create("start")
+            .unwrap();
+        let cl: VarLenUnicode = format!("{{\"chr1\": {}}}", starts.len()).parse().unwrap();
+        file.new_attr::<VarLenUnicode>()
+            .create("chrom_lengths")
+            .unwrap()
+            .write_scalar(&cl)
+            .unwrap();
+        path.to_string_lossy().into_owned()
+    }
+
+    #[test]
+    fn sample_names_follow_their_stored_columns() {
+        let path = cpg_matrix(
+            "colidx",
+            &["A", "B", "C"],
+            &[10],
+            ndarray::arr2(&[[0.1f32, 0.2, 0.3]]),
+            ndarray::arr2(&[[1u16, 1, 1]]),
+        );
+        let file = File::open_rw(&path).unwrap();
+        // A is column 2, B column 0, C column 1
+        file.group("meta/samples")
+            .unwrap()
+            .new_dataset_builder()
+            .with_data(&ndarray::arr1(&[2i64, 0, 1]))
+            .create("col_idx")
+            .unwrap();
+        assert_eq!(read_h5_metadata(&file).unwrap().samples, ["B", "C", "A"]);
+        drop(file);
+        std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn sample_levels_are_depth_weighted_over_each_region() {
+        // 4 CpGs x 3 samples: A, B, and X, which is not requested
+        let file = cpg_matrix(
+            "levels",
+            &["A", "X", "B"],
+            &[100, 200, 300, 400],
+            ndarray::arr2(&[
+                [1.0f32, 0.9, 0.0],
+                [0.5, 0.9, 0.5],
+                [0.0, 0.9, f32::NAN],
+                [0.25, 0.9, 1.0],
+            ]),
+            ndarray::arr2(&[[10u16, 5, 4], [10, 5, 4], [20, 5, 0], [4, 5, 4]]),
+        );
+        let jobs = [MatrixJob {
+            file: file.clone(),
+            chrs: vec!["chr1".into()],
+        }];
+        // overlapping regions share CpGs 200 and 300; the third holds no CpG; C is not in the file
+        let regions = [
+            ("chr1".to_string(), 100, 300),
+            ("chr1".to_string(), 200, 400),
+            ("chr1".to_string(), 1000, 2000),
+        ];
+        let (lv, n, rows) = sample_region_levels(&jobs, &["A", "B", "C"], Values::Counts, &regions, 5.0).unwrap();
+        let (under, _, _) = sample_region_levels(&jobs, &["A", "B"], Values::Counts, &regions, 9.0).unwrap();
+        std::fs::remove_file(&file).ok();
+        let at = |i: usize, k: usize| lv[i * 3 + k];
+        // A over 100-300: (1.0 x 10 + 0.5 x 10 + 0 x 20) / 40
+        assert!((at(0, 0) - 15.0 / 40.0).abs() < 1e-12);
+        // B over 100-300: (0 x 4 + 0.5 x 4) / 8, the NaN cell at depth 0 left out
+        assert!((at(0, 1) - 0.25).abs() < 1e-12);
+        // A over 200-400: (0.5 x 10 + 0 x 20 + 0.25 x 4) / 34; B there: (0.5 x 4 + 1.0 x 4) / 8
+        assert!((at(1, 0) - 6.0 / 34.0).abs() < 1e-12 && (at(1, 1) - 0.75).abs() < 1e-12);
+        assert!(
+            at(2, 0).is_nan() && at(0, 2).is_nan(),
+            "no CpG, or no such sample, is not measured"
+        );
+        assert_eq!(n, vec![3, 3, 0], "CpGs covered in some requested sample");
+        assert_eq!(rows, 4, "rows from the first region's start to the last one's stop");
+        // B's 8 reads over 100-300 are under 9; A's 40 are not
+        assert!(under[0].is_finite() && under[1].is_nan());
+    }
+
+    #[test]
+    fn sample_tests_center_each_sample_then_match_scipy_welch() {
+        // 3 regions x 5 samples, 3 cases then 2 controls; expected from scipy.stats.ttest_ind(equal_var=False)
+        // after subtracting each sample's np.nanmedian over the regions
+        let mut lv = vec![
+            0.80,
+            0.70,
+            0.75,
+            0.50,
+            0.55, //
+            0.60,
+            0.65,
+            0.62,
+            0.60,
+            0.58, //
+            0.20,
+            0.30,
+            f64::NAN,
+            0.40,
+            0.35,
+        ];
+        let r = sample_region_tests(&mut lv, 3, 5);
+        for (got, (nc, nk, delta, t, df, p)) in r.iter().zip([
+            (3, 2, 0.10499999999999998, 2.201398157116026, 2.0, 0.15865276577424622),
+            (
+                3,
+                2,
+                -0.08666666666666663,
+                -2.1054184584651785,
+                1.7824167770398276,
+                0.1852152430662357,
+            ),
+            (
+                2,
+                2,
+                -0.22499999999999998,
+                -4.0249223594996195,
+                1.4705882352941158,
+                0.09171033896595462,
+            ),
+        ]) {
+            assert_eq!((got.0, got.1), (nc, nk));
+            for (a, b) in [(got.2, delta), (got.3, t), (got.4, df), (got.5, p)] {
+                assert!((a - b).abs() < 1e-9 * b.abs().max(1.0), "{} vs {}", a, b);
+            }
+        }
+        // one value in a group, or no variance, is untested rather than a panic
+        let mut lv = vec![0.5, 0.5, 0.4, 0.4, 0.4, 0.4];
+        let r = sample_region_tests(&mut lv, 1, 3);
+        assert!(r.iter().all(|x| x.3.is_nan() && x.5.is_nan()));
     }
 }

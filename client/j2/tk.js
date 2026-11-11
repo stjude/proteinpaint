@@ -1,6 +1,6 @@
 import { dofetch3 } from '#common/dofetch'
 import { makeTk } from './makeTk'
-import { renderTk } from './render'
+import { renderTk, renderHeatmap } from './render'
 import { rangequery_rglst } from '../mds3/tk'
 //import { make_leftlabels } from './leftlabel'
 
@@ -53,6 +53,12 @@ export async function loadTk(tk, block) {
 		tk._finish(data)
 	} catch (e) {
 		if (tk.clear) tk.clear() // if the error is thrown upon initiating the track, clear() function may not have been added
+		if (tk.rows?.heatmap.data) {
+			// a heatmap was drawn: gone with the junctions it was of, and the junctions move back up
+			tk.data = []
+			delete tk.rows.heatmap.data
+			renderHeatmap(tk, block)
+		}
 		if (tk._finish) tk._finish({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
 	}
@@ -76,6 +82,8 @@ export function getParameter(tk, block) {
 	rangequery_rglst(tk, block, par)
 
 	if (tk.legend?.type?.hiddenvalues?.size) par.hiddenTypes = [...tk.legend.type.hiddenvalues].join(',')
+	// read counts by sample of the most frequent junctions, see renderHeatmap()
+	if (tk.sampleHeatmap) par.matrixTop = tk.heatmapTop || 20
 
 	return [par, headers]
 }
@@ -113,7 +121,7 @@ each junction requires chr, start and stop, and may have:
 	psi_control, psi_case: shown in tooltip; with tk.deltaPsiGroups, colored by the group with higher PSI,
 		and y is |ΔPSI| when not every junction has p, as a leafcutter cluster, which is tested as a whole
 	types[], info{}: types hidden in the legend are removed, as computeTypes() does on the server
-see tk.sections.jug.yAxisKey in renderTk()
+see tk.rows.jug.yAxisKey in renderTk()
 they are cloned since rendering adds attributes to each junction; tk.custom_data is not modified, so hidden types can be shown again
 */
 async function dataFromCustomData(tk, block) {

@@ -163,6 +163,15 @@ export class VolcanoPlotView {
 				)
 			)
 		}
+		// every gene's promoter and body methylation change against its expression change, for these groups
+		if (
+			hasExpression &&
+			this.interactions.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg'
+		) {
+			this.addActionButton('Methylation vs expression by gene', [tt.DNA_METHYLATION], () =>
+				this.interactions.launchStarburst()
+			)
+		}
 		/* Must match the label the view model built from the same helper, otherwise the
 		find() below silently misses and the count disappears from the action bar. */
 		const dmNoun = elementNoun(this.settings?.elementType)
@@ -804,7 +813,8 @@ export class VolcanoPlotView {
 				const tbl = table2col({ holder: container.append('table') })
 				this.addTooltipRows(d, tbl)
 			},
-			getRowKey: d => d.gene_name
+			// a methylation hit is known by its element or region: it may name no gene, or share one with other hits
+			getRowKey: d => (this.termType === tt.DNA_METHYLATION && (d as any).promoter_id) || d.gene_name
 		}).attach()
 	}
 
@@ -903,6 +913,8 @@ export class VolcanoPlotView {
 	private getActionMenuOpts(d: DataPointEntry): ActionMenuItem[] {
 		const termType = this.termType
 		const interactions = this.interactions
+		// a methylation element may list several genes; the first is the one it is named for
+		const gene = d.gene_name?.split(',')[0]?.trim()
 		const all = [
 			{
 				label: 'Violin plot',
@@ -947,6 +959,40 @@ export class VolcanoPlotView {
 				isVisible: () => termType === tt.GENE_EXPRESSION,
 				onClick: async () => {
 					interactions.launchBoxPlot(d.gene_name)
+				}
+			},
+			{
+				label: `Methylation & expression at ${gene}`,
+				isVisible: () => {
+					const q = interactions.app.vocabApi.termdbConfig?.queries
+					return (
+						(termType === tt.GENE_EXPRESSION || termType === tt.DNA_METHYLATION) &&
+						!!gene &&
+						q?.dnaMethylation?.regionAnalysis == 'cpg' &&
+						!!q?.geneExpression
+					)
+				},
+				onClick: async () => interactions.launchMethylationLocus({ gene: gene! }, this.viewData.scan?.bedjFile)
+			},
+			{
+				/* a methylation hit that names no gene, or any on a dataset without expression: the same track on
+				its region, without expression */
+				label: `Methylation at ${(d as any).chr}:${(d as any).start}-${(d as any).stop}`,
+				isVisible: () => {
+					const q = interactions.app.vocabApi.termdbConfig?.queries
+					return (
+						termType === tt.DNA_METHYLATION &&
+						(!gene || !q?.geneExpression) &&
+						Number.isFinite((d as any).start) &&
+						q?.dnaMethylation?.regionAnalysis == 'cpg'
+					)
+				},
+				onClick: async () => {
+					const dm = d as any
+					return interactions.launchMethylationLocus(
+						{ chr: dm.chr, start: dm.start, stop: dm.stop },
+						this.viewData.scan?.bedjFile
+					)
 				}
 			}
 		]

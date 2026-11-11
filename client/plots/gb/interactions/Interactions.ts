@@ -32,14 +32,23 @@ export class Interactions {
 	}
 
 	onGeneSearch = (result, blockIsProteinMode) => {
+		const config: any = {
+			geneSearchResult: result,
+			blockIsProteinMode,
+			block: { rglst: [] }
+		}
+		/* on a dataset with CpG-level methylation, the methylation track starts on at the gene or position searched,
+		with the gene for its expression. It is turned off from the Methylation tab, see launchMethylationTrack() */
+		const tracks = this.app.getState().plots.find(p => p.id === this.id)?.tracks || []
+		if (this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg') {
+			// a track switched on before the search keeps its settings and takes the gene
+			const tk = tracks.find(t => t.type == 'dnameth') || { type: 'dnameth', name: 'Methylation' }
+			config.tracks = [...tracks.filter(t => t.type != 'dnameth'), { ...tk, gene: this.expressionGene(result) }]
+		}
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
-			config: {
-				geneSearchResult: result,
-				blockIsProteinMode,
-				block: { rglst: [] }
-			}
+			config
 		})
 	}
 
@@ -89,6 +98,15 @@ export class Interactions {
 				}
 			}
 		}
+		// the gene and sort chosen in the methylation track's menu
+		const dnameth = blockInstance.tklst.find(t => t.type == 'dnameth')
+		const savedDnameth = config.tracks?.find(t => t.type == 'dnameth')
+		if (dnameth && savedDnameth) Object.assign(savedDnameth, { gene: dnameth.gene, sortBy: dnameth.sortBy })
+		// removed with the block's Remove Track: gone from the state too, so that it does not come back
+		else if (savedDnameth) config.tracks = config.tracks.filter(t => t.type != 'dnameth')
+		// the heatmap choice of the junction track's menu
+		const j2 = blockInstance.tklst.find(t => t.type == 'j2' && t.dslabel == state.vocab?.dslabel)
+		if (j2 && config.junction) config.junction.sampleHeatmap = !!j2.sampleHeatmap
 		let facetActiveTracksChanged = false
 		if (config.trackLst?.activeTracks && this.facetTrackNames.size) {
 			/* active facet tracks are inuse; if user deletes such tracks from block ui, remove from activeTracks. One the
@@ -157,6 +175,24 @@ export class Interactions {
 			type: 'plot_edit',
 			id: this.id,
 			config: { junction: { shown } }
+		})
+	}
+
+	// the searched gene for the methylation track, which asks for its expression: none on a dataset without expression
+	expressionGene(geneSearchResult) {
+		return this.app.vocabApi.termdbConfig?.queries?.geneExpression ? geneSearchResult?.geneSymbol : undefined
+	}
+
+	/* The methylation track is one of config.tracks[], where a launcher also puts it, e.g. with the groups of a
+	volcano. Shown from the tab, it takes the gene of the gene search, for that gene's expression. */
+	launchMethylationTrack = shown => {
+		const config = this.app.getState().plots.find(p => p.id === this.id)
+		const tracks = (config.tracks || []).filter(t => t.type != 'dnameth')
+		if (shown) tracks.push({ type: 'dnameth', name: 'Methylation', gene: this.expressionGene(config.geneSearchResult) })
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { tracks }
 		})
 	}
 

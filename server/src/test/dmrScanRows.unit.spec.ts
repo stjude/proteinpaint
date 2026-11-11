@@ -314,8 +314,8 @@ tape('dmrBedjLines', t => {
 	)
 	t.deepEqual(
 		JSON.parse(lines[1].split('\t')[3]),
-		{ name: 'Δβ +0.210, 8 CpGs, AAA', category: 'hyper' },
-		'column 4 is the bedj item: hover label and the category the legend counts'
+		{ name: 'Δβ +0.210, 8 CpGs, AAA', category: 'hyper', delta_beta: 0.21, no_cpgs: 8 },
+		'column 4 is the bedj item: hover label, the category the legend counts, and the two values of the label'
 	)
 	t.equal(dmrBedjLines({ regions: [] } as any, 5), '', 'a scan with no calls makes an empty file, not a stray newline')
 	t.end()
