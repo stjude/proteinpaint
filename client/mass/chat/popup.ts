@@ -62,15 +62,18 @@ export class ResultsPopup {
 	}
 
 	/** replace the popup content with a titled holder for an inline picker */
-	openPicker(title?: string) {
+	openPicker(title?: string, anchor?: HTMLElement) {
 		this.tip.clear()
-		this.tip.showunder(this.inputNode)
+		this.tip.showunder(anchor || this.inputNode)
 		const holder = this.resultDiv.append('div').style('margin', '10px')
 		if (title) holder.append('div').style('margin-bottom', '5px').text(title)
 		return holder
 	}
 
-	showError(e: any) {
+	/** `anchor`: the clicked button, so the message opens under it. The popup is hidden once a gene is selected,
+	 * so it is shown again here; otherwise an error from a button click would be invisible. */
+	showError(e: any, anchor?: HTMLElement) {
+		this.tip.showunder(anchor || this.inputNode)
 		sayerror(this.resultDiv, 'Error: ' + (e?.message || e))
 	}
 }

@@ -19,6 +19,6 @@ export function addActionButton(
 		.style('cursor', 'pointer')
 		.text(opts.label)
 		.on('click', function (this: HTMLElement) {
-			opts.onClick(this).catch(e => deps.popup.showError(e))
+			opts.onClick(this).catch(e => deps.popup.showError(e, this))
 		})
 }

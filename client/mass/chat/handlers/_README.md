@@ -74,6 +74,8 @@ When a button is shown (decided from `termdbConfig`):
 - Variant Summary and Survival: `allowedTermTypes` includes `geneVariant`.
 - Protein view / Genome view: if `queries.gbRestrictMode` is set, only the view it names (`protein` or `genomic`); if unset, both. Genome view also needs the gene's coordinate.
 
+`gbRestrictMode` limits the genome browser only. The DNA methylation region picker embeds its own genome browser and does not read it, so a methylation gene still needs a coordinate when `gbRestrictMode` is `'protein'`. The server (`runOmnisearch()` in `server/src/chat/search.ts`) therefore always resolves `GeneMatch.coord` for genes with methylation data, and skips it for a gene that only has genome browser data when `gbRestrictMode` is `'protein'` (no genomic view to seed). If a methylation button reports "Could not resolve coordinates", the gene has no coordinate in the genome's gene db.
+
 ## Tests
 
 Unit specs are in `../test/<key>.unit.spec.ts`, plus `results`, `search`, and the server-calling `search.integration.spec.ts`. Run in the browser with `dir=mass/chat&name=*`.

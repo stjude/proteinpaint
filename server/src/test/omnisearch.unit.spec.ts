@@ -127,6 +127,27 @@ tape('gene data type — DNA methylation: TP53 reports dnaMethylation', async t 
 	t.end()
 })
 
+tape(
+	'gene coordinate: gbRestrictMode=protein drops the genomic view coordinate but not the methylation one',
+	async t => {
+		const restricted = (queries: any) => ({ ...ds, queries: { ...queries, gbRestrictMode: 'protein' } })
+		const coordOf = async (d: any) =>
+			(await runOmnisearch({ prompt: gene }, req, d, genome)).genes.find(g => g.gene == gene)
+
+		const both = await coordOf(restricted({ snvindel: {}, dnaMethylation: { get: async () => ({}) } }))
+		t.equal(both?.dataTypes?.dnaMethylation, true, 'TP53 has methylation')
+		t.ok(both?.coord?.chr, 'methylation still gets a coordinate: its region picker is not the protein/genomic view')
+
+		const variantOnly = await coordOf(restricted({ snvindel: {} }))
+		t.equal(variantOnly?.dataTypes?.genomeBrowser, true, 'TP53 has the genome browser')
+		t.equal(variantOnly?.coord, null, 'no genomic view when restricted to protein -> no coordinate')
+
+		const unrestricted = await coordOf({ ...ds, queries: { snvindel: {} } })
+		t.ok(unrestricted?.coord?.chr, 'unrestricted: the genome browser gets a coordinate')
+		t.end()
+	}
+)
+
 tape('gene data type — genome browser: TP53 reports genomeBrowser', async t => {
 	const data = await runOmnisearch({ prompt: gene }, req, ds, genome)
 	const tp53 = data.genes.find(g => g.gene == gene)

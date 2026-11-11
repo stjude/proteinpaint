@@ -63,7 +63,8 @@ export type GeneTermTypeDef = {
 		handler: SearchResultHandler,
 		deps: HandlerDeps,
 		row: GeneRow,
-		onTerm: (tw: any) => Promise<void>
+		onTerm: (tw: any) => Promise<void>,
+		button?: HTMLElement
 	) => Promise<void>
 	/** buttons that are not plots of the term, e.g. genome browser views */
 	extraActions?: Array<GeneActionDef & { enabled: (flags: DatasetFlags) => boolean }>
@@ -170,7 +171,8 @@ const TERM_TYPES: GeneTermTypeDef[] = [
 		label: () => 'DNA methylation',
 		available: row => Boolean(row.dataTypes?.dnaMethylation),
 		enabled: () => true,
-		withTerm: (h, d, row, onTerm) => h.pickMethylationTerm(d, row.gene, row.coord, term => onTerm({ term }))
+		withTerm: (h, d, row, onTerm, button) =>
+			h.pickMethylationTerm(d, row.gene, row.coord, term => onTerm({ term }), button)
 	}
 ]
 
@@ -262,7 +264,7 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 					testid: gene =>
 						`sjpp-mass-chat-gene-${termType.testidKey}-${plot.id == 'summary' ? '' : plot.id + '-'}${gene}`,
 					available: () => true,
-					run: (h, d, r, button) => termType.withTerm(h, d, r, tw => plot.launch(h, d, tw, button))
+					run: (h, d, r, button) => termType.withTerm(h, d, r, tw => plot.launch(h, d, tw, button), button)
 				}))
 				return {
 					category: termType,
@@ -344,15 +346,17 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 		deps: HandlerDeps,
 		gene: string,
 		coord: Coord | null,
-		onTerm: (term: any) => Promise<void>
+		onTerm: (term: any) => Promise<void>,
+		button?: HTMLElement
 	) {
 		// coord is the gene's default coordinate, resolved server-side (GeneMatch.coord)
+		// needed whatever gbRestrictMode is: it limits the genome browser views, not this region picker (see _README.md)
 		if (!coord) throw new Error(`Could not resolve coordinates for gene "${gene}"`)
 		// reuse the termdb search handler's region picker and term builder (client/termdb/handlers/dnaMethylation.ts)
 		const { embedRegionPicker, makeMethylationRegionTerm } = await import('../../../termdb/handlers/dnaMethylation.ts')
 		const { mayRenderSampleTypeRow } = await import('#dom')
 		const { vocabApi } = deps.app
-		const holder = deps.popup.openPicker(gene)
+		const holder = deps.popup.openPicker(gene, button)
 		const sampleTypeSelect = mayRenderSampleTypeRow(
 			holder.append('div'),
 			vocabApi.termdbConfig?.queries.dnaMethylation,

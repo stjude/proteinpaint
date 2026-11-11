@@ -72,10 +72,10 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 		const dataTypes = getGeneDataTypesForEachGene(ds, gene, datasetDataTypes)
 		// resolve a default genomic coordinate for genes that can seed a genome browser: the DNA
 		// methylation region picker and the genome browser's genomic view both need chr/start/stop
-		const coord =
-			(dataTypes.dnaMethylation || dataTypes.genomeBrowser) && ds.queries?.gbRestrictMode !== 'protein' // Restrict genome browser to protein view only (no genomic view) when gbRestrictMode is set to 'protein'
-				? getGeneCoord(genome, gene)
-				: null
+		// gbRestrictMode='protein' restricts the genome browser to the protein view (no genomic view), so the genomic
+		// view needs no coordinate. The methylation region picker has its own genome browser and always needs one.
+		const needsCoord = dataTypes.dnaMethylation || (dataTypes.genomeBrowser && ds.queries?.gbRestrictMode !== 'protein')
+		const coord = needsCoord ? getGeneCoord(genome, gene) : null
 		return { gene, dataTypes, coord }
 	})
 
