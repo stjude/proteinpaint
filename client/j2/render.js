@@ -399,7 +399,7 @@ function renderHeatmap(tk, block) {
 	if (!cols.length && !tk.rows) return // never drawn: nothing to clear or move back
 	const n = cols.length ? cols[0].readcounts.length : 0
 	// samples with the most reads over these junctions on top
-	const weight = Array.from({ length: n }, (_, i) => cols.reduce((sum, c) => sum + Math.log2(c.readcounts[i] + 1), 0))
+	const weight = Array.from({ length: n }, (_, i) => cols.reduce((sum, c) => sum + c.readcounts[i], 0))
 	const idx = weight.map((_, i) => i).sort((a, b) => weight[b] - weight[a])
 	const max = Math.max(1, ...cols.flatMap(c => c.readcounts))
 	const coord = j => `${j.chr}:${j.start + 1}-${j.stop + 1} ${j.strand}`

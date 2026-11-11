@@ -44,7 +44,7 @@ export class Interactions {
 			this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg' &&
 			!tracks.some(t => t.type == 'dnameth')
 		)
-			config.tracks = [...tracks, { type: 'dnameth', name: 'Methylation', gene: result?.geneSymbol }]
+			config.tracks = [...tracks, { type: 'dnameth', name: 'Methylation', gene: this.expressionGene(result) }]
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
@@ -176,12 +176,17 @@ export class Interactions {
 		})
 	}
 
+	// the searched gene for the methylation track, which asks for its expression: none on a dataset without expression
+	expressionGene(geneSearchResult) {
+		return this.app.vocabApi.termdbConfig?.queries?.geneExpression ? geneSearchResult?.geneSymbol : undefined
+	}
+
 	/* The methylation track is one of config.tracks[], where a launcher also puts it, e.g. with the groups of a
 	volcano. Shown from the tab, it takes the gene of the gene search, for that gene's expression. */
 	launchMethylationTrack = shown => {
 		const config = this.app.getState().plots.find(p => p.id === this.id)
 		const tracks = (config.tracks || []).filter(t => t.type != 'dnameth')
-		if (shown) tracks.push({ type: 'dnameth', name: 'Methylation', gene: config.geneSearchResult?.geneSymbol })
+		if (shown) tracks.push({ type: 'dnameth', name: 'Methylation', gene: this.expressionGene(config.geneSearchResult) })
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,

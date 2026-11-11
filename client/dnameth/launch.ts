@@ -24,6 +24,12 @@ export async function launchMethylationBrowser(
 		const pad = Math.max(5000, at.stop - at.start)
 		region = { chr: at.chr, start: Math.max(0, at.start - pad), stop: at.stop + pad }
 	}
+	/* the dataset's mutation and junction tracks start off, so that the heatmap is next to the gene. Each is the
+	dataset's own config with shown:false, and only when the dataset has it: the genome browser takes these keys
+	whole, so a bare {shown:false} would drop the rest of the config, or add a tab for a track the dataset lacks */
+	const queries = app.vocabApi.termdbConfig?.queries || {}
+	const off: any = {}
+	for (const k of ['snvindel', 'junction']) if (queries[k]) off[k] = { ...structuredClone(queries[k]), shown: false }
 	app.dispatch({
 		type: 'plot_create',
 		config: {
@@ -31,9 +37,7 @@ export async function launchMethylationBrowser(
 			// genomic mode: the CpGs of interest are mostly outside the exons
 			blockIsProteinMode: false,
 			geneSearchResult: region,
-			// the dataset's mutation and junction tracks start off, so that the heatmap is next to the gene
-			snvindel: { shown: false },
-			junction: { shown: false },
+			...off,
 			tracks: [{ type: 'dnameth', name: 'Methylation', gene, groupTw, dmrFile }]
 		}
 	})

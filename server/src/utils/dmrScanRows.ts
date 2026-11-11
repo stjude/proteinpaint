@@ -296,7 +296,9 @@ export function dmrBedjLines(payload: TermdbDmrBatchSuccessResponse, minCpgs: nu
 		const label = `Δβ ${db >= 0 ? '+' : ''}${db.toFixed(3)}, ${d.no_cpgs} CpGs${
 			d.genes?.length ? ', ' + d.genes.join(' ') : ''
 		}`
-		return `${d.chr}\t${d.start}\t${d.stop}\t${JSON.stringify({ name: label, category: d.direction })}`
+		// delta_beta and no_cpgs repeat the label as values, for a reader of the items (the methylation track's DMR row)
+		const item = { name: label, category: d.direction, delta_beta: Number(db.toFixed(3)), no_cpgs: d.no_cpgs }
+		return `${d.chr}\t${d.start}\t${d.stop}\t${JSON.stringify(item)}`
 	})
 	return lines.length ? lines.join('\n') + '\n' : ''
 }

@@ -97,9 +97,9 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 	const samples: { name: string; value?: number; group?: string }[] = []
 	const add = (name: string, value?: number) => {
 		if (!m.eligible.has(name)) return
-		const group = sample2group.get(name)
+		const group = sample2group?.get(name)
 		// with groups, the view is their comparison: a sample in none of them is left out
-		if (sample2group.size && group === undefined) return
+		if (sample2group && group === undefined) return
 		samples.push({ name, ...(value === undefined ? {} : { value }), ...(group === undefined ? {} : { group }) })
 	}
 	if (q.gene) {
@@ -155,8 +155,14 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 	try {
 		bins = JSON.parse(await run_python('query_beta_values.py', JSON.stringify(input))).bins
 	} catch (e: any) {
-		// the script exits with this when the range has no CpG, e.g. a view zoomed in between two
-		if (!String(e?.message || e).includes('No DNA methylation data for the provided range')) throw e
+		/* the script exits with one of these when the range has no CpG: a view zoomed in between two, or one before
+		the chromosome's first CpG or after its last */
+		const msg = String(e?.message || e)
+		if (
+			!msg.includes('No DNA methylation data for the provided range') &&
+			!msg.includes('not within the genomic bounds')
+		)
+			throw e
 		bins = []
 	}
 
@@ -246,9 +252,10 @@ a filter is listed (resolveGroups), and on a dataset with sample ancestry a pati
 for its samples (buildGroupValues). Reading the samplelst term through getData() instead labels only
 the ids the groups list, so groups of patients would label no sample. */
 async function getSampleGroups(q: MethylationLocusRequest, ds: any, eligible: Set<string>) {
-	const sample2group = new Map<string, string>()
 	const groups = (q.groupTw as any)?.q?.groups
-	if (!Array.isArray(groups)) return sample2group
+	// undefined: no groups asked for. An empty map: groups asked for, with no sample that has methylation
+	if (!Array.isArray(groups)) return
+	const sample2group = new Map<string, string>()
 	for (const g of await resolveGroups(groups, q, ds)) {
 		if (g.in === false || !Array.isArray(g.values)) continue
 		const { names } = await buildGroupValues(g.values, eligible, ds, null, null, null, null, q.__protected__)

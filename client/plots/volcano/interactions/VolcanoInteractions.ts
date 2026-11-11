@@ -259,11 +259,14 @@ export class VolcanoInteractions {
 	/** Per-sample methylation along a gene, next to its expression, or over a region, with the volcano's groups as a
 	 * strip. dmrFile: the track file of this volcano's scan, whose DMRs the track then marks */
 	launchMethylationLocus(at: { gene: string } | { chr: string; start: number; stop: number }, dmrFile?: string) {
-		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		const state = this.app.getState()
+		const config = state.plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		// an in:false "others" placeholder becomes the group it stands for, as the volcano's own request sends it
+		const groups = withOthersGroup(config.tw.q.groups, state.termfilter)
 		return launchMethylationBrowser(
 			this.app,
 			at,
-			{ q: { groups: config.tw.q.groups, type: 'custom-samplelst' }, term: config.tw.term },
+			{ q: { groups, type: 'custom-samplelst' }, term: config.tw.term },
 			dmrFile
 		)
 	}
@@ -277,6 +280,8 @@ export class VolcanoInteractions {
 			config: {
 				chartType: 'methylationStarburst',
 				tw: { q: { groups: config.tw.q.groups }, term: config.tw.term },
+				// this volcano's own sample filter, when it has one
+				filter: config.filter,
 				corrected: !!s.backgroundCorrection,
 				excludeSexChr: !!s.excludeSexChr
 			}

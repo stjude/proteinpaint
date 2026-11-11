@@ -260,12 +260,14 @@ export const PROMOTER_UP = 2000
 export const PROMOTER_DOWN = 500
 
 /** One core promoter per gene symbol, from the genes table's default isoforms: rows of {name, genemodel} where
- * genemodel is the JSON of one isoform. The first default isoform of a symbol is kept, as genedb's own lookups do. */
-export function promoterLoci(rows: { name: string; genemodel: string }[]) {
+ * genemodel is the JSON of one isoform. The first default isoform of a symbol is kept, as genedb's own lookups do;
+ * with chrs, the first one on those chromosomes. */
+export function promoterLoci(rows: { name: string; genemodel: string }[], chrs?: Set<string>) {
 	const locusOf = new Map<string, { chr: string; start: number; stop: number }>()
 	for (const r of rows) {
 		if (locusOf.has(r.name)) continue
 		const gm = JSON.parse(r.genemodel)
+		if (chrs && !chrs.has(gm.chr)) continue
 		const minus = gm.strand == '-'
 		const tss = minus ? gm.stop : gm.start
 		locusOf.set(r.name, {
@@ -283,7 +285,9 @@ function lociByChr(genome: any, region?: 'promoter') {
 	if (region == 'promoter') {
 		const rows: any[] = genome?.genedb?.db?.prepare('select name, genemodel from genes where isdefault=1').all() || []
 		if (!rows.length) throw new Error('This genome has no default isoforms.')
-		locusOf = promoterLoci(rows)
+		// a symbol's rows on the major chromosomes only: the first may be on a fix or alt contig, which has no matrix
+		const major = new Set(validateChromosomes(genome, undefined, true))
+		locusOf = promoterLoci(rows, major)
 	} else {
 		/* Gene bodies, trimmed at both ends exactly as the scan's inGeneBody flag trims them, so
 		"gene body" means one thing across the two analyses. */

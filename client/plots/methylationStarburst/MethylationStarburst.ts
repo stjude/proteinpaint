@@ -4,6 +4,7 @@ import { Menu } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { launchMethylationBrowser } from '../../dnameth/launch'
 import { withOthersGroup } from '#mass/groups'
+import { getCombinedTermFilter } from '#filter'
 import { getDefaultVolcanoSettings } from '../volcano/settings/defaults'
 import type { MethylationStarburstResponse } from '#types'
 import { drawStarburst, drawPathways, type Cutoffs, type StarburstData } from './view'
@@ -32,7 +33,8 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 	getState(appState: any) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw new Error(`No plot with id='${this.id}' found`)
-		return { config, termfilter: appState.termfilter }
+		// with the sample filter of the volcano it was opened from, when that has one
+		return { config, termfilter: getCombinedTermFilter(appState, config.filter) }
 	}
 
 	async main() {
@@ -173,5 +175,9 @@ export const componentInit = getCompInit(MethylationStarburst)
 
 export function getPlotConfig(opts: any) {
 	if (opts.tw?.q?.groups?.length != 2) throw new Error('two sample groups are required for the starburst plot')
-	return copyMerge({ settings: { methylationStarburst: { minDeltaBeta: 0.05, maxQ: 0.05 } } }, opts)
+	// no plot-local sample filter: the groups are sample lists that the methylation side does not filter further
+	return copyMerge(
+		{ hidePlotFilter: true, settings: { methylationStarburst: { minDeltaBeta: 0.05, maxQ: 0.05 } } },
+		opts
+	)
 }

@@ -180,7 +180,8 @@ export async function validate_query_junction(ds: any, genome: any) {
 				}
 			})
 		}
-		if (!param.matrixTop) return { junctions, maxReadCount }
+		// no matrix with keepLst: its junctions carry sn2rc instead, and have no sampleCount to rank by
+		if (!param.matrixTop || keepLst?.length) return { junctions, maxReadCount }
 
 		// the columns of the samples that the request covers
 		const columns: number[] = []

@@ -102,16 +102,13 @@ async function loadDmrs(tk: any, block: any, data: LocusData): Promise<Dmr[]> {
 		})
 		const dmrs: Dmr[] = []
 		for (const i of res.items || []) {
-			// the name is "Δβ -0.175, 10 CpGs, GENE ..."
-			const m = /^Δβ ([-+]?[\d.]+), (\d+) CpGs/.exec(i.name || '')
-			if (m)
-				dmrs.push({
-					start: i.start,
-					stop: i.stop,
-					hyper: i.category == 'hyper',
-					delta: Number(m[1]),
-					nCpg: Number(m[2])
-				})
+			// the item's own values; a file written before it carried them has them only in its name,
+			// "Δβ -0.175, 10 CpGs, GENE ..."
+			const m = i.delta_beta === undefined ? /^Δβ ([-+]?[\d.]+), (\d+) CpGs/.exec(i.name || '') : null
+			const delta = i.delta_beta ?? (m ? Number(m[1]) : undefined)
+			const nCpg = i.no_cpgs ?? (m ? Number(m[2]) : undefined)
+			if (delta !== undefined && nCpg !== undefined)
+				dmrs.push({ start: i.start, stop: i.stop, hyper: i.category == 'hyper', delta, nCpg })
 		}
 		return dmrs
 	} catch (_e) {
@@ -204,8 +201,9 @@ function render(tk: any, block: any): number {
 
 	const stats: LocusHeatmapStat[] = []
 	if (hasGene) {
-		// to the largest |rho| in view, in steps of 0.25, so that a locus of weak correlations still shows them
-		const top = Math.max(0.25, Math.ceil(Math.max(...bins.map(b => Math.abs(b.rho ?? 0))) * 4) / 4)
+		// to the largest |rho| in view, pooled or within a group, in steps of 0.25, so that a locus of weak correlations still shows them
+		const rhos = bins.flatMap(b => [b.rho, ...(b.byGroup || []).map(g => g.rho)])
+		const top = Math.max(0.25, Math.ceil(Math.max(...rhos.map(r => Math.abs(r ?? 0))) * 4) / 4)
 		stats.push({
 			label: `ρ with ${unit}`,
 			domain: [-top, top],

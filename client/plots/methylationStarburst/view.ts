@@ -382,7 +382,8 @@ export function drawPathways(holder: any, pw: StarburstPathways, groups: [string
 			c.append('rect')
 				.attr('width', cell.w - 1)
 				.attr('height', cell.h - 1)
-				.attr('fill', heat(-l.log10q * (l.direction || 1)))
+				// direction 0: the set's picked genes split evenly, so the cell stays neutral and the dot carries the q
+				.attr('fill', heat(-l.log10q * (l.direction ?? 1)))
 				.attr('stroke', '#eee')
 			if (l.log10q < SIG)
 				c.append('circle')

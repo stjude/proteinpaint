@@ -32,5 +32,13 @@ tape('core promoter on each strand', test => {
 	test.deepEqual(loci.get('MINUS'), { chr: 'chr2', start: 49500, stop: 52000 }, 'should mirror on the minus strand')
 	test.deepEqual(loci.get('EDGE'), { chr: 'chr3', start: 0, stop: 600 }, 'should clip at the chromosome start')
 	test.ok(PROMOTER_DOWN < GENE_BODY_PAD && PROMOTER_UP > 0, 'should end before the gene body starts')
+	// a symbol whose first row is on a contig: with the chromosomes to keep, the first row on one of them
+	const rows = [row('ALT', 'chr1_alt', 100000, 200000, '+'), row('ALT', 'chr5', 30000, 40000, '+')]
+	test.equal(promoterLoci(rows).get('ALT')?.chr, 'chr1_alt', 'should keep the first row without chromosomes to keep')
+	test.deepEqual(
+		promoterLoci(rows, new Set(['chr5'])).get('ALT'),
+		{ chr: 'chr5', start: 28000, stop: 30500 },
+		'should skip rows on other chromosomes'
+	)
 	test.end()
 })

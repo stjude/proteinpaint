@@ -62,6 +62,8 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 	if (!ds) throw new Error('unknown dataset')
 	const groups = q.samplelst?.groups
 	if (groups?.length != 2) throw new Error('Two sample groups are required.')
+	// before the genome-wide runs below
+	if (q.geneSetGroup) validGeneSetGroup(genome, q.geneSetGroup)
 	const t0 = Date.now()
 
 	/* Both axes from the same samples: each group cut to the samples that have methylation AND expression. Cut
@@ -86,7 +88,6 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 	// one after the other: each is a genome-wide rust run admitted against server memory
 	const body = await deltas()
 	const promoter = await deltas('promoter')
-	if (q.geneSetGroup) validGeneSetGroup(genome, q.geneSetGroup)
 	const tests = q.geneSetGroup ? await getGeneBodyTests(groupArgs, genomes) : null
 
 	const { result } = await getDeCacheResult(
