@@ -18,9 +18,6 @@ need='names': assess() gets {names}, the distinct names of the samples with data
 export type SampleAccessTerm = {
 	/** the ids of the samples that have data for a term, as included in the response */
 	sampleIds: Iterable<string | number>
-	/** the ids to look up the termId values of, defaults to sampleIds. When child samples are mapped to their
-	 * root samples, this has both the child and root ids, since the termId term may annotate either one */
-	lookupIds?: Iterable<string | number>
 }
 
 const needs = new Set(['count', 'names'])
@@ -56,9 +53,7 @@ export function validateCheckAccessToSampleData(ds) {
 export function mayCheckSampleAccess(q, ds, terms: SampleAccessTerm[]) {
 	const check = ds.cohort?.termdb?.checkAccessToSampleData
 	if (!check) return
-	const lst = terms
-		.map(t => ({ sampleIds: toIdSet(t.sampleIds), lookupIds: t.lookupIds }))
-		.filter(t => t.sampleIds.size)
+	const lst = terms.map(t => ({ sampleIds: toIdSet(t.sampleIds) })).filter(t => t.sampleIds.size)
 	if (!lst.length) return
 
 	if (check.need == 'count') {
@@ -68,9 +63,8 @@ export function mayCheckSampleAccess(q, ds, terms: SampleAccessTerm[]) {
 	if (check.need != 'names') throw 'invalid termdb.checkAccessToSampleData.need'
 	const id2names = getId2Names(ds, check.termId)
 	for (const t of lst) {
-		const ids = check.termId && t.lookupIds ? toIdSet(t.lookupIds) : t.sampleIds
 		const names = new Set<string>()
-		for (const id of ids) {
+		for (const id of t.sampleIds) {
 			for (const n of id2names.get(id) || []) names.add(n)
 		}
 		assertAccess(check.assess(q, { names: [...names] }))

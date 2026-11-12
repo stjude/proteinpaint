@@ -123,10 +123,6 @@ tape("mayCheckSampleAccess(): need='names' with termId", t => {
 		'should allow 1-site terms of the site the user owns'
 	)
 
-	calls.length = 0
-	mayCheckSampleAccess(publicQ, ds, [{ sampleIds: [1], lookupIds: [1, 6] }])
-	t.deepEqual(calls, [{ names: ['A', 'C'] }], 'should look up the lookupIds when given')
-
 	t.equal(prepared.length, 1, 'should query the termId values once, and reuse them for later requests')
 	t.end()
 })
@@ -140,7 +136,7 @@ tape("mayCheckSampleAccess(): need='names' without termId", t => {
 			return { minSize: 1, canAccess: true }
 		}
 	})
-	mayCheckSampleAccess(publicQ, ds, [{ sampleIds: [1, 2], lookupIds: [1, 2, 3] }])
+	mayCheckSampleAccess(publicQ, ds, [{ sampleIds: [1, 2] }])
 	t.deepEqual(calls, [{ names: ['sample1', 'sample2'] }], 'should use the sample names of the sampleIds')
 	t.end()
 })
