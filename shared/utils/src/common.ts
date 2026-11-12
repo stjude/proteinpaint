@@ -1525,6 +1525,8 @@ export const JT_exonskip = 'exonskip'
 export const JT_exonaltuse = 'exonaltuse'
 export const JT_a5ss = 'a5ss'
 export const JT_a3ss = 'a3ss'
+export const JT_mxe = 'mxe' // mutually exclusive exon
+export const JT_ir = 'IR' // intron retention, of the intron between the two ends of the junction
 export const JTypes = {
 	[JT_canonical]: {
 		color: '#0C72A8',
@@ -1545,6 +1547,14 @@ export const JTypes = {
 	[JT_exonaltuse]: {
 		color: '#E69525',
 		name: 'Alternative exon'
+	},
+	[JT_mxe]: {
+		color: '#A347D1',
+		name: 'Mutually exclusive exon'
+	},
+	[JT_ir]: {
+		color: '#A0A0A0',
+		name: 'Intron retention'
 	},
 	[JT_na]: {
 		color: '#787854',

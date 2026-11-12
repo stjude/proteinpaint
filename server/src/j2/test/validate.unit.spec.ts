@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { computeTypes, getJunctionData } from '../validate.js'
+import { computeTypes, getJunctionData, removeIRtype, validate_query_junction } from '../validate.js'
 
 tape('\n', test => {
 	test.comment('-***- junction/validate specs -***-')
@@ -52,6 +52,51 @@ tape('computeTypes: event type must be a string', test => {
 	}
 
 	test.throws(() => computeTypes(junction, new Set()), /event\.type missing/, 'throws when an event type is missing')
+	test.end()
+})
+
+tape('computeTypes: intron retention', test => {
+	{
+		const junction = { canonical: true, events: [{ type: 'IR', intron: { start: 11, stop: 20 } }] }
+		test.deepEqual(computeTypes(junction, new Set()), ['canonical', 'IR'], 'lists IR after canonical')
+	}
+	{
+		const junction = { events: [{ type: 'IR' }] }
+		test.deepEqual(computeTypes(junction, new Set()), ['na', 'IR'], 'a non-canonical junction with only IR is also na')
+	}
+	{
+		const junction = { events: [{ type: 'IR' }] }
+		test.deepEqual(computeTypes(junction, new Set(['IR'])), ['na'], 'remains na when IR is hidden')
+		test.equal((junction as any).events, undefined, 'removes the hidden IR event')
+	}
+	{
+		const junction = { events: [{ type: 'IR' }] }
+		test.deepEqual(computeTypes(junction, new Set(['na'])), ['IR'], 'is only IR when na is hidden')
+	}
+	{
+		const junction = { events: [{ type: 'a5ss' }, { type: 'IR' }] }
+		test.deepEqual(computeTypes(junction, new Set()), ['a5ss', 'IR'], 'is not na with another event')
+	}
+	{
+		const junction = { events: [{ type: 'a5ss' }, { type: 'IR' }] }
+		test.deepEqual(computeTypes(junction, new Set(['a5ss'])), ['IR'], 'is not na when the other event is hidden')
+	}
+	test.end()
+})
+
+tape('removeIRtype', test => {
+	{
+		const j: any = { types: ['canonical', 'a5ss', 'IR'], info: { events: [{ type: 'a5ss' }, { type: 'IR' }] } }
+		removeIRtype(j)
+		test.deepEqual(j.types, ['canonical', 'a5ss'], 'removes IR from types')
+		test.deepEqual(j.info.events, [{ type: 'a5ss' }], 'removes the IR event')
+	}
+	{
+		const j: any = { types: ['na', 'IR'], info: { events: [{ type: 'IR' }] } }
+		removeIRtype(j)
+		test.deepEqual(j.types, ['na'], 'leaves na')
+		test.equal(j.info.events, undefined, 'removes events when none is left')
+	}
 	test.end()
 })
 
@@ -167,5 +212,75 @@ tape('getJunctionData: keeps the samples of the sample types chosen for each ter
 	await refuses('2', ds, 'must be an array', 'refuses sample types that are not an array')
 	await refuses(['abc'], ds, "invalid sample type='abc'", 'refuses a sample type that is not an integer')
 	await refuses([9], ds, "invalid sample type='9'", 'refuses a sample type unknown to the dataset')
+	test.end()
+})
+
+/* test/tp/files/hg38/junction/test.junction.gz, of samples S1-S4, holds a junction:
+- 1000-2000, canonical with IR: IR ratio in every sample, one of which has a read count of 5
+- 3000-4000, canonical with a5ss and IR: IR ratio in 2 samples, after the value of a5ss
+- 5000-6000, with only IR and no IR ratio in any sample, of the highest read count, 40
+- 7000-8000, canonical with IR: IR ratio in 1 sample
+*/
+async function getJunctionQuery() {
+	const ds: any = { label: 'test', queries: { junction: { file: 'files/hg38/junction/test.junction.gz' } } }
+	const genome = { chrlookup: { CHR17: { name: 'chr17', len: 83257441 } } }
+	await validate_query_junction(ds, genome)
+	return ds.queries.junction
+}
+async function listJunctions(q, param = {}) {
+	const result = await q.listJunctions({ rglst: [{ chr: 'chr17', start: 0, stop: 10000 }], ...param })
+	return {
+		maxReadCount: result.maxReadCount,
+		byStart: new Map(result.junctions.map(j => [j.start, j]))
+	}
+}
+
+tape('listJunctions: intron retention', async test => {
+	const q = await getJunctionQuery()
+	{
+		const { byStart, maxReadCount } = await listJunctions(q)
+		const a: any = byStart.get(1000)
+		test.deepEqual(a.types, ['canonical', 'IR'], 'lists IR in types')
+		test.equal(a.IR.sampleCount, 4, 'counts the samples with an IR ratio')
+		test.ok(Math.abs(a.IR.medianRatio - 0.3) < 1e-9, 'median of an even number of IR ratios')
+		test.equal(a.sampleCount, 4, 'counts the samples of the junction')
+		const b: any = byStart.get(3000)
+		test.deepEqual(b.IR, { sampleCount: 2, medianRatio: 0.4 }, 'reads the IR ratio after the value of another event')
+		const c: any = byStart.get(5000)
+		test.deepEqual(c.types, ['na'], 'removes IR from types when no sample has an IR ratio')
+		test.equal(c.IR, undefined, 'has no IR summary then')
+		test.equal(c.info.events, undefined, 'removes the IR event then')
+		const d: any = byStart.get(7000)
+		test.deepEqual(d.IR, { sampleCount: 1, medianRatio: 0.25 }, 'the median of one IR ratio is that ratio')
+		test.equal(maxReadCount, 40, 'max read count of all junctions')
+	}
+	{
+		const { byStart } = await listJunctions(q, { readcountCutoff: 10 })
+		const a: any = byStart.get(1000)
+		test.deepEqual(
+			a.IR,
+			{ sampleCount: 3, medianRatio: 0.2 },
+			'counts the IR ratio of a sample only when its read count passes the cutoff'
+		)
+		test.equal(byStart.get(3000), undefined, 'skips a junction with no sample passing the cutoff')
+	}
+	{
+		const { byStart } = await listJunctions(q, { hiddenTypes: 'a5ss' })
+		const b: any = byStart.get(3000)
+		test.deepEqual(b.types, ['canonical', 'IR'], 'a5ss is hidden')
+		test.deepEqual(b.IR, { sampleCount: 2, medianRatio: 0.4 }, 'still reads the IR ratio of each sample at its place')
+	}
+	{
+		const { byStart } = await listJunctions(q, { hiddenTypes: 'IR' })
+		for (const j of byStart.values() as any) {
+			if (j.types.includes('IR') || j.IR) test.fail(`a junction at ${j.start} has IR while IR is hidden`)
+		}
+		test.deepEqual((byStart.get(5000) as any).types, ['na'], 'a junction with only IR is na')
+	}
+	{
+		const { byStart, maxReadCount } = await listJunctions(q, { hiddenTypes: 'na' })
+		test.equal(byStart.get(5000), undefined, 'skips a junction left with no type after removing IR')
+		test.equal(maxReadCount, 30, 'the max read count is of the junctions returned')
+	}
 	test.end()
 })

@@ -12,7 +12,14 @@ export type Junction = {
 	sampleCount?: number
 	medianReadCount?: number
 	readcountBoxplot?: number[]
-	/** 
+	/** for a junction with an intron retention event, of its samples, those with a nonzero IR ratio.
+	Absent when there is none, and the IR type is then also removed from types[] */
+	IR?: {
+		sampleCount: number
+		/** median IR ratio of these samples */
+		medianRatio: number
+	}
+	/**
 	/AbyB route calls q.listJunctions(, keepLst) to only return given junctions
 	along with sn2rc for downstream processing
 	*/
