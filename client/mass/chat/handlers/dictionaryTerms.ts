@@ -3,22 +3,8 @@ import { escapeHtml } from '../../../dom/escapeHtml.ts'
 import { MIN_PROMPT_LENGTH_FOR_DICT_SEARCH, withinLength } from '../constants.ts'
 import type { HandlerDeps, OmnisearchHandler, SearchInput } from '../types.ts'
 
-export type DictRow = {
-	name: string
-	/** the dictionary term as returned by the server; passed to the plot as `term` */
-	term: any
-	/** type-less terms (e.g. folders) are listed but not clickable */
-	selectable: boolean
-	ancestors: string
-}
-
-// Result kind: dictionary variables (the dataset's clinical/phenotype terms). Click a term to open a
-// summary (or survival) plot of it.
-
-/** Whether this dataset has dictionary terms to search: every dataset does. */
-export function includeResult(_termdbConfig: any): boolean {
-	return true
-}
+/*Result kind: dictionary variables (the dataset's clinical/phenotype terms). Click a term to open 
+a summary (or survival) plot of it. */
 
 export class SearchResultHandler implements OmnisearchHandler<DictRow> {
 	readonly key = 'dictionaryTerms' as const
@@ -65,4 +51,22 @@ export class SearchResultHandler implements OmnisearchHandler<DictRow> {
 		}
 		tr.append('td').text(row.ancestors).style('opacity', 0.5).style('font-size', '.7em')
 	}
+}
+
+/** Whether this dataset has dictionary terms to search: every dataset does. */
+export function includeResult(_termdbConfig: any): boolean {
+	return true
+}
+
+/**********************
+        TYPES
+ **********************/
+
+export type DictRow = {
+	name: string
+	/** the dictionary term as returned by the server; passed to the plot as `term` */
+	term: any
+	/** type-less terms (e.g. folders) are listed but not clickable */
+	selectable: boolean
+	ancestors: string
 }

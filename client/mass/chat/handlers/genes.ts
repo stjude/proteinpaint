@@ -93,24 +93,6 @@ const VARIANT_TYPES = [
 	{ key: 'svfusion', label: 'SV/fusion', dts: [dtsv, dtfusionrna] }
 ] as const
 
-function presentVariantTypes(row: GeneRow) {
-	return VARIANT_TYPES.filter(v => row.dataTypes?.[v.key])
-}
-
-/** Row label for the variant category, e.g. "SNV/indel/CNV/SV/fusion" or just "CNV" when that is all this
- * gene has. */
-export function variantCategoryLabel(row: GeneRow): string {
-	return presentVariantTypes(row)
-		.map(v => v.label)
-		.join('/')
-}
-
-/** All dts to try, in order, when launching the variant summary: launchGeneVariantPlot uses the first one
- * the dataset has a predefined groupset for. */
-export function variantDtCandidates(row: GeneRow): number[] {
-	return presentVariantTypes(row).flatMap(v => [...v.dts])
-}
-
 /** Plot types, chained onto every term type below. Survival always takes the gene's term as term2. */
 const PLOT_TYPES: GenePlotTypeDef[] = [
 	{
@@ -175,39 +157,6 @@ const TERM_TYPES: GeneTermTypeDef[] = [
 			h.pickMethylationTerm(d, row.gene, row.coord, term => onTerm({ term }), button)
 	}
 ]
-
-/** Dataset-wide flags from termdbConfig. gbRestrictMode limits the genome browser to one view. */
-export function getDatasetFlags(termdbConfig: any): DatasetFlags {
-	const allowed: string[] = termdbConfig?.allowedTermTypes || []
-	const restrict = termdbConfig?.queries?.gbRestrictMode
-	// anything but a known restriction (including a missing one) allows both views
-	const gbRestrictMode: GBRestrictMode | undefined =
-		restrict == 'protein' || restrict == 'genomic' ? restrict : undefined
-	return {
-		hasSurvival: allowed.includes(TermTypes.SURVIVAL),
-		hasGeneVariant: allowed.includes(TermTypes.GENE_VARIANT),
-		gbRestrictMode
-	}
-}
-
-/** Whether this dataset has genes to search: it has any gene data type to act on (mirrors the server's
- * hasGeneData). */
-export function includeResult(termdbConfig: any): boolean {
-	const allowed: string[] = termdbConfig?.allowedTermTypes || []
-	const q = termdbConfig?.queries || {}
-	return (
-		allowed.includes(TermTypes.GENE_EXPRESSION) ||
-		allowed.includes(TermTypes.DNA_METHYLATION) ||
-		Boolean(q.snvindel || q.cnv || q.svfusion)
-	)
-}
-
-/** A gene is listed only if at least one action (expression / variant / genome browser / methylation) can
- * be offered for it. */
-export function hasAnyGeneAction(dt: Partial<GeneDataTypeAvailability> | undefined | null): boolean {
-	if (!dt) return false
-	return Boolean(dt.geneExpression || dt.snvindel || dt.cnv || dt.svfusion || dt.genomeBrowser || dt.dnaMethylation)
-}
 
 export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 	readonly key = 'genes' as const
@@ -416,4 +365,59 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 			}
 		})
 	}
+}
+
+/** Whether this dataset has genes to search: it has any gene data type to act on (mirrors the server's
+ * hasGeneData). */
+export function includeResult(termdbConfig: any): boolean {
+	const allowed: string[] = termdbConfig?.allowedTermTypes || []
+	const q = termdbConfig?.queries || {}
+	return (
+		allowed.includes(TermTypes.GENE_EXPRESSION) ||
+		allowed.includes(TermTypes.DNA_METHYLATION) ||
+		Boolean(q.snvindel || q.cnv || q.svfusion)
+	)
+}
+
+/**********************
+        HELPERS
+ **********************/
+
+/** Dataset-wide flags from termdbConfig. gbRestrictMode limits the genome browser to one view. */
+export function getDatasetFlags(termdbConfig: any): DatasetFlags {
+	const allowed: string[] = termdbConfig?.allowedTermTypes || []
+	const restrict = termdbConfig?.queries?.gbRestrictMode
+	// anything but a known restriction (including a missing one) allows both views
+	const gbRestrictMode: GBRestrictMode | undefined =
+		restrict == 'protein' || restrict == 'genomic' ? restrict : undefined
+	return {
+		hasSurvival: allowed.includes(TermTypes.SURVIVAL),
+		hasGeneVariant: allowed.includes(TermTypes.GENE_VARIANT),
+		gbRestrictMode
+	}
+}
+
+/** A gene is listed only if at least one action (expression / variant / genome browser / methylation) can
+ * be offered for it. */
+export function hasAnyGeneAction(dt: Partial<GeneDataTypeAvailability> | undefined | null): boolean {
+	if (!dt) return false
+	return Boolean(dt.geneExpression || dt.snvindel || dt.cnv || dt.svfusion || dt.genomeBrowser || dt.dnaMethylation)
+}
+
+/** Row label for the variant category, e.g. "SNV/indel/CNV/SV/fusion" or just "CNV" when that is all this
+ * gene has. */
+export function variantCategoryLabel(row: GeneRow): string {
+	return presentVariantTypes(row)
+		.map(v => v.label)
+		.join('/')
+}
+
+/** All dts to try, in order, when launching the variant summary: launchGeneVariantPlot uses the first one
+ * the dataset has a predefined groupset for. */
+export function variantDtCandidates(row: GeneRow): number[] {
+	return presentVariantTypes(row).flatMap(v => [...v.dts])
+}
+
+function presentVariantTypes(row: GeneRow) {
+	return VARIANT_TYPES.filter(v => row.dataTypes?.[v.key])
 }

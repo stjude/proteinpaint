@@ -1,19 +1,6 @@
-// Result kind: samples, matched by name. Searched only when the user presses Enter (the server scans
-// every sample name), and only for datasets that display sample ids. The server also enforces access.
 import type { OmnisearchResult } from '#types'
 import { addActionButton } from '../buttons.ts'
 import type { HandlerDeps, OmnisearchHandler, SearchInput } from '../types.ts'
-
-export type SampleRow = {
-	name: string
-	sampleId: number | string
-	/** present only when the server confirmed this sample has single-cell data */
-	singleCell?: { sID: string; eID?: string }
-	/** present only when the sample has facet-table assays */
-	facetTracks?: { facet: string; names: string[] }[]
-	/** true only when the sample has plain whole-slide images */
-	wsimages?: boolean
-}
 
 /** Sample actions, in display order. An action appears only when the server confirmed it applies to this
  * particular sample. `config` is the plot config to launch (may be async to load code lazily). */
@@ -54,10 +41,8 @@ export const SAMPLE_ACTIONS: {
 	}
 ]
 
-/** Whether this dataset has samples to search: only datasets that display sample ids. */
-export function includeResult(termdbConfig: any): boolean {
-	return Boolean(termdbConfig?.displaySampleIds)
-}
+/* Result kind: samples, matched by name. Searched only when the user presses Enter (the server scans every sample 
+name), and only for datasets that display sample ids. The server also enforces access.*/
 
 export class SearchResultHandler implements OmnisearchHandler<SampleRow> {
 	readonly key = 'samples' as const
@@ -99,4 +84,24 @@ export class SearchResultHandler implements OmnisearchHandler<SampleRow> {
 			})
 		}
 	}
+}
+
+/** Whether this dataset has samples to search: only datasets that display sample ids. */
+export function includeResult(termdbConfig: any): boolean {
+	return Boolean(termdbConfig?.displaySampleIds)
+}
+
+/**********************
+        TYPES
+ **********************/
+
+export type SampleRow = {
+	name: string
+	sampleId: number | string
+	/** present only when the server confirmed this sample has single-cell data */
+	singleCell?: { sID: string; eID?: string }
+	/** present only when the sample has facet-table assays */
+	facetTracks?: { facet: string; names: string[] }[]
+	/** true only when the sample has plain whole-slide images */
+	wsimages?: boolean
 }
