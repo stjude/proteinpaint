@@ -41,8 +41,7 @@ function makeDs() {
 					3: { name: 'Sister', plural_name: 'Sisters', parent_id: 1 }
 				},
 				q: {
-					id2sampleName: id => `sample-${id}`,
-					id2rootSampleId: id => (id < 20 ? id : id === 22 ? 11 : 10)
+					id2sampleName: id => `sample-${id}`
 				}
 			}
 		},
