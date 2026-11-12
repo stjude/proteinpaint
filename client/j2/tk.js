@@ -2,6 +2,7 @@ import { dofetch3 } from '#common/dofetch'
 import { makeTk } from './makeTk'
 import { renderTk, renderHeatmap } from './render'
 import { rangequery_rglst } from '../mds3/tk'
+import { JT_ir } from '#shared/common.js'
 //import { make_leftlabels } from './leftlabel'
 
 /*
@@ -121,6 +122,7 @@ each junction requires chr, start and stop, and may have:
 	psi_control, psi_case: shown in tooltip; with tk.deltaPsiGroups, colored by the group with higher PSI,
 		and y is |ΔPSI| when not every junction has p, as a leafcutter cluster, which is tested as a whole
 	types[], info{}: types hidden in the legend are removed, as computeTypes() does on the server
+	IR{}: intron retention summary, removed when the IR type is hidden, as the server does not send it then
 see tk.rows.jug.yAxisKey in renderTk()
 they are cloned since rendering adds attributes to each junction; tk.custom_data is not modified, so hidden types can be shown again
 */
@@ -137,6 +139,7 @@ async function dataFromCustomData(tk, block) {
 			if (!info.events.length) delete info.events
 		}
 		const j2 = { ...j, types, info }
+		if (hidden?.has(JT_ir)) delete j2.IR
 		// rawdata2track() may swap start and mate.start of a same-chr sv
 		if (j.sv) j2.sv = { ...j.sv, mate: { ...j.sv.mate } }
 		// a p of 0 has underflowed, keep it finite on the axis
