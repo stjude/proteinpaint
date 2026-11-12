@@ -1,5 +1,5 @@
 import path from 'path'
-import { string2pos, dtsnvindel, dtfusionrna, dtsv, dtcnv } from '#shared/common.js'
+import { string2pos } from '#shared/common.js'
 import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
@@ -10,9 +10,7 @@ import {
 	isDictionaryType,
 	isNonDictionaryType,
 	isSingleCellTerm,
-	isNumericTerm,
 	getBin,
-	getGvQueryKey,
 	getTwSampleTypes,
 	type TwSampleTypes,
 	getDefaultSampleTypes
@@ -26,9 +24,7 @@ import {
 	SSGSEA,
 	PROTEOME_ABUNDANCE,
 	PSEUDOBULK,
-	JUNCTION,
-	TERM_COLLECTION,
-	MULTIVALUE
+	JUNCTION
 } from '#types'
 import type { SampleMapping } from '#types'
 import { annotateSingleCellTerm, hydrateMetaResultCellRows } from './singleCell/matrixData.ts'
@@ -135,12 +131,9 @@ export async function getData(q, ds): Promise<any> {
 		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
 		resolveTermCollectionFractions(data, originalTerms)
-		// before mayMapChildren2Root(), which replaces child samples with their root samples
-		const unmappedIdsByTerm = ds.cohort?.termdb?.checkAccessToSampleData ? getSampleIdsByTerm(data.samples) : undefined
-		mayMapChildren2Root(data, { ...q, terms: originalTerms }, ds)
 		dropRowsWithoutAnnotation(data)
 
-		mayCheckAccessToSampleData(data, ds, q, unmappedIdsByTerm)
+		mayCheckAccessToSampleData(data, ds, q)
 
 		// get categories within same data request to avoid a separate
 		// getCategories() request, which can be time-consuming for
@@ -212,26 +205,6 @@ function validateArg(q, ds) {
 	}
 	if (q.currentGeneNames) {
 		if (!Array.isArray(q.currentGeneNames)) throw 'currentGeneNames[] is not array'
-	}
-	if (q.mapChildren2Root !== undefined && typeof q.mapChildren2Root != 'boolean')
-		throw 'mapChildren2Root is not boolean'
-	if (q.mapChildren2Root && ds.cohort.termdb?.hasSampleAncestry) {
-		const rootSampleType: any = Object.values(ds.cohort.termdb.sampleTypes || {}).find(
-			(st: any) => st.parent_id === null
-		)
-		const rootName = rootSampleType?.name || 'root sample'
-		// a single cell term has no parent level id
-		if (q.terms.some(tw => isSingleCellTerm(tw.term))) throw `${rootName} level is not supported with single cell data`
-		// a snplst/snplocus value is {snpid: genotype}, which mayMapChildren2Root() cannot merge
-		if (q.terms.some(tw => tw.term?.type == 'snplst' || tw.term?.type == 'snplocus'))
-			throw `${rootName} level is not supported with snplst/snplocus data`
-		// the numeric values of several children would have to be combined into one value, which is not supported
-		if (
-			q.terms.some(
-				tw => isNumericTerm(tw.term) || (tw.term?.type == TERM_COLLECTION && tw.term.memberType == 'numeric')
-			)
-		)
-			throw `${rootName} level is not supported with numeric data`
 	}
 	if (q.filter0) {
 		if (typeof q.filter0 == 'string') q.filter0 = parseJsonParam(q.filter0, 'filter0')
@@ -479,13 +452,9 @@ async function getSampleData(q, ds) {
 	// plain bySampleId[sid] = ref assignment with an object ref would reassign bySampleId's own
 	// prototype instead of creating a real entry
 	const bySampleId = Object.create(null)
-	// skipped when mayMapChildren2Root() will replace them with the refs of the root samples;
-	// the same condition as it uses to map the samples in mayMapChildren2Root
-	if (!(q.mapChildren2Root && ds.cohort.termdb?.hasSampleAncestry)) {
-		for (const sid in samples) {
-			const ref = id2sampleRef(samples[sid]?.sampleId ?? sid, q.ds)
-			if (ref) bySampleId[sid] = ref
-		}
+	for (const sid in samples) {
+		const ref = id2sampleRef(samples[sid]?.sampleId ?? sid, q.ds)
+		if (ref) bySampleId[sid] = ref
 	}
 
 	// determine the sample type
@@ -840,14 +809,29 @@ export function resolveSampleMapping(q, ds) {
 	if (q.sampleMapping) {
 		// q.sampleMapping defined by caller
 		if (q.sampleMapping === 'parentToChildren') {
+			// map to child sample types
 			const childTypes = [...new Set(sampleTypesLst.flatMap(st => st.childSampleTypes || []))]
 			q.sampleTypes = childTypes.length ? childTypes : getDefaultSampleTypes(ds)
 		} else if (q.sampleMapping === 'childrenToParent') {
-			const parent = getCommonParentSampleType(sampleTypesLst, ds)
-			if (!Number.isInteger(parent)) throw new Error('no common parent sample type found')
-			q.sampleTypes = [parent]
+			// map to common parent sample type
+			const sampleTypes = ds.cohort.termdb.sampleTypes
+			const types = sampleTypesLst.flatMap(st => st.sampleTypes || [])
+			const parents = new Set(types.map(type => sampleTypes[type].parent_id).filter(Number.isInteger))
+			if (parents.size > 1) throw new Error('multiple parent sample types found')
+			if (parents.size) {
+				// common parent sample type
+				q.sampleTypes = [...parents]
+			} else {
+				// no parent sample type (i.e. root terms)
+				// use sample type of the queried terms
+				q.sampleTypes = [...new Set(types)]
+			}
+			if (q.sampleTypes.length != 1) throw new Error('unexpected q.sampleTypes.length')
+		} else if (q.sampleMapping === 'none') {
+			// no sample hierarchy mapping, query the sample type of each term
+			q.sampleTypes = [...new Set(sampleTypesLst.flatMap(st => st.sampleTypes || []))]
 		} else {
-			throw new Error('invalid sampleMapping')
+			throw new Error('invalid q.sampleMapping')
 		}
 	} else {
 		// q.sampleMapping not defined by caller
@@ -855,27 +839,6 @@ export function resolveSampleMapping(q, ds) {
 		inferSampleMapping(q, sampleTypesLst, ds)
 	}
 	validateQuerySampleTypes(q, ds)
-}
-
-function getCommonParentSampleType(sampleTypesLst: TwSampleTypes[], ds): number | undefined {
-	if (sampleTypesLst.some(st => st.sampleTypes?.length !== 1)) {
-		// some sets have multiple sample types, so cannot
-		// reliably map back to parent
-		return
-	}
-	const parents = new Set(
-		sampleTypesLst.map(st => {
-			if (!st.sampleTypes) throw 'sampleTypes is missing'
-			const [type] = st.sampleTypes
-			return ds.cohort.termdb.sampleTypes[type].parent_id
-		})
-	)
-	if (parents.size != 1) {
-		// no common parent sample type across sets
-		return
-	}
-	const [parent] = parents
-	return parent
 }
 
 function inferSampleMapping(q, sampleTypesLst: TwSampleTypes[], ds): void {
@@ -887,8 +850,9 @@ function inferSampleMapping(q, sampleTypesLst: TwSampleTypes[], ds): void {
 	} else {
 		// sample types are not aligned, need mapping
 		const sampleTypes = ds.cohort.termdb.sampleTypes
-		const parent = getCommonParentSampleType(sampleTypesLst, ds)
-		if (Number.isInteger(parent)) {
+		const parentIds = new Set(types.map(type => sampleTypes[type].parent_id))
+		const [parent] = parentIds
+		if (parentIds.size === 1 && Number.isInteger(parent)) {
 			// sample types share a common parent
 			// map child samples to parent samples
 			q.sampleMapping = 'childrenToParent'
@@ -1616,177 +1580,16 @@ function hasValues(term) {
 }
 
 /*
-when q.mapChildren2Root is true, move the annotations of each sample onto its root ancestor
-(e.g. the patient of a sample), so that a plot shows one entry per root sample.
-
-when several children of a root are annotated for the same term:
-- geneVariant: values[] of the children are combined
-- numeric: not supported, rejected by validateArg()
-- multivalue: distinct values are kept as .values[]
-- otherwise: distinct values are combined into one key, e.g. "Diagnosis, Relapse"
-*/
-export function mayMapChildren2Root(data, q, ds) {
-	if (!q.mapChildren2Root || !ds.cohort?.termdb?.hasSampleAncestry) return
-	const rootSampleType: any = Object.values(ds.cohort.termdb.sampleTypes || {}).find((st: any) => st.parent_id === null)
-	const id2rootSampleId = ds.cohort.termdb.q?.id2rootSampleId
-	if (!id2rootSampleId) throw `${rootSampleType?.name || 'root sample'} level is not supported for this dataset`
-
-	// root sample id -> annotation key -> annotations of the root's children
-	const root2annos = new Map<number, Map<string, any[]>>()
-	for (const [sid, sample] of Object.entries(data.samples) as [string, any][]) {
-		const rootId = id2rootSampleId(sample.sample ?? sid)
-		// not a known sample id; mapping it would merge unrelated rows under the same undefined key
-		if (rootId === undefined) {
-			throw 'cannot find the root sample of a sample'
-		}
-		if (!root2annos.has(rootId)) root2annos.set(rootId, new Map())
-		const annos = root2annos.get(rootId)!
-		for (const [k, v] of Object.entries(sample)) {
-			if (!v || typeof v != 'object') continue // not an annotation, e.g. .sample
-			if (!annos.has(k)) annos.set(k, [])
-			annos.get(k)!.push(v)
-		}
-	}
-
-	const twBy$id = new Map(q.terms.map(tw => [tw.$id, tw]))
-	const samples = Object.create(null)
-	const bySampleId = Object.create(null)
-	for (const [rootId, annos] of root2annos) {
-		const sampleEntry = getOrCreateSampleEntry(samples, String(rootId), { sample: rootId })
-		for (const [k, lst] of annos) {
-			// defineProperty for the same reason as in getSampleData(): k may be a dataset-supplied key
-			Object.defineProperty(sampleEntry, k, {
-				value: mergeChildAnnotations(lst, twBy$id.get(k)),
-				enumerable: true,
-				configurable: true,
-				writable: true
-			})
-		}
-		const ref = id2sampleRef(rootId, ds)
-		if (ref) bySampleId[rootId] = ref
-	}
-	data.samples = samples
-	data.refs.bySampleId = bySampleId
-	if (rootSampleType) data.sampleType = rootSampleType
-}
-
-function mergeChildAnnotations(lst: any[], tw: any) {
-	if (lst.length == 1) return lst[0]
-	if (tw?.term?.type == GENE_VARIANT) return mergeGeneVariantAnnotations(lst, tw)
-	// keep distinct values
-	const distinct: any[] = []
-	for (const v of lst.flatMap(a => a.values || [a])) {
-		if (!distinct.some(d => d.key === v.key && d.value === v.value)) distinct.push(v)
-	}
-	if (distinct.length == 1) return distinct[0]
-	// a multivalue cell carries values[]; other cells are grouped, sorted and colored by .key on the client
-	if (tw?.term?.type == MULTIVALUE) return { values: distinct }
-	return combineDistinctValues(distinct, tw)
-}
-
-/* combine the distinct values of a root's children into one value, e.g. "Diagnosis, Relapse",
-which is shown as its own category. Use the active groupset's group order and names when available;
-otherwise, use the order in term.values */
-function combineDistinctValues(distinct: any[], tw: any) {
-	const groupset = tw ? get_active_groupset(tw.term, tw.q) : undefined
-	const termValues = groupset ? {} : tw?.term?.values || {}
-	const order: string[] = groupset ? groupset.groups.map(g => String(g.name)) : Object.keys(termValues)
-	const rank = v => {
-		const i = order.indexOf(String(v.key))
-		return i == -1 ? order.length : i
-	}
-	const key = distinct
-		// a key that is not in order[] is sorted by itself, rather than left in the order of the children
-		.sort((a, b) => rank(a) - rank(b) || String(a.key).localeCompare(String(b.key)))
-		.map(v => termValues[v.key]?.label ?? v.key)
-		.join(', ')
-	return { key, value: key }
-}
-
-function mergeGeneVariantAnnotations(lst: any[], tw: any) {
-	const groupset = get_active_groupset(tw.term, tw.q)
-	if (groupset) {
-		// assign the root to the first group that any of its children is assigned to,
-		// as ds.mayGetGeneVariantData() assigns a sample to the first group it matches
-		const groupIdx = a => groupset.groups.findIndex(g => g.name == a.key)
-		const first = lst.reduce((a, b) => (groupIdx(b) < groupIdx(a) ? b : a))
-		lst = lst.filter(a => a.key == first.key)
-	}
-	return { ...lst[0], values: mergeGeneVariantValues(lst.flatMap(a => a.values || [])) }
-}
-
-/*
-Merge the gene variants from all children of a root sample into one list, keeping each variant only once.
-* If multiple children have the same variant, keep the entry from the first child and use its sample-specific
-values (e.g. VAF, read counts, genotype, copy number, and the fusion breakpoint on the partner gene).
-*Two variants are considered the same if they have the same gene (or queried region), dt, origin, and class,
-and meet the following criteria:
-
-- SNV/indel (dt=1): the same chromosome, position, mutation name and isoform
-- fusion RNA and SV (dt=2, 5): the same chromosome and breakpoint position on this gene, the same partner gene
-  (mname), and this gene at the same end of the fusion (pairlstIdx, the 5' or 3' end)
-- CNV (dt=4): same chromosome and overlapping segments.
-  two segments overlap when they share any part of the chromosome:
-      one segment partly covers the other, lies inside it, or contains it.
-  a CNV without start/stop (e.g. a gene-level CNV) is considered the same as any other CNV for that gene.
-- Other dt values: same chromosome, position, start, stop, mutation name, isoform, and value.
-
-* a WT or Blank status of a dt is dropped when a child has a variant of that dt;
-otherwise one status is kept per dt, WT rather than Blank
-*/
-function mergeGeneVariantValues(values: any[]) {
-	const statusKey = v => `${getGvQueryKey(v)}\t${v.dt}\t${v.origin || ''}`
-	const isStatus = v => v.class == 'WT' || v.class == 'Blank'
-	const joinFields = (...fields) => fields.map(f => f ?? '').join('\t')
-	const variantKey = v => {
-		const k = joinFields(statusKey(v), v.class)
-		if (v.dt == dtsnvindel) return joinFields(k, v.chr, v.pos, v.mname, v.isoform)
-		if (v.dt == dtfusionrna || v.dt == dtsv) return joinFields(k, v.chr, v.pos, v.mname, v.pairlstIdx)
-		if (v.dt == dtcnv) return joinFields(k, v.chr) // positions are compared by cnvOverlaps()
-		return joinFields(k, v.chr, v.pos, v.start, v.stop, v.mname, v.isoform, v.value)
-	}
-	const cnvOverlaps = (a, b) =>
-		[a.start, a.stop, b.start, b.stop].some(n => !Number.isFinite(n)) || (a.start < b.stop && a.stop > b.start)
-
-	// variant key -> kept variants; more than one only for CNV segments that do not overlap each other
-	const variants = new Map<string, any[]>()
-	for (const v of values) {
-		if (isStatus(v)) continue
-		const k = variantKey(v)
-		const kept = variants.get(k)
-		if (!kept) variants.set(k, [v])
-		else if (v.dt == dtcnv && !kept.some(c => cnvOverlaps(v, c))) kept.push(v)
-	}
-	const keptVariants = [...variants.values()].flat()
-
-	const mutated = new Set(keptVariants.map(statusKey))
-	const statuses = new Map()
-	for (const v of values) {
-		if (!isStatus(v)) continue
-		const k = statusKey(v)
-		if (mutated.has(k)) continue
-		if (!statuses.has(k) || v.class == 'WT') statuses.set(k, v)
-	}
-	return [...keptVariants, ...statuses.values()]
-}
-
-/*
-	data: return value of getSampleData(), after mayMapChildren2Root()
+	data: return value of getSampleData()
 	ds: dataset object
 	q: req.query
-	unmappedIdsByTerm: return value of getSampleIdsByTerm() before mayMapChildren2Root(),
-		same as for data.samples when not mapped
 
 each term is checked by itself, see termdb.sampleAccess.ts
 */
-function mayCheckAccessToSampleData(data, ds, q, unmappedIdsByTerm?: Map<string, Set<string>>) {
+function mayCheckAccessToSampleData(data, ds, q) {
 	if (!ds.cohort?.termdb?.checkAccessToSampleData) return
 	const terms: SampleAccessTerm[] = []
-	for (const [key, sampleIds] of getSampleIdsByTerm(data.samples)) {
-		const unmapped = unmappedIdsByTerm?.get(key)
-		// the term that gives the names may annotate either the original or the root samples
-		terms.push({ sampleIds, lookupIds: unmapped ? new Set([...sampleIds, ...unmapped]) : sampleIds })
-	}
+	for (const sampleIds of getSampleIdsByTerm(data.samples).values()) terms.push({ sampleIds })
 	mayCheckSampleAccess(q, ds, terms)
 }
 

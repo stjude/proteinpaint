@@ -12,14 +12,14 @@ export function setSamplesBtn(self: MatrixControls, s: any) {
 	const rows: any[] = [
 		{
 			label: `Show One Column Per`,
-			title: `Show one column per ${l.sample}, or per root ${l.sample} (e.g. patient) with the data of its ${l.samples} combined`,
+			title: `Show one column per ${l.sample}, or per parent ${l.sample} (e.g. patient) with the data of its ${l.samples} combined`,
 			type: 'radio',
 			chartType: 'matrix',
-			settingsKey: 'mapChildren2Root',
+			settingsKey: 'mapChildren2Parent',
 			styles: { display: 'inline-block' },
 			options: [
 				{ label: l.Sample, value: false },
-				{ label: getRootSampleTypeName(self.opts.app.vocabApi.termdbConfig), value: true }
+				{ label: getParentSampleTypeName(self.opts.app.vocabApi.termdbConfig), value: true }
 			],
 			getDisplayStyle(plot: any) {
 				return plot.chartType == 'matrix' && self.opts.app.vocabApi.termdbConfig.hasSampleAncestry
@@ -354,9 +354,17 @@ export function updateSamplesControls(self: MatrixControls, app: any, parent: an
 	}
 }
 
-/** return the root sample type name of a dataset with sample ancestry */
-function getRootSampleTypeName(termdbConfig: any) {
-	const root: any = Object.values(termdbConfig.sampleTypes || {}).find((st: any) => st.parent_id === null)
-	const name = root?.name || 'root sample'
+// return the name of parent sample type
+// currently only supporting sample ancestry with a single parent
+function getParentSampleTypeName(termdbConfig: any) {
+	if (!termdbConfig.hasSampleAncestry) return
+	const sampleTypes = termdbConfig.sampleTypes || {}
+	const parentIds = new Set<number>()
+	for (const st of Object.values(sampleTypes) as any[]) {
+		if (Number.isInteger(st.parent_id)) parentIds.add(st.parent_id)
+	}
+	if (parentIds.size !== 1) throw `expected a single parent sample type, found ${parentIds.size}`
+	const name = sampleTypes[[...parentIds][0]]?.name
+	if (!name) throw 'missing parent sample type name'
 	return name.charAt(0).toUpperCase() + name.slice(1)
 }
