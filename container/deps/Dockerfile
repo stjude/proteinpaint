@@ -175,7 +175,13 @@ RUN python3 -m venv /opt/venv && \
     /opt/venv/bin/pip install --no-cache-dir --upgrade pip && \
     /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt && \
     find /opt/venv -name '__pycache__' -type d -exec rm -rf {} + && \
-    find /opt/venv -type d \( -iname 'test' -o -iname 'tests' \) -exec rm -rf {} +
+    find /opt/venv -type d \( -iname 'test' -o -iname 'tests' \) -exec rm -rf {} + && \
+    # torch's C++ test programs and protoc in torch/bin, which the app does not run: the test_shim program of torch
+    # 2.13.0 cannot even load, since its RUNPATH has $ORIGIN but not $ORIGIN/../lib, where the torch libraries are.
+    # torch_shm_manager stays, since torch.multiprocessing starts it.
+    for d in /opt/venv/lib/python3*/site-packages/torch/bin; do \
+      if [ -d "$d" ]; then find "$d" -mindepth 1 -maxdepth 1 ! -name torch_shm_manager -exec rm -rf {} +; fi; \
+    done
 
 FROM os AS tools
 
