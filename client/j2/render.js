@@ -3,7 +3,17 @@ import { select as d3select } from 'd3-selection'
 import { axisRight } from 'd3-axis'
 import * as d3force from 'd3-force'
 import { axisstyle, table2col } from '#dom'
-import { bplen, IN_frame, JTypes, JT_canonical, JT_exonskip, JT_exonaltuse, JT_a5ss, JT_a3ss } from '#shared/common.js'
+import {
+	bplen,
+	IN_frame,
+	JTypes,
+	JT_canonical,
+	JT_exonskip,
+	JT_exonaltuse,
+	JT_a5ss,
+	JT_a3ss,
+	JT_ir
+} from '#shared/common.js'
 import { getParameter } from './tk'
 import { dofetch3 } from '#common/dofetch'
 import { TermTypes } from '#types'
@@ -891,6 +901,16 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 			<br>${j.medianReadCount} <span style="font-size:.7em">median read count</span>`)
 		}
 	}
+	if (j.IR) {
+		// of the samples above, those retaining the intron between the two ends of this junction
+		const [t1, t2] = table.addRow()
+		t1.text('Intron retention')
+		const n = j.IR.sampleCount
+		t2.append('div').html(`${n} <span style="font-size:.7em">sample${n > 1 ? 's' : ''}</span>`)
+		t2.append('div').html(
+			`${roundValueAuto(j.IR.medianRatio)} <span style="font-size:.7em">${n > 1 ? 'median ' : ''}IR ratio</span>`
+		)
+	}
 
 	if (isClickMenu && tk.massApp) {
 		const [, buttonCell] = table.addRow()
@@ -922,6 +942,8 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 
 	const type2elst = new Map() // k: event.type, v: list of events of that type
 	for (const e of j.info?.events || []) {
+		// an intron retention event is shown by the type above and by j.IR, it has no gene or isoform to list
+		if (e.type == JT_ir) continue
 		if (!type2elst.has(e.type)) type2elst.set(e.type, [])
 		type2elst.get(e.type).push(e)
 	}
@@ -1236,11 +1258,7 @@ function listAllEvents(lst, table, j, tk, block, isClickMenu) {
 		const e = lst[0]
 		t1.append('div').text(e.gene)
 		t1.append('div').text(e.isoform).style('font-size', '.8em')
-		if (e.type == JT_exonskip || e.type == JT_exonaltuse) {
-			showEventdiagram_skipalt_fetchreadcount(j, e, tk, t2, block, isClickMenu)
-		} else if (e.type == JT_a5ss || e.type == JT_a3ss) {
-			showEventdiagram_a53ss(j, e, tk, t2, block, isClickMenu)
-		}
+		showEvent(j, e, tk, t2, block, isClickMenu)
 		return
 	}
 
@@ -1269,11 +1287,15 @@ function listAllEvents(lst, table, j, tk, block, isClickMenu) {
 					.text(i)
 					.style('font-size', s + 'em')
 		}
-		if (eo.type == JT_exonskip || eo.type == JT_exonaltuse) {
-			showEventdiagram_skipalt_fetchreadcount(j, eo, tk, t2, block, isClickMenu)
-		} else if (eo.type == JT_a5ss || eo.type == JT_a3ss) {
-			showEventdiagram_a53ss(j, eo, tk, t2, block, isClickMenu)
-		}
+		showEvent(j, eo, tk, t2, block, isClickMenu)
+	}
+}
+
+function showEvent(j, e, tk, holder, block, isClickMenu) {
+	if (e.type == JT_exonskip || e.type == JT_exonaltuse) {
+		showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, isClickMenu)
+	} else if (e.type == JT_a5ss || e.type == JT_a3ss) {
+		showEventdiagram_a53ss(j, e, tk, holder, block, isClickMenu)
 	}
 }
 

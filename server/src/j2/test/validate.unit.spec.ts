@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { computeTypes, getJunctionData } from '../validate.js'
+import { computeTypes, getJunctionData, removeIRtype } from '../validate.js'
 
 tape('\n', test => {
 	test.comment('-***- junction/validate specs -***-')
@@ -52,6 +52,51 @@ tape('computeTypes: event type must be a string', test => {
 	}
 
 	test.throws(() => computeTypes(junction, new Set()), /event\.type missing/, 'throws when an event type is missing')
+	test.end()
+})
+
+tape('computeTypes: intron retention', test => {
+	{
+		const junction = { canonical: true, events: [{ type: 'IR', intron: { start: 11, stop: 20 } }] }
+		test.deepEqual(computeTypes(junction, new Set()), ['canonical', 'IR'], 'lists IR after canonical')
+	}
+	{
+		const junction = { events: [{ type: 'IR' }] }
+		test.deepEqual(computeTypes(junction, new Set()), ['na', 'IR'], 'a non-canonical junction with only IR is also na')
+	}
+	{
+		const junction = { events: [{ type: 'IR' }] }
+		test.deepEqual(computeTypes(junction, new Set(['IR'])), ['na'], 'remains na when IR is hidden')
+		test.equal((junction as any).events, undefined, 'removes the hidden IR event')
+	}
+	{
+		const junction = { events: [{ type: 'IR' }] }
+		test.deepEqual(computeTypes(junction, new Set(['na'])), ['IR'], 'is only IR when na is hidden')
+	}
+	{
+		const junction = { events: [{ type: 'a5ss' }, { type: 'IR' }] }
+		test.deepEqual(computeTypes(junction, new Set()), ['a5ss', 'IR'], 'is not na with another event')
+	}
+	{
+		const junction = { events: [{ type: 'a5ss' }, { type: 'IR' }] }
+		test.deepEqual(computeTypes(junction, new Set(['a5ss'])), ['IR'], 'is not na when the other event is hidden')
+	}
+	test.end()
+})
+
+tape('removeIRtype', test => {
+	{
+		const j: any = { types: ['canonical', 'a5ss', 'IR'], info: { events: [{ type: 'a5ss' }, { type: 'IR' }] } }
+		removeIRtype(j)
+		test.deepEqual(j.types, ['canonical', 'a5ss'], 'removes IR from types')
+		test.deepEqual(j.info.events, [{ type: 'a5ss' }], 'removes the IR event')
+	}
+	{
+		const j: any = { types: ['na', 'IR'], info: { events: [{ type: 'IR' }] } }
+		removeIRtype(j)
+		test.deepEqual(j.types, ['na'], 'leaves na')
+		test.equal(j.info.events, undefined, 'removes events when none is left')
+	}
 	test.end()
 })
 

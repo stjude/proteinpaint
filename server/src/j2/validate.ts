@@ -1,6 +1,6 @@
 import computePercentile from '#shared/compute.percentile.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
-import { JT_na, JT_canonical } from '#shared/common.js'
+import { JT_na, JT_canonical, JT_ir } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
 import { setFile, validateSampleHeader, getTermSampleLimiter } from '../mds3.init.js'
@@ -69,19 +69,22 @@ export async function validate_query_junction(ds: any, genome: any) {
 			return { junctions: [], maxReadCount: 0 }
 		}
 
-		function getSampleReadcount(str, i) {
-			// if both sample and readcount are valid and pass filter, return [readcount, samplename]
+		/* if both sample and readcount are valid and pass filter, return [readcount, samplename, IR ratio]
+		str is "n;v1;v2;..": read count, then one value per element of info.events[], in the same order;
+		the value of an intron retention event is the sample's IR ratio, blank for none
+		irSlot: index in str of the IR ratio, when the junction has an IR event
+		*/
+		function getSampleReadcount(str, i, irSlot?: number): [number, string | number, number?] | undefined {
 			if (!str) return // blank string
 			const sname = q.samples[i - 5]?.name
 			if (sname == undefined) throw new Error('sample undefined')
 			if (limitSamples && !limitSamples.has(sname)) return // filtered out
-			// str is "n;%;%"
-			const vlst = str.split(';').map(Number)
+			const vlst = str.split(';').map(Number) // a blank value becomes 0
 			const rc = vlst[0] // first field is read count
 			if (!Number.isInteger(rc)) return
 			if (rc <= 0) return
 			if (param.readcountCutoff && rc < param.readcountCutoff) return
-			return [rc, sname]
+			return [rc, sname, irSlot ? vlst[irSlot] : undefined]
 		}
 
 		const junctions: Junction[] = [] // list of junctions to be returned
@@ -132,8 +135,11 @@ export async function validate_query_junction(ds: any, genome: any) {
 						console.log(`invalid json for a junction: ${r.chr}:${start}-${stop}`)
 						return
 					}
+					// found before computeTypes(), which may remove hidden events and so shift the values of samples
+					const irIdx = info?.events?.findIndex((e: any) => e.type == JT_ir) ?? -1
 					const types = computeTypes(info, hiddenTypes)
 					if (!types.length) return // no visible types. this junction is filtered out by hiddenTypes
+					const irSlot = irIdx != -1 && types.includes(JT_ir) ? irIdx + 1 : undefined
 					const j: Junction = {
 						chr: l[0],
 						start,
@@ -144,17 +150,28 @@ export async function validate_query_junction(ds: any, genome: any) {
 					}
 					const readcounts: number[] = [] // array of read counts of samples carrying this junction
 					const pairs: [number, number][] = []
+					const irRatios: number[] = [] // of samples with intron retention, among those of readcounts[]
 
 					let lastRCcolumn // remembers i for last sample with valid read count. helps to get singleton sample name
 					for (let i = 5; i < l.length; i++) {
-						const r = getSampleReadcount(l[i], i)
+						const r = getSampleReadcount(l[i], i, irSlot)
 						if (!r) continue
 						readcounts.push(r[0])
 						if (param.matrixTop) pairs.push([i, r[0]])
-						maxReadCount = Math.max(maxReadCount, r[0])
 						lastRCcolumn = i
+						if (r[2]! > 0) irRatios.push(r[2]!)
 					}
 					if (readcounts.length == 0) return
+					if (irSlot) {
+						if (irRatios.length) {
+							j.IR = { sampleCount: irRatios.length, medianRatio: median(irRatios) }
+						} else {
+							// none of these samples retains the intron
+							removeIRtype(j)
+							if (!j.types.length) return
+						}
+					}
+					for (const rc of readcounts) maxReadCount = Math.max(maxReadCount, rc)
 					j.sampleCount = readcounts.length
 					if (readcounts.length == 1) {
 						j.medianReadCount = readcounts[0]
@@ -323,6 +340,22 @@ export async function getJunctionData(
 	return { term2sample2value }
 }
 
+function median(values: number[]): number {
+	values.sort((a, b) => a - b)
+	const m = Math.floor(values.length / 2)
+	return values.length % 2 ? values[m] : (values[m - 1] + values[m]) / 2
+}
+
+/* for a junction with an intron retention event when no sample of the request retains the intron,
+so that its types and events are as if it had no such event */
+export function removeIRtype(j: Junction) {
+	j.types = j.types.filter(t => t != JT_ir)
+	if (j.info?.events) {
+		j.info.events = j.info.events.filter((e: any) => e.type != JT_ir)
+		if (!j.info.events.length) delete j.info.events
+	}
+}
+
 /*
 j: junction annotation
 possible annotations:
@@ -331,6 +364,8 @@ possible annotations:
 - {canonical:true} 
 - {canonical:true, events:[]} alternative exon usage
 - {.., events:[]} 
+an intron retention (IR) event is listed in types[] like any event. As IR mostly occurs on canonical junctions,
+a non-canonical junction with no event other than IR is also na, so its color is that of na rather than IR
 
 hide: set of types to hide
 */
@@ -347,6 +382,7 @@ export function computeTypes(j: any, hide: Set<string>): string[] {
 		if (!hide?.has(JT_canonical)) types.push(JT_canonical)
 	}
 	if (j.events) {
+		if (!j.canonical && j.events.every(e => e.type == JT_ir) && !hide?.has(JT_na)) types.push(JT_na)
 		const events: any[] = [] // when filtering using "hide", generate new array to prevent sending excess data
 		for (const e of j.events) {
 			if (typeof e.type != 'string') throw new Error('event.type missing')
