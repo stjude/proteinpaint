@@ -48,9 +48,9 @@ or reuse groups to partition the visualized cohort.
 The nav `FILTER` tab uses `client/filter/FilterRxComp` to allow a user to create arbitrary cohort filters
 using annotation terms.
 
-### chat
+### search
 
-The `chat` component is exposed as a tab by `nav`. Within its subheader, a user may interact with the chat bot to search for terms, create plots, and ask dataset-specific questions.
+The `SEARCH` tab is exposed as a tab by `nav`. Within its subheader, a user may search different term or data types noted below the input field. 
 
 ### user.ts
 
