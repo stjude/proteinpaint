@@ -2,15 +2,14 @@
 // search for the typed text and build ONE request (planSearch, pure), and call the server (fetchOmnisearch).
 // What each result kind does lives in ./handlers.
 import { getCompInit, type RxComponent } from '#rx'
-import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import type { OmnisearchRequest, OmnisearchResult } from '#types'
 import type { MassAppApi } from '../types/mass'
-import { debounce } from 'debounce'
+import debounce from 'debounce'
 import { initHandlers } from './loadHandlers.ts'
 import type { HandlerDeps, OmnisearchHandler } from './types.ts'
 import { buildResultList, renderEntry, describeSearchable } from './results.ts'
-import { ResultsPopup } from './popup.ts'
+import type { ResultsPopup } from './popup.ts'
 import { Launcher } from './launcher.ts'
 
 /** wait this long after the last keystroke before searching */
@@ -107,10 +106,12 @@ class MassSearch implements RxComponent {
 		// No server request here: each search resolves dictionary terms, genes, samples and a typed coordinate
 		// in a single request. Everything that depends only on the dataset is decided once, here.
 		this.handlers = await initHandlers({ app: this.app, termdbConfig: appState.termdbConfig })
-		this.initDom()
+		await this.initDom()
 	}
 
-	initDom() {
+	async initDom() {
+		// keeping this module importable in plain Node for test/search.unit.spec.ts (planSearch)
+		const [{ ResultsPopup }, { keyupEnter }] = await Promise.all([import('./popup.ts'), import('#src/client')])
 		const subheader = this.opts.subheader
 		// grows to fit the selected gene's action buttons
 		this.dom = {
