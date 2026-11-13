@@ -1527,37 +1527,47 @@ export const JT_a5ss = 'a5ss'
 export const JT_a3ss = 'a3ss'
 export const JT_mxe = 'mxe' // mutually exclusive exon
 export const JT_ir = 'IR' // intron retention, of the intron between the two ends of the junction
+/* name: a single word, so that a type label does not wrap
+desc: the definition, shown on clicking the type in the junction track legend */
 export const JTypes = {
 	[JT_canonical]: {
 		color: '#0C72A8',
-		name: 'Canonical'
+		name: 'Canonical',
+		desc: 'The junction matches an intron of an annotated isoform.'
 	},
 	[JT_exonskip]: {
 		color: '#D14747',
-		name: 'ExonSkip'
+		name: 'ExonSkip',
+		desc: 'Exon skipping: the junction joins two exons of an isoform and skips one or more exons between them, and matches no intron of any other annotated isoform.'
 	},
 	[JT_a5ss]: {
 		color: '#476CD1',
-		name: "Alt 5'SS"
+		name: 'A5SS',
+		desc: "Alternative 5' splice site: the 3' end of the junction is at the start of an annotated exon, and its 5' end is not at the end of the upstream exon, but in that exon or in the intron after it."
 	},
 	[JT_a3ss]: {
 		color: '#47B582',
-		name: "Alt 3'SS"
+		name: 'A3SS',
+		desc: "Alternative 3' splice site: the 5' end of the junction is at the end of an annotated exon, and its 3' end is not at the start of the downstream exon, but in that exon or in the intron before it."
 	},
 	[JT_exonaltuse]: {
 		color: '#E69525',
-		name: 'Alternative exon'
+		name: 'AltExon',
+		desc: 'Alternative exon usage: the junction skips one or more exons of an isoform, and matches an intron of another annotated isoform.'
 	},
 	[JT_mxe]: {
 		color: '#A347D1',
-		name: 'Mutually exclusive exon'
+		name: 'MXE',
+		desc: 'Mutually exclusive exons: of two exons, a transcript includes either one or the other, but not both.'
 	},
 	[JT_ir]: {
 		color: '#A0A0A0',
-		name: 'Intron retention'
+		name: 'IR',
+		desc: 'Intron retention: in some samples, the intron between the two ends of the junction is retained, rather than spliced out.'
 	},
 	[JT_na]: {
 		color: '#787854',
-		name: 'Unannotated'
+		name: 'Unannotated',
+		desc: 'The junction matches no annotated intron, and has no annotated splicing event.'
 	}
 }

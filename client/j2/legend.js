@@ -115,6 +115,14 @@ function update_type(tk) {
 							tk.load()
 						})
 				}
+				// definition of the type, as for a class in the mds3 track legend
+				const descDiv = tk.legend.tip.d
+					.append('div')
+					.style('padding', '10px')
+					.style('font-size', '.8em')
+					.style('width', '150px')
+				descDiv.append('span').style('color', JTypes[t].color).text(JTypes[t].name)
+				descDiv.append('div').style('color', 'black').text(JTypes[t].desc)
 			}
 		})
 	}
