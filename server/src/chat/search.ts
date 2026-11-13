@@ -32,7 +32,7 @@ export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
  * path as the termdb findterm route); gene search uses searchGeneNames() below. */
 export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Promise<OmnisearchResult> {
 	const prompt = typeof q.prompt == 'string' ? q.prompt.trim() : ''
-	// The client decides which result kinds to search (client/mass/chat/search.ts) and lists them in q.include
+	// The client decides which result kinds to search (client/mass/search/search.ts) and lists them in q.include
 	// (see OmnisearchRequest). Without a list only the cheap searches run: sample search is an all-samples scan
 	// and a coordinate needs the client's candidates, so each is searched only when explicitly listed.
 	const include = new Set<OmnisearchResultKey>(q.include ?? DEFAULT_INCLUDE)

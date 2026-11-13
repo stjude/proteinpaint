@@ -1,26 +1,73 @@
-import { escapeHtml } from '#dom'
+// Mass omnisearch: the SEARCH tab component (MassSearch), plus its request side: decide which result kinds to
+// search for the typed text and build ONE request (planSearch, pure), and call the server (fetchOmnisearch).
+// What each result kind does lives in ./handlers.
 import { getCompInit, type RxComponent } from '#rx'
-import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
-import type { ChatRequest, ChatResponse } from '#types'
+import type { OmnisearchRequest, OmnisearchResult } from '#types'
 import type { MassAppApi } from '../types/mass'
+import debounce from 'debounce'
 import { initHandlers } from './loadHandlers.ts'
 import type { HandlerDeps, OmnisearchHandler } from './types.ts'
 import { buildResultList, renderEntry, describeSearchable } from './results.ts'
-import { planSearch, fetchOmnisearch, SEARCH_DEBOUNCE_MS, type SearchPlan } from './search.ts'
-import { debounce } from 'debounce'
-import { ResultsPopup } from './popup.ts'
+import type { ResultsPopup } from './popup.ts'
 import { Launcher } from './launcher.ts'
 
-const MIN_PROMPT_LENGTH_FOR_CHAT = 5 // Set a minimum prompt length for chat submission
+/** wait this long after the last keystroke before searching */
+export const SEARCH_DEBOUNCE_MS = 250
 
-/** The mass SEARCH / CHAT tab: a search-as-you-type omnisearch (dictionary variables, genes, samples,
- * genomic regions) that launches plots, plus, when the dataset supports it, an AI chat.
+export type SearchPlan = {
+	prompt: string
+	/** `include` lists the key of every handler that searches this text, plus any extra fields they need */
+	request: OmnisearchRequest
+}
+
+/** Ask every handler whether it searches the typed text. The request's `include` list is the keys of those that
+ * do, in handler order. Returns null when no handler does (the results popup is then cleared). `enter` is true
+ * when the user pressed Enter. */
+export function planSearch(
+	handlers: OmnisearchHandler[],
+	rawPrompt: string,
+	opts: { enter: boolean }
+): SearchPlan | null {
+	const prompt = rawPrompt.trim()
+	if (!prompt) return null
+	const input = { prompt, enter: opts.enter }
+	const searched = handlers.filter(h => h.includeInSearch(input))
+	if (!searched.length) return null
+	return {
+		prompt,
+		request: Object.assign({ include: searched.map(h => h.key) }, ...searched.map(h => h.requestExtras?.(input)))
+	}
+}
+
+/** Server call: POST the prompt to termdb/chat in omnisearch mode and return the OmnisearchResult. Takes
+ * plain params (no DOM / component) so it can be integration-tested against a running server on its own.
+ * Without `include` the server searches only dictionary terms and genes (see OmnisearchRequest). */
+export async function fetchOmnisearch(
+	opts: {
+		genome: string
+		dslabel: string
+		prompt: string
+		cohortStr?: string
+		usecase?: any
+		treeFilter?: any
+		/** aborts the request, e.g. when a newer keystroke supersedes this search */
+		signal?: AbortSignal
+	} & OmnisearchRequest
+): Promise<OmnisearchResult> {
+	const { signal, ...body } = opts
+	const data: OmnisearchResult = await dofetch3('termdb/chat', { signal, body: { ...body, omnisearch: true } })
+	if (data.error) throw data.error
+	return data
+}
+
+/** The mass SEARCH tab: a search-as-you-type omnisearch (dictionary variables, genes, samples, genomic regions)
+ * that launches plots.
  * Module map: handlers/ (one per result kind: when it is searched, its rows, what clicking does),
- * search.ts (merge the handlers' requests + server call), results.ts (generic headings/notes/list),
+ * search.ts (this component, merge the handlers' requests + server call), results.ts (generic headings/notes/list),
  * popup.ts (results popup), launcher.ts (plot launchers shared by handlers). */
-class MassAiChatBot implements RxComponent {
-	static type = 'chat'
+class MassSearch implements RxComponent {
+	static type = 'search'
 	type: string
 	opts: any
 	app: MassAppApi
@@ -29,8 +76,6 @@ class MassAiChatBot implements RxComponent {
 	id!: string
 	/** one per result kind, initialized once from the dataset config in init() */
 	handlers!: OmnisearchHandler[]
-	/** chat (LLM) is available for this dataset */
-	isChat = false
 	popup!: ResultsPopup
 	launcher!: Launcher
 	/** aborts the in-flight omnisearch request when a newer search, or a clear, supersedes it */
@@ -39,7 +84,7 @@ class MassAiChatBot implements RxComponent {
 	private debouncedSearch!: ((plan: SearchPlan) => void) & { clear: () => void }
 
 	constructor(opts: any) {
-		this.type = MassAiChatBot.type
+		this.type = MassSearch.type
 		this.opts = opts
 		this.app = opts.app
 		this.opts.usecase = this.opts.usecase || { target: 'dictionary', detail: 'term' }
@@ -60,21 +105,21 @@ class MassAiChatBot implements RxComponent {
 	async init(appState) {
 		// No server request here: each search resolves dictionary terms, genes, samples and a typed coordinate
 		// in a single request. Everything that depends only on the dataset is decided once, here.
-		const termdbConfig = appState.termdbConfig
-		this.isChat = Boolean(termdbConfig?.queries?.chat)
-		this.handlers = await initHandlers({ app: this.app, termdbConfig })
-		this.initDom()
+		this.handlers = await initHandlers({ app: this.app, termdbConfig: appState.termdbConfig })
+		await this.initDom()
 	}
 
-	initDom() {
+	async initDom() {
+		// keeping this module importable in plain Node for test/search.unit.spec.ts (planSearch)
+		const [{ ResultsPopup }, { keyupEnter }] = await Promise.all([import('./popup.ts'), import('#src/client')])
 		const subheader = this.opts.subheader
+		// grows to fit the selected gene's action buttons
 		this.dom = {
 			bubbleDiv: subheader
 				.append('div')
 				.attr('class', 'sjpp_show_scrollbar')
 				.style('margin', '5px 20px 0px 20px')
-				// no white space needed for search only; grows to fit the selected gene's action buttons
-				.style('height', this.isChat ? '200px' : 'auto')
+				.style('height', 'auto')
 				.style('max-height', '200px')
 				.style('overflow', 'auto')
 				.style('scroll-behavior', 'smooth')
@@ -88,7 +133,7 @@ class MassAiChatBot implements RxComponent {
 			.style('padding', '17px')
 			.style('border-radius', '34px')
 			.attr('size', 70)
-			.attr('placeholder', this.isChat ? 'Ask a question' : 'Search an item')
+			.attr('placeholder', 'Search an item')
 		this.dom.inputNode = inputSel.node()
 
 		// tells the user what can be searched; generated from the same handlers that gate the search
@@ -100,9 +145,7 @@ class MassAiChatBot implements RxComponent {
 			.style('opacity', 0.6)
 			.text(describeSearchable(this.handlers))
 
-		this.popup = new ResultsPopup(this.dom.inputNode, {
-			noMatchText: this.isChat ? 'No match. Using the chatbot...' : 'No match'
-		})
+		this.popup = new ResultsPopup(this.dom.inputNode, { noMatchText: 'No match' })
 		this.launcher = new Launcher({
 			app: this.app,
 			popup: this.popup,
@@ -126,11 +169,9 @@ class MassAiChatBot implements RxComponent {
 			})
 			.on('keyup.submit', async (event: KeyboardEvent) => {
 				if (!keyupEnter(event)) return
-				const value = (event.target as HTMLInputElement).value
-				if (this.isChat) return void (await this.submitChat(value.trim()))
-				// search-only: Enter runs the full search immediately, including samples
+				// Enter runs the full search immediately, including samples
 				this.debouncedSearch.clear()
-				const plan = planSearch(this.handlers, value, { enter: true })
+				const plan = planSearch(this.handlers, (event.target as HTMLInputElement).value, { enter: true })
 				if (plan) await this.runSearch(plan)
 				else this.popup.hide()
 			})
@@ -175,49 +216,7 @@ class MassAiChatBot implements RxComponent {
 		}
 	}
 
-	async submitChat(prompt: string) {
-		if (!prompt) return
-		this.addBubble({ msg: escapeHtml(prompt), me: 1 })
-		this.dom.inputNode.value = ''
-		const serverBubble = this.addBubble({ msg: '...' }) // Keep server bubble always below prompt bubble so that responses are below the prompt always
-		if (prompt.length <= MIN_PROMPT_LENGTH_FOR_CHAT) {
-			serverBubble.text('Your prompt is too short. Enter a longer prompt.')
-			return
-		}
-		const body: ChatRequest = {
-			genome: this.app.vocabApi.vocab.genome,
-			dslabel: this.app.vocabApi.vocab.dslabel,
-			filter: this.app.vocabApi.state.termfilter?.filter,
-			prompt
-		}
-		try {
-			const data = await dofetch3('termdb/chat', { body })
-			if (data.error) throw data.error
-
-			const result: ChatResponse = data
-			if (result.type === 'text') {
-				serverBubble.text(result.text)
-			} else if (result.type === 'html') {
-				serverBubble.html(result.html)
-			} else if (result.type === 'plot') {
-				// A field whose value carries a `possible_options` array means the server could not resolve
-				// that term and is offering the user a choice: show click boxes. Otherwise the plot state is
-				// complete and can be dispatched directly.
-				const optionField = findPossibleOptionsField(result.plot)
-				if (optionField) {
-					this.showPossibleOptions(serverBubble, result.plot, optionField, result.msg)
-				} else {
-					this.app.dispatch({ type: 'plot_create', config: result.plot })
-					serverBubble.text(`${result.msg ? result.msg + '. ' : ''}Please refer to the plot generated below.`)
-				}
-			}
-		} catch (e: any) {
-			if (e.stack) console.log(e.stack)
-			serverBubble.html(`Error: ${escapeHtml(String(e.message || e))}`)
-		}
-	}
-
-	/** Add a chat bubble. `msg` is html (it may contain hyperlinks) and must already be escaped when it
+	/** Add a message bubble. `msg` is html (it may contain hyperlinks) and must already be escaped when it
 	 * includes user input. `me`: if 1, the user's side. Returns the bubble so it can be modified. */
 	addBubble(arg: { msg: string; me?: number }) {
 		const bubble = this.dom.bubbleDiv
@@ -228,42 +227,6 @@ class MassAiChatBot implements RxComponent {
 		const n = this.dom.bubbleDiv.node()
 		n.scrollTop = n.scrollHeight // scroll to bottom
 		return bubble
-	}
-
-	/** Render click boxes for an incomplete plot state. `fieldKey` is the field of `plot` whose value holds
-	 * `possible_options`. Clicking a box completes the plot state and dispatches plot_create. An option
-	 * completes the plot in one of two ways:
-	 *  - opt.config: a config patch merged into the plot (the incomplete field is dropped), e.g. the genome
-	 *    browser view sets blockIsProteinMode
-	 *  - otherwise: the incomplete field is set to { id: opt.id }, e.g. survival term selection -> term:{id} */
-	showPossibleOptions(bubble: any, plot: any, fieldKey: string, msg?: string) {
-		const options = plot[fieldKey].possible_options || []
-		bubble.text(`${msg ? msg + '. ' : ''}Multiple options are available. Please select one:`)
-		const boxDiv = bubble.append('div').style('margin-top', '5px')
-		for (const opt of options) {
-			boxDiv
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.attr('data-testid', `sjpp-mass-chat-option-${opt.id}`)
-				.style('display', 'inline-block')
-				.style('margin', '3px')
-				.style('padding', '5px 10px')
-				.style('border-radius', '5px')
-				.style('cursor', 'pointer')
-				.text(opt.name)
-				.on('click', () => {
-					const config = JSON.parse(JSON.stringify(plot))
-					if (opt.config) {
-						delete config[fieldKey]
-						Object.assign(config, opt.config)
-					} else {
-						config[fieldKey] = { id: opt.id }
-					}
-					this.app.dispatch({ type: 'plot_create', config })
-					bubble.selectAll('*').remove()
-					bubble.text(`Selected "${opt.name}". Please refer to the plot generated below.`)
-				})
-		}
 	}
 
 	main() {
@@ -281,16 +244,4 @@ class MassAiChatBot implements RxComponent {
 	}
 }
 
-export const chatInit = getCompInit(MassAiChatBot)
-
-/** Scan a plot state for a field whose value carries a `possible_options` array, indicating the server
- * could not resolve that term and is offering the user a list of choices. Returns the field name (e.g.
- * 'term') or null if the plot state is complete. */
-export function findPossibleOptionsField(plot: any): string | null {
-	if (!plot || typeof plot !== 'object') return null
-	for (const key of Object.keys(plot)) {
-		const val = plot[key]
-		if (val && typeof val === 'object' && Array.isArray(val.possible_options)) return key
-	}
-	return null
-}
+export const searchInit = getCompInit(MassSearch)

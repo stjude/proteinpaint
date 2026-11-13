@@ -49,7 +49,7 @@ export type GeneActionDef = {
  * produce this gene's term; the plot buttons (PLOT_TYPES) are the same for every term type and are chained on. */
 export type GeneTermTypeDef = {
 	id: string
-	/** middle part of the plot buttons' data-testid, e.g. `sjpp-mass-chat-gene-<testidKey>-survival-<gene>` */
+	/** middle part of the plot buttons' data-testid, e.g. `sjpp-mass-search-gene-<testidKey>-survival-<gene>` */
 	testidKey: string
 	/** row label, may depend on which variant types this gene has */
 	label: (row: GeneRow) => string
@@ -131,7 +131,7 @@ const TERM_TYPES: GeneTermTypeDef[] = [
 			{
 				id: 'geneVariant-protein',
 				label: 'Protein view',
-				testid: gene => `sjpp-mass-chat-gene-protein-${gene}`,
+				testid: gene => `sjpp-mass-search-gene-protein-${gene}`,
 				enabled: flags => !flags.gbRestrictMode || flags.gbRestrictMode == 'protein',
 				available: row => presentVariantTypes(row).length > 0,
 				run: (_h, d, row) => d.launcher.launchGenomeBrowserView('protein', { gene: row.gene })
@@ -139,7 +139,7 @@ const TERM_TYPES: GeneTermTypeDef[] = [
 			{
 				id: 'geneVariant-genomic',
 				label: 'Genome view',
-				testid: gene => `sjpp-mass-chat-gene-genomic-${gene}`,
+				testid: gene => `sjpp-mass-search-gene-genomic-${gene}`,
 				enabled: flags => !flags.gbRestrictMode || flags.gbRestrictMode == 'genomic',
 				// a genomic view needs the gene's locus; hide the button when the server could not resolve it
 				available: row => presentVariantTypes(row).length > 0 && Boolean(row.coord),
@@ -211,7 +211,7 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 					id: `${termType.id}-${plot.id}`,
 					label: plot.label,
 					testid: gene =>
-						`sjpp-mass-chat-gene-${termType.testidKey}-${plot.id == 'summary' ? '' : plot.id + '-'}${gene}`,
+						`sjpp-mass-search-gene-${termType.testidKey}-${plot.id == 'summary' ? '' : plot.id + '-'}${gene}`,
 					available: () => true,
 					run: (h, d, r, button) => termType.withTerm(h, d, r, tw => plot.launch(h, d, tw, button), button)
 				}))
@@ -232,7 +232,7 @@ export class SearchResultHandler implements OmnisearchHandler<GeneRow> {
 			.style('padding', '5px 10px')
 			.style('cursor', 'pointer')
 			.attr('class', 'sja_menuoption')
-			.attr('data-testid', `sjpp-mass-chat-gene-select-${row.gene}`)
+			.attr('data-testid', `sjpp-mass-search-gene-select-${row.gene}`)
 			.on('click', () => {
 				deps.popup.inputNode.value = ''
 				deps.popup.hide()

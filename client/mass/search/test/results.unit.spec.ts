@@ -33,7 +33,7 @@ function fake(key: OmnisearchResultKey, rows: any[], opts: Partial<OmnisearchHan
 const data = (totals?: any): any => ({ dictionaryTerms: [], genes: [], samples: [], totals })
 
 tape('\n', t => {
-	t.comment('-***- mass/chat/results -***-')
+	t.comment('-***- mass/search/results -***-')
 	t.end()
 })
 
@@ -59,7 +59,7 @@ tape('buildResultList() truncation note', t => {
 	const h = fake('genes', [{}, {}], { noun: 'gene' })
 	const capped: any = buildResultList([h], data({ genes: 7 })).find(e => e.type == 'note')
 	t.equal(capped?.name, 'Displaying 2 out of a total of 7 gene matches')
-	t.equal(capped?.testid, 'sjpp-mass-chat-note-genes')
+	t.equal(capped?.testid, 'sjpp-mass-search-note-genes')
 	t.notOk(
 		buildResultList([h], data({ genes: 2 })).some(e => e.type == 'note'),
 		'no note when the total equals what was returned'
