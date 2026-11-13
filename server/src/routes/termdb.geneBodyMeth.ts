@@ -158,7 +158,15 @@ function init({ genomes }) {
 // 5: corrected deltas take the excess over the stratum's median (was the mean), from 6000 windows per chromosome
 // (was 2000), with strata also split on solo-WCGW share; a stratum with no spread leaves its genes out
 // 6: dmrcate places sample names at the columns meta/samples/col_idx gives them
-const CACHE_VERSION = 6
+// 7: an array's region needs 2 probes, not 5 (minProbes)
+const CACHE_VERSION = 7
+
+/** The fewest CpGs a gene body or promoter needs for a value. Sequencing: 5, the DMR scan's own minimum, so the two
+ * analyses agree on what is measurable. An array (no read depth): 2, since an EPIC core promoter has a median of one
+ * probe and 5 left out half the promoters that had a value; 2 still keeps one probe from deciding a gene alone. */
+export function minProbes(matrix: { hasDepth: boolean }) {
+	return matrix.hasDepth ? 5 : 2
+}
 
 /* Mean delta-beta over every gene body, keyed by gene symbol -- one signed number per gene across
 the whole genome. This is the gene-level reading of a methylation scan: a DMR list has many regions
@@ -417,16 +425,16 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 				const bodyRes = bg.slice(offset, offset + bodies.length)
 				const chrWindows = bg.slice(offset + bodies.length, offset + bodies.length + windows.length)
 				offset += bodies.length + windows.length
+				// a region with too few probes has an unstable mean, see minProbes
+				const min = minProbes(matrix)
 				if (!q.corrected) {
 					bodyRes.forEach((b: any, j: number) => {
-						/* A gene body with too few probes has an unstable mean; 5 matches the scan's own
-						minimum CpG count so the two analyses agree on what is measurable. */
-						if (b.delta != null && b.n_probes >= 5) deltaOf[bodies[j].name] = b.delta
+						if (b.delta != null && b.n_probes >= min) deltaOf[bodies[j].name] = b.delta
 					})
 				} else {
 					const measured = bodyRes
 						.map((b: any, j: number) => ({ j, b }))
-						.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
+						.filter(({ b }) => b?.delta != null && b.n_probes >= min)
 					const { scored } = scoreAgainstBackground(
 						measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, delta_beta_mean: b.delta })),
 						chrWindows,
@@ -497,8 +505,8 @@ async function computeGeneBodyTests(q: any, genome: any, ds: any): Promise<Recor
 		if (out.error) throw new Error(out.error)
 		const testOf: Record<string, GeneBodyTest> = {}
 		;(out.background as any[]).forEach((r, i) => {
-			// at least 5 CpGs, as the deltas require
-			if (r.p != null && r.n_probes >= 5) testOf[bodies[i].name] = { t: r.t, p: r.p, delta: r.delta }
+			// as many CpGs as the deltas require
+			if (r.p != null && r.n_probes >= minProbes(matrix)) testOf[bodies[i].name] = { t: r.t, p: r.p, delta: r.delta }
 		})
 		return testOf
 	} finally {

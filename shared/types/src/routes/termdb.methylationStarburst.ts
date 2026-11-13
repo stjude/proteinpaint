@@ -63,9 +63,9 @@ export type MethylationStarburstResponse =
 			log2fc: number[]
 			/** DE adjusted p, or the unadjusted one where DE gave no adjusted p */
 			q: number[]
-			/** mean Δβ over the core promoter (default isoform TSS -2 kb to +500 bp); null when under 5 CpGs */
+			/** mean Δβ over the core promoter (default isoform TSS -2 kb to +500 bp); null when under the minimum CpGs (5 sequenced, 2 on an array) */
 			promoter: (number | null)[]
-			/** mean Δβ over the gene body less 2 kb at each end; null when under 5 CpGs */
+			/** mean Δβ over the gene body less 2 kb at each end; null when under the minimum CpGs (5 sequenced, 2 on an array) */
 			body: (number | null)[]
 			sampleSize1: number
 			sampleSize2: number

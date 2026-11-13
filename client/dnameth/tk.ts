@@ -322,7 +322,7 @@ function render(tk: any, block: any): number {
 			}
 			table.addRow(b.nCpg == 1 ? 'CpG' : 'Bin', `${region.chr}:${b.start}${b.nCpg == 1 ? '' : '-' + b.stop}`)
 			if (b.nCpg > 1) table.addRow('CpGs', b.nCpg)
-			if (row >= 0) table.addRow('β', b.beta[idx[row]] === null ? 'too few reads' : round(b.beta[idx[row]]!))
+			if (row >= 0) table.addRow('β', b.beta[idx[row]] === null ? 'no data' : round(b.beta[idx[row]]!))
 			if (hasGene) table.addRow('Spearman ρ', rhoText(b))
 			for (const g of b.byGroup || []) table.addRow(`ρ in ${g.group}`, rhoText(g))
 			for (const sr of series) {
@@ -401,7 +401,7 @@ function renderLegend(tk: any, data: LocusData, series: Series[]) {
 	}
 	const stops = [0, 0.25, 0.5, 0.75, 1].map(betaColor).join(',')
 	item(`width:80px;height:12px;background:linear-gradient(to right,${stops})`, 'β 0 to 1')
-	item(`width:12px;height:12px;background:${missingColor}`, 'too few reads')
+	item(`width:12px;height:12px;background:${missingColor}`, 'no data')
 	for (const s of series) item(`width:16px;height:2px;background:${s.color}`, `mean β, ${s.label}`)
 	if (data.groups?.length == 2) item('', `Δβ = ${data.groups[1]} minus ${data.groups[0]}`)
 	if (tk.dmrs && data.groups?.length == 2) {
