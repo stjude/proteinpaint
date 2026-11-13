@@ -67,7 +67,7 @@ export async function getMds3LDdata(q: TermdbMds3LDRequest, ds, genome): Promise
 	const tk = tracks.find(i => i.name == q.ldtkname)
 	if (!tk) throw 'unknown ld tk'
 
-	const p = string2pos(`${q.m.chr}:${q.m.pos}`, genome)
+	const p = string2pos(`${q.m.chr}:${q.m.pos}`, genome, false)
 	if (!p?.actualposition) throw 'invalid q.m.chr/pos'
 	const chr = p.chr
 	const pos = p.actualposition.position
