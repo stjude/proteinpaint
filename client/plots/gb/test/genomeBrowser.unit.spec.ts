@@ -6,6 +6,7 @@ import { TabsRenderer } from '../view/TabsRenderer.ts'
 import * as d3s from 'd3-selection'
 import { makeJunctionTerm } from '../../../j2/render.js'
 import { getParameter } from '../../../j2/tk.js'
+import { withSampleTypes } from '#termdb/handlers/junction.customTerm'
 
 /* 
 Tests:
@@ -143,6 +144,22 @@ tape('junction details support', async test => {
 		},
 		'creates a numeric junction term from track data'
 	)
+	test.end()
+})
+
+tape('makeJunctionTerm: IR ratio', test => {
+	const j = { chr: 'chr1', start: 99, stop: 200, strand: '+', info: { canonical: true } }
+	const term: any = makeJunctionTerm(j, 'IR')
+	test.equal(term.measure, 'IR', 'reads the IR ratio of each sample')
+	test.equal(term.id, 'chr1:99-200:+:IR', 'has an id other than that of the read count of the junction')
+	test.equal(term.name, 'chr1:100-201 (+) IR ratio', 'is named for the IR ratio')
+	test.equal((makeJunctionTerm(j) as any).measure, undefined, 'a term of the read count has no measure')
+	test.equal(
+		withSampleTypes(term, { sampleTypes: [2], sampleTypeLabel: 'diagnosis' }).name,
+		'chr1:100-201 (+) IR ratio (diagnosis)',
+		'the sample types follow the IR ratio in the name'
+	)
+	test.throws(() => makeJunctionTerm(j, 'exonskip'), /invalid junction term measure/, 'throws on another measure')
 	test.end()
 })
 

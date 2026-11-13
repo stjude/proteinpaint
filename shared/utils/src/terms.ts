@@ -206,7 +206,14 @@ export function equals(t1: any, t2: any) {
 		case ISOFORM_EXPRESSION:
 			return t1.isoform == t2.isoform
 		case JUNCTION:
-			return t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop && t1.strand == t2.strand
+			return (
+				t1.chr == t2.chr &&
+				t1.start == t2.start &&
+				t1.stop == t2.stop &&
+				t1.strand == t2.strand &&
+				// the read count and the IR ratio of a junction are different terms
+				t1.measure == t2.measure
+			)
 		case SSGSEA:
 			return t1.id == t2.id
 		case DNA_METHYLATION:
