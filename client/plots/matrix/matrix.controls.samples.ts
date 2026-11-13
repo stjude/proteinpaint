@@ -15,11 +15,11 @@ export function setSamplesBtn(self: MatrixControls, s: any) {
 			title: `Show one column per ${l.sample}, or per parent ${l.sample} (e.g. patient) with the data of its ${l.samples} combined`,
 			type: 'radio',
 			chartType: 'matrix',
-			settingsKey: 'mapChildren2Parent',
+			settingsKey: 'sampleMapping',
 			styles: { display: 'inline-block' },
 			options: [
-				{ label: l.Sample, value: false },
-				{ label: getParentSampleTypeName(self.opts.app.vocabApi.termdbConfig), value: true }
+				{ label: l.Sample, value: 'parentToChildren' },
+				{ label: getParentSampleTypeName(self.opts.app.vocabApi.termdbConfig), value: 'childrenToParent' }
 			],
 			getDisplayStyle(plot: any) {
 				return plot.chartType == 'matrix' && self.opts.app.vocabApi.termdbConfig.hasSampleAncestry
