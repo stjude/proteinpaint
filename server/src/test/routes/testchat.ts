@@ -19,74 +19,83 @@ export default function setRoutes(app, basepath, genomes) {
 		const datasetFilter = req.query.dslabel as string | undefined
 		console.log('test chat page' + (datasetFilter ? ` (dslabel filter: ${datasetFilter})` : ''))
 		const testResults: TestResult[] = []
-		for (const genome of Object.values(genomes)) {
-			if (!genome) {
-				// This should not happen since we are iterating over Object.values(genomes), but just in case
-				console.log('Genome is undefined, skipping')
-				continue
-			}
+		try {
+			for (const genome of Object.values(genomes)) {
+				if (!genome) {
+					// This should not happen since we are iterating over Object.values(genomes), but just in case
+					console.log('Genome is undefined, skipping')
+					continue
+				}
 
-			for (const ds of Object.values((genome as any).datasets)) {
-				if ((ds as any)?.queries?.chat) {
-					const label = (ds as any).label
-					if (datasetFilter && label !== datasetFilter) continue
-					let rawFilter: any
-					if (typeof req.query.filter === 'string') {
-						try {
-							rawFilter = JSON.parse(req.query.filter)
-						} catch (err) {
-							throw new Error(`Invalid JSON in filter query parameter: ${err}`)
+				for (const ds of Object.values((genome as any).datasets)) {
+					if ((ds as any)?.queries?.chat) {
+						const label = (ds as any).label
+						if (datasetFilter && label !== datasetFilter) continue
+						let rawFilter: any
+						if (typeof req.query.filter === 'string') {
+							try {
+								rawFilter = JSON.parse(req.query.filter)
+							} catch (err) {
+								throw new Error(`Invalid JSON in filter query parameter: ${err}`)
+							}
+						} else {
+							rawFilter = req.query.filter
 						}
-					} else {
-						rawFilter = req.query.filter
-					}
-					const filter: any = rawFilter && typeof rawFilter === 'object' ? rawFilter : {}
-					const lst = Array.isArray(filter.lst) ? filter.lst : []
-					const cohortFilter = lst.find((item: any) => item.tag === 'cohortFilter')
-					const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
-					const supportedPlotTypes = (ds as any).cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
-					const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
-					console.log('\x1b[32m%s\x1b[0m', 'Testing chatbot for dataset: ' + label)
-					const overrideDir = path.join(process.cwd(), 'dataset', 'ai', label)
-					const aiFilesDir = fs.existsSync(overrideDir)
-						? overrideDir
-						: path.join(serverconfig.binpath, 'dataset', 'ai', label) // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
-					const results = await test_chatbot_by_dataset(ds, genome, aiFilesDir, chatSupportedPlotTypes)
-					if (results.num_errors == 0) {
-						console.log(
-							'\x1b[32m%s\x1b[0m',
-							'Tests complete for ' +
-								label +
-								'. Number of failed prompts: ' +
-								results.num_errors +
-								'/' +
-								results.num_tests
-						) // Show in green if all tests passed
-					} else {
-						console.log(
-							'\x1b[31m%s\x1b[0m',
-							'Tests complete for ' +
-								label +
-								'. Number of failed prompts: ' +
-								results.num_errors +
-								'/' +
-								results.num_tests
-						) // Show in red if any of the tests failed
-						console.log('\x1b[31m%s\x1b[0m', 'Failed prompts: ') // Show in red if any of the tests failed
-						for (const failed_prompt of results.failed_prompts) {
-							console.log('\x1b[31m%s\x1b[0m', '  ' + failed_prompt) // Show in red if any of the tests failed
+						const filter: any = rawFilter && typeof rawFilter === 'object' ? rawFilter : {}
+						const lst = Array.isArray(filter.lst) ? filter.lst : []
+						const cohortFilter = lst.find((item: any) => item.tag === 'cohortFilter')
+						const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
+						// getSupportedChartTypes() requires req.query.dslabel, which is optional for this route;
+						// inherit from req so that req.get() etc still work
+						const dsReq = Object.assign(Object.create(req), { query: { ...req.query, dslabel: label } })
+						const supportedPlotTypes = (ds as any).cohort.termdb.q?.getSupportedChartTypes(dsReq)?.[cohortKey]
+						const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
+						console.log('\x1b[32m%s\x1b[0m', 'Testing chatbot for dataset: ' + label)
+						const overrideDir = path.join(process.cwd(), 'dataset', 'ai', label)
+						const aiFilesDir = fs.existsSync(overrideDir)
+							? overrideDir
+							: path.join(serverconfig.binpath, 'dataset', 'ai', label) // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
+						const results = await test_chatbot_by_dataset(ds, genome, aiFilesDir, chatSupportedPlotTypes)
+						if (results.num_errors == 0) {
+							console.log(
+								'\x1b[32m%s\x1b[0m',
+								'Tests complete for ' +
+									label +
+									'. Number of failed prompts: ' +
+									results.num_errors +
+									'/' +
+									results.num_tests
+							) // Show in green if all tests passed
+						} else {
+							console.log(
+								'\x1b[31m%s\x1b[0m',
+								'Tests complete for ' +
+									label +
+									'. Number of failed prompts: ' +
+									results.num_errors +
+									'/' +
+									results.num_tests
+							) // Show in red if any of the tests failed
+							console.log('\x1b[31m%s\x1b[0m', 'Failed prompts: ') // Show in red if any of the tests failed
+							for (const failed_prompt of results.failed_prompts) {
+								console.log('\x1b[31m%s\x1b[0m', '  ' + failed_prompt) // Show in red if any of the tests failed
+							}
 						}
+						testResults.push({
+							dataset: label,
+							num_errors: results.num_errors,
+							num_tests: results.num_tests,
+							failed_prompts: results.failed_prompts
+						})
 					}
-					testResults.push({
-						dataset: label,
-						num_errors: results.num_errors,
-						num_tests: results.num_tests,
-						failed_prompts: results.failed_prompts
-					})
 				}
 			}
+			res.send(testResults)
+		} catch (e: any) {
+			// an uncaught throw in this async handler would be an unhandled rejection and exit the process
+			console.error(e)
+			if (!res.headersSent) res.send({ error: e?.message || e, testResults })
 		}
-		res.send(testResults)
 	})
 }
 
