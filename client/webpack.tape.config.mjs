@@ -50,7 +50,8 @@ export default {
 	resolve: {
 		fallback: {
 			path: 'path-browserify',
-			stream: 'stream-browserify'
+			stream: 'stream-browserify',
+			buffer: 'buffer'
 		}
 	},
 
