@@ -338,9 +338,9 @@ export async function getJunctionData(
 		rather than through the request: listJunctions() resets the request's sample types to the default
 		ones, and a request may hold terms that chose different sample types */
 		if (term.sampleTypes?.length) {
-			sn2rc = sn2rc.filter(([sid]) => term.sampleTypes.includes(ds.sampleId2Type.get(sid)))
+			samples = samples.filter(([sid]) => term.sampleTypes.includes(ds.sampleId2Type.get(sid)))
 		}
-		const s2v = Object.fromEntries(sn2rc.filter(([, value]) => Number.isFinite(value)))
+		const s2v = Object.fromEntries(samples.filter(([, value]) => Number.isFinite(value)))
 		const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 		const limitSamples = await mayLimitSamples(param, null, ds)
 		const filteredValues = Object.create(null)
