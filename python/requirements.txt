@@ -10,7 +10,6 @@ h5py==3.15.1
 # production only. 3.10.3 also has no cp314 wheel and was being built from source.
 matplotlib==3.10.7
 nibabel==5.3.2
-numba==0.66.0
 numpy>=1.22
 openslide-bin==4.0.1.2
 openslide-python==1.4.6

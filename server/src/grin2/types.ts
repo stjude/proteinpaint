@@ -56,9 +56,10 @@ export interface Grin2Processing {
 	}
 }
 
-/** grin2/{cacheid}.json. Self-contained: the per-gene rows Rust needs
- * for the Manhattan plot live inside `resultData.geneHits`, so the Rust
- * step opens this file directly. */
+/** grin2/{cacheid}.json. Self-contained: the per-gene rows that
+ * renderManhattan needs for the Manhattan plot live inside
+ * `resultData.geneHits`, so a cache hit redraws the plot without
+ * rerunning the grin2 binary. */
 export type Grin2CacheResult = {
 	resultData: any
 	processing: Grin2Processing

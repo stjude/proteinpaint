@@ -86,7 +86,7 @@ more lesions than a cap below 50,000, the smallest run worth doing. Use this on 
 production servers, where one large request could otherwise use up the memory of every other request.
 
 **`report`**: the server still reads the free memory and logs each estimate, but every run goes ahead in full.
-Nothing is refused, and GRIN2 keeps its configured lesion cap (`features.grin2maxLesions`, at most about 641,000
+Nothing is refused, and GRIN2 keeps its configured lesion cap (`features.grin2maxLesions`, at most about 4,170,000
 lesions, a fixed 2 GB ceiling). Use this on a laptop or a dedicated server, where free memory is often low because
 the OS keeps memory as cache, and an analysis that would finish would otherwise be refused. The logs then show how
 close each run came to the budget, to tune `maxMB` before enforcing.

@@ -32,20 +32,10 @@ use std::io;
 use std::time::Instant;
 use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Stroke, StrokeDash, Transform};
 
-fn get_rss_mb() -> f64 {
-    unsafe {
-        let mut usage: libc::rusage = std::mem::zeroed();
-        libc::getrusage(libc::RUSAGE_SELF, &mut usage);
-        #[cfg(target_os = "macos")]
-        {
-            usage.ru_maxrss as f64 / 1_048_576.0
-        } // bytes → MB
-        #[cfg(not(target_os = "macos"))]
-        {
-            usage.ru_maxrss as f64 / 1024.0
-        } // KB → MB
-    }
-}
+mod peak_rss;
+mod stats_functions;
+use peak_rss::peak_rss_mb;
+use stats_functions::{bh_adjust, bh_adjust_ordered};
 
 /// User + system CPU seconds consumed so far, from getrusage. Compared with wall time this says
 /// how much of the run was compute versus waiting on the HDF5 read.
@@ -381,29 +371,6 @@ fn trigamma_inverse(x: f64) -> f64 {
         }
     }
     y
-}
-
-/// R's p.adjust(p, "BH"). A NaN is dropped before n is counted -- p.adjust's default n is
-/// length(p), evaluated after the NAs are removed -- and comes back NaN.
-fn bh_adjust(p: &[f64]) -> Vec<f64> {
-    bh_adjust_ordered(p).0
-}
-
-/// bh_adjust, plus the non-NaN indices in descending order of p -- which is also ascending order
-/// of the adjusted values read from the end, since BH is monotone in p.
-fn bh_adjust_ordered(p: &[f64]) -> (Vec<f64>, Vec<u32>) {
-    let mut idx: Vec<u32> = (0..p.len() as u32).filter(|&i| !p[i as usize].is_nan()).collect();
-    // largest first; tied values all receive the same adjusted value, so their order is immaterial
-    idx.sort_unstable_by(|&a, &b| p[b as usize].partial_cmp(&p[a as usize]).unwrap());
-    let n = idx.len() as f64;
-    let mut out = vec![f64::NAN; p.len()];
-    let mut cm = f64::INFINITY;
-    for (k, &i) in idx.iter().enumerate() {
-        let rank = (idx.len() - k) as f64;
-        cm = cm.min(n / rank * p[i as usize]);
-        out[i as usize] = cm.min(1.0);
-    }
-    (out, idx)
 }
 
 /// R's qnorm (Wichura's AS241), lower tail.
@@ -2010,7 +1977,7 @@ fn r5(v: f64) -> Value {
 
 fn main() {
     let t0 = Instant::now();
-    let rss_start = get_rss_mb();
+    let rss_start = peak_rss_mb();
     let mut input = String::new();
     if io::stdin().read_line(&mut input).is_err() {
         bail!("Failed to read stdin");
@@ -2060,7 +2027,7 @@ fn main() {
     let diagnostic = |n: usize| {
         json!({
             "total_probes_analyzed": n,
-            "peak_memory_mb": (get_rss_mb() * 10.0).round() / 10.0,
+            "peak_memory_mb": (peak_rss_mb() * 10.0).round() / 10.0,
             "start_memory_mb": (rss_start * 10.0).round() / 10.0,
             "cpu_seconds": (get_cpu_seconds() * 100.0).round() / 100.0,
             "threads": THREADS,

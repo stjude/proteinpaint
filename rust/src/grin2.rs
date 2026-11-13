@@ -28,26 +28,37 @@ Steps:
 
 The results match the Python implementation this replaced (python/src/grin2_core.py): the same approximation
 threshold, the clip of exact terms to [1e-10, 1 - 1e-10], numpy's rounding to 4 significant digits, and the
-stable ordering of ties. Two differences:
+stable ordering of ties. Lesion fields are read as the Python's astype read them: a sample, chromosome or type may be
+a number, and a coordinate a float (truncated) or a numeric string. Four differences:
 - a p- or q-value below ~1e-305 is reported, where numpy's rounding turned it into NaN, which left the value blank
   and ranked the gene by its other lesion types.
 - the constellation test uses the beta parameters of GRIN2's R p.order. The Python used Beta(j, k - j + 2) for the
   j-th smallest of k p-values, the distribution for k + 1 lesion types, which made it conservative.
+- every lesion type and chromosome is its own block. The Python split blocks by chromosome only, so when one lesion
+  type's last chromosome with a hit was the next type's first, the genes of the second type there kept p = 1.
+- genes that share a name are separate rows. The Python joined hits to genes by name, which added up their counts.
 */
 
 use flate2::read::MultiGzDecoder;
 use r_mathlib::beta_cdf;
 use rayon::prelude::*;
 use rusqlite::Connection;
+use serde::de::{self, Deserializer, SeqAccess, Visitor};
 use serde::ser::{SerializeMap, SerializeSeq};
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, HashMap};
+use std::convert::TryFrom;
+use std::fmt;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Write};
 
+mod peak_rss;
 mod sqlite_static;
+mod stats_functions;
+use peak_rss::peak_rss_mb;
 use sqlite_static::prepare_static;
+use stats_functions::bh_adjust;
 
 // below this (max gene + max lesion) / chromosome size, the log(1 - p) ~ -p approximation is used
 const APPROX_THRESHOLD: f64 = 0.05;
@@ -59,7 +70,7 @@ const MAX_CONSTELLATION_COLUMNS: usize = 5;
 struct Input {
     genedb: String,
     chromosomelist: HashMap<String, i64>,
-    lesion: Vec<(String, String, i64, i64, String)>,
+    lesion: Lesions,
     lesion_type_map: BTreeMap<String, String>,
     max_genes_to_show: Option<usize>,
     exclude_enabled: Option<bool>,
@@ -76,11 +87,19 @@ struct Gene {
 }
 
 struct Lesion {
-    subj: u32, // rank of the sample id in sorted order
-    chrom: String,
+    subj: u32,  // rank of the sample id in sorted order
+    chrom: u32, // index into Lesions.chroms
     start: i64,
     end: i64,
-    ty: usize, // index into the sorted lesion types
+    ty: usize, // index into Lesions.types
+}
+
+/// The lesions, with their sample, chromosome and type as ranks of the sorted names
+struct Lesions {
+    list: Vec<Lesion>,
+    chroms: Vec<String>, // sorted, with the chr prefix
+    types: Vec<String>,  // sorted
+    counts: Vec<usize>,  // lesions of each type
 }
 
 fn main() {
@@ -92,22 +111,18 @@ fn main() {
 }
 
 fn read_input() -> Result<Input, String> {
-    let mut text = String::new();
-    io::stdin()
-        .read_to_string(&mut text)
-        .map_err(|e| format!("Cannot read input: {e}"))?;
-    serde_json::from_str(&text).map_err(|e| format!("Invalid input: {e}"))
+    // parsed as it is read, so the input text is never held whole next to the lesions
+    serde_json::from_reader(BufReader::new(io::stdin().lock())).map_err(|e| format!("Invalid input: {e}"))
 }
 
 fn run(input: Input) -> Result<(), String> {
     if input.lesion_type_map.is_empty() {
         return Err("lesionTypeMap not provided".into());
     }
-    if input.lesion.is_empty() {
+    if input.lesion.list.is_empty() {
         return Err("No lesion data provided".into());
     }
     let mut genes = read_genes(&input.genedb)?;
-    let (lesions, types, lesion_counts) = parse_lesions(input.lesion);
 
     let beds: Vec<&str> = input
         .exclude_beds
@@ -131,11 +146,17 @@ fn run(input: Input) -> Result<(), String> {
     // genes sorted by chromosome name, start, end; ties keep the gene db order
     genes.sort_by(|a, b| (&a.chrom, a.start, a.end).cmp(&(&b.chrom, b.start, b.end)));
 
+    let (nsubj, p) = gene_stats(&genes, &input.lesion, &input.chromosomelist);
+    let Lesions {
+        list,
+        chroms,
+        types,
+        counts,
+    } = input.lesion;
+    // not needed past the statistics, so freed before the q-values and the output are built
+    drop((list, chroms));
     let nt = types.len();
     let g = genes.len();
-    let nsubj = count_subjects(&genes, &lesions, nt);
-    let p = gene_pvalues(&genes, &lesions, &nsubj, nt, &input.chromosomelist);
-    drop(lesions);
     let q = q_values(&p, g, nt);
     let constellation = (nt > 1).then(|| constellation(&p, g, nt));
 
@@ -144,30 +165,10 @@ fn run(input: Input) -> Result<(), String> {
     let (p, q) = (round_all(&p), round_all(&q));
     let constellation = constellation.map(|(cp, cq)| (round_all(&cp), round_all(&cq)));
 
-    // a type's p column counts only when one of the first 20 genes has a p-value
-    let valid_types: Vec<usize> = (0..nt)
-        .filter(|&t| (0..g.min(20)).any(|i| !p[i * nt + t].is_nan()))
-        .collect();
-    if valid_types.is_empty() {
-        return Err("No p-value columns with data found".into());
-    }
-    let min_p = |i: usize| {
-        valid_types
-            .iter()
-            .map(|&t| p[i * nt + t])
-            .filter(|x| !x.is_nan())
-            .fold(f64::NAN, f64::min)
-    };
+    // genes by their smallest p across lesion types; a stable sort, so ties keep the gene order
+    let min_p = |i: usize| p[i * nt..(i + 1) * nt].iter().cloned().fold(f64::INFINITY, f64::min);
     let mut order: Vec<usize> = (0..g).collect();
-    order.sort_by(|&a, &b| {
-        let (x, y) = (min_p(a), min_p(b));
-        match (x.is_nan(), y.is_nan()) {
-            (true, true) => std::cmp::Ordering::Equal,
-            (true, false) => std::cmp::Ordering::Greater,
-            (false, true) => std::cmp::Ordering::Less,
-            _ => x.partial_cmp(&y).unwrap(),
-        }
-    });
+    order.sort_by(|&a, &b| min_p(a).total_cmp(&min_p(b)));
 
     let num_rows = g.min(input.max_genes_to_show.unwrap_or(500));
     let table = top_gene_table(
@@ -181,7 +182,7 @@ fn run(input: Input) -> Result<(), String> {
         &q,
         &constellation,
     );
-    let by_type: BTreeMap<&str, usize> = types.iter().map(|t| t.as_str()).zip(lesion_counts).collect();
+    let by_type: BTreeMap<&str, usize> = types.iter().map(|t| t.as_str()).zip(counts).collect();
 
     // geneHits reports nsubj and q for each lesion type of lesionTypeMap present in the data
     let hit_types = input
@@ -320,35 +321,158 @@ fn read_genes(path: &str) -> Result<Vec<Gene>, String> {
     Ok(genes)
 }
 
-/// Lesions with sample ranks and type indices, the sorted type names, and the lesion count of each type.
-fn parse_lesions(raw: Vec<(String, String, i64, i64, String)>) -> (Vec<Lesion>, Vec<String>, Vec<usize>) {
-    let mut ids: Vec<&str> = raw.iter().map(|r| r.0.as_str()).collect();
-    ids.sort_unstable();
-    ids.dedup();
-    let subj: Vec<u32> = raw
-        .iter()
-        .map(|r| ids.binary_search(&r.0.as_str()).unwrap() as u32)
-        .collect();
-    let mut types: Vec<String> = raw.iter().map(|r| r.4.clone()).collect();
-    types.sort_unstable();
-    types.dedup();
-    let mut counts = vec![0; types.len()];
-    let lesions = raw
-        .into_iter()
-        .zip(subj)
-        .map(|((_, chrom, start, end, ty), subj)| {
-            let ty = types.binary_search(&ty).unwrap();
-            counts[ty] += 1;
-            Lesion {
-                subj,
-                chrom: with_chr(chrom),
+impl<'de> Deserialize<'de> for Lesions {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_seq(LesionsVisitor)
+    }
+}
+
+struct LesionsVisitor;
+
+impl<'de> Visitor<'de> for LesionsVisitor {
+    type Value = Lesions;
+
+    fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("an array of [sample, chrom, start, end, type]")
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Lesions, A::Error> {
+        // the names are numbered as they arrive, so a lesion holds numbers instead of its own copy of each name
+        let (mut samples, mut chroms, mut types) = (Names::default(), Names::default(), Names::default());
+        let mut list = Vec::with_capacity(seq.size_hint().unwrap_or(0));
+        while let Some((Text(s), Text(c), Coord(start), Coord(end), Text(t))) = seq.next_element()? {
+            list.push(Lesion {
+                subj: samples.id(s),
+                chrom: chroms.id(with_chr(c)),
                 start,
                 end,
-                ty,
-            }
+                ty: types.id(t) as usize,
+            });
+        }
+        // then renumbered by sorted name, the order in which the statistics group and visit them
+        let (_, subj) = samples.sorted();
+        let (chroms, chrom) = chroms.sorted();
+        let (types, ty) = types.sorted();
+        let mut counts = vec![0; types.len()];
+        for l in &mut list {
+            l.subj = subj[l.subj as usize];
+            l.chrom = chrom[l.chrom as usize];
+            l.ty = ty[l.ty] as usize;
+            counts[l.ty] += 1;
+        }
+        Ok(Lesions {
+            list,
+            chroms,
+            types,
+            counts,
         })
-        .collect();
-    (lesions, types, counts)
+    }
+}
+
+/// Numbers names in the order they are first seen
+#[derive(Default)]
+struct Names(HashMap<String, u32>);
+
+impl Names {
+    fn id(&mut self, name: String) -> u32 {
+        let next = self.0.len() as u32;
+        *self.0.entry(name).or_insert(next)
+    }
+
+    /// the names in sorted order, and the sorted rank of each number
+    fn sorted(self) -> (Vec<String>, Vec<u32>) {
+        let mut names: Vec<(String, u32)> = self.0.into_iter().collect();
+        names.sort_unstable();
+        let mut rank = vec![0; names.len()];
+        for (r, (_, id)) in names.iter().enumerate() {
+            rank[*id as usize] = r as u32;
+        }
+        (names.into_iter().map(|(name, _)| name).collect(), rank)
+    }
+}
+
+/// A name given as a string or a number; null reads as "None", as Python's str(None) did
+struct Text(String);
+
+impl<'de> Deserialize<'de> for Text {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct V;
+        impl<'de> Visitor<'de> for V {
+            type Value = Text;
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                f.write_str("a string or a number")
+            }
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Text, E> {
+                Ok(Text(v.to_owned()))
+            }
+            fn visit_string<E: de::Error>(self, v: String) -> Result<Text, E> {
+                Ok(Text(v))
+            }
+            fn visit_i64<E: de::Error>(self, v: i64) -> Result<Text, E> {
+                Ok(Text(v.to_string()))
+            }
+            fn visit_u64<E: de::Error>(self, v: u64) -> Result<Text, E> {
+                Ok(Text(v.to_string()))
+            }
+            fn visit_f64<E: de::Error>(self, v: f64) -> Result<Text, E> {
+                Ok(Text(py_float_str(v)))
+            }
+            fn visit_unit<E: de::Error>(self) -> Result<Text, E> {
+                Ok(Text("None".into()))
+            }
+        }
+        d.deserialize_any(V)
+    }
+}
+
+/// Python's str() of a float: Rust's {:?} has the same shortest digits, ".0" on whole numbers and switch to
+/// scientific notation (below 1e-4 or from 1e16), but writes the exponent as e16 or e-5 where Python writes e+16 or e-05
+fn py_float_str(v: f64) -> String {
+    let s = format!("{v:?}");
+    match s.split_once('e') {
+        Some((mantissa, exp)) => {
+            let exp: i32 = exp.parse().unwrap();
+            format!("{mantissa}e{}{:02}", if exp < 0 { '-' } else { '+' }, exp.abs())
+        }
+        None => s,
+    }
+}
+
+/// A coordinate given as an integer, a float (truncated, as numpy's astype("int64") does) or an integer string
+struct Coord(i64);
+
+impl<'de> Deserialize<'de> for Coord {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct V;
+        impl<'de> Visitor<'de> for V {
+            type Value = Coord;
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                f.write_str("a coordinate")
+            }
+            fn visit_i64<E: de::Error>(self, v: i64) -> Result<Coord, E> {
+                Ok(Coord(v))
+            }
+            fn visit_u64<E: de::Error>(self, v: u64) -> Result<Coord, E> {
+                i64::try_from(v)
+                    .map(Coord)
+                    .map_err(|_| E::custom(format!("coordinate out of range: {v}")))
+            }
+            fn visit_f64<E: de::Error>(self, v: f64) -> Result<Coord, E> {
+                if v.is_finite() && v.abs() < 9.2e18 {
+                    Ok(Coord(v as i64))
+                } else {
+                    Err(E::custom(format!("invalid coordinate: {v}")))
+                }
+            }
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Coord, E> {
+                v.trim()
+                    .parse()
+                    .map(Coord)
+                    .map_err(|_| E::custom(format!("invalid coordinate: {v:?}")))
+            }
+        }
+        d.deserialize_any(V)
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -457,14 +581,33 @@ fn chrom_ranges(genes: &[Gene]) -> HashMap<&str, (usize, usize)> {
     ranges
 }
 
-/// Lesion indices ordered by type, chromosome, sample; a sample's lesions keep their input order.
-fn lesion_order(lesions: &[Lesion]) -> Vec<usize> {
-    let mut order: Vec<usize> = (0..lesions.len()).collect();
-    order.sort_by(|&a, &b| {
-        let (x, y) = (&lesions[a], &lesions[b]);
-        (x.ty, &x.chrom, x.subj).cmp(&(y.ty, &y.chrom, y.subj))
+/// Subject count and p-value per gene (row) and lesion type (column).
+fn gene_stats(genes: &[Gene], lesions: &Lesions, chrom_sizes: &HashMap<String, i64>) -> (Vec<u32>, Vec<f64>) {
+    let nt = lesions.types.len();
+    let ranges = chrom_ranges(genes);
+    // per lesion chromosome: its genes' index range and longest gene, when it has genes
+    let gene_range: Vec<Option<(usize, usize, i64)>> = lesions
+        .chroms
+        .iter()
+        .map(|c| {
+            let &(a, b) = ranges.get(c.as_str())?;
+            Some((a, b, genes[a..b].iter().map(|gn| gn.end - gn.start).max().unwrap()))
+        })
+        .collect();
+    let sizes: Vec<Option<f64>> = lesions
+        .chroms
+        .iter()
+        .map(|c| chrom_sizes.get(c).map(|&s| s as f64))
+        .collect();
+    // lesions ordered by type, chromosome, sample; a stable sort, so a sample's lesions keep their input order
+    let mut order: Vec<usize> = (0..lesions.list.len()).collect();
+    order.sort_by_key(|&i| {
+        let l = &lesions.list[i];
+        (l.ty, l.chrom, l.subj)
     });
-    order
+    let nsubj = count_subjects(genes, &lesions.list, &order, &gene_range, nt);
+    let p = gene_pvalues(genes, &lesions.list, &order, &gene_range, &sizes, &nsubj, nt);
+    (nsubj, p)
 }
 
 /// Calls f(gene index) for every gene whose closed interval overlaps the lesion.
@@ -481,21 +624,22 @@ fn for_each_hit(genes: &[Gene], range: (usize, usize), max_len: i64, l: &Lesion,
 }
 
 /// Number of distinct samples with a hit, per gene (row) and lesion type (column).
-fn count_subjects(genes: &[Gene], lesions: &[Lesion], nt: usize) -> Vec<u32> {
-    let ranges = chrom_ranges(genes);
-    let max_len: HashMap<&str, i64> = ranges
-        .iter()
-        .map(|(c, &(a, b))| (*c, genes[a..b].iter().map(|gn| gn.end - gn.start).max().unwrap_or(0)))
-        .collect();
+fn count_subjects(
+    genes: &[Gene],
+    lesions: &[Lesion],
+    order: &[usize],
+    gene_range: &[Option<(usize, usize, i64)>],
+    nt: usize,
+) -> Vec<u32> {
     let mut nsubj = vec![0u32; genes.len() * nt];
     // lesions arrive grouped by type and sample, so a hit from a new sample is one whose sample differs from the last
     let mut last = vec![u32::MAX; genes.len() * nt];
-    for i in lesion_order(lesions) {
+    for &i in order {
         let l = &lesions[i];
-        let Some(&range) = ranges.get(l.chrom.as_str()) else {
+        let Some((a, b, max_len)) = gene_range[l.chrom as usize] else {
             continue;
         };
-        for_each_hit(genes, range, max_len[l.chrom.as_str()], l, |g| {
+        for_each_hit(genes, (a, b), max_len, l, |g| {
             let k = g * nt + l.ty;
             if last[k] != l.subj {
                 last[k] = l.subj;
@@ -510,32 +654,26 @@ fn count_subjects(genes: &[Gene], lesions: &[Lesion], nt: usize) -> Vec<u32> {
 fn gene_pvalues(
     genes: &[Gene],
     lesions: &[Lesion],
+    order: &[usize],
+    gene_range: &[Option<(usize, usize, i64)>],
+    chrom_sizes: &[Option<f64>],
     nsubj: &[u32],
     nt: usize,
-    chrom_sizes: &HashMap<String, i64>,
 ) -> Vec<f64> {
-    let ranges = chrom_ranges(genes);
-    let order = lesion_order(lesions);
     let mut p = vec![1.0; genes.len() * nt];
-    let mut a = 0;
-    while a < order.len() {
-        // one block: the lesions of one type on one chromosome
-        let first = &lesions[order[a]];
-        let mut b = a;
-        while b < order.len() && lesions[order[b]].ty == first.ty && lesions[order[b]].chrom == first.chrom {
-            b += 1;
-        }
-        let block = &order[a..b];
-        a = b;
-        let (ty, chrom) = (first.ty, first.chrom.as_str());
-        let (Some(&(ga, gb)), Some(&size)) = (ranges.get(chrom), chrom_sizes.get(chrom)) else {
+    // one block: the lesions of one type on one chromosome
+    for block in order.chunk_by(|&x, &y| (lesions[x].ty, lesions[x].chrom) == (lesions[y].ty, lesions[y].chrom)) {
+        let first = &lesions[block[0]];
+        let ty = first.ty;
+        let (Some((ga, gb, _)), Some(chrom_size)) =
+            (gene_range[first.chrom as usize], chrom_sizes[first.chrom as usize])
+        else {
             continue;
         };
         let hit_genes: Vec<usize> = (ga..gb).filter(|&g| nsubj[g * nt + ty] > 0).collect();
         if hit_genes.is_empty() {
             continue;
         }
-        let chrom_size = size as f64;
 
         // the block's samples in sorted order; each lesion's local sample index
         let mut lsn_subj = Vec::with_capacity(block.len());
@@ -564,7 +702,6 @@ fn gene_pvalues(
             total[s] += lsn_size[k];
         }
         let inv_chrom = 1.0 / chrom_size;
-        let max_x = hit_genes.iter().map(|&g| nsubj[g * nt + ty]).max().unwrap() as usize;
 
         let values: Vec<f64> = hit_genes
             .par_iter()
@@ -585,7 +722,9 @@ fn gene_pvalues(
                     }
                     logsum.iter().map(|x| 1.0 - x.exp()).collect()
                 };
-                upper_tail(&pr_subj, nsubj[g * nt + ty] as usize, max_x)
+                // the distribution is needed only up to the gene's own count, the last entry absorbing the rest
+                let k = nsubj[g * nt + ty] as usize;
+                upper_tail(&pr_subj, k, k - 1)
             })
             .collect();
         for (&g, v) in hit_genes.iter().zip(values) {
@@ -609,33 +748,13 @@ fn upper_tail(probs: &[f64], k: usize, max_x: usize) -> f64 {
     pr[k..].iter().sum()
 }
 
-/// Benjamini-Hochberg adjusted p-values, as statsmodels fdrcorrection (method "indep") computes them.
-fn bh(p: &[f64]) -> Vec<f64> {
-    let n = p.len();
-    let mut idx: Vec<usize> = (0..n).collect();
-    idx.sort_by(|&a, &b| p[a].partial_cmp(&p[b]).unwrap());
-    let mut out = vec![0.0; n];
-    let mut cummin = f64::INFINITY;
-    for r in (0..n).rev() {
-        let factor = (r + 1) as f64 / n as f64;
-        cummin = cummin.min(p[idx[r]] / factor);
-        out[idx[r]] = cummin.min(1.0);
-    }
-    out
-}
-
-/// min(1, 2 * mean(p)) * BH(p) for each column of a genes x columns matrix; a NaN p counts as 1 in BH and is
-/// skipped in the mean.
+/// min(1, 2 * mean(p)) * BH(p) for each column of a genes x columns matrix
 fn q_values(p: &[f64], g: usize, nc: usize) -> Vec<f64> {
     let mut q = vec![0.0; g * nc];
     for c in 0..nc {
         let col: Vec<f64> = (0..g).map(|i| p[i * nc + c]).collect();
-        let finite: Vec<f64> = col.iter().cloned().filter(|x| !x.is_nan()).collect();
-        let pi_hat = (2.0 * finite.iter().sum::<f64>() / finite.len() as f64).min(1.0);
-        let adj = bh(&col
-            .iter()
-            .map(|&x| if x.is_nan() { 1.0 } else { x })
-            .collect::<Vec<_>>());
+        let pi_hat = (2.0 * col.iter().sum::<f64>() / g as f64).min(1.0);
+        let adj = bh_adjust(&col);
         for i in 0..g {
             q[i * nc + c] = pi_hat * adj[i];
         }
@@ -650,7 +769,7 @@ fn constellation(p: &[f64], g: usize, nt: usize) -> (Vec<f64>, Vec<f64>) {
     let mut out = vec![0.0; g * nt];
     for i in 0..g {
         let mut row: Vec<f64> = p[i * nt..(i + 1) * nt].to_vec();
-        row.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        row.sort_by(f64::total_cmp);
         for k in 0..nt {
             // R's pbeta, accurate far into the lower tail like scipy's; statrs gives 0 below ~1e-16
             out[i * nt + k] = beta_cdf(row[k], (k + 1) as f64, (nt - k) as f64, true, false);
@@ -666,7 +785,7 @@ fn constellation(p: &[f64], g: usize, nt: usize) -> (Vec<f64>, Vec<f64>) {
 /// 4 significant digits of a probability the way numpy.round does it: scale by 10^d, round half to even, scale
 /// back. Below ~1e-305, where 10^d overflows (numpy returns NaN there), it rounds the decimal digits instead.
 fn sig_round(x: f64) -> f64 {
-    if x == 0.0 || !x.is_finite() {
+    if x == 0.0 {
         return 0.0;
     }
     let d = 3 - x.abs().log10().floor() as i32;
@@ -677,11 +796,9 @@ fn sig_round(x: f64) -> f64 {
     (x * f).round_ties_even() / f
 }
 
-/// 3 significant digits for the table; null for NaN
+/// 3 significant digits for the table
 fn table_num(x: f64) -> Value {
-    if !x.is_finite() {
-        Value::Null
-    } else if x == 0.0 {
+    if x == 0.0 {
         json!(0)
     } else {
         json!(format!("{x:.2e}").parse::<f64>().unwrap())
@@ -714,10 +831,6 @@ fn top_gene_table(
 ) -> Value {
     let nt = types.len();
     let top = &order[..num_rows];
-    // a type gets columns when one of the first 20 rows has a p-value
-    let shown: Vec<usize> = (0..nt)
-        .filter(|&t| top.iter().take(20).any(|&i| !p[i * nt + t].is_nan()))
-        .collect();
     let n_const = if constellation.is_some() {
         nt.min(MAX_CONSTELLATION_COLUMNS)
     } else {
@@ -728,7 +841,7 @@ fn top_gene_table(
         json!({"label": "Gene", "sortable": true}),
         json!({"label": "Chromosome", "sortable": true}),
     ];
-    for &t in &shown {
+    for t in 0..nt {
         for prefix in ["p.nsubj.", "q.nsubj.", "nsubj."] {
             columns.push(json!({"label": type_label(prefix, &types[t], lesion_type_map), "sortable": true}));
         }
@@ -743,11 +856,11 @@ fn top_gene_table(
         .iter()
         .map(|&i| {
             let mut row = vec![json!({"value": genes[i].name}), json!({"value": genes[i].chrom})];
-            for &t in &shown {
+            for t in 0..nt {
                 let k = i * nt + t;
                 row.push(json!({"value": table_num(p[k])}));
                 row.push(json!({"value": table_num(q[k])}));
-                row.push(json!({"value": table_num(nsubj[k] as f64)}));
+                row.push(json!({"value": nsubj[k]}));
             }
             if let Some((cp, cq)) = constellation {
                 for k in 0..n_const {
@@ -759,19 +872,6 @@ fn top_gene_table(
         })
         .collect();
     json!({"columns": columns, "rows": rows})
-}
-
-fn peak_rss_mb() -> f64 {
-    unsafe {
-        let mut usage: libc::rusage = std::mem::zeroed();
-        libc::getrusage(libc::RUSAGE_SELF, &mut usage);
-        // ru_maxrss is bytes on macOS, kilobytes on Linux
-        if cfg!(target_os = "macos") {
-            usage.ru_maxrss as f64 / 1_048_576.0
-        } else {
-            usage.ru_maxrss as f64 / 1024.0
-        }
-    }
 }
 
 #[cfg(test)]
@@ -802,7 +902,7 @@ mod tests {
     #[test]
     fn bh_matches_known_values() {
         // statsmodels fdrcorrection([0.01, 0.04, 0.03, 0.5])[1]
-        let q = bh(&[0.01, 0.04, 0.03, 0.5]);
+        let q = bh_adjust(&[0.01, 0.04, 0.03, 0.5]);
         for (a, b) in q.iter().zip([0.04, 0.05333333333333334, 0.05333333333333334, 0.5]) {
             assert!((a - b).abs() < 1e-15);
         }
@@ -818,7 +918,7 @@ mod tests {
         };
         let lesion = |start, end| Lesion {
             subj: 0,
-            chrom: "chr1".into(),
+            chrom: 0,
             start,
             end,
             ty: 0,
@@ -837,6 +937,47 @@ mod tests {
     }
 
     #[test]
+    fn lesions_read_as_python_read_them() {
+        // a numeric sample or chromosome, a float or string coordinate, and a null chromosome, as astype() took them
+        let l: Lesions = serde_json::from_str(
+            r#"[[7, 1, 10.9, "20", "loss"], ["s2", "chr2", 5, 6, "gain"], ["s2", null, 1, 2, "loss"]]"#,
+        )
+        .unwrap();
+        assert_eq!(l.chroms, ["chr1", "chr2", "chrNone"]);
+        assert_eq!(l.types, ["gain", "loss"]);
+        assert_eq!(l.counts, [1, 2]);
+        let first = &l.list[0];
+        assert_eq!(
+            (first.subj, first.chrom, first.start, first.end, first.ty),
+            (0, 0, 10, 20, 1)
+        );
+        assert_eq!(l.list[1].subj, 1); // "7" sorts before "s2"
+        // a float name reads as Python's str() of it, so 7.0 and "7" are different samples, as they were in Python
+        let l: Lesions =
+            serde_json::from_str(r#"[[7.0, 1, 1, 2, "x"], ["7", 1, 1, 2, "x"], [7.0, 1, 3, 4, "x"]]"#).unwrap();
+        assert_eq!((l.list[0].subj, l.list[1].subj, l.list[2].subj), (1, 0, 1)); // "7" < "7.0"
+        // python3 -c 'print([str(x) for x in [7.0, 7.5, -0.0, 1e15, 1e16, 1.5e-5, 0.0001, 9.999e-5, 1.2345e100, 5e-324]])'
+        let py = [
+            "7.0",
+            "7.5",
+            "-0.0",
+            "1000000000000000.0",
+            "1e+16",
+            "1.5e-05",
+            "0.0001",
+            "9.999e-05",
+            "1.2345e+100",
+            "5e-324",
+        ];
+        let v = [7.0, 7.5, -0.0, 1e15, 1e16, 1.5e-5, 0.0001, 9.999e-5, 1.2345e100, 5e-324];
+        for (x, s) in v.iter().zip(py) {
+            assert_eq!(py_float_str(*x), s);
+        }
+        assert!(serde_json::from_str::<Lesions>(r#"[["s", "chr1", null, 2, "loss"]]"#).is_err());
+        assert!(serde_json::from_str::<Lesions>(r#"[["s", "chr1", "1.5", 2, "loss"]]"#).is_err());
+    }
+
+    #[test]
     fn subject_counts_and_pvalues_per_block() {
         let gene = |chrom: &str, start, end| Gene {
             name: String::new(),
@@ -844,59 +985,57 @@ mod tests {
             start,
             end,
         };
-        let lesion = |subj, chrom: &str, start, end, ty| Lesion {
-            subj,
-            chrom: chrom.into(),
-            start,
-            end,
-            ty,
-        };
-        // chrA is small, so (gene + lesion) / size >= APPROX_THRESHOLD and the exact path runs;
-        // chrB is large, so the approximation runs
+        // chrA is small, so a gain block there takes the exact path; the approximation runs for the mutation block on
+        // chrA, whose gene and lesion are small, and on the large chrB
         let genes = [
             gene("chrA", 100, 149),   // 50 bp
             gene("chrA", 500, 509),   // 10 bp
             gene("chrB", 1000, 1099), // 100 bp
         ];
-        let lesions = [
-            // type 0 on chrA: sample 0 hits gene 0 twice, sample 1 hits gene 1, sample 2 hits nothing
-            lesion(0, "chrA", 120, 130, 0), // 11 bp
-            lesion(0, "chrA", 140, 145, 0), // 6 bp
-            lesion(1, "chrA", 505, 505, 0), // 1 bp
-            lesion(2, "chrA", 300, 310, 0), // 11 bp
-            // type 1 on chrB: sample 0 hits gene 2 twice, sample 1 hits nothing
-            lesion(0, "chrB", 1050, 1050, 1), // 1 bp
-            lesion(0, "chrB", 1090, 1200, 1), // 111 bp
-            lesion(1, "chrB", 5000, 5009, 1), // 10 bp
-        ];
-        let nt = 2;
-        let nsubj = count_subjects(&genes, &lesions, nt);
-        // a sample with two lesions in one gene counts once
-        assert_eq!(nsubj, vec![1, 0, 1, 0, 0, 1]);
-
+        let lesions: Lesions = serde_json::from_str(
+            r#"[
+                ["a", "A", 120, 130, "gain"],
+                ["a", "chrA", 140, 145.7, "gain"],
+                [7, "chrA", 505, "505", "gain"],
+                ["c", "chrA", 300, 310, "gain"],
+                ["c", "chrA", 507, 507, "mutation"],
+                ["a", "chrB", 1050, 1050, "mutation"],
+                ["a", "chrB", 1090, 1200, "mutation"],
+                [7, "chrB", 5000, 5009, "mutation"]
+            ]"#,
+        )
+        .unwrap();
+        // gain: sample a hits gene 0 twice (11 and 6 bp), 7 hits gene 1 (1 bp), c hits nothing (11 bp).
+        // mutation: on chrA, c hits gene 1 (1 bp), in a block of its own although gain's last chromosome is also chrA;
+        // on chrB, a hits gene 2 twice (1 and 111 bp), 7 hits nothing (10 bp)
         let sizes = HashMap::from([("chrA".to_string(), 1000), ("chrB".to_string(), 1_000_000)]);
-        let p = gene_pvalues(&genes, &lesions, &nsubj, nt, &sizes);
+        let (nsubj, p) = gene_stats(&genes, &lesions, &sizes);
+        // a sample with two lesions in one gene counts once
+        assert_eq!(nsubj, vec![1, 0, 1, 1, 0, 1]);
+
         // exact: a sample's hit probability is 1 - prod over its lesions of (1 - (gene + lesion size) / chrom size)
         let none = |prs: &[f64]| prs.iter().map(|x| 1.0 - x).product::<f64>();
         let p0 = 1.0 - none(&[0.061, 0.056]) * none(&[0.051]) * none(&[0.061]);
         let p1 = 1.0 - none(&[0.021, 0.016]) * none(&[0.011]) * none(&[0.021]);
         // approximate: 1 - exp(-(lesion count * gene size + total lesion size) / chrom size)
         let p2 = 1.0 - (-(2.0 * 100.0 + 112.0) / 1e6_f64).exp() * (-(100.0 + 10.0) / 1e6_f64).exp();
-        let expected = [p0, 1.0, p1, 1.0, 1.0, p2];
+        let p3 = 1.0 - (-(10.0 + 1.0) / 1000_f64).exp();
+        let expected = [p0, 1.0, p1, p3, 1.0, p2];
         for (i, (a, b)) in p.iter().zip(expected).enumerate() {
             assert!((a - b).abs() < 1e-12, "p[{}] = {}, expected {}", i, a, b);
         }
 
         // q = min(1, 2 * mean p) * BH(p), per type
-        let q = q_values(&p, genes.len(), nt);
+        let q = q_values(&p, genes.len(), 2);
         let pi0 = (2.0 * (p0 + p1 + 1.0) / 3.0).min(1.0);
+        let pi1 = (2.0 * (1.0 + p3 + p2) / 3.0).min(1.0);
         let expected = [
             pi0 * (p0 * 1.5),
-            1.0,
+            pi1,
             pi0 * (p1 * 3.0).min(p0 * 1.5),
-            1.0,
+            pi1 * (p3 * 1.5),
             pi0,
-            p2 * 3.0,
+            pi1 * (p2 * 3.0).min(p3 * 1.5),
         ];
         for (i, (a, b)) in q.iter().zip(expected).enumerate() {
             assert!((a - b).abs() < 1e-12, "q[{}] = {}, expected {}", i, a, b);
@@ -909,6 +1048,27 @@ mod tests {
         let (p, _) = constellation(&[0.1, 0.1], 1, 2);
         assert!((p[0] - 0.19).abs() < 1e-12, "p1 = {}", p[0]);
         assert!((p[1] - 0.01).abs() < 1e-12, "p2 = {}", p[1]);
+    }
+
+    #[test]
+    fn top_gene_table_shows_exact_subject_counts() {
+        let genes = [Gene {
+            name: "G".into(),
+            chrom: "chr1".into(),
+            start: 1,
+            end: 2,
+        }];
+        let types = ["mutation".to_string()];
+        let label = BTreeMap::from([("mutation".to_string(), "Mutation".to_string())]);
+        let table = top_gene_table(&genes, &[0], 1, &types, &label, &[1234], &[1e-5], &[2e-5], &None);
+        let col = table["columns"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .position(|c| c["label"] == "Subject Count (Mutation)")
+            .unwrap();
+        // the count, not 1230 from the 3-significant-digit formatting of the p- and q-value cells
+        assert_eq!(table["rows"][0][col]["value"], json!(1234));
     }
 
     #[test]

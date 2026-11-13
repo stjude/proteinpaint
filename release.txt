@@ -1,1 +1,7 @@
+General:
+- GRIN2: a run now plans for 170 MB + 0.45 MB per 1,000 lesions (was 150 MB + 0.6 MB), since the statistics step now peaks at about a quarter of its earlier memory on large cohorts, so the per-run ceiling rises to 4,173,333 lesions
 
+Fixes:
+- GRIN2: the top-gene table shows exact subject counts, which were rounded to 3 significant digits above 999
+- GRIN2: when one lesion type's last chromosome with a hit was the next type's first, the second type's genes on it are tested instead of being left at p = 1
+- GRIN2: genes that share a name are counted separately, as in the GRIN2 R package, instead of all their hits going to one of them
