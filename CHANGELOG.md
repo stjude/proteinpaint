@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 General:
 - GRIN2: a run now plans for 150 MB + 0.6 MB per 1,000 lesions (was 380 MB + 2.6 MB), so the per-run ceiling rises from 641,538 to 3,163,333 lesions. features.grin2maxLesions (default 250,000) still sets the cap; raise it to analyze more samples of large cohorts
+- GRIN2: a run now plans for 170 MB + 0.45 MB per 1,000 lesions (was 150 MB + 0.6 MB), since the statistics step now peaks at about a quarter of its earlier memory on large cohorts, so the per-run ceiling rises to 4,173,333 lesions
 
 Features:
 - Allow selecting sample types in the genome browser, for every track of sample-level data
@@ -23,6 +24,9 @@ Fixes:
 - CERNO gene set enrichment no longer drops the gene sets that contain the top-ranked gene.
 - GRIN2: p-values and q-values below about 1e-305 are reported, and rank their gene, instead of being left blank
 - GRIN2: the constellation test (genes hit by 1, 2, ... lesion types) uses the order-statistic distribution of the GRIN2 R package, so its p-values are no longer too large
+- GRIN2: the top-gene table shows exact subject counts, which were rounded to 3 significant digits above 999
+- GRIN2: when one lesion type's last chromosome with a hit was the next type's first, the second type's genes on it are tested instead of being left at p = 1
+- GRIN2: genes that share a name are counted separately, as in the GRIN2 R package, instead of all their hits going to one of them
 
 
 ## 2.227.1
