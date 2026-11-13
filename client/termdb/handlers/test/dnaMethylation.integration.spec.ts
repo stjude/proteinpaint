@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { SearchHandler } from '../dnaMethylation.ts'
+import { SearchHandler, embedRegionPicker } from '../dnaMethylation.ts'
 import { hg38 } from '../../../test/testdata/genomes'
 import { sleep } from '../../../test/test.helpers.js'
 import { vocabInit } from '../../vocabulary'
@@ -12,6 +12,8 @@ Tests:
 	Coordinate search
 	Gene search
 	Gene search with navigation
+	embedRegionPicker() renders a block and submits the displayed region (as the mass omnisearch uses it)
+	embedRegionPicker() replaces a previous picker in the same holder
 */
 
 /**************
@@ -177,9 +179,62 @@ tape('Gene search with navigation', async test => {
 	test.end()
 })
 
+tape('embedRegionPicker() renders a block and submits the displayed region', async test => {
+	let region
+	const holder = getHolder()
+	await embedRegionPicker({
+		holder,
+		genomeObj: getGenome(),
+		chr: 'chr17',
+		start: 7661778,
+		stop: 7687537,
+		onSubmit: _region => {
+			region = _region
+		}
+	})
+	await sleep(100)
+	test.ok(holder.text().includes('Navigate genome browser to desired region'), 'should show the navigation note')
+	test.ok(holder.select('[data-testid="sjpp_block_svg"]').node(), 'should render block svg')
+	const submitBtn: any = holder.select('[data-testid="sjpp-dnaMethylation-submitDiv"]').select('button').node()
+	test.ok(submitBtn, 'should render the Submit Region button')
+	submitBtn.click()
+	await sleep(100)
+	test.deepEqual(region, { chr: 'chr17', start: 7661778, stop: 7687537 }, 'should submit the displayed region')
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('embedRegionPicker() replaces a previous picker in the same holder', async test => {
+	const holder = getHolder()
+	for (let i = 0; i < 2; i++) {
+		await embedRegionPicker({
+			holder,
+			genomeObj: getGenome(),
+			chr: 'chr17',
+			start: 7661778,
+			stop: 7687537,
+			onSubmit() {}
+		})
+	}
+	await sleep(100)
+	test.equal(
+		holder.selectAll('[data-testid="sjpp-dnaMethylation-submitDiv"]').size(),
+		1,
+		'should have one Submit button'
+	)
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 /*************************
  reusable helper functions
 **************************/
+
+function getGenome() {
+	const hg38_copy = structuredClone(hg38)
+	hg38_copy.hasSNP = false // to allow coordinate input
+	return hg38_copy
+}
 
 async function getVocabApi() {
 	const vocabApi = vocabInit({ state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } } })
@@ -195,12 +250,10 @@ function getHolder() {
 
 async function initializeSearchHandler(opts) {
 	const callback = opts.callback || (() => {})
-	const hg38_copy = structuredClone(hg38)
-	hg38_copy.hasSNP = false // to allow coordinate input
 	await handler.init({
 		holder: opts.holder,
 		app: { vocabApi },
-		genomeObj: hg38_copy,
+		genomeObj: getGenome(),
 		callback
 	})
 }

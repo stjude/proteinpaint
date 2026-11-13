@@ -60,43 +60,18 @@ export class SearchHandler {
 			// gene input
 			// embed block of gene locus to allow navigation to region of interest
 			const { chr, start, stop } = geneSearch
-			if (!chr || !Number.isInteger(start) || !Number.isInteger(stop))
-				throw new Error('unable to retrieve gene coordinate')
-
-			this.dom.blockDiv.selectAll('*').remove()
-			this.dom.blockDiv.style('display', 'block')
-			this.dom.blockDiv.append('div').style('opacity', 0.6).text('Navigate genome browser to desired region')
-
-			const arg: any = {
+			this.blockInstance = await embedRegionPicker({
 				holder: this.dom.blockDiv,
-				genome: this.opts.genomeObj, // genome obj
+				genomeObj: this.opts.genomeObj,
 				chr,
 				start,
 				stop,
-				tklst: [],
-				nobox: true,
-				width: 500,
-				hidegenelegend: true,
-				debugmode: this.opts.debug
-			}
-			first_genetrack_tolist(this.opts.genomeObj, arg.tklst)
-			const _ = await import('#src/block')
-			this.blockInstance = new _.Block(arg)
-
-			this.dom.submitBtn = this.dom.blockDiv
-				.append('div')
-				.attr('data-testid', 'sjpp-dnaMethylation-submitDiv')
-				.style('margin', '10px 0px')
-				.append('button')
-				.style('border', 'none')
-				.style('border-radius', '20px')
-				.style('padding', '10px 15px')
-				.text('Submit Region')
-				.on('click', async () => {
-					const { chr, start, stop } = this.blockInstance.rglst[0]
-					const term = this.makeTerm({ chr, start, stop })
+				debug: this.opts.debug,
+				onSubmit: async region => {
+					const term = this.makeTerm(region)
 					if (term) await this.callback(term)
-				})
+				}
+			})
 		} else if (geneSearch.chr && Number.isInteger(geneSearch.start) && Number.isInteger(geneSearch.stop)) {
 			// coordinate input
 			// string2pos() expands single positions to a 400bp window for the
@@ -116,12 +91,75 @@ export class SearchHandler {
 	}
 
 	makeTerm(opts) {
-		const termSampleTypes = getTermSampleTypes(this.sampleTypeSelect, this.query, this.app.vocabApi.termdbConfig)
-		if (!termSampleTypes) return
-		return makeDNAMethRegionTerm(opts, this.app.vocabApi, termSampleTypes)
+		return makeMethylationRegionTerm(this.sampleTypeSelect, this.app.vocabApi, opts)
 	}
 
 	get query() {
 		return this.app.vocabApi.termdbConfig?.queries.dnaMethylation
 	}
+}
+
+/** Embed a genome browser of a locus into `holder` so the user can navigate to the region of interest, with a
+ * "Submit Region" button. On submit, `onSubmit` receives the region the browser is showing. Shared by this
+ * search handler and the mass omnisearch (client/mass/chat/handlers/gene.ts). Returns the Block instance. */
+export async function embedRegionPicker(opts: {
+	holder: any
+	genomeObj: any
+	chr: string
+	start: number
+	stop: number
+	onSubmit: (region: { chr: string; start: number; stop: number }) => void | Promise<void>
+	debug?: boolean
+}) {
+	const { holder, genomeObj, chr, start, stop } = opts
+	if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('unable to retrieve gene coordinate')
+
+	holder.selectAll('*').remove()
+	holder.style('display', 'block')
+	holder.append('div').style('opacity', 0.6).text('Navigate genome browser to desired region')
+
+	const arg: any = {
+		holder,
+		genome: genomeObj, // genome obj
+		chr,
+		start,
+		stop,
+		tklst: [],
+		nobox: true,
+		width: 500,
+		hidegenelegend: true,
+		debugmode: opts.debug
+	}
+	first_genetrack_tolist(genomeObj, arg.tklst)
+	const _ = await import('#src/block')
+	const blockInstance = new _.Block(arg)
+
+	holder
+		.append('div')
+		.attr('data-testid', 'sjpp-dnaMethylation-submitDiv')
+		.style('margin', '10px 0px')
+		.append('button')
+		.style('border', 'none')
+		.style('border-radius', '20px')
+		.style('padding', '10px 15px')
+		.text('Submit Region')
+		.on('click', async () => {
+			const { chr, start, stop } = blockInstance.rglst[0]
+			await opts.onSubmit({ chr, start, stop })
+		})
+
+	return blockInstance
+}
+
+/** Build a region-based dnaMethylation term from `region` and the sample types chosen in `sampleTypeSelect`.
+ * Returns undefined when the sample type selection is not valid yet (the select reports why). */
+export function makeMethylationRegionTerm(
+	sampleTypeSelect: any,
+	vocabApi: any,
+	region: { chr: string; start: number; stop: number }
+) {
+	const query = vocabApi.termdbConfig?.queries.dnaMethylation
+	const termSampleTypes = getTermSampleTypes(sampleTypeSelect, query, vocabApi.termdbConfig)
+	if (!termSampleTypes) return
+	return makeDNAMethRegionTerm(region, vocabApi, termSampleTypes)
 }

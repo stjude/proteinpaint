@@ -75,6 +75,20 @@ export interface SampleMatch {
 	wsimages?: boolean
 }
 
+/** Mass omnisearch request fields beyond the genome/dslabel/prompt (see runOmnisearch in server/src/chat/search.ts) */
+export interface OmnisearchRequest {
+	/** The result kinds to search, named by their key in OmnisearchResult. When omitted the server searches only
+	 * dictionary terms and genes; samples (an all-samples scan) and a coordinate are searched only when listed. */
+	include?: OmnisearchResultKey[]
+	/** "chr:start-stop" spellings of a typed genomic region; the server resolves the first valid one when
+	 * 'coord' is included */
+	coordCandidates?: string[]
+}
+
+/** The fields of OmnisearchResult that hold matches (everything but its metadata). These name the result
+ * kinds: the `include` list of a request, and the key of a client search result handler. */
+export type OmnisearchResultKey = Exclude<keyof OmnisearchResult, 'totals' | 'error'>
+
 /** Result of the mass omnisearch: matched dictionary terms and matched genes, each carrying its own
  * available gene data types so the client can offer the appropriate per-gene action buttons. */
 export interface OmnisearchResult {

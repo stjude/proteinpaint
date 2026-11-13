@@ -340,7 +340,8 @@ function baseFor(embedder: string) {
 function omnisearchBody(embedder: string) {
 	// the prompt matches several TermdbTest sample names; it is sent as a JSON string, since a numeric-looking
 	// URL query value would be parsed as a number and not be used as a search prompt
-	return { genome, dslabel, embedder, omnisearch: true, prompt: '12' }
+	// samples are searched only when listed in `include`; without it the "denied" checks would pass vacuously
+	return { genome, dslabel, embedder, omnisearch: true, prompt: '12', include: ['samples'] }
 }
 
 function loginPayload(overrides: any = {}) {
