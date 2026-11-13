@@ -53,8 +53,6 @@ export function renderTk(data, tk, block) {
 		}
 		if (tk.rows.jug.yAxisKey == 'medianReadCount' && !Number.isFinite(data.maxReadCount))
 			throw new Error('data.maxReadCount is not number')
-		// kept for redraws without data, e.g. changing track height or log scale in the config menu
-		tk.maxReadCount = data.maxReadCount
 		if (rawdata2track(data.junctions, tk, block)) {
 			// none in view range, e.g. custom junctions after navigating away from them
 			tk.data = []
@@ -138,19 +136,14 @@ export function renderTk(data, tk, block) {
 		tk.maxradius = maxradius
 	}
 
-	// y position, by median read count for each junction
-	const maxmedian = tk.data.reduce((c, j) => Math.max(c, j.medianReadCount), 0)
-
-	/*
-	essential to use tk.maxReadCount as yscale max
-	this may leave some white space above the disks (median positioned)
-	but will allow the hover boxplot to fully show
-	*/
+	/* the top of the read count axis is the highest p95 of the junctions in view, so that the hover boxplot,
+	which spans p5 to p95, always fits; for a junction without a boxplot, e.g. of a single sample, its median */
 	tk.rows.jug.yscale =
 		tk.rows.jug.yAxisKey == 'medianReadCount'
-			? (tk.yscaleUseLog ? scaleLog() : scaleLinear())
-					.domain([tk.readcountCutoff || 1, tk.maxReadCount])
-					.range([tk.rows.jug.axisheight, 0])
+			? (tk.yscaleUseLog ? scaleLog() : scaleLinear()).domain([
+					tk.readcountCutoff || 1,
+					tk.data.reduce((max, j) => Math.max(max, j.readcountBoxplot?.[4] ?? j.medianReadCount), 0)
+			  ])
 			: scaleLinear()
 					.domain([
 						0,
@@ -160,7 +153,7 @@ export function renderTk(data, tk, block) {
 						)
 					])
 					.nice()
-					.range([tk.rows.jug.axisheight, 0])
+	tk.rows.jug.yscale.range([tk.rows.jug.axisheight, getYRangeTop(tk)])
 
 	// fill axis-y for those junction without previous axisy
 	for (const j of tk.data) {
@@ -196,8 +189,11 @@ export function renderTk(data, tk, block) {
 			.attr('stroke', '#858585')
 			.attr('stroke-opacity', 0.2)
 			.attr('shape-rendering', 'crispEdges')
+		const [minv, maxv] = tk.rows.jug.yscale.domain()
+		// from the first power of 10 above the bottom of the axis, as one below it would be drawn under the axis
 		let v = 10
-		while (tk.rows.jug.yAxisKey == 'medianReadCount' && v <= tk.maxReadCount) {
+		while (v <= minv) v *= 10
+		while (tk.rows.jug.yAxisKey == 'medianReadCount' && v <= maxv) {
 			// order of magnitude line
 			mg.append('line')
 				.attr('x1', 0)
@@ -374,15 +370,16 @@ jug2.filter(function(d){return d.rimwidth>0})
 				.attr('text-anchor', 'middle')
 				.attr('transform', `translate(-8, ${tk.rows.jug.axisheight / 2}) rotate(-90)`)
 				.text(yTitle)
+		const tickCount = tk.rows.jug.yAxisKey ? Math.floor(tk.rows.jug.axisheight / 20) : 0
+		const yAxis = axisRight()
+			.scale(tk.rows.jug.yscale)
+			.ticks(tickCount, tk.rows.jug.yAxisKey == 'medianReadCount' ? '.0f' : undefined)
+		/* read counts are integers: of a small range, the ticks are not, and the '.0f' labels would repeat,
+		e.g. 1, 1.5, 2 as 1, 2, 2. the format is kept for the log scale to leave out labels of crowded ticks */
+		if (tk.rows.jug.yAxisKey == 'medianReadCount')
+			yAxis.tickValues(tk.rows.jug.yscale.ticks(tickCount).filter(Number.isInteger))
 		axisstyle({
-			axis: tk.rows.jug.axis.transition().call(
-				axisRight()
-					.scale(tk.rows.jug.yscale)
-					.ticks(
-						tk.rows.jug.yAxisKey ? Math.floor(tk.rows.jug.axisheight / 20) : 0,
-						tk.rows.jug.yAxisKey == 'medianReadCount' ? '.0f' : undefined
-					)
-			),
+			axis: tk.rows.jug.axis.transition().call(yAxis),
 			color: 'black',
 			showline: true
 		})
@@ -591,6 +588,14 @@ function getYDomainMax(yAxisKey, values) {
 	return yAxisKey == 'absDeltaPsi' ? max || 1 : Math.max(1, max)
 }
 
+/* top of the y range: a disc is centered at its value, so a disc less than its radius from the top of the axis
+would go above it; lower the top by the largest radius of those, or 0 for none. needs the domain of
+tk.rows.jug.yscale, and j.radius2 */
+function getYRangeTop(tk) {
+	const y = tk.rows.jug.yscale.range([tk.rows.jug.axisheight, 0])
+	return tk.data.reduce((top, j) => (y(yValue(j, tk)) < j.radius2 ? Math.max(top, j.radius2) : top), 0)
+}
+
 function setColor(tk) {
 	for (const j of tk.data) {
 		// remove prior color, as color may be reassigned by switching infoFilter and then calling renderTk()
@@ -777,7 +782,8 @@ function mouseoverBoxplot(j, tk) {
 	const p95 = tk.rows.jug.yscale(j.readcountBoxplot[4])
 	const w = 10
 	tk.pica.g.selectAll('*').remove()
-	tk.pica.g.attr('transform', 'translate(' + j.x + ',' + p50 + ')')
+	// tk.pica.g is not in the junctions' g, which renderHeatmap() moves down by the height of the heatmap
+	tk.pica.g.attr('transform', 'translate(' + j.x + ',' + (locusHeatmapHeight(tk) + p50) + ')')
 	const g = tk.pica.g.append('g').attr('transform', 'translate(' + (-5 - w - j.radius2) + ',0)')
 	// v line
 	g.append('line')
