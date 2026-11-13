@@ -10,6 +10,7 @@ import tape from 'tape'
 import Database from 'better-sqlite3'
 import { sql, guardDb } from '../sql.ts'
 import { getFilterCTEs } from '../termdb.filter.js'
+import { get_samples } from '../termdb.sql.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
 
@@ -132,6 +133,62 @@ tape('filter sample mapping: maps both directions and preserves unmapped samples
 				`${id}: ${mapping} targeting ${targetTypes}`
 			)
 		}
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
+tape('get_samples resolves sample mapping for filter-only SQL callers', async t => {
+	const connection = guardDb(new Database(':memory:'), 'off')
+	connection.exec(`
+		CREATE TABLE sampleidmap (id INTEGER, name TEXT, sample_type INTEGER);
+		CREATE TABLE sample_ancestry (sample_id INTEGER, ancestor_id INTEGER);
+		CREATE TABLE anno_categorical (sample INTEGER, term_id TEXT, value TEXT);
+		INSERT INTO sampleidmap VALUES (10, 'P1', 1), (20, 'S1', 2), (30, 'S2', 2);
+		INSERT INTO sample_ancestry VALUES (20, 10), (30, 10);
+		INSERT INTO anno_categorical VALUES (10, 'parent', 'P'), (20, 'child', 'C');
+	`)
+	const ds = {
+		cohort: {
+			db: { connection },
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: { 1: { parent_id: null }, 2: { parent_id: 1 } }
+			}
+		}
+	}
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: { id: 'parent', name: 'Parent', type: 'categorical', sampleTypes: [1] },
+					values: [{ key: 'P' }]
+				}
+			},
+			{
+				type: 'tvs',
+				tvs: {
+					term: { id: 'child', name: 'Child', type: 'categorical', sampleTypes: [2] },
+					values: [{ key: 'C' }]
+				}
+			}
+		]
+	}
+	const q = { filter }
+	try {
+		const samples = await get_samples(q, ds)
+		t.deepEqual(
+			samples.map(sample => sample.id),
+			[20],
+			'intersects parent and child filters at child level'
+		)
+		t.equal(q.sampleMapping, 'parentToChildren', 'infers parent-to-child mapping')
+		t.deepEqual(q.sampleTypes, [2], 'targets the child sample type')
 	} finally {
 		connection.close()
 	}

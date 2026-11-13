@@ -14,23 +14,11 @@ import { resolveSampleMapping } from './termdb.matrix.js'
 import { sql } from './sql.ts'
 import { parseJsonParam } from './routes/common.ts'
 
-/* a ds with sample ancestry may annotate terms at different levels (e.g. patient vs sample).
-CTEs of parent-level filter terms must be mapped down to leaf-level samples, otherwise
-intersecting them with child-level CTEs (e.g. a ds access-control filter on a sample-level
-term) matches nothing and silently yields an empty result. detect from the filter contents
-when the caller did not set q.sampleMapping */
-function mayDetectSampleLevels(q, ds) {
-	if (q.sampleMapping !== undefined) {
+/* getData() normally resolves sample mapping before building filters. SQL callers
+that do not go through getData() still need this resolution for datasets with sample ancestry. */
+function mayResolveSampleMapping(q, ds) {
+	if (ds.cohort?.termdb?.hasSampleAncestry && q.sampleMapping === undefined) {
 		resolveSampleMapping(q, ds)
-		return
-	}
-	if (!ds.cohort?.termdb?.hasSampleAncestry) return
-	if (!q.filter?.lst?.length) return
-	try {
-		resolveSampleMapping(q, ds)
-	} catch (e) {
-		// fall back to no mapping (previous behavior) on filters whose sample types cannot be detected
-		console.warn('mayDetectSampleLevels():', e.message || e)
 	}
 }
 /*
@@ -105,7 +93,7 @@ export async function get_samples(q, ds, canDisplay = false) {
 	q.__protected__.ignoreTermIds is modified or if routeTwLst can be supplied at this point
 	*/
 
-	mayDetectSampleLevels(q, ds)
+	mayResolveSampleMapping(q, ds)
 	const filter = await getFilterCTEs(q.filter, ds, q.sampleMapping, q.sampleTypes) // if q.filter is blank, it returns null
 	const query = filter
 		? sql`WITH ${filter.filters} SELECT sample as id, name FROM ${sql.id(
@@ -200,7 +188,7 @@ export async function get_samplecount(q, ds) {
 	}
 
 	const fq = { filter: j }
-	mayDetectSampleLevels(fq, ds)
+	mayResolveSampleMapping(fq, ds)
 	const filter = await getFilterCTEs(j, ds, fq.sampleMapping, fq.sampleTypes)
 	let statement, row
 	let sample_type

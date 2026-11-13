@@ -14,7 +14,6 @@ import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
 import { getH5samples } from './utils/h5samples.ts'
 import { withholdSampleNames, samplelstFilter } from './utils/sampleGroups.ts'
-import { getTermSampleTypeIds } from './utils/sampleTypes.ts'
 import { compute_mclass } from './vcf.mclass.js'
 import serverconfig, { mergeDsFeatures } from './serverconfig.js'
 import {
@@ -576,8 +575,8 @@ async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
 	// makes sense to call barchart function as it adds counting logic over getData output
 
 	let filter = combinePPfilterAndTid2value(q, ds) // optional filter, based on optional parameters
-	/* the sample types the track reads (see mapParent2ChildrenWithSampleTypes() in mds3.load.js), when they leave some
-	of the dataset's out: the totals then count the samples of those types only, as the counts of mutated samples do */
+	/* the sample types the track reads, when they leave some of the dataset's out: the totals then count the samples
+	of those types only, as the counts of mutated samples do */
 	const sampleTypes = q.sampleTypes?.map(Number)
 	if (ds.sampleId2Type && sampleTypes?.length && getDefaultSampleTypes(ds).some(t => !sampleTypes.includes(t))) {
 		const list = [...ds.sampleId2Type].filter(([, t]) => sampleTypes.includes(t)).map(([sampleId]) => ({ sampleId }))
