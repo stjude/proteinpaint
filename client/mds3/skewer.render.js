@@ -10,7 +10,8 @@ import {
 	getMlstJoinLabel,
 	DISC_G_PREFIX,
 	MCLASSES_ATTRIBUTE,
-	getMClassesLabel
+	getMClassesLabel,
+	testIdPrefix
 } from './skewer.render.shapes.ts'
 import { shapes } from '#dom/shapes'
 
@@ -127,7 +128,7 @@ export function skewer_make(tk, block) {
 		.append('g')
 		.attr('class', 'sja_skg')
 		.attr('extended', d => d.showmode)
-		.attr('data-testid', d => 'sjpp-mds3tk-skewer-' + [...new Set(d.mlst.map(mItem => mItem.mname))].join('-'))
+		.attr('data-testid', d => testIdPrefix + 'skewer-' + [...new Set(d.mlst.map(mItem => mItem.mname))].join('-'))
 		.attr('mclasses', d => [...new Set(d.mlst.map(mItem => mItem.class))].join('-'))
 		.each(function (d) {
 			d.skewer = this
@@ -194,7 +195,7 @@ export function skewer_make(tk, block) {
 		.append('text')
 		.text(d => d.occurrence)
 		.attr('class', 'sja_aa_discnum')
-		.attr('data-testid', d => `sjpp-mds3tk-skewer-discnum-${d.mlst[0].mname}`)
+		.attr('data-testid', d => `${testIdPrefix}skewer-discnum-${d.mlst[0].mname}`)
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('stroke-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('dominant-baseline', d => (tk.shapes ? setNumBaseline(d.shape, tk.skewer.pointup) : ''))
@@ -285,7 +286,7 @@ export function skewer_make(tk, block) {
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
 		.classed('sja_aa_disckick', true)
 		.attr('fill', 'white')
-		.attr('data-testid', d => `sjpp-mds3tk-skewer-disc-kick-${d.mlst[0].mname}`)
+		.attr('data-testid', d => `${testIdPrefix}skewer-disc-kick-${d.mlst[0].mname}`)
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
 		.on('mousedown', event => {

@@ -106,7 +106,7 @@ function create_mclass(tk, block) {
 	const headerText = block.mclassOverride?.className || 'Mutation'
 	tk.legend.mclass.row
 		.append('td')
-		.attr('data-testid', 'sjpp-mds3tk-legend-header-mclass')
+		.attr('data-testid', testIdPrefix + 'legend-header-mclass')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
 		.text(headerText)
@@ -224,7 +224,7 @@ function may_create_infoFields(tk) {
 		// column 1 <td>: info field name
 		row
 			.append('td')
-			.attr('data-testid', `sjpp-mds3tk-legend-header-bcfinfo-${key}`)
+			.attr('data-testid', `${testIdPrefix}legend-header-bcfinfo-${key}`)
 			.style('text-align', 'right')
 			.style('opacity', 0.7)
 			.text(headerText)
@@ -255,7 +255,7 @@ function may_create_formatFilter(tk) {
 		// column 1 <td>: format field name
 		row
 			.append('td')
-			.attr('data-testid', `sjpp-mds3tk-legend-header-bcfformat-${key}`)
+			.attr('data-testid', `${testIdPrefix}legend-header-bcfformat-${key}`)
 			.style('text-align', 'right')
 			.style('opacity', 0.7)
 			.text(headerText)
@@ -656,7 +656,7 @@ function update_mclass(tk) {
 			.append('div')
 			.style('display', 'inline-block')
 			.attr('class', 'sja_clb')
-			.attr('data-testid', 'sjpp-mds3tk-hidden-legenditemlabel')
+			.attr('data-testid', testIdPrefix + 'hidden-legenditemlabel')
 			.style('text-decoration', 'line-through')
 			.style('opacity', 0.7)
 			.text((c.count ? '(' + c.count + ') ' : '') + (Number.isInteger(c.k) ? dt2label[c.k] : mclass[c.k].label))
@@ -679,7 +679,7 @@ function may_create_skewerRim(tk, block) {
 
 	R.headerTd = R.row // name of rim legend row is set on the fly, allows to change data type for rim
 		.append('td')
-		.attr('data-testid', `sjpp-mds3tk-legend-header-skewerRim`)
+		.attr('data-testid', testIdPrefix + 'legend-header-skewerRim')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
 
@@ -726,7 +726,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-mds3tk-hide-${sk.rim1value}-option`)
+					.attr('data-testid', `${testIdPrefix}hide-${sk.rim1value}-option`)
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.rim1value)
@@ -747,7 +747,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', 'sjpp-mds3tk-hide-no-rim-option')
+					.attr('data-testid', testIdPrefix + 'hide-no-rim-option')
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.noRimValue)
@@ -768,7 +768,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-mds3tk-hide-${sk.rim2value}-option`)
+					.attr('data-testid', `${testIdPrefix}hide-${sk.rim2value}-option`)
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.rim2value)
@@ -818,7 +818,7 @@ function may_create_ld(tk, block) {
 	// contents are filled in dynamically
 	R.headerTd = R.row
 		.append('td')
-		.attr('data-testid', `sjpp-mds3tk-legend-header-ld`)
+		.attr('data-testid', testIdPrefix + 'legend-header-ld')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
 	R.holder = R.row.append('td').attr('data-testid', legendLabelHolderPrefix)
@@ -863,7 +863,7 @@ function may_create_cnv(tk, block) {
 	const headerText = 'CNV'
 	R.headerTd = R.row
 		.append('td')
-		.attr('data-testid', `sjpp-mds3tk-legend-header-cnv`)
+		.attr('data-testid', testIdPrefix + 'legend-header-cnv')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
 		.text(headerText)
@@ -915,7 +915,7 @@ function may_create_cnv(tk, block) {
 		})
 	} else {
 		// cnv data uses category but not numeric value; fill category legend based on returned data
-		R.cnvCategoryHolder = R.holder.append('span').attr('data-testid', 'sjpp-mds3tk-cnvlegend-categoryholder')
+		R.cnvCategoryHolder = R.holder.append('span').attr('data-testid', testIdPrefix + 'cnvlegend-categoryholder')
 	}
 
 	R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6) // indicator there's no cnv in the region
@@ -1103,13 +1103,13 @@ function createLegendTipMenu(opts, tk, elem) {
 					 * effect) is removed.
 					 */
 					.classed('sja_menuoption', true)
-					.attr('data-testid', 'sjpp-mds3tk-change-shape-option')
+					.attr('data-testid', testIdPrefix + 'change-shape-option')
 					.style('padding', '5px 10px')
 					.style('margin', '1px')
 					.style('border-radius', '0px')
 					.on('click', () => {
 						div.classed('sja_menuoption', false)
-						div.attr('data-testid', 'sjpp-mds3tk-shape-picker')
+						div.attr('data-testid', testIdPrefix + 'shape-picker')
 						div.style('background-color', 'white')
 						if (called == false) {
 							called = true
@@ -1124,7 +1124,7 @@ function createLegendTipMenu(opts, tk, elem) {
 				tk.legend.tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-mds3tk-legend-option-${opt.label.toLowerCase().replace(/\s/g, '-')}`)
+					.attr('data-testid', `${testIdPrefix}legend-option-${opt.label.toLowerCase().replace(/\s/g, '-')}`)
 					.style('border-radius', '0px')
 					.text(opt.label)
 					.on('click', () => {
@@ -1150,7 +1150,7 @@ export function printCategory({ holder, key, color, count, label, click, testid 
 		.style('display', 'inline-block')
 		.style('color', color)
 		.style('padding-left', '5px')
-		.attr('data-testid', testid || 'sjpp-mds3tk-legenditemlabel')
+		.attr('data-testid', testid || testIdPrefix + 'legenditemlabel')
 		.attr('__key__', key) // for testing
 		.text(label)
 }
