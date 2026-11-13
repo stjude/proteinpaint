@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.228.0
 
 General:
 - GRIN2: a run now plans for 150 MB + 0.6 MB per 1,000 lesions (was 380 MB + 2.6 MB), so the per-run ceiling rises from 641,538 to 3,163,333 lesions. features.grin2maxLesions (default 250,000) still sets the cap; raise it to analyze more samples of large cohorts
