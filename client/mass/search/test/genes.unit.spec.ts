@@ -49,7 +49,7 @@ const labelsFor = (h: GeneHandler, row: GeneRow) => h.categoriesFor(row).flatMap
 const empty = { dictionaryTerms: [], genes: [], samples: [] }
 
 tape('\n', t => {
-	t.comment('-***- mass/chat/handlers/genes -***-')
+	t.comment('-***- mass/search/handlers/genes -***-')
 	t.end()
 })
 

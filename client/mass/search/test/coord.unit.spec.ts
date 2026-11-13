@@ -1,5 +1,10 @@
 import tape from 'tape'
-import { SearchResultHandler as CoordHandler, includeResult, parseCoordCandidates, formatCoord } from '../handlers/coord.ts'
+import {
+	SearchResultHandler as CoordHandler,
+	includeResult,
+	parseCoordCandidates,
+	formatCoord
+} from '../handlers/coord.ts'
 
 /* Tests
 	parseCoordCandidates()
@@ -13,7 +18,7 @@ import { SearchResultHandler as CoordHandler, includeResult, parseCoordCandidate
 */
 
 tape('\n', t => {
-	t.comment('-***- mass/chat/handlers/coord -***-')
+	t.comment('-***- mass/search/handlers/coord -***-')
 	t.end()
 })
 

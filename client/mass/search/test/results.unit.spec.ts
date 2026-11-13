@@ -33,7 +33,7 @@ function fake(key: OmnisearchResultKey, rows: any[], opts: Partial<OmnisearchHan
 const data = (totals?: any): any => ({ dictionaryTerms: [], genes: [], samples: [], totals })
 
 tape('\n', t => {
-	t.comment('-***- mass/chat/results -***-')
+	t.comment('-***- mass/search/results -***-')
 	t.end()
 })
 

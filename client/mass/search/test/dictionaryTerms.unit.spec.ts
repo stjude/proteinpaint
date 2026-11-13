@@ -16,7 +16,7 @@ handler.init()
 const empty = { dictionaryTerms: [], genes: [], samples: [] }
 
 tape('\n', t => {
-	t.comment('-***- mass/chat/handlers/dictionaryTerms -***-')
+	t.comment('-***- mass/search/handlers/dictionaryTerms -***-')
 	t.end()
 })
 

@@ -1,4 +1,4 @@
-# mass/chat
+# mass/search
 
 The mass **SEARCH / CHAT** tab. It has two parts:
 
@@ -44,10 +44,10 @@ Decided once, in `init()`, from `termdbConfig` (each handler's `includeResult()`
 
 Unit specs (`test/*.unit.spec.ts`) cover the small functions: handler gating and rows, `planSearch`, the result list. They need no server. The integration spec calls the real route on TermdbTest.
 
-In the browser, open the unit test page with `dir=mass/chat&name=*`. From the command line, from `client/`:
+In the browser, open the unit test page with `dir=mass/search&name=*`. From the command line, from `client/`:
 
 ```bash
-npx tsx --conditions=sjpp/dev mass/chat/test/genes.unit.spec.ts
+npx tsx --conditions=sjpp/dev mass/search/test/genes.unit.spec.ts
 ```
 
 ## Not done yet

@@ -1,5 +1,10 @@
 import tape from 'tape'
-import { SearchResultHandler as SampleHandler, includeResult, SAMPLE_ACTIONS, type SampleRow } from '../handlers/samples.ts'
+import {
+	SearchResultHandler as SampleHandler,
+	includeResult,
+	SAMPLE_ACTIONS,
+	type SampleRow
+} from '../handlers/samples.ts'
 
 /* Tests
 	includeResult()
@@ -14,7 +19,7 @@ import { SearchResultHandler as SampleHandler, includeResult, SAMPLE_ACTIONS, ty
 */
 
 tape('\n', t => {
-	t.comment('-***- mass/chat/handlers/samples -***-')
+	t.comment('-***- mass/search/handlers/samples -***-')
 	t.end()
 })
 
