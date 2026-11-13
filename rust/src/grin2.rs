@@ -147,7 +147,14 @@ fn run(input: Input) -> Result<(), String> {
     genes.sort_by(|a, b| (&a.chrom, a.start, a.end).cmp(&(&b.chrom, b.start, b.end)));
 
     let (nsubj, p) = gene_stats(&genes, &input.lesion, &input.chromosomelist);
-    let Lesions { types, counts, .. } = input.lesion;
+    let Lesions {
+        list,
+        chroms,
+        types,
+        counts,
+    } = input.lesion;
+    // not needed past the statistics, so freed before the q-values and the output are built
+    drop((list, chroms));
     let nt = types.len();
     let g = genes.len();
     let q = q_values(&p, g, nt);
@@ -408,13 +415,26 @@ impl<'de> Deserialize<'de> for Text {
                 Ok(Text(v.to_string()))
             }
             fn visit_f64<E: de::Error>(self, v: f64) -> Result<Text, E> {
-                Ok(Text(v.to_string()))
+                Ok(Text(py_float_str(v)))
             }
             fn visit_unit<E: de::Error>(self) -> Result<Text, E> {
                 Ok(Text("None".into()))
             }
         }
         d.deserialize_any(V)
+    }
+}
+
+/// Python's str() of a float: Rust's {:?} has the same shortest digits, ".0" on whole numbers and switch to
+/// scientific notation (below 1e-4 or from 1e16), but writes the exponent as e16 or e-5 where Python writes e+16 or e-05
+fn py_float_str(v: f64) -> String {
+    let s = format!("{v:?}");
+    match s.split_once('e') {
+        Some((mantissa, exp)) => {
+            let exp: i32 = exp.parse().unwrap();
+            format!("{mantissa}e{}{:02}", if exp < 0 { '-' } else { '+' }, exp.abs())
+        }
+        None => s,
     }
 }
 
@@ -932,6 +952,27 @@ mod tests {
             (0, 0, 10, 20, 1)
         );
         assert_eq!(l.list[1].subj, 1); // "7" sorts before "s2"
+        // a float name reads as Python's str() of it, so 7.0 and "7" are different samples, as they were in Python
+        let l: Lesions =
+            serde_json::from_str(r#"[[7.0, 1, 1, 2, "x"], ["7", 1, 1, 2, "x"], [7.0, 1, 3, 4, "x"]]"#).unwrap();
+        assert_eq!((l.list[0].subj, l.list[1].subj, l.list[2].subj), (1, 0, 1)); // "7" < "7.0"
+        // python3 -c 'print([str(x) for x in [7.0, 7.5, -0.0, 1e15, 1e16, 1.5e-5, 0.0001, 9.999e-5, 1.2345e100, 5e-324]])'
+        let py = [
+            "7.0",
+            "7.5",
+            "-0.0",
+            "1000000000000000.0",
+            "1e+16",
+            "1.5e-05",
+            "0.0001",
+            "9.999e-05",
+            "1.2345e+100",
+            "5e-324",
+        ];
+        let v = [7.0, 7.5, -0.0, 1e15, 1e16, 1.5e-5, 0.0001, 9.999e-5, 1.2345e100, 5e-324];
+        for (x, s) in v.iter().zip(py) {
+            assert_eq!(py_float_str(*x), s);
+        }
         assert!(serde_json::from_str::<Lesions>(r#"[["s", "chr1", null, 2, "loss"]]"#).is_err());
         assert!(serde_json::from_str::<Lesions>(r#"[["s", "chr1", "1.5", 2, "loss"]]"#).is_err());
     }
