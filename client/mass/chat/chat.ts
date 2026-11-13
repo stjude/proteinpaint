@@ -35,6 +35,8 @@ class MassAiChatBot implements RxComponent {
 	launcher!: Launcher
 	/** aborts the in-flight omnisearch request when a newer search, or a clear, supersedes it */
 	private searchAbort?: AbortController
+	/** debounced search-as-you-type; kept on the component so main() can cancel a queued search */
+	private debouncedSearch!: ((plan: SearchPlan) => void) & { clear: () => void }
 
 	constructor(opts: any) {
 		this.type = MassAiChatBot.type
@@ -107,7 +109,7 @@ class MassAiChatBot implements RxComponent {
 			getActiveTab: () => this.state?.nav?.activeTab
 		})
 
-		const debouncedSearch = debounce((plan: SearchPlan) => void this.runSearch(plan), SEARCH_DEBOUNCE_MS)
+		this.debouncedSearch = debounce((plan: SearchPlan) => void this.runSearch(plan), SEARCH_DEBOUNCE_MS)
 
 		inputSel
 			// search-as-you-type: debounced; never searches samples
@@ -115,19 +117,19 @@ class MassAiChatBot implements RxComponent {
 				if (keyupEnter(event)) return
 				const plan = planSearch(this.handlers, (event.target as HTMLInputElement).value, { enter: false })
 				if (!plan) {
-					debouncedSearch.clear()
+					this.debouncedSearch.clear()
 					this.searchAbort?.abort() // drop any in-flight request for text that is no longer there
 					this.popup.hide()
 					return
 				}
-				debouncedSearch(plan)
+				this.debouncedSearch(plan)
 			})
 			.on('keyup.submit', async (event: KeyboardEvent) => {
 				if (!keyupEnter(event)) return
 				const value = (event.target as HTMLInputElement).value
 				if (this.isChat) return void (await this.submitChat(value.trim()))
 				// search-only: Enter runs the full search immediately, including samples
-				debouncedSearch.clear()
+				this.debouncedSearch.clear()
 				const plan = planSearch(this.handlers, value, { enter: true })
 				if (plan) await this.runSearch(plan)
 				else this.popup.hide()
@@ -266,8 +268,11 @@ class MassAiChatBot implements RxComponent {
 
 	main() {
 		// A hidden subheader means this tab is not visible: don't focus the input (avoids accidental typing)
-		// and dismiss the results popup so it doesn't linger over another tab's content.
+		// and dismiss the results popup so it doesn't linger over another tab's content. Also cancel any
+		// queued or in-flight search so a late result can't reopen the popup over the other tab.
 		if (this.opts.subheader.style('display') == 'none') {
+			this.debouncedSearch.clear()
+			this.searchAbort?.abort()
 			this.dom.inputNode.blur()
 			this.popup.hide()
 			return

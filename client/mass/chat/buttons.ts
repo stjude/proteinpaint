@@ -9,7 +9,8 @@ export function addActionButton(
 	opts: { label: string; testid: string; onClick: (button: HTMLElement) => Promise<void> }
 ) {
 	return parent
-		.append('span')
+		.append('button')
+		.attr('type', 'button')
 		.attr('class', 'sja_menuoption')
 		.attr('data-testid', opts.testid)
 		.style('display', 'inline-block')
