@@ -1051,6 +1051,27 @@ mod tests {
     }
 
     #[test]
+    fn top_gene_table_shows_exact_subject_counts() {
+        let genes = [Gene {
+            name: "G".into(),
+            chrom: "chr1".into(),
+            start: 1,
+            end: 2,
+        }];
+        let types = ["mutation".to_string()];
+        let label = BTreeMap::from([("mutation".to_string(), "Mutation".to_string())]);
+        let table = top_gene_table(&genes, &[0], 1, &types, &label, &[1234], &[1e-5], &[2e-5], &None);
+        let col = table["columns"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .position(|c| c["label"] == "Subject Count (Mutation)")
+            .unwrap();
+        // the count, not 1230 from the 3-significant-digit formatting of the p- and q-value cells
+        assert_eq!(table["rows"][0][col]["value"], json!(1234));
+    }
+
+    #[test]
     fn sig_round_matches_numpy() {
         // numpy: [np.round(x, 3 - int(np.floor(np.log10(abs(x))))) for x in ...]
         assert_eq!(sig_round(0.000123456), 0.0001235);
