@@ -65,7 +65,7 @@ export async function getPlotConfig(opts = {}, app) {
 				sortSamplesBy: 'a',
 				sortPriority: undefined, // will be filled-in
 				sortBySampleAncestry: app.vocabApi.termdbConfig.hasSampleAncestry ? 'last' : false, // indicates sorting priority by sample ancestry
-				mapChildren2Parent: false, // for a dataset with sample ancestry, show one column per parent sample (e.g. patient)
+				sampleMapping: app.vocabApi.termdbConfig.hasSampleAncestry ? 'parentToChildren' : null,
 				// sortByMutation: 'consequence', computed
 				// sortByCNV: true, computed
 				//sortOptions: getSortOptions(app.vocabApi.termdbConfig, controlLabels),
@@ -210,9 +210,10 @@ export async function getPlotConfig(opts = {}, app) {
 	copyMerge(config, opts)
 	const m = config.settings.matrix
 	m.sortOptions = getSortOptions(app.vocabApi.termdbConfig, controlLabels, m)
-	// support deprecated setting name from a saved session or url
+	// support legacy m.mapChildren2Root
+	const hasSampleMapping = Object.hasOwn(opts.settings?.matrix || {}, 'sampleMapping')
 	if ('mapChildren2Root' in m) {
-		if (m.mapChildren2Root) m.mapChildren2Parent = true
+		if (m.mapChildren2Root && !hasSampleMapping) m.sampleMapping = 'childrenToParent'
 		delete m.mapChildren2Root
 	}
 	// harcode these overrides for now
