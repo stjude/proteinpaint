@@ -10,7 +10,7 @@ import { init as dsdataInit } from '../routes/dsdata.ts'
 import bamRequestClosure from '../bam.js'
 import { mdsjunction_request_closure } from '../mds.junction.js'
 import { handle_mdssurvivalplot } from '../km.js'
-import { handle_request_closure as termdbClosure } from '../termdb.js'
+import { getMds3LDdata } from '../routes/termdb.mds3.ld.ts'
 import { getTestRoutes } from './testRoutes.js'
 import { readBcfRecords } from '../bcf.ts'
 
@@ -241,22 +241,25 @@ tape('/mdssurvivalplot', async test => {
 	test.end()
 })
 
-tape('/termdb?getLDdata', async test => {
+tape('termdb/mds3/getLDdata rejects chromosome arguments that look like options', async test => {
 	const genome = getGenome()
-	genome.datasets.testds = {
-		cohort: { termdb: {} },
-		queries: { ld: { tracks: [{ name: 'ld', file: 'files/hg38/TermdbTest/TermdbTest_ITD.gz' }] } }
-	}
-	const handler = termdbClosure({ hg38: genome })
+	const ds = { queries: { ld: { tracks: [{ name: 'ld', file: 'files/hg38/TermdbTest/TermdbTest_ITD.gz' }] } } }
 	for (const chr of chrAttacks) {
-		const r = await send(handler, {
-			genome: 'hg38',
-			dslabel: 'testds',
-			getLDdata: 1,
-			ldtkname: 'ld',
-			m: { chr, pos: 1, ref: 'A', alt: 'T' }
-		})
-		test.equal(r?.error, 'invalid q.m.chr/pos', `m.chr should reject chr=${chr}`)
+		try {
+			await getMds3LDdata(
+				{
+					genome: 'hg38',
+					dslabel: 'testds',
+					ldtkname: 'ld',
+					m: { chr, pos: 1, ref: 'A', alt: 'T' }
+				},
+				ds,
+				genome
+			)
+			test.fail(`m.chr should reject chr=${chr}`)
+		} catch (e) {
+			test.equal(String(e), 'invalid q.m.chr/pos', `m.chr should reject chr=${chr}`)
+		}
 	}
 	test.end()
 })

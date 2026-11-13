@@ -4,6 +4,7 @@ import { first_genetrack_tolist } from '#common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
 import { sayerror, axisstyle, drawBoxplot, makeSsmLink, ColorScale, Menu } from '#dom'
 import { getEstimateMsg, refGrp_NA } from './estimateMsg'
+import { testIdPrefix } from 'mds3/skewer.render.shapes'
 
 /*************
 can dynamically add following attributes
@@ -1734,7 +1735,10 @@ async function mayCheckLD(m, input, self) {
 }
 
 export function showLDlegend(div, colorScale) {
-	const colorbardiv = div.append('span').style('margin-left', '10px')
+	const colorbardiv = div
+		.append('span')
+		.style('margin-left', '10px')
+		.attr('data-testid', testIdPrefix + 'ld-colorbar')
 	const colorlst: string[] = []
 	for (let i = 0; i <= 1; i += 0.1) {
 		colorlst.push(colorScale(i))

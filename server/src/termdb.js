@@ -1,9 +1,6 @@
-import path from 'path'
 import * as termdbsql from './termdb.sql.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
-import { readTabixLines } from './utils.js'
-import { string2pos } from '#shared/common.js'
 import { authApi } from './auth.js'
 import { searchSNP } from '#routes/snp.ts'
 import { parseJsonParam } from '#routes/common.ts'
@@ -11,7 +8,6 @@ import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
 import { uiLabel } from '#shared'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
-import serverconfig from './serverconfig.js'
 import { filterTerms } from './termdb.server.init.ts'
 import { get_matrix } from './termdb.get_matrix.js'
 import { maySetMapParent2Children } from './termdb.matrix.js'
@@ -50,7 +46,6 @@ export function handle_request_closure(genomes) {
 			if (q.getsamples) return await trigger_getsamples(q, req, res, ds)
 			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return res.send(ds?.queries?.snvindel?.variant_filter || {})
-			if (q.getLDdata) return await LDoverlay(q, ds, res, genome)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) q.for = 'scatter'
 
@@ -364,48 +359,4 @@ export async function get_AllSamplesByName(q, req, res, ds) {
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
-}
-
-async function LDoverlay(q, ds, res, genome) {
-	if (!q.ldtkname) throw '.ldtkname missing'
-	if (!ds.queries?.ld?.tracks) throw 'no ld tk'
-	const tk = ds.queries.ld.tracks.find(i => i.name == q.ldtkname)
-	if (!tk) throw 'unknown ld tk'
-	if (typeof q.m != 'object') throw 'q.m{} not object'
-	// validated chr/pos from string2pos() are used below instead of raw q.m.chr/pos
-	if (!Number.isInteger(q.m.pos)) throw 'invalid q.m.chr/pos'
-	const p = string2pos(q.m.chr + ':' + q.m.pos, genome)
-	if (!p?.actualposition) throw 'invalid q.m.chr/pos'
-	const chr = p.chr,
-		pos = p.actualposition.position
-	if (!q.m.ref || !q.m.alt) throw 'q.m{} invalid alleles'
-	const thisalleles = q.m.ref + '.' + q.m.alt
-	const region = { chr: tk.nochr ? chr.replace('chr', '') : chr, start: pos, stop: pos + 1 }
-	const lst = []
-	await readTabixLines({
-		file: path.join(serverconfig.tpmasterdir, tk.file),
-		regions: [region],
-		callback: line => {
-			const l = line.split('\t')
-			const start = Number.parseInt(l[1])
-			const stop = Number.parseInt(l[2])
-			const alleles1 = l[3]
-			const alleles2 = l[4]
-			const r2 = Number.parseFloat(l[5])
-			if (start == pos && alleles1 == thisalleles) {
-				lst.push({
-					pos: stop,
-					alleles: alleles2,
-					r2
-				})
-			} else if (stop == pos && alleles2 == thisalleles) {
-				lst.push({
-					pos: start,
-					alleles: alleles1,
-					r2
-				})
-			}
-		}
-	})
-	res.send({ lst })
 }

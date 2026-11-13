@@ -3,6 +3,7 @@ import { init_sampletable, getSamples, displaySampleTable } from './sampletable'
 import { appear, renderTable, table2col, makeSsmLink, isoformPairRangeSelect } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { renderEventImages } from '#dom/eventImages'
+import { testIdPrefix } from './skewer.render.shapes'
 
 /*
 when there's just one item, print a vertical 2-col table to show details
@@ -891,7 +892,10 @@ function table_snvindel_mayInsertLD(m, tk, table) {
 
 	for (const o of tk.mds.queries.ld.tracks) {
 		// o = {name}
-		const btn = td2.append('button').text(o.name)
+		const btn = td2
+			.append('button')
+			.text(o.name)
+			.attr('data-testid', testIdPrefix + `ld-button-${o.name}`)
 
 		if (m0 && m0.ssm_id == m.ssm_id) {
 			// the same index variant everybody else's overlaying against
