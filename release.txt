@@ -1,1 +1,4 @@
-
+Fixes:
+- Gene set ORA with "Filter Non-coding Genes" unchecked tests the query genes, instead of every coding gene in the genome, which left no pathway enriched
+- CERNO with "Filter Non-coding Genes" unchecked ranks each gene once and finishes in under a second, instead of copying every gene once per coding gene in the genome until it ran out of memory (more than 12 GB for a 4,000-gene list)
+- ORA and CERNO select coding genes faster: CERNO on a 13,485-gene list takes 0.2 s instead of 12 s

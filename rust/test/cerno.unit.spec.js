@@ -203,3 +203,31 @@ tape('rust GSEA cerno unit test downregulated', async function (test) {
 	)
 	test.end()
 })
+
+tape('cerno: filter_non_coding_genes=false keeps the given genes, once each', async function (test) {
+	const coding = ['AKT1', 'PEX10', 'BCR', 'PLCH2', 'HES5', 'KRAS', 'MORN1', 'NADK', 'TP53', 'GABRD']
+	const run = async (genes, filter_non_coding_genes) => {
+		const inJson = {
+			genes,
+			fold_change: genes.map((g, i) => 3 - i * 0.5),
+			db: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/msigdb/db',
+			geneset_group: 'H: hallmark gene sets',
+			genedb: serverconfig.binpath + '/test/tp/anno/genes.hg38.test.db',
+			filter_non_coding_genes
+		}
+		return JSON.parse(await run_rust('cerno', JSON.stringify(inJson)))
+	}
+	test.deepEqual(
+		await run(coding, false),
+		await run(coding, true),
+		'only coding genes given: the same ranked list either way, each gene ranked once'
+	)
+	// a name that is not in codingGenes, ranked first
+	const withNonCoding = ['NONCODING_TEST_GENE', ...coding]
+	test.notDeepEqual(
+		await run(withNonCoding, false),
+		await run(withNonCoding, true),
+		'a non-coding gene is ranked when the filter is off, which moves the ranks of the Hallmark genes'
+	)
+	test.end()
+})

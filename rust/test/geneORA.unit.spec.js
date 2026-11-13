@@ -86,3 +86,29 @@ tape('rust DE wilcoxon unit test', async function (test) {
 	)
 	test.end()
 })
+
+tape(
+	'genesetORA: with only coding query genes, filter_non_coding_genes=false gives the same result as true',
+	async function (test) {
+		const run = async filter_non_coding_genes => {
+			const inJson = {
+				sample_genes: 'AKT1,BCR',
+				msigdb: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/msigdb/db',
+				gene_set_group: 'H: hallmark gene sets',
+				filter_non_coding_genes,
+				genedb: serverconfig.binpath + '/test/tp/anno/genes.hg38.test.db'
+			}
+			const out = JSON.parse(await run_rust('genesetORA', JSON.stringify(inJson)))
+			// gene_set_hits lists a set's hits in no fixed order
+			for (const p of out.pathways) p.gene_set_hits = p.gene_set_hits.split(',').sort().join(',')
+			return out
+		}
+		const off = await run(false)
+		test.deepEqual(off, await run(true), 'the query is the two given genes, not every coding gene in the gene db')
+		test.ok(
+			off.pathways.every(p => p.gene_set_hits == 'AKT1,BCR'),
+			'each Hallmark set is hit by the two query genes only'
+		)
+		test.end()
+	}
+)

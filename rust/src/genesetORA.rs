@@ -106,26 +106,23 @@ fn main() -> Result<()> {
 
                     let genedbconn = Connection::open(genedb)?;
                     let genedb_result = prepare_static(&genedbconn, "select * from codingGenes");
-                    let mut num_coding_genes: usize = 0;
-                    let mut sample_coding_genes: HashSet<String> = HashSet::with_capacity(24000);
+                    let mut coding_genes: HashSet<String> = HashSet::with_capacity(24000);
                     match genedb_result {
                         Ok(mut x) => {
                             let mut genes = x.query([])?;
                             while let Some(coding_gene) = genes.next()? {
-                                num_coding_genes += 1;
-                                //println!("coding_gene:{:?}", coding_gene);
-                                for sample_gene in &sample_genes {
-                                    let code_gene: String = coding_gene.get(0).unwrap();
-                                    if filter_non_coding_genes == true && code_gene == *sample_gene {
-                                        sample_coding_genes.insert(code_gene);
-                                    } else if filter_non_coding_genes == false {
-                                        sample_coding_genes.insert(code_gene);
-                                    }
-                                }
+                                coding_genes.insert(coding_gene.get(0)?);
                             }
                         }
                         Err(_) => {}
                     }
+                    let num_coding_genes = coding_genes.len();
+                    // the query genes, without the non-coding ones when asked
+                    let sample_coding_genes: HashSet<String> = sample_genes
+                        .iter()
+                        .filter(|g| !g.is_empty() && (!filter_non_coding_genes || coding_genes.contains(**g)))
+                        .map(|g| g.to_string())
+                        .collect();
 
                     if sample_coding_genes.len() == 0 {
                         panic!("All query genes are non-coding");

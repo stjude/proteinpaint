@@ -121,24 +121,21 @@ fn main() -> Result<()> {
 
                     let genedbconn = Connection::open(genedb)?;
                     let genedb_result = prepare_static(&genedbconn, "select * from codingGenes");
-                    let mut sample_coding_genes: Vec<stats_functions::gene_order> = Vec::with_capacity(24000);
+                    let mut coding_genes: HashSet<String> = HashSet::with_capacity(24000);
                     match genedb_result {
                         Ok(mut x) => {
                             let mut genes = x.query([])?;
                             while let Some(coding_gene) = genes.next()? {
-                                //println!("coding_gene:{:?}", coding_gene);
-                                for sample_gene in &genes_vector {
-                                    let code_gene: String = coding_gene.get(0).unwrap();
-                                    if filter_non_coding_genes == true && code_gene == *sample_gene.gene_name {
-                                        sample_coding_genes.push(sample_gene.clone());
-                                    } else if filter_non_coding_genes == false {
-                                        sample_coding_genes.push(sample_gene.clone());
-                                    }
-                                }
+                                coding_genes.insert(coding_gene.get(0)?);
                             }
                         }
                         Err(_) => {}
                     }
+                    // the ranked genes, without the non-coding ones when asked
+                    let sample_coding_genes: Vec<stats_functions::gene_order> = genes_vector
+                        .into_iter()
+                        .filter(|g| !filter_non_coding_genes || coding_genes.contains(&g.gene_name))
+                        .collect();
 
                     if sample_coding_genes.len() == 0 {
                         panic!("All query genes are non-coding");
