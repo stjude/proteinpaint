@@ -1,6 +1,6 @@
 /** Per-sample mutation → lesion conversion for GRIN2. Pure functions (no I/O): route an mlst by data type
  * and filter/convert each entry to the lesion tuple [sampleName, chrom, start, end, lesionType]. Split out
- * of main.ts so the request/response orchestration there stays focused on the cache + Python + render flow.
+ * of main.ts so the request/response orchestration there stays focused on the cache + statistics + render flow.
  * These are the functions exercised directly by grin2.unit.spec.ts. */
 
 import {
@@ -21,7 +21,7 @@ import { mayFilterByMaf } from '../mds3.init.js'
 import { mayLog } from '../helpers.ts'
 import type { CnvType, Lesion } from './types.ts'
 
-// Building the lesion map to send to python
+// Building the lesion type map sent to the grin2 binary
 export function buildLesionTypeMap(availableOptions: string[]): Record<string, string> {
 	const lesionTypeMap: Record<string, string> = {}
 
@@ -181,7 +181,7 @@ export function filterAndConvertSnvIndel(
 		if (Array.isArray(entry.vafs)) {
 			for (const v of entry.vafs) {
 				// per-sample json (disco shape) carries totalCount where the gdc getter carries refCount
-const alt = Number(v.altCount)
+				const alt = Number(v.altCount)
 				const ref = v.refCount != null ? Number(v.refCount) : Number(v.totalCount) - alt
 				copy[v.id] = ref + ',' + alt
 			}
