@@ -1,1 +1,2 @@
-
+Features
+- Removed UI for AI chatbot in mass UI. Only the search functionality will remain in the search tab. 
