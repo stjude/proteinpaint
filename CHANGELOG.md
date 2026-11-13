@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- GRIN2: a run now plans for 150 MB + 0.6 MB per 1,000 lesions (was 380 MB + 2.6 MB), so the per-run ceiling rises from 641,538 to 3,163,333 lesions. features.grin2maxLesions (default 250,000) still sets the cap; raise it to analyze more samples of large cohorts
+
 Features:
 - Allow selecting sample types in the genome browser, for every track of sample-level data
 - Offer a search that opens a genome browser when no splice junction has been selected yet
@@ -12,11 +15,14 @@ Features:
 - Methylation track in the genome browser: per-sample DNA methylation over the view range, with samples as rows and bins of equal CpG count as columns linked to their genomic position. The bins shrink on zooming in, down to single CpGs. With a gene, each bin is correlated with the gene's expression, and samples can be sorted by expression, group or mean methylation. With two groups, it shows the mean methylation of each and their difference. Opened from a DMR scan, it marks the bins inside a DMR that the scan called. Clicking a bin shows the gene's expression split by that bin's methylation. For datasets with CpG-level methylation: opened from a DE or DM volcano dot, on the region of a methylation hit that names no gene, and from the Genome browser chart, where it is shown after a gene or position search and turned off in the new Methylation tab.
 - Junction track: an option in its CONFIG menu shows a heatmap of samples by the 20 most frequent junctions in view, above the junction discs.
 - Methylation vs expression starburst: one point per gene, plotting the core-promoter and gene-body methylation change against the expression change between a volcano's two groups. With a gene set group selected, it also shows the gene sets enriched in expression, in gene-body methylation, and in the two merged when they move in the same direction. Opened from the DM volcano with "Methylation vs expression by gene".
+- GRIN2 statistics run in Rust instead of Python, several times faster and with a fraction of the memory
 
 Fixes:
 - Show a genome browser track again at its earlier place when it is unchecked and checked again
 - Show the mutations of the samples of filtered cases in the genome browser mutation track, when the filter is on a case-level term
 - CERNO gene set enrichment no longer drops the gene sets that contain the top-ranked gene.
+- GRIN2: p-values and q-values below about 1e-305 are reported, and rank their gene, instead of being left blank
+- GRIN2: the constellation test (genes hit by 1, 2, ... lesion types) uses the order-statistic distribution of the GRIN2 R package, so its p-values are no longer too large
 
 
 ## 2.227.1

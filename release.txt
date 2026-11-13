@@ -1,9 +1,1 @@
-General:
-- GRIN2: a run now plans for 150 MB + 0.6 MB per 1,000 lesions (was 380 MB + 2.6 MB), so the per-run ceiling rises from 641,538 to 3,163,333 lesions. features.grin2maxLesions (default 250,000) still sets the cap; raise it to analyze more samples of large cohorts
 
-Features:
-- GRIN2 statistics run in Rust instead of Python, several times faster and with a fraction of the memory
-
-Fixes:
-- GRIN2: p-values and q-values below about 1e-305 are reported, and rank their gene, instead of being left blank
-- GRIN2: the constellation test (genes hit by 1, 2, ... lesion types) uses the order-statistic distribution of the GRIN2 R package, so its p-values are no longer too large
