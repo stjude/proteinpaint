@@ -241,7 +241,7 @@ tape('/mdssurvivalplot', async test => {
 	test.end()
 })
 
-tape('termdb/mds3/getLDdata rejects chromosome arguments that look like options', async test => {
+tape('mds3/getLDdata', async test => {
 	const genome = getGenome()
 	const ds = { queries: { ld: { tracks: [{ name: 'ld', file: 'files/hg38/TermdbTest/TermdbTest_ITD.gz' }] } } }
 	for (const chr of chrAttacks) {

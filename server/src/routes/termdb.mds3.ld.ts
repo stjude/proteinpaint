@@ -39,7 +39,7 @@ export function validTermdbMds3LDRequest(input): TermdbMds3LDRequest {
 	const m = input.m
 	if (!m || typeof m != 'object' || Array.isArray(m)) throw 'q.m{} not object'
 	if (typeof m.chr != 'string' || !m.chr || !Number.isInteger(m.pos)) throw 'invalid q.m.chr/pos'
-	if (!m.ref || !m.alt) throw 'q.m{} invalid alleles'
+	if (typeof m.ref != 'string' || !m.ref || typeof m.alt != 'string' || !m.alt) throw 'q.m{} invalid alleles'
 	return { ...ids, ldtkname: input.ldtkname, m: { chr: m.chr, pos: m.pos, ref: m.ref, alt: m.alt } }
 }
 
