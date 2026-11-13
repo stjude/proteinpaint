@@ -97,6 +97,7 @@ export const routeFiles = [
 	import('./routes/termdb.methylationStarburst.ts'),
 	import('./routes/termdb.mds3.ts'),
 	import('./routes/termdb.mds3.eventImage.ts'),
+	import('./routes/termdb.mds3.ld.ts'),
 	import('./routes/termdb.mds3.variantData.ts'),
 	import('./routes/termdb.numericcategories.ts'),
 	import('./routes/termdb.percentile.ts'),

@@ -37,6 +37,7 @@ shared/types/routes/checkers/*
 shared/**/test/internals*.*
 **/.coverage*/*
 **/shared/types/**/*d.ts
+!shared/types/src/routes/termdb.mds3.ld.ts
 
 # ignore public bin symlinks and dirs
 **/public/bin 

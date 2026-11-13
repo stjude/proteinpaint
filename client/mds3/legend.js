@@ -19,6 +19,7 @@ import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '#plots/regression/regression.results.ts'
 import { rgb } from 'd3-color'
 import { renderShapePicker } from './leftlabel.variant'
+import { testIdPrefix } from './skewer.render.shapes'
 
 /*	
 ********************** EXPORTED
@@ -55,7 +56,7 @@ may_update_cnv
 const unknown_infoCategory_color = 'black'
 
 export const unannotatedKey = 'Unannotated'
-
+const legendLabelHolderPrefix = `${testIdPrefix}legend-item-holder-`
 export function initLegend(tk, block) {
 	// run only once, called by makeTk
 	if (!block.legend) return // block has no legend. could be due to hidegenelegend flag
@@ -64,7 +65,7 @@ export function initLegend(tk, block) {
 
 	const [tr, td, td0] = legend_newrow(block, tk.name)
 	tk.legend.headTd = td0 // for updating tk name in legend when filterObj updates
-
+	td0.attr('data-testid', testIdPrefix + 'dataset-sublegend-header')
 	tk.tr_legend = tr // to be compatible with block.tk_remove()
 
 	const table = td.append('table').style('border-spacing', '5px').style('border-collapse', 'separate')
@@ -102,15 +103,15 @@ function create_mclass(tk, block) {
 		// in cnv-only mode, keep mutation legend invisible and still create tk.legend.mclass{} to avoid breaking logic
 		tk.legend.mclass.row.style('display', 'none')
 	}
-
+	const headerText = block.mclassOverride?.className || 'Mutation'
 	tk.legend.mclass.row
 		.append('td')
-		.attr('data-testid', 'sjpp-mds3tk-legend-mclass')
+		.attr('data-testid', testIdPrefix + 'legend-header-mclass')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
-		.text(block.mclassOverride?.className || 'Mutation')
+		.text(headerText)
 
-	tk.legend.mclass.holder = tk.legend.mclass.row.append('td')
+	tk.legend.mclass.holder = tk.legend.mclass.row.append('td').attr('data-testid', legendLabelHolderPrefix + headerText)
 }
 
 function may_create_variantShapeName(tk) {
@@ -219,20 +220,20 @@ function may_create_infoFields(tk) {
 	for (const key of infoFields4legend) {
 		const row = tk.legend.table.append('tr') // html <tr> created for this info field in the legend table
 		// this row will have two columns, just like mclass
-
+		const headerText = tk.mds.bcf.info[key].name || key
 		// column 1 <td>: info field name
 		row
 			.append('td')
-			.attr('data-testid', `sjpp-mds3tk-legend-bcfinfo-${key}`)
+			.attr('data-testid', `${testIdPrefix}legend-header-bcfinfo-${key}`)
 			.style('text-align', 'right')
 			.style('opacity', 0.7)
-			.text(tk.mds.bcf.info[key].name || key)
+			.text(headerText)
 
 		tk.legend.bcfInfo[key] = {
 			hiddenvalues: new Set(),
 			row,
 			// column 2 <td>: content holder
-			holder: row.append('td')
+			holder: row.append('td').attr('data-testid', legendLabelHolderPrefix + headerText)
 		}
 	}
 }
@@ -250,20 +251,20 @@ function may_create_formatFilter(tk) {
 	for (const key of formatFields4legend) {
 		const row = tk.legend.table.append('tr') // html <tr> created for this info field in the legend table
 		// this row will have two columns, just like mclass
-
+		const headerText = tk.mds.bcf.format[key].Description
 		// column 1 <td>: format field name
 		row
 			.append('td')
-			.attr('data-testid', `sjpp-mds3tk-legend-bcfformat-${key}`)
+			.attr('data-testid', `${testIdPrefix}legend-header-bcfformat-${key}`)
 			.style('text-align', 'right')
 			.style('opacity', 0.7)
-			.text(tk.mds.bcf.format[key].Description)
+			.text(headerText)
 
 		tk.legend.formatFilter[key] = {
 			hiddenvalues: new Set(),
 			row,
 			// column 2 <td>: content holder
-			holder: row.append('td')
+			holder: row.append('td').attr('data-testid', legendLabelHolderPrefix + headerText)
 		}
 	}
 }
@@ -655,7 +656,7 @@ function update_mclass(tk) {
 			.append('div')
 			.style('display', 'inline-block')
 			.attr('class', 'sja_clb')
-			.attr('data-testid', 'sjpp-mds3tk-hidden-legenditemlabel')
+			.attr('data-testid', testIdPrefix + 'hidden-legenditemlabel')
 			.style('text-decoration', 'line-through')
 			.style('opacity', 0.7)
 			.text((c.count ? '(' + c.count + ') ' : '') + (Number.isInteger(c.k) ? dt2label[c.k] : mclass[c.k].label))
@@ -678,11 +679,11 @@ function may_create_skewerRim(tk, block) {
 
 	R.headerTd = R.row // name of rim legend row is set on the fly, allows to change data type for rim
 		.append('td')
-		.attr('data-testid', `sjpp-mds3tk-legend-skewerRim`)
+		.attr('data-testid', testIdPrefix + 'legend-header-skewerRim')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
 
-	R.holder = R.row.append('td')
+	R.holder = R.row.append('td').attr('data-testid', legendLabelHolderPrefix)
 }
 
 function getSkewerRimLegendHeaderName(tk) {
@@ -725,7 +726,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-mds3tk-hide-${sk.rim1value}-option`)
+					.attr('data-testid', `${testIdPrefix}hide-${sk.rim1value}-option`)
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.rim1value)
@@ -746,7 +747,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', 'sjpp-mds3tk-hide-no-rim-option')
+					.attr('data-testid', testIdPrefix + 'hide-no-rim-option')
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.noRimValue)
@@ -767,7 +768,7 @@ function may_update_skewerRim(data, tk) {
 					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-mds3tk-hide-${sk.rim2value}-option`)
+					.attr('data-testid', `${testIdPrefix}hide-${sk.rim2value}-option`)
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.rim2value)
@@ -817,10 +818,10 @@ function may_create_ld(tk, block) {
 	// contents are filled in dynamically
 	R.headerTd = R.row
 		.append('td')
-		.attr('data-testid', `sjpp-mds3tk-legend-ld`)
+		.attr('data-testid', testIdPrefix + 'legend-header-ld')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
-	R.holder = R.row.append('td')
+	R.holder = R.row.append('td').attr('data-testid', legendLabelHolderPrefix)
 	R.showHolder = R.holder.append('div').style('display', 'none')
 	showLDlegend(R.showHolder, tk.mds.queries.ld.colorScale)
 	R.showHolder
@@ -859,13 +860,17 @@ function may_create_cnv(tk, block) {
 
 	const R = (tk.legend.cnv = {})
 	R.row = tk.legend.table.append('tr')
+	const headerText = 'CNV'
 	R.headerTd = R.row
 		.append('td')
-		.attr('data-testid', `sjpp-mds3tk-legend-cnv`)
+		.attr('data-testid', testIdPrefix + 'legend-header-cnv')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
-		.text('CNV')
-	R.holder = R.row.append('td').style('padding-left', '10px')
+		.text(headerText)
+	R.holder = R.row
+		.append('td')
+		.style('padding-left', '10px')
+		.attr('data-testid', legendLabelHolderPrefix + headerText)
 
 	if (Number.isFinite(tk.cnv.cnvGainCutoff)) {
 		// has the cutoff and cnv data uses numeric value; show colorscale
@@ -910,7 +915,7 @@ function may_create_cnv(tk, block) {
 		})
 	} else {
 		// cnv data uses category but not numeric value; fill category legend based on returned data
-		R.cnvCategoryHolder = R.holder.append('span').attr('data-testid', 'sjpp-mds3tk-cnvlegend-categoryholder')
+		R.cnvCategoryHolder = R.holder.append('span').attr('data-testid', testIdPrefix + 'cnvlegend-categoryholder')
 	}
 
 	R.noCnv = R.holder.append('div').text('No data').style('opacity', 0.6) // indicator there's no cnv in the region
@@ -925,6 +930,7 @@ function may_create_cnv(tk, block) {
 		.style('margin-left', '10px')
 		.style('font-size', '.9em')
 		.attr('class', 'sja_clbtext')
+		.attr('data-testid', testIdPrefix + 'cnv-filter-prompt')
 		.on('click', () => {
 			// no longer show above due to https://gdc-ctds.atlassian.net/browse/SV-2757
 			menu.clear().showunder(R.cnvFilterPrompt.node())
@@ -1097,13 +1103,13 @@ function createLegendTipMenu(opts, tk, elem) {
 					 * effect) is removed.
 					 */
 					.classed('sja_menuoption', true)
-					.attr('data-testid', 'sjpp-mds3tk-change-shape-option')
+					.attr('data-testid', testIdPrefix + 'change-shape-option')
 					.style('padding', '5px 10px')
 					.style('margin', '1px')
 					.style('border-radius', '0px')
 					.on('click', () => {
 						div.classed('sja_menuoption', false)
-						div.attr('data-testid', 'sjpp-mds3tk-shape-picker')
+						div.attr('data-testid', testIdPrefix + 'shape-picker')
 						div.style('background-color', 'white')
 						if (called == false) {
 							called = true
@@ -1118,7 +1124,7 @@ function createLegendTipMenu(opts, tk, elem) {
 				tk.legend.tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-mds3tk-legend-option-${opt.label.toLowerCase().replace(/\s/g, '-')}`)
+					.attr('data-testid', `${testIdPrefix}legend-option-${opt.label.toLowerCase().replace(/\s/g, '-')}`)
 					.style('border-radius', '0px')
 					.text(opt.label)
 					.on('click', () => {
@@ -1144,7 +1150,7 @@ export function printCategory({ holder, key, color, count, label, click, testid 
 		.style('display', 'inline-block')
 		.style('color', color)
 		.style('padding-left', '5px')
-		.attr('data-testid', testid || 'sjpp-mds3tk-legenditemlabel')
+		.attr('data-testid', testid || testIdPrefix + 'legenditemlabel')
 		.attr('__key__', key) // for testing
 		.text(label)
 }

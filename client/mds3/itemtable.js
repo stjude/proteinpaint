@@ -3,6 +3,7 @@ import { init_sampletable, getSamples, displaySampleTable } from './sampletable'
 import { appear, renderTable, table2col, makeSsmLink, isoformPairRangeSelect } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { renderEventImages } from '#dom/eventImages'
+import { testIdPrefix } from './skewer.render.shapes'
 
 /*
 when there's just one item, print a vertical 2-col table to show details
@@ -103,7 +104,7 @@ export async function itemtable_oneItem(arg) {
 
 	// if the variant has only one sample,
 	// allow to append new rows to table to show sample key:value
-	table.scrollDiv.attr('data-testid', 'sjpp-mds3tk-single-occurence-table')
+	table.scrollDiv.attr('data-testid', testIdPrefix + 'single-occurence-table')
 	arg.singleSampleDiv = table
 	// if there are multiple samples, this <div> won't be used
 	// a new table will be created under arg.div to show sample table
@@ -235,7 +236,7 @@ async function itemtable_multiItems(arg) {
 		rows.push(row)
 	}
 
-	const tableDiv = arg.div.append('div').attr('data-testid', 'sjpp-mds3tk-multi-occurence-table')
+	const tableDiv = arg.div.append('div').attr('data-testid', testIdPrefix + 'multi-occurence-table')
 
 	renderTable({
 		div: tableDiv,
@@ -316,7 +317,7 @@ async function table_snvindel({ mlst, tk, block }, table) {
 			const [td1, td2] = table.addRow()
 
 			// column 1: info field key
-			td1.text(key).attr('data-testid', 'sjpp-mds3tk-singlemtablerow4infokey')
+			td1.text(key).attr('data-testid', testIdPrefix + 'singlemtablerow4infokey')
 
 			// column 2: info field value of this variant m{}
 			// value can be array or one string
@@ -543,7 +544,10 @@ holder is the div of the breakpoint pair; if it is removed before the images are
 async function mayShowEventImages(arg, holder, eventImage) {
 	const eventImages = arg.tk.mds.eventImages
 	if (!eventImages || !eventImage) return
-	const div = holder.append('div').attr('data-testid', 'sjpp-mds3tk-event-images').style('margin', '3px 0px 8px 0px')
+	const div = holder
+		.append('div')
+		.attr('data-testid', testIdPrefix + 'event-images')
+		.style('margin', '3px 0px 8px 0px')
 	div.append('div').style('font-size', '0.85em').style('opacity', 0.7).text(eventImages.label)
 	const content = div.append('div').text('Loading...')
 	try {
@@ -573,7 +577,10 @@ async function makeBreakpointChart(arg, m, partnerSide, div, breakpointCell) {
 	const partner = m.pairlst[0][partnerSide]
 	const breakpoints = partner.breakpoints
 
-	const chartDiv = div.append('div').attr('data-testid', 'sjpp-mds3tk-svfusionBreakpointChart').style('margin', '10px')
+	const chartDiv = div
+		.append('div')
+		.attr('data-testid', testIdPrefix + 'svfusionBreakpointChart')
+		.style('margin', '10px')
 	const svgraphDiv = div.append('div')
 
 	// the breakpoint of the gene in view can be intergenic and carry no name; the gene in view is then used
@@ -797,7 +804,7 @@ function svPoint2str(p) {
 }
 
 async function makeSvgraph(m, div, block) {
-	div.attr('data-testid', 'sjpp-mds3tk-singlesvfusiongraph')
+	div.attr('data-testid', testIdPrefix + 'singlesvfusiongraph')
 	const wait = div.append('div').text('Loading...')
 	try {
 		if (!m.pairlst) throw '.pairlst[] missing'
@@ -891,7 +898,10 @@ function table_snvindel_mayInsertLD(m, tk, table) {
 
 	for (const o of tk.mds.queries.ld.tracks) {
 		// o = {name}
-		const btn = td2.append('button').text(o.name)
+		const btn = td2
+			.append('button')
+			.text(o.name)
+			.attr('data-testid', testIdPrefix + `ld-button-${o.name}`)
 
 		if (m0 && m0.ssm_id == m.ssm_id) {
 			// the same index variant everybody else's overlaying against

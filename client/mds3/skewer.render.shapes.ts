@@ -4,7 +4,8 @@ import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
 import { select as d3select } from 'd3-selection'
 
 export const MCLASSES_ATTRIBUTE = 'mclasses'
-export const DISC_G_PREFIX = 'sjpp-mds3tk-skewer-disc-g-'
+export const testIdPrefix = 'sjpp-mds3tk-'
+export const DISC_G_PREFIX = testIdPrefix + 'skewer-disc-g-'
 export const joinMlstBy = (d, key = 'mname') => {
 	return d?.mlst ? Array.from(new Set(d.mlst.map(mItem => mItem[key]))).join('-') : d[key]
 }

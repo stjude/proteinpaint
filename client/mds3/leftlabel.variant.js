@@ -6,6 +6,7 @@ import { to_textfile, Tabs, make_radios, shapes, shapeSelector } from '#dom'
 import { rangequery_rglst } from './tk'
 import { samples2columnsRows, block2source, findMbyId } from './sampletable'
 import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtitd, dtfusionrna } from '#shared/common.js'
+import { testIdPrefix } from './skewer.render.shapes'
 
 /*
 variant label covers any data item rendered in a mds3 tk
@@ -23,7 +24,7 @@ export function makeVariantLabel(data, tk, block, laby) {
 
 	if (!tk.leftlabels.doms.variants) {
 		tk.leftlabels.doms.variants = makelabel(tk, block, laby)
-		tk.leftlabels.doms.variants.attr('data-testid', 'sjpp-mds3tk-variants-label')
+		tk.leftlabels.doms.variants.attr('data-testid', testIdPrefix + 'variants-label')
 		if (data.variantAlerts?.length) tk.leftlabels.doms.variants.attr('fill', 'red')
 	}
 
@@ -132,7 +133,7 @@ function menu_variants(data, tk, block) {
 			tk.menutip.d
 				.append('div')
 				.style('margin', '10px')
-				.attr('data-testid', 'sjpp-mds3tk-variantalerts')
+				.attr('data-testid', testIdPrefix + 'variantalerts')
 				.style('font-size', '.8em')
 				.style('color', 'red')
 				.text(m)
@@ -143,7 +144,7 @@ function menu_variants(data, tk, block) {
 	if ((!tk.skewer?.rawmlst || tk.skewer.rawmlst?.length == 0) && tk.cnv?.cnvInDensity) {
 		tk.menutip.d
 			.append('div')
-			.attr('data-testid', 'sjpp-mds3tk-variantleftlabel-cnvdensitymsg')
+			.attr('data-testid', testIdPrefix + 'variantleftlabel-cnvdensitymsg')
 			.style('margin', '10px')
 			.text('Viewing CNV segment density, no information on individual segments.')
 		if (tk.cnv.cnvMsg) {
@@ -155,7 +156,7 @@ function menu_variants(data, tk, block) {
 		.append('div')
 		.text('List')
 		.attr('class', 'sja_menuoption sja_sharp_border')
-		.attr('data-testid', 'sjpp-mds3tk-variantleftlabel-list')
+		.attr('data-testid', testIdPrefix + 'variantleftlabel-list')
 		.attr('tabindex', 0)
 		.on('click', () => {
 			listVariantData(tk, block)
@@ -171,7 +172,7 @@ function menu_variants(data, tk, block) {
 				.append('div')
 				.text('Cancel highlight')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.attr('data-testid', 'sjpp-mds3tk-cancel-highlight-option')
+				.attr('data-testid', testIdPrefix + 'cancel-highlight-option')
 				.attr('tabindex', 0)
 				.on('click', () => {
 					delete tk.skewer.hlssmid
@@ -201,7 +202,7 @@ function menu_variants(data, tk, block) {
 					.append('div')
 					.text('Collapse')
 					.attr('class', 'sja_menuoption sja_sharp_border')
-					.attr('data-testid', 'sjpp-mds3tk-collapse-menuoption')
+					.attr('data-testid', testIdPrefix + 'collapse-menuoption')
 					.attr('tabindex', 0)
 					.on('click', () => {
 						fold_glyph(tk.skewer.data, tk)
@@ -212,7 +213,7 @@ function menu_variants(data, tk, block) {
 					.append('div')
 					.text('Expand')
 					.attr('class', 'sja_menuoption sja_sharp_border')
-					.attr('data-testid', 'sjpp-mds3tk-expand-menuoption')
+					.attr('data-testid', testIdPrefix + 'expand-menuoption')
 					.attr('tabindex', 0)
 					.on('click', () => {
 						settle_glyph(tk, block)
@@ -224,7 +225,7 @@ function menu_variants(data, tk, block) {
 				.append('div')
 				.text(tk.skewer.pointup ? 'Point down' : 'Point up')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.attr('data-testid', 'sjpp-mds3tk-pointup-option')
+				.attr('data-testid', testIdPrefix + 'pointup-option')
 				.attr('tabindex', 0)
 				.on('click', () => {
 					tk.skewer.pointup = !tk.skewer.pointup
@@ -240,7 +241,7 @@ function menu_variants(data, tk, block) {
 					.text('Change variant shape')
 					.style('vertical-align', 'middle')
 					.attr('class', 'sja_menuoption sja_sharp_border')
-					.attr('data-testid', 'sjpp-mds3tk-change-skewer-shape-option')
+					.attr('data-testid', testIdPrefix + 'change-skewer-shape-option')
 					.attr('tabindex', 0)
 					.on('click', () => {
 						if (called == false) {
@@ -266,7 +267,7 @@ function menu_variants(data, tk, block) {
 				.append('div')
 				.text(tk.skewer.hideDotLabels ? 'Show all variant labels' : 'Hide all variant labels')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.attr('data-testid', 'sjpp-mds3tk-show-hide-variant-labels-option')
+				.attr('data-testid', testIdPrefix + 'show-hide-variant-labels-option')
 				.attr('tabindex', 0)
 				.on('click', () => {
 					tk.skewer.hideDotLabels = !tk.skewer.hideDotLabels
@@ -283,7 +284,7 @@ function menu_variants(data, tk, block) {
 			.text('Download')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.attr('tabindex', 0)
-			.attr('data-testid', 'sjpp-mds3tk-variantdownload-menuoption')
+			.attr('data-testid', testIdPrefix + 'variantdownload-menuoption')
 			.on('click', () => {
 				downloadVariants(tk, block)
 				tk.menutip.hide()

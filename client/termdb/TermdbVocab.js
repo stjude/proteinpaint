@@ -1034,13 +1034,12 @@ export class TermdbVocab extends Vocab {
 
 	async getLDdata(tkname, m) {
 		const body = {
-			getLDdata: 1,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			ldtkname: tkname,
 			m: { chr: m.chr, pos: m.pos, ref: m.ref, alt: m.alt }
 		}
-		return await this.dofetch3('termdb', { body })
+		return await this.dofetch3('termdb/mds3/getLDdata', { body })
 	}
 
 	async getScatterData(opts, signal = undefined) {

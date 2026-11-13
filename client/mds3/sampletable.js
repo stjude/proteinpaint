@@ -4,6 +4,7 @@ import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv, dtitd } from '#shared/com
 import { guessSsmid } from '#shared/mds3tk.js'
 import { print_snv, printSvPair, cnv2str } from './itemtable'
 import { convertUnits } from '#shared/helpers.js'
+import { testIdPrefix } from './skewer.render.shapes'
 
 /*
 ********************** EXPORTED
@@ -84,7 +85,7 @@ export async function displaySampleTable(samples, args) {
 		return await make_singleSampleTable(samples[0], args)
 	}
 	const [columns, rows] = await samples2columnsRows(samples, args.tk)
-	const params = { rows, columns, div: args.div, resize: rows.length > 10, dataTestId: 'sjpp-mds3tk-sampletable' }
+	const params = { rows, columns, div: args.div, resize: rows.length > 10, dataTestId: testIdPrefix + 'sampletable' }
 	//if (args.maxWidth) params.maxWidth = args.maxWidth
 	//if (args.maxHeight) params.maxHeight = args.maxHeight
 
@@ -94,7 +95,7 @@ export async function displaySampleTable(samples, args) {
 		const height = screen.height
 		const colButton = {
 			text: 'Disco',
-			dataTestId: 'sjpp-mds3tk-sample-table-disco-button',
+			dataTestId: testIdPrefix + 'sample-table-disco-button',
 			callback: async (event, i) => {
 				// hide tooltips where disco may have been launched
 				args.tk.itemtip.hide() // when clicking dot with occurrence>1
@@ -115,7 +116,7 @@ export async function displaySampleTable(samples, args) {
 		for (const k in args.tk.mds.queries.singleSampleGenomeQuantification) {
 			const btn = {
 				text: k,
-				dataTestId: `sjpp-mds3tk-${k}-button`,
+				dataTestId: `${testIdPrefix}${k}-button`,
 				callback: async (event, i) => {
 					const sandbox = newSandboxDiv(args.tk.newChartHolder || args.block.holder0)
 					sandbox.header.text(samples[i].sample_id)
@@ -241,7 +242,7 @@ async function make_singleSampleTable(s, arg) {
 				const [t1, t2] = table.addRow()
 				const fobj = arg.tk.mds?.bcf?.format?.[formatkey]
 				t1.text(fobj?.Description || formatkey)
-					.attr('data-testid', 'sjpp-mds3tk-singlemtablerow4formatkey')
+					.attr('data-testid', testIdPrefix + 'singlemtablerow4formatkey')
 					.attr('__key__', formatkey)
 				t2.html(printFormat(fobj, value))
 			}
@@ -293,7 +294,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 		const t = tk.allow2selectSamples.buttonText
 		const btn = extraRow
 			.append('button')
-			.attr('data-testid', 'sjpp-mds3tk-selectsamplebtn')
+			.attr('data-testid', testIdPrefix + 'selectsamplebtn')
 			.style('margin-right', '10px')
 			.text(t.endsWith('s') ? t.substring(0, t.length - 1) : t)
 			.on('click', () => {
@@ -310,7 +311,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 			.append('button')
 			.style('margin-right', '10px')
 			.text('Disco plot')
-			.attr('data-testid', 'sjpp-mds3tk-disc-table-disco-button')
+			.attr('data-testid', testIdPrefix + 'disc-table-disco-button')
 			.on('click', async () => {
 				tk.itemtip.hide() // hide tooltip so it won't block
 				await createDiscoInSandbox(tk, block, sample, thisMutation)
@@ -347,7 +348,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 async function createDiscoInSandbox(tk, block, sample, thisMutation) {
 	// create ad-hoc sandbox; if newChartHolder is present, plot into it
 	const sandbox = newSandboxDiv(tk.newChartHolder || block.holder0)
-	sandbox.app_div.attr('data-testid', 'sjpp-mds3tk-sandbox-Disco')
+	sandbox.app_div.attr('data-testid', testIdPrefix + 'sandbox-Disco')
 	const headerTexts = [sample.sample_id] // for sandbox header
 	if (thisMutation) {
 		// mutation of this sample is provided (tooltip currently shows info about this mutation)

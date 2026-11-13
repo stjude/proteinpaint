@@ -16,6 +16,7 @@ import {
 	getColors
 } from '#shared/common.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
+import { testIdPrefix } from './skewer.render.shapes'
 import { getFilterName } from './filterName'
 import { fillTermWrapper } from '#termsetting'
 import { rehydrateFilter } from '../filter/rehydrateFilter.js'
@@ -152,7 +153,7 @@ export async function makeTk(tk, block) {
 	tk.cache = {}
 	tk.itemtip = new Menu() // show contents on clicking an item
 	tk.hovertip = new Menu() // show contents here on hovering an item and avoid reusing itemtip
-	tk.menutip = new Menu({ padding: '', testid: 'sjpp-mds3tk-menutip' }) // to show menu options without margin
+	tk.menutip = new Menu({ padding: '', testid: testIdPrefix + 'menutip' }) // to show menu options without margin
 
 	tk.load = _load(tk, block) // shorthand
 

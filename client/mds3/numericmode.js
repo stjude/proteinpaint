@@ -13,6 +13,7 @@ import {
 	renderSkewerShapes,
 	getMlstJoinLabel,
 	DISC_G_PREFIX,
+	testIdPrefix,
 	getMClassesLabel,
 	MCLASSES_ATTRIBUTE
 } from './skewer.render.shapes'
@@ -884,7 +885,7 @@ function render_axis(tk, nm, block) {
 		.attr('dominant-baseline', 'central')
 		.attr('text-anchor', 'end')
 		.attr('class', 'sjpp-mds3-nm-axislabel sja_clbtext2') // for testing
-		.attr('data-testid', 'sjpp-mds3tk-nm-axislabel')
+		.attr('data-testid', testIdPrefix + 'nm-axislabel')
 		.attr('y', nm.axisheight / 2)
 		.attr('x', -nm.axisWidth)
 		.text(nm.label || defaultLabel) // if too long can use ellipsis, hover to show full
@@ -898,7 +899,7 @@ function render_axis(tk, nm, block) {
 				.d.append('div')
 				.text('Cancel')
 				.attr('class', 'sja_menuoption')
-				.attr('data-testid', 'sjpp-mds3tk-cancel-numeric-axis-option')
+				.attr('data-testid', testIdPrefix + 'cancel-numeric-axis-option')
 				.style('border-radius', '0px')
 				.on('click', () => {
 					tk.menutip.hide()

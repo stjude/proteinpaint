@@ -3,6 +3,7 @@ import { mclass } from '#shared/common.js'
 import { table_cnv, itemtable_oneItem } from './itemtable'
 import { axisRight } from 'd3-axis'
 import { table2col, axisstyle } from '#dom'
+import { testIdPrefix } from './skewer.render.shapes'
 
 /* (important param for cnv tk rendering thus is put at top)
 arg is an array. each element is a row of either:
@@ -96,10 +97,10 @@ function renderDensity(data, tk, block) {
 		.attr('width', block.width)
 		.attr('height', tk.cnv.density.barheight)
 		.attr('xlink:href', data.cnvDensity.gain.src)
-		.attr('data-testid', 'sjpp-mds3tk-cnvdensityimg')
+		.attr('data-testid', testIdPrefix + 'cnvdensityimg')
 	tk.cnv.g
 		.append('image')
-		.attr('data-testid', 'sjpp-mds3tk-cnvdensityimg')
+		.attr('data-testid', testIdPrefix + 'cnvdensityimg')
 		.attr('width', block.width)
 		.attr('height', tk.cnv.density.barheight)
 		.attr('xlink:href', data.cnvDensity.loss.src)
@@ -261,7 +262,7 @@ function plotOneSegment(c, y, rowheight, tk, block, sample) {
 		.append('rect')
 		.attr('x', x1)
 		.attr('y', y)
-		.attr('data-testid', 'sjpp-mds3tk-cnv-segment-' + c.class)
+		.attr('data-testid', testIdPrefix + 'cnv-segment-' + c.class)
 		.attr('width', x2 - x1)
 		.attr('height', Math.max(rowheight, 1))
 		.attr('fill', Number.isFinite(c.value) ? tk.cnv.colorScale(c.value) : mclass[c.class].color)
