@@ -96,3 +96,7 @@ path="src/survival.rs"
 [[bin]]
 name="corr"
 path="src/corr.rs"
+
+[[bin]]
+name="grin2"
+path="src/grin2.rs"

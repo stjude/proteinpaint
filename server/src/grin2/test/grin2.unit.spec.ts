@@ -626,7 +626,7 @@ tape('resolveExcludeBeds', test => {
 
 tape('getMaxLesions', async test => {
 	// a fixed 2 GB, from the cost alone: a low configured maxMB must not lower it, or report mode would trim or refuse
-	test.equal(CEILING_LESIONS, 641538, 'the ceiling is (2048 - 380) / 0.0026 = 641,538 lesions, whatever the budget')
+	test.equal(CEILING_LESIONS, 3163333, 'the ceiling is (2048 - 150) / 0.0006 = 3,163,333 lesions, whatever the budget')
 	// the configured max, under that ceiling
 	const max = Math.min(serverconfig.features.grin2maxLesions || 250000, CEILING_LESIONS)
 	const freeMB = (mb: number) => async () => mb
@@ -636,12 +636,12 @@ tape('getMaxLesions', async test => {
 		releaseMemory()
 		return cap
 	}
-	// cap = floor((free MB, at most the 3,072 MB default maxMB, − 380) / 0.0026), then no higher than max
+	// cap = floor((free MB, at most the 3,072 MB default maxMB, − 150) / 0.0006), then no higher than max
 	test.equal(await capAt(16000), max, 'plentiful memory => the configured max')
-	test.equal(await capAt(600), Math.min(max, 84615), '600 MB => 84,615')
-	test.equal(await capAt(400), Math.min(max, 7692), '400 MB => 7,692, not raised to a floor')
-	test.equal(await capAt(380.4), Math.min(max, 153), '380.4 MB => 153, the smallest cap that is not refused')
-	for (const mb of [380, 0]) {
+	test.equal(await capAt(250), Math.min(max, 166666), '250 MB => 166,666')
+	test.equal(await capAt(170), Math.min(max, 33333), '170 MB => 33,333, not raised to a floor')
+	test.equal(await capAt(150.1), Math.min(max, 166), '150.1 MB => 166, the smallest cap that is not refused')
+	for (const mb of [150, 0]) {
 		try {
 			await capAt(mb)
 			test.fail(`${mb} MB => should throw`)
@@ -651,16 +651,16 @@ tape('getMaxLesions', async test => {
 		}
 	}
 
-	// two runs at once: the first reserves its whole 600 MB budget at 600 MB free, so the second does not fit
-	const first = await getMaxLesions(freeMB(600))
+	// two runs at once: the first reserves its whole 250 MB budget at 250 MB free, so the second does not fit
+	const first = await getMaxLesions(freeMB(250))
 	try {
-		await getMaxLesions(freeMB(600))
+		await getMaxLesions(freeMB(250))
 		test.fail('a second run while the first holds the budget => should throw')
 	} catch (e: any) {
 		test.equal(e.code, 'LOW_MEMORY', 'a second run while the first holds the budget => refused')
 	}
 	first.releaseMemory()
-	test.equal(await capAt(600), Math.min(max, 84615), 'after the first run releases => the full cap again')
+	test.equal(await capAt(250), Math.min(max, 166666), 'after the first run releases => the full cap again')
 
 	// report mode: never trimmed or refused, however little is free
 	for (const mb of [1500, 0]) {

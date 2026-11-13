@@ -213,7 +213,7 @@ export function getCgroupInactiveFileBytes(readFile = (file: string) => fs.readF
  * leave one out and get a low estimate. The @example outputs here and below are asserted in
  * test/memoryCosts.unit.spec.ts, so update both together.
  * @example
- * estimatePeakMB(GRIN2_MEMORY, { lesions: 250_000 }) // 1030: 380 + 0.0026 × 250,000
+ * estimatePeakMB(GRIN2_MEMORY, { lesions: 250_000 }) // 300: 150 + 0.0006 × 250,000
  * estimatePeakMB(DE_MEMORY.edgeR, { cells: 4438 * 17928 }) // ≈ 8938: all ASH, 17,928 genes
  * estimatePeakMB(DE_MEMORY.wilcoxon, { cells: 4438 * 17928, spanCells: 4438 * 17928 }) // ≈ 2551
  * // wilcoxon reads every column between the first and last selected sample: 20 samples over 10,000 columns
@@ -264,9 +264,9 @@ export function runFitsInMemory(
  * its lesions, and reserves the capped run's memory. The cost must have no other size (estimatePeakMB throws if it
  * does). The examples assume nothing is reserved.
  * @example
- * largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions') // 430769: (1500 budget - 380 base) / 0.0026
- * largestSizeThatFits(300, GRIN2_MEMORY, 'lesions') // 0: 300 budget < 380 base, so GRIN2 refuses the run
- * largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1) // 641538: the whole 2 GB as budget, under the default maxMB
+ * largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions') // 2250000: (1500 budget - 150 base) / 0.0006
+ * largestSizeThatFits(100, GRIN2_MEMORY, 'lesions') // 0: 100 budget < 150 base, so GRIN2 refuses the run
+ * largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1) // 3163333: the whole 2 GB as budget, under the default maxMB
  */
 export function largestSizeThatFits(
 	availableMB: number,

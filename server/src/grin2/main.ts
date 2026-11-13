@@ -1,7 +1,7 @@
 import type { GRIN2Request, GRIN2Response } from '#types'
 import serverconfig from '../serverconfig.js'
 import path from 'path'
-import { run_python } from '@sjcrh/proteinpaint-python'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { renderManhattan } from '../renderManhattan.ts'
 import { mayLog } from '../helpers.ts'
 import { get_samples } from '../termdb.sql.js'
@@ -28,12 +28,13 @@ export { resolveExcludeBeds } from '../utils/regionMask.ts'
 import { resolveExcludeBeds } from '../utils/regionMask.ts'
 
 // Constants for memory-aware lesion cap calculations
-// Peak memory of a run (the Node server's rise plus the Python child, at the same moment) measured on 14 ASH runs of
-// 851 to 250,000 lesions fits about 330-355 MB + 2.4-2.6 MB per 1,000 lesions. These values are at or above every run,
-// and only together: a 380 MB base with 2.4 MB per 1,000 lesions is below every run of 100,000 lesions or more.
-export const GRIN2_MEMORY: MemoryCost = { baseMB: 380, perUnitMB: { lesions: 0.0026 } }
+// Peak memory of a run (the Node server's rise plus the grin2 binary, at the same moment) measured on 22 ASH and AML
+// runs of 162 to 3,738,033 lesions and 16 to 5,735 samples fits 70 MB + 0.53 MB per 1,000 lesions (R2 0.99). These
+// values are at or above every run, by 40 MB or more. Node holds over half the peak (its lesion array, the input string,
+// and the plot), and its share varies by ~250 MB between identical large runs, so the slope keeps 150 MB of room there.
+export const GRIN2_MEMORY: MemoryCost = { baseMB: 150, perUnitMB: { lesions: 0.0006 } }
 const MIN_LESIONS = 50000 // smallest run worth doing; when memory cannot fit this many, the run is refused
-/* Hard ceiling on the memory one run plans for, whatever the config or free memory: 2 GB ≈ 641,538 lesions. Computed
+/* Hard ceiling on the memory one run plans for, whatever the config or free memory: 2 GB ≈ 3,163,333 lesions. Computed
 from the cost alone, not with largestSizeThatFits(), which applies the configured maxMB: a low maxMB would lower this
 ceiling, and so the cap of a report-mode run, which the budget must not affect. */
 export const CEILING_LESIONS = Math.floor((2048 - GRIN2_MEMORY.baseMB) / GRIN2_MEMORY.perUnitMB.lesions)
@@ -77,7 +78,7 @@ if (serverconfig.features.grin2maxLesions > CEILING_LESIONS)
  *    - SV: No filtering applied; same breakpoint-to-lesion conversion as fusion.
  *    - Hypermutator: To be implemented at later date
  * 4. Convert filtered data to lesion format and apply overall lesion cap
- * 5. Pass lesion data and maxGenesToShow to Python for GRIN2 statistical analysis and then pass device pixel ratio, width, and height to Rust for plot generation
+ * 5. Pass lesion data and maxGenesToShow to the grin2 Rust binary for GRIN2 statistical analysis, then draw the plot with renderManhattan() at the device pixel ratio, width, and height
  * 6. Return Manhattan plot from renderManhattan() as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg, and cache file name for future use
  */
 
@@ -152,8 +153,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 
 	// Step 5: Render Manhattan PNG. Always re-rendered because rendering
 	// depends on view params (width, height, etc.) that aren't in the cache key.
-	// `geneHits` is read straight from the cached Python result rather than
-	// re-parsed from the cache JSON file (the Rust binary used to do the latter).
+	// `geneHits` is read straight from the cached statistics result rather than
+	// re-parsed from the cache JSON file.
 	const manhattanPlotStart = Date.now()
 	const manhattanPlotData = await renderManhattan({
 		geneHits: resultData?.geneHits ?? [],
@@ -342,14 +343,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 				...(maskRows.length > 0 ? [{ name: 'Excluded Genes (region mask)', rows: maskRows }] : []),
 				{
 					name: 'Memory Usage',
-					rows: [
-						['Start', `${resultData.memory?.start} MB`],
-						['After Prep', `${resultData.memory?.after_prep} MB`],
-						['After Overlaps', `${resultData.memory?.after_overlaps} MB`],
-						['After Counts', `${resultData.memory?.after_counts} MB`],
-						['After Stats', `${resultData.memory?.after_stats} MB`],
-						['Peak', `${resultData.memory?.peak} MB`]
-					]
+					rows: [['Peak', `${resultData.memory?.peak} MB`]]
 				},
 				{
 					name: 'Timing',
@@ -375,9 +369,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
  * cacheOrRecompute as the computeArgument. View/render params (width,
  * height, devicePixelRatio, pngDotRadius, lesionTypeColors,
  * qValueThreshold, logCutoff, maxCappedPoints, hardCap, binSize) are
- * deliberately excluded — they only affect the Rust manhattan_plot
- * output, not the underlying Python statistics. Changing only a render
- * param should still hit the Python cache; changing a data filter
+ * deliberately excluded — they only affect the renderManhattan
+ * output, not the underlying statistics. Changing only a render
+ * param should still hit the cache; changing a data filter
  * should miss. */
 export function grin2KeyInputs(req: GRIN2Request) {
 	return {
@@ -395,9 +389,9 @@ export function grin2KeyInputs(req: GRIN2Request) {
 	}
 }
 
-/** Normalize excludeOptions so the cache key and the Python input always agree and never carry a
+/** Normalize excludeOptions so the cache key and the statistics input always agree and never carry a
  * non-finite overlapFrac. A NaN (e.g. from an empty client input) would be serialized by
- * JSON.stringify to null, and the Python wrapper's float(None) would then throw. Clamp to a finite
+ * JSON.stringify to null, which the grin2 binary rejects as a number. Clamp to a finite
  * value in [0, 1] (default 0.5). Returns null when no excludeOptions are provided. */
 export function normalizeExcludeOptions(opts: GRIN2Request['excludeOptions']): {
 	blacklists?: string[]
@@ -411,10 +405,10 @@ export function normalizeExcludeOptions(opts: GRIN2Request['excludeOptions']): {
 	}
 }
 
-/** Single read-or-recompute entry point for the GRIN2 cache. The Rust
- * plot step lives in `runGrin2` (always rerun because it depends on
+/** Single read-or-recompute entry point for the GRIN2 cache. The plot
+ * step lives in `runGrin2` (always rerun because it depends on
  * view params not in the cache key) — this wrapper only owns the
- * Python statistical step. Returns the cache result plus the telemetry
+ * statistical step. Returns the cache result plus the telemetry
  * fields the route handler uses to label `fromCache` and the
  * processing/GRIN2 timing rows. */
 async function getGrin2CacheResult(
@@ -466,7 +460,7 @@ async function getGrin2CacheResult(
 	return { result, cacheId, cacheFile, freshCompute, cohortTime, processingTime, grin2AnalysisTime }
 }
 
-/** Compute GRIN2 fresh: pull samples, build lesions, invoke Python.
+/** Compute GRIN2 fresh: pull samples, build lesions, run the grin2 binary.
  * `cacheOrRecompute` persists the returned cacheResult. Returns telemetry
  * alongside the result so `getGrin2CacheResult` can surface it to the
  * route handler. */
@@ -524,7 +518,7 @@ async function runGrin2Fresh(
 		throw new Error('No samples found matching the provided filter criteria')
 	}
 
-	// the memory for a run at this cap stays reserved until the python step ends
+	// the memory for a run at this cap stays reserved until the statistics step ends
 	const { cap: maxLesions, releaseMemory } = await getMaxLesions()
 	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
 	try {
@@ -553,20 +547,19 @@ async function runGrin2Fresh(
 			throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
 		}
 
-		// Step 3: Prepare input for Python script. Per-gene rows come back
-		// in the stdout JSON (geneHits) and get embedded in the cache result —
-		// Rust reads them straight from this JSON file, no sibling file.
+		// Step 3: Prepare input for the grin2 binary. Per-gene rows come back
+		// in the stdout JSON (geneHits) and get embedded in the cache result.
 		const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
 
-		// normalized once so pyInput matches the cache key (and never carries a non-finite overlapFrac)
+		// normalized once so the input matches the cache key (and never carries a non-finite overlapFrac)
 		const excludeOpts = normalizeExcludeOptions(request.excludeOptions)
 		const excludeBeds = resolveExcludeBeds(g, excludeOpts?.blacklists)
 		const excludeEnabled = excludeBeds.length > 0
 
-		const pyInput = {
+		const input = {
 			genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 			chromosomelist,
-			lesion: JSON.stringify(lesions),
+			lesion: lesions,
 			maxGenesToShow: request.maxGenesToShow,
 			lesionTypeMap: buildLesionTypeMap(availableDataTypes),
 			excludeEnabled,
@@ -574,21 +567,14 @@ async function runGrin2Fresh(
 			excludeOverlapFrac: excludeOpts?.overlapFrac ?? 0.5
 		}
 
-		// Step 4: Run GRIN2 analysis via Python
+		// Step 4: Run GRIN2 analysis. run_rust rejects with the binary's stderr when it fails.
 		const grin2AnalysisStart = Date.now()
-		const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput), { signal })
-
-		if (pyResult.stderr?.trim()) {
-			mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
-			if (pyResult.stderr.includes('ERROR:')) {
-				throw new Error(`Python script error: ${pyResult.stderr}`)
-			}
-		}
+		const out = await run_rust('grin2', JSON.stringify(input), [], { signal })
 
 		const grin2AnalysisTime = Date.now() - grin2AnalysisStart
-		mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
+		mayLog(`[GRIN2] Statistics took ${formatElapsedTime(grin2AnalysisTime)}`)
 
-		const resultData = JSON.parse(pyResult)
+		const resultData = JSON.parse(out)
 
 		const cacheResult: Grin2CacheResult = {
 			resultData,

@@ -5,7 +5,7 @@
 /** How a dataset quantifies cnv values; declared at ds.queries.cnv.type. See CnvSegmentQuery in #types. */
 export type CnvType = 'log2ratio' | 'segmean' | 'category' | 'copyNumber'
 
-/** One GRIN2 lesion row passed to Python: [sampleName, chrom, start, end, lesionType].
+/** One GRIN2 lesion row passed to the grin2 binary: [sampleName, chrom, start, end, lesionType].
  * start/end are numeric genomic positions (not strings) — see the data-flow comment at the top of main.ts. */
 export type Lesion = [string, string, number, number, string]
 

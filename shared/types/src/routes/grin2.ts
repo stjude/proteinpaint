@@ -196,8 +196,8 @@ export type GRIN2Response = {
 		}>
 	}
 
-	/** True when the GRIN2 statistical analysis (Python step) was served from
-	 * cache rather than recomputed. The Manhattan plot (Rust step) is always
+	/** True when the GRIN2 statistical analysis (grin2 binary step) was served from
+	 * cache rather than recomputed. The Manhattan plot (renderManhattan step) is always
 	 * re-rendered because it depends on view params (width, height, colors). */
 	fromCache?: boolean
 }
