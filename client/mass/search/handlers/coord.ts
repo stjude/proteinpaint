@@ -33,7 +33,7 @@ export class SearchResultHandler implements OmnisearchHandler<RegionRow> {
 		tr.append('td').text(row.name).style('padding', '5px 10px')
 		addActionButton(tr.append('td'), deps, {
 			label: 'Genome Browser',
-			testid: 'sjpp-mass-chat-coord-genomebrowser',
+			testid: 'sjpp-mass-search-coord-genomebrowser',
 			onClick: () => deps.launcher.launchGenomeBrowserView('genomic', { coord: row.coord })
 		})
 	}

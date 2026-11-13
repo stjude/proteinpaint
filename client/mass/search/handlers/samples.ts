@@ -12,27 +12,27 @@ export const SAMPLE_ACTIONS: {
 }[] = [
 	{
 		label: 'Sample View',
-		testid: row => `sjpp-mass-chat-sample-view-${row.sampleId}`,
+		testid: row => `sjpp-mass-search-sample-view-${row.sampleId}`,
 		available: () => true,
 		// config.sample (singular): the same single-sample shape the scatter click handler dispatches
 		config: row => ({ chartType: 'sampleView', sample: { sampleId: row.sampleId, sampleName: row.name } })
 	},
 	{
 		label: 'Single cell',
-		testid: row => `sjpp-mass-chat-single-cell-${row.sampleId}`,
+		testid: row => `sjpp-mass-search-single-cell-${row.sampleId}`,
 		available: row => Boolean(row.singleCell),
 		config: row => ({ chartType: 'sc', settings: { sc: { item: row.singleCell } } })
 	},
 	{
 		label: 'Whole Slide Images',
-		testid: row => `sjpp-mass-chat-wsimages-${row.sampleId}`,
+		testid: row => `sjpp-mass-search-wsimages-${row.sampleId}`,
 		available: row => Boolean(row.wsimages),
 		// whole-slide viewer in fixed-sample mode, restricted to plain slides
 		config: row => ({ chartType: 'wsi', sample: { sID: row.name }, imageType: 'wsi' })
 	},
 	{
 		label: 'Facet Table',
-		testid: row => `sjpp-mass-chat-assays-${row.sampleId}`,
+		testid: row => `sjpp-mass-search-assays-${row.sampleId}`,
 		available: row => Boolean(row.facetTracks?.length),
 		config: async row => {
 			const { getSampleFilter } = await import('../../groups.js')

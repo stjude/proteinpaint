@@ -263,14 +263,14 @@ tape('testids per term type and plot', t => {
 		.categoriesFor(geneRow({ geneExpression: true, snvindel: true, dnaMethylation: true }))
 		.flatMap(c => c.actions.map(a => a.testid('TP53')))
 	t.deepEqual(ids, [
-		'sjpp-mass-chat-gene-exp-TP53',
-		'sjpp-mass-chat-gene-exp-survival-TP53',
-		'sjpp-mass-chat-gene-variant-TP53',
-		'sjpp-mass-chat-gene-variant-survival-TP53',
-		'sjpp-mass-chat-gene-protein-TP53',
-		'sjpp-mass-chat-gene-genomic-TP53',
-		'sjpp-mass-chat-gene-methylation-TP53',
-		'sjpp-mass-chat-gene-methylation-survival-TP53'
+		'sjpp-mass-search-gene-exp-TP53',
+		'sjpp-mass-search-gene-exp-survival-TP53',
+		'sjpp-mass-search-gene-variant-TP53',
+		'sjpp-mass-search-gene-variant-survival-TP53',
+		'sjpp-mass-search-gene-protein-TP53',
+		'sjpp-mass-search-gene-genomic-TP53',
+		'sjpp-mass-search-gene-methylation-TP53',
+		'sjpp-mass-search-gene-methylation-survival-TP53'
 	])
 	t.end()
 })
