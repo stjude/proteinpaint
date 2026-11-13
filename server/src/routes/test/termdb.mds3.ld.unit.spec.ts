@@ -38,8 +38,8 @@ tape('LD route is mounted only when a dataset has LD tracks', test => {
 	)
 	test.deepEqual(
 		getMounted({ hg38: { termdbs: { A: { queries: { ld: { tracks: [{ name: 'ld' }] } } } } } }),
-		['get /termdb/mds3/getLDdata', 'post /termdb/mds3/getLDdata'],
-		'mounts for termdbs with LD tracks'
+		[],
+		'does not inspect genome-level termdbs'
 	)
 	test.end()
 })

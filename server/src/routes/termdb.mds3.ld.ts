@@ -27,9 +27,7 @@ export const api: RouteApi = {
 
 export function hasMds3LDDataDs(genomes) {
 	return Object.values(genomes).some((genome: any) =>
-		[...Object.values(genome.datasets || {}), ...Object.values(genome.termdbs || {})].some(
-			(ds: any) => ds.queries?.ld?.tracks?.length
-		)
+		Object.values(genome.datasets || {}).some((ds: any) => ds.queries?.ld?.tracks?.length)
 	)
 }
 
@@ -50,7 +48,7 @@ function init({ genomes }) {
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome name'
-			const ds = genome.datasets?.[q.dslabel] || genome.termdbs?.[q.dslabel]
+			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			result = await getMds3LDdata(q, ds, genome)
 		} catch (e: any) {
