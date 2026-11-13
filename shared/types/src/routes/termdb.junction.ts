@@ -24,6 +24,8 @@ export type Junction = {
 	along with sn2rc for downstream processing
 	*/
 	sn2rc?: Map<string | number, number>
+	/** with keepLst, for a junction with an intron retention event: k: sample id of sn2rc, v: its IR ratio, 0 for none */
+	sn2ir?: Map<string | number, number>
 	/**
 	in /junctions route response, if a junction is singleton, its sample name will be attached for showing in j2 tk
 	this avoids making another request to get the sample name

@@ -118,10 +118,14 @@ export async function validate_query_junction(ds: any, genome: any) {
 							strand,
 							sn2rc: new Map<string | number, number>() // k: sample id, v: read count
 						}
+						const irSlot = getIRslot(l[4])
+						if (irSlot) j.sn2ir = new Map<string | number, number>()
 						for (let i = 5; i < l.length; i++) {
-							const r = getSampleReadcount(l[i], i)
+							const r = getSampleReadcount(l[i], i, irSlot)
 							if (r) {
 								j.sn2rc!.set(r[1], r[0])
+								// a sample of the junction with no IR ratio retains none of the intron, as for j.IR below
+								if (irSlot) j.sn2ir!.set(r[1], Number.isFinite(r[2]) ? r[2]! : 0)
 							}
 						}
 						junctions.push(j)
@@ -314,6 +318,9 @@ export async function getJunctionData(
 		if (!term.chr || !Number.isInteger(term.start) || !Number.isInteger(term.stop) || !term.strand) {
 			throw new Error('junction.get(): junction term must include chr, integer start/stop, and strand')
 		}
+		if (term.measure != undefined && term.measure != JT_ir) {
+			throw new Error(`junction.get(): invalid junction term measure='${term.measure}'`)
+		}
 		const query = {
 			...param,
 			rglst: [{ chr: term.chr, start: term.start, stop: term.stop }],
@@ -327,17 +334,33 @@ export async function getJunctionData(
 		const junction = result.junctions.find(
 			(j: Junction) => j.start == term.start && j.stop == term.stop && j.strand == term.strand
 		)
-		let sn2rc: [string | number, number][] = junction ? [...(junction.sn2rc || [])] : []
+		/* by sample, the read count of the junction, or for a term of measure IR, the IR ratio. An IR term of a junction
+		with no IR event has no value */
+		const sn2value = term.measure == JT_ir ? junction?.sn2ir : junction?.sn2rc
+		let samples: [string | number, number][] = [...(sn2value || [])]
 		/* the samples of the sample types chosen for this term in the term picker. Applied here, per term,
 		rather than through the request, whose sample types listJunctions() would apply to every term of it:
 		a request may hold terms that chose different sample types */
 		if (term.sampleTypes != null) {
 			const keep = await limitSamples(term)
-			if (keep) sn2rc = sn2rc.filter(([sid]) => keep.has(sid))
+			if (keep) samples = samples.filter(([sid]) => keep.has(sid))
 		}
-		term2sample2value.set(tw.$id, Object.fromEntries(sn2rc))
+		term2sample2value.set(tw.$id, Object.fromEntries(samples))
 	}
 	return { term2sample2value }
+}
+
+/* the index of the IR ratio in the value string of a sample, when the junction has an IR event, of the junction's
+info column. Its values follow the read count in the order of info.events[] of the file */
+function getIRslot(infoStr: string): number | undefined {
+	let info
+	try {
+		info = JSON.parse(infoStr)
+	} catch (_) {
+		return // a junction of invalid info still has read counts
+	}
+	const irIdx = info?.events?.findIndex?.((e: any) => e.type == JT_ir) ?? -1
+	return irIdx == -1 ? undefined : irIdx + 1
 }
 
 function median(values: number[]): number {

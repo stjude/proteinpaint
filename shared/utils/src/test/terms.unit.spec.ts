@@ -3,6 +3,7 @@ import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV, TermTypes } from '#types'
 import { dtTerms } from '../common.js'
 import {
 	dtTermTypes,
+	equals,
 	getGvGeneKey,
 	getGvQCacheKey,
 	getGvQueryKey,
@@ -255,6 +256,15 @@ tape('trimGvTermsForSave(): leaves other term types alone', t => {
 	const copy = structuredClone(state)
 	trimGvTermsForSave(state)
 	t.deepEqual(state, copy, 'should not modify a non-geneVariant tw')
+	t.end()
+})
+
+tape('equals(): junction terms', t => {
+	const j = { type: TermTypes.JUNCTION, chr: 'chr1', start: 100, stop: 200, strand: '+' }
+	t.ok(equals(j, { ...j }), 'the read counts of a junction are the same term')
+	t.notOk(equals(j, { ...j, measure: 'IR' }), 'the read count and the IR ratio of a junction are different terms')
+	t.ok(equals({ ...j, measure: 'IR' }, { ...j, measure: 'IR' }), 'the IR ratios of a junction are the same term')
+	t.notOk(equals(j, { ...j, stop: 300 }), 'junctions of different ends are different terms')
 	t.end()
 })
 

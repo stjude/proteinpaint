@@ -888,6 +888,7 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 		table.addRow(`PSI, ${tk.deltaPsiGroups?.case.name || 'case'}`, psi(j.psi_case))
 		if (j.psi_control != null && j.psi_case != null) table.addRow('ΔPSI', roundValueAuto(j.psi_case - j.psi_control))
 	}
+	let samplesCell // shows the buttons of the term of the read count of each sample, when there are samples
 	if (Number.isFinite(j.medianReadCount)) {
 		const [t1, t2] = table.addRow()
 		if (!(j.sampleCount > 1)) {
@@ -900,6 +901,11 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 			t2.append('div').html(`${j.sampleCount} <span style="font-size:.7em">samples</span>
 			<br>${j.medianReadCount} <span style="font-size:.7em">median read count</span>`)
 		}
+		samplesCell = t2
+	}
+	if (isClickMenu && tk.massApp) {
+		const buttonCell = samplesCell ? samplesCell.append('div') : table.addRow()[1]
+		addTermButtons(buttonCell, tk, makeJunctionTerm(j), 'sjpp-junction')
 	}
 	if (j.IR) {
 		// of the samples above, those retaining the intron between the two ends of this junction
@@ -910,34 +916,8 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 		t2.append('div').html(
 			`${roundValueAuto(j.IR.medianRatio)} <span style="font-size:.7em">${n > 1 ? 'median ' : ''}IR ratio</span>`
 		)
-	}
-
-	if (isClickMenu && tk.massApp) {
-		const [, buttonCell] = table.addRow()
-		buttonCell
-			.append('button')
-			.attr('data-testid', 'sjpp-junction-details')
-			.text('Details')
-			.on('click', async () => {
-				tk.itemtip.hide()
-				// read for the sample types the track shows, chosen in the genome browser's sample type row
-				const term = tk.sampleTypes ? withSampleTypes(makeJunctionTerm(j), tk) : makeJunctionTerm(j)
-				await tk.massApp.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: 'summary',
-						term: { term, q: { mode: 'continuous' } }
-					}
-				})
-			})
-		buttonCell
-			.append('button')
-			.attr('data-testid', 'sjpp-junction-select')
-			.text('Select')
-			.on('click', async event => {
-				await addJunctionCustomTerm(tk, [makeJunctionTerm(j)], event.currentTarget, msgDiv)
-			})
-		const msgDiv = buttonCell.append('div').style('font-size', '.7em')
+		// a term of the IR ratio of each sample, rather than its read count
+		if (isClickMenu && tk.massApp) addTermButtons(t2.append('div'), tk, makeJunctionTerm(j, JT_ir), 'sjpp-junction-ir')
 	}
 
 	const type2elst = new Map() // k: event.type, v: list of events of that type
@@ -948,11 +928,22 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 		type2elst.get(e.type).push(e)
 	}
 
-	for (const [type, elst] of type2elst) {
-		listAllEvents(elst, table, j, tk, block, isClickMenu)
+	// an end of the junction mapped to a gene, of the free diagram of a junction without event, see showJunctionDiagram()
+	const endInGene = ['exonleft', 'exonleftin', 'intronleft', 'exonright', 'exonrightin', 'intronright'].some(
+		k => j.info?.[k]?.length
+	)
+	const hasDiagram = type2elst.size > 0 || endInGene
+	if (!isClickMenu) {
+		/* no events on hover, whose types are shown above: their gene and isoforms say little, and an event diagram
+		requests the read counts of its other junctions, of which a gene of many isoforms may have many */
+		if (hasDiagram)
+			holder.append('div').style('font-size', '.7em').style('opacity', 0.7).text('Click the junction to show diagrams.')
+		return
 	}
-
-	if (type2elst.size == 0 && Object.keys(j.info).length) {
+	for (const [type, elst] of type2elst) {
+		listAllEvents(elst, table, j, tk, block)
+	}
+	if (type2elst.size == 0 && j.info && Object.keys(j.info).length) {
 		// no events. it's either canonical or not annotated, show free diagram
 		const [t1, t2] = table.addRow()
 		t1.text('Diagram')
@@ -960,9 +951,11 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 	}
 }
 
-export function makeJunctionTerm(j) {
+/* measure: optional, JT_ir for a term of the IR ratio of each sample, see JunctionTerm.measure; absent for its read count.
+The id and name tell the two terms of a junction apart */
+export function makeJunctionTerm(j, measure) {
 	const position = `${j.chr}:${j.start + 1}-${j.stop + 1}`
-	return {
+	const term = {
 		type: TermTypes.JUNCTION,
 		id: `${j.chr}:${j.start}-${j.stop}:${j.strand}`,
 		name: j.name || `${position} (${j.strand})`,
@@ -972,6 +965,42 @@ export function makeJunctionTerm(j) {
 		strand: j.strand,
 		info: j.info || {}
 	}
+	if (measure == JT_ir) {
+		term.measure = JT_ir
+		term.id += `:${JT_ir}`
+		term.name += ' IR ratio'
+	} else if (measure) {
+		throw new Error(`invalid junction term measure='${measure}'`)
+	}
+	return term
+}
+
+/* Details opens a summary plot of the term; Select adds it as a custom term, to be found in the term picker.
+testidPrefix: of the data-testid of the buttons */
+function addTermButtons(holder, tk, term, testidPrefix) {
+	holder
+		.append('button')
+		.attr('data-testid', `${testidPrefix}-details`)
+		.text('Details')
+		.on('click', async () => {
+			tk.itemtip.hide()
+			await tk.massApp.dispatch({
+				type: 'plot_create',
+				config: {
+					chartType: 'summary',
+					// read for the sample types the track shows, chosen in the genome browser's sample type row
+					term: { term: tk.sampleTypes ? withSampleTypes(term, tk) : term, q: { mode: 'continuous' } }
+				}
+			})
+		})
+	holder
+		.append('button')
+		.attr('data-testid', `${testidPrefix}-select`)
+		.text('Select')
+		.on('click', async event => {
+			await addJunctionCustomTerm(tk, [term], event.currentTarget, msgDiv)
+		})
+	const msgDiv = holder.append('div').style('font-size', '.7em')
 }
 
 function showJunctionDiagram(j, tk, holder) {
@@ -1047,7 +1076,7 @@ function showJunctionDiagram(j, tk, holder) {
 	})
 }
 
-function showEventdiagram_a53ss(j, e, tk, holder, block, isClickMenu) {
+function showEventdiagram_a53ss(j, e, tk, holder, block) {
 	// a5ss, a3ss
 	const e2 = {
 		junctionB: {
@@ -1073,9 +1102,7 @@ function showEventdiagram_a53ss(j, e, tk, holder, block, isClickMenu) {
 		otherJs.push(aj)
 	}
 
-	if (isClickMenu) {
-		mayGroupSelect(tk, block, j, otherJs, `${e.gene} ${e.isoform} E${e.exon5idx + 1} ${e.type}`, holder)
-	}
+	mayGroupSelect(tk, block, j, otherJs, `${e.gene} ${e.isoform} E${e.exon5idx + 1} ${e.type}`, holder)
 
 	import('../src/spliceevent.a53ss.diagram').then(p => {
 		const text = p.default({
@@ -1097,7 +1124,7 @@ function showEventdiagram_a53ss(j, e, tk, holder, block, isClickMenu) {
 	})
 }
 
-function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, isClickMenu) {
+function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block) {
 	/*
 	j is the junctionB of this event
 	event is as from j.info.spliceEvent, either skip or alt
@@ -1164,26 +1191,24 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, isClic
 		e2.down1junction = e.down1junction
 	}
 
-	if (isClickMenu) {
-		const jc = structuredClone({
-			// duplicate j.info{} just in case
-			chr: j.chr,
-			start: j.start,
-			stop: j.stop,
-			strand: j.strand,
-			info: j.info
-		})
-		// junction B joins the exons flanking the skipped ones
-		jc.name = `E${firstSkipped - 1}-E${lastSkipped + 1}`
-		mayGroupSelect(
-			tk,
-			block,
-			jc,
-			otherJs,
-			`${e.gene} ${e.isoform} ${e.skippedexon.map(i => 'E' + (i + 1)).join(',')} ${e.type}`,
-			holder
-		)
-	}
+	const jc = structuredClone({
+		// duplicate j.info{} just in case
+		chr: j.chr,
+		start: j.start,
+		stop: j.stop,
+		strand: j.strand,
+		info: j.info
+	})
+	// junction B joins the exons flanking the skipped ones
+	jc.name = `E${firstSkipped - 1}-E${lastSkipped + 1}`
+	mayGroupSelect(
+		tk,
+		block,
+		jc,
+		otherJs,
+		`${e.gene} ${e.isoform} ${e.skippedexon.map(i => 'E' + (i + 1)).join(',')} ${e.type}`,
+		holder
+	)
 
 	import('../src/spliceevent.exonskip.diagram').then(p => {
 		const [junction2readcounttext, junctionlst] = p.default({
@@ -1229,7 +1254,7 @@ function mayGroupSelect(tk, block, mainJ, otherJs, eventlabel, holder) {
 		.on('click', async event => {
 			await addJunctionCustomTerm(
 				tk,
-				[makeJunctionTerm(mainJ), ...otherJs.map(makeJunctionTerm)],
+				[makeJunctionTerm(mainJ), ...otherJs.map(o => makeJunctionTerm(o))],
 				event.currentTarget,
 				msgDiv,
 				eventlabel
@@ -1252,13 +1277,14 @@ async function addJunctionCustomTerm(tk, junctions, button, msgDiv, eventlabel) 
 	)
 }
 
-function listAllEvents(lst, table, j, tk, block, isClickMenu) {
+// only in the click menu, see showOneJunction()
+function listAllEvents(lst, table, j, tk, block) {
 	if (lst.length == 1) {
 		const [t1, t2] = table.addRow()
 		const e = lst[0]
 		t1.append('div').text(e.gene)
 		t1.append('div').text(e.isoform).style('font-size', '.8em')
-		showEvent(j, e, tk, t2, block, isClickMenu)
+		showEvent(j, e, tk, t2, block)
 		return
 	}
 
@@ -1287,15 +1313,15 @@ function listAllEvents(lst, table, j, tk, block, isClickMenu) {
 					.text(i)
 					.style('font-size', s + 'em')
 		}
-		showEvent(j, eo, tk, t2, block, isClickMenu)
+		showEvent(j, eo, tk, t2, block)
 	}
 }
 
-function showEvent(j, e, tk, holder, block, isClickMenu) {
+function showEvent(j, e, tk, holder, block) {
 	if (e.type == JT_exonskip || e.type == JT_exonaltuse) {
-		showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, isClickMenu)
+		showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block)
 	} else if (e.type == JT_a5ss || e.type == JT_a3ss) {
-		showEventdiagram_a53ss(j, e, tk, holder, block, isClickMenu)
+		showEventdiagram_a53ss(j, e, tk, holder, block)
 	}
 }
 

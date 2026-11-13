@@ -9,6 +9,9 @@ export type JunctionTerm = NumericBaseTerm & {
 	/** to be fully documented */
 	info: any
 	bins?: PresetNumericBins
+	/** the value of a sample. Absent: the read count of the junction.
+	'IR' (JT_ir): the IR ratio of the sample, of the intron between the two ends of the junction */
+	measure?: 'IR'
 }
 
 export type JunctionTW = NumTW & { term: JunctionTerm }

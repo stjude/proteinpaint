@@ -284,3 +284,61 @@ tape('listJunctions: intron retention', async test => {
 	}
 	test.end()
 })
+
+tape('getJunctionData: IR ratio of a junction term of measure IR', async test => {
+	const q = await getJunctionQuery()
+	const term = { type: 'junction', chr: 'chr17', start: 3000, stop: 4000, strand: '+' }
+	const get = async (terms: any[], param = {}) => (await q.get({ terms, ...param })).term2sample2value
+	{
+		const data = await get([
+			{ $id: 'rc', term },
+			{ $id: 'ir', term: { ...term, measure: 'IR' } }
+		])
+		test.deepEqual(data.get('rc'), { S1: 8, S2: 6, S4: 9 }, 'a term without measure reads the read counts')
+		test.deepEqual(
+			data.get('ir'),
+			{ S1: 0.3, S2: 0, S4: 0.5 },
+			'reads the IR ratio after the value of another event, 0 for a sample of the junction with none'
+		)
+	}
+	{
+		const data = await get([{ $id: 'ir', term: { ...term, start: 1000, stop: 2000, measure: 'IR' } }], {
+			readcountCutoff: 10
+		})
+		test.deepEqual(
+			data.get('ir'),
+			{ S1: 0.2, S2: 0.4, S4: 0.1 },
+			'reads the IR ratio of a sample only when its read count passes the cutoff'
+		)
+	}
+	{
+		const data = await get([{ $id: 'ir', term: { ...term, start: 5000, stop: 6000, measure: 'IR' } }])
+		test.deepEqual(data.get('ir'), { S1: 0, S2: 0 }, 'every sample of the junction has 0 when none retains the intron')
+	}
+	{
+		// a junction that is found, with read counts but no IR event, so listJunctions() gives no sn2ir
+		const listJunctions = async () => ({
+			junctions: [{ start: 100, stop: 200, strand: '+', sn2rc: new Map([['sample-1', 12]]) }]
+		})
+		const result = await getJunctionData(
+			{
+				terms: [
+					{ $id: 'ir', term: { type: 'junction', chr: 'chr1', start: 100, stop: 200, strand: '+', measure: 'IR' } }
+				]
+			},
+			listJunctions,
+			{}
+		)
+		test.deepEqual(result.term2sample2value.get('ir'), {}, 'a junction with no IR event has no IR ratio')
+	}
+	try {
+		await get([{ $id: 'x', term: { ...term, measure: 'exonskip' } }])
+		test.fail('should throw on an unsupported measure')
+	} catch (e: any) {
+		test.ok(
+			String(e.message || e).includes("invalid junction term measure='exonskip'"),
+			'throws on an unsupported measure'
+		)
+	}
+	test.end()
+})
