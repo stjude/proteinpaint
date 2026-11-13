@@ -5,14 +5,13 @@
 #   RUN --mount=type=bind,source=checkSharedLibs.sh,target=/tmp/checkSharedLibs.sh sh /tmp/checkSharedLibs.sh <path>...
 #
 # Not reported:
-# - numba's optional TBB threading layer, which numba skips when libtbb is not installed
 # - the libraries that a python wheel bundles in site-packages/<name>.libs/, which resolve each other only when they
 #   are loaded through the wheel's extension modules, whose own dependencies are checked; import the package to check
 #   them, as the ppruntime stage does
 
 set -eu
 
-SKIP='/numba/np/ufunc/tbbpool\.|/site-packages/[^/]+\.libs/'
+SKIP='/site-packages/[^/]+\.libs/'
 failed=0
 count=0
 for f in $(find "$@" -type f \( -name '*.so' -o -name '*.so.*' -o -name '*.node' -o -perm -u+x \) 2>/dev/null); do

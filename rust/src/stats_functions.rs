@@ -510,3 +510,28 @@ pub fn cerno(
     }
     (p_value as f32, AUC, cES, N1, gene_set_hits, cerno)
 }
+
+/// R's p.adjust(p, "BH"). A NaN is dropped before n is counted -- p.adjust's default n is
+/// length(p), evaluated after the NAs are removed -- and comes back NaN.
+#[allow(dead_code)]
+pub fn bh_adjust(p: &[f64]) -> Vec<f64> {
+    bh_adjust_ordered(p).0
+}
+
+/// bh_adjust, plus the non-NaN indices in descending order of p -- which is also ascending order
+/// of the adjusted values read from the end, since BH is monotone in p.
+#[allow(dead_code)]
+pub fn bh_adjust_ordered(p: &[f64]) -> (Vec<f64>, Vec<u32>) {
+    let mut idx: Vec<u32> = (0..p.len() as u32).filter(|&i| !p[i as usize].is_nan()).collect();
+    // largest first; tied values all receive the same adjusted value, so their order is immaterial
+    idx.sort_unstable_by(|&a, &b| p[b as usize].partial_cmp(&p[a as usize]).unwrap());
+    let n = idx.len() as f64;
+    let mut out = vec![f64::NAN; p.len()];
+    let mut cm = f64::INFINITY;
+    for (k, &i) in idx.iter().enumerate() {
+        let rank = (idx.len() - k) as f64;
+        cm = cm.min(n / rank * p[i as usize]);
+        out[i as usize] = cm.min(1.0);
+    }
+    (out, idx)
+}

@@ -591,7 +591,7 @@ tape('grin2KeyInputs + normalizeExcludeOptions', test => {
 	test.equal(minimal.filter, null, 'missing filter nulled in cache key')
 	test.equal(minimal.cnvOptions, null, 'missing option groups nulled in cache key')
 	test.equal(minimal.excludeOptions, null, 'missing excludeOptions => null')
-	test.equal(minimal.statsVersion, 2, 'statistics version in cache key, so results of older statistics are not reused')
+	test.equal(minimal.statsVersion, 3, 'statistics version in cache key, so results of older statistics are not reused')
 
 	// overlapFrac normalization
 	test.equal(normalizeExcludeOptions({ overlapFrac: NaN })?.overlapFrac, 0.5, 'NaN overlapFrac clamped to default 0.5')
@@ -627,7 +627,7 @@ tape('resolveExcludeBeds', test => {
 
 tape('getMaxLesions', async test => {
 	// a fixed 2 GB, from the cost alone: a low configured maxMB must not lower it, or report mode would trim or refuse
-	test.equal(CEILING_LESIONS, 3163333, 'the ceiling is (2048 - 150) / 0.0006 = 3,163,333 lesions, whatever the budget')
+	test.equal(CEILING_LESIONS, 4173333, 'the ceiling is (2048 - 170) / 0.00045 = 4,173,333 lesions, whatever the budget')
 	// the configured max, under that ceiling
 	const max = Math.min(serverconfig.features.grin2maxLesions || 250000, CEILING_LESIONS)
 	const freeMB = (mb: number) => async () => mb
@@ -637,12 +637,12 @@ tape('getMaxLesions', async test => {
 		releaseMemory()
 		return cap
 	}
-	// cap = floor((free MB, at most the 3,072 MB default maxMB, − 150) / 0.0006), then no higher than max
+	// cap = floor((free MB, at most the 3,072 MB default maxMB, − 170) / 0.00045), then no higher than max
 	test.equal(await capAt(16000), max, 'plentiful memory => the configured max')
-	test.equal(await capAt(250), Math.min(max, 166666), '250 MB => 166,666')
-	test.equal(await capAt(170), Math.min(max, 33333), '170 MB => 33,333, not raised to a floor')
-	test.equal(await capAt(150.1), Math.min(max, 166), '150.1 MB => 166, the smallest cap that is not refused')
-	for (const mb of [150, 0]) {
+	test.equal(await capAt(250), Math.min(max, 177777), '250 MB => 177,777')
+	test.equal(await capAt(185), Math.min(max, 33333), '185 MB => 33,333, not raised to a floor')
+	test.equal(await capAt(170.1), Math.min(max, 222), '170.1 MB => 222, the smallest cap that is not refused')
+	for (const mb of [170, 0]) {
 		try {
 			await capAt(mb)
 			test.fail(`${mb} MB => should throw`)
@@ -661,7 +661,7 @@ tape('getMaxLesions', async test => {
 		test.equal(e.code, 'LOW_MEMORY', 'a second run while the first holds the budget => refused')
 	}
 	first.releaseMemory()
-	test.equal(await capAt(250), Math.min(max, 166666), 'after the first run releases => the full cap again')
+	test.equal(await capAt(250), Math.min(max, 177777), 'after the first run releases => the full cap again')
 
 	// report mode: never trimmed or refused, however little is free
 	for (const mb of [1500, 0]) {

@@ -28,13 +28,14 @@ export { resolveExcludeBeds } from '../utils/regionMask.ts'
 import { resolveExcludeBeds } from '../utils/regionMask.ts'
 
 // Constants for memory-aware lesion cap calculations
-// Peak memory of a run (the Node server's rise plus the grin2 binary, at the same moment) measured on 22 ASH and AML
-// runs of 162 to 3,738,033 lesions and 16 to 5,735 samples fits 70 MB + 0.53 MB per 1,000 lesions (R2 0.99). These
-// values are at or above every run, by 40 MB or more. Node holds over half the peak (its lesion array, the input string,
-// and the plot), and its share varies by ~250 MB between identical large runs, so the slope keeps 150 MB of room there.
-export const GRIN2_MEMORY: MemoryCost = { baseMB: 150, perUnitMB: { lesions: 0.0006 } }
+// Peak memory of a run (the Node server's rise plus the grin2 binary, at the same moment) was measured on 22 ASH and
+// AML runs of 162 to 3,738,033 lesions and 16 to 5,735 samples, listed in utils/test/memoryCosts.unit.spec.ts. They fit
+// 82 MB + 0.37 MB per 1,000 lesions (R2 0.99). These values are at or above every run, by 45 MB or more. Node holds
+// most of the peak (its lesion array, the input string, and the plot; the binary peaks at ~200 MB on all of ASH), and
+// its share varies by up to ~250 MB between identical large runs, so the slope keeps 280 MB or more of room above 3M.
+export const GRIN2_MEMORY: MemoryCost = { baseMB: 170, perUnitMB: { lesions: 0.00045 } }
 const MIN_LESIONS = 50000 // smallest run worth doing; when memory cannot fit this many, the run is refused
-/* Hard ceiling on the memory one run plans for, whatever the config or free memory: 2 GB ≈ 3,163,333 lesions. Computed
+/* Hard ceiling on the memory one run plans for, whatever the config or free memory: 2 GB ≈ 4,173,333 lesions. Computed
 from the cost alone, not with largestSizeThatFits(), which applies the configured maxMB: a low maxMB would lower this
 ceiling, and so the cap of a report-mode run, which the budget must not affect. */
 export const CEILING_LESIONS = Math.floor((2048 - GRIN2_MEMORY.baseMB) / GRIN2_MEMORY.perUnitMB.lesions)
@@ -134,8 +135,8 @@ export function init({ genomes }) {
 
 async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSignal): Promise<GRIN2Response> {
 	// Build the chromosome list once. It depends only on the genome reference,
-	// not the request, so it's safe to compute outside the cache (and Rust
-	// needs it for plotting on every request).
+	// not the request, so it's safe to compute outside the cache (and
+	// renderManhattan needs it on every request).
 	const chromosomelist: { [key: string]: number } = {}
 	for (const c in g.majorchr) {
 		chromosomelist[c] = g.majorchr[c]
@@ -376,8 +377,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 export function grin2KeyInputs(req: GRIN2Request) {
 	return {
 		// bump when the statistics change their results, so that cached results of the old ones are not reused;
-		// 2 = the Rust grin2 binary, which reports tiny p-values and changed the constellation test
-		statsVersion: 2,
+		// 2 = the Rust grin2 binary, which reports tiny p-values and changed the constellation test;
+		// 3 = exact subject counts in the top-gene table
+		statsVersion: 3,
 		genome: req.genome,
 		dslabel: req.dslabel,
 		filter: req.filter ?? null,
@@ -394,7 +396,8 @@ export function grin2KeyInputs(req: GRIN2Request) {
 
 /** Normalize excludeOptions so the cache key and the statistics input always agree and never carry a
  * non-finite overlapFrac. A NaN (e.g. from an empty client input) would be serialized by
- * JSON.stringify to null, which the grin2 binary rejects as a number. Clamp to a finite
+ * JSON.stringify to null, which the grin2 binary reads as unset and replaces with 0.5, while the
+ * cache key would still differ from a request that sends 0.5. Clamp to a finite
  * value in [0, 1] (default 0.5). Returns null when no excludeOptions are provided. */
 export function normalizeExcludeOptions(opts: GRIN2Request['excludeOptions']): {
 	blacklists?: string[]

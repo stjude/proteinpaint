@@ -9,7 +9,7 @@ import { DMRCATE_MEMORY, DMRCATE_REGION_MEMORY, DMRCATE_SAMPLE_TEST_MEMORY } fro
 /*
 Every memory cost must be at or above the peak of each real run it was measured on, so that a cost changed later
 cannot fall below the data without failing here. Peaks are MB: the Node server's rise plus the peak footprints of its
-R, python and rust children, on ASH unless noted, measured 2026-10-19/20 (GRIN2 2026-11-11) with a fresh server and an empty cache per run.
+R, python and rust children, on ASH unless noted, measured 2026-10-19/20 (GRIN2 2026-11-13) with a fresh server and an empty cache per run.
 The last section pins the @example outputs in memory.ts, so a changed cost fails here until those comments are updated.
 
 test sections:
@@ -26,32 +26,30 @@ function covers(test, label: string, needed: number, measured: number) {
 }
 
 tape('GRIN2', test => {
-	// [lesions, peak], measured 2026-11-11 with the Rust statistics step on ASH and AML
+	// [lesions, peak], measured 2026-11-13 with the Rust statistics step on ASH and AML
 	for (const [lesions, peak] of [
-		[162, 24],
-		[851, 69],
-		[851, 75],
-		[851, 84],
-		[851, 110],
-		[905, 91],
-		[1093, 93],
-		[2296, 94],
-		[15046, 90],
-		[15046, 113],
-		[250000, 165],
-		[250000, 177],
-		[250000, 187],
-		[299642, 183],
-		[500000, 299],
-		[872252, 526],
-		[991029, 593],
-		[1000000, 612],
-		[1441819, 812],
-		[2000000, 1206],
-		[3163333, 1792],
-		[3163333, 1877],
-		[3450909, 2064],
-		[3738033, 1894]
+		[162, 21],
+		[851, 121],
+		[851, 125],
+		[905, 119],
+		[1093, 57],
+		[2296, 103],
+		[15046, 93],
+		[250000, 155],
+		[299642, 166],
+		[500000, 280],
+		[872252, 361],
+		[991029, 449],
+		[1000000, 455],
+		[1441819, 580],
+		[2000000, 821],
+		[3000000, 1274],
+		[3163333, 1303],
+		[3163333, 1309],
+		[3163333, 1309],
+		[3738033, 1337],
+		[3738033, 1437],
+		[3738033, 1479]
 	])
 		covers(test, `${lesions} lesions`, estimatePeakMB(GRIN2_MEMORY, { lesions }), peak)
 	test.end()
@@ -180,7 +178,7 @@ tape('memory.ts @example outputs', test => {
 	const mmrfAllccre = { fileCells: 267531 * 415, cells: 267531 * 400 }
 	const r = (mb: number) => Math.round(mb)
 
-	test.equal(r(estimatePeakMB(GRIN2_MEMORY, { lesions: 250_000 })), 300, 'GRIN2 250,000 lesions => 300 MB')
+	test.equal(r(estimatePeakMB(GRIN2_MEMORY, { lesions: 250_000 })), 283, 'GRIN2 250,000 lesions => 283 MB')
 	test.equal(r(estimatePeakMB(DE_MEMORY.edgeR, allAsh)), 8938, 'edgeR on all ASH => ≈ 8938 MB')
 	test.equal(r(estimatePeakMB(DE_MEMORY.wilcoxon, allAsh)), 2551, 'wilcoxon on all ASH => ≈ 2551 MB')
 	test.equal(
@@ -229,12 +227,12 @@ tape('memory.ts @example outputs', test => {
 	)
 	test.equal(runFitsInMemory(TOPVE_MEMORY, { samples: 4873 }, 100), false, 'topVE at 100 MB => does not fit')
 
-	test.equal(largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions'), 2250000, 'GRIN2 at 1,500 MB => 2,250,000 lesions')
+	test.equal(largestSizeThatFits(1500, GRIN2_MEMORY, 'lesions'), 2955555, 'GRIN2 at 1,500 MB => 2,955,555 lesions')
 	test.equal(largestSizeThatFits(100, GRIN2_MEMORY, 'lesions'), 0, 'GRIN2 at 100 MB => 0, refused')
 	test.equal(
 		largestSizeThatFits(2048, GRIN2_MEMORY, 'lesions', 1),
-		3163333,
-		'all of 2 GB, under the default maxMB => 3,163,333 lesions'
+		4173333,
+		'all of 2 GB, under the default maxMB => 4,173,333 lesions'
 	)
 	test.end()
 })
