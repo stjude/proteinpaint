@@ -591,6 +591,7 @@ tape('grin2KeyInputs + normalizeExcludeOptions', test => {
 	test.equal(minimal.filter, null, 'missing filter nulled in cache key')
 	test.equal(minimal.cnvOptions, null, 'missing option groups nulled in cache key')
 	test.equal(minimal.excludeOptions, null, 'missing excludeOptions => null')
+	test.equal(minimal.statsVersion, 2, 'statistics version in cache key, so results of older statistics are not reused')
 
 	// overlapFrac normalization
 	test.equal(normalizeExcludeOptions({ overlapFrac: NaN })?.overlapFrac, 0.5, 'NaN overlapFrac clamped to default 0.5')

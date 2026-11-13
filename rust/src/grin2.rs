@@ -837,6 +837,73 @@ mod tests {
     }
 
     #[test]
+    fn subject_counts_and_pvalues_per_block() {
+        let gene = |chrom: &str, start, end| Gene {
+            name: String::new(),
+            chrom: chrom.into(),
+            start,
+            end,
+        };
+        let lesion = |subj, chrom: &str, start, end, ty| Lesion {
+            subj,
+            chrom: chrom.into(),
+            start,
+            end,
+            ty,
+        };
+        // chrA is small, so (gene + lesion) / size >= APPROX_THRESHOLD and the exact path runs;
+        // chrB is large, so the approximation runs
+        let genes = [
+            gene("chrA", 100, 149),   // 50 bp
+            gene("chrA", 500, 509),   // 10 bp
+            gene("chrB", 1000, 1099), // 100 bp
+        ];
+        let lesions = [
+            // type 0 on chrA: sample 0 hits gene 0 twice, sample 1 hits gene 1, sample 2 hits nothing
+            lesion(0, "chrA", 120, 130, 0), // 11 bp
+            lesion(0, "chrA", 140, 145, 0), // 6 bp
+            lesion(1, "chrA", 505, 505, 0), // 1 bp
+            lesion(2, "chrA", 300, 310, 0), // 11 bp
+            // type 1 on chrB: sample 0 hits gene 2 twice, sample 1 hits nothing
+            lesion(0, "chrB", 1050, 1050, 1), // 1 bp
+            lesion(0, "chrB", 1090, 1200, 1), // 111 bp
+            lesion(1, "chrB", 5000, 5009, 1), // 10 bp
+        ];
+        let nt = 2;
+        let nsubj = count_subjects(&genes, &lesions, nt);
+        // a sample with two lesions in one gene counts once
+        assert_eq!(nsubj, vec![1, 0, 1, 0, 0, 1]);
+
+        let sizes = HashMap::from([("chrA".to_string(), 1000), ("chrB".to_string(), 1_000_000)]);
+        let p = gene_pvalues(&genes, &lesions, &nsubj, nt, &sizes);
+        // exact: a sample's hit probability is 1 - prod over its lesions of (1 - (gene + lesion size) / chrom size)
+        let none = |prs: &[f64]| prs.iter().map(|x| 1.0 - x).product::<f64>();
+        let p0 = 1.0 - none(&[0.061, 0.056]) * none(&[0.051]) * none(&[0.061]);
+        let p1 = 1.0 - none(&[0.021, 0.016]) * none(&[0.011]) * none(&[0.021]);
+        // approximate: 1 - exp(-(lesion count * gene size + total lesion size) / chrom size)
+        let p2 = 1.0 - (-(2.0 * 100.0 + 112.0) / 1e6_f64).exp() * (-(100.0 + 10.0) / 1e6_f64).exp();
+        let expected = [p0, 1.0, p1, 1.0, 1.0, p2];
+        for (i, (a, b)) in p.iter().zip(expected).enumerate() {
+            assert!((a - b).abs() < 1e-12, "p[{}] = {}, expected {}", i, a, b);
+        }
+
+        // q = min(1, 2 * mean p) * BH(p), per type
+        let q = q_values(&p, genes.len(), nt);
+        let pi0 = (2.0 * (p0 + p1 + 1.0) / 3.0).min(1.0);
+        let expected = [
+            pi0 * (p0 * 1.5),
+            1.0,
+            pi0 * (p1 * 3.0).min(p0 * 1.5),
+            1.0,
+            pi0,
+            p2 * 3.0,
+        ];
+        for (i, (a, b)) in q.iter().zip(expected).enumerate() {
+            assert!((a - b).abs() < 1e-12, "q[{}] = {}, expected {}", i, a, b);
+        }
+    }
+
+    #[test]
     fn constellation_uses_order_statistics_of_uniforms() {
         // two lesion types, both p = 0.1: P(min of 2 uniforms <= 0.1) = 1 - 0.9^2, P(max <= 0.1) = 0.1^2
         let (p, _) = constellation(&[0.1, 0.1], 1, 2);

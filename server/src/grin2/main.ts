@@ -375,6 +375,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
  * should miss. */
 export function grin2KeyInputs(req: GRIN2Request) {
 	return {
+		// bump when the statistics change their results, so that cached results of the old ones are not reused;
+		// 2 = the Rust grin2 binary, which reports tiny p-values and changed the constellation test
+		statsVersion: 2,
 		genome: req.genome,
 		dslabel: req.dslabel,
 		filter: req.filter ?? null,
