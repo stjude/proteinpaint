@@ -17,6 +17,7 @@ export function addActionButton(
 		.style('margin', '0px 3px')
 		.style('padding', '5px 10px')
 		.style('border-radius', '5px')
+		.style('border', 'none')
 		.style('cursor', 'pointer')
 		.text(opts.label)
 		.on('click', function (this: HTMLElement) {
