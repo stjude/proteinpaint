@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Removed UI for AI chatbot in mass UI. Only the search functionality will remain in the search tab.
+
+
 ## 2.228.0
 
 General:
