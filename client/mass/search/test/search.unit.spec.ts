@@ -25,7 +25,7 @@ const config = {
 const handlers = await initHandlers({ app: {}, termdbConfig: config })
 
 tape('\n', t => {
-	t.comment('-***- mass/chat/search -***-')
+	t.comment('-***- mass/search/search -***-')
 	t.end()
 })
 

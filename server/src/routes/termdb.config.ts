@@ -516,9 +516,6 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 				}) || undefined
 		}
 	}
-	if (q.chat) {
-		q2.chat = {}
-	}
 	if (q.NIdata && serverconfig.features.showBrainImaging) {
 		q2.NIdata = { references: {} }
 		for (const [refKey, ref] of Object.entries(q.NIdata.references)) {

@@ -1,18 +1,14 @@
-# mass/chat
+# mass/search
 
-The mass **SEARCH / CHAT** tab. It has two parts:
-
-- **Omnisearch** (search as you type): finds dictionary variables, genes, samples and a typed genomic region, and launches plots from the results. This is the main code in this directory.
-- **Chat** (AI): shown only when the dataset has `termdbConfig.queries.chat`. In that case Enter sends the prompt to the chat instead of running a search. The chat code is in `chat.ts` (`submitChat`, `addBubble`, `showPossibleOptions`) and is separate from the search.
+The mass **SEARCH** tab: omnisearch (search as you type). It finds dictionary variables, genes, samples and a typed genomic region, and launches plots from the results.
 
 ## Files
 
 | File               | Role                                                                                                                               |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `chat.ts`          | The component (`type: 'chat'`). Builds the input, wires typing (debounced) and Enter, renders the popup, hosts the chat.            |
 | `loadHandlers.ts`  | `initHandlers()`: loads one handler per result key, once per dataset. `RESULT_KEYS` is the display order.                           |
 | `handlers/`        | One file per result kind. See `handlers/_README.md`.                                                                                |
-| `search.ts`        | `planSearch()` (which kinds to search for this text, one request) and `fetchOmnisearch()` (the server call). Debounce delay.        |
+| `search.ts`        | The `MassSearch` component (`type: 'search'`, exported as `searchInit`): builds the input, wires typing (debounced) and Enter, renders the popup. Also `planSearch()` (which kinds to search for this text, one request), `fetchOmnisearch()` (the server call) and the debounce delay. |
 | `results.ts`       | Generic list: headings, truncation notes, and the "Searchable: ..." note. Knows nothing about a particular result kind.             |
 | `popup.ts`         | `ResultsPopup`: the menu holding the results, and the inline picker used by the DNA methylation region.                             |
 | `launcher.ts`      | `Launcher`: `launchPlot` and `launchGenomeBrowserView`, shared by the handlers.                                                     |
@@ -44,10 +40,10 @@ Decided once, in `init()`, from `termdbConfig` (each handler's `includeResult()`
 
 Unit specs (`test/*.unit.spec.ts`) cover the small functions: handler gating and rows, `planSearch`, the result list. They need no server. The integration spec calls the real route on TermdbTest.
 
-In the browser, open the unit test page with `dir=mass/chat&name=*`. From the command line, from `client/`:
+In the browser, open the unit test page with `dir=mass/search&name=*`. From the command line, from `client/`:
 
 ```bash
-npx tsx --conditions=sjpp/dev mass/chat/test/genes.unit.spec.ts
+npx tsx --conditions=sjpp/dev mass/search/test/genes.unit.spec.ts
 ```
 
 ## Not done yet

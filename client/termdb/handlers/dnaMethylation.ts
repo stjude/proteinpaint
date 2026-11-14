@@ -101,7 +101,7 @@ export class SearchHandler {
 
 /** Embed a genome browser of a locus into `holder` so the user can navigate to the region of interest, with a
  * "Submit Region" button. On submit, `onSubmit` receives the region the browser is showing. Shared by this
- * search handler and the mass omnisearch (client/mass/chat/handlers/gene.ts). Returns the Block instance. */
+ * search handler and the mass omnisearch (client/mass/search/handlers/gene.ts). Returns the Block instance. */
 export async function embedRegionPicker(opts: {
 	holder: any
 	genomeObj: any

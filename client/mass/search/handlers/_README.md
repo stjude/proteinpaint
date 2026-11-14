@@ -78,4 +78,4 @@ When a button is shown (decided from `termdbConfig`):
 
 ## Tests
 
-Unit specs are in `../test/<key>.unit.spec.ts`, plus `results`, `search`, and the server-calling `search.integration.spec.ts`. Run in the browser with `dir=mass/chat&name=*`.
+Unit specs are in `../test/<key>.unit.spec.ts`, plus `results`, `search`, and the server-calling `search.integration.spec.ts`. Run in the browser with `dir=mass/search&name=*`.

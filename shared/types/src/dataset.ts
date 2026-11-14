@@ -1772,13 +1772,7 @@ type Mds3Queries = {
 	 * either kind of image, or both. */
 	w2?: SpatialQuery
 	images?: Images
-	chat?: any
 }
-
-/** chat app support
-type Chat = {
-}
- */
 
 /** non-zoom small images
 iamge file to sample mapping is stored in images table
@@ -2682,7 +2676,7 @@ export type Cohort = {
 type MassNav = {
 	/** Customization for the tabs*/
 	tabs?: {
-		/** supported keys: about, charts, groups, filter, chat
+		/** supported keys: about, charts, groups, filter, 
 		invalid key is ignored
 		when dslabel is too long to show in about tab middle row or to define alternative label,
 		do .tabs:{about:{mid:'alt label'}} */
@@ -2690,8 +2684,7 @@ type MassNav = {
 		charts?: MassNavTabEntry
 		groups?: MassNavTabEntry
 		filter?: MassNavTabEntry
-		/** shown as CHAT when the ds has queries.chat, otherwise as SEARCH */
-		chat?: MassNavTabEntry
+		search?: MassNavTabEntry
 		/** shown as USER when the ds requires authorization, otherwise as SESSION */
 		user?: MassNavUserTabEntry
 	}

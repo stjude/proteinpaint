@@ -34,7 +34,7 @@ export class SearchResultHandler implements OmnisearchHandler<DictRow> {
 			nameTd
 				.style('cursor', 'pointer')
 				.attr('class', 'sja_menuoption')
-				.attr('data-testid', `sjpp-mass-chat-term-${row.term.id}`)
+				.attr('data-testid', `sjpp-mass-search-term-${row.term.id}`)
 				.on('click', async () => {
 					deps.addBubble({ msg: escapeHtml(row.name) + ' (dictionary variable)', me: 1 })
 					try {

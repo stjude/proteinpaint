@@ -3,7 +3,7 @@ import { recoverInit } from '../rx/src/recover'
 import { chartsInit } from './charts'
 import { groupsInit } from './groups'
 import { aboutInit } from './about.ts'
-import { chatInit } from './chat/chat.ts'
+import { searchInit } from './search/search.ts'
 import { userInit, getDaysLeft } from './user'
 import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
@@ -38,6 +38,7 @@ const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
 // const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
+const searchTab = { top: 'SEARCH', mid: '', btm: '', subheader: 'search' }
 const userTab = { top: 'SESSION', mid: '', btm: '', subheader: 'user' }
 
 /**
@@ -136,9 +137,9 @@ class TdbNav {
 				aboutOverrides: appState?.termdbConfig?.massNav?.tabs?.about || null,
 				selectCohort: appState?.termdbConfig?.selectCohort || null
 			}),
-			chat: chatInit({
+			search: searchInit({
 				app: this.app,
-				subheader: this.dom.subheader.chat
+				subheader: this.dom.subheader.search
 			}),
 			user: userInit({
 				app: this.app,
@@ -336,10 +337,6 @@ function setRenderers(self: any): void {
 				.append('div')
 				.attr('data-testid', 'sjpp-mass-nav-subheader-filter')
 				.style('display', 'none'),
-			chat: self.dom.subheaderDiv
-				.append('div')
-				.attr('data-testid', 'sjpp-mass-nav-subheader-chat')
-				.style('display', 'none'),
 			user: self.dom.subheaderDiv
 				.append('div')
 				.attr('data-testid', 'sjpp-mass-nav-subheader-user')
@@ -378,20 +375,9 @@ function setRenderers(self: any): void {
 			self.tabs.push(filterTab)
 			Object.assign(filterTab, massNav.tabs?.filter)
 		}
-		/** When chat is enabled for a ds, show name as "CHAT". When not enabled, it should show "SEARCH" with ONLY omnisearch functionality
-		 **/
-		if (!massNav.tabs?.chat?.hide) {
-			if (appState.termdbConfig?.queries?.chat) {
-				const chatTab = { top: 'CHAT', mid: '', btm: '', subheader: 'chat' }
-				Object.assign(chatTab, massNav.tabs?.chat)
-				chatTab.top = 'CHAT' // Copilot mentioned that Object.assign may overwrite {chat/search}.top. Therefore this line has been added.
-				self.tabs.push(chatTab)
-			} else {
-				const searchTab = { top: 'SEARCH', mid: '', btm: '', subheader: 'chat' }
-				Object.assign(searchTab, massNav.tabs?.chat)
-				searchTab.top = 'SEARCH' // Copilot mentioned that Object.assign may overwrite {chat/search}.top. Therefore this line has been added.
-				self.tabs.push(searchTab)
-			}
+		if (!massNav.tabs?.search?.hide) {
+			// search tab is not hidden
+			self.tabs.push(Object.assign({}, searchTab, massNav.tabs?.search))
 		}
 		if (!massNav.tabs?.user?.hide) {
 			//User tab is not hidden

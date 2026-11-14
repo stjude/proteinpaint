@@ -26,7 +26,7 @@ export function buildResultList(handlers: OmnisearchHandler[], data: OmnisearchR
 		if (typeof total == 'number' && total > returned) {
 			list.push({
 				type: 'note',
-				testid: `sjpp-mass-chat-note-${handler.key}`,
+				testid: `sjpp-mass-search-note-${handler.key}`,
 				name: `Displaying ${rows.length} out of a total of ${total} ${handler.noun} matches`
 			})
 		}
@@ -41,7 +41,7 @@ export function renderEntry(tr: any, entry: ListEntry, deps: HandlerDeps) {
 		// group label spanning both columns; not selectable
 		tr.append('td')
 			.attr('colspan', 2)
-			.attr('data-testid', `sjpp-mass-chat-heading-${entry.name.toLowerCase().replace(/\s+/g, '-')}`)
+			.attr('data-testid', `sjpp-mass-search-heading-${entry.name.toLowerCase().replace(/\s+/g, '-')}`)
 			.text(entry.name)
 			.style('padding', '6px 10px 2px')
 			.style('font-weight', 'bold')
