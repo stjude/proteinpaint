@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - Leave out two changes of 2.224.2 from this patch release: the child_sample_types of branch terms, and the move of the cardsjson and isoformbycoord code into route modules
+- Hierarchical clustering runs in rust instead of R; when a child process is not allowed, it runs in the server process as a wasm module, like the fisher, wilcoxon and survival rust code
+- The rust wasm modules are built, released and packaged with the rust binaries, in rust/target/wasm; a rust binary that has a wasm module always runs that module, and the server and full image builds fail when a wasm module is not valid
 
 
 ## 2.224.2
