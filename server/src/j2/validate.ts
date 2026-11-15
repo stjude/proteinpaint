@@ -89,6 +89,8 @@ export async function validate_query_junction(ds: any, genome: any) {
 
 		const junctions: Junction[] = [] // list of junctions to be returned
 		let maxReadCount = 0
+		// junctions read from the file in the regions, including those filtered out below, e.g. by read count cutoff
+		let totalCount = 0
 		if (
 			param.matrixTop !== undefined &&
 			(!Number.isInteger(param.matrixTop) || param.matrixTop < 1 || param.matrixTop > maxMatrixTop)
@@ -106,6 +108,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 					const stop = Number(l[2])
 					const strand = l[3]
 					if (start < r.start && stop > r.stop) return // completely spans r
+					totalCount++
 
 					if (keepLst?.length) {
 						//////////// detour //////////////
@@ -210,7 +213,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 			})
 		}
 		// no matrix with keepLst: its junctions carry sn2rc instead, and have no sampleCount to rank by
-		if (!param.matrixTop || keepLst?.length) return { junctions, maxReadCount }
+		if (!param.matrixTop || keepLst?.length) return { junctions, maxReadCount, totalCount }
 
 		// the columns of the samples that the request covers
 		const columns: number[] = []
@@ -230,7 +233,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 				return { chr: j.chr, start: j.start, stop: j.stop, strand: j.strand, readcounts }
 			})
 		}
-		return { junctions, maxReadCount, matrix }
+		return { junctions, maxReadCount, totalCount, matrix }
 	}
 	/*
 	called by getData() and return sample level numeric values in required format

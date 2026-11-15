@@ -10,7 +10,9 @@ of a block track, with a line from each column down to its place in the genomic 
 
 Each is { g, height, data }, with the height drawn: 0 when there is nothing to draw. The heatmap also has
 leftG and rightG for its labels and annotation columns, and leftWidth, the width of the labels on the left
-of the statistics rows and the heatmap. tk.rows.heatmap.height can be preset, else it is 300. A track sets
+of the statistics rows and the heatmap, and highlight(col), which outlines a column and its line as on hovering
+the column, e.g. when the track's item of the column is hovered, or clears with -1; absent when nothing is drawn.
+tk.rows.heatmap.height can be preset, else it is 300. A track sets
 the rows up with initLocusHeatmapRows(), keeps its own data for them in `data`, and may keep its other rows
 in tk.rows too: the junction track keeps its junctions in tk.rows.jug. It adds whatever goes below, and sets
 its own height from locusHeatmapHeight(). */
@@ -83,6 +85,7 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 	for (const g of [statistics.g, heatmap.g, linkage.g, heatmap.leftG, heatmap.rightG]) g.selectAll('*').remove()
 	const nc = data.cols.length,
 		nr = data.rows.length
+	delete heatmap.highlight
 	if (!nc || !nr) {
 		statistics.height = heatmap.height = linkage.height = heatmap.leftWidth = 0
 		return 0
@@ -238,6 +241,7 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 		outline.attr('x', col * cw).attr('display', col < 0 ? 'none' : null)
 		lines.forEach((l, i) => l?.attr('stroke', i == col ? '#000' : '#999').attr('stroke-width', i == col ? 1.5 : 0.5))
 	}
+	heatmap.highlight = highlight
 
 	/* one hit layer over the statistics rows and the heatmap: hover reads the column and row under the
 	pointer, so the cells need no listeners. row is -1 above the heatmap. */
