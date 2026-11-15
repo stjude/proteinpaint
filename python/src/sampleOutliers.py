@@ -78,6 +78,7 @@ def main() -> int:
 						continue
 					value[start:end] = block[:, j]
 					sub = block[:, group]
+					sub = np.where(np.isfinite(sub), sub, np.nan)
 					stats["n"][start:end] = np.sum(~np.isnan(sub), axis=1)
 					stats["mean"][start:end] = np.nanmean(sub, axis=1)
 					stats["sd"][start:end] = np.nanstd(sub, axis=1)
