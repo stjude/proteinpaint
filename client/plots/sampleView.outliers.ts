@@ -50,6 +50,8 @@ export function getOutlierTool(kind: SampleOutliersKind, title: string): SampleT
 /** the filter of the custom reference group, by app: one group for both tiles and all samples, used by a tile
  * only when its "Custom group" is chosen */
 const customFilters = new WeakMap<object, any>()
+/** destroys the filter UI of a drawing's expanded tile, with its body-mounted menus */
+const filterDestroyers = new WeakMap<object, () => void>()
 
 /** null when the sample has no data */
 async function fetchOutliers(
@@ -176,7 +178,7 @@ function renderExpanded(holder: any, data: OutlierData, sample: Sample, ctx: Too
 		.attr('data-testid', 'sjpp-sampleview-outliers-custom')
 		.style('display', 'none')
 		.style('margin-left', '8px')
-	filterInit({
+	const filter = filterInit({
 		holder: builder,
 		vocabApi: ctx.app.vocabApi,
 		header_mode: 'hide_search',
@@ -185,7 +187,19 @@ function renderExpanded(holder: any, data: OutlierData, sample: Sample, ctx: Too
 			else customFilters.delete(ctx.app)
 			if (current == 'custom') show('custom')
 		}
-	}).main(customFilters.get(ctx.app) || { type: 'tvslst', in: true, join: '', lst: [] })
+	})
+	filter.main(customFilters.get(ctx.app) || { type: 'tvslst', in: true, join: '', lst: [] })
+	// one filter UI per drawing: reopening the tile replaces the one of the previous opening, and discarding the
+	// drawing (e.g. closing sample view) destroys it
+	filterDestroyers.get(data)?.()
+	let destroyed = false
+	const destroy = () => {
+		if (destroyed) return
+		destroyed = true
+		filter.destroy()
+	}
+	filterDestroyers.set(data, destroy)
+	ctx.onDestroy(destroy)
 
 	const show = async (id: string) => {
 		const call = ++shown
