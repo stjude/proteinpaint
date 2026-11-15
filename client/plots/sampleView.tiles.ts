@@ -514,7 +514,10 @@ async function getScatterChildConfig(plot: any, holder?: any) {
 	const width = holder?.node().clientWidth
 	if (width) {
 		const size = Math.round(Math.max(300, Math.min(600, width - SCATTER_SIDES_W)))
-		config.settings = { sampleScatter: { svgw: size, svgh: size } }
+		config.settings = {
+			...config.settings,
+			sampleScatter: { ...config.settings?.sampleScatter, svgw: size, svgh: size }
+		}
 	}
 	return config
 }
