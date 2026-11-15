@@ -38,9 +38,14 @@ export class Interactions {
 			block: { rglst: [] }
 		}
 		/* on a dataset with CpG-level methylation, the methylation track starts on at the gene or position searched,
-		with the gene for its expression. It is turned off from the Methylation tab, see launchMethylationTrack() */
-		const tracks = this.app.getState().plots.find(p => p.id === this.id)?.tracks || []
-		if (this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg') {
+		with the gene for its expression. It is turned off from the Methylation tab, see launchMethylationTrack().
+		config.noDefaultMethylationTrack: it does not start on, e.g. in a plot of one sample, as the track needs a cohort */
+		const plot = this.app.getState().plots.find(p => p.id === this.id)
+		const tracks = plot?.tracks || []
+		if (
+			this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg' &&
+			!plot?.noDefaultMethylationTrack
+		) {
 			// a track switched on before the search keeps its settings and takes the gene
 			const tk = tracks.find(t => t.type == 'dnameth') || { type: 'dnameth', name: 'Methylation' }
 			config.tracks = [...tracks.filter(t => t.type != 'dnameth'), { ...tk, gene: this.expressionGene(result) }]

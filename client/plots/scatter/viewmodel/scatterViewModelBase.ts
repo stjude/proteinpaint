@@ -295,16 +295,57 @@ export class ScatterViewModelBase {
 			.transition()
 			.duration(duration)
 
+		this.mayRenderHighlights(chart)
 		this.mayRenderSampleLabels(chart)
 		this.mayRenderRegression()
 	}
 
-	/** Draw the sample name as a text label next to each cohort (db) sample dot. Used by per-sample
-	 * (bySample) scatterplots, where a single highlighted dot sits among a reference cloud. */
+	/** Unfilled rings around the dots of config.highlightSamples, as the hover outline: the same shape a few
+	 * screen px larger, thicker for config.emphasizedSample. The rings ignore the mouse, so the dots inside
+	 * one can still be hovered */
+	mayRenderHighlights(chart) {
+		const config = this.scatter.config
+		const data = config.highlightSamples?.length
+			? (chart.data?.samples || []).filter(c => this.model.getHighlightRank(c))
+			: []
+		let layer = chart.serie.select('g.sjpp-scatter-highlight')
+		if (layer.empty()) layer = chart.serie.append('g').attr('class', 'sjpp-scatter-highlight')
+		layer.attr('pointer-events', 'none').raise()
+		const rings = layer.selectAll('path').data(data, (c: any) => c.sample)
+		rings.exit().remove()
+		rings
+			.enter()
+			.append('path')
+			.attr('data-testid', 'sjpp-scatter-highlight')
+			.attr('fill', 'none')
+			.attr('stroke', 'black')
+			.style('vector-effect', 'non-scaling-stroke')
+			.merge(rings as any)
+			.attr('d', (c: any) => this.model.getShape(chart, c))
+			.attr('transform', (c: any) => this.model.transform(chart, c, this.getHighlightRingFactor(chart, c)))
+			.attr('stroke-width', (c: any) => (this.model.getHighlightRank(c) == 2 ? 2 : 1.25))
+	}
+
+	/** scale factor of a highlight ring: a gap of a few screen px outside the dot, as the hover ring */
+	getHighlightRingFactor(chart, c) {
+		const r = this.scatterTooltip.dotRadius(chart, c)
+		if (!r) return 1
+		return 1 + 3 / this.scatterTooltip.screenScale(chart) / r
+	}
+
+	/** Draw the sample name as a text label next to each cohort (db) sample dot of a per-sample (bySample)
+	 * scatterplot, where a single highlighted dot sits among a reference cloud, and next to
+	 * config.emphasizedSample among config.highlightSamples */
 	mayRenderSampleLabels(chart) {
 		const g = chart.serie
-		const labelData =
-			this.scatter.config.bySample && chart.data?.samples ? chart.data.samples.filter(c => !c.isRef && c.sample) : []
+		const config = this.scatter.config
+		const labelData = !chart.data?.samples
+			? []
+			: config.bySample
+			? chart.data.samples.filter(c => !c.isRef && c.sample)
+			: config.highlightSamples?.length
+			? chart.data.samples.filter(c => this.model.getHighlightRank(c) == 2)
+			: []
 		const labels = g.selectAll('text[name="sampleLabel"]').data(labelData, (c: any) => c.sample)
 		labels.exit().remove()
 		labels
@@ -319,9 +360,27 @@ export class ScatterViewModelBase {
 			.attr('stroke-width', '3px')
 			.attr('fill', 'black')
 			.merge(labels as any)
-			.attr('x', (c: any) => this.model.getCoordinates(chart, c).x + 8)
+			// left of a dot near the right edge of the plot area, so the label is not clipped
+			.attr('text-anchor', (c: any) => (this.isLabelOnLeft(chart, c) ? 'end' : 'start'))
+			.attr('x', (c: any) => {
+				const offset = this.getLabelOffset(chart, c)
+				return this.model.getCoordinates(chart, c).x + (this.isLabelOnLeft(chart, c) ? -offset : offset)
+			})
 			.attr('y', (c: any) => this.model.getCoordinates(chart, c).y + 4)
 			.text((c: any) => c.sample)
+		g.selectAll('text[name="sampleLabel"]').raise()
+	}
+
+	/** a label of a dot in the right third of the plot area goes on its left */
+	isLabelOnLeft(chart, c) {
+		return this.model.getCoordinates(chart, c).x - this.model.axisOffset.x > (this.scatter.settings.svgw * 2) / 3
+	}
+
+	/** x offset of a sample label: past the highlight ring of a highlighted sample, else 8px */
+	getLabelOffset(chart, c) {
+		if (!this.model.getHighlightRank(c)) return 8
+		const r = this.scatterTooltip.dotRadius(chart, c) * this.getHighlightRingFactor(chart, c)
+		return r + 4
 	}
 
 	async mayRenderRegression() {

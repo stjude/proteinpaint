@@ -1,12 +1,41 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.js'
 import { select } from 'd3-selection'
-import { getBrainImagingSampleSet } from './getBrainImagingSampleSet.ts'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, ROOT_SAMPLE_TYPE, getDateStrFromNumber } from '#shared/terms.js'
-import { sayerror, Menu } from '#dom'
+import { sayerror } from '#dom'
+import { importPlot } from '#plots/importPlot.js'
+import { makeTileGrid, makeTileCard, makeAsyncCard, tileExpandState } from './tileCard.ts'
+import { getSampleTools, type Sample, type SampleTool, type ToolContext } from './sampleView.tiles.ts'
+
+/*********************************************************************
+ * sampleView
+ *
+ * All available data of a sample, as a grid of tiles: the dictionary
+ * plus one tile per tool (disco, methylation array, brain
+ * imaging, swimmer, genome browser, single cell, whole slide images, ssGSEA, gene expression
+ * , prebuilt scatter plots). The shown samples are a patient's related
+ * samples (or the samples passed in config.samples); a switcher picks
+ * the sample whose tiles are shown, while patient-level tiles (swimmer)
+ * and the expanded dictionary cover all shown samples.
+ *********************************************************************/
 
 const root_ID = 'root'
+/** most samples compared side by side in the expanded dictionary */
 const samplesLimit = 15
+/** most samples shown as switcher buttons; more are shown in a dropdown */
+const switcherButtonsLimit = 8
+/** dictionary values shown on the dictionary tile face */
+const faceValuesLimit = 8
+
+/** a tool's loaded data for a sample (or for all shown samples), kept to be drawn again
+ * without refetching when the grid is redrawn; and its faces by the chosen sample, drawn once and moved
+ * to each new card: a face may draw the full tool */
+type Drawing = {
+	ctx: ToolContext
+	destroy: (() => void)[]
+	data: Promise<any>
+	faces: Map<string, { div: Element; done: Promise<void> }>
+}
 
 class SampleView extends PlotBase implements RxComponent {
 	static type = 'sampleView'
@@ -16,209 +45,128 @@ class SampleView extends PlotBase implements RxComponent {
 	dom!: {
 		header: any
 		holder: any
-		controlsDiv: any
 		sampleDiv: any
-		showPlotsDiv: any
+		switcherDiv: any
 		loadingDiv: any
 		plotsDiv: any
-		noteDiv?: any
 		downloadbt?: any
-		tableDiv?: any
 		messageDiv?: any
 	}
 	vocabApi: any
 	samplesData!: any
-	sample!: { sampleId: any; sampleName: string }
+	sample!: Sample
 	config!: any
-	settings!: any
 	termsById!: Record<string, any>
 	sampleDataByTermId!: Record<string, any>
 	orderedVisibleTerms!: any[]
-	discoPlots!: any[]
-	singleSamplePlots!: Record<string, any[]>
-	brainPlots!: any[]
-	imagePlots!: any[]
-	/** holder of the swimmer lane(s) of the shown samples' patient, one for all samples */
-	swimmerDiv?: any
-	/** renderer of swimmerDiv, kept to destroy its body-mounted menus when replaced or when sample view closes */
-	swimmerRenderer?: any
-	visiblePlots!: boolean
-	renderSampleDictionary!: () => void
+	tools!: SampleTool[]
+	/** the sample whose tiles are shown */
+	activeSample!: Sample
+	/** the samples compared in the expanded dictionary */
+	dictSamples!: Sample[]
+	/** by tool key + sample name(s); cleared when the shown samples change */
+	drawings = new Map<string, Drawing>()
+	/** all values of a sample, for the dictionary tile face; cleared with the drawings */
+	sampleValues = new Map<string, Promise<any>>()
+	/** the shown samples, to know when the drawings are stale */
+	samplesKey?: string
+	/** used by tileExpandState() to reopen the expanded tile on rerender */
+	expandedTileKey?: string | null
+	/** child plots (e.g. the full prebuilt scatter of an expanded scatter tile) by key: each is created
+	 * on first expand, then its live component is moved into the tile on every later expand. While out of the
+	 * page (its tile collapsed), its components are parked out of this.components so that they are not updated */
+	childPlots = new Map<string, { div: any; mounting?: Promise<void>; parked?: { [key: string]: any } }>()
 
 	constructor(opts, api: ComponentApi) {
 		super(opts, api)
 		this.type = SampleView.type
 		this.setDom(opts)
-		setInteractivity(this)
-		setRenderers(this)
 	}
 
 	setDom(opts) {
 		opts.holder.style('position', 'relative')
-		const div = opts.holder.append('div')
-
-		const controlsDiv = div.append('div').style('display', 'inline-block')
-		const headerDiv = div.append('div').style('display', 'inline-block').style('padding', '20px')
-		const contentDiv = div
+		const div = opts.holder.append('div').style('padding', '10px 20px')
+		const headerDiv = div.append('div')
+		const sampleDiv = headerDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const switcherDiv = headerDiv
 			.append('div')
-			.style('display', 'flex')
-			.style('flex-direction', 'row')
-			.style('flex-wrap', 'wrap')
-			.style('justify-content', 'flex-start')
-			.style('width', '100vw')
+			.attr('data-testid', 'sjpp-sampleview-switcher')
+			.style('display', 'inline-block')
+			.style('margin-left', '20px')
+			.style('vertical-align', 'top')
+		const plotsDiv = div.append('div')
 
-		const plotsDiv = contentDiv //div.append('div').style('display', 'inline-block').style('margin-top', '10px') //div with plots
-		const sampleDiv = headerDiv.insert('div').style('display', 'inline-block')
-		const showPlotsDiv = headerDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
-
-		// loading overlay shown over the sandbox while sample data is fetched/rendered;
+		// loading overlay shown over the sandbox while sample data is fetched;
 		// reuses the shared .sjpp-loading-overlay box + .sjpp-spinner glyph
 		const loadingDiv = opts.holder.append('div').attr('class', 'sjpp-loading-overlay').style('display', 'none')
 		loadingDiv.append('div').attr('class', 'sjpp-spinner')
 
-		this.dom = {
-			header: opts.header,
-			holder: opts.holder,
-			controlsDiv,
-			sampleDiv,
-			showPlotsDiv,
-			loadingDiv,
-			plotsDiv
-		}
+		this.dom = { header: opts.header, holder: opts.holder, sampleDiv, switcherDiv, loadingDiv, plotsDiv }
 	}
 
 	async init(appState) {
 		this.termsByCohort = {}
-
+		this.tools = getSampleTools(appState.termdbConfig)
 		await this.setSampleSelect(appState)
-		const state = this.getState(appState)
-
-		await this.setControls(state)
 	}
 
 	async setSampleSelect(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
+		if (this.dom.header) this.dom.header.html(`Sample View`)
+		// samples passed by the opening plot (e.g. a lasso selection) are chosen with the switcher only
+		if (config.samples?.length > 1) return
 
 		const sampleDiv = this.dom.sampleDiv
-		if (this.dom.header) this.dom.header.html(`Sample View`)
-
-		if (config.samples && config.samples.length > 1) {
-			// const sampleLabel = sampleDiv.insert('label').style('vertical-align', 'top').html('Samples:')
-
-			const select = sampleDiv
-				.insert('select')
-				.style('margin', '0px 5px')
-				.property('multiple', true)
-				.attr('id', 'select')
-			select
-				.selectAll('option')
-				.data(config.samples)
-				.enter()
-				.append('option')
-				.attr('value', d => d.sampleId)
-				.property('selected', (d, _i) => _i < samplesLimit)
-				.text(d => d.sampleName)
-
-			this.dom.noteDiv = sampleDiv
-				.insert('div')
-				.style('display', 'none')
-				.style('vertical-align', 'top')
-				.style('font-size', '0.8em')
-				.style('color', '#aaa')
-				.html(
-					`*Note that only ${samplesLimit} samples can be selected.<br/>&nbsp;Navigate through the list to view all the samples.`
-				)
-			if (config.samples.length > samplesLimit) this.dom.noteDiv.style('display', 'inline-block')
-
-			select.on('change', () => {
-				const options = select.node().options
-				const samples: unknown[] = []
-				let count = 0
-				for (const option of options) {
-					if (option.selected) {
-						if (count < samplesLimit) {
-							const sampleId = Number(option.value)
-							const sampleName = config.samples.find(s => s.sampleId == sampleId).sampleName
-							const sample = { sampleId, sampleName }
-							samples.push(sample)
-							count++
-						} else option.selected = false
-					}
-				}
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
-			})
-		} else {
-			this.samplesData = await this.vocabApi.getSamplesByName({
-				filter: appState.termfilter?.filter
-			})
-			if (Object.keys(this.samplesData).length == 0) throw 'No accessible samples found'
-			const callback = sampleName => {
-				if (this.samplesData[sampleName]) {
-					const samples = getSamplesRelated(this.samplesData, sampleName, null, undefined)
-
-					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
-					this.dom.downloadbt.property('disabled', false)
-				} else {
-					this.dom.tableDiv.style('display', 'none')
-					for (const div of this.discoPlots) div.cellDiv.style('display', 'none')
-					for (const div of Object.values(this.singleSamplePlots)) {
-						div.forEach(p => p.cellDiv.style('display', 'none'))
-					}
-					for (const div of this.brainPlots) div.cellDiv.style('display', 'none')
-					this.swimmerDiv?.style('display', 'none')
-
-					if (sampleName != '') {
-						this.dom.downloadbt.property('disabled', true)
-						const errorDiv = sampleDiv.append('div')
-						sayerror(errorDiv, `Invalid sample ID: ${sampleName}. Please check the sample ID.`)
-						setTimeout(() => {
-							errorDiv.remove()
-						}, 6000)
-					}
-				}
+		this.samplesData = await this.vocabApi.getSamplesByName({
+			filter: appState.termfilter?.filter
+		})
+		if (Object.keys(this.samplesData).length == 0) throw 'No accessible samples found'
+		const callback = sampleName => {
+			if (this.samplesData[sampleName]) {
+				const samples = getSamplesRelated(this.samplesData, sampleName, null, undefined)
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples, activeSample: sampleName } })
+				this.mayUpdateChildHighlight(samples, sampleName)
+				this.dom.downloadbt.property('disabled', false)
+			} else if (sampleName != '') {
+				this.dom.downloadbt.property('disabled', true)
+				const errorDiv = sampleDiv.append('div')
+				sayerror(errorDiv, `Invalid sample ID: ${sampleName}. Please check the sample ID.`)
+				setTimeout(() => {
+					errorDiv.remove()
+				}, 6000)
 			}
-			const hasSampleAncestry = appState.termdbConfig.hasSampleAncestry
-			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, hasSampleAncestry, callback, undefined)
-			this.sample = config.sample || { sampleId: this.samplesData[sampleName!].id, sampleName: sampleName! }
-			// When the plot is opened for an already-chosen sample (config.sample, e.g. from the omnisearch
-			// or a scatter point click), show that name in the search box. Its data is rendered either way,
-			// but an empty box reads as "type a sample name to see details".
-			if (config.sample?.sampleName) sampleDiv.select('input').property('value', config.sample.sampleName)
-
-			this.dom.downloadbt = sampleDiv
-				.insert('button')
-				.style('margin-left', '10px')
-				.style('vertical-align', 'top')
-				.text('Download')
-				.on('click', () => {
-					this.downloadData()
-				})
-			this.dom.messageDiv = sampleDiv
-				.insert('div')
-				.style('display', 'inline-block')
-				.style('display', 'none')
-				.style('vertical-align', 'top')
-				.html('&nbsp;&nbsp;Downloading data ...')
 		}
+		const hasSampleAncestry = appState.termdbConfig.hasSampleAncestry
+		const sampleName = searchSampleInput(sampleDiv, this.samplesData, hasSampleAncestry, callback, undefined)
+		this.sample = config.sample || { sampleId: this.samplesData[sampleName!].id, sampleName: sampleName! }
+		// When the plot is opened for an already-chosen sample (config.sample, e.g. from the omnisearch
+		// or a scatter point click), show that name in the search box. Its data is rendered either way,
+		// but an empty box reads as "type a sample name to see details".
+		if (config.sample?.sampleName) sampleDiv.select('input').property('value', config.sample.sampleName)
+
+		this.dom.downloadbt = sampleDiv
+			.insert('button')
+			.style('margin-left', '10px')
+			.style('vertical-align', 'top')
+			.text('Download')
+			.on('click', () => {
+				this.downloadData()
+			})
+		this.dom.messageDiv = sampleDiv
+			.insert('div')
+			.style('display', 'none')
+			.style('vertical-align', 'top')
+			.html('&nbsp;&nbsp;Downloading data ...')
 	}
 
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
-		let samples = config.samples || getSamplesRelated(this.samplesData, this.sample.sampleName, null, undefined)
-
-		if (config.samples?.length > 15) samples = config.samples.filter((s, i) => i < 15)
-		const q = appState.termdbConfig.queries
-
+		const samples = config.samples || getSamplesRelated(this.samplesData, this.sample.sampleName, null, undefined)
 		const state: {
 			config: any
 			termfilter: any
 			activeCohort: any
-			terms: any
-			expandedTermIds: any
-			samples: any
-			singleSampleGenomeQuantification: any
-			singleSampleMutation: any
-			NIdata: any
+			samples: Sample[]
 			hasVerifiedToken: any
 			tokenVerificationPayload: any
 			termdbConfig: any
@@ -231,12 +179,7 @@ class SampleView extends PlotBase implements RxComponent {
 			// TODO: use state.config drectly, instead of having to extract
 			// selected config.key-values into the component state
 			activeCohort: config.activeCohort,
-			terms: config.terms,
-			expandedTermIds: config.expandedTermIds,
 			samples,
-			singleSampleGenomeQuantification: q?.singleSampleGenomeQuantification,
-			singleSampleMutation: q?.singleSampleMutation,
-			NIdata: q?.NIdata,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationPayload: this.app.vocabApi.tokenVerificationPayload,
 			termdbConfig: appState.termdbConfig,
@@ -256,135 +199,335 @@ class SampleView extends PlotBase implements RxComponent {
 
 	async main() {
 		if (this.mayRequireToken()) return
+		this.config = structuredClone(this.state.config)
+		const samples = this.state.samples
+		// the drawings are of these samples, the filter and the cohort
+		const samplesKey = JSON.stringify([
+			samples.map(s => s.sampleName),
+			this.state.termfilter?.filter,
+			this.state.activeCohort
+		])
+		if (samplesKey !== this.samplesKey) {
+			this.clearDrawings()
+			this.samplesKey = samplesKey
+		}
+		const name = this.config.activeSample || this.config.sample?.sampleName
+		this.activeSample = samples.find(s => s.sampleName == name) || samples[0]
+		this.dictSamples = samples.length <= samplesLimit ? samples : this.activeSample ? [this.activeSample] : []
+
 		this.dom.loadingDiv.style('display', '')
 		try {
-			this.config = structuredClone(this.state.config)
-			this.settings = this.state.config.settings.sampleView
-			this.dom.plotsDiv.selectAll('*').remove()
-
 			this.termsById = this.getTermsById(this.state)
 			this.sampleDataByTermId = {}
 			const root = this.termsById[root_ID]
 			root.terms = await this.requestTermRecursive(root)
-			this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
-			if (this.dom.downloadbt)
-				this.dom.downloadbt.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
-
-			if (this.settings.showDictionary) this.renderSampleDictionary()
-			this.dom.tableDiv.style('display', this.settings.showDictionary ? 'block' : 'none')
-
-			await this.renderPlots(this.state, this.state.samples)
-			this.showVisiblePlots()
+			this.orderedVisibleTerms = this.getOrderedVisibleTerms()
 		} finally {
 			this.dom.loadingDiv.style('display', 'none')
 		}
+
+		this.renderSwitcher()
+		// detach only the direct children: the cached drawings inside the cards are moved to the new grid
+		this.dom.plotsDiv.node().replaceChildren()
+		if (!this.activeSample) {
+			this.dom.plotsDiv.append('div').style('color', '#6b7280').text('No accessible data for this sample.')
+			return
+		}
+		const grid = makeTileGrid(this.dom.plotsDiv).attr('data-testid', 'sjpp-sampleview-tiles')
+		this.renderDictionaryTile(grid)
+		for (const tool of this.tools) {
+			const toolSamples = tool.scope == 'patient' ? samples : [this.activeSample]
+			const d = this.getDrawing(tool, toolSamples)
+			const expand = tileExpandState(this, tool.key)
+			const card = makeAsyncCard(grid, {
+				title: tool.title,
+				data: d.data,
+				renderFace: (face, data) => this.renderFace(face, data, tool, toolSamples, d),
+				renderExpanded: (holder, data) => tool.renderExpanded(holder, data, toolSamples, d.ctx, this.activeSample),
+				open: expand.open,
+				onToggle: open => {
+					expand.onToggle!(open)
+					if (!open) this.parkDetachedChildren()
+				}
+			})
+			card.attr('data-testid', `sjpp-sampleview-tile-${tool.key}`)
+		}
+		// the grid is new: the child plot of an expanded tile is mounted again when the tile reopens
+		this.parkDetachedChildren()
 	}
 
-	async setControls(state) {
-		const q = state.termdbConfig.queries
-		const hasPlots =
-			q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images || q?.swimmer
-		if (hasPlots) {
-			this.dom.showPlotsDiv
-				.append('input')
-				.attr('id', 'showDictionary')
-				.attr('type', 'checkbox')
-				.property('checked', true)
-				.on('change', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { sampleView: { showDictionary: e.target.checked } } }
-					})
-				})
-			this.dom.showPlotsDiv.append('label').text('Show Dictionary').attr('for', 'showDictionary')
+	/** buttons, or a dropdown for many samples, to choose the sample whose tiles are shown */
+	renderSwitcher() {
+		const div = this.dom.switcherDiv
+		div.selectAll('*').remove()
+		const samples = this.state.samples
+		if (samples.length < 2) return
+		const choose = (sampleName: string) => {
+			if (sampleName == this.activeSample.sampleName) return
+			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeSample: sampleName } })
+			this.mayUpdateChildHighlight(this.state.samples, sampleName)
 		}
-
-		if (q?.singleSampleMutation) {
-			this.dom.showPlotsDiv
-				.append('input')
-				.attr('type', 'checkbox')
-				.property('checked', true)
-				.attr('id', 'showDisco')
-				.on('change', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { sampleView: { showDisco: e.target.checked } } }
-					})
-				})
-			this.dom.showPlotsDiv.append('label').text('Show Disco').attr('for', 'showDisco')
+		if (samples.length > switcherButtonsLimit) {
+			div.append('label').style('margin-right', '5px').text(`Sample (${samples.length}):`)
+			div
+				.append('select')
+				.on('change', event => choose(event.target.value))
+				.selectAll('option')
+				.data(samples)
+				.enter()
+				.append('option')
+				.attr('value', d => d.sampleName)
+				.property('selected', d => d == this.activeSample)
+				.text(d => d.sampleName)
+			return
 		}
+		div
+			.attr('role', 'tablist')
+			.selectAll('button')
+			.data(samples)
+			.enter()
+			.append('button')
+			.attr('role', 'tab')
+			.attr('aria-selected', d => String(d == this.activeSample))
+			.style('margin-right', '4px')
+			.style('padding', '3px 10px')
+			.style('border', '1px solid #d1d5db')
+			.style('border-radius', '4px')
+			.style('cursor', 'pointer')
+			.style('background', d => (d == this.activeSample ? '#e5e7eb' : '#fff'))
+			.style('font-weight', d => (d == this.activeSample ? '600' : null))
+			.text(d => d.sampleName)
+			.on('click', (_event, d) => choose(d.sampleName))
+	}
 
-		if (q?.singleSampleGenomeQuantification) {
-			for (const ssgqKey in q.singleSampleGenomeQuantification) {
-				const label = ssgqKey.replace(/([a-z](?=[A-Z]))/g, '$1 ')
+	/** the face of a drawing for the chosen sample, drawn on first use, then moved into the new card */
+	renderFace(face: any, data: any, tool: SampleTool, samples: Sample[], d: Drawing): Promise<void> {
+		const key = this.activeSample.sampleName
+		const cached = d.faces.get(key)
+		if (cached) {
+			face.node().append(cached.div)
+			return cached.done
+		}
+		// drawn in the card, where it is displayed to be measured
+		const div = face.append('div')
+		const done = Promise.resolve(tool.renderFace(div, data, samples, d.ctx, this.activeSample)).catch(e => {
+			// drawn again on the next render
+			d.faces.delete(key)
+			div.remove()
+			throw e
+		})
+		d.faces.set(key, { div: div.node(), done })
+		return done
+	}
 
-				this.dom.showPlotsDiv
-					.append('input')
-					.attr('type', 'checkbox')
-					.property('checked', true)
-					.attr('id', ssgqKey)
-					.on('change', (e: Event) => {
-						this.app.dispatch({
-							type: 'plot_edit',
-							id: this.id,
-							config: { settings: { sampleView: { [ssgqKey]: (e.target as HTMLInputElement).checked } } }
-						})
+	/** the cached data of a tool for samples, or a new load */
+	getDrawing(tool: SampleTool, samples: Sample[]): Drawing {
+		const key = tool.key + '\t' + samples.map(s => s.sampleName).join('\t')
+		const cached = this.drawings.get(key)
+		if (cached) return cached
+		const destroy: (() => void)[] = []
+		const ctx: ToolContext = {
+			termdbConfig: this.state.termdbConfig,
+			vocab: this.state.vocab,
+			genome: this.app.opts.genome,
+			app: this.app,
+			config: this.config,
+			onDestroy: fn => destroy.push(fn),
+			filter: this.state.termfilter.filter,
+			mountChildPlot: (holder, key, config) => this.mountChildPlot(holder, key, config)
+		}
+		const drawing: Drawing = { ctx, destroy, data: tool.load(samples, ctx), faces: new Map() }
+		this.drawings.set(key, drawing)
+		return drawing
+	}
+
+	/** the configs of the child plots of sample view, in the store */
+	getChildConfigs(): any[] {
+		return this.app.getState().plots.filter((p: any) => p.parentId === this.id)
+	}
+
+	/** mount child plot `key` into holder: created with `config` on first use, else the live component
+	 * is moved here. as a sub-component it then gets the later state updates (e.g. its setting edits) */
+	async mountChildPlot(holder: any, key: string, config: any) {
+		let child = this.childPlots.get(key)
+		if (child) {
+			holder.node().appendChild(child.div.node())
+			if (child.parked) {
+				// back in the page: updated again, from the state it missed while parked
+				Object.assign(this.components, child.parked)
+				const parked = Object.values(child.parked)
+				delete child.parked
+				const appState = this.app.getState()
+				await child.mounting
+				for (const c of parked) await c.update({ appState })
+				return
+			}
+		} else {
+			// a child plot wider than the card (e.g. a scatter with its settings open) scrolls sideways
+			child = { div: holder.append('div').style('overflow-x', 'auto') }
+			this.childPlots.set(key, child)
+		}
+		if (!child.mounting) {
+			const div = child.div
+			child.mounting = (async () => {
+				// a retry starts over: a failed mount may have left a filter or plot holder
+				div.node().replaceChildren()
+				let childConfig = this.getChildConfigs().find(p => p.childKey === key)
+				if (!childConfig) {
+					await this.app.dispatch({
+						type: 'plot_create',
+						parentId: this.id,
+						config: { ...config, parentId: this.id, childKey: key }
 					})
-				this.dom.showPlotsDiv
-					.append('label')
-					.text('Show ' + label)
-					.attr('for', ssgqKey)
+					childConfig = this.getChildConfigs().find(p => p.childKey === key)
+					if (!childConfig) throw `failed to create the ${config.chartType} plot`
+				}
+				// the local sample filter of the child, shown and edited as in a plot of the mass app (mass/plot.js)
+				const filterCfg = this.app.vocabApi.termdbConfig?.plotFilter
+				let filter: any
+				if (!childConfig.hidePlotFilter && !filterCfg?.hide) {
+					const { filterRxCompInit } = await import('#filter')
+					const id = childConfig.id
+					const filterDiv = div.append('div').style('margin-bottom', '5px')
+					// disabled (e.g. for the public view): greyed, with the reason on hover
+					if (filterCfg?.disabledMessage)
+						filterDiv.attr('title', filterCfg.disabledMessage).style('cursor', 'not-allowed')
+					filter = await filterRxCompInit({
+						app: this.app,
+						vocabApi: this.app.vocabApi,
+						parentId: id,
+						holder: filterCfg?.disabledMessage
+							? filterDiv.append('div').style('pointer-events', 'none').style('opacity', 0.5)
+							: filterDiv,
+						hideLabel: true,
+						emptyLabel: '+Add new filter',
+						callback: filter => this.app.dispatch({ type: 'plot_edit', id, parentId: this.id, config: { filter } })
+					})
+					this.components[key + ':filter'] = filter
+				}
+				const { componentInit } = await importPlot(childConfig.chartType)
+				const component = await componentInit({
+					app: this.app,
+					holder: div.append('div'),
+					id: childConfig.id,
+					parentId: this.id
+				})
+				this.components[key] = component
+				// the first render is forced, as mounting happens outside of a dispatch
+				const appState = this.app.getState()
+				await filter?.update({ appState })
+				await component.update({ appState })
+			})()
+			// a failed mount is retried on the next expand
+			child.mounting.catch(() => delete child!.mounting)
+		}
+		await child.mounting
+		// collapsed while mounting
+		this.parkDetachedChildren()
+	}
+
+	/** park the components of the child plots out of the page, see childPlots */
+	parkDetachedChildren() {
+		for (const [key, child] of this.childPlots) {
+			if (child.parked || child.div.node().isConnected) continue
+			for (const k of [key, key + ':filter']) {
+				if (!this.components[k]) continue
+				child.parked ||= {}
+				child.parked[k] = this.components[k]
+				delete this.components[k]
 			}
 		}
-		if (q?.images) {
-			this.dom.showPlotsDiv
-				.append('input')
-				.attr('type', 'checkbox')
-				.property('checked', true)
-				.attr('id', 'showImages')
-				.on('change', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { sampleView: { showImages: e.target.checked } } }
-					})
-				})
-			this.dom.showPlotsDiv.append('label').text('Show Images').attr('for', 'showImages')
-		}
+	}
 
-		if (q?.NIdata) {
-			this.dom.showPlotsDiv
-				.append('input')
-				.attr('type', 'checkbox')
-				.property('checked', true)
-				.attr('id', 'showBrainImaging')
-				.on('change', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { sampleView: { showBrainImaging: e.target.checked } } }
-					})
-				})
-			this.dom.showPlotsDiv.append('label').text('Show brain imaging').attr('for', 'showBrainImaging')
+	/** keep the highlighted samples of the child plots (e.g. scatter plots) on the shown samples */
+	mayUpdateChildHighlight(samples: Sample[], activeSample: string) {
+		const highlightSamples = samples.map(s => s.sampleName)
+		for (const p of this.getChildConfigs()) {
+			if (!p.highlightSamples) continue
+			this.app.dispatch({
+				type: 'plot_edit',
+				id: p.id,
+				parentId: this.id,
+				config: { highlightSamples, emphasizedSample: activeSample }
+			})
 		}
+	}
 
-		if (q?.swimmer) {
-			this.dom.showPlotsDiv
-				.append('input')
-				.attr('type', 'checkbox')
-				.property('checked', true)
-				.attr('id', 'showSwimmer')
-				.on('change', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { sampleView: { showSwimmer: e.target.checked } } }
-					})
+	clearDrawings() {
+		for (const d of this.drawings.values()) for (const fn of d.destroy) fn()
+		this.drawings.clear()
+		this.sampleValues.clear()
+	}
+
+	/** face: the first values of the shown sample; expanded: the term tree, all shown samples side by side */
+	renderDictionaryTile(grid) {
+		// in a slot like the tool tiles, which carries the test id of the tile
+		const slot = grid.append('div').style('display', 'contents').attr('data-testid', 'sjpp-sampleview-tile-dictionary')
+		const face = makeTileCard(slot, {
+			title: 'Dictionary',
+			uniform: true,
+			fixedHeight: true,
+			openGroup: grid.node(),
+			expand: { render: holder => this.renderSampleDictionary(holder), ...tileExpandState(this, 'dictionary') }
+		})
+		face.style('font-size', '.8em')
+		const sample = this.activeSample
+		if (!this.sampleValues.has(sample.sampleName))
+			this.sampleValues.set(
+				sample.sampleName,
+				this.vocabApi.getSingleSampleData({
+					sampleId: sample.sampleId,
+					term_ids: [],
+					filter: this.state.termfilter.filter || []
 				})
-			this.dom.showPlotsDiv.append('label').text('Show swimmer plot').attr('for', 'showSwimmer')
-		}
+			)
+		const values = this.sampleValues.get(sample.sampleName)!
+		const wait = face.append('div').style('color', '#6b7280').text('Loading…')
+		values
+			.then(data => {
+				wait.remove()
+				if ('error' in data) throw data.error
+				const rows: [string, string][] = []
+				for (const id in data) {
+					const value = getTermValue(data[id].term, data)
+					if (value != null) rows.push([data[id].term.name, value])
+				}
+				// one line per row, so the face keeps the card's fixed height; long text is cut with
+				// an ellipsis and shown in full on hover
+				const table = face
+					.append('table')
+					.style('border-collapse', 'collapse')
+					.style('width', '100%')
+					.style('table-layout', 'fixed')
+				for (const [name, value] of rows.slice(0, faceValuesLimit)) {
+					const tr = table.append('tr').style('border-bottom', 'solid 1px rgb(245,245,245)')
+					for (const [i, text] of [name, value].entries()) {
+						tr.append('td')
+							.attr('title', text)
+							.style('padding', '2px 4px')
+							.style('width', i ? '40%' : '60%')
+							.style('white-space', 'nowrap')
+							.style('overflow', 'hidden')
+							.style('text-overflow', 'ellipsis')
+							.style('text-align', i ? 'end' : null)
+							.style('color', i ? null : '#6b7280')
+							.text(text)
+					}
+				}
+				if (rows.length > faceValuesLimit)
+					face
+						.append('div')
+						.style('color', '#6b7280')
+						.style('margin-top', '4px')
+						.text(`${rows.length - faceValuesLimit} more variables`)
+			})
+			.catch(e => {
+				wait.remove()
+				face
+					.append('div')
+					.style('color', '#b91c1c')
+					.text(`Failed to load: ${e?.message || e}`)
+			})
 	}
 
 	getTermsById(state) {
@@ -413,7 +556,7 @@ class SampleView extends PlotBase implements RxComponent {
 		but hard to do given that main() has no way of telling what action was dispatched
 		to prevent previously loaded .terms[] for the collapsing term from been wiped out of termsById,
 		need to add it back TERMS_ADD_BACK
- 
+
 		NOTE: !!!! sortVisibleTerms() assumes that the child terms in the response.lst[]
 					are returned in order. If not, a term.order can be used to sort the child terms array
 		*/
@@ -440,10 +583,10 @@ class SampleView extends PlotBase implements RxComponent {
 
 			if (!copy.isleaf && this.config.expandedTermIds.includes(copy.id)) {
 				copy.terms = await this.requestTermRecursive(copy, [...ancestry, t.id])
-				if (this.state.samples) await this.fillSampleData(copy.terms)
+				await this.fillSampleData(copy.terms)
 			} else {
 				const t0 = this.termsById[copy.id]
-				if (this.state.samples) await this.fillSampleData([copy])
+				await this.fillSampleData([copy])
 
 				if (t0 && t0.terms) {
 					copy.terms = t0.terms
@@ -455,7 +598,7 @@ class SampleView extends PlotBase implements RxComponent {
 		return terms
 	}
 
-	getOrderedVisibleTerms(_root) {
+	getOrderedVisibleTerms() {
 		const visibleTerms = Object.values(this.termsById).filter(this.isVisibleTermId.bind(this))
 		const orderedVisibleTerms = []
 		this.sortVisibleTerms(this.termsById[root_ID], visibleTerms, orderedVisibleTerms)
@@ -497,16 +640,28 @@ class SampleView extends PlotBase implements RxComponent {
 	async fillSampleData(terms: any[]) {
 		const term_ids: string[] = []
 		for (const term of terms) term_ids.push(term.id)
-		for (const sample of this.state.samples) {
-			const data = await this.vocabApi.getSingleSampleData({
-				sampleId: sample.sampleId,
-				term_ids,
-				filter: this.state.termfilter.filter
-			})
+		const get = (s: Sample) =>
+			this.vocabApi.getSingleSampleData({ sampleId: s.sampleId, term_ids, filter: this.state.termfilter.filter })
+		/* the shown samples are of one patient: its values (e.g. sex) fill in the terms a sample has none of, marked by
+		.fromSample. A patient is known from the sample search list; samples passed in by another plot have none */
+		const patient = this.dictSamples.length ? this.getPatient(this.dictSamples[0]) : undefined
+		const pdata = patient && (await get(patient))
+		for (const sample of this.dictSamples) {
+			const data = await get(sample)
 			if ('error' in data) throw data.error
+			if (pdata && !('error' in pdata) && this.getPatient(sample)?.sampleName == patient!.sampleName)
+				for (const id in pdata) if (!(id in data)) data[id] = { ...pdata[id], fromSample: patient!.sampleName }
 			if (!this.sampleDataByTermId[sample.sampleId]) this.sampleDataByTermId[sample.sampleId] = {}
 			for (const id in data) this.sampleDataByTermId[sample.sampleId][id] = data[id]
 		}
+	}
+
+	/** the root sample above a sample, e.g. its patient, from the sample search list */
+	getPatient(sample: Sample): Sample | undefined {
+		let s = this.samplesData?.[sample.sampleName]
+		while (s?.ancestor_name && this.samplesData[s.ancestor_name]) s = this.samplesData[s.ancestor_name]
+		if (!s || s.name == sample.sampleName) return
+		return { sampleId: s.id, sampleName: s.name }
 	}
 
 	async downloadData() {
@@ -575,303 +730,94 @@ class SampleView extends PlotBase implements RxComponent {
 		}
 	}
 
-	showVisiblePlots() {
-		this.visiblePlots = false
-		this.showPlotsFromCategory(this.discoPlots, 'showDisco')
-		for (const ssgqKey in this.state.singleSampleGenomeQuantification)
-			this.showPlotsFromCategory(this.singleSamplePlots[ssgqKey], ssgqKey)
-		this.showPlotsFromCategory(this.brainPlots, 'showBrain')
-		this.showPlotsFromCategory(this.imagePlots, 'showImages')
-		if (this.swimmerDiv) {
-			this.swimmerDiv.style('display', this.settings.showSwimmer ? 'block' : 'none')
-			if (this.settings.showSwimmer) this.visiblePlots = true
-		}
-		if (this.state.samples.length == 1 && this.visiblePlots)
-			this.dom.tableDiv.style('max-width', '48vw').style('max-height', '40vw').attr('class', 'sjpp_show_scrollbar')
-		else this.dom.tableDiv.style('max-width', '').style('max-height', '').attr('class', '')
-	}
-
-	showPlotsFromCategory(plots, key) {
-		for (const div of plots) {
-			const visibleSample = this.state.samples.find(s => s.sampleName == div.sample.sampleName)
-			const visiblePlot = this.settings[key] && visibleSample
-			if (visiblePlot) this.visiblePlots = true
-			div.cellDiv.style('display', visiblePlot ? 'table-cell' : 'none')
-		}
-	}
-
-	async renderPlots(state, samples) {
-		const plotsDiv = this.dom.plotsDiv
-		this.discoPlots = []
-		this.singleSamplePlots = {}
-		this.brainPlots = []
-		this.imagePlots = []
-		delete this.swimmerDiv
-		this.swimmerRenderer?.destroy()
-		delete this.swimmerRenderer
-		// const q = state.termdbConfig.queries
-		if (state.termdbConfig?.queries?.singleSampleMutation) {
-			const div = plotsDiv.append('div')
-			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
-			let someFound = false
-			for (const sample of samples) {
-				const cellDiv = div.append('div').style('display', 'inline-block')
-				this.discoPlots.push({ sample, cellDiv })
-				const header = cellDiv.insert('div')
-				const discoPlotImport = await import('./plot.disco.js')
-				const found = await discoPlotImport.default(
-					state.termdbConfig,
-					state.vocab.dslabel,
-					{ sample_id: sample.sampleName },
-					cellDiv,
-					this.app.opts.genome,
-					{}, //overrides
-					false //showError
-				)
-				if (found) {
-					if (state.samples.length > 1)
-						header.style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
-					someFound = true
-				}
-			}
-			this.dom.showPlotsDiv.select('input[id=showDisco').style('display', someFound ? 'inline-block' : 'none')
-			this.dom.showPlotsDiv.select('label[for=showDisco').style('display', someFound ? 'inline-block' : 'none')
-		}
-		if (state.termdbConfig.queries?.singleSampleGenomeQuantification) {
-			for (const k in state.termdbConfig.queries.singleSampleGenomeQuantification) {
-				let someFound = false
-				this.singleSamplePlots[k] = []
-				const div = plotsDiv.append('div')
-				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
-				for (const sample of samples) {
-					const label = (k.match(/[A-Z][a-z]+|[0-9]+/g) || []).join(' ')
-					const plotDiv = div.insert('div').style('display', 'table-cell').style('padding', '20px')
-					this.singleSamplePlots[k].push({ sample, cellDiv: plotDiv })
-					if (state.samples.length > 1)
-						plotDiv.insert('div').style('font-weight', 'bold').text(`${sample.sampleName} ${label}`)
-					const ssgqImport = await import('./plot.ssgq.js')
-					const found = await ssgqImport.plotSingleSampleGenomeQuantification(
-						state.termdbConfig,
-						state.vocab.dslabel,
-						k,
-						{ sample_id: sample.sampleName },
-						plotDiv.insert('div'),
-						this.app.opts.genome,
-						null, //geneName
-						false //showError
-					)
-					if (found) someFound = true
-				}
-				this.dom.showPlotsDiv.select(`input[id=${k}`).style('display', someFound ? 'inline-block' : 'none')
-				this.dom.showPlotsDiv.select(`label[for=${k}`).style('display', someFound ? 'inline-block' : 'none')
-			}
-		}
-		if (state.termdbConfig.queries?.NIdata) {
-			// show a single brain imaging plot per sample, using the first template as the default
-			const k = Object.keys(state.termdbConfig.queries.NIdata.references)[0]
-			// find which of the samples actually have imaging files, to skip the ones without
-			let available = new Set()
-			try {
-				available = k ? await getBrainImagingSampleSet(state.vocab.genome, state.vocab.dslabel, k) : new Set<string>()
-			} catch (e) {
-				// on error keep the empty set: no brain imaging plots are shown
-				console.error('brainImagingSamples request failed:', e)
-			}
-			const samplesWithImaging = samples.filter(s => available.has(s.sampleName))
-			if (samplesWithImaging.length) {
-				const div = plotsDiv.append('div')
-				if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
-				for (const sample of samplesWithImaging) {
-					const plotDiv = div.insert('div').style('display', 'inline-block')
-					this.brainPlots.push({ sample, cellDiv: plotDiv })
-					if (state.samples.length > 1)
-						plotDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
-
-					const brainImagingImport = await import('./plot.brainImaging.js')
-					brainImagingImport.default(
-						state.termdbConfig,
-						state.vocab.dslabel,
-						k,
-						{ sample_id: sample.sampleName },
-						plotDiv,
-						this.app.opts.genome
-					)
-				}
-			}
-		}
-		if (state.termdbConfig?.queries?.images) {
-			const div = plotsDiv.append('div')
-			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
-			for (const sample of samples) {
-				const cellDiv = div.append('div').style('display', 'inline-block')
-				this.imagePlots.push({ sample, cellDiv })
-				if (state.samples.length > 1)
-					cellDiv.insert('div').style('font-weight', 'bold').style('padding-left', '20px').text(sample.sampleName)
-				const imagePlotImport = await import('./imagePlot.js')
-				imagePlotImport.renderImagePlot(state, cellDiv, sample)
-			}
-		}
-		if (state.termdbConfig?.queries?.swimmer) await this.renderSwimmer(state, samples)
-	}
-
-	/** the swimmer lane of the shown samples' patient (found from any sample of the patient), drawn once
-	below the other plots. the checkbox is hidden when there is no lane */
-	async renderSwimmer(state, samples) {
-		if (!samples.length) return
-		const { fetchSwimmerLanes, SwimmerRenderer, getDefaultSwimmerSettings } = await import('./swimmer.ts')
-		let lanes: any[] = []
-		// the time reference of the lanes, for the axis label
-		let timeReference: string | undefined
-		try {
-			// no user filter: the samples are already chosen; the route still applies access control
-			const result = await fetchSwimmerLanes({
-				genome: state.vocab.genome,
-				dslabel: state.vocab.dslabel,
-				samples: samples.map(s => s.sampleName),
-				// set when opened from a swimmer plot, to show the same time reference; unset: the ds default
-				timeReference: state.config.swimmerTimeReference
-			})
-			lanes = result.lanes
-			timeReference = result.timeReference
-		} catch (e) {
-			console.error('swimmer request failed:', e)
-		}
-		this.dom.showPlotsDiv.select('input[id=showSwimmer]').style('display', lanes.length ? 'inline-block' : 'none')
-		this.dom.showPlotsDiv.select('label[for=showSwimmer]').style('display', lanes.length ? 'inline-block' : 'none')
-		if (!lanes.length) return
-		const div = this.dom.plotsDiv.append('div').attr('data-testid', 'sjpp-sampleview-swimmer').style('width', '100%')
-		this.swimmerDiv = div
-		div.append('div').style('font-weight', 'bold').style('padding', '10px 20px 0 20px').text('Swimmer plot')
-		const renderer = new SwimmerRenderer(this.app, {
-			plotDiv: div.append('div').style('padding', '10px'),
-			noteDiv: div.append('div').style('padding', '0 20px').style('font-size', '.9em').style('opacity', 0.7),
-			tip: new Menu({ padding: '5px' })
-		})
-		this.swimmerRenderer = renderer
-		renderer.update({
-			swimmer: state.termdbConfig.queries.swimmer,
-			settings: getDefaultSwimmerSettings(),
-			lanes,
-			timeReference
-		})
-	}
-
-	destroy() {
-		this.swimmerRenderer?.destroy()
-	}
-}
-
-export function getTermValue(term, data) {
-	let value = data[term.id]?.value
-	if (value == null || value == undefined || value == 'undefined') return null
-	if (term.type == 'date') return getDateStrFromNumber(value)
-	if (isNumericTerm(term)) {
-		value = term.values?.[value]?.label || term.values?.[value]?.key || value
-		if (isNaN(value)) return value
-		return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
-	}
-
-	if (term.type == 'categorical') return term.values[value]?.label || term.values[value]?.key
-
-	if (term.type == 'condition') {
-		const values = value.toString().split(' ')
-		const [years, statusKey] = values
-		const status = term.values[statusKey].label || term.values[statusKey].key
-		return `Max grade: ${status}, Time to event: ${Number(years).toFixed(1)} years`
-	}
-	if (term.type == 'survival') {
-		const values = value.split(' ')
-		const [years, statusKey] = values
-		const status = term.values?.[statusKey]?.label || term.values?.[statusKey]?.key || statusKey
-		return `${status} after ${Number(years).toFixed(1)} years`
-	}
-	return null
-}
-
-export const sampleViewInit = getCompInit(SampleView)
-export const componentInit = sampleViewInit
-
-function setRenderers(self) {
-	self.renderSampleDictionary = function () {
-		this.dom.tableDiv = this.dom.plotsDiv.append('div').style('display', 'inline-block').style('padding', '20px')
-		const table = this.dom.tableDiv.append('table').style('border-collapse', 'collapse')
-		const thead = table.append('thead')
-		const theadrow = thead.append('tr')
+	/** the term tree with the values of the compared samples side by side */
+	renderSampleDictionary(holder) {
+		if (this.dictSamples.length < this.state.samples.length)
+			holder
+				.append('div')
+				.style('font-size', '.85em')
+				.style('color', '#6b7280')
+				.text(`Showing ${this.activeSample.sampleName} only: up to ${samplesLimit} samples are compared side by side.`)
+		const table = holder
+			.append('div')
+			.attr('data-testid', 'sjpp-sampleview-dictionary')
+			.style('padding', '10px')
+			.append('table')
+			.style('border-collapse', 'collapse')
+		const theadrow = table.append('thead').append('tr')
 		const tbody = table.append('tbody')
-		// use an array to support multiple visible samples,
-		// but prototyping with just one sample for now
-		const visibleSamples: any[] = []
-		for (const sample of self.state.samples) visibleSamples.push(self.sampleDataByTermId[sample.sampleId])
+		const visibleSamples = this.dictSamples.map(sample => this.sampleDataByTermId[sample.sampleId] || {})
 		// for the column names, just need the first column name + sample data
-		self.renderTHead(['', ...self.state.samples.map(s => s.sampleName)], theadrow)
-		const tBodyData = self.orderedVisibleTerms.map((term, _trIndex) => [
+		this.renderTHead(['', ...this.dictSamples.map(s => s.sampleName)], theadrow)
+		const tBodyData = this.orderedVisibleTerms.map(term => [
 			{ term }, // first column, no sample data
 			// create data to bind for each sample column
 			...visibleSamples.map(sample => ({ term, sample }))
 		])
-		self.renderTBody(tBodyData, tbody)
+		this.renderTBody(tBodyData, tbody)
 	}
 
-	self.renderTHead = function (data, theadrow) {
+	renderTHead(data, theadrow) {
 		const trs = theadrow.selectAll('th').data(data)
 		trs.exit().remove()
-		trs.text(self.getThHtml)
-		trs.enter().append('th').style('padding', '5px 10px').style('text-align', 'end').text(self.getThHtml)
+		trs.text(d => d)
+		trs
+			.enter()
+			.append('th')
+			.style('padding', '5px 10px')
+			.style('text-align', 'end')
+			.text(d => d)
 	}
 
-	self.getThHtml = d => d
-
-	self.renderTBody = function (data, tbody) {
+	renderTBody(data, tbody) {
+		// d3 each() callbacks, given the element as nodes[i]
+		const renderTr = (trData, i, nodes) => {
+			const tds = select(nodes[i])
+				.selectAll('td')
+				.data(trData, (d: any) => d)
+			tds.exit().remove()
+			tds.each(renderTd)
+			tds
+				.enter()
+				.append('td')
+				.style('border-bottom', 'solid 1px rgb(245,245,245)')
+				.style('text-align', (_d, j) => (j === 0 ? 'left' : 'center'))
+				.style('padding', '2px 10px')
+				.each(renderTd)
+		}
+		const renderTd = (d: any, i, nodes) => {
+			const td = select(nodes[i])
+			if (!d.sample) {
+				// first column for tree dict variables
+				this.renderTerm(td)
+				return
+			}
+			const term = d.term
+			const value = getTermValue(term, d.sample)
+			const fromSample = d.sample[term.id]?.fromSample
+			td.datum(d)
+				.style('text-align', 'end')
+				.style('padding', '5px 10px')
+				.style('color', fromSample ? '#9ca3af' : '')
+				.attr('title', fromSample ? `of ${fromSample}` : '')
+				// !!! TODO: use getTermValue only for actual data !!!
+				.text(d.sample[term.id]?.label || value)
+			if (isNumericTerm(term))
+				td.append('button')
+					.style('margin-left', '5px')
+					.text('Plot')
+					.on('click', () => {
+						const tw = { id: term.id, q: { mode: 'continuous' } }
+						this.app.dispatch({ type: 'plot_create', config: { chartType: 'violin', term: tw, value } })
+					})
+		}
 		const trs = tbody.selectAll('tr').data(data)
 		trs.exit().remove()
-		trs.each(self.renderTr)
-		trs.enter().append('tr').each(self.renderTr)
+		trs.each(renderTr)
+		trs.enter().append('tr').each(renderTr)
 	}
 
-	self.renderTr = function (trData, _trIndex) {
-		const tds = select(this)
-			.selectAll('td')
-			.data(trData, (d: any) => d)
-		tds.exit().remove()
-		tds.each(self.renderTd)
-		tds
-			.enter()
-			.append('td')
-			.style('border-bottom', 'solid 1px rgb(245,245,245)')
-			.style('text-align', (d, _i) => (_i === 0 ? 'left' : 'center'))
-			.style('padding', '2px 10px')
-			.each(self.renderTd)
-	}
-
-	self.renderTd = function (d, _i) {
-		if (!d.sample) {
-			// first column for tree dict variables
-			self.renderTerm(select(this))
-			return
-		}
-		//const sampleId = Number(d.sample.sampleId)
-		// const data = d.sample
-		const term = d.term
-		const isNumeric = isNumericTerm(term)
-		const value = getTermValue(d.term, d.sample)
-		const td = select(this)
-			.datum(d)
-			.style('text-align', 'end')
-			.style('padding', '5px 10px')
-
-			// !!! TODO: use getTermValue only for actual data !!!
-			.text(d.sample[d.term.id]?.label || value)
-		if (isNumeric)
-			td.append('button')
-				.style('margin-left', '5px')
-				.text('Plot')
-				.on('click', () => {
-					const tw = { id: term.id, q: { mode: 'continuous' } }
-					self.app.dispatch({ type: 'plot_create', config: { chartType: 'violin', term: tw, value } })
-				})
-	}
-
-	self.renderTerm = function (td) {
+	renderTerm(td) {
 		// must get the current data, since each row's data gets replaced
 		// as child terms get inserted between each row
 		const d = td.datum() // current data
@@ -886,50 +832,81 @@ function setRenderers(self) {
 				.style('height', '28px')
 				.style('cursor', 'pointer')
 			span.append('span').style('margin-left', `3px`).style('cursor', 'pointer')
-			td.on('click', self.toggleTerm)
+			td.on('click', () => this.toggleTerm(td.datum().term))
 		}
 		const leftIndent = (d.term.ancestry.length - 1) * 24
 		const span = td.select(':scope>span').style('margin-left', `${leftIndent}px`)
 		span
 			.select('button')
 			.style('display', d.term.isleaf ? 'none' : '')
-			.html(self.config.expandedTermIds.includes(d.term.id) ? '-' : '+')
+			.html(this.config.expandedTermIds.includes(d.term.id) ? '-' : '+')
 		span.select('span').text(d.term.name)
-		return
 	}
-}
 
-function setInteractivity(self) {
-	self.toggleTerm = function () {
-		const d = select(this).datum() as any
-		if (d.term.isleaf) return
-		const expandedTermIds = self.config.expandedTermIds.slice() // create a copy
-		const i = expandedTermIds.indexOf(d.term.id)
-		if (i == -1) expandedTermIds.push(d.term.id)
+	toggleTerm(term) {
+		if (term.isleaf) return
+		const expandedTermIds = this.config.expandedTermIds.slice() // create a copy
+		const i = expandedTermIds.indexOf(term.id)
+		if (i == -1) expandedTermIds.push(term.id)
 		else expandedTermIds.splice(i, 1)
-		self.app.dispatch({
+		this.app.dispatch({
 			type: 'plot_edit',
-			id: self.id,
+			id: this.id,
 			config: { expandedTermIds }
+		})
+	}
+
+	destroy() {
+		this.clearDrawings()
+		// the parked components, as the others are destroyed by the component api
+		for (const child of this.childPlots.values())
+			for (const c of Object.values(child.parked || {})) (c as any).destroy?.()
+		/* remove the child plot configs, as ProteomeInput does: deferred until app.main() has finished
+		destroying the deleted plots, and only when this plot's own config is gone */
+		const app = this.app
+		const parentId = this.id
+		const childIds = this.getChildConfigs().map(p => p.id)
+		if (!childIds.length) return
+		queueMicrotask(() => {
+			const ids = new Set(app.getState().plots.map((p: any) => p.id))
+			if (ids.has(parentId)) return
+			for (const id of childIds) if (ids.has(id)) app.dispatch({ type: 'plot_delete', id })
 		})
 	}
 }
 
-export async function getPlotConfig(opts: any, app: any) {
-	const q = app.getState()?.termdbConfig?.queries
-	const settings = {
-		sampleView: {
-			showDictionary: true,
-			showDisco: true,
-			showBrain: true,
-			showImages: true,
-			showSwimmer: true
-		}
+export function getTermValue(term, data) {
+	let value = data[term.id]?.value
+	if (value == null || value == undefined || value == 'undefined') return null
+	if (term.type == 'date') return getDateStrFromNumber(value)
+	if (isNumericTerm(term)) {
+		value = term.values?.[value]?.label || term.values?.[value]?.key || value
+		if (isNaN(value)) return value
+		return value % 1 == 0 ? value.toString() : value.toFixed(2).toString()
 	}
-	if (q)
-		//Init show property for each genome quantification plot to true
-		for (const ssgqKey in q.singleSampleGenomeQuantification) settings.sampleView[ssgqKey] = true
-	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], settings, hidePlotFilter: true }
+
+	if (term.type == 'categorical') return term.values?.[value]?.label || term.values?.[value]?.key
+
+	if (term.type == 'condition') {
+		const values = value.toString().split(' ')
+		const [years, statusKey] = values
+		const status = term.values?.[statusKey]?.label || term.values?.[statusKey]?.key || statusKey
+		return `Max grade: ${status}, Time to event: ${Number(years).toFixed(1)} years`
+	}
+	if (term.type == 'survival') {
+		const values = value.split(' ')
+		const [years, statusKey] = values
+		const status = term.values?.[statusKey]?.label || term.values?.[statusKey]?.key || statusKey
+		return `${status} after ${Number(years).toFixed(1)} years`
+	}
+	return null
+}
+
+export const sampleViewInit = getCompInit(SampleView)
+export const componentInit = sampleViewInit
+
+export async function getPlotConfig(opts: any) {
+	const config = { activeCohort: 0, sample: null, expandedTermIds: [root_ID], hidePlotFilter: true }
 	return copyMerge(config, opts)
 }
 

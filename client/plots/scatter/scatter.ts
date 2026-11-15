@@ -472,6 +472,14 @@ function makeBySampleScatterMenu(menuDiv, chartsInstance) {
 }
 
 export function openScatterPlot(app, plot, filter = null) {
+	app.dispatch({
+		type: 'plot_create',
+		config: getScatterPlotConfig(plot, filter)
+	})
+}
+
+/** the sampleScatter config of a prebuilt plot, an element of termdbConfig.scatterplots[] */
+export function getScatterPlotConfig(plot, filter = null) {
 	const config: any = {
 		chartType: 'sampleScatter',
 		name: plot.name,
@@ -491,8 +499,5 @@ export function openScatterPlot(app, plot, filter = null) {
 
 	if ('shapeTW' in plot) config.shapeTW = structuredClone(plot.shapeTW)
 	if (plot.settings) config.settings = structuredClone(plot.settings)
-	app.dispatch({
-		type: 'plot_create',
-		config: config
-	})
+	return config
 }

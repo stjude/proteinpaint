@@ -138,6 +138,17 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	const loneTermByType = getLoneTermByType(req, ds, tdb.loneTermByType)
 	if (loneTermByType) c.loneTermByType = structuredClone(loneTermByType)
 	if (tdb.regression) c.regression = tdb.regression
+	if (tdb.sampleView?.outliers) {
+		// the sample view tiles of the genes and gene sets outlying in a sample; a tile needs its data file. The
+		// reference groups are sent by termdb/sampleOutliers, with the sample's values
+		const o = tdb.sampleView.outliers
+		c.sampleView = {
+			outliers: {
+				ssGSEA: o.ssGSEA !== false && !!ds.queries?.ssGSEA?.file,
+				geneExpression: o.geneExpression !== false && !!ds.queries?.geneExpression?.file
+			}
+		}
+	}
 	if (tdb.uiLabels) c.uiLabels = tdb.uiLabels
 	// termCollections (with type: 'numeric' | 'categorical') replace legacy numericTermCollections
 	if (tdb.termCollections) c.termCollections = tdb.termCollections

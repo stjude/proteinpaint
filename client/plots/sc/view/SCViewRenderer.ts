@@ -30,7 +30,10 @@ export class SCViewRenderer {
 	}
 
 	render(settings: SCSettings, state: SCFormattedState) {
-		this.renderSelectBtn()
+		if (settings.hideItemTable) {
+			// fixed to settings.item: the table stays hidden
+			this.dom.tableDiv.style('display', 'none')
+		} else this.renderSelectBtn()
 		this.renderGroupByOptions(settings)
 		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv, state.termdbConfig)
 		this.sectionRenderer = new SectionRenderer(this.dom.sectionsDiv, settings.groupBy)
@@ -67,11 +70,7 @@ export class SCViewRenderer {
 
 	renderGroupByOptions(settings: SCSettings) {
 		this.groupsWrapper = this.dom.controlsDiv.append('div').style('display', 'none')
-		this.groupsWrapper
-			.append('span')
-			.style('padding', '3px 0px 3px 20px')
-			.style('opacity', 0.7)
-			.text('Group by:')
+		this.groupsWrapper.append('span').style('padding', '3px 0px 3px 20px').style('opacity', 0.7).text('Group by:')
 		const optionsDiv = this.groupsWrapper.append('span').style('display', 'inline-block')
 		const options = GroupByOptions.map(option => {
 			return {

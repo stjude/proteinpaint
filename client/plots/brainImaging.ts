@@ -579,20 +579,27 @@ class BrainImaging extends PlotBase implements RxComponent {
 export const brainImaging = getCompInit(BrainImaging)
 export const componentInit = brainImaging
 
+/** the default sagittal (l), coronal (f) and axial (t) slices of a template (an NIdata.references entry):
+its parameters, else the volume midpoint, else default numbers */
+export function getDefaultSlices(ref: any): { l: number; f: number; t: number } {
+	const parameters = ref?.parameters
+	const dims = ref?.dimensions
+	return {
+		l: parameters?.l ?? (dims ? Math.floor(dims.l / 2) : 98),
+		f: parameters?.f ?? (dims ? Math.floor(dims.f / 2) : 81),
+		t: parameters?.t ?? (dims ? Math.floor(dims.t / 2) : 53)
+	}
+}
+
 export async function getPlotConfig(opts, app) {
 	/* default slice positions come from the template's dataset-configured
 	parameters (NIdata.references[queryKey].parameters in e.g. DISCOVER.hg38.ts); a ds
 	that omits parameters falls back to the volume midpoint (dimensions are
 	read from the NIfTI header at server launch), then to default numbers */
 	const ref = app.vocabApi?.termdbConfig?.queries?.NIdata?.references?.[opts.queryKey]
-	const parameters = ref?.parameters
-	const dims = ref?.dimensions
+	const slices = getDefaultSlices(ref)
 	const settings = {
-		brainImaging: {
-			brainImageL: parameters?.l ?? (dims ? Math.floor(dims.l / 2) : 98),
-			brainImageF: parameters?.f ?? (dims ? Math.floor(dims.f / 2) : 81),
-			brainImageT: parameters?.t ?? (dims ? Math.floor(dims.t / 2) : 53)
-		}
+		brainImaging: { brainImageL: slices.l, brainImageF: slices.f, brainImageT: slices.t }
 	}
 	const config: any = { chartType: 'brainImaging', settings }
 	copyMerge(config, opts)

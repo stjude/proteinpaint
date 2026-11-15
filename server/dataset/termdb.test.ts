@@ -100,6 +100,18 @@ export default function (): Mds3 {
 			},
 
 			termdb: {
+				sampleView: {
+					// tiles of the Hallmark gene sets (queries.ssGSEA) and the genes (queries.geneExpression) unusually
+					// high or low in a sample, by z-score against all samples, the samples sharing a term value below, or a
+					// custom group
+					outliers: {
+						referenceGroups: [{ termId: 'diaggrp', label: 'Same diagnosis group' }],
+						minGroupSize: 20,
+						ssGSEA: { geneSetCollection: 'H: hallmark gene sets' },
+						// FPKM
+						geneExpression: { minValue: 5 }
+					}
+				},
 				allowedTermTypes: ['geneVariant'],
 				displaySampleIds: () => true, // allow to display sample-level data
 				// enables the sunburst chart and its route; default rings, inside out
