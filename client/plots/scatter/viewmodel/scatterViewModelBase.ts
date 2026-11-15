@@ -302,11 +302,11 @@ export class ScatterViewModelBase {
 
 	/** Unfilled rings around the dots of config.highlightSamples, as the hover outline: the same shape a few
 	 * screen px larger, thicker for config.emphasizedSample. The rings ignore the mouse, so the dots inside
-	 * one can still be hovered */
+	 * one can still be hovered. A dot hidden from the legend has no ring */
 	mayRenderHighlights(chart) {
 		const config = this.scatter.config
 		const data = config.highlightSamples?.length
-			? (chart.data?.samples || []).filter(c => this.model.getHighlightRank(c))
+			? (chart.data?.samples || []).filter(c => this.model.getHighlightRank(c) && this.model.getOpacity(c) > 0)
 			: []
 		let layer = chart.serie.select('g.sjpp-scatter-highlight')
 		if (layer.empty()) layer = chart.serie.append('g').attr('class', 'sjpp-scatter-highlight')
@@ -344,7 +344,7 @@ export class ScatterViewModelBase {
 			: config.bySample
 			? chart.data.samples.filter(c => !c.isRef && c.sample)
 			: config.highlightSamples?.length
-			? chart.data.samples.filter(c => this.model.getHighlightRank(c) == 2)
+			? chart.data.samples.filter(c => this.model.getHighlightRank(c) == 2 && this.model.getOpacity(c) > 0)
 			: []
 		const labels = g.selectAll('text[name="sampleLabel"]').data(labelData, (c: any) => c.sample)
 		labels.exit().remove()
