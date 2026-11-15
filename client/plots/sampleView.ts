@@ -865,7 +865,14 @@ class SampleView extends PlotBase implements RxComponent {
 		destroying the deleted plots, and only when this plot's own config is gone */
 		const app = this.app
 		const parentId = this.id
-		const childIds = this.getChildConfigs().map(p => p.id)
+		const plots = app.getState().plots
+		const descendants = new Set([parentId])
+		for (const id of descendants) {
+			for (const p of plots) {
+				if (p.parentId === id) descendants.add(p.id)
+			}
+		}
+		const childIds = [...descendants].filter(id => id !== parentId).reverse()
 		if (!childIds.length) return
 		queueMicrotask(() => {
 			const ids = new Set(app.getState().plots.map((p: any) => p.id))
