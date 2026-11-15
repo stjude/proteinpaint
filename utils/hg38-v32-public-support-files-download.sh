@@ -36,6 +36,7 @@ curl --parallel \
     https://proteinpaint.stjude.org/ppSupport/db/proteindomain.db \
     \
     --next --remote-name-all --continue-at - --create-dirs --output-dir anno/msigdb/ \
+    https://proteinpaint.stjude.org/ppSupport/msigdb/db_2026.2.Hs \
     https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs
 
 # Ensures index files are newer than data files so tabix won't break

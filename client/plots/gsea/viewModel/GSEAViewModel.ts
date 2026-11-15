@@ -141,6 +141,7 @@ export class GSEAViewModel {
 			filter_non_coding_genes: settings.filter_non_coding_genes,
 			method: settings.gsea_method
 		}
+		if (settings.msigdbRelease) body.msigdbRelease = settings.msigdbRelease
 		if (p.cacheId) {
 			body.cacheId = p.cacheId
 			if (p.daRequest) body.daRequest = p.daRequest

@@ -12,7 +12,7 @@ import { getDmCacheResult, scanChromosomes } from '../../routes/termdb.diffMeth.
 import { getGeneBodyDeltas } from './termdb.geneBodyMeth.ts'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import { validGeneSetGroup, validNumPermutations } from '#src/utils/genesetGroups.ts'
+import { msigdbTermdb, validGeneSetGroup, validNumPermutations } from '#src/utils/genesetGroups.ts'
 import { get_ds_tdb } from '#src/termdb.js'
 import type { GseaCacheResult } from '../../routes/types.ts'
 
@@ -103,7 +103,7 @@ async function run_genesetEnrichment_analysis(
 	}
 
 	// the geneSetGroup value is passed to gsea.py and cerno, which query the msigdb db with it
-	validGeneSetGroup(genomes[q.genome], q.geneSetGroup, q.method == 'blitzgsea')
+	validGeneSetGroup(msigdbTermdb(genomes[q.genome], q.msigdbRelease), q.geneSetGroup, q.method == 'blitzgsea')
 
 	if (q.method == 'blitzgsea') {
 		// the permutation count sets the blitzgsea compute time
@@ -121,7 +121,7 @@ async function run_genesetEnrichment_analysis(
 		const genesetenrichment_input: any = {
 			genes,
 			fold_change,
-			db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
+			db: msigdbTermdb(genomes[q.genome], q.msigdbRelease).cohort.db.connection.name,
 			geneset_group: q.geneSetGroup,
 			genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
 			filter_non_coding_genes: q.filter_non_coding_genes
@@ -140,10 +140,13 @@ async function run_genesetEnrichment_analysis(
  * deliberately excluded — it picks which row to render as a detail
  * plot, not the underlying enrichment, so initial-table and
  * detail-image requests share one cached result and one pickle. */
-function gseaKeyInputs(q: GenesetEnrichmentRequest, genes: string[], fold_change: number[]) {
+export function gseaKeyInputs(q: GenesetEnrichmentRequest, genes: string[], fold_change: number[], genomes: any) {
 	return {
 		genes,
 		fold_change,
+		/* the gene set db file, so a result computed on one MSigDB release is not served after the genome
+		switches to another; the same geneSetGroup holds different gene sets in each release */
+		msigdb: msigdbTermdb(genomes[q.genome], q.msigdbRelease).cohort.db.file,
 		geneSetGroup: q.geneSetGroup,
 		num_permutations: q.num_permutations,
 		filter_non_coding_genes: q.filter_non_coding_genes,
@@ -171,7 +174,7 @@ async function getGseaCacheResult({
 	genomes: any
 }): Promise<{ result: GseaCacheResult; cacheId: string }> {
 	const { genes, fold_change } = await resolveGseaGenesAndFoldChange({ q, genomes })
-	const cacheArg = gseaKeyInputs(q, genes, fold_change)
+	const cacheArg = gseaKeyInputs(q, genes, fold_change, genomes)
 
 	// ─── cache lookup or recompute ─── //
 	const { result, cacheId } = await cacheOrRecompute<typeof cacheArg, GseaCacheResult>({
@@ -279,7 +282,7 @@ async function runGseaPythonForImage({
 	// needs the signature/library/filter inputs. Resolve genes+fold_change
 	// here (the cache result doesn't store them) and reuse buildPyInput.
 	const { genes, fold_change } = await resolveGseaGenesAndFoldChange({ q, genomes })
-	const cacheArg = gseaKeyInputs(q, genes, fold_change)
+	const cacheArg = gseaKeyInputs(q, genes, fold_change, genomes)
 	const pyInput = buildPyInput(q, genomes, cacheArg, pickleB64)
 	const time1 = new Date().valueOf()
 	const gsea_output: string = await run_python('gsea.py', '/' + JSON.stringify(pyInput))
@@ -315,7 +318,7 @@ function buildPyInput(
 	return {
 		genes: cacheArg.genes,
 		fold_change: cacheArg.fold_change,
-		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
+		db: msigdbTermdb(genomes[q.genome], q.msigdbRelease).cohort.db.connection.name,
 		geneset_group: cacheArg.geneSetGroup,
 		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
 		filter_non_coding_genes: cacheArg.filter_non_coding_genes,

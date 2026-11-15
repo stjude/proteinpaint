@@ -63,7 +63,7 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 	const groups = q.samplelst?.groups
 	if (groups?.length != 2) throw new Error('Two sample groups are required.')
 	// before the genome-wide runs below
-	if (q.geneSetGroup) validGeneSetGroup(genome, q.geneSetGroup)
+	if (q.geneSetGroup) validGeneSetGroup(genome.termdbs?.msigdb, q.geneSetGroup)
 	const t0 = Date.now()
 
 	/* Both axes from the same samples: each group cut to the samples that have methylation AND expression. Cut

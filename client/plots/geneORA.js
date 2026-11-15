@@ -8,6 +8,7 @@ import { newSandboxDiv } from '../dom/sandbox.ts'
 import { select, pointer } from 'd3-selection'
 import { downloadTable } from '../dom/table'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { msigdbReleaseOptions, plotMsigdbRelease } from '#plots/msigdbRelease.ts'
 
 const hlcolor = '#ffa200'
 const tip = new Menu()
@@ -101,6 +102,16 @@ class geneORA {
 			this.settings.pathway = '-'
 		}
 		inputs.push(geneSet)
+		const releases = msigdbReleaseOptions(this.app.opts.genome)
+		if (releases.length > 1)
+			inputs.push({
+				label: 'MSigDB Release',
+				type: 'dropdown',
+				chartType: 'geneORA',
+				settingsKey: 'msigdbRelease',
+				title: 'MSigDB release of the gene sets. A plot saved before releases could be chosen uses 2023.2.Hs',
+				options: releases
+			})
 
 		this.components = {
 			controls: await controlsInit({
@@ -150,6 +161,7 @@ add:
 		self.dom.tableDiv.selectAll('*').remove()
 		self.config.geneORAparams.geneSetGroup = self.settings.pathway
 		self.config.geneORAparams.filter_non_coding_genes = self.settings.filter_non_coding_genes
+		if (self.settings.msigdbRelease) self.config.geneORAparams.msigdbRelease = self.settings.msigdbRelease
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
 		let output
 		try {
@@ -254,6 +266,8 @@ export async function getPlotConfig(opts, app) {
 				controls: { isOpen: true }
 			}
 		}
+		// a saved session's settings arrive in opts; copyMerge() keeps a release they recorded
+		config.settings.geneORA.msigdbRelease = plotMsigdbRelease(app?.opts?.genome, opts.settings?.geneORA)
 		return copyMerge(config, opts)
 	} catch (e) {
 		throw `${e} [geneORA getPlotConfig()]`

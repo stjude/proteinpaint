@@ -19,4 +19,6 @@ export type GseaSettings = {
 	fdr_or_top: 'fdr' | 'top'
 	/** GSEA algorithm implementation to run. */
 	gsea_method: 'blitzgsea' | 'cerno'
+	/** MSigDB release of the gene set db, set by getPlotConfig(), see client/plots/msigdbRelease.ts */
+	msigdbRelease?: string
 }

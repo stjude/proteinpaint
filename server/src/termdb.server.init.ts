@@ -74,8 +74,9 @@ export function server_init_db_queries(ds) {
 		'term2role'
 	]
 
-	// ds.cohort.termdb.sampleTypes has been added in mds3.init.js
-	if (tables.has('sample_types')) {
+	// ds.cohort.termdb.sampleTypes has been added in mds3.init.js; a genome-level termdb such as msigdb
+	// has no samples and no sampleTypes{}, though a db built by the current buildTermdb has the table
+	if (tables.has('sample_types') && ds.cohort.termdb.sampleTypes) {
 		const rows = cn.prepare('SELECT * FROM sample_types').all()
 
 		for (const row of rows) {

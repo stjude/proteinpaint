@@ -18,6 +18,9 @@ type TermDbs = {
 
 type TermDbsEntry = {
 	label: string
+	/** the MSigDB release of this db, e.g. '2026.2.Hs'. GSEA and ORA offer each termdb that has one as a release
+	to run on; a request without a release uses termdbs.msigdb */
+	release?: string
 	cohort: Cohort
 	/** list of geneset groups in db; required for geneORA and gsea
 	later allow ds override so ds can enable/disable some genesets..

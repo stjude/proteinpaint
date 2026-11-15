@@ -1,5 +1,6 @@
 import type { GSEA } from '../GSEA'
 import { controlsInit } from '#plots/controls.js'
+import { msigdbReleaseOptions } from '#plots/msigdbRelease.ts'
 
 export async function setControls(controlsDiv, gsea: GSEA) {
 	const inputs: any = [
@@ -93,6 +94,17 @@ export async function setControls(controlsDiv, gsea: GSEA) {
 			}
 		}
 	]
+
+	const releases = msigdbReleaseOptions(gsea.app.opts.genome)
+	if (releases.length > 1)
+		inputs.unshift({
+			label: 'MSigDB Release',
+			type: 'dropdown',
+			chartType: 'gsea',
+			settingsKey: 'msigdbRelease',
+			title: 'MSigDB release of the gene sets. A plot saved before releases could be chosen uses 2023.2.Hs',
+			options: releases
+		})
 
 	gsea.components.controls = await controlsInit({
 		app: gsea.app,

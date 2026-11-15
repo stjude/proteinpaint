@@ -11,6 +11,33 @@ import { CancerGeneCensusLst } from './cgc.js'
 // Exporting a function below will support returning an object with methods/functions,
 // unlike a literal object that, when copied, loses methods with JSON.parse(JSON.stringify())
 // or not allowed with structuredClone().
+/** one MSigDB release as a genome-level gene set db, a new object on each call like getHg38() */
+function msigdbRelease(release: string) {
+	return {
+		label: `MSigDB (${release})`, // to be compatible with ds.label
+		release,
+		cohort: {
+			db: { file: `anno/msigdb/db_${release}` },
+			termdb: {
+				isGeneSetTermdb: true
+			}
+		},
+		analysisGenesetGroups: [
+			{ label: '-', value: '-' },
+			{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
+			{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
+			{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
+			{ label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
+			{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' },
+			{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
+		],
+		geneORAparam: {
+			minCutoff: 15,
+			maxCutoff: 500
+		}
+	}
+}
+
 export function getHg38(): Genome {
 	return {
 		species: 'human',
@@ -20,28 +47,11 @@ export function getHg38(): Genome {
 		},
 
 		termdbs: {
-			msigdb: {
-				label: 'MSigDB (2023.2.Hs)', // to be compatible with ds.label
-				cohort: {
-					db: { file: 'anno/msigdb/db_2023.2.Hs' },
-					termdb: {
-						isGeneSetTermdb: true
-					}
-				},
-				analysisGenesetGroups: [
-					{ label: '-', value: '-' },
-					{ label: 'BP: subset of GO', value: 'BP: subset of GO' },
-					{ label: 'MF: subset of GO', value: 'MF: subset of GO' },
-					{ label: 'CC: subset of GO', value: 'CC: subset of GO' },
-					{ label: 'WikiPathways subset of CP', value: 'WikiPathways subset of CP' },
-					{ label: 'REACTOME subset of CP', value: 'REACTOME subset of CP' },
-					{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
-				],
-				geneORAparam: {
-					minCutoff: 15,
-					maxCutoff: 500
-				}
-			}
+			// the current release, used by every gene set feature
+			msigdb: msigdbRelease('2026.2.Hs'),
+			// the previous release, kept so that GSEA and ORA can still run on it, and a GSEA or ORA plot
+			// saved before releases were recorded reopens on it (client/plots/msigdbRelease.ts)
+			msigdb_2023_2: msigdbRelease('2023.2.Hs')
 		},
 
 		proteindomain: {

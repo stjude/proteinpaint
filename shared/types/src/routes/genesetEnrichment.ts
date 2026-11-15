@@ -31,6 +31,8 @@ export type GenesetEnrichmentRequest = {
 	genome: string
 	/** Type of GO to be queried e.g MF, CC, BP */
 	geneSetGroup: string
+	/** MSigDB release of the gene set db, e.g. '2023.2.Hs'; the genome's current release when missing */
+	msigdbRelease?: string
 	/** Gene set name whose enrichment score is to be profiled */
 	geneset_name?: string
 	/** Number of permutations to be carried out for GSEA analysis.

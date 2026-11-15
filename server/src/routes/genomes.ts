@@ -105,6 +105,7 @@ function clientcopy_genome(genomename, genomes) {
 		for (const k in g.termdbs) {
 			g2.termdbs[k] = {
 				label: g.termdbs[k].label,
+				release: g.termdbs[k].release,
 				analysisGenesetGroups: g.termdbs[k].analysisGenesetGroups,
 				geneORAparam: g.termdbs[k].geneORAparam
 			}
