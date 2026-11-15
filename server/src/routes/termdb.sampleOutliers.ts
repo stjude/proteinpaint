@@ -1,6 +1,8 @@
 import { createHash } from 'crypto'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { authApi } from '#src/auth.js'
+import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
+import { mayCheckSampleAccess } from '#src/termdb.sampleAccess.ts'
 import { getFilterSampleIdSet } from '#src/termdb.sql.js'
 import { genomes } from '#src/initGenomesDs.js'
 import { validGenomeDs } from '#routes/common.ts'
@@ -41,6 +43,7 @@ export const payload: RoutePayload = {
 
 export const api: RouteApi = {
 	endpoint: 'termdb/sampleOutliers',
+	middlewares: [protectedRoutes.termdb, protectedRoutes.samples],
 	methods: { get: payload, post: payload }
 }
 
@@ -107,6 +110,8 @@ function init({ genomes }) {
 			const q = req.query
 			const ds = genomes[q.genome]?.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid genome or dataset'
+			// the response has the values of a sample, as termdb singleSampleData
+			if (!authApi.canDisplaySampleIds(req, ds)) throw 'Requires sign in to access the sample data'
 			result = await getSampleOutliers(q, ds, genomes[q.genome])
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
@@ -130,6 +135,7 @@ async function getSampleOutliers(q: any, ds: any, genome: any): Promise<TermdbSa
 	if (!so || so[q.kind] === false || !dq?.file) throw 'not supported on this dataset'
 	const tdbq = ds.cohort.termdb.q
 	const sampleId = tdbq.sampleName2id(q.sample)
+	if (sampleId != undefined) mayCheckSampleAccess(q, ds, [{ sampleIds: [sampleId] }])
 	// the samples of the file, as sample ids, set by the query validator
 	const fileSamples: number[] = dq.samples || []
 	// 404: the sample view leaves out the tile
