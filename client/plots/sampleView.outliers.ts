@@ -181,7 +181,6 @@ function renderExpanded(holder: any, data: OutlierData, sample: Sample, ctx: Too
 	const filter = filterInit({
 		holder: builder,
 		vocabApi: ctx.app.vocabApi,
-		header_mode: 'hide_search',
 		callback: f => {
 			if (f?.lst?.length) customFilters.set(ctx.app, f)
 			else customFilters.delete(ctx.app)
