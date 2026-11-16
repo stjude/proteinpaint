@@ -10,6 +10,7 @@ param={}
 	.filter = pp filter
 	.filter0 = gdc/mmrf filter
 	.sampleMapping = hierarchy mapping direction
+	.sampleTypes = sample types to include
 	.skipSampleFiltering = defer sample filtering to the caller
 _allSamples=[{name: int}] (NOTE new format: [int])
 	set of samples to use (e.g. samples from bcf/tabix file)
@@ -23,9 +24,6 @@ if not filtering, undefined
 */
 export async function mayLimitSamples(param, _allSamples, ds) {
 	if (param.skipSampleFiltering) return
-
-	// sampleTypes is a request parameter and may be tampered with, so only accept an array
-	if (param.sampleTypes != null && !Array.isArray(param.sampleTypes)) throw new Error('sampleTypes must be an array')
 
 	let allSamples
 	if (_allSamples) {
@@ -49,15 +47,19 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		}
 		if (ds.cohort?.db) {
 			// dataset has sqlite db
-			if (!q.filter) return // no pp filtering, use all samples
 			// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
-			filterSamples = new Set((await get_samples(q, ds)).map(i => i.id))
+			if (q.filter) filterSamples = new Set((await get_samples(q, ds)).map(i => i.id))
 		} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
 			// ds-supplied filter method
 			filterSamples = await ds.cohort.termdb.filterSamples(q, ds)
 		} else {
 			throw new Error('no method available to get samples')
 		}
+	}
+
+	if (param.sampleTypes?.length) {
+		const samples = filterSamples || allSamples || ds.sampleId2Type.keys()
+		filterSamples = new Set([...samples].filter(sampleId => param.sampleTypes.includes(ds.sampleId2Type.get(sampleId))))
 	}
 
 	if (!filterSamples) return // no filtering done, use all samples
