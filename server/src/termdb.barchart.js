@@ -60,8 +60,6 @@ ds{}
 	server-side dataset obj
 tdb{}
 	ds.cohort.termdb
-onlyChildren: boolean
-	forces parentToChildren mapping when true
 
 output an object:
 .charts=[]
@@ -72,7 +70,7 @@ output an object:
 			.dataId=str // key of term2 category, '' if no term2
 			.total=int // size of this term1-term2 combination
 */
-export async function barchart_data(q, ds, tdb, onlyChildren) {
+export async function barchart_data(q, ds, tdb) {
 	/* existing code to work with mds2 which only supports backend-termdb
 	as later mds2 will be deprecated and migrated to mds3,
 	there should be no need to check for isMds3 flag
@@ -90,7 +88,8 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 			terms,
 			__protected__: q.__protected__,
 			__abortSignal: q.__abortSignal,
-			sampleMapping: onlyChildren ? 'parentToChildren' : q.sampleMapping
+			sampleTypes: q.sampleTypes,
+			sampleMapping: q.sampleMapping
 		},
 		q.ds
 	)

@@ -39,7 +39,7 @@ import {
 	resolveTermCollectionFractions,
 	resolveTermId
 } from './termdb.termCollection.ts'
-import { mayLimitSamples } from './mds3.filter.js'
+import { mayLimitSamples, combinePPfilterAndTid2value } from './mds3.filter.js'
 import { resolveGroups, isFilterGroup, maxFilterGroups } from './utils/sampleGroups.ts'
 
 /* centralized resolution of a sample id -> display refs ({ label, ... }) for refs.bySampleId{}.
@@ -800,8 +800,12 @@ export function divideTerms(q, ds) {
 /** Resolve mapping direction when needed, alongside the target sample types used by data and filter queries. */
 export function resolveSampleMapping(q, ds) {
 	if (!ds.cohort?.termdb?.hasSampleAncestry) {
-		// Mapping is unavailable without sample ancestry.
+		// no sample ancestry
 		delete q.sampleMapping
+		return
+	}
+	if (q.sampleMapping && q.sampleTypes) {
+		// do not overwrite properties supplied by caller
 		return
 	}
 	const sampleTypesLst = getSampleTypesLst(q, ds)
@@ -1026,7 +1030,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 
 function getSampleTypesLst(q, ds): TwSampleTypes[] {
 	const twLst = q.terms ? q.terms : q.tw ? [q.tw] : []
-	const filter = q.filter
+	const filter = combinePPfilterAndTid2value(q, ds) // pp filter
 	const filter0 = q.filter0
 	const twTypes = getTwSampleTypesLst(twLst, ds)
 	const filterTypes = getFilterSampleTypesLst(filter, ds)

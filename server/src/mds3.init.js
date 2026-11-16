@@ -13,7 +13,7 @@ import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
 import { getH5samples } from './utils/h5samples.ts'
-import { withholdSampleNames, samplelstFilter } from './utils/sampleGroups.ts'
+import { withholdSampleNames } from './utils/sampleGroups.ts'
 import { compute_mclass } from './vcf.mclass.js'
 import serverconfig, { mergeDsFeatures } from './serverconfig.js'
 import {
@@ -62,10 +62,8 @@ import {
 	getGvQueryRegion,
 	getGvQueryKey,
 	matchesGvQueryEntry,
-	setQuerySampleTypes,
-	getDefaultSampleTypes
+	setQuerySampleTypes
 } from '#shared/terms.js'
-import { filterJoin } from '#shared/filter.js'
 import { TermTypes } from '#types'
 import { isNumeric } from '#shared/helpers.js'
 import { validate_query_junction } from './j2/validate.ts'
@@ -528,17 +526,10 @@ function mayValidateSampleTypes(tdb) {
 	if (!childSampleTypes.length) throw 'child sample types are missing'
 }
 
-async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
+async function call_barchart_data(twLst, q, combination, ds) {
 	// makes sense to call barchart function as it adds counting logic over getData output
 
-	let filter = combinePPfilterAndTid2value(q, ds) // optional filter, based on optional parameters
-	/* the sample types the track reads, when they leave some of the dataset's out: the totals then count the samples
-	of those types only, as the counts of mutated samples do */
-	const sampleTypes = q.sampleTypes?.map(Number)
-	if (ds.sampleId2Type && sampleTypes?.length && getDefaultSampleTypes(ds).some(t => !sampleTypes.includes(t))) {
-		const list = [...ds.sampleId2Type].filter(([, t]) => sampleTypes.includes(t)).map(([sampleId]) => ({ sampleId }))
-		filter = filter ? filterJoin([filter, samplelstFilter(list)]) : samplelstFilter(list)
-	}
+	const filter = combinePPfilterAndTid2value(q, ds) // optional filter, based on optional parameters
 
 	const termid2values = new Map()
 	// k: term id
@@ -553,10 +544,12 @@ async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
 			const _q = {
 				term1: { $id: tw.$id || tw.term.id, term: tw.term, q: { type: 'values' } },
 				filter,
+				sampleTypes: q.sampleTypes,
+				sampleMapping: q.sampleMapping ?? 'parentToChildren',
 				__protected__: q.__protected__
 			}
 
-			const out = await barchart_data(_q, ds, ds.cohort.termdb, onlyChildren)
+			const out = await barchart_data(_q, ds, ds.cohort.termdb)
 
 			if (!out?.data?.charts?.[0]) {
 				// no data
@@ -4179,8 +4172,7 @@ function mayInitTermid2totalsize2(tdb, ds) {
 			a map, key is termid, value is array, each element: [category, total]
 		*/
 	tdb.termid2totalsize2.get = async (twLst, q = {}, combination = null) => {
-		const onlyChildren = true // only get sample-level data for mds3 track
-		return await call_barchart_data(twLst, q, combination, ds, onlyChildren)
+		return await call_barchart_data(twLst, q, combination, ds)
 	}
 }
 
