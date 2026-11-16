@@ -5,7 +5,7 @@ import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
 import { setFile, validateSampleHeader } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
-import { resolveSampleMapping, mayMapNonDictionaryData } from '../termdb.matrix.js'
+import { mayMapNonDictionaryData } from '../termdb.matrix.js'
 import { getH5samples } from '../utils/h5samples.ts'
 import { setQuerySampleTypes } from '#shared/terms.js'
 
@@ -55,12 +55,6 @@ export async function validate_query_junction(ds: any, genome: any) {
 			hiddenTypes = new Set(param.hiddenTypes.trim().split(','))
 			if (!hiddenTypes.size) throw new Error('param.hiddenTypes invalid')
 		}
-
-		// QUICKFIX
-		// assuming genomic data in mds3 tk is at sample-level, so setting
-		// sampleMapping=parentToChildren to allow parent-level term data to be mapped
-		// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
-		resolveSampleMapping(Object.assign(param, { sampleMapping: 'parentToChildren' }), ds)
 
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
@@ -237,7 +231,9 @@ export async function validate_query_junction(ds: any, genome: any) {
 	/*
 	called by getData() and return sample level numeric values in required format
 	*/
-	q.get = async (param: { terms?: any[]; [key: string]: any }) => getJunctionData(param, q.listJunctions, ds)
+	q.get = async (param: { terms: any[]; [key: string]: any }) => {
+		return getJunctionData(param, q.listJunctions, ds)
+	}
 
 	/*
 	get sample details of one junction
@@ -323,11 +319,9 @@ export async function getJunctionData(
 		const query = {
 			...param,
 			rglst: [{ chr: term.chr, start: term.start, stop: term.stop }],
-			readcountCutoff: tw.q?.readcountCutoff ?? param.readcountCutoff
+			readcountCutoff: tw.q?.readcountCutoff ?? param.readcountCutoff,
+			skipSampleFiltering: true // defer sample filtering until source samples are mapped (see below)
 		}
-		delete query.terms
-		// the term's own sample types are applied below, not those of the request, which may be for other terms
-		delete (query as any).sampleTypes
 		const keepList = [{ start: term.start, stop: term.stop, strand: term.strand }]
 		const result = await listJunctions(query, keepList)
 		const junction = result.junctions.find(
@@ -336,15 +330,16 @@ export async function getJunctionData(
 		/* by sample, the read count of the junction, or for a term of measure IR, the IR ratio. An IR term of a junction
 		with no IR event has no value */
 		const sn2value = term.measure == JT_ir ? junction?.sn2ir : junction?.sn2rc
-		let samples: [string | number, number][] = [...(sn2value || [])]
-		/* the samples of the sample types chosen for this term in the term picker. Applied here, per term,
-		rather than through the request: listJunctions() resets the request's sample types to the default
-		ones, and a request may hold terms that chose different sample types */
-		if (term.sampleTypes?.length) {
-			samples = samples.filter(([sid]) => term.sampleTypes.includes(ds.sampleId2Type.get(sid)))
+		// filter samples by sample type of term
+		const s2v = Object.create(null)
+		for (const [sid, value] of sn2value || []) {
+			if (term.sampleTypes?.length && !term.sampleTypes.includes(ds.sampleId2Type.get(sid))) continue
+			if (!Number.isFinite(value)) continue
+			s2v[sid] = value
 		}
-		const s2v = Object.fromEntries(samples.filter(([, value]) => Number.isFinite(value)))
+		// map to target sample type
 		const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+		// filter samples
 		const limitSamples = await mayLimitSamples(param, null, ds)
 		const filteredValues = Object.create(null)
 		for (const [sid, value] of Object.entries(mappedValues)) {

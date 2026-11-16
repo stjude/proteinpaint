@@ -779,7 +779,7 @@ async function validate_query_geneCnv(ds, genome) {
 	}
 }
 
-async function validate_query_snvindel(ds, genome) {
+export async function validate_query_snvindel(ds, genome) {
 	const q = ds.queries.snvindel
 	if (!q) return
 	if (q.url) {
@@ -823,6 +823,12 @@ async function validate_query_snvindel(ds, genome) {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
 		mayValidateBcfMafFilter(q)
+		if (q.byrange._tk?.samples)
+			setQuerySampleTypes(
+				q,
+				q.byrange._tk.samples.map(s => s.name),
+				ds
+			)
 	}
 
 	if (q.byisoform) {
@@ -1688,13 +1694,18 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 	return sampleObj
 }
 
-async function validate_query_svfusion(ds, genome) {
+export async function validate_query_svfusion(ds, genome) {
 	const q = ds.queries.svfusion
 	if (!q) return
 	if (!q.byrange && !q.byname) throw 'both byrange and byname missing from queries.svfusion'
 	if (q.byrange) {
 		await setFile(q.byrange, 'svfusion.byrange')
 		q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
+		setQuerySampleTypes(
+			q,
+			q.byrange.samples.map(s => s.name),
+			ds
+		)
 	}
 	if (q.byname) {
 		await setFile(q.byname, 'svfusion.byname')
@@ -1703,7 +1714,7 @@ async function validate_query_svfusion(ds, genome) {
 	validate_query_svfusionEventImages(ds)
 }
 
-async function validate_query_cnv(ds, genome) {
+export async function validate_query_cnv(ds, genome) {
 	// cnv segments, compared to geneCnv
 	const q = ds.queries.cnv
 	if (!q) return
@@ -1732,6 +1743,11 @@ async function validate_query_cnv(ds, genome) {
 		})
 		q.samples = validateSampleHeader(ds, q.samples, 'cnv')
 	}
+	setQuerySampleTypes(
+		q,
+		q.samples.map(s => s.name),
+		ds
+	)
 
 	/*
 	getter param:
@@ -1903,7 +1919,7 @@ export async function setFile(q, dtn, fk = 'file') {
 	console.log('setFile:', dtn, q[fk])
 }
 
-async function validate_query_itd(ds, genome) {
+export async function validate_query_itd(ds, genome) {
 	const q = ds.queries.itd
 	if (!q) return
 	await setFile(q, 'itd')
@@ -1919,6 +1935,11 @@ async function validate_query_itd(ds, genome) {
 		})
 		q.samples = validateSampleHeader(ds, q.samples, 'itd')
 	}
+	setQuerySampleTypes(
+		q,
+		q.samples.map(s => s.name),
+		ds
+	)
 	q.get = async param => {
 		if (param.hiddenmclass?.has(dtitd) || param.hiddenmclass?.has(mclassitd)) {
 			return { itds: [] }

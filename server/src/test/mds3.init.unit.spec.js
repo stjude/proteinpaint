@@ -10,6 +10,10 @@ import {
 	mayAdd_mayGetGeneVariantData,
 	mayFilterByMaf,
 	mayValidateBcfMafFilter,
+	validate_query_snvindel,
+	validate_query_cnv,
+	validate_query_svfusion,
+	validate_query_itd,
 	setFile,
 	svfusionByNameGetter_file,
 	plotSampleGenomeQuantification
@@ -71,6 +75,51 @@ Tests:
 test('\n', t => {
 	t.pass('-***- mds3.init unit tests -***-')
 	t.end()
+})
+
+test('mutation query sample types', async t => {
+	const originalTpMasterDir = serverconfig.tpmasterdir
+	serverconfig.tpmasterdir = path.resolve(import.meta.dirname, '../../test/tp')
+	const folder = 'files/hg38/TermdbTest/'
+	const ds = {
+		label: 'test',
+		sampleId2Type: new Map([
+			[3444, 2],
+			[3332, 3]
+		]),
+		cohort: {
+			termdb: {
+				q: { sampleName2id: Number },
+				sampleTypesByTerms: { visit: { Diagnosis: [2], Relapse: [3], Other: [4] } }
+			}
+		},
+		queries: {
+			snvindel: { byrange: { bcffile: folder + 'TermdbTest.bcf.gz' } },
+			cnv: { file: folder + 'TermdbTest_CNV_gene.gz' },
+			svfusion: { byrange: { file: folder + 'TermdbTest_Fusion.gz' } },
+			itd: { file: folder + 'TermdbTest_ITD.gz' }
+		}
+	}
+	try {
+		for (const [type, validate, expected] of [
+			['snvindel', validate_query_snvindel, [2, 3]],
+			['cnv', validate_query_cnv, [3]],
+			['svfusion', validate_query_svfusion, [2, 3]],
+			['itd', validate_query_itd, [2, 3]]
+		]) {
+			await validate(ds, { majorchr: {} })
+			const query = ds.queries[type]
+			t.deepEqual(query.sampleTypes.slice().sort(), expected, `${type} derives unique sample types from its header`)
+			t.deepEqual(
+				query.sampleTypesByTerms,
+				{ visit: type == 'cnv' ? { Relapse: [3] } : { Diagnosis: [2], Relapse: [3] } },
+				`${type} restricts term-based choices to available sample types`
+			)
+		}
+	} finally {
+		serverconfig.tpmasterdir = originalTpMasterDir
+		t.end()
+	}
 })
 
 test('setFile: validates and resolves files', async t => {
