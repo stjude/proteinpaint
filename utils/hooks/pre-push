@@ -2,14 +2,19 @@
 
 set -e
 
-# check the pushed branch name and the commit messages and added lines to push
-./utils/hooks/check-text.sh push "$1"
+# git passes the pushed refs on stdin, save them so that both checks below can read them
+REFS=$(mktemp)
+trap 'rm -f "$REFS"' EXIT
+cat > "$REFS"
 
-FILES=$(git diff-tree --no-commit-id --name-only --diff-filter=ACM -r origin/master..HEAD)
-echo "number of files to be checked=$(echo "$FILES" | wc -w)"
-# doing this per GDC requirements
-pre-commit run --files $FILES
+# check the pushed branch name and the commit messages and added lines to push
+./utils/hooks/check-text.sh push "$1" < "$REFS"
+
+# scan the commits to push for secrets, doing this per GDC requirements
+./utils/hooks/scan-secrets.sh "$1" < "$REFS"
+
 # run linter on ts files
+FILES=$(git diff-tree --no-commit-id --name-only --diff-filter=ACM -r origin/master..HEAD)
 echo "linting ..."
 # only run eslint when there are changed .ts files (guard is portable across GNU and BSD)
 TSFILES=$(echo "$FILES" | grep "\.ts$" || true)
