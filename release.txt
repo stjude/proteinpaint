@@ -1,2 +1,1 @@
-Features:
-- Redesign sample view as showing a sample's data as a grid of tiles: Dictionary, Disco, methylation array, Brain imaging, Swimmer, Genome browser, Single cell, Whole slide images, ssGSEA, Gene expression, and prebuilt scatter plots that highlight the sample.
+

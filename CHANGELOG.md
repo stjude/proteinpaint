@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Removed UI for AI chatbot in mass UI. Only the search functionality will remain in the search tab.
+- Redesign sample view as showing a sample's data as a grid of tiles: Dictionary, Disco, methylation array, Brain imaging, Swimmer, Genome browser, Single cell, Whole slide images, ssGSEA, Gene expression, and prebuilt scatter plots that highlight the sample.
 
 
 ## 2.228.0
