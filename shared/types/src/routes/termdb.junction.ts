@@ -38,7 +38,8 @@ export type TermdbJunctionsRequest = {
 	genome: string
 	dslabel: string
 	rglst: any
-	filter?: Filter
+	/** pp filter of samples, as filterObj of the mds3 track */
+	filterObj?: Filter
 	filter0?: any
 	readcountCutoff?: number
 	/** comma-joined types to filter out junctions */
@@ -77,7 +78,8 @@ export type TermdbJunctionsResponse = TermdbJunctionsDataResponse | ErrorRespons
 export type TermdbJunctionsAbyBRequest = {
 	genome: string
 	dslabel: string
-	filter?: Filter
+	/** pp filter of samples, as filterObj of the mds3 track */
+	filterObj?: Filter
 	filter0?: any
 	readcountCutoff?: number
 	/** "jB", the junction that shows an event */

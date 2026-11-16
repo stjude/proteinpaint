@@ -221,8 +221,8 @@ tape('getJunctionData: keeps the samples of the sample types chosen for each ter
 - 5000-6000, with only IR and no IR ratio in any sample, of the highest read count, 40
 - 7000-8000, canonical with IR: IR ratio in 1 sample
 */
-async function getJunctionQuery() {
-	const ds: any = { label: 'test', queries: { junction: { file: 'files/hg38/junction/test.junction.gz' } } }
+async function getJunctionQuery(dsExtra = {}) {
+	const ds: any = { label: 'test', queries: { junction: { file: 'files/hg38/junction/test.junction.gz' } }, ...dsExtra }
 	const genome = { chrlookup: { CHR17: { name: 'chr17', len: 83257441 } } }
 	await validate_query_junction(ds, genome)
 	return ds.queries.junction
@@ -285,6 +285,37 @@ tape('listJunctions: intron retention', async test => {
 		test.equal(byStart.get(5000), undefined, 'skips a junction left with no type after removing IR')
 		test.equal(maxReadCount, 30, 'the max read count is of the junctions returned')
 	}
+	test.end()
+})
+
+tape('listJunctions: filterObj is mapped from patients to their samples as filter is', async test => {
+	const seen: any[] = []
+	// samples S1-S4 of the file are diagnosis samples (2) of patients (1), and 'sex' annotates patients
+	const q = await getJunctionQuery({
+		sampleId2Type: new Map(['S1', 'S2', 'S3', 'S4'].map(s => [s, 2])),
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				term2SampleType: new Map([['sex', 1]]),
+				sampleTypes: {
+					1: { name: 'Patient', parent_id: null },
+					2: { name: 'Diagnosis', parent_id: 1 }
+				},
+				filterSamples: async (fq: any) => {
+					seen.push(fq)
+					return new Set(['S1', 'S2'])
+				}
+			}
+		}
+	})
+	const sex = { type: 'tvslst', join: '', in: true, lst: [{ type: 'tvs', tvs: { term: { id: 'sex' } } }] }
+	const byFilter = await listJunctions(q, { filter: sex })
+	const byFilterObj = await listJunctions(q, { filterObj: sex })
+	test.equal(seen[1].mapParent2Children, seen[0].mapParent2Children, 'maps filterObj from patients as filter is')
+	test.equal(seen[1].mapParent2Children, true, 'which maps patients to their samples')
+	test.deepEqual(seen[1].filter, sex, 'filters samples by filterObj')
+	test.equal((byFilterObj.byStart.get(1000) as any).sampleCount, 2, 'keeps the samples that filterObj passes')
+	test.deepEqual(byFilterObj, byFilter, 'lists the same junctions as by filter')
 	test.end()
 })
 

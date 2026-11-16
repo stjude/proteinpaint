@@ -743,7 +743,7 @@ export async function mayGetTkobj(key, value, urlp, genomeobj) {
 				dslabel: n
 			}
 			if (urlp.has('token')) tk.token = urlp.get('token') // temporary
-			if (urlp.has('filter')) tk.filter = urlp.get('filter')
+			if (urlp.has('filterobj')) tk.filterObj = urlp.get('filterobj')
 			if (urlp.has('filter0')) tk.filter0 = urlp.get('filter0')
 			tks.push(tk)
 		}

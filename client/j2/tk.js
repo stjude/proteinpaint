@@ -76,9 +76,10 @@ export function getParameter(tk, block) {
 		genome: block.genome.name,
 		dslabel: tk.dslabel,
 		filter0: tk.filter0,
-		filter: tk.filter,
 		readcountCutoff: tk.readcountCutoff
 	}
+	// pp filter of samples, as tk.filterObj of mds3; an empty lst[] is left out, as when user deletes the only tvs from the filter ui
+	if (tk.filterObj?.lst?.length) par.filterObj = tk.filterObj
 	// chosen in the genome browser's sample type row; absent when every sample type is shown
 	if (tk.sampleTypes) par.sampleTypes = tk.sampleTypes
 

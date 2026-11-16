@@ -7,9 +7,18 @@ import { fillTermWrapper } from '#termsetting'
 import { rehydrateFilter } from '../filter/rehydrateFilter'
 import { makelabel, setLeftlabelsMaxWidth } from '../mds3/leftlabel'
 import { initLocusHeatmapRows, locusHeatmapHeight } from '../src/block.locusHeatmap'
+import { filterInit } from '../filter/filter'
 
 /*
+as in the mds3 track:
+tk.filter0
+	read-only filter provided by an embedding portal, not shown
+tk.filterObj
+	pp filter of samples, e.g. the global and local filters of the mass genome browser joined into one.
+	shown as a left label under the junction count label, which the user can click to change it
  */
+
+const labyspace = 5
 
 export async function makeTk(tk, block) {
 	// run just once to initiate a track by adding in essential attributes to tk object
@@ -98,7 +107,11 @@ export async function makeTk(tk, block) {
 
 	if (!tk.custom_data) await initTermdb(tk, block)
 
-	if (tk.filter) await Promise.all(rehydrateFilter(tk.filter, tk.vocabApi))
+	if (tk.filterObj) {
+		if (tk.custom_data) throw new Error('tk.filterObj is not supported for custom junctions')
+		await Promise.all(rehydrateFilter(tk.filterObj, tk.vocabApi))
+		makeSampleFilterLabel(tk, block)
+	}
 
 	tk.tklabel.text(tk.dslabel || tk.name)
 
@@ -132,7 +145,10 @@ function loadTk_finish_closure(tk, block) {
 	return data => {
 		// update legend name in case filter has changed
 		// tk.legend{} is missing if tk is not initiated (wrong ds name)
-		tk.legend?.headTd.text(tk.custom_data ? tk.name : tk.dslabel + (tk.filter ? ' - ' + getFilterName(tk.filter) : ''))
+		tk.legend?.headTd.text(
+			tk.custom_data ? tk.name : tk.dslabel + (tk.filterObj ? ' - ' + getFilterName(tk.filterObj) : '')
+		)
+		tk.leftlabels.doms.filterObj?.text(getFilterName(tk.filterObj))
 
 		if (data) {
 			// centralized place on indicating if tk has error or simply no data
@@ -163,7 +179,9 @@ function loadTk_finish_closure(tk, block) {
 		}
 
 		// derive tk height
-		tk.height_main = locusHeatmapHeight(tk) + tk.rows.jug.height + tk.toppad + tk.bottompad
+		// the left labels are next to the junctions, and need room when there are none, e.g. "No splice junctions"
+		tk.height_main =
+			locusHeatmapHeight(tk) + Math.max(tk.rows.jug.height, tk.leftlabels.laby + 20) + tk.toppad + tk.bottompad
 
 		if (data) {
 			updateLegend(data, tk, block)
@@ -178,6 +196,26 @@ function loadTk_finish_closure(tk, block) {
 
 		tk.callbackOnRender?.(tk, block) // run if present
 	}
+}
+
+function makeSampleFilterLabel(tk, block) {
+	// the label is under the junction count label; its text is updated in tk._finish()
+	const y = labyspace + block.labelfontsize
+	tk.leftlabels.doms.filterObj = makelabel(tk, block, y)
+		.attr('data-testid', 'sjpp-j2-leftlabel-samplefilter')
+		.text(getFilterName(tk.filterObj))
+		.on('click', event => {
+			tk.menutip.clear().showunder(event.target)
+			filterInit({
+				holder: tk.menutip.d.append('div').style('margin', '10px'),
+				vocabApi: tk.vocabApi,
+				callback: f => {
+					tk.filterObj = f
+					tk.load()
+				}
+			}).main(tk.filterObj)
+		})
+	tk.leftlabels.laby = y + labyspace + block.labelfontsize
 }
 
 async function initTermdb(tk, block) {

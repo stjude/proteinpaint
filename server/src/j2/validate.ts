@@ -2,7 +2,7 @@ import computePercentile from '#shared/compute.percentile.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
 import { JT_na, JT_canonical, JT_ir } from '#shared/common.js'
 import * as utils from '../utils.js'
-import { mayLimitSamples } from '../mds3.filter.js'
+import { mayLimitSamples, combinePPfilterAndTid2value } from '../mds3.filter.js'
 import { setFile, validateSampleHeader, getTermSampleLimiter } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
 import { mapParent2ChildrenWithSampleTypes } from '../utils/sampleTypes.ts'
@@ -60,8 +60,8 @@ export async function validate_query_junction(ds: any, genome: any) {
 		// assuming genomic data in mds3 tk is at sample-level, so setting
 		// mapParent2Children=true to allow parent-level term data to be mapped
 		// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
-		// with the sample types chosen in the genome browser
-		mapParent2ChildrenWithSampleTypes(param, ds)
+		// with the sample types chosen in the genome browser; the filter is param.filterObj of the j2 track, as in mds3
+		mapParent2ChildrenWithSampleTypes(param, ds, combinePPfilterAndTid2value(param, ds))
 
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {

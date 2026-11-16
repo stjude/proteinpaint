@@ -174,7 +174,8 @@ export class View {
 			}
 			// the label names the sample types on the junction terms of Details and Select
 			Object.assign(tk, this.trackSampleTypes)
-			if (this.state.filter?.lst?.length) tk.filter = structuredClone(this.state.filter)
+			// the global filter, as the mds3 track gets it
+			if (this.state.filter?.lst?.length) tk.filterObj = structuredClone(this.state.filter)
 			tklst.push(tk)
 		}
 		if (this.state.config.ld?.tracks) {
