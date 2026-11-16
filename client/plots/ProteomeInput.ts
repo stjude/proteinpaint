@@ -9,13 +9,8 @@ import { dofetch3 } from '#common/dofetch'
 import { PROTEOME_DAP, type ProteomeDetails, type DataQualityFigure } from '#types'
 import { importPlot } from '#plots/importPlot.js'
 import { axisBottom, axisLeft, scaleLinear } from 'd3'
-import {
-	makeTileGrid,
-	makeTileCard,
-	tileExpandState,
-	renderTileError,
-	renderPlaceholderTiles
-} from './proteinView.tiles'
+import { makeTileGrid, makeTileCard, tileExpandState, renderTileError } from './tileCard'
+import { renderPlaceholderTiles } from './proteinView.tiles'
 
 /*
 ProteomeInput — the analysis tools for ONE sample set, laid out as

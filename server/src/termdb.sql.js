@@ -114,9 +114,9 @@ export async function get_samples(q, ds, canDisplay = false) {
 
 export async function get_samples_ancestry(qfilter, ds, canDisplay = false) {
 	/*
-must have qfilter[]
-as the actual query is embedded in qfilter
-return an array of sample names passing through the filter
+qfilter: the filter already including any access control: adjusted by the app middleware, or computed by the
+caller (e.g. the chat omnisearch)
+return an array of the samples passing the filter, {id, ancestor_id}
 */
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
 	const query = filter
@@ -128,6 +128,32 @@ return an array of sample names passing through the filter
 		: sql`SELECT id, sa.ancestor_id FROM sampleidmap left join sample_ancestry sa on id = sa.sample_id and sa.distance = 1`
 
 	const re = ds.cohort.db.connection.prepare(query).all()
+	if (filter) {
+		/* a filter of parent-level terms, e.g. a patient-level access-control filter, passes only the parent
+		samples above, not their child samples (e.g. a patient's primary, PDX, CSF samples): add the child
+		samples passing the filter mapped from parent to children, as getFilterSampleIdSet() lists them, without
+		its access-control merge since qfilter includes it */
+		const listed = new Set(re.map(i => i.id))
+		const fq = { filter: qfilter }
+		let children = []
+		try {
+			maySetMapParent2Children(fq, ds, true)
+			children = await get_samples(fq, ds)
+		} catch (e) {
+			// as mayDetectSampleLevels(): a filter whose sample types cannot be detected lists the samples above only
+			console.warn('get_samples_ancestry():', e.message || e)
+		}
+		const tdbq = ds.cohort.termdb.q
+		for (const { id } of children) {
+			if (listed.has(id)) continue
+			// only a child of a root sample listed above: with a negated filter (in: false), the mapped filter also
+			// passes samples, e.g. the excluded patients themselves, that the filter as given does not
+			const rootId = tdbq.id2rootSampleId(id)
+			if (rootId == id || !listed.has(rootId)) continue
+			// the nearest ancestor: the ancestors are sorted by distance
+			re.push({ id, ancestor_id: tdbq.id2sampleRefs(id)?.ancestors?.[0]?.ancestor_id })
+		}
+	}
 	if (canDisplay) return re
 	for (const item of re) delete item.name
 	return re

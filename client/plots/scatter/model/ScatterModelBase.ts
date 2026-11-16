@@ -39,6 +39,12 @@ export abstract class ScatterModelBase {
 		// isRef marks reference-cloud dots; the server sets it once (from sampleId presence, before any
 		// anonymization) so a denied request that drops sampleId still classifies cohort dots correctly.
 		const cohortSamples: any[] = data.samples ? data.samples.filter(sample => !sample.isRef) : []
+		// highlighted samples (config.highlightSamples) are drawn last, on top of the other dots
+		if (this.scatter.config.highlightSamples?.length && data.samples)
+			data.samples = [
+				...data.samples.filter(c => !this.getHighlightRank(c)),
+				...data.samples.filter(c => this.getHighlightRank(c))
+			]
 		if (cohortSamples.length > this.scatter.settings.maxSvgSamplesCutoff) this.is2DLarge = true
 		const colorLegend: Map<string, ColorLegendItem> = new Map(data.colorLegend)
 		const shapeLegend: Map<string, ShapeLegendItem> = new Map(data.shapeLegend)
@@ -160,7 +166,20 @@ export abstract class ScatterModelBase {
 			if (c.sample?.toLowerCase().includes(this.filterSampleStr.toLowerCase())) scale = scale * 2
 			else scale = scale * 0.8
 		}
+		if (this.scatter.config.highlightSamples?.length) {
+			// the highlighted samples keep about their size among a cloud of smaller dots, and are marked by an
+			// unfilled ring (see mayRenderHighlights()) rather than enlarged, so they do not hide their neighbors
+			const rank = this.getHighlightRank(c)
+			scale = scale * (rank == 2 ? 1.2 : rank == 1 ? 1 : 0.6)
+		}
 		return scale
+	}
+
+	/** 2: config.emphasizedSample, 1: config.highlightSamples, 0: not highlighted. */
+	getHighlightRank(c): number {
+		const config = this.scatter.config
+		if (!c.sample || !config.highlightSamples?.includes(c.sample)) return 0
+		return c.sample == config.emphasizedSample ? 2 : 1
 	}
 
 	transform(chart, c, factor = 1) {

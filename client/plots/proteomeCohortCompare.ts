@@ -4,13 +4,8 @@ import { PlotBase } from './PlotBase'
 import { Menu } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { scaleLinear, axisBottom, axisLeft } from 'd3'
-import {
-	makeTileGrid,
-	makeTileCard,
-	renderPlaceholderTiles,
-	renderTileError,
-	tileExpandState
-} from './proteinView.tiles'
+import { makeTileGrid, makeTileCard, tileExpandState, renderTileError } from './tileCard'
+import { renderPlaceholderTiles } from './proteinView.tiles'
 
 /*
 proteomeCohortCompare — cross-cohort comparison of standardized fold change (log2FC-z).

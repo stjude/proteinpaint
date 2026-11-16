@@ -27,13 +27,21 @@ class MassPlot {
 				action.id === this.id ||
 				action.id == this.parentId ||
 				action.config?.parentId === this.id ||
-				action.parentId === this.id
+				action.parentId === this.id ||
+				// a grandchild plot, e.g. the UMAP that the single-cell app in a sample view tile creates
+				this.isChildPlot(action.parentId ?? action.config?.parentId)
 			)
 		}
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
 		if (action.type.endsWith('customTerm')) return true
+	}
+
+	/** whether the plot with id plotId is a child of this plot */
+	isChildPlot(plotId) {
+		if (!plotId) return false
+		return this.app.getState().plots.find(p => p.id === plotId)?.parentId === this.id
 	}
 
 	// !!! NOTE: This getState() method is reused by the plot-specific recover component.

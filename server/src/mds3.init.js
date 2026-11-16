@@ -2772,6 +2772,9 @@ export function plotSampleGenomeQuantification(file, genome, control, devicePixe
 						canvasWidth,
 						canvasHeight,
 						xoff: xpad + axisWidth,
+						// top and height of the plot area, excluding the chromosome labels below it
+						yoff: ypad,
+						plotHeight: axisHeight,
 						chrLst
 					})
 				)

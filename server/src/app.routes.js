@@ -110,6 +110,7 @@ export const routeFiles = [
 	import('./routes/termdb.swimmer.ts'),
 	import('./routes/termdb.sampleScatter.ts'),
 	import('./routes/termdb.survival.ts'),
+	import('./routes/termdb.sampleOutliers.ts'),
 	import('./routes/termdb.singleSampleMutation.ts'),
 	import('./routes/termdb.termchildren.ts'),
 	import('./routes/termdb.termsbyids.ts'),

@@ -41,8 +41,11 @@ export class ScatterView {
 		this.opts = scatter.opts
 		this.scatter = scatter
 		this.opts.holder.attr('data-testid', 'sjpp-scatter-holder')
-		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
-		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
+		// the tools and settings stay on the left of the chart, also in a holder narrower than both together
+		// (e.g. an expanded sample view tile), which then scrolls instead of moving the chart below them
+		const row = this.opts.holder.insert('div').style('display', 'flex').style('align-items', 'flex-start')
+		const leftDiv = row.append('div').style('flex', 'none')
+		const rightDiv = row.append('div').style('flex', 'none')
 		const controlsHolder = leftDiv
 			.append('div')
 			.style('display', 'inline-block')

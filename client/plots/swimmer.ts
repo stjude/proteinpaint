@@ -9,6 +9,7 @@ import { getColors } from '#shared/common.js'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { create, pointer } from 'd3-selection'
+import type { HoverShapeSpec } from '#dom/hoverShapes'
 import type {
 	SwimmerLane,
 	SwimmerLegendItem,
@@ -109,6 +110,40 @@ function getMarkerGeometry(shapeKey: string, height: number) {
 		transform: `scale(${scale}) translate(${-(bb.x + bb.width / 2)},${-(bb.y + bb.height / 2)})`,
 		halfWidth: (bb.width * scale + strokePx) / 2
 	}
+}
+
+/** outline of a marker's shape centered at (cx, cy), 2px larger on each side; the hover outline and the
+outline of a highlighted sample's event */
+function getMarkerOutline(shape: string, cx: number, cy: number, height: number): HoverShapeSpec {
+	const m = getMarkerGeometry(shape, height + 4)
+	return { path: m.shape.path, transform: `translate(${cx},${cy}) ${m.transform}`, stroke: 'black', fill: 'none' }
+}
+
+/** the hover outline around the marker of a highlighted sample's event centered at (cx, cy), with the
+sample name above it */
+function drawHighlightOutline(holder, shape: string, cx: number, cy: number, height: number, label: string) {
+	const o = getMarkerOutline(shape, cx, cy, height)
+	holder
+		.append('path')
+		.attr('data-testid', 'sjpp-swimmer-highlight')
+		.attr('d', o.path)
+		.attr('transform', o.transform)
+		.attr('fill', 'none')
+		.attr('stroke', o.stroke!)
+		.attr('stroke-width', 1.5)
+		.style('vector-effect', 'non-scaling-stroke')
+	holder
+		.append('text')
+		.attr('x', cx)
+		.attr('y', cy - (height + 4) / 2 - 3)
+		.attr('text-anchor', 'middle')
+		.attr('font-size', 10)
+		.attr('font-weight', 600)
+		.attr('paint-order', 'stroke')
+		.attr('stroke', '#fff')
+		.attr('stroke-width', 3)
+		.attr('fill', '#111827')
+		.text(label)
 }
 
 /** draw an event marker centered at (cx, cy) inside holder, scaled so the visible shape is `height` px tall.
@@ -353,6 +388,9 @@ export class SwimmerRenderer {
 	pointTerm?: any
 	/** point category order from the server, only with pointTerm */
 	pointCategoryOrder: string[] = []
+	/** name of a sample whose linked events (e.g. its CSF collection) are drawn enlarged, ringed and labeled,
+	e.g. the sample chosen in sample view */
+	highlightSample?: string
 	/** key of the time reference of the lanes, from the server; unset when the ds has none */
 	timeReference?: string
 	dom: { plotDiv: any; noteDiv: any; tip: Menu; svg?: any }
@@ -400,6 +438,7 @@ export class SwimmerRenderer {
 		pointTerm?: any
 		pointCategoryOrder?: string[]
 		timeReference?: string
+		highlightSample?: string
 	}) {
 		this.swimmer = d.swimmer || {}
 		this.settings = d.settings
@@ -409,6 +448,7 @@ export class SwimmerRenderer {
 		this.pointTerm = d.pointTerm
 		this.pointCategoryOrder = d.pointCategoryOrder || []
 		this.timeReference = d.timeReference
+		this.highlightSample = d.highlightSample
 		this.render()
 	}
 
@@ -566,7 +606,8 @@ export class SwimmerRenderer {
 
 		const fontSize = Math.min(12, Math.max(7, s.rowHeight - 3))
 		const axisHeight = 45
-		const topPad = 10
+		// room above the first lane for the label of a highlighted sample's event
+		const topPad = this.highlightSample ? 28 : 10
 		const rightPad = 20
 		// lanes are separated by a thin fixed gap so the bar fills most of the row; segments and
 		// event dots scale with the bar rather than the row
@@ -697,8 +738,10 @@ export class SwimmerRenderer {
 					}
 				}
 
-				// events
-				for (const p of lane.points) {
+				// events; the events of the highlighted sample are drawn last, on top of the others
+				const isHighlighted = (p: SwimmerPoint) => !!this.highlightSample && p.sample == this.highlightSample
+				const points = [...lane.points.filter(p => !isHighlighted(p)), ...lane.points.filter(isHighlighted)]
+				for (const p of points) {
 					if (this.isClipped(p)) continue
 					const entry = events.byKey.get(p.event)!
 					if (entry.hidden) continue
@@ -707,10 +750,12 @@ export class SwimmerRenderer {
 					if (mark?.hidden) continue
 					const shape = mark?.shape || entry.shape
 					const color = mark?.color || entry.color
-					const height = markerH * entry.size
+					const highlighted = isHighlighted(p)
+					const height = markerH * entry.size * (highlighted ? 1.6 : 1)
 					const cx = x(p.time)
 					// hover and click go through the panel cover, see attachInteractions()
 					const dot = drawMarker(g, shape, cx, s.rowHeight / 2, height, color).attr('data-event', p.event)
+					if (highlighted) drawHighlightOutline(g, shape, cx, s.rowHeight / 2, height, p.sample!)
 					// after drawMarker(), which measures the shape on its first use
 					const { halfWidth } = getMarkerGeometry(shape, height)
 					markers.push({ p, lane, entry, mark, shape, color, x: cx, y: y + s.rowHeight / 2, height, halfWidth })
@@ -1153,15 +1198,7 @@ export class SwimmerRenderer {
 			// within reach from the neighboring lanes. so the hit distance is the horizontal one
 			isHidden: d => Math.floor(d.y / o.rowHeight) !== cursorRow,
 			// outline of the marker's shape, 2px larger on each side
-			toHoverSpec: d => {
-				const m = getMarkerGeometry(d.shape, d.height + 4)
-				return {
-					path: m.shape.path,
-					transform: `translate(${d.x},${d.y}) ${m.transform}`,
-					stroke: 'black',
-					fill: 'none'
-				}
-			},
+			toHoverSpec: d => getMarkerOutline(d.shape, d.x, d.y, d.height),
 			itemNoun: 'event',
 			renderSingleHoverTooltip: (d, container) => this.renderMarkerTip(d, container, time, o.fmt),
 			buildMultiHitTableData: dots => this.buildMarkersTable(dots, o.timeLabel, o.fmt),

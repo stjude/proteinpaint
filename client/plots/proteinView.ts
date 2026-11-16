@@ -8,7 +8,6 @@ import {
 	prepareTileData,
 	renderStudyTiles,
 	renderPlaceholderTiles,
-	makeTileGrid,
 	renderCoverageLine,
 	renderPTMSummaryCard,
 	renderOverviewVolcanoCard,
@@ -16,6 +15,7 @@ import {
 	launchViolinPlot,
 	getLog2Ratio
 } from './proteinView.tiles'
+import { makeTileGrid } from './tileCard'
 import { axisBottom, axisLeft, scaleLinear, rgb, select, creator } from 'd3'
 import { shapeSelector, shapes } from '../dom/shapes.js'
 import { TermTypes } from '#types'

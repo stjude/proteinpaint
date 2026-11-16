@@ -2234,6 +2234,7 @@ keep this setting here for reason of:
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
 	geomap?: GeomapConfig
+	sampleView?: SampleViewConfig
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
@@ -2494,6 +2495,32 @@ export type SampleTypesByTerms = {
 	[term: string]: {
 		[value: string]: number[]
 	}
+}
+
+/** sample view settings of the dataset */
+type SampleViewConfig = {
+	/** tiles of the genes (ds.queries.geneExpression) and gene sets (ds.queries.ssGSEA) whose value in a sample
+	is unusually high or low against a reference group of samples, by z-score; when set, even as {}, a tile
+	is shown for each of the two queries with an HDF5 file, unless its setting here is false */
+	outliers?: SampleViewOutliers
+}
+
+/** see SampleViewConfig.outliers; every setting is optional */
+export type SampleViewOutliers = {
+	/** reference groups offered besides all samples: the other samples sharing the sample's value of a
+	categorical term, e.g. [{termId: 'Diagnosis', label: 'Same diagnosis'}]; the first one available for a
+	sample is the default. Default: none, all samples only */
+	referenceGroups?: { termId: string; label: string }[]
+	/** least number of other samples in a reference group; a smaller group is not offered. Default 20 */
+	minGroupSize?: number
+	/** the ssGSEA tile, or false for none. .geneSetCollection: the gene sets of the ssGSEA file to score, the
+	children of this term of the genome gene set db. Default 'H: hallmark gene sets' of msigdb */
+	ssGSEA?: false | { geneSetCollection?: string }
+	/** the gene expression tile, or false for none. .minValue: a gene is ranked when its value in the sample
+	or the reference group's mean (of log2(value+1), back in the file's unit, e.g. FPKM) is at least this, so
+	that rarely expressed genes do not rank high by small values. Default 5. The file's values must not already
+	be logged (e.g. FPKM or TPM, not log2 or VST): the route takes log2(value+1) of them for the z-scores. */
+	geneExpression?: false | { minValue?: number }
 }
 
 /** predefined configuration objects per subcohort per plot type */

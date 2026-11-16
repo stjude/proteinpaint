@@ -19,4 +19,6 @@ export type SCSettings = {
 	/** Active item chosen by the user */
 	item: SCSample | undefined
 	groupBy: (typeof GroupByOptions)[number]
+	/** no sample table and no button to show it, for an app fixed to .item, e.g. in a sample view tile */
+	hideItemTable?: boolean
 }

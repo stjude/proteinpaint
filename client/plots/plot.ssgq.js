@@ -44,103 +44,134 @@ export async function plotSingleSampleGenomeQuantification(
 ) {
 	const loadingDiv = holder.append('div').text('Loading...')
 	try {
-		// verify this dataset supports this plot
-		if (typeof termdbConfig?.queries?.singleSampleGenomeQuantification != 'object')
-			throw 'termdbConfig.queries.singleSampleGenomeQuantification{} missing, cannot plot'
-		const q = termdbConfig.queries.singleSampleGenomeQuantification[queryKey]
-		if (!q) throw 'invalid queryKey'
-
-		if (typeof sample != 'object') throw 'sample{} not object'
-		if (typeof genomeObj != 'object') throw 'genomeObj{} not object'
-
-		const body = {
-			genome: genomeObj.name,
+		const data = await getSingleSampleGenomeQuantification(termdbConfig, dslabel, queryKey, sample, genomeObj)
+		await renderSingleSampleGenomeQuantification(
+			termdbConfig,
 			dslabel,
-			devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
-			singleSampleGenomeQuantification: { dataType: queryKey, sample: sample[q.sample_id_key] }
-		}
-		const data = await dofetch3('termdb/mds3', { body })
-		if (data.error) throw data.error
-
-		// optional query, if present, will enable clicking on genome-wide img to launch block
-		const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
-
-		// description
-		holder
-			.append('div')
-			.attr('data-testid', 'sjpp_ssgq_sandbox')
-			.text(q.description || queryKey)
-		if (q2) {
-			holder
-				.append('div')
-				.attr('data-testid', 'sjpp_ssgq_intro_text')
-				.text(`Click a chromosomal position to zoom in and view ${q2.description || q.singleSampleGbtk}`)
-		}
-
-		const img = holder
-			.append('img')
-			.attr('data-testid', 'sjpp_ssgq_img')
-			.attr('width', data.canvasWidth)
-			.attr('height', data.canvasHeight)
-			.attr('src', data.src)
-
+			queryKey,
+			sample,
+			data,
+			holder,
+			genomeObj,
+			geneName
+		)
+		// after the render, so that a render error is shown in it
 		loadingDiv.remove()
-
-		if (!q2) return // singleSampleGbtk is not enabled
-
-		// !!
-
-		let bb // so as to only load block once, later clicks all update existing block
-		if (geneName) {
-			const geneData = await dofetch3('genelookup', {
-				body: { genome: genomeObj.name, input: geneName, deep: 1 }
-			})
-			if (geneData.error) throw geneData.error
-			if (geneData.gmlst && geneData.gmlst.length) {
-				const locs = gmlst2loci(geneData.gmlst)
-				const chr = locs[0].chr
-				const start = Math.max(0, locs[0].start - (locs[0].stop - locs[0].start))
-				const chrLen = data.chrLst.filter(c => c.chr == chr)[0].chrLen
-				const stop = Math.min(chrLen, locs[0].stop + (locs[0].stop - locs[0].start))
-
-				// block is not present yet. load block
-				bb = await plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, chr, start, stop)
-			}
-		}
-
-		img.on('click', async event => {
-			const x = event.offsetX - data.xoff
-
-			let chr, chrLen, position
-
-			for (const c of data.chrLst) {
-				if (c.xStart <= x && c.xStop >= x) {
-					chr = c.chr
-					chrLen = c.chrLen
-					position = Math.ceil((c.chrLen / (c.xStop - c.xStart)) * (x - c.xStart))
-					break
-				}
-			}
-			if (!chr) return
-
-			const start = Math.max(0, position - 500000),
-				stop = Math.min(position + 500000, chrLen)
-
-			if (bb) {
-				// block already loaded, jump
-				bb.jump_1basedcoordinate({ chr, start, stop })
-				return
-			}
-
-			// block is not present yet. load block
-			bb = await plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, chr, start, stop)
-		})
 		return true
 	} catch (e) {
 		if (showError) loadingDiv.text('Error: ' + (e.message || e))
 		else loadingDiv.remove()
 		return false
 	}
+}
+
+/** the genome-wide image of a sample, as drawn by renderSingleSampleGenomeQuantification():
+{ src, canvasWidth, canvasHeight, xoff, chrLst[] }; throws when the sample has none or on error */
+export async function getSingleSampleGenomeQuantification(termdbConfig, dslabel, queryKey, sample, genomeObj) {
+	// verify this dataset supports this plot
+	if (typeof termdbConfig?.queries?.singleSampleGenomeQuantification != 'object')
+		throw 'termdbConfig.queries.singleSampleGenomeQuantification{} missing, cannot plot'
+	const q = termdbConfig.queries.singleSampleGenomeQuantification[queryKey]
+	if (!q) throw 'invalid queryKey'
+
+	if (typeof sample != 'object') throw 'sample{} not object'
+	if (typeof genomeObj != 'object') throw 'genomeObj{} not object'
+
+	const body = {
+		genome: genomeObj.name,
+		dslabel,
+		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
+		singleSampleGenomeQuantification: { dataType: queryKey, sample: sample[q.sample_id_key] }
+	}
+	const data = await dofetch3('termdb/mds3', { body })
+	if (data.error) throw data.error
+	return data
+}
+
+/** draws the genome-wide image of getSingleSampleGenomeQuantification() into holder, with clicking a
+chromosomal position to launch the singleSampleGbtk block when the dataset has it */
+export async function renderSingleSampleGenomeQuantification(
+	termdbConfig,
+	dslabel,
+	queryKey,
+	sample,
+	data,
+	holder,
+	genomeObj,
+	geneName
+) {
+	const q = termdbConfig.queries.singleSampleGenomeQuantification[queryKey]
+	// optional query, if present, will enable clicking on genome-wide img to launch block
+	const q2 = termdbConfig.queries.singleSampleGbtk?.[q.singleSampleGbtk]
+
+	// description
+	holder
+		.append('div')
+		.attr('data-testid', 'sjpp_ssgq_sandbox')
+		.text(q.description || queryKey)
+	if (q2) {
+		holder
+			.append('div')
+			.attr('data-testid', 'sjpp_ssgq_intro_text')
+			.text(`Click a chromosomal position to zoom in and view ${q2.description || q.singleSampleGbtk}`)
+	}
+
+	const img = holder
+		.append('img')
+		.attr('data-testid', 'sjpp_ssgq_img')
+		.attr('width', data.canvasWidth)
+		.attr('height', data.canvasHeight)
+		.attr('src', data.src)
+
+	if (!q2) return // singleSampleGbtk is not enabled
+
+	// !!
+
+	let bb // so as to only load block once, later clicks all update existing block
+	if (geneName) {
+		const geneData = await dofetch3('genelookup', {
+			body: { genome: genomeObj.name, input: geneName, deep: 1 }
+		})
+		if (geneData.error) throw geneData.error
+		if (geneData.gmlst && geneData.gmlst.length) {
+			const locs = gmlst2loci(geneData.gmlst)
+			const chr = locs[0].chr
+			const start = Math.max(0, locs[0].start - (locs[0].stop - locs[0].start))
+			const chrLen = data.chrLst.filter(c => c.chr == chr)[0].chrLen
+			const stop = Math.min(chrLen, locs[0].stop + (locs[0].stop - locs[0].start))
+
+			// block is not present yet. load block
+			bb = await plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, chr, start, stop)
+		}
+	}
+
+	img.on('click', async event => {
+		const x = event.offsetX - data.xoff
+
+		let chr, chrLen, position
+
+		for (const c of data.chrLst) {
+			if (c.xStart <= x && c.xStop >= x) {
+				chr = c.chr
+				chrLen = c.chrLen
+				position = Math.ceil((c.chrLen / (c.xStop - c.xStart)) * (x - c.xStart))
+				break
+			}
+		}
+		if (!chr) return
+
+		const start = Math.max(0, position - 500000),
+			stop = Math.min(position + 500000, chrLen)
+
+		if (bb) {
+			// block already loaded, jump
+			bb.jump_1basedcoordinate({ chr, start, stop })
+			return
+		}
+
+		// block is not present yet. load block
+		bb = await plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, chr, start, stop)
+	})
 }
 
 async function plotSingleSampleGbtk(dslabel, sample, holder, genomeObj, q, q2, chr, start, stop) {
