@@ -25,7 +25,7 @@ with a matching name.
 
 ### pre-push
 
-- Detect secrets: run again, in case the pre-commit hook missed something
+- Detect secrets: run again with `scan-secrets.sh`, in case the pre-commit hook missed something, see below
 - Check the pushed branch name, and the messages and added lines of the commits to push, with `check-text.sh`
 
 ### reference-transaction
@@ -48,6 +48,13 @@ name is also checked for a term from a line that starts with `caps:` in either t
 stand out in all caps and are associated with security, even when the lowercase word is fine, so reword the text
 or remove the all-caps word.
 Set `SKIP_TEXT_CHECK=1` to skip the check, such as when the fix is already deployed to prod.
+
+### scan-secrets.sh
+
+Called by the pre-push hook to scan the commits to push for secrets, with the detect-secrets hook in
+`.pre-commit-config.yaml`. Each commit that is not on the remote yet is scanned, using the content of its changed files
+in that commit instead of the working tree, so that the scan also works when the pushed branch is not checked out,
+and checks a secret that is added in one commit and removed in a later one. A merge commit is skipped.
 
 ### claude-bash-check.cjs
 
