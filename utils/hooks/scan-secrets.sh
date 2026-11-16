@@ -27,7 +27,9 @@ touch "$SCANNED"
 scan_commit() {
 	local COMMIT=$1 FILES=() META MODE SHA FILE CONFIG OUT CODE
 	find "$SCANDIR/repo" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-	# -z output: ":<old mode> <new mode> <old sha> <new sha> <status>" NUL "<path>" NUL, for each file
+	# -z output: ":<old mode> <new mode> <old sha> <new sha> <status>" NUL "<path>" NUL, for each file.
+	# --root lists the files of a root commit as added, and the T status is a type change, such as from
+	# a symlink to a regular file
 	while IFS= read -r -d '' META && IFS= read -r -d '' FILE; do
 		read -r _ MODE _ SHA _ <<< "$META"
 		# skip a submodule or symlink, which is not a file with content to scan
@@ -35,7 +37,7 @@ scan_commit() {
 		mkdir -p "$SCANDIR/repo/$(dirname "$FILE")"
 		git cat-file blob "$SHA" > "$SCANDIR/repo/$FILE"
 		FILES+=("$FILE")
-	done < <(git diff-tree -r -z --no-commit-id --no-renames --diff-filter=ACM --raw "$COMMIT")
+	done < <(git diff-tree -r -z --root --no-commit-id --no-renames --diff-filter=ACMT --raw "$COMMIT")
 	if [[ ${#FILES[@]} -eq 0 ]]; then return 0; fi
 
 	for CONFIG in .pre-commit-config.yaml .secrets.baseline; do
