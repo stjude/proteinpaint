@@ -52,6 +52,9 @@ export type TermdbJunctionsDataResponse = {
 	junctions: Junction[]
 	/** max read count from all allowed samples */
 	maxReadCount: number
+	/** number of junctions read from the file in rglst, including those not returned in junctions[],
+	e.g. of no sample passing the filter or read count cutoff, or of hidden types; absent when no sample passes the filter */
+	totalCount?: number
 	alert?: string
 	/** read counts by sample of the junctions found in the most samples, when matrixTop was requested */
 	matrix?: {

@@ -13,6 +13,8 @@ export type Tk = {
 	maxReadCount: number
 	/ in flight list of junctions, with rendering x/y coordinates 
 	data?: Junction[]
+	/ from the server, of the junctions in the file in view including those filtered out; absent for custom junctions
+	totalJunctionCount?: number
 }
 export type Junction = {
 	chr: string
@@ -22,6 +24,8 @@ export type Junction = {
 	sampleCount: number
 	medianReadCount: number
 	sv?: object
+	startOut?: boolean // start is out of view range
+	stopOut?: boolean // stop is out of view range
 	x0?: number
 	x1?: number
 	x?: number

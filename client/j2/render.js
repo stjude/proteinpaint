@@ -45,9 +45,11 @@ export function renderTk(data, tk, block) {
 		tk.rows.jug.yAxisKey = getYAxisKey(data, tk)
 		// kept for redraws without data
 		tk.rows.heatmap.data = data.matrix
+		// from the server, of the junctions in the file including those filtered out; absent for custom junctions
+		tk.totalJunctionCount = data.totalCount
 		if (data.junctions?.length == 0) {
 			tk.data = []
-			tk.leftlabels?.doms?.jug?.text('0 junctions')
+			tk.leftlabels?.doms?.jug?.text(junctionCountLabel(0, tk))
 			renderHeatmap(tk, block)
 			return
 		}
@@ -57,7 +59,7 @@ export function renderTk(data, tk, block) {
 			// none in view range, e.g. custom junctions after navigating away from them
 			tk.data = []
 			data.junctions = [] // for tk._finish() to show "No splice junctions"
-			tk.leftlabels.doms.jug.text('0 junctions')
+			tk.leftlabels.doms.jug.text(junctionCountLabel(0, tk))
 			renderHeatmap(tk, block)
 			return
 		}
@@ -66,7 +68,7 @@ export function renderTk(data, tk, block) {
 		// this is called from config menu. server data is already parsed at tk.data[]
 	}
 
-	tk.leftlabels.doms.jug.text(`${tk.data.length} junction${tk.data.length > 1 ? 's' : ''}`)
+	tk.leftlabels.doms.jug.text(junctionCountLabel(tk.data.length, tk))
 
 	const viewpxwidth = block.width + block.subpanels.reduce((i, j) => i + j.leftpad + j.width, 0)
 
@@ -326,13 +328,16 @@ jug2.filter(function(d){return d.rimwidth>0})
 
 			mouseoverSpanBackground(d, tk, block, viewpxwidth)
 			mouseoverBoxplot(d, tk)
+			// the heatmap column of the junction and its linkage line, when the junction is in the heatmap
+			const col = tk.rows.heatmap.colOf?.get(d)
+			if (col !== undefined) tk.rows.heatmap.highlight?.(col)
 
-			const p = event.target.getBoundingClientRect()
-			tk.hovertip.clear().show(p.left + p.width, p.top - 50)
+			showTipBesideDisc(tk.hovertip, event)
 			showOneJunction(d, tk, tk.hovertip.d, block)
 		})
 		.on('mouseout', (event, d) => {
 			tk.hovertip.hide()
+			tk.rows.heatmap.highlight?.(-1)
 			tk.pica.g.selectAll('*').remove()
 			block.cursorhlbar.attr('fill', block.cursorhlbarFillColor) // restore
 			d3select(d.disc).attr('fill-opacity', discopacity)
@@ -348,8 +353,7 @@ jug2.filter(function(d){return d.rimwidth>0})
 		})
 		.on('click', (event, d) => {
 			tk.hovertip.hide()
-			const p = event.target.getBoundingClientRect()
-			tk.itemtip.clear().show(p.left + p.width, p.top - 50)
+			showTipBesideDisc(tk.itemtip, event)
 			showOneJunction(d, tk, tk.itemtip.d.append('div'), block, true)
 		})
 
@@ -405,6 +409,8 @@ export function renderHeatmap(tk, block) {
 		// as the discs are laid out, so that the links cross less
 		cols.sort((a, b) => a.j.x - b.j.x)
 	}
+	// k: junction of a heatmap column, v: column index, for highlighting the column on hovering the disc
+	tk.rows.heatmap.colOf = new Map(cols.map((c, i) => [c.j, i]))
 	if (!cols.length && !locusHeatmapHeight(tk)) return // not drawn: nothing to clear or move back
 	const n = cols.length ? cols[0].readcounts.length : 0
 	// samples with the most reads over these junctions on top
@@ -505,6 +511,27 @@ function rawdata2track(raw, tk, block) {
 	tk.data = junctions
 }
 
+/* show a menu beside the hovered/clicked disc, on its right side by default,
+or on its left side when the disc is within 200px of the right border of the viewport;
+menu contents are added after this, so Menu.show() can't detect the overflow by itself
+*/
+function showTipBesideDisc(tip, event) {
+	const p = event.target.getBoundingClientRect()
+	tip.clear().show(p.right, p.top - 50)
+	if (window.innerWidth - p.right < 200) {
+		// same right-anchoring as in Menu.show(), so the menu's right edge is offsetX left of the disc
+		tip.d.style('left', null).style('right', window.innerWidth - p.left - window.scrollX + tip.offsetX + 'px')
+	}
+}
+
+/* "N junctions" for the left label, or "N/Total junctions" when the server reports the total in the file,
+which includes the junctions filtered out e.g. by read count cutoff */
+function junctionCountLabel(n, tk) {
+	const total = tk.totalJunctionCount
+	const hasTotal = Number.isInteger(total)
+	return `${hasTotal ? n + '/' + total : n} junction${(hasTotal ? total : n) == 1 ? '' : 's'}`
+}
+
 function j2block(j, block, viewpxwidth) {
 	let starthit
 	let stophit
@@ -534,6 +561,9 @@ function j2block(j, block, viewpxwidth) {
 		}
 	}
 
+	// an unmapped end, e.g. sv mate on a chr not in view, counts as out of view range
+	const startMapped = !!starthit,
+		stopMapped = !!stophit
 	if (starthit) {
 		if (!stophit) {
 			stophit = starthit // stop not mapped, use start
@@ -546,13 +576,16 @@ function j2block(j, block, viewpxwidth) {
 		}
 	}
 
-	let startout = starthit.x < 0 || starthit.x > viewpxwidth
-	let stopout = stophit.x < 0 || stophit.x > viewpxwidth
+	const startout = !startMapped || starthit.x < 0 || starthit.x > viewpxwidth
+	const stopout = !stopMapped || stophit.x < 0 || stophit.x > viewpxwidth
 	if (startout && stopout) {
 		// both start/stop are out of view range, drop
 		return true
 	}
 
+	// flag the end out of view range, to highlight its coordinate in showOneJunction()
+	j.startOut = startout
+	j.stopOut = stopout
 	j.x0 = starthit.x
 	j.x1 = stophit.x
 	j.x = (j.x0 + j.x1) / 2 // adjusted by force layout
@@ -835,29 +868,29 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 		const [t1, t2] = table.addRow()
 		t1.text('Junction')
 		const div = t2.append('div')
+		// coordinate of a splice site out of view range is highlighted
+		const pos = (text, out) =>
+			out ? `<span style="background-color:black;color:white;padding:0px 2px;">${text}</span>` : text
 		if (!j.sv || j.chr == j.sv.mate.chr) {
 			// same chr
+			const stop = j.sv ? j.sv.mate.start : j.stop
 			div.html(
-				bplen(Math.abs(j.start - (j.sv ? j.sv.mate.start : j.stop))) +
+				bplen(Math.abs(j.start - stop)) +
 					' <span style="font-size:.8em;">' +
 					j.chr +
 					':' +
-					(j.start + 1) +
+					pos(j.start + 1, j.startOut) +
 					'-' +
-					((j.sv ? j.sv.mate.start : j.stop) + 1) +
+					pos(stop + 1, j.stopOut) +
 					'</span>'
 			)
 		} else {
 			// inter-chr sv
 			div.html(
 				'<span style="font-size:.8em;">' +
-					j.chr +
-					':' +
-					(j.start + 1) +
+					pos(j.chr + ':' + (j.start + 1), j.startOut) +
 					'-' +
-					j.sv.mate.chr +
-					':' +
-					(j.sv.mate.start + 1) +
+					pos(j.sv.mate.chr + ':' + (j.sv.mate.start + 1), j.stopOut) +
 					'</span>'
 			)
 		}

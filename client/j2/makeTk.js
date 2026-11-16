@@ -24,11 +24,12 @@ export async function makeTk(tk, block) {
 		// comma joined type strings to be hidden by default. the property will be assessed by legend and removed
 		if (typeof tk.hiddentypes != 'string') throw new Error('tk.hiddentypes not string')
 	}
-	if (tk.readcountCutoff) {
-		if (!Number.isInteger(tk.readcountCutoff) || tk.readcountCutoff < 0)
-			throw new Error('tk.readcountCutoff is not positive integer')
-	} else {
-		tk.readcountCutoff = 0
+	if (tk.readcountCutoff == undefined) {
+		// default cutoff, which can be changed or cancelled (set to 0) in the config menu;
+		// not for custom data junctions, which are not filtered by read count
+		tk.readcountCutoff = tk.custom_data ? 0 : 5
+	} else if (!Number.isInteger(tk.readcountCutoff) || tk.readcountCutoff < 0) {
+		throw new Error('tk.readcountCutoff is not non-negative integer')
 	}
 
 	// make color gradients

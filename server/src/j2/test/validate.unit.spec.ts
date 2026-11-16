@@ -231,6 +231,7 @@ async function listJunctions(q, param = {}) {
 	const result = await q.listJunctions({ rglst: [{ chr: 'chr17', start: 0, stop: 10000 }], ...param })
 	return {
 		maxReadCount: result.maxReadCount,
+		totalCount: result.totalCount,
 		byStart: new Map(result.junctions.map(j => [j.start, j]))
 	}
 }
@@ -238,7 +239,8 @@ async function listJunctions(q, param = {}) {
 tape('listJunctions: intron retention', async test => {
 	const q = await getJunctionQuery()
 	{
-		const { byStart, maxReadCount } = await listJunctions(q)
+		const { byStart, maxReadCount, totalCount } = await listJunctions(q)
+		test.equal(totalCount, 4, 'counts every junction in the file')
 		const a: any = byStart.get(1000)
 		test.deepEqual(a.types, ['canonical', 'IR'], 'lists IR in types')
 		test.equal(a.IR.sampleCount, 4, 'counts the samples with an IR ratio')
@@ -255,7 +257,8 @@ tape('listJunctions: intron retention', async test => {
 		test.equal(maxReadCount, 40, 'max read count of all junctions')
 	}
 	{
-		const { byStart } = await listJunctions(q, { readcountCutoff: 10 })
+		const { byStart, totalCount } = await listJunctions(q, { readcountCutoff: 10 })
+		test.equal(totalCount, 4, 'the total count includes a junction skipped by the read count cutoff')
 		const a: any = byStart.get(1000)
 		test.deepEqual(
 			a.IR,

@@ -120,6 +120,13 @@ tape('renderLocusHeatmap', t => {
 	t.equal(Number(outline.attr('x')), 100, 'at its place in the heatmap')
 	move(10)
 	t.deepEqual(hover, [1, -1], 'over a statistics row, the column and no row')
+	heatmap.highlight(0)
+	t.equal(Number(outline.attr('x')), 0, 'highlight() outlines a given column')
+	t.equal(lines[0].getAttribute('stroke'), '#000', 'and highlights its line')
+	t.equal(lines[1].getAttribute('stroke'), '#999', 'and no other line')
+	heatmap.highlight(-1)
+	t.equal(outline.attr('display'), 'none', 'highlight(-1) clears the outline')
+	t.equal(lines[0].getAttribute('stroke'), '#999', 'and the line')
 
 	heatmap.height = 10
 	renderLocusHeatmap(tk, block, data)
@@ -128,5 +135,6 @@ tape('renderLocusHeatmap', t => {
 	t.equal(renderLocusHeatmap(tk, block, { ...data, cols: [] }), 0, 'no columns: height 0')
 	t.equal(heatmap.g.selectAll('*').size(), 0, 'and the rows are cleared')
 	t.equal(locusHeatmapHeight(tk), 0, 'and their heights are 0')
+	t.equal(heatmap.highlight, undefined, 'and there is no column to highlight')
 	t.end()
 })
