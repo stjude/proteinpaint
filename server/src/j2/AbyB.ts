@@ -2,6 +2,7 @@ import type { RouteApi, RoutePayload, TermdbJunctionsAbyBRequest, TermdbJunction
 import computePercentile from '#shared/compute.percentile.js'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasJunctionDs } from './junctions.ts'
+import { resolveSampleMapping } from '#src/termdb.matrix.js'
 
 /*
 get junction A median read count for the same set of samples with junction B
@@ -58,6 +59,11 @@ export function init({ genomes }) {
 				keepLst.push({ start: i[0], stop: i[1], strand: i[2] })
 			})
 			const rglst = [{ chr: q.junctionB.chr, start, stop }]
+
+			// assuming genomic data in tk is at sample-level, so setting
+			// sampleMapping=parentToChildren to allow parent-level term data to be mapped
+			// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
+			resolveSampleMapping(Object.assign(q, { sampleMapping: 'parentToChildren' }), ds)
 
 			const re = await ds.queries.junction.listJunctions(Object.assign({}, q, { rglst }), keepLst)
 			if (!Array.isArray(re.junctions)) throw new Error('re.junctions[]')

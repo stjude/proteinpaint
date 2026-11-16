@@ -389,8 +389,15 @@ type SnvindelComputeGroup_info = {
 	infoKey: string
 }
 
+type QuerySampleTypes = {
+	/** Unique sample types present in the query's data, set at init. */
+	sampleTypes?: number[]
+	/** Dataset sampleTypesByTerms filtered to the query's sample types. */
+	sampleTypesByTerms?: SampleTypesByTerms
+}
+
 /** a data type under ds.queries{} */
-type SnvIndelQuery = {
+type SnvIndelQuery = QuerySampleTypes & {
 	forTrack?: boolean
 	/** allow to query data by either isoform or range; either or both can be used; cannot be both missing */
 	byisoform?: SnvindelByIsoform
@@ -423,7 +430,7 @@ so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig canno
 	shown?: boolean
 }
 
-type SvFusion = {
+type SvFusion = QuerySampleTypes & {
 	/** Optional PNG reports of events. An event may carry the image file prefix as its optional "eventImage" value,
 	 * in the mattr{} of the svfusion file, or on the event in the singleSampleMutation data.
 	 * The images of an event are the png files in the folder whose names start with the prefix followed by "_".
@@ -803,7 +810,7 @@ configs for types of cnv data
 important: presence of filtering properties indiate the type of cnv quantification
 and will trigger rendering of ui controls
 */
-type CnvSegmentQuery = {
+type CnvSegmentQuery = QuerySampleTypes & {
 	/** ds supplied or dynamically added getter
 	todo properly type input/output
 	returns:
@@ -888,7 +895,7 @@ type CnvSegmentQuery = {
 	maxReturnCutoff?: number
 }
 /** ITDs */
-type ITDQuery = {
+type ITDQuery = QuerySampleTypes & {
 	/** file is bgzipped with a header line and columns:
 	1. chr
 	2. start, 0-based

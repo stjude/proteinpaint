@@ -44,6 +44,31 @@ tape('\n', function (test) {
 	test.end()
 })
 
+tape('addNonDictionaryQueries() - mutation sample types', test => {
+	const ds: any = {
+		queries: {
+			snvindel: { sampleTypes: [2], sampleTypesByTerms: { visit: { Diagnosis: [2] } }, allowSNPs: true },
+			cnv: { sampleTypes: [2, 3], type: 'copyNumber' },
+			svfusion: { sampleTypes: [3], sampleTypesByTerms: { visit: { Relapse: [3] } }, dtLst: [2, 5] },
+			itd: { sampleTypes: [] }
+		}
+	}
+	const c: any = {}
+	addNonDictionaryQueries(c, ds, { defaultcoord: {} })
+	for (const type of ['snvindel', 'cnv', 'svfusion', 'itd']) {
+		test.deepEqual(c.queries[type].sampleTypes, ds.queries[type].sampleTypes, `${type} exposes its sample types`)
+		test.deepEqual(
+			c.queries[type].sampleTypesByTerms,
+			ds.queries[type].sampleTypesByTerms,
+			`${type} exposes its sample type groups when present`
+		)
+	}
+	test.equal(c.queries.snvindel.allowSNPs, true, 'preserves SNV/indel settings')
+	test.equal(c.queries.cnv.type, 'copyNumber', 'preserves CNV settings')
+	test.deepEqual(c.queries.svfusion.dtLst, [2, 5], 'preserves SV/fusion settings')
+	test.end()
+})
+
 tape('getDsAllowedTermTypes() - basic termtypeByCohort', function (test) {
 	const ds: any = {
 		cohort: {
