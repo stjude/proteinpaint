@@ -60,14 +60,16 @@ NUMCOMMITS=0
 while read -r LOCALREF LOCALSHA REMOTEREF REMOTESHA; do
 	# skip the deletion of a remote ref
 	if [[ ! "$LOCALSHA" =~ [1-9a-f] ]]; then continue; fi
-	# only scan the commits that are not on the destination remote yet, same as in check-text.sh
-	if [[ "$REMOTE" != "" ]] && git remote get-url "$REMOTE" > /dev/null 2>&1; then
-		RANGE=("$LOCALSHA" --not "--remotes=$REMOTE")
-	else
-		RANGE=("$LOCALSHA" --not --remotes)
-	fi
+	# only scan the commits that are not on the destination remote yet, same as in check-text.sh.
+	# The remote sha is excluded with ^ before --not, which reverses the meaning of each revision after it
+	RANGE=("$LOCALSHA")
 	if [[ "$REMOTESHA" =~ [1-9a-f] ]] && git cat-file -e "$REMOTESHA" 2>/dev/null; then
-		RANGE+=(--not "$REMOTESHA")
+		RANGE+=("^$REMOTESHA")
+	fi
+	if [[ "$REMOTE" != "" ]] && git remote get-url "$REMOTE" > /dev/null 2>&1; then
+		RANGE+=(--not "--remotes=$REMOTE")
+	else
+		RANGE+=(--not --remotes)
 	fi
 	for COMMIT in $(git rev-list --no-merges "${RANGE[@]}"); do
 		# a commit can be in more than one pushed ref

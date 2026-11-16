@@ -64,14 +64,16 @@ if [[ "$MODE" == "push" ]]; then
 		# only check the commits that are not on the destination remote yet, or on any remote when the
 		# destination is a url instead of a configured remote. This excludes the commits that are already
 		# in the remote master, such as after the branch is rebased onto a newer master, which the range
-		# $REMOTESHA..$LOCALSHA would include
-		if [[ "$REMOTE" != "" ]] && git remote get-url "$REMOTE" > /dev/null 2>&1; then
-			RANGE=("$LOCALSHA" --not "--remotes=$REMOTE")
-		else
-			RANGE=("$LOCALSHA" --not --remotes)
-		fi
+		# $REMOTESHA..$LOCALSHA would include. The remote sha is excluded with ^ before --not, which
+		# reverses the meaning of each revision after it
+		RANGE=("$LOCALSHA")
 		if [[ "$REMOTESHA" =~ [1-9a-f] ]] && git cat-file -e "$REMOTESHA" 2>/dev/null; then
-			RANGE+=(--not "$REMOTESHA")
+			RANGE+=("^$REMOTESHA")
+		fi
+		if [[ "$REMOTE" != "" ]] && git remote get-url "$REMOTE" > /dev/null 2>&1; then
+			RANGE+=(--not "--remotes=$REMOTE")
+		else
+			RANGE+=(--not --remotes)
 		fi
 		git log --format=%B "${RANGE[@]}" | "$0" text "commit messages to push" || STATUS=1
 		# --remerge-diff shows the lines that a merge commit adds, such as when resolving a conflict
