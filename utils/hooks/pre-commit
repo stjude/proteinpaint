@@ -2,10 +2,10 @@
 
 set -e
 
-STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
-
 # doing per GDC requirements
-pre-commit run --files "$STAGEDFILES"
+# without --files, pre-commit runs the hooks on each staged file, and checks the staged content
+# instead of the working tree by stashing the unstaged changes while the hooks run
+pre-commit run
 
 # select changed/added file extensions where prettier format is preferred,
 # for other file extensions nests, prettier rules might not be preferred,
