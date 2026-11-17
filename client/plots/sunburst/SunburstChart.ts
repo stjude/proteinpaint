@@ -6,6 +6,7 @@ import {
 	addNewGroup,
 	getGroupFilterOfConditions,
 	getSamplelstTWFromFilters,
+	isGroupsDisabled,
 	getGeneExpressionPreAnalysis,
 	renderPreAnalysisData
 } from '#mass/groups'
@@ -501,14 +502,16 @@ export class SunburstChart {
 
 		const count = this.selectedCount()
 		if (n) void this.renderData(body, count)
-		if (!n && !this.createdNote) return
+		// the groups tab cannot be used to see or use a created group
+		const canCreateGroup = n > 0 && !isGroupsDisabled(this.app.vocabApi.termdbConfig)
+		if (!canCreateGroup && !this.createdNote) return
 
 		const footer = body
 			.append('div')
 			.style('margin-top', '10px')
 			.style('padding-top', '10px')
 			.style('border-top', `1px solid ${RULE}`)
-		if (n) {
+		if (canCreateGroup) {
 			pill(footer, { button: true })
 				.attr('data-testid', 'sjpp-sunburst-create-group')
 				.text(`Create group of ${this.renderer.unitText(count)}`)

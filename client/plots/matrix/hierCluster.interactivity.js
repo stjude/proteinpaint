@@ -2,6 +2,7 @@ import { renderTable } from '#dom'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { select } from 'd3-selection'
 import { termType2label } from '#shared/terms.js'
+import { isGroupsDisabled } from '#mass/groups'
 
 // Given a clusterId, return all its children clusterIds
 export function getAllChildrenClusterIds(clickedClusterId, left) {
@@ -47,7 +48,11 @@ export function addSelectedSamplesOptions(clickedSampleNames, event) {
 			}
 		})
 	} else {
-		if (this.state.nav && this.state.nav.header_mode !== 'hidden') {
+		if (
+			this.state.nav &&
+			this.state.nav.header_mode !== 'hidden' &&
+			!isGroupsDisabled(this.app.vocabApi.termdbConfig)
+		) {
 			const samples = clickedSampleNames.map(c => this.sampleOrder.find(s => s.row.sample == c).row)
 			for (const s of samples) {
 				if (!s.sampleId) s.sampleId = s.sample

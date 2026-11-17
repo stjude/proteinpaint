@@ -1605,6 +1605,18 @@ function mayAddMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, o
 	itemDiv.insert('div').html('›').style('float', 'right')
 }
 
+/* return true when the dataset disables or hides the groups tab, as termdbConfig.massNav.tabs.groups.disabled
+or .hide, such as for a viewer without the access to groups. a plot should then not offer an option that adds
+a group, such as "Add as group" in a click menu, since the groups tab cannot be used to see or use the group
+
+termdbConfig{}
+  the termdbConfig of the app, such as app.vocabApi.termdbConfig
+*/
+export function isGroupsDisabled(termdbConfig) {
+	const tab = termdbConfig?.massNav?.tabs?.groups
+	return tab?.disabled === true || tab?.hide === true
+}
+
 export function addNewGroup(app, filter, groups, baseName = 'New group') {
 	groups = JSON.parse(JSON.stringify(groups))
 	let name = baseName

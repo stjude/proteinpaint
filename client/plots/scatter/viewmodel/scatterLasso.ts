@@ -1,4 +1,5 @@
-import { getSamplelstTW, getFilter, addNewGroup } from '../../../mass/groups.js'
+import { getSamplelstTW, getFilter, addNewGroup, isGroupsDisabled } from '../../../mass/groups.js'
+import { isGlobalFilterDisabled } from '#filter'
 import { getId } from '#mass/nav'
 import type { Scatter } from '../scatter'
 import { buildSampleTableData } from './scatterSampleTable'
@@ -97,11 +98,13 @@ export class ScatterLasso {
 					},
 					event.clientX,
 					event.clientY,
-					this.scatter.app.getState().nav.header_mode === 'with_tabs'
+					this.scatter.app.getState().nav.header_mode === 'with_tabs' &&
+						!isGroupsDisabled(this.scatter.app.vocabApi.termdbConfig)
 				)
 			})
 
-		if (this.scatter.app.getState().nav.header_mode === 'with_tabs')
+		const termdbConfig = this.scatter.app.vocabApi.termdbConfig
+		if (this.scatter.app.getState().nav.header_mode === 'with_tabs' && !isGroupsDisabled(termdbConfig))
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -111,7 +114,11 @@ export class ScatterLasso {
 					this.view.dom.tip.hide()
 				})
 
-		if (this.scatter.app.getState().nav.header_mode === 'with_tabs')
+		if (
+			this.scatter.app.getState().nav.header_mode === 'with_tabs' &&
+			!isGroupsDisabled(termdbConfig) &&
+			!isGlobalFilterDisabled(termdbConfig)
+		)
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')

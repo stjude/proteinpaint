@@ -2730,8 +2730,15 @@ type MassNavTabEntry = {
 	mid?: string
 	/** label appearing in the bottom row*/
 	btm?: string
-	/** if true, does not show the tab */
+	/** if true, does not show the tab. like disabled, a hidden filter or groups tab also hides the plot
+	 * menu options that add to the global filter or add a group */
 	hide?: boolean
+	/** if true, shows the tab but it cannot be activated, such as for a viewer without the access to it.
+	 * a disabled filter or groups tab also hides the plot menu options that add to the global filter or
+	 * add a group, since the tab cannot be used to see or use what is added */
+	disabled?: boolean
+	/** the tooltip of a disabled tab */
+	disabledMessage?: string
 }
 
 type MassNavUserTabEntry = MassNavTabEntry &

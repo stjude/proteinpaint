@@ -16,7 +16,7 @@ import {
 	dtproteomeabundance
 } from '#shared/common.js'
 import { rgb2hex } from '#src/client'
-import { getSamplelstTW, getFilter, addNewGroup } from '../../mass/groups.js'
+import { getSamplelstTW, getFilter, addNewGroup, isGroupsDisabled } from '../../mass/groups.js'
 import { TwBase } from '#tw/TwBase'
 
 let inputIndex = 0
@@ -2701,7 +2701,11 @@ function setZoomPanActions(self) {
 				}
 			})
 		} else {
-			if (self.state.nav && self.state.nav.header_mode !== 'hidden') {
+			if (
+				self.state.nav &&
+				self.state.nav.header_mode !== 'hidden' &&
+				!isGroupsDisabled(self.app.vocabApi.termdbConfig)
+			) {
 				for (const s of samples) {
 					if (!s.sampleId) s.sampleId = s.sample
 				}

@@ -2,6 +2,7 @@ import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import type { RenderedPlot } from './RenderedPlot'
 import { renderTable, type Menu } from '#dom'
+import { isGlobalFilterDisabled } from '#filter'
 import { rgb } from 'd3-color'
 
 /** Menu is available when more than one boxplot is rendered. */
@@ -15,7 +16,7 @@ export class BoxPlotLabelMenu {
 		/*chart: any*/
 	) {
 		const options: any[] = []
-		if (app.getState().nav.header_mode === 'with_tabs')
+		if (app.getState().nav.header_mode === 'with_tabs' && !isGlobalFilterDisabled(app.vocabApi.termdbConfig))
 			options.push({
 				text: `Add filter: ${plot.key}`,
 				isVisible: () => true,

@@ -12,7 +12,8 @@ import {
 	getGroupForRegion,
 	getOthersGroup,
 	getAvailabilityGroups,
-	renderPreAnalysisData
+	renderPreAnalysisData,
+	isGroupsDisabled
 } from '../groups'
 import { TermTypes } from '#types'
 
@@ -24,6 +25,7 @@ import { TermTypes } from '#types'
  *  - groups getSamplelstTW()
  *  - groups getAvailabilityGroups()
  *  - groups renderPreAnalysisData()
+ *  - groups isGroupsDisabled()
  */
 
 const mockGrp1Values = [
@@ -615,5 +617,32 @@ tape('groups renderPreAnalysisData()', test => {
 	)
 
 	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('isGroupsDisabled()', test => {
+	test.equal(isGroupsDisabled(undefined), false, 'Should return false without termdbConfig')
+	test.equal(isGroupsDisabled({}), false, 'Should return false without massNav')
+	test.equal(isGroupsDisabled({ massNav: { tabs: {} } }), false, 'Should return false without a groups tab entry')
+	test.equal(
+		isGroupsDisabled({ massNav: { tabs: { groups: { hide: false, disabled: false } } } }),
+		false,
+		'Should return false when the groups tab is neither hidden nor disabled'
+	)
+	test.equal(
+		isGroupsDisabled({ massNav: { tabs: { filter: { disabled: true } } } }),
+		false,
+		'Should return false when only another tab is disabled'
+	)
+	test.equal(
+		isGroupsDisabled({ massNav: { tabs: { groups: { disabled: true } } } }),
+		true,
+		'Should return true when the groups tab is disabled'
+	)
+	test.equal(
+		isGroupsDisabled({ massNav: { tabs: { groups: { hide: true } } } }),
+		true,
+		'Should return true when the groups tab is hidden'
+	)
 	test.end()
 })

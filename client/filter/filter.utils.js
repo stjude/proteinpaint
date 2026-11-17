@@ -222,6 +222,19 @@ export function joinToFilterUiRoot(globalFilter, filters) {
 	return filter
 }
 
+/* return true when the dataset disables or hides the filter tab, as termdbConfig.massNav.tabs.filter.disabled
+or .hide, such as for a viewer without the access to filter. a plot should then not offer an option that adds
+to the global filter, such as "Add as filter" in a click menu, since the filter tab cannot be used to see or
+edit the added filter
+
+termdbConfig{}
+  the termdbConfig of the app, such as app.vocabApi.termdbConfig
+*/
+export function isGlobalFilterDisabled(termdbConfig) {
+	const tab = termdbConfig?.massNav?.tabs?.filter
+	return tab?.disabled === true || tab?.hide === true
+}
+
 /* make copy of input filter, return negated copy
 if tag=filterUiRoot is found, negate that;
 else, assume is tvslst of single tvs an negate at tvs level
