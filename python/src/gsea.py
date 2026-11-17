@@ -137,13 +137,31 @@ def _selftest():
     # the smoothed null must follow the anchor fits. These are the anchor sizes and the fitted
     # scales of one run on random normal scores, for which lowess with its robust iterations puts
     # the scale at 108 genes at 0.34 of its fitted value; without them every anchor of 5 genes or
-    # more (smaller sets are not tested) stays between 0.92 and 1.10. Read through blitzgsea, so
-    # this also fails if the replacement above is no longer the function the library calls.
+    # more (smaller sets are not tested) stays between 0.92 and 1.10. The curve comes from
+    # blitz.estimate_parameters, the library's own null fitting, with only the permutation step
+    # (estimate_anchor) replaced by these fits, so this also fails if the library stops smoothing
+    # through the replacement above. A signature of 4056 genes gives the anchors at 1, 4, 6, 2028
+    # (half) and 4000 (max_size); the library's set sizes are laid out so that its 20 percentiles
+    # give the rest.
     sizes = [1, 4, 5, 6, 7, 8, 10, 11, 12, 14, 16, 18, 22, 26, 31, 39, 49, 69, 108, 2028, 4000]
     scales = [0.031258, 0.0417733, 0.045009, 0.0360382, 0.0402187, 0.0376618, 0.0310034, 0.0330648,
               0.0296003, 0.0277773, 0.0257849, 0.024948, 0.0201065, 0.0184957, 0.0197434, 0.0141217,
               0.0111754, 0.0081409, 0.00655173, 0.000563282, 0.00028813]
-    smoothed = blitz.loess_interpolation(np.array(sizes, dtype=float), scales, frac=0.2)
+    fits = dict(zip(sizes, scales))
+    percentile_sizes = [5, 5, 7, 8, 10, 11, 12, 14, 16, 18, 22, 26, 31, 39, 49, 69, 108, 108, 108, 108]
+    positions = np.linspace(2, 100, 20) / 100 * 999
+    library = {f'set{i}': [''] * percentile_sizes[int(np.argmin(abs(positions - i)))] for i in range(1000)}
+    anchors = []
+    def fitted_anchor(signature, abs_signature, signature_map, set_size, *rest):
+        anchors.append(set_size)
+        return 1.0, fits[set_size], 0, 1.0, fits[set_size], 0, 1.0
+    permuting_anchor = blitz.estimate_anchor
+    blitz.estimate_anchor = fitted_anchor
+    try:
+        smoothed = blitz.estimate_parameters(pd.DataFrame(index=range(4056)), None, None, library, processes=1)[1]
+    finally:
+        blitz.estimate_anchor = permuting_anchor
+    assert anchors == sizes, f'blitzgsea chose different anchor sizes: {anchors}'
     for size, fitted in zip(sizes, scales):
         ratio = float(smoothed(size)) / fitted
         assert size < 5 or 0.8 < ratio < 1.25, f'smoothed null scale at {size} genes is {ratio:.2f} of its fitted value'
