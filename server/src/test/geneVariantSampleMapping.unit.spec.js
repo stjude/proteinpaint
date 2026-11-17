@@ -443,7 +443,7 @@ tape('geneVariant mapping: object collection preserves unmapped sample ID types'
 	t.end()
 })
 
-tape('geneVariant mapping: matrix infers mapping and batch processing preserves dictionary annotations', async t => {
+tape('geneVariant mapping: matrix inference and batch getter constraints', async t => {
 	if (!authApi) await getAuthApi({ doNotFreezeAuthApi: true, get() {}, post() {}, all() {}, use() {} }, {}, {}, true)
 	const { ds, connection } = makeDs()
 	try {
@@ -481,20 +481,29 @@ tape('geneVariant mapping: matrix infers mapping and batch processing preserves 
 		}
 		const tw = makeTw()
 		const tw2 = { ...makeTw(), $id: 'other' }
-		const dictionaryData = await getData({ terms: [dict], sampleMapping: 'childrenToParent', filter: filter() }, ds)
 		data = await getData({ terms: [dict, tw, tw2], sampleMapping: 'childrenToParent', filter: filter() }, ds)
-		t.notOk(data.error, 'batch request succeeds')
+		t.match(
+			data.error,
+			/sample hierarchy mapping not supported for batch geneVariant query/,
+			'hierarchical batch request is rejected'
+		)
+		t.equal(count, 0, 'rejected hierarchical request does not call the batch getter')
+
+		ds.cohort.termdb.hasSampleAncestry = false
+		const dictionaryData = await getData({ terms: [dict], filter: filter() }, ds)
+		data = await getData({ terms: [dict, tw, tw2], filter: filter() }, ds)
+		t.notOk(data.error, 'non-hierarchical batch request succeeds')
 		t.equal(count, 1, 'all wrappers execute in one batch query')
-		t.deepEqual(Object.keys(data.samples), ['10'], 'batch output is filtered in target space')
+		t.deepEqual(Object.keys(data.samples), ['20'], 'batch output is filtered in source space')
 		t.deepEqual(
-			data.samples[10].status,
-			dictionaryData.samples[10].status,
+			data.samples[20].status,
+			dictionaryData.samples[20].status,
 			'dictionary annotation is preserved and not mapped again'
 		)
-		t.equal(data.samples[10].variant.values[0].mname, 'event-20', 'batch selects first child')
-		t.equal(data.samples[10].other.values[0].mname, 'other-20', 'each batch term is mapped independently')
-		t.equal(data.samples[10].sample, 10, 'batch outer sample is target ID')
-		t.equal(data.refs.bySampleId[10].label, 'sample-10', 'batch references use target IDs')
+		t.equal(data.samples[20].variant.values[0].mname, 'event-20', 'batch selects first child')
+		t.equal(data.samples[20].other.values[0].mname, 'other-20', 'each batch term is mapped independently')
+		t.equal(data.samples[20].sample, 20, 'batch outer sample is source ID')
+		t.equal(data.refs.bySampleId[20].label, 'sample-20', 'batch references use source IDs')
 		ds.cohort.termdb.hasSampleAncestry = false
 		const aligned = await getData({ terms: [tw, tw2] }, ds)
 		t.notOk(aligned.error, 'local batch works without hierarchy mapping')

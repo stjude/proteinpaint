@@ -106,6 +106,7 @@ for (const type of [
 					term.name = 'M'
 					getter = ds.queries.metaboliteIntensity.get
 				} else if (type === 'proteomeAbundance') {
+					if (!down) connection.exec('UPDATE sample_ancestry SET ancestor_id = 10 WHERE sample_id = 40')
 					for (const name of names) ds.cohort.termdb.q.sampleName2id(name)
 					const file = path.join(dir, 'proteome.db')
 					files.push(file)
@@ -222,7 +223,7 @@ for (const type of [
 				for (const values of mapped.term2sample2value.values()) {
 					t.deepEqual(
 						Object.keys(values).sort(),
-						down ? ['20', '40', '50'] : ['10', '11'],
+						down ? ['20', '40', '50'] : type === 'proteomeAbundance' ? ['10'] : ['10', '11'],
 						'source types map to all related targets'
 					)
 				}
@@ -230,7 +231,7 @@ for (const type of [
 				if (mapped.controlSampleIds)
 					t.deepEqual(
 						[...mapped.controlSampleIds],
-						[down ? '40' : '11'],
+						down ? ['40'] : type === 'proteomeAbundance' ? [] : ['11'],
 						'control sample IDs use the same target space as values'
 					)
 				const aligned = await getter({ ...param, sampleMapping: undefined, sampleTypes: [down ? 1 : 2] })

@@ -31,7 +31,9 @@ function init({ genomes }) {
 			if (!Array.isArray(facet.tracks)) throw 'facet.tracks[] missing'
 
 			let tracks = facet.tracks
-			resolveSampleMapping(q, ds)
+			// track data is at sample-level, so map
+			// parent samples to child samples
+			resolveSampleMapping(Object.assign(q, { sampleMapping: 'parentToChildren' }), ds)
 			// undefined for a filter that limits nothing
 			const samples = await mayLimitSamples(q, null, ds)
 			if (samples) tracks = facet.tracks.filter(track => samples.has(ds.cohort.termdb.q.sampleName2id(track.sample)))

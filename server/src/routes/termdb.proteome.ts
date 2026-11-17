@@ -448,24 +448,25 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 		const controlRowSet = new Set(controlRows)
 
 		// accumulate sample values into a single s2v
-		const s2v = Object.create(null)
-		const controlValues = Object.create(null)
+		const s2v: Record<string, { value: number; isControl: boolean }> = Object.create(null)
 		for (const row of allRows) {
 			const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
 			if (sid === undefined) continue
 			if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(sid))) continue
 			if (!Number.isFinite(row.value)) continue
-			s2v[sid] = row.value
-			if (controlRowSet.has(row)) controlValues[sid] = true
+			s2v[sid] = { value: row.value, isControl: controlRowSet.has(row) }
 		}
-		const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
-		const mappedControls = await mayMapNonDictionaryData(tw, { ...param, ds }, controlValues)
+		const mappedValues: Record<string, { value: number; isControl: boolean }> = await mayMapNonDictionaryData(
+			tw,
+			{ ...param, ds },
+			s2v
+		)
 		const limitSamples = await mayLimitSamples(param, null, ds)
 		const filteredValues = Object.create(null)
-		for (const [sid, value] of Object.entries(mappedValues)) {
+		for (const [sid, sampleValue] of Object.entries(mappedValues)) {
 			if (limitSamples && !limitSamples.has(Number(sid))) continue
-			filteredValues[sid] = value
-			if (Object.hasOwn(mappedControls, sid)) controlSampleIds.add(sid)
+			filteredValues[sid] = sampleValue.value
+			if (sampleValue.isControl) controlSampleIds.add(sid)
 		}
 		if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 	}
