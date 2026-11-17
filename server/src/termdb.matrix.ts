@@ -850,7 +850,7 @@ function inferSampleMapping(q, sampleTypesLst: TwSampleTypes[], ds): void {
 	const childTypes = [...new Set(sampleTypesLst.flatMap(st => st.childSampleTypes || []))]
 	if (sampleTypesAreAligned(sampleTypesLst)) {
 		// sample types are aligned, no need for mapping
-		q.sampleTypes = types
+		if (!q.sampleTypes) q.sampleTypes = types
 	} else {
 		// sample types are not aligned, need mapping
 		const sampleTypes = ds.cohort.termdb.sampleTypes
@@ -1072,6 +1072,7 @@ When sampleMapping is childrenToParent, map child annotations onto the target pa
 */
 export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
 	const filterCTE = filter ? sql.id(filter.CTEname) : null
+	const mappedTermIds = new Set()
 	const selects = CTEs.map((t, i) => {
 		const tw = termWrappers[i]
 		// for "samplelst" term, term.id is missing and must use term.name
@@ -1080,6 +1081,7 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
 		const mapParent2Children = shouldMapParent2Children(tw, q.ds, q.sampleMapping, q.sampleTypes)
 		const mapChildren2Parent = shouldMapChildren2Parent(tw, q.ds, q.sampleMapping, q.sampleTypes)
 		if (mapParent2Children || mapChildren2Parent) {
+			mappedTermIds.add(termId)
 			const source = mapParent2Children ? sql`sa.ancestor_id` : sql`sa.sample_id`
 			const target = mapParent2Children ? sql`sa.sample_id` : sql`sa.ancestor_id`
 			return sql`SELECT ${target} as sample, key, value, ${termId} as term_id
@@ -1103,7 +1105,19 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
 		${sql.join(selects, sql`\nUNION ALL\n`)}`
 
 	const rows = q.ds.cohort.db.connection.prepare(query).all()
-	return rows
+
+	// keep first mapped value for each target sample and term.
+	const seenValues = new Map()
+	const filteredRows = rows.filter(row => {
+		if (!mappedTermIds.has(row.term_id)) return true
+		let termIds = seenValues.get(row.sample)
+		if (!termIds) seenValues.set(row.sample, (termIds = new Set()))
+		if (termIds.has(row.term_id)) return false
+		termIds.add(row.term_id)
+		return true
+	})
+
+	return filteredRows
 }
 
 const termTypesWithJsonValue = new Set(['termCollection'])

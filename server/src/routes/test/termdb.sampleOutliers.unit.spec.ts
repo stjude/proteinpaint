@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getRows, validRequest } from '../termdb.sampleOutliers.ts'
+import { getRows, getValue, validRequest } from '../termdb.sampleOutliers.ts'
 
 /**
  * Tests
@@ -144,6 +144,46 @@ tape('getRows(): gene expression box', function (test) {
 		[{ min: 0, w1: 0, p25: 3, p50: 15, p75: 31, w2: 63, max: 63 }, undefined],
 		'Should give the box in the file unit, as the value, and none to a row whose box is NaN.'
 	)
+})
+tape('getValue(): falls back to the nearest ancestor with a value', function (test) {
+	const tdbq = {
+		id2sampleRefs: () => ({
+			ancestors: [
+				{ ancestor_id: 20, distance: 1 },
+				{ ancestor_id: 10, distance: 2 }
+			]
+		})
+	}
+	test.equal(
+		getValue(
+			new Map([
+				[10, 'root'],
+				[20, 'parent']
+			]),
+			30,
+			tdbq
+		),
+		'parent',
+		'uses the nearest ancestor value before a more distant root'
+	)
+	test.equal(
+		getValue(new Map([[10, 'root']]), 30, tdbq),
+		'root',
+		'falls back to the root when nearer ancestors lack values'
+	)
+	test.equal(
+		getValue(
+			new Map([
+				[30, 'sample'],
+				[20, 'parent']
+			]),
+			30,
+			tdbq
+		),
+		'sample',
+		'prefers the sample value'
+	)
+	test.equal(getValue(new Map(), 30, tdbq), undefined, 'returns undefined when no sample or ancestor has a value')
 	test.end()
 })
 
