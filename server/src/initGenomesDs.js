@@ -87,10 +87,6 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 		if (Number.isNaN(v) || v <= 0) throw 'base_zindex must be positive integer'
 		serverconfig.base_zindex = v
 	}
-	if (serverconfig.jwt) {
-		if (!serverconfig.jwt.secret) throw 'jwt.secret missing'
-		if (!serverconfig.jwt.permissioncheck) throw 'jwt.permissioncheck missing'
-	}
 	if (!serverconfig.tpmasterdir) throw '.tpmasterdir missing'
 	if (!serverconfig.cachedir) throw '.cachedir missing'
 

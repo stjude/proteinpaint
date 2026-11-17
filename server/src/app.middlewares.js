@@ -10,7 +10,6 @@ import * as validator from './validator.js'
 import { authApi } from './auth.js'
 import { normalizeReqPath, getRequestOrigin, isCredEmbedder } from './auth/Auth.ts'
 import { decode as urlJsonDecode } from '#shared/urljson.js'
-import jsonwebtoken from 'jsonwebtoken'
 import sjson from 'secure-json-parse'
 import fs from 'fs'
 import crypto from 'crypto'
@@ -111,32 +110,6 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 			mayWrapResponseSend(testDataCacheDir, req, res)
 			next()
 		})
-
-	if (serverconfig.jwt) {
-		console.log('JWT is activated')
-		app.use((req, res, next) => {
-			let j = {}
-			if (req.body && req.method === 'POST') {
-				// a preceding middleware assumes all POST contents are json-encoded and processed by bodyParser()
-				j = req.body
-			}
-			const jwt = j.jwt
-				? j.jwt
-				: req.headers && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
-				? req.headers.authorization.split(' ')[1]
-				: null
-			if (!jwt) return res.send({ error: 'json web token missing' })
-
-			jsonwebtoken.verify(jwt, serverconfig.jwt.secret, (err, decode) => {
-				if (err) return res.send({ error: 'Invalid token' })
-
-				// FIXME do not hardcode required attribute, replace with a list
-				if (!decode[serverconfig.jwt.permissioncheck]) return res.send({ error: 'Not authorized' })
-
-				next()
-			})
-		})
-	}
 
 	app.use((req, res, next) => {
 		if (req.method.toUpperCase() == 'POST' && req.body && !req.is('application/json')) {
@@ -250,7 +223,7 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 }
 
 // not logged: credentials, and the request info that the server adds
-const hiddenQueryKeys = new Set(['jwt', 'token', 'sessionid', '__protected__', '__abortSignal'])
+const hiddenQueryKeys = new Set(['token', 'sessionid', '__protected__', '__abortSignal'])
 
 function log(req) {
 	const j = {}
