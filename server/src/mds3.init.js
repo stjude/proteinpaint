@@ -3446,8 +3446,9 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 		const mappedValues = await mayMapNonDictionaryData(tw, { ...q, ds }, sample2value)
 		const limitSamples = await mayLimitSamples(q, null, ds)
 		for (const [sid, value] of Object.entries(mappedValues)) {
-			if (limitSamples && !limitSamples.has(Number(sid))) continue
-			data.set(sid, value)
+			const sampleId = Number(sid)
+			if (limitSamples && !limitSamples.has(sampleId)) continue
+			data.set(sampleId, value)
 		}
 
 		return data

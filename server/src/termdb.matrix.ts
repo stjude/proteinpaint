@@ -525,7 +525,7 @@ export async function mayMapNonDictionaryData(tw, q, sample2value) {
 		.all()
 
 	for (const { source, target } of rows) {
-		if (mappedValues[target]) {
+		if (Object.hasOwn(mappedValues, target)) {
 			// multiple source values map to target value
 			// just using first one
 			continue

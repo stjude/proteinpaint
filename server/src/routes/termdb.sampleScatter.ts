@@ -100,7 +100,11 @@ export function init({ genomes }) {
 					filter0: q.filter0,
 					terms,
 					__protected__: q.__protected__,
-					__abortSignal: q.__abortSignal
+					__abortSignal: q.__abortSignal,
+					// can infer sample mapping when coordinates
+					// come from terms, otherwise map parent data
+					// to child data
+					sampleMapping: q.coordTWs?.length ? undefined : 'parentToChildren'
 				},
 				ds
 			)
