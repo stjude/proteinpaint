@@ -223,7 +223,7 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 }
 
 // not logged: credentials, and the request info that the server adds
-const hiddenQueryKeys = new Set(['token', 'sessionid', '__protected__', '__abortSignal'])
+const hiddenQueryKeys = new Set(['jwt', 'token', 'sessionid', '__protected__', '__abortSignal'])
 
 function log(req) {
 	const j = {}

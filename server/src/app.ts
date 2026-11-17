@@ -39,10 +39,8 @@ export async function launch() {
 		// and so that the validated creds can be passed into getAuthApi() for maySetAuthRoutes() to use in
 		// setting up auth routes before any other routes are set up
 		const validatedCreds = await extractValidatedCreds(serverconfig)
-		if (serverconfig.jwt) throw `serverconfig.jwt is no longer supported, use dsCredentials`
-		if (serverconfig.features?.requireAuth && !Object.keys(validatedCreds).length) {
-			throw `requireAuth is set but no dsCredentials were loaded`
-		}
+		if (serverconfig.jwt)
+			throw `serverconfig.jwt is no longer supported, use dsCredentials. Set PP_CREDS to the dataset credentials JSON, or use PP_CREDS_FILE with container/envHelpers.mjs`
 		const trackedDatasets = await initGenomesDs(serverconfig, { credDslabels: Object.keys(validatedCreds) })
 		// the cache path is not kept in serverconfig, so that code which runs later cannot read it from there, see
 		// hideCachedir in serverconfig.js; the route, dataset, and other modules that use it are loaded by now,
