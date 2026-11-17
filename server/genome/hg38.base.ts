@@ -21,9 +21,11 @@ export function getHg38(): Genome {
 
 		termdbs: {
 			msigdb: {
-				label: 'MSigDB (2023.2.Hs)', // to be compatible with ds.label
+				label: 'MSigDB (2026.2.Hs)', // to be compatible with ds.label
+				// sent by GSEA and ORA requests, so a request records the release it ran on
+				release: '2026.2.Hs',
 				cohort: {
-					db: { file: 'anno/msigdb/db_2023.2.Hs' },
+					db: { file: 'anno/msigdb/db_2026.2.Hs' },
 					termdb: {
 						isGeneSetTermdb: true
 					}

@@ -1,16 +1,23 @@
 import tape from 'tape'
-import { validGeneSetGroup, validNumPermutations, MAX_PERMUTATIONS } from '#src/utils/genesetGroups.ts'
+import {
+	validGeneSetGroup,
+	validMsigdbRelease,
+	validNumPermutations,
+	MAX_PERMUTATIONS
+} from '#src/utils/genesetGroups.ts'
 
 /*
 test sections:
 
 validGeneSetGroup(): genome analysisGenesetGroups and blitzgsea libraries
+validMsigdbRelease(): only the genome's current release
 validNumPermutations(): integer range
 */
 
 const genome = {
 	termdbs: {
 		msigdb: {
+			release: '2026.2.Hs',
 			analysisGenesetGroups: [
 				{ label: '-', value: '-' },
 				{ label: 'H: hallmark gene sets', value: 'H: hallmark gene sets' }
@@ -47,6 +54,14 @@ tape('validGeneSetGroup()', test => {
 		() => validGeneSetGroup({}, 'H: hallmark gene sets'),
 		'should reject when the genome has no msigdb groups'
 	)
+	test.end()
+})
+
+tape('validMsigdbRelease()', test => {
+	test.doesNotThrow(() => validMsigdbRelease(genome, undefined), 'a request without a release is run')
+	test.doesNotThrow(() => validMsigdbRelease(genome, '2026.2.Hs'), 'the current release is run')
+	test.throws(() => validMsigdbRelease(genome, '2023.2.Hs'), /now MSigDB 2026.2.Hs/, 'should reject another release')
+	test.throws(() => validMsigdbRelease(genome, ['2026.2.Hs']), /now MSigDB/, 'should reject a non-string')
 	test.end()
 })
 

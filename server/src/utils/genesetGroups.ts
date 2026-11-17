@@ -25,6 +25,17 @@ export function validGeneSetGroup(genome: any, geneSetGroup: any, allowBlitzgsea
 	return geneSetGroup
 }
 
+/**
+ * A request may name the MSigDB release of its gene sets, which the client reads from termdbs.msigdb.release.
+ * The server has only the current release, so another one (from a page loaded before an update) is refused
+ * rather than run on gene sets it did not name.
+ */
+export function validMsigdbRelease(genome: any, release: any) {
+	if (release === undefined) return
+	const current = genome?.termdbs?.msigdb?.release
+	if (release !== current) throw new Error(`the gene sets are now MSigDB ${current}, please reload the page`)
+}
+
 export function validNumPermutations(value: any) {
 	// a GET request has a string value
 	const n = typeof value == 'string' && value ? Number(value) : value

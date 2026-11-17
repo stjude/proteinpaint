@@ -7,6 +7,9 @@ export type GenesetOverrepresentationRequest = {
 	genome: string
 	/** msigdb branch term name. all genesets under this branch will be analyzed */
 	geneSetGroup: string
+	/** MSigDB release of the gene sets, e.g. '2026.2.Hs', so the request records it; must be the genome's current
+	release (termdbs.msigdb.release) when given */
+	msigdbRelease?: string
 	/** Boolean variable describing if non-coding genes should be filtered */
 	filter_non_coding_genes: boolean
 }

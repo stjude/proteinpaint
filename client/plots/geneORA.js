@@ -149,6 +149,8 @@ add:
 		self.dom.detailsDiv.selectAll('*').remove()
 		self.dom.tableDiv.selectAll('*').remove()
 		self.config.geneORAparams.geneSetGroup = self.settings.pathway
+		// the MSigDB release of the gene sets, so the request records which one was used
+		self.config.geneORAparams.msigdbRelease = self.app.opts.genome.termdbs.msigdb.release
 		self.config.geneORAparams.filter_non_coding_genes = self.settings.filter_non_coding_genes
 		const wait = self.dom.detailsDiv.append('div').text('Loading...')
 		let output

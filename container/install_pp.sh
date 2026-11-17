@@ -229,7 +229,7 @@ if [ "$DOWNLOAD" = true ]; then
    curl https://proteinpaint.stjude.org/ppSupport/db/proteindomain.db -O
    
    cd ../msigdb/
-   curl https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs -O
+   curl https://proteinpaint.stjude.org/ppSupport/msigdb/db_2026.2.Hs -O
 fi
 
 cd $CURRENT_DIR
