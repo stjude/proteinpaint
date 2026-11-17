@@ -1,5 +1,11 @@
 import tape from 'tape'
-import { negateFilter, joinToFilterUiRoot, getCategoricalTermFilter, Filter } from '../filter.js'
+import {
+	negateFilter,
+	joinToFilterUiRoot,
+	isGlobalFilterDisabled,
+	getCategoricalTermFilter,
+	Filter
+} from '../filter.js'
 import { termjson } from '../../test/testdata/termjson.js'
 import * as d3s from 'd3-selection'
 
@@ -9,6 +15,7 @@ import * as d3s from 'd3-selection'
 
 negateFilter
 joinToFilterUiRoot
+isGlobalFilterDisabled
 
 */
 
@@ -325,5 +332,32 @@ tape('getTreeFilter()', async test => {
 	}
 
 	if (test._ok) f0.destroy()
+	test.end()
+})
+
+tape('isGlobalFilterDisabled', test => {
+	test.equal(isGlobalFilterDisabled(undefined), false, 'should return false without termdbConfig')
+	test.equal(isGlobalFilterDisabled({}), false, 'should return false without massNav')
+	test.equal(isGlobalFilterDisabled({ massNav: { tabs: {} } }), false, 'should return false without a filter tab entry')
+	test.equal(
+		isGlobalFilterDisabled({ massNav: { tabs: { filter: { hide: false, disabled: false } } } }),
+		false,
+		'should return false when the filter tab is neither hidden nor disabled'
+	)
+	test.equal(
+		isGlobalFilterDisabled({ massNav: { tabs: { filter: { hide: true } } } }),
+		true,
+		'should return true when the filter tab is hidden'
+	)
+	test.equal(
+		isGlobalFilterDisabled({ massNav: { tabs: { groups: { disabled: true } } } }),
+		false,
+		'should return false when only another tab is disabled'
+	)
+	test.equal(
+		isGlobalFilterDisabled({ massNav: { tabs: { filter: { disabled: true, disabledMessage: 'msg' } } } }),
+		true,
+		'should return true when the filter tab is disabled'
+	)
 	test.end()
 })

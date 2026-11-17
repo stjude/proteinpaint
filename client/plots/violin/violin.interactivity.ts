@@ -1,4 +1,4 @@
-import { joinToFilterUiRoot } from '#filter'
+import { isGlobalFilterDisabled, joinToFilterUiRoot } from '#filter'
 import {
 	niceNumLabels,
 	ListSamples,
@@ -85,7 +85,10 @@ export function setInteractivity(self: any) {
 
 		const label = getGroupTw(t1, t2) === t2 ? 'term2' : 'term'
 		const options: MenuOption[] = []
-		if (this.app.getState().nav.header_mode !== 'only_buttons')
+		if (
+			this.app.getState().nav.header_mode !== 'only_buttons' &&
+			!isGlobalFilterDisabled(self.app.vocabApi.termdbConfig)
+		)
 			options.push({
 				label: `Add filter: ${plot.label.split(',')[0]}`,
 				testid: 'sjpp-violinLabOpt-addf',
@@ -146,7 +149,7 @@ export function setInteractivity(self: any) {
 
 		const options: MenuOption[] = []
 
-		if (this.app.getState().nav.header_mode === 'with_tabs')
+		if (this.app.getState().nav.header_mode === 'with_tabs' && !isGlobalFilterDisabled(self.app.vocabApi.termdbConfig))
 			options.push({
 				label: `Add filter`,
 				testid: 'sjpp-violinBrushOpt-addf',

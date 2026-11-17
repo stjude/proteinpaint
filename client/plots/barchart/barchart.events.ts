@@ -5,6 +5,7 @@ import { mclass, dt2label } from '#shared/common.js'
 import {
 	filterJoin,
 	getFilterItemByTag,
+	isGlobalFilterDisabled,
 	joinToFilterUiRoot,
 	/*getNormalRoot,*/ findItemByTermId /*normalizeProps*/
 } from '#filter'
@@ -14,7 +15,13 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTw } from '#shared/terms.js'
 import { isFractionTw, getFractionTvsTerm } from '#shared/termCollection.js'
 import { negateTermLabel } from './barchart'
-import { getGroupFilterEntry, getGvGroupFilterEntry, getGroupFilterOfConditions, addNewGroup } from '#mass/groups'
+import {
+	getGroupFilterEntry,
+	getGvGroupFilterEntry,
+	getGroupFilterOfConditions,
+	addNewGroup,
+	isGroupsDisabled
+} from '#mass/groups'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -467,7 +474,7 @@ function handle_click(event, self, chart) {
 		}
 	}
 
-	if (self.opts.bar_click_opts.includes('add_filter')) {
+	if (self.opts.bar_click_opts.includes('add_filter') && !isGlobalFilterDisabled(self.app.vocabApi.termdbConfig)) {
 		const item = findItemByTermId(self.state.termfilter.filter, self.config.term.term.id)
 		if (!item) {
 			options.push({
@@ -479,7 +486,11 @@ function handle_click(event, self, chart) {
 			})
 		}
 	}
-	if (self.opts.bar_click_opts.includes('add_group') && self.config.displaySampleIds) {
+	if (
+		self.opts.bar_click_opts.includes('add_group') &&
+		self.config.displaySampleIds &&
+		!isGroupsDisabled(self.app.vocabApi.termdbConfig)
+	) {
 		options.push({
 			label: 'Add as group',
 			callback: async () => {

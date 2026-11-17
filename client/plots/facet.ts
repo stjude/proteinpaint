@@ -4,7 +4,7 @@ import { controlsInit } from './controls'
 import { getT0T2defaultQ } from './summaryQ.ts'
 import { Menu, select2Terms } from '#dom'
 import { isNumericTerm } from '#shared/terms.js'
-import { addNewGroup, getGroupFilterOfConditions, getGvGroupFilterEntry } from '#mass/groups'
+import { addNewGroup, getGroupFilterOfConditions, getGvGroupFilterEntry, isGroupsDisabled } from '#mass/groups'
 import { getCombinedTermFilter, filterJoin } from '#filter'
 import { ListSamples } from '#dom/summary/ListSamples'
 import { PlotBase } from '#plots/PlotBase.js'
@@ -287,6 +287,8 @@ class Facet extends PlotBase implements RxComponent {
 				}
 			}
 		]
+		// the groups tab cannot be used to see or use a created group
+		if (isGroupsDisabled(this.app.vocabApi.termdbConfig)) btns.pop()
 
 		for (const btn of btns) {
 			this.addBtn(buttonDiv, btn)
