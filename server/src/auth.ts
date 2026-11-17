@@ -36,6 +36,9 @@ export type ProtectedRouteMiddlewares = {
 // app should call this as early as possible to avoid unnecessarily exposing to other code
 export async function extractValidatedCreds(_serverconfig) {
 	const serverconfig = _serverconfig || (await import('./serverconfig.js')).default
+	if (serverconfig.jwt) {
+		throw `serverconfig.jwt is no longer supported, use dsCredentials. Set PP_CREDS to the dataset credentials JSON, or use PP_CREDS_FILE with container/envHelpers.mjs`
+	}
 	const creds = serverconfig.dsCredentials || {}
 	// !!! do not expose the loaded dsCredentials to other code that imports serverconfig.json !!!
 	delete serverconfig.dsCredentials
