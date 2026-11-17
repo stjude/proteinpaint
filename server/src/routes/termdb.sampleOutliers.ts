@@ -269,10 +269,15 @@ function getReferences(so: any, samples: number[], sampleId: number, tdbq: any):
 	return refs
 }
 
-/** a sample's value of a term: its own, else its root sample's, e.g. the patient-level subtype of a diagnosis
- * sample whose expression is in the file */
-function getValue(values: Map<number, any>, id: number, tdbq: any) {
-	return values.get(id) ?? values.get(tdbq.id2rootSampleId(id))
+/** a sample's value of a term: its own, else the nearest ancestor's, e.g. the patient-level subtype of a
+ * diagnosis sample whose expression is in the file */
+export function getValue(values: Map<number, any>, id: number, tdbq: any) {
+	const ownValue = values.get(id)
+	if (ownValue != null) return ownValue
+	for (const { ancestor_id } of tdbq.id2sampleRefs?.(id)?.ancestors || []) {
+		const value = values.get(ancestor_id)
+		if (value != null) return value
+	}
 }
 
 function publicReference(r: Reference): SampleOutliersReference {

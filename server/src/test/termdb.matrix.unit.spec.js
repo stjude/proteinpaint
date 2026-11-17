@@ -459,6 +459,48 @@ tape('getAnnotationRows: maps child annotations onto parent samples', async t =>
 	t.end()
 })
 
+tape('getAnnotationRows: keeps the first value when mapping multiple sources to a sample', async t => {
+	const rows = [
+		{ sample: 10, key: 'first', value: 'first', term_id: 'child' },
+		{ sample: 10, key: 'second', value: 'second', term_id: 'child' },
+		{ sample: 11, key: 'third', value: 'third', term_id: 'child' },
+		{ sample: 10, key: 'parent-first', value: 'parent-first', term_id: 'parent' },
+		{ sample: 10, key: 'parent-second', value: 'parent-second', term_id: 'parent' }
+	]
+	const ds = {
+		cohort: {
+			db: { connection: { prepare: () => ({ all: () => rows }) } },
+			termdb: {
+				sampleTypes: {
+					1: { parent_id: null },
+					2: { parent_id: 1 }
+				}
+			}
+		}
+	}
+	const termWrappers = [
+		{ $id: 'child', term: { sampleTypes: [2] } },
+		{ $id: 'parent', term: { sampleTypes: [1] } }
+	]
+	const CTEs = [
+		{ tablename: 'child', sql: sql`child AS (SELECT 10 AS sample, 'first' AS key, 'first' AS value)` },
+		{ tablename: 'parent', sql: sql`parent AS (SELECT 10 AS sample, 'parent-first' AS key, 'parent-first' AS value)` }
+	]
+
+	const result = await getAnnotationRows(
+		{ ds, sampleMapping: 'childrenToParent', sampleTypes: [1] },
+		termWrappers,
+		undefined,
+		CTEs
+	)
+	t.deepEqual(
+		result,
+		[rows[0], rows[2], rows[3], rows[4]],
+		'keeps the first mapped value per target sample and term while preserving unmapped rows'
+	)
+	t.end()
+})
+
 tape('getAnnotationRows: resolved direction maps actual annotations and omission keeps their original ids', async t => {
 	const connection = guardDb(new Database(':memory:'), 'off')
 	connection.exec(`

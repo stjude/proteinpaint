@@ -4,7 +4,7 @@ import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { authApi } from './auth.js'
 import { searchSNP } from '#routes/snp.ts'
 import { parseJsonParam } from '#routes/common.ts'
-import { get_samples_ancestry, get_samples } from './termdb.sql.js'
+import { get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
 import { uiLabel } from '#shared'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
@@ -338,17 +338,17 @@ export async function get_AllSamplesByName(q, req, res, ds) {
 		const sampleName2Id = new Map()
 		if (q.filter) {
 			q.ds = ds
-			const filteredSamples = ds.cohort.termdb.hasSampleAncestry
-				? await get_samples_ancestry(q.filter, q.ds, true)
-				: await get_samples(q, q.ds, true)
+			resolveSampleMapping(q, q.ds)
+			const filteredSamples = await get_samples(q, q.ds, true)
 			for (const sample of filteredSamples) {
 				const name = ds.sampleId2Name.get(sample.id)
 				const sample_type = ds.sampleId2Type.get(sample.id)
+				const ancestor_id = ds.cohort.termdb.q?.id2sampleRefs?.(sample.id)?.ancestors?.[0]?.ancestor_id
 				sampleName2Id.set(name, {
 					id: sample.id,
 					name,
-					ancestor_id: sample.ancestor_id,
-					ancestor_name: ds.sampleId2Name.get(sample.ancestor_id),
+					ancestor_id,
+					ancestor_name: ds.sampleId2Name.get(ancestor_id),
 					sample_type
 				})
 			}
