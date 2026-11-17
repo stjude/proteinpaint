@@ -31,7 +31,8 @@ export type GenesetEnrichmentRequest = {
 	genome: string
 	/** Type of GO to be queried e.g MF, CC, BP */
 	geneSetGroup: string
-	/** MSigDB release of the gene set db, e.g. '2023.2.Hs'; the genome's current release when missing */
+	/** MSigDB release of the gene sets, e.g. '2026.2.Hs', so the request records it; must be the genome's current
+	release (termdbs.msigdb.release) when given */
 	msigdbRelease?: string
 	/** Gene set name whose enrichment score is to be profiled */
 	geneset_name?: string

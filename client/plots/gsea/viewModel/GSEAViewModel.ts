@@ -139,9 +139,10 @@ export class GSEAViewModel {
 			genome: p.genome,
 			geneSetGroup: settings.pathway,
 			filter_non_coding_genes: settings.filter_non_coding_genes,
-			method: settings.gsea_method
+			method: settings.gsea_method,
+			// the MSigDB release of the gene sets, so the request records which one was used
+			msigdbRelease: this.gsea.app.opts.genome.termdbs.msigdb.release
 		}
-		if (settings.msigdbRelease) body.msigdbRelease = settings.msigdbRelease
 		if (p.cacheId) {
 			body.cacheId = p.cacheId
 			if (p.daRequest) body.daRequest = p.daRequest

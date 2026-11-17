@@ -5,7 +5,6 @@ import { sayerror, Menu } from '#dom'
 import { TermTypeGroups } from '#shared/common.js'
 import { getDefaultVolcanoSettings } from './volcano/settings/defaults.ts'
 import { getDefaultGseaSettings } from './gsea/settings/defaults.ts'
-import { currentMsigdbRelease } from './msigdbRelease.ts'
 import { dofetch3 } from '#common/dofetch'
 import { PROTEOME_DAP, type ProteomeDetails, type DataQualityFigure } from '#types'
 import { importPlot } from '#plots/importPlot.js'
@@ -568,8 +567,7 @@ export class ProteomeInput extends PlotBase implements RxComponent {
 				proteomeDetails: { organism, assay, cohort },
 				settings: {
 					volcano: this.volcanoSettings(),
-					// a new plot: the current release, since pre-filled settings without one read as a session saved before releases
-					gsea: { ...getDefaultGseaSettings({}), msigdbRelease: currentMsigdbRelease(this.app.opts.genome) }
+					gsea: getDefaultGseaSettings({})
 				},
 				highlightedData: [],
 				hidePlotFilter: true

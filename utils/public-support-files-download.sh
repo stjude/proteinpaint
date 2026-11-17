@@ -53,7 +53,6 @@ curl --parallel \
     \
     --next --remote-name-all --continue-at - --create-dirs --output-dir anno/msigdb/ \
     https://proteinpaint.stjude.org/ppSupport/msigdb/db_2026.2.Hs  \
-    https://proteinpaint.stjude.org/ppSupport/msigdb/db_2023.2.Hs  \
     \
     --next --remote-name-all --continue-at - --create-dirs --output-dir hg19/ \
     https://proteinpaint.stjude.org/ppSupport/clinvar.hg19.bcf.gz \

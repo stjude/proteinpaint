@@ -12,7 +12,7 @@ import { getDmCacheResult, scanChromosomes } from '../../routes/termdb.diffMeth.
 import { getGeneBodyDeltas } from './termdb.geneBodyMeth.ts'
 import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import { msigdbTermdb, validGeneSetGroup, validNumPermutations } from '#src/utils/genesetGroups.ts'
+import { validGeneSetGroup, validMsigdbRelease, validNumPermutations } from '#src/utils/genesetGroups.ts'
 import { get_ds_tdb } from '#src/termdb.js'
 import type { GseaCacheResult } from '../../routes/types.ts'
 
@@ -103,7 +103,8 @@ async function run_genesetEnrichment_analysis(
 	}
 
 	// the geneSetGroup value is passed to gsea.py and cerno, which query the msigdb db with it
-	validGeneSetGroup(msigdbTermdb(genomes[q.genome], q.msigdbRelease), q.geneSetGroup, q.method == 'blitzgsea')
+	validGeneSetGroup(genomes[q.genome], q.geneSetGroup, q.method == 'blitzgsea')
+	validMsigdbRelease(genomes[q.genome], q.msigdbRelease)
 
 	if (q.method == 'blitzgsea') {
 		// the permutation count sets the blitzgsea compute time
@@ -121,7 +122,7 @@ async function run_genesetEnrichment_analysis(
 		const genesetenrichment_input: any = {
 			genes,
 			fold_change,
-			db: msigdbTermdb(genomes[q.genome], q.msigdbRelease).cohort.db.connection.name,
+			db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
 			geneset_group: q.geneSetGroup,
 			genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
 			filter_non_coding_genes: q.filter_non_coding_genes
@@ -146,7 +147,7 @@ export function gseaKeyInputs(q: GenesetEnrichmentRequest, genes: string[], fold
 		fold_change,
 		/* the gene set db file, so a result computed on one MSigDB release is not served after the genome
 		switches to another; the same geneSetGroup holds different gene sets in each release */
-		msigdb: msigdbTermdb(genomes[q.genome], q.msigdbRelease).cohort.db.file,
+		msigdb: genomes[q.genome].termdbs.msigdb.cohort.db.file,
 		geneSetGroup: q.geneSetGroup,
 		num_permutations: q.num_permutations,
 		filter_non_coding_genes: q.filter_non_coding_genes,
@@ -318,7 +319,7 @@ function buildPyInput(
 	return {
 		genes: cacheArg.genes,
 		fold_change: cacheArg.fold_change,
-		db: msigdbTermdb(genomes[q.genome], q.msigdbRelease).cohort.db.connection.name,
+		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
 		geneset_group: cacheArg.geneSetGroup,
 		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
 		filter_non_coding_genes: cacheArg.filter_non_coding_genes,

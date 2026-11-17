@@ -3,7 +3,6 @@ import { PlotBase } from '#plots/PlotBase.js'
 import { getCombinedTermFilter } from '#filter'
 import { PROTEOME_DAP, SINGLECELL_CELLTYPE } from '#types'
 import { getDefaultGseaSettings } from './settings/defaults'
-import { plotMsigdbRelease } from '#plots/msigdbRelease.ts'
 import { GSEAModel } from './model/GSEAModel'
 import { isValidGseaParams } from './model/GseaParams'
 import { setControls } from './view/GSEAControls'
@@ -160,8 +159,6 @@ export async function getPlotConfig(opts, app) {
 				gsea: getDefaultGseaSettings(opts.overrides, opts)
 			}
 		}
-		// a saved session's settings arrive in opts; copyMerge() keeps a release they recorded
-		config.settings.gsea.msigdbRelease = plotMsigdbRelease(app?.opts?.genome, opts.settings?.gsea)
 
 		copyMerge(config, opts)
 		validateConfigByTermType(config)

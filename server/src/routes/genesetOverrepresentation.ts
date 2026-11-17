@@ -8,7 +8,7 @@ import type {
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
-import { msigdbTermdb, validGeneSetGroup } from '#src/utils/genesetGroups.ts'
+import { validGeneSetGroup, validMsigdbRelease } from '#src/utils/genesetGroups.ts'
 
 const payload: RoutePayload = {
 	init,
@@ -44,11 +44,11 @@ async function run_genesetOverrepresentation_analysis(q: GenesetOverrepresentati
 	//console.log('q:', q.genome)
 	if (!genomes[q.genome].termdbs) throw 'termdb database is not available for ' + q.genome
 	// the geneSetGroup value is passed to genesetORA, which queries the msigdb db with it
-	const termdb = msigdbTermdb(genomes[q.genome], q.msigdbRelease)
-	validGeneSetGroup(termdb, q.geneSetGroup)
+	validGeneSetGroup(genomes[q.genome], q.geneSetGroup)
+	validMsigdbRelease(genomes[q.genome], q.msigdbRelease)
 	const gene_overrepresentation_input_type = {
 		sample_genes: q.sample_genes,
-		msigdb: termdb.cohort.db.connection.name,
+		msigdb: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
 		gene_set_group: q.geneSetGroup,
 		filter_non_coding_genes: q.filter_non_coding_genes,
 		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile)

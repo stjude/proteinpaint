@@ -1,8 +1,8 @@
 General:
-- hg38 gene set db: MSigDB 2026.2.Hs (anno/msigdb/db_2026.2.Hs) is the current release, and 2023.2.Hs (anno/msigdb/db_2023.2.Hs) stays as a second one. Copy db_2026.2.Hs next to db_2023.2.Hs on every server, and to ppSupport/msigdb/ for the support-file download scripts, before deploying
+- hg38 gene set db: MSigDB 2026.2.Hs (anno/msigdb/db_2026.2.Hs) replaces 2023.2.Hs. Copy db_2026.2.Hs to anno/msigdb/ on every server, and to ppSupport/msigdb/ for the support-file download scripts and the container install, before deploying; db_2023.2.Hs is no longer used
 - GSEA results are cached per gene set db file, so a result computed on one MSigDB release is not served for another
 Features:
 - Gene set analyses and the gene set browser use MSigDB 2026.2.Hs: Reactome 97, WikiPathways, GO and HPO updated in October 2026, and the new C9 computational perturbation collection
-- GSEA (blitzgsea and CERNO) and ORA have an MSigDB Release option, 2026.2.Hs by default. A GSEA or ORA plot saved before this release reopens on 2023.2.Hs, the release it was made with
+- GSEA and ORA requests record the MSigDB release they ran on
 Fixes:
 - A genome-level gene set db built by the current buildTermdb no longer stops the server from starting

@@ -9,7 +9,6 @@ import type { DiffAnalysisDom, /*DiffAnalysisOpts,*/ DiffAnalysisPlotConfig } fr
 import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/settings/defaults.ts'
 import { getDefaultGseaSettings } from '#plots/gsea/settings/defaults.ts'
-import { plotMsigdbRelease } from '#plots/msigdbRelease.ts'
 import { DATermTypes, enabledTermTypes } from './enabledTermTypes'
 
 const { SINGLECELL_CELLTYPE } = DATermTypes
@@ -173,8 +172,6 @@ export function getPlotConfig(opts: any, app?: any) {
 		...opts,
 		elementType: opts.settings?.volcano?.elementType || config.settings.volcano.elementType
 	})
-	// a saved session's settings arrive in opts; copyMerge() below keeps a release they recorded
-	config.settings.gsea.msigdbRelease = plotMsigdbRelease((opts.app || app)?.opts?.genome, opts.settings?.gsea)
 
 	validateVolcanoSettings(config, opts)
 
