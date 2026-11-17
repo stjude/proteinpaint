@@ -482,7 +482,7 @@ function furbishViewModeWithSnvindelComputeDetails(self, viewmode) {
 export function getGbSampleTypeQuery(termdbConfig: any) {
 	const sampleTypes = [
 		...new Set<number>(
-			['snvindel', 'cnv', 'svfusion', 'itd', 'junction'].flatMap(
+			['snvindel', 'cnv', 'svfusion', 'itd', 'junction', 'dnaMethylation'].flatMap(
 				type => termdbConfig?.queries?.[type]?.sampleTypes || []
 			)
 		)

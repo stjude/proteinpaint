@@ -797,7 +797,18 @@ export function divideTerms(q, ds) {
 	return [dict, geneVariantTws, nonDict]
 }
 
-/** Resolve mapping direction when needed, alongside the target sample types used by data and filter queries. */
+/*
+Resolve sample hierarchy mapping and target sample types
+across terms and filters
+	- caller defines q.sampleMapping = 'parentToChildren':
+		q.sampleTypes will be child sample types (if defined) or
+		default sample types (all non-root sample types)
+	- caller defines q.sampleMapping = 'childrenToParent':
+		q.sampleTypes will be common parent sample type
+	- caller does not define q.sampleMapping:
+		q.sampleMapping and q.sampleTypes will be inferred based
+		on sample types of terms and filters
+*/
 export function resolveSampleMapping(q, ds) {
 	if (!ds.cohort?.termdb?.hasSampleAncestry) {
 		// no sample ancestry
@@ -805,7 +816,7 @@ export function resolveSampleMapping(q, ds) {
 		return
 	}
 	if (q.sampleMapping && q.sampleTypes) {
-		// do not overwrite properties supplied by caller
+		validateQuerySampleTypes(q, ds)
 		return
 	}
 	const sampleTypesLst = getSampleTypesLst(q, ds)
@@ -831,9 +842,6 @@ export function resolveSampleMapping(q, ds) {
 				q.sampleTypes = [...new Set(types)]
 			}
 			if (q.sampleTypes.length != 1) throw new Error('unexpected q.sampleTypes.length')
-		} else if (q.sampleMapping === 'none') {
-			// no sample hierarchy mapping, query the sample type of each term
-			q.sampleTypes = [...new Set(sampleTypesLst.flatMap(st => st.sampleTypes || []))]
 		} else {
 			throw new Error('invalid q.sampleMapping')
 		}

@@ -8,10 +8,10 @@
  */
 
 /**
- * Sample hierarchy mapping direction; omit for automatic inference, 'none' for no mapping.
+ * Sample hierarchy mapping direction; omit for automatic inference.
  * term.sampleTypes identifies source types, and query sampleTypes identifies target types.
  */
-export type SampleMapping = 'parentToChildren' | 'childrenToParent' | 'none'
+export type SampleMapping = 'parentToChildren' | 'childrenToParent'
 
 type SampleEntry = {
 	/** stringified integer sample id  */

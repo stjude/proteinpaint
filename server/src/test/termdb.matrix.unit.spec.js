@@ -247,26 +247,6 @@ tape('resolveSampleMapping: childrenToParent targets the common parent of the sa
 	t.end()
 })
 
-tape('resolveSampleMapping: sampleMapping none bypasses the sample hierarchy mapping', t => {
-	const ds = {
-		cohort: {
-			termdb: {
-				hasSampleAncestry: true,
-				sampleTypes: { 1: { parent_id: null }, 2: { parent_id: 1 }, 3: { parent_id: 1 } }
-			}
-		}
-	}
-	const terms = [{ term: { sampleTypes: [1] } }, { term: { sampleTypes: [2] } }]
-	const q = { terms, sampleMapping: 'none' }
-	resolveSampleMapping(q, ds)
-	t.equal(q.sampleMapping, 'none', 'the mapping stays none')
-	t.deepEqual(q.sampleTypes, [1, 2], 'the sample types of the terms are queried')
-	const inferred = { terms }
-	resolveSampleMapping(inferred, ds)
-	t.equal(inferred.sampleMapping, 'parentToChildren', 'the mapping is still inferred when omitted')
-	t.end()
-})
-
 tape('resolveSampleMapping: resolves automatic and explicit mapping with validated target types', t => {
 	const ds = {
 		cohort: {
@@ -297,13 +277,18 @@ tape('resolveSampleMapping: resolves automatic and explicit mapping with validat
 	const noAncestry = { terms, sampleMapping: 'parentToChildren' }
 	resolveSampleMapping(noAncestry, emptyDs)
 	t.notOk(Object.hasOwn(noAncestry, 'sampleMapping'), 'datasets without ancestry leave the mapping property absent')
-	for (const sampleMapping of [true, false, null, 'invalid', {}, []]) {
+	for (const sampleMapping of [true, false, null, 'invalid', 'none', {}, []]) {
 		t.throws(
 			() => resolveSampleMapping({ terms, sampleMapping }, ds),
-			/invalid sampleMapping/,
+			/invalid q\.sampleMapping/,
 			'invalid intent rejected'
 		)
 	}
+	t.throws(
+		() => resolveSampleMapping({ terms, sampleMapping: 'none', sampleTypes: [1] }, ds),
+		/invalid q\.sampleMapping/,
+		'removed mapping rejected when target sample types are supplied'
+	)
 	const mixed = { terms, sampleMapping: 'childrenToParent' }
 	resolveSampleMapping(mixed, ds)
 	t.deepEqual(mixed.sampleTypes, [1], 'a term without a parent is left as is when mapping the other terms upward')
