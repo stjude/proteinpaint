@@ -62,7 +62,7 @@ export const isoformExpressionHandler: VolcanoHandler = {
 }
 
 /** the isoform expression term of a row, in the unit of the dataset's isoform expression */
-function getIsoformTerm(d: any, termdbConfig: RowActionContext['termdbConfig']) {
+export function getIsoformTerm(d: any, termdbConfig: RowActionContext['termdbConfig']) {
 	const unit = termdbConfig?.queries?.isoformExpression?.unit || 'Isoform Expression'
 	return {
 		type: ISOFORM_EXPRESSION,

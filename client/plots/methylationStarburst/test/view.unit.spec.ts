@@ -1,4 +1,5 @@
 import tape from 'tape'
+import { Menu } from '#dom'
 import * as d3s from 'd3-selection'
 import {
 	drawStarburst,
@@ -65,7 +66,7 @@ function getData(): StarburstData {
 
 tape('draws two panels', test => {
 	const holder = d3s.select('body').append('div')
-	drawStarburst(holder, getData(), { minDeltaBeta: 0.05, maxQ: 0.05 }, ['ref', 'case'], {}, () => {})
+	drawStarburst(holder, getData(), { minDeltaBeta: 0.05, maxQ: 0.05 }, ['ref', 'case'], new Menu(), () => []).destroy()
 	for (const region of ['promoter', 'body']) {
 		const g = holder.select(`[data-testid=sjpp-methylationStarburst-${region}]`)
 		test.equal(g.size(), 1, `should draw the ${region} panel`)
@@ -95,7 +96,10 @@ tape('draws two panels', test => {
 
 tape('highlighted genes', test => {
 	const holder = d3s.select('body').append('div')
-	drawStarburst(holder, getData(), { minDeltaBeta: 0.05, maxQ: 0.05 }, ['ref', 'case'], {}, () => {}, ['D', 'Z'])
+	drawStarburst(holder, getData(), { minDeltaBeta: 0.05, maxQ: 0.05 }, ['ref', 'case'], new Menu(), () => [], [
+		'D',
+		'Z'
+	]).destroy()
 	const named = (region: string) =>
 		holder
 			.selectAll(`[data-testid=sjpp-methylationStarburst-${region}] .sjpp-methylationStarburst-highlight text`)
@@ -107,11 +111,16 @@ tape('highlighted genes', test => {
 	test.end()
 })
 
-tape('click passes the nearest gene', test => {
+tape('click opens the actions of the nearest point, in a menu that stays', test => {
 	const holder = d3s.select('body').append('div')
 	let clicked = ''
-	const tip = { clear: () => tip, show: () => {}, hide: () => {}, d: d3s.select('body').append('div') }
-	drawStarburst(holder, getData(), { minDeltaBeta: 0.05, maxQ: 0.05 }, ['ref', 'case'], tip, g => (clicked = g))
+	const tip = new Menu()
+	const data = getData()
+	// the view asks for the actions of the point's index; its gene is data.genes[i]
+	const drawn = drawStarburst(holder, data, { minDeltaBeta: 0.05, maxQ: 0.05 }, ['ref', 'case'], tip, i => {
+		clicked = data.genes[i]
+		return [{ label: `Open ${data.genes[i]}`, onClick: () => {} }]
+	})
 	// gene A sits at (0, 0), the center of a symmetric panel
 	const hit = holder.select(
 		'[data-testid=sjpp-methylationStarburst-promoter] [data-testid=sjpp-methylationStarburst-hit]'
@@ -121,9 +130,23 @@ tape('click passes the nearest gene', test => {
 	node.dispatchEvent(
 		new MouseEvent('click', { clientX: r.x + r.width / 2, clientY: r.y + r.height / 2, bubbles: true })
 	)
-	test.equal(clicked, 'A', 'should pass the gene under the pointer')
+	test.equal(clicked, 'A', 'should ask for the actions of the point under the pointer')
+	const shown = [...document.querySelectorAll('.sja_menuoption')].filter(e => (e as HTMLElement).offsetParent)
+	test.ok(
+		shown.some(e => e.textContent == 'Open A'),
+		'should show the actions in the click menu'
+	)
+	// moving over the plot again does not take the menu away
+	node.dispatchEvent(new MouseEvent('mousemove', { clientX: r.x + 5, clientY: r.y + 5, bubbles: true }))
+	test.ok(
+		[...document.querySelectorAll('.sja_menuoption')].some(
+			e => (e as HTMLElement).offsetParent && e.textContent == 'Open A'
+		),
+		'should keep the menu open while the pointer moves'
+	)
+	drawn.destroy()
 	holder.remove()
-	tip.d.remove()
+	tip.destroy()
 	test.end()
 })
 

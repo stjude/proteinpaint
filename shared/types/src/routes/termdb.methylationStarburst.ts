@@ -16,6 +16,9 @@ export type MethylationStarburstRequest = {
 	filter0?: any
 	/** an msigdb analysisGenesetGroups value: adds `pathways` to the response */
 	geneSetGroup?: string
+	/** one point per transcript: isoform DE (ds.queries.isoformExpressionCount) against each transcript's own core
+	 * promoter and body. Not with geneSetGroup */
+	byIsoform?: boolean
 	__protected__?: any
 }
 
@@ -59,7 +62,10 @@ export type StarburstPathways = {
  * Δβ and log2 fold change are group2 minus group1. */
 export type MethylationStarburstResponse =
 	| {
+			/** the gene of each point; with byIsoform, of its transcript */
 			genes: string[]
+			/** with byIsoform, the transcript of each point (id without version) */
+			isoforms?: string[]
 			log2fc: number[]
 			/** DE adjusted p, or the unadjusted one where DE gave no adjusted p */
 			q: number[]

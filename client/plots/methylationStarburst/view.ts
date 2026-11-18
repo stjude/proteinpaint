@@ -1,8 +1,8 @@
 import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisLeft } from 'd3-axis'
-import { quadtree } from 'd3-quadtree'
-import { pointer } from 'd3-selection'
 import { table2col } from '#dom/table2col'
+import { DataPointInteractions } from '#dom/dataPointInteractions'
+import type { ActionMenuItem } from '#dom/dataPointClickMenu'
 import type { MethylationStarburstResponse } from '#types'
 
 export type StarburstData = Extract<MethylationStarburstResponse, { genes: any }>
@@ -85,20 +85,28 @@ const fmt = (v: number | null, d = 3) => {
 }
 const fmtQ = (q: number) => (q < 1e-4 ? q.toExponential(1) : q.toPrecision(2))
 
-/** Two scatter panels, core promoter and gene body, sharing both axes. `highlight` genes are ringed and named.
- * Returns the svg. */
+const circlePath = (r: number) => `M${r},0 A${r},${r} 0 1,1 ${-r},0 A${r},${r} 0 1,1 ${r},0 Z`
+
+/** a point of one panel: its index in data, and where it is drawn */
+type Point = { i: number; x: number; y: number }
+
+/** Two scatter panels, core promoter and gene body, sharing both axes. `highlight` genes (or, by isoform, transcript
+ * ids) are ringed and named. Hover and click are the portal's DataPointInteractions, as on the Manhattan and volcano
+ * plots: a click opens a menu of the point's `getActions` that stays until dismissed, and a click on overlapping points
+ * lists them first. Returns the svg, and destroy() for the click menus, to call before drawing again. */
 export function drawStarburst(
 	holder: any,
 	data: StarburstData,
 	cutoffs: Cutoffs,
 	groups: [string, string],
 	tip: any,
-	onGeneClick: (gene: string) => void,
+	/** the actions of the point at index i of data; by isoform, its transcript is data.isoforms[i] */
+	getActions: (i: number) => ActionMenuItem[],
 	highlight: string[] = []
 ) {
 	const W = 300
 	const H = 300
-	const m = { top: 62, left: 60, bottom: 46, gap: 40 }
+	const m = { top: 84, left: 60, bottom: 64, gap: 48 }
 	const regions: Region[] = ['promoter', 'body']
 	const allDb = regions.flatMap(r => data[r].filter(v => v != null) as number[])
 	const x = scaleLinear()
@@ -111,9 +119,11 @@ export function drawStarburst(
 	const svg = holder
 		.append('svg')
 		.attr('data-testid', 'sjpp-methylationStarburst-svg')
-		.attr('width', m.left + 2 * W + m.gap + 20)
+		.attr('width', m.left + 2 * W + m.gap + 30)
 		.attr('height', m.top + H + m.bottom + 30)
 		.style('font-family', 'Arial, sans-serif')
+
+	const interactions: DataPointInteractions<Point>[] = []
 
 	regions.forEach((region, k) => {
 		const idx = data.genes.map((_, i) => i).filter(i => data[region][i] != null)
@@ -127,16 +137,23 @@ export function drawStarburst(
 			.attr('data-testid', `sjpp-methylationStarburst-${region}`)
 			.attr('transform', `translate(${m.left + k * (W + m.gap)},${m.top})`)
 
-		g.append('text').attr('y', -42).attr('font-weight', 'bold').attr('font-size', 13).text(regionLabels[region])
-		g.append('text')
+		g.append('text').attr('y', -66).attr('font-weight', 'bold').attr('font-size', 13).text(regionLabels[region])
+		// two lines, so that a long odds ratio is not cut off at the panel's width
+		const stats = g
+			.append('text')
 			.attr('data-testid', 'sjpp-methylationStarburst-stats')
-			.attr('y', -26)
+			.attr('y', -50)
 			.attr('font-size', 11)
 			.attr('fill', '#555')
-			.text(
-				`${idx.length.toLocaleString()} genes · ρ = ${fmt(rho, 2)}` +
-					(quad.or ? ` · same-direction OR ${quad.or.toFixed(2)} (${quad.lo!.toFixed(2)}–${quad.hi!.toFixed(2)})` : '')
-			)
+		stats
+			.append('tspan')
+			.text(`${idx.length.toLocaleString()} ${data.isoforms ? 'transcripts' : 'genes'} · ρ = ${fmt(rho, 2)}`)
+		if (quad.or)
+			stats
+				.append('tspan')
+				.attr('x', 0)
+				.attr('dy', 14)
+				.text(`same-direction OR ${quad.or.toFixed(2)} (${quad.lo!.toFixed(2)}–${quad.hi!.toFixed(2)})`)
 
 		// guides: zero lines and the Δβ cutoff
 		const guide = (x1: number, y1: number, x2: number, y2: number, dash?: string) =>
@@ -160,12 +177,25 @@ export function drawStarburst(
 		const ctx = canvas.getContext('2d')!
 		ctx.scale(dpr, dpr)
 		const order = idx.map((_, j) => j).sort((a, b) => +passes(db[a], q[a], cutoffs) - +passes(db[b], q[b], cutoffs))
+		const [xlo, xhi] = x.domain(),
+			[ylo, yhi] = y.domain()
 		for (const j of order) {
 			const pass = passes(db[j], q[j], cutoffs)
 			ctx.globalAlpha = pass ? 0.9 : 0.35
 			ctx.fillStyle = pass ? (db[j] > 0 == fc[j] > 0 ? colors.same : colors.opposite) : colors.below
+			const [cx, cy] = [x(db[j]), y(fc[j])]
+			// beyond the axis range: a small triangle on the edge, pointing the way it went, not a dot piled on the border
+			const dx = db[j] > xhi ? 1 : db[j] < xlo ? -1 : 0
+			const dy = fc[j] > yhi ? -1 : fc[j] < ylo ? 1 : 0
 			ctx.beginPath()
-			ctx.arc(x(db[j]), y(fc[j]), pass ? 2.5 : 1.5, 0, 2 * Math.PI)
+			if (dx || dy) {
+				const r = pass ? 4 : 3
+				const [ux, uy] = dx && dy ? [dx * Math.SQRT1_2, dy * Math.SQRT1_2] : [dx, dy]
+				ctx.moveTo(cx + ux * r, cy + uy * r)
+				ctx.lineTo(cx - ux * r - uy * r * 0.8, cy - uy * r + ux * r * 0.8)
+				ctx.lineTo(cx - ux * r + uy * r * 0.8, cy - uy * r - ux * r * 0.8)
+				ctx.closePath()
+			} else ctx.arc(cx, cy, pass ? 2.5 : 1.5, 0, 2 * Math.PI)
 			ctx.fill()
 		}
 		g.append('image')
@@ -174,12 +204,13 @@ export function drawStarburst(
 			.attr('height', H)
 			.attr('href', canvas.toDataURL())
 
-		// counts in the corners of the quadrants they count
+		// counts at the corners of the quadrants they count, just outside the frame: inside it they covered points and
+		// the names of highlighted genes
 		const corner = (label: string, count: number, color: string, right: boolean, top: boolean) => {
 			const t = g
 				.append('g')
 				.attr('class', 'sjpp-methylationStarburst-count')
-				.attr('transform', `translate(${right ? W - 6 : 6},${top ? 14 : H - 8})`)
+				.attr('transform', `translate(${right ? W : 0},${top ? -8 : H + 56})`)
 			t.append('circle')
 				.attr('cx', right ? -4 : 4)
 				.attr('cy', -4)
@@ -189,6 +220,11 @@ export function drawStarburst(
 				.attr('x', right ? -12 : 12)
 				.attr('text-anchor', right ? 'end' : 'start')
 				.attr('font-size', 11)
+				// a halo, so the count reads over the dots it sits on
+				.attr('stroke', 'white')
+				.attr('stroke-width', 3)
+				.attr('stroke-linejoin', 'round')
+				.attr('paint-order', 'stroke')
 				.text(`${label} ${count.toLocaleString()}`)
 		}
 		corner('hypo, up', quad.n.hypoUp, colors.opposite, false, true)
@@ -199,12 +235,21 @@ export function drawStarburst(
 		// named genes: a ring on the dot and the name beside it, on the side with more room, and under the dot
 		// near the top edge, where the corner counts are
 		for (const gene of highlight) {
-			const j = idx.findIndex(i => data.genes[i] == gene)
-			if (j == -1) continue
+			// by isoform a gene has a point per transcript: each is ringed, the name goes by the one furthest from 0
+			// a gene, or by isoform a transcript id
+			const js = idx.map((i, j) => (data.genes[i] == gene || data.isoforms?.[i] == gene ? j : -1)).filter(j => j != -1)
+			if (!js.length) continue
+			const h = g.append('g').attr('class', 'sjpp-methylationStarburst-highlight')
+			for (const j of js)
+				h.append('circle')
+					.attr('cx', x(db[j]))
+					.attr('cy', y(fc[j]))
+					.attr('r', 4)
+					.attr('fill', 'none')
+					.attr('stroke', '#000')
+			const j = js.reduce((a, b) => (Math.hypot(db[b], fc[b]) > Math.hypot(db[a], fc[a]) ? b : a))
 			const [cx, cy] = [x(db[j]), y(fc[j])]
 			const right = cx < W - 60
-			const h = g.append('g').attr('class', 'sjpp-methylationStarburst-highlight')
-			h.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 4).attr('fill', 'none').attr('stroke', '#000')
 			h.append('text')
 				.attr('x', cx + (right ? 7 : -7))
 				.attr('y', cy + (cy < 24 ? 16 : 4))
@@ -214,7 +259,7 @@ export function drawStarburst(
 				.attr('stroke', 'white')
 				.attr('stroke-width', 3)
 				.attr('paint-order', 'stroke')
-				.text(gene)
+				.text(js.length > 1 ? `${gene} (${js.length})` : gene)
 		}
 
 		g.append('g').attr('transform', `translate(0,${H})`).call(axisBottom(x).ticks(5))
@@ -232,57 +277,71 @@ export function drawStarburst(
 				.attr('font-size', 12)
 				.text(`log2 fold change, ${groups[1]} / ${groups[0]}`)
 
-		// hover and click: the nearest gene within a few pixels
-		const qt = quadtree<number>()
-			.x(j => x(db[j]))
-			.y(j => y(fc[j]))
-			.addAll(idx.map((_, j) => j))
-		const ring = g
-			.append('circle')
-			.attr('r', 5)
-			.attr('fill', 'none')
-			.attr('stroke', '#000')
-			.style('pointer-events', 'none')
-			.style('display', 'none')
-		const nearest = (event: any) => {
-			const [px, py] = pointer(event, g.node())
-			return qt.find(px, py, 6)
-		}
-		g.append('rect')
+		const hoverLayer = g.append('g').style('pointer-events', 'none')
+		const cover = g
+			.append('rect')
 			.attr('data-testid', 'sjpp-methylationStarburst-hit')
 			.attr('width', W)
 			.attr('height', H)
 			.attr('fill', 'transparent')
+			.style('pointer-events', 'all')
 			.style('cursor', 'pointer')
-			.on('mousemove', (event: any) => {
-				const j = nearest(event)
-				if (j == undefined) {
-					ring.style('display', 'none')
-					tip.hide()
-					return
-				}
-				const i = idx[j]
-				ring.style('display', '').attr('cx', x(db[j])).attr('cy', y(fc[j]))
-				tip.clear().show(event.clientX, event.clientY)
-				const other: Region = region == 'promoter' ? 'body' : 'promoter'
-				const table = table2col({ holder: tip.d })
-				table.addRow('Gene', data.genes[i])
-				table.addRow(`Δβ, ${region}`, fmt(db[j]))
-				table.addRow(`Δβ, ${other}`, fmt(data[other][i]))
-				table.addRow('log2 fold change', fmt(fc[j], 2))
-				table.addRow('DE q', fmtQ(q[j]))
-				tip.d.append('div').style('font-size', '0.8em').style('opacity', 0.7).text('Click for the methylation track')
-			})
-			.on('mouseout', () => {
-				ring.style('display', 'none')
-				tip.hide()
-			})
-			.on('click', (event: any) => {
-				const j = nearest(event)
-				if (j == undefined) return
-				tip.hide()
-				onGeneClick(data.genes[idx[j]])
-			})
+		const other: Region = region == 'promoter' ? 'body' : 'promoter'
+		const info = (pt: Point, holder: any) => {
+			const i = pt.i
+			const table = table2col({ holder })
+			table.addRow('Gene', data.genes[i])
+			if (data.isoforms) {
+				table.addRow('Isoform', data.isoforms[i])
+				const n = data.genes.reduce((c, gn) => c + (gn == data.genes[i] ? 1 : 0), 0)
+				if (n > 1) table.addRow('Transcripts of the gene', String(n))
+			}
+			table.addRow(`Δβ, ${region}`, fmt(data[region][i]))
+			table.addRow(`Δβ, ${other}`, fmt(data[other][i]))
+			table.addRow('log2 fold change', fmt(data.log2fc[i], 2))
+			table.addRow('DE q', fmtQ(data.q[i]))
+		}
+		const dpi = new DataPointInteractions<Point>({
+			cover,
+			hoverLayer,
+			hoverTip: tip,
+			points: idx.map((i, j) => ({ i, x: x(db[j]), y: y(fc[j]) })),
+			getX: pt => pt.x,
+			getY: pt => pt.y,
+			hitRadius: 5,
+			toHoverSpec: pt => ({ path: circlePath(5), transform: `translate(${pt.x},${pt.y})`, strokeWidth: 1.5 }),
+			itemNoun: data.isoforms ? 'transcript' : 'gene',
+			renderSingleHoverTooltip: (pt, holder) => {
+				info(pt, holder)
+				holder
+					.append('div')
+					.style('font-size', '0.8em')
+					.style('opacity', 0.7)
+					.style('padding', '2px 4px')
+					.text('Click for options')
+			},
+			buildMultiHitTableData: pts => ({
+				columns: [
+					{ label: 'Gene' },
+					...(data.isoforms ? [{ label: 'Isoform' }] : []),
+					{ label: `Δβ, ${region}` },
+					{ label: 'log2 fold change' },
+					{ label: 'DE q' }
+				],
+				rows: pts.map(pt => [
+					{ value: data.genes[pt.i] },
+					...(data.isoforms ? [{ value: data.isoforms[pt.i] }] : []),
+					{ value: fmt(data[region][pt.i]) },
+					{ value: fmt(data.log2fc[pt.i], 2) },
+					{ value: fmtQ(data.q[pt.i]) }
+				])
+			}),
+			getActions: pt => getActions(pt.i),
+			renderSingleHitInfo: info,
+			getRowKey: pt => String(pt.i)
+		})
+		dpi.attach()
+		interactions.push(dpi)
 	})
 
 	// legend
@@ -305,7 +364,7 @@ export function drawStarburst(
 			.text(label)
 		lx += 12 + (t.node()?.getComputedTextLength?.() || label.length * 6) + 18
 	}
-	return svg
+	return { svg, destroy: () => interactions.forEach(d => d.destroy()) }
 }
 
 export type StarburstPathways = NonNullable<StarburstData['pathways']>

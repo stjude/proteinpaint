@@ -175,7 +175,14 @@ export class VolcanoPlotView {
 			hasExpression &&
 			this.interactions.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg'
 		) {
-			this.addActionButton('Methylation vs expression by gene', 'starburst', () => this.interactions.launchStarburst())
+			// by gene, or by isoform where the dataset has transcript counts (the starburst's own switch)
+			this.addActionButton(
+				this.interactions.app.vocabApi.termdbConfig?.queries?.isoformExpressionCount
+					? 'Methylation vs expression by gene or isoform'
+					: 'Methylation vs expression by gene',
+				'starburst',
+				() => this.interactions.launchStarburst()
+			)
 		}
 		/* The view model builds exactly one "Number of significant <noun>" row, the noun following the
 		term type. Matching a hardcoded "genes" missed proteomics ("proteins") entirely, so its caption

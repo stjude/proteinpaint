@@ -16,6 +16,7 @@ import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
+import { ISOFORM_EXPRESSION } from '#types'
 
 /* Methylation change against expression change, one point per gene, for the two groups of a volcano: the
 starburst plot (Noushmehr 2010, PMID 20399149). Two regions per gene, the core promoter and the body, because
@@ -24,6 +25,11 @@ they relate to transcription in opposite ways.
 Nothing here is new computation. Δβ per region is termdb/geneBodyMeth's mean delta over the region (raw, or its
 excess over matched background), and the fold change is the DE run the volcano would make on the same patients:
 both cached, so this joins them. The response holds gene-level values only.
+
+With byIsoform, one point per transcript instead: the fold change of the isoform DE run (ds.queries.isoformExpressionCount)
+against the transcript's own core promoter and body (termdb/geneBodyMeth with isoforms). A gene with an alternative
+promoter shows as several points, which the gene-level plot averages away. Gene sets are not tested then: they are
+gene-level.
 
 With a gene set group, it also tests gene sets on each layer and on the two merged, see getPathways(). */
 
@@ -62,6 +68,10 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 	if (!ds) throw new Error('unknown dataset')
 	const groups = q.samplelst?.groups
 	if (groups?.length != 2) throw new Error('Two sample groups are required.')
+	const byIsoform = !!q.byIsoform
+	if (byIsoform && !ds.queries?.isoformExpressionCount)
+		throw new Error('This dataset has no transcript expression counts.')
+	if (byIsoform && q.geneSetGroup) throw new Error('Gene sets are tested by gene, not by isoform.')
 	// before the genome-wide runs below
 	if (q.geneSetGroup) validGeneSetGroup(genome, q.geneSetGroup)
 	const t0 = Date.now()
@@ -69,7 +79,8 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 	/* Both axes from the same samples: each group cut to the samples that have methylation AND expression. Cut
 	to methylation only (as termdb/dmrGeneDE does), DE drops the samples without RNA by itself while the methylation
 	keeps them, which on MMRF is 312 vs 45 against 276 vs 41 for a t(4;14) contrast. */
-	const rna: Set<string> | undefined = ds.queries?.rnaseqGeneCount?.allSampleSet
+	const rna: Set<string> | undefined = (byIsoform ? ds.queries.isoformExpressionCount : ds.queries?.rnaseqGeneCount)
+		?.allSampleSet
 	if (!rna) throw new Error('This dataset has no gene expression counts.')
 	const eligible = new Set([...eligibleMethylationSamples(ds, undefined)].filter(n => rna.has(n)))
 	// of those, the samples that the request's filter leaves, as the methylation track shows them
@@ -86,12 +97,6 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 		chromosomes,
 		__protected__: q.__protected__
 	}
-	const deltas = (region?: 'promoter') => getGeneBodyDeltas({ ...groupArgs, corrected: !!q.corrected, region }, genomes)
-	// one after the other: each is a genome-wide rust run admitted against server memory
-	const body = await deltas()
-	const promoter = await deltas('promoter')
-	const tests = q.geneSetGroup ? await getGeneBodyTests(groupArgs, genomes) : null
-
 	const { result } = await getDeCacheResult(
 		{
 			genome: q.genome,
@@ -101,6 +106,8 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 			min_total_count: q.min_total_count ?? 15,
 			cpm_cutoff: q.cpm_cutoff,
 			method: q.method,
+			// transcripts instead of genes; left out for genes, so the gene run's cache key is unchanged
+			termType: byIsoform ? ISOFORM_EXPRESSION : undefined,
 			// part of the DE cache key: sent so this run and the volcano's are one entry
 			filter: q.filter,
 			filter0: q.filter0,
@@ -108,26 +115,45 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 		} as any,
 		genomes
 	)
+	// with byIsoform, the transcripts the DE run tested, without the version suffix the gene table leaves out
+	const rows: any[] = (result as any)?.geneRows || []
+	const idOf = (r: any) => (byIsoform ? String(r.gene_name).replace(/\.\d+$/, '') : r.gene_name)
+	const isoforms = byIsoform ? rows.map(idOf) : undefined
+	const deltas = (region?: 'promoter') =>
+		getGeneBodyDeltas({ ...groupArgs, corrected: !!q.corrected, region, isoforms }, genomes)
+	// one after the other: each is a genome-wide rust run admitted against server memory
+	const body = await deltas()
+	const promoter = await deltas('promoter')
+	const tests = q.geneSetGroup ? await getGeneBodyTests(groupArgs, genomes) : null
+
 	const out = {
 		genes: [] as string[],
+		// with byIsoform, the transcript of each point; genes[] then holds its gene
+		isoforms: byIsoform ? ([] as string[]) : undefined,
 		log2fc: [] as number[],
 		q: [] as number[],
 		promoter: [] as (number | null)[],
 		body: [] as (number | null)[]
 	}
-	for (const r of (result as any)?.geneRows || []) {
-		const p = promoter[r.gene_name] ?? null
-		const b = body[r.gene_name] ?? null
+	for (const r of rows) {
+		const p = promoter[idOf(r)] ?? null
+		const b = body[idOf(r)] ?? null
 		if ((p == null && b == null) || !Number.isFinite(r.fold_change)) continue
-		out.genes.push(r.gene_name)
+		// a transcript the gene annotation does not name keeps its id as its gene
+		out.genes.push(byIsoform ? r.gene || idOf(r) : r.gene_name)
+		out.isoforms?.push(idOf(r))
 		out.log2fc.push(r.fold_change)
 		out.q.push(r.adjusted_p_value ?? r.original_p_value ?? 1)
 		out.promoter.push(p)
 		out.body.push(b)
 	}
-	if (!out.genes.length) throw new Error('No gene had both a methylation value and a fold change.')
-	const pathways = tests ? getPathways(genome, q.geneSetGroup!, (result as any)?.geneRows || [], tests) : undefined
-	mayLog(`methylationStarburst: ${out.genes.length} genes,`, formatElapsedTime(Date.now() - t0))
+	if (!out.genes.length)
+		throw new Error(`No ${byIsoform ? 'transcript' : 'gene'} had both a methylation value and a fold change.`)
+	const pathways = tests ? getPathways(genome, q.geneSetGroup!, rows, tests) : undefined
+	mayLog(
+		`methylationStarburst: ${out.genes.length} ${byIsoform ? 'transcripts' : 'genes'},`,
+		formatElapsedTime(Date.now() - t0)
+	)
 	return {
 		...out,
 		sampleSize1: (result as any)?.sample_size1,

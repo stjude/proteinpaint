@@ -191,6 +191,9 @@ type GeneBodyQuery = {
 	corrected?: boolean
 	/** 'promoter' measures each gene's core promoter (see promoterLoci) instead of its body */
 	region?: 'promoter'
+	/** transcript ids (no version suffix): measure these transcripts instead of genes, each over its own core promoter
+	 * or body, from its own gene model (see isoformLoci); the result is keyed by transcript id */
+	isoforms?: string[]
 	__protected__?: any
 }
 
@@ -242,6 +245,8 @@ async function getCachedGeneBodies(q: GeneBodyQuery, genomes: any, test: boolean
 			region: q.region,
 			// likewise undefined for the deltas
 			test: test || undefined,
+			// undefined for genes; sorted, so that the same transcripts in another order share an entry
+			isoforms: q.isoforms ? [...new Set(q.isoforms)].sort() : undefined,
 			// corrected: the solo-WCGW shares come from the reference sequence
 			files: fingerprint(
 				[...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile, q.corrected ? sequenceFiles(genome) : [])
@@ -280,10 +285,49 @@ export function promoterLoci(rows: { name: string; genemodel: string }[], chrs?:
 	return locusOf
 }
 
-/** each chromosome's gene bodies, or with 'promoter' core promoters, one locus per gene symbol */
-function lociByChr(genome: any, region?: 'promoter') {
+/** Loci of transcripts, keyed by transcript id: with 'promoter' its core promoter around its own TSS, else its body
+ * trimmed by GENE_BODY_PAD at both ends as a gene body is. From the genes table's rows of {isoform, genemodel}; only the
+ * ids in keep, on the chrs. A body shorter than twice the pad has no locus. */
+export function isoformLoci(
+	rows: { isoform: string; genemodel: string }[],
+	keep: Set<string>,
+	region?: 'promoter',
+	chrs?: Set<string>
+) {
+	const locusOf = new Map<string, { chr: string; start: number; stop: number }>()
+	for (const r of rows) {
+		if (!keep.has(r.isoform) || locusOf.has(r.isoform)) continue
+		const gm = JSON.parse(r.genemodel)
+		if (chrs && !chrs.has(gm.chr)) continue
+		if (region == 'promoter') {
+			const minus = gm.strand == '-'
+			const tss = minus ? gm.stop : gm.start
+			locusOf.set(r.isoform, {
+				chr: gm.chr,
+				start: Math.max(0, tss - (minus ? PROMOTER_DOWN : PROMOTER_UP)),
+				stop: tss + (minus ? PROMOTER_UP : PROMOTER_DOWN)
+			})
+		} else {
+			const start = gm.start + GENE_BODY_PAD,
+				stop = gm.stop - GENE_BODY_PAD
+			if (stop > start) locusOf.set(r.isoform, { chr: gm.chr, start, stop })
+		}
+	}
+	return locusOf
+}
+
+type Locus = { name: string; start: number; stop: number; aliases?: string[] }
+
+/** each chromosome's gene bodies, or with 'promoter' core promoters, one locus per gene symbol; with isoforms, one
+ * per transcript, those of the same coordinates measured once (the others are its aliases) */
+function lociByChr(genome: any, region?: 'promoter', isoforms?: string[]) {
 	let locusOf: Map<string, { chr: string; start: number; stop: number }>
-	if (region == 'promoter') {
+	if (isoforms) {
+		const rows: any[] = genome?.genedb?.db?.prepare('select isoform, genemodel from genes').all() || []
+		if (!rows.length) throw new Error('This genome has no gene models.')
+		const major = new Set(validateChromosomes(genome, undefined, true))
+		locusOf = isoformLoci(rows, new Set(isoforms), region, major)
+	} else if (region == 'promoter') {
 		const rows: any[] = genome?.genedb?.db?.prepare('select name, genemodel from genes where isdefault=1').all() || []
 		if (!rows.length) throw new Error('This genome has no default isoforms.')
 		// a symbol's rows on the major chromosomes only: the first may be on a fix or alt contig, which has no matrix
@@ -306,17 +350,33 @@ function lociByChr(genome: any, region?: 'promoter') {
 			if (!prev || e - s > prev.stop - prev.start) locusOf.set(r.name, { chr: r.chr, start: s, stop: e })
 		}
 	}
-	const byChr = new Map<string, { name: string; start: number; stop: number }[]>()
+	const byChr = new Map<string, Locus[]>()
+	// transcripts often share a TSS or a whole model: one region per coordinate pair
+	const seen = new Map<string, Locus>()
 	for (const [name, l] of locusOf) {
+		const key = `${l.chr}:${l.start}-${l.stop}`
+		const same = isoforms ? seen.get(key) : undefined
+		if (same) {
+			;(same.aliases ||= []).push(name)
+			continue
+		}
+		const locus: Locus = { name, start: l.start, stop: l.stop }
+		if (isoforms) seen.set(key, locus)
 		const lst = byChr.get(l.chr) || []
-		lst.push({ name, start: l.start, stop: l.stop })
+		lst.push(locus)
 		byChr.set(l.chr, lst)
 	}
 	return byChr
 }
 
+/** a locus's value under its name and its aliases' */
+function setLocus(out: Record<string, any>, locus: Locus, v: any) {
+	out[locus.name] = v
+	for (const a of locus.aliases || []) out[a] = v
+}
+
 async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Record<string, number>> {
-	const byChr = lociByChr(genome, q.region)
+	const byChr = lociByChr(genome, q.region, q.isoforms)
 
 	/* The validated list the cache key was built from, and with none requested the genome's major
 	chromosomes -- not every contig gene2coord names, which fanned out unkeyed fits over alternate and
@@ -365,7 +425,7 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 			as the scan, so the two corrections are the same correction. */
 			const parts: {
 				chr: string
-				bodies: { name: string; start: number; stop: number }[]
+				bodies: Locus[]
 				windows: { chr: string; start: number; stop: number }[]
 			}[] = []
 			for (const chr of jobChrs) {
@@ -421,7 +481,7 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 					bodyRes.forEach((b: any, j: number) => {
 						/* A gene body with too few probes has an unstable mean; 5 matches the scan's own
 						minimum CpG count so the two analyses agree on what is measurable. */
-						if (b.delta != null && b.n_probes >= 5) deltaOf[bodies[j].name] = b.delta
+						if (b.delta != null && b.n_probes >= 5) setLocus(deltaOf, bodies[j], b.delta)
 					})
 				} else {
 					const measured = bodyRes
@@ -434,7 +494,7 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 					)
 					measured.forEach(({ j }, k) => {
 						const sc = scored[k]
-						if (sc) deltaOf[bodies[j].name] = Math.round(sc.excess * 100000) / 100000
+						if (sc) setLocus(deltaOf, bodies[j], Math.round(sc.excess * 100000) / 100000)
 					})
 				}
 			}
