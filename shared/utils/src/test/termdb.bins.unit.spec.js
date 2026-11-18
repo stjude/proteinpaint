@@ -411,6 +411,29 @@ tape('get_bin_label(), force label_offset == 1', function (test) {
 	test.end()
 })
 
+tape('get_bin_label(), frozen binconfig', function (test) {
+	const binconfig = Object.freeze({
+		type: 'regular-bin',
+		bin_size: 5,
+		startinclusive: true,
+		label_offset: 1,
+		rounding: '.0f',
+		first_bin: Object.freeze({ startunbounded: true, stop: 5 })
+	})
+	test.equal(b.get_bin_label({ startunbounded: true, stop: 5 }, binconfig), '<5', 'should label a first bin')
+	test.equal(
+		b.get_bin_label({ start: 5, stop: 10, startinclusive: true }, binconfig),
+		'5 to 9',
+		'should label a two-sided bin'
+	)
+	test.equal(
+		b.get_bin_range_equation({ stopunbounded: true, start: 10, startinclusive: true }, binconfig),
+		'<span style="font-family:Times;font-style:italic;">x</span> ≥10',
+		'should state the range of a last bin'
+	)
+	test.end()
+})
+
 tape('get_bin_label(), user-assigned custom bin label', function (test) {
 	const binconfig = {
 		type: 'custom-bin',
