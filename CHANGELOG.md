@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.229.0
 
 General:
 - hg38 gene set db: MSigDB 2026.2.Hs (anno/msigdb/db_2026.2.Hs) replaces 2023.2.Hs. Copy db_2026.2.Hs to anno/msigdb/ on every server, and to ppSupport/msigdb/ for the support-file download scripts and the container install, before deploying; db_2023.2.Hs is no longer used
