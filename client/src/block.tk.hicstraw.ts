@@ -3,6 +3,7 @@ import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
 import { hicparsestat, hicparsefragdata } from '../tracks/hic/data/parseData.ts'
 import { ColorScale } from '#dom'
+import { hicstrawSubpanelsKey } from './block.tk.hicstraw.adaptor'
 
 /*
 single-sample hic
@@ -149,6 +150,8 @@ function setResolution(tk: any, block: any) {
 	}
 
 	tk.regions = regions
+	// the subpanels that this load uses, see hicstrawloadsubpanels()
+	tk.subpanelsKey = hicstrawSubpanelsKey(block)
 
 	if (tk.textdata || tk.bedfile || tk.bedurl) {
 		return
