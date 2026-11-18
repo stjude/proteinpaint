@@ -555,6 +555,70 @@ tape('getAnnotationRows: resolved direction maps actual annotations and omission
 	t.end()
 })
 
+tape('dictionary numeric bins use only annotations whose mapped samples pass the filter', async t => {
+	const connection = guardDb(new Database(':memory:'), 'off')
+	try {
+		connection.exec(`
+			CREATE TABLE sampleidmap (id INTEGER, sample_type INTEGER);
+			CREATE TABLE sample_ancestry (sample_id INTEGER, ancestor_id INTEGER);
+			CREATE TABLE anno_categorical (sample INTEGER, term_id TEXT, value TEXT);
+			CREATE TABLE anno_float (sample INTEGER, term_id TEXT, value REAL);
+			INSERT INTO sampleidmap VALUES (10, 1), (11, 1), (12, 1), (20, 2), (21, 2), (22, 2);
+			INSERT INTO sample_ancestry VALUES (20, 10), (21, 11), (22, 12);
+			INSERT INTO anno_categorical VALUES (10, 'group', 'keep'), (11, 'group', 'keep'),
+				(20, 'group', 'keep'), (21, 'group', 'keep');
+			INSERT INTO anno_float VALUES (10, 'parent', 7.6), (11, 'parent', 2.4), (12, 'parent', 30),
+				(20, 'child', 7.6), (21, 'child', 2.4), (22, 'child', 30);
+		`)
+		const ds = {
+			cohort: {
+				db: { connection },
+				termdb: { sampleTypes: { 1: { parent_id: null }, 2: { parent_id: 1 } } }
+			}
+		}
+		for (const [mapping, id, sourceType, targetType, high, low] of [
+			['childrenToParent', 'child', 2, 1, 10, 11],
+			['parentToChildren', 'parent', 1, 2, 20, 21],
+			[undefined, 'child', 2, 2, 20, 21]
+		]) {
+			const filter = {
+				type: 'tvslst',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: { id: 'group', type: 'categorical', name: 'Group', sampleTypes: [targetType] },
+							values: [{ key: 'keep' }]
+						}
+					}
+				]
+			}
+			const tw = {
+				$id: id,
+				term: { id, type: 'float', sampleTypes: [sourceType] },
+				q: {
+					type: 'regular-bin',
+					bin_size: 5,
+					startinclusive: true,
+					first_bin: { startunbounded: true, stop: 5 }
+				}
+			}
+			const [samples, refs] = await getSampleData_dictionaryTerms_termdb(
+				{ ds, filter, sampleMapping: mapping, sampleTypes: [targetType] },
+				[tw]
+			)
+			const label = mapping || 'unmapped'
+			t.deepEqual(Object.keys(samples), [String(high), String(low)], `${label}: only filtered samples are returned`)
+			t.deepEqual(samples[high]?.[id], { key: '≥5', value: 7.6 }, `${label}: value above 5 is in the upper bin`)
+			t.deepEqual(samples[low]?.[id], { key: '<5', value: 2.4 }, `${label}: value below 5 is in the lower bin`)
+			t.equal(refs[id].bins.length, 2, `${label}: the filtered-out outlier does not extend the bin range`)
+		}
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
 tape('shouldMapParent2Children: handles object sample type metadata with child sample types', t => {
 	const ds = {
 		cohort: {

@@ -1,4 +1,5 @@
 import { getUncomputableClause, get_bins } from './termdb.sql.js'
+import { getAnnotationSampleMapping } from './termdb.matrix.js'
 import { dictionaryNumericTypes } from '#shared/terms.js'
 import { sql } from './sql.ts'
 
@@ -35,13 +36,17 @@ export const discrete = {
 	filter
 		{} or null
 
+	request
+		full query with the resolved sample mapping, used to map the filter when getting bins
+
 	returns { sql, tablename, name2bin, bins }
 	*/
-	getCTE(tablename, term, ds, q, index, filter) {
+	getCTE(tablename, term, ds, q, index, filter, request) {
 		const annoTable = `anno_${term.type}`
 		if (!dictionaryNumericTypes.has(term.type)) throw `unknown '${annoTable}' table (discrete.getCTE)`
 
-		const bins = get_bins(q, term, ds, index, filter)
+		const mapping = filter ? getAnnotationSampleMapping(request, { term, q }) : undefined
+		const bins = get_bins(q, term, ds, index, filter, mapping)
 		//console.log('last2', bins[bins.length - 2], 'last1', bins[bins.length - 1])
 		const bin_def_lst = []
 		const name2bin = new Map() // k: name str, v: bin{}
