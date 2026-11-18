@@ -191,31 +191,32 @@ async function handle_batch(q: HicdataRequest): Promise<HicdataResponse> {
 		STRAW_CONCURRENCY,
 		async ([pos1, pos2], i) => {
 			const result = results[i]
-			let stopped: boolean
 			try {
-				;({ stopped } = await runStraw(sq, pos1, pos2, item => {
-					if (total >= batchLimits.items) return false
-					result.items.push(item)
-					total++
-					return true
-				}))
+				await runStraw(sq, pos1, pos2, item => {
+					if (total < batchLimits.items) {
+						result.items.push(item)
+						total++
+						return true
+					}
+					// stop this pair; its data points are released now, instead of when its straw process closes,
+					// so that the pairs that are still running may use them and are not also stopped
+					limitReached = true
+					if (result.items.length >= batchLimits.items) {
+						// this pair alone has more data points than the limit
+						result.error = `more than ${batchLimits.items} data points`
+					} else {
+						result.skipped = true
+					}
+					total -= result.items.length
+					result.items = []
+					return false
+				})
 			} catch (e) {
 				// the data points of a pair with an error are not returned
 				total -= result.items.length
 				result.items = []
 				throw e
 			}
-			if (!stopped) return
-			limitReached = true
-			if (result.items.length >= batchLimits.items) {
-				// this pair alone has more data points than the limit
-				result.error = `more than ${batchLimits.items} data points`
-			} else {
-				result.skipped = true
-			}
-			// the data points of this pair are not returned, so that the pairs that are still running may use them
-			total -= result.items.length
-			result.items = []
 		},
 		{ stopWhen: () => limitReached }
 	)

@@ -12,6 +12,7 @@ Tests:
 	hicdata reports the straw errors of a pair in a batch and keeps the data of the other pairs
 	hicdata validates the pairs of a batch before straw is spawned
 	hicdata skips the pairs of a batch over the data point limit, which may be requested again
+	hicdata returns the data of some pairs when the output of the pairs over the limit is interleaved
 	hicdata reports a pair that alone has more data points than the limit
 	hicdata runs at most a fixed number of straw processes at once for a batch
 */
@@ -20,6 +21,8 @@ Tests:
 - pos1 of chrN:0:<count> prints <count> lines
 - pos1 of bad:0:1 prints malformed lines
 - pos1 of err:0:1 prints to stderr
+- pos2 of slow prints the <count> lines of pos1 in two halves after a delay, so that the output of pairs is interleaved,
+  and does not exit until it is done when it is stopped
 - when $STRAW_LOG is set, logs the start and end of each process to that file
 */
 const fakeStraw = `#!/bin/sh
@@ -31,6 +34,14 @@ if [ "$chr" = "bad" ]; then
 	printf 'a\\tb\\tc\\n'
 elif [ "$chr" = "err" ]; then
 	echo 'straw failed' >&2
+elif [ "$5" = "slow" ]; then
+	# exits on its own after printing, instead of when it is stopped
+	trap '' TERM
+	sleep 0.05
+	awk -v n="$count" 'BEGIN { for (i = 0; i < n / 2; i++) printf "%d\\t0\\t1\\n", i }'
+	sleep 0.2
+	awk -v n="$count" 'BEGIN { for (i = n / 2; i < n; i++) printf "%d\\t0\\t1\\n", i }'
+	sleep 0.1
 else
 	awk -v n="$count" -v p2="$5" 'BEGIN { for (i = 0; i < n; i++) printf "%d\\t%d\\t1\\n", i, length(p2) }'
 fi
@@ -184,6 +195,31 @@ tape('hicdata skips the pairs of a batch over the data point limit, which may be
 	}
 	test.end()
 })
+
+tape(
+	'hicdata returns the data of some pairs when the output of the pairs over the limit is interleaved',
+	async test => {
+		batchLimits.items = 10
+		try {
+			// each pair prints half of its 6 data points at about the same time as the other pairs, then the other half,
+			// so that the running pairs reach the limit at about the same time
+			const pairs = Array.from({ length: 4 }, (_, i) => [`chr${i}:0:6`, 'slow'])
+			const res = await request(query({ pairs }))
+			test.notOk(res.error, 'should not have a request error')
+			const returned = res.pairs.filter(r => !r.skipped)
+			test.ok(returned.length > 0, `should return at least one pair, returned ${returned.length}`)
+			for (const r of returned) {
+				test.notOk(r.error, 'should not have a pair error')
+				test.equal(r.items.length, 6, 'should return all data points of a returned pair')
+			}
+			const total = res.pairs.reduce((sum, r) => sum + r.items.length, 0)
+			test.ok(total <= 10, `should return at most 10 data points, got ${total}`)
+		} finally {
+			batchLimits.items = limits.items
+		}
+		test.end()
+	}
+)
 
 tape('hicdata reports a pair that alone has more data points than the limit', async test => {
 	batchLimits.items = 10
