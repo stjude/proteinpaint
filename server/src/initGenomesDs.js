@@ -22,6 +22,7 @@ import { combineSamplesById } from './mds3.variant2samples.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { cacheOrRecompute, cacheFilePath, generateHash } from './utils/cacheOrRecompute.ts'
 import { shouldMapParent2Children } from './termdb.matrix.js'
+import { patternMatches } from './auth/Auth.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -57,6 +58,12 @@ export const genomes = {} // { hg19: {...}, ... }
 	  as a failure, instead of being indistinguishable from a dataset that was never configured
 */
 export const trackedDatasets = []
+
+// a credentials key may be an exact dataset name, a glob pattern, or '*', the same as the matching in
+// auth/Auth.ts; a key that starts with '#' (comment) or '__' is not a dataset label
+function hasCredFor(dslabel, credKeys = []) {
+	return credKeys.some(key => !key.startsWith('#') && !key.startsWith('__') && patternMatches(dslabel, key))
+}
 
 export async function initGenomesDs(serverconfig, opts = {}) {
 	// verify if tp directory is readable
@@ -485,7 +492,7 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 				// do this check after trackedDatasets.push so that datasets with auth requirement
 				// but no provided creds can still be tracked with fatalError status, to be emitted
 				// in app.ts processTrackedDs() and inform user about missing creds via log and optional slack notification
-				if (ds.requiresAuthCred && !opts.credDslabels?.includes(ds.label)) {
+				if (ds.requiresAuthCred && !hasCredFor(ds.label, opts.credDslabels)) {
 					ds.init.status = 'fatalError'
 					ds.init.fatalError = `${ds.label} ds.requiresAuthCred is true but no credential provided`
 					delete g.datasets[ds.label] // do not keep reference to this dataset since it will not be loaded
