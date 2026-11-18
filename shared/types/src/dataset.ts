@@ -1739,6 +1739,10 @@ type Mds3Queries = {
 		scanOnly?: boolean
 	}
 	rnaseqGeneCount?: RnaseqGeneCount
+	/** Read counts of transcripts, for differential isoform expression. The layout of rnaseqGeneCount's file, with
+	 * transcript ids such as ENST00000269305 as the items. Takes a static file only: buildCountsFile and
+	 * previewCountsFiles are not supported for it. */
+	isoformExpressionCount?: RnaseqGeneCount
 	/** Used to create the top mutated genes UI in the gene
 	 * set edit ui and data requests. */
 	topMutatedGenes?: TopMutatedGenes

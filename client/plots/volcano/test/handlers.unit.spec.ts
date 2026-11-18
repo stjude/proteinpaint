@@ -9,6 +9,7 @@ import { select } from 'd3-selection'
 
 /* Tests:
 	- the request body of each data type
+	- the isoform expression handler
 	- an unsupported data type is rejected
 	- getVolcanoHandler()
 	- p-value controls by data type
@@ -134,6 +135,97 @@ tape('gene expression request body', async test => {
 		await getRequestBody(getModel(tt.GENE_EXPRESSION, pbConfig, settings)),
 		pbExpected,
 		'should send the pseudobulk category of the samplelst tw'
+	)
+	test.end()
+})
+
+tape('isoform expression request body', async test => {
+	const settings = getRenderSettings({ method: 'edgeR', minCount: 10, minTotalCount: 15, cpmCutoff: 1 })
+	const config = { samplelst: getSamplelst(), confounderTws }
+	test.deepEqual(
+		await getRequestBody(getModel(tt.ISOFORM_EXPRESSION, config, settings)),
+		{
+			kind: 'DE',
+			genome: 'hg38-test',
+			dslabel: 'TermdbTest',
+			method: 'edgeR',
+			min_count: 10,
+			min_total_count: 15,
+			samplelst: getSamplelst(),
+			filter: termfilter.filter,
+			filter0: termfilter.filter0,
+			cpm_cutoff: 1,
+			volcanoRender: getExpectedRender(),
+			tw: confounderTws[0],
+			tw2: confounderTws[1],
+			termType: 'isoformExpression'
+		},
+		'should send the DE parameters of gene expression, with the isoform term type'
+	)
+	test.end()
+})
+
+tape('the isoform expression handler', test => {
+	const h = getVolcanoHandler(tt.ISOFORM_EXPRESSION)
+	const d = { gene_name: 'ENST00000269305', gene: 'TP53', fold_change: 1 }
+	test.equal(h.route, 'termdb/DE', 'should run on the DE route')
+	test.equal(h.getRowNoun({}), 'isoforms', 'should count isoforms')
+	test.equal(h.getSignificantNoun!({}), 'DE isoforms', 'should caption the significant isoforms')
+	test.deepEqual(
+		h.getIdColumns({}).map(c => [c.label, c.value(d)]),
+		[
+			['Isoform', 'ENST00000269305'],
+			['Gene', 'TP53']
+		],
+		'should name a row by its isoform and its gene'
+	)
+	const shared: any = { effect: ['effect', 1], pValues: [['p', 0.01]] }
+	test.deepEqual(
+		h.getTooltipRows(d, { settings: {} }, shared),
+		[
+			['Isoform', 'ENST00000269305'],
+			['Gene', 'TP53'],
+			['effect', 1],
+			['p', 0.01]
+		],
+		'should list the isoform and its gene in the tooltip'
+	)
+	test.deepEqual(
+		h.getTooltipRows({ gene_name: 'ENST1' }, { settings: {} }, shared),
+		[
+			['Isoform', 'ENST1'],
+			['effect', 1],
+			['p', 0.01]
+		],
+		'should leave out the gene of a transcript without one'
+	)
+	test.notOk(h.actions.includes('highlight'), 'should not offer the gene set highlight')
+	test.ok(h.actions.includes('clustering'), 'should offer clustering')
+
+	const vocabApi = { termdbConfig: { queries: { isoformExpression: { unit: 'TPM' } } } }
+	test.deepEqual(
+		h.clusterTerms!.getTerm(d, vocabApi),
+		{ type: 'isoformExpression', isoform: 'ENST00000269305', gene: 'TP53', name: 'ENST00000269305 TPM', unit: 'TPM' },
+		'should cluster a row by its isoform expression'
+	)
+	test.equal(
+		h.clusterTerms!.getTerm({ gene_name: 'ENST1' }, vocabApi),
+		undefined,
+		'should leave out of clustering a transcript that the genome does not know'
+	)
+	test.equal(h.clusterTerms!.dataType, 'isoformExpression', 'should cluster isoform expression')
+	test.ok(h.clusterTerms!.isAvailable!(vocabApi.termdbConfig), 'should offer clustering with isoform expression')
+	test.notOk(h.clusterTerms!.isAvailable!({ queries: {} }), 'should not offer clustering without isoform expression')
+
+	test.equal(
+		h.preAnalysis!.getPreferredMethod!({ queries: { isoformExpressionCount: { defaultMethod: 'wilcoxon' } } }),
+		'wilcoxon',
+		'should prefer the method of the transcript counts'
+	)
+	test.equal(
+		h.preAnalysis!.getPreferredMethod!({ queries: { rnaseqGeneCount: { defaultMethod: 'wilcoxon' } } }),
+		undefined,
+		'should not prefer the method of the gene counts'
 	)
 	test.end()
 })
@@ -294,6 +386,7 @@ tape('unsupported data type', async test => {
 tape('getVolcanoHandler()', test => {
 	for (const termType of [
 		tt.GENE_EXPRESSION,
+		tt.ISOFORM_EXPRESSION,
 		tt.DNA_METHYLATION,
 		tt.JUNCTION,
 		tt.SINGLECELL_CELLTYPE,
@@ -311,6 +404,7 @@ tape('p-value controls by data type', test => {
 	const config: any = { samplelst: getSamplelst(), settings: { volcano: {} } }
 	for (const termType of [
 		tt.GENE_EXPRESSION,
+		tt.ISOFORM_EXPRESSION,
 		tt.DNA_METHYLATION,
 		tt.JUNCTION,
 		tt.SINGLECELL_CELLTYPE,
@@ -357,7 +451,8 @@ tape('GSEA tab by data type', test => {
 		[tt.DNA_METHYLATION, true],
 		[tt.SINGLECELL_CELLTYPE, true],
 		[tt.JUNCTION, false],
-		[tt.PROTEOME_DAP, false]
+		[tt.PROTEOME_DAP, false],
+		[tt.ISOFORM_EXPRESSION, false]
 	] as [string, boolean][]) {
 		const view = new DiffAnalysisView(
 			{} as any,
@@ -376,6 +471,7 @@ tape('GSEA tab by data type', test => {
 tape('getRowKey() by data type', test => {
 	const cases: [string, any, string][] = [
 		[tt.GENE_EXPRESSION, { gene_name: 'TP53' }, 'TP53'],
+		[tt.ISOFORM_EXPRESSION, { gene_name: 'ENST00000269305', gene: 'TP53' }, 'ENST00000269305'],
 		[tt.SINGLECELL_CELLTYPE, { gene_name: 'CD3E' }, 'CD3E'],
 		[tt.PROTEOME_DAP, { gene_name: 'P04637', gene: 'TP53' }, 'P04637'],
 		[tt.DNA_METHYLATION, { promoter_id: 'NKAP.p4_chrX:100-200', gene_name: 'NKAP' }, 'NKAP.p4_chrX:100-200'],

@@ -8,6 +8,8 @@ import * as testData from './testData'
 
 /* Tests:
 	- the click actions of a dot by data type
+	- the click actions of an isoform
+	- clustering of the significant rows
 	- the click actions of a single-cell cell type gene
 	- the box plot and violin of a gene
 	- the download menu by data type
@@ -109,6 +111,84 @@ tape('click actions of a dot by data type', async test => {
 		'a cluster opens the browser'
 	)
 	test.deepEqual(await getActions(tt.PROTEOME_DAP, gene, cpg), [], 'a proteome dot has no action')
+	test.end()
+})
+
+tape('click actions of an isoform', async test => {
+	const isoform = { gene_name: 'ENST00000269305', gene: 'TP53', fold_change: 1 }
+	const tw = { term: { type: 'samplelst', name: 'groups' }, q: { groups: [{ name: 'g1' }, { name: 'g2' }] } }
+	const config = { termType: tt.ISOFORM_EXPRESSION, tw }
+	test.deepEqual(
+		await getActions(tt.ISOFORM_EXPRESSION, isoform, { geneExpression: {} }, undefined, { config }),
+		[],
+		'an isoform has no action without isoform expression'
+	)
+	const actions = await getActions(tt.ISOFORM_EXPRESSION, isoform, { isoformExpression: { unit: 'TPM' } }, undefined, {
+		config
+	})
+	test.deepEqual(
+		actions.map(([label, launcher, plot]) => [label, launcher, plot.childType]),
+		[
+			['Violin plot', 'launchPlot', 'violin'],
+			['Box plot', 'launchPlot', 'boxplot']
+		],
+		'an isoform opens its violin and box plot'
+	)
+	test.deepEqual(
+		actions[0][2].term,
+		{
+			q: { mode: 'continuous' },
+			term: {
+				type: 'isoformExpression',
+				isoform: 'ENST00000269305',
+				gene: 'TP53',
+				name: 'ENST00000269305 TPM',
+				unit: 'TPM'
+			}
+		},
+		'of its isoform expression'
+	)
+	test.deepEqual(
+		actions[0][2].term2,
+		{ q: { groups: tw.q.groups, type: 'custom-samplelst' }, term: tw.term },
+		'by the groups of the analysis'
+	)
+	test.end()
+})
+
+tape('clustering of the significant rows', async test => {
+	const tw = { term: { type: 'samplelst', name: 'groups' }, q: { groups: [] } }
+	/** the hierCluster terms and dataType that the clustering of these rows launches */
+	async function getClusterConfig(termType: string, data: any[]) {
+		const dispatched: any[] = []
+		const app: any = {
+			getState: () => ({ plots: [{ id: 'v', termType, tw }] }),
+			vocabApi: { termdbConfig: { queries: { geneExpression: { unit: 'FPKM' }, isoformExpression: { unit: 'TPM' } } } },
+			dispatch: (action: any) => dispatched.push(action)
+		}
+		const interactions = new VolcanoInteractions(app, 'v', {} as any)
+		interactions.data = data
+		await interactions.launchDEGClustering()
+		const config = dispatched[0].config
+		return { dataType: config.dataType, names: config.termgroups[0].lst.map(tw => tw.term.name) }
+	}
+	test.deepEqual(
+		await getClusterConfig(tt.GENE_EXPRESSION, [
+			{ gene_name: 'KRAS', adjusted_p_value: 0.01 },
+			{ gene_name: 'TP53', adjusted_p_value: 0.001 }
+		]),
+		{ dataType: 'geneExpression', names: ['TP53 FPKM', 'KRAS FPKM'] },
+		'genes are clustered by their expression, the smallest adjusted p-value first'
+	)
+	test.deepEqual(
+		await getClusterConfig(tt.ISOFORM_EXPRESSION, [
+			{ gene_name: 'ENST2', gene: 'KRAS', adjusted_p_value: 0.01 },
+			{ gene_name: 'ENST1', gene: 'TP53', adjusted_p_value: 0.001 },
+			{ gene_name: 'ENST3', adjusted_p_value: 0.0001 }
+		]),
+		{ dataType: 'isoformExpression', names: ['ENST1 TPM', 'ENST2 TPM'] },
+		'isoforms are clustered by their isoform expression, leaving out a transcript without a gene'
+	)
 	test.end()
 })
 

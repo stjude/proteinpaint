@@ -4,7 +4,10 @@ import {
 	admitDeRun,
 	deMethodsOverMemory,
 	deSampleLimitAlert,
-	selectedColumnSpan
+	selectedColumnSpan,
+	isIsoformDE,
+	addIsoformGenes,
+	resolveDE
 } from '#src/routes/termdb.DE.ts'
 
 /** Tests
@@ -15,6 +18,9 @@ import {
  * - deSampleLimitAlert()
  * - admitDeRun() counts the columns wilcoxon reads
  * - selectedColumnSpan()
+ * - isIsoformDE()
+ * - resolveDE() picks the counts of the term type
+ * - addIsoformGenes()
  */
 
 /**************
@@ -190,5 +196,75 @@ tape('selectedColumnSpan', function (test) {
 	test.equal(selectedColumnSpan(file, ['e', 'a']), 5, 'a to e, in any order => 5')
 	test.equal(selectedColumnSpan(file, ['b', 'x', 'd']), 3, 'a sample not in the file is skipped')
 	test.equal(selectedColumnSpan(file, ['x', 'y']), 2, 'none in the file => the number selected')
+	test.end()
+})
+
+tape('isIsoformDE', function (test) {
+	const req = (termType?: any) => ({ termType } as any)
+	test.equal(isIsoformDE(req()), false, 'a run without termType tests genes')
+	test.equal(isIsoformDE(req('geneExpression')), false, 'geneExpression tests genes')
+	test.equal(isIsoformDE(req('isoformExpression')), true, 'isoformExpression tests transcripts')
+	test.throws(
+		() => isIsoformDE(req('dnaMethylation')),
+		/invalid termType/,
+		'throws for a data type the route does not test'
+	)
+	test.end()
+})
+
+tape('resolveDE() picks the counts of the term type', function (test) {
+	const geneSamples = new Set(['a', 'b'])
+	const isoformSamples = new Set(['a', 'c'])
+	const ds = {
+		queries: {
+			rnaseqGeneCount: { file: '/genes.h5', allSampleSet: geneSamples, maxSamples: 300 },
+			isoformExpressionCount: { file: '/isoforms.h5', allSampleSet: isoformSamples, maxSamples: 100 }
+		}
+	}
+	const genes = resolveDE({}, ds)
+	test.equal(genes.countsFile, '/genes.h5', 'a gene run reads the gene counts')
+	test.equal(genes.allSampleSet, geneSamples, 'with the samples of the gene counts')
+
+	const isoforms = resolveDE({ termType: 'isoformExpression' }, ds)
+	test.equal(isoforms.countsFile, '/isoforms.h5', 'an isoform run reads the transcript counts')
+	test.equal(isoforms.allSampleSet, isoformSamples, 'with the samples of the transcript counts')
+	test.equal(isoforms.maxSamples, 100, 'and their sample limit')
+	test.notOk(isoforms.buildCountsFile, 'and builds no counts file')
+
+	test.throws(
+		() => resolveDE({ termType: 'isoformExpression' }, { queries: { rnaseqGeneCount: ds.queries.rnaseqGeneCount } }),
+		/no isoformExpressionCount/,
+		'throws for an isoform run on a dataset without transcript counts'
+	)
+	test.throws(
+		() => resolveDE({ termType: 'isoformExpression', pseudobulk: { assay: 'x', memberId: 'y', category: 'z' } }, ds),
+		/pseudobulk is not supported/,
+		'throws for an isoform run on pseudobulk'
+	)
+	test.end()
+})
+
+tape('addIsoformGenes', function (test) {
+	const known = new Map([
+		['ENST00000269305', 'TP53'],
+		['ENST00000256078', 'KRAS']
+	])
+	const genome = {
+		genedb: { getnamebyisoform: { get: (i: string) => (known.has(i) ? { name: known.get(i) } : undefined) } }
+	}
+	const rows: any[] = [
+		{ gene_name: 'ENST00000269305' },
+		{ gene_name: 'ENST00000256078.10' },
+		{ gene_name: 'ENST99999999999' }
+	]
+	addIsoformGenes(rows, genome)
+	test.equal(rows[0].gene, 'TP53', 'names the gene of a transcript')
+	test.equal(rows[1].gene, 'KRAS', 'names the gene of a transcript id with a version suffix')
+	test.notOk('gene' in rows[2], 'names no gene for a transcript the annotation does not have')
+	test.equal(rows[1].gene_name, 'ENST00000256078.10', 'keeps the transcript id as gene_name')
+
+	const unchanged: any[] = [{ gene_name: 'ENST00000269305' }]
+	addIsoformGenes(unchanged, {})
+	test.notOk('gene' in unchanged[0], 'names no gene on a genome without gene annotation')
 	test.end()
 })

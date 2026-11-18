@@ -26,10 +26,12 @@ export type DataAvailabilityRequest = {
 
 /** a kind of data that a group's samples may have; a key of DataAvailabilityGroupCounts.data.
  *  geneExpression: the samples of expression plots (queries.geneExpression); rnaseqGeneCount: the samples
- *  of differential expression (queries.rnaseqGeneCount) */
+ *  of differential expression (queries.rnaseqGeneCount); isoformExpressionCount: the samples of differential
+ *  isoform expression (queries.isoformExpressionCount) */
 export type DataAvailabilityType =
 	| 'geneExpression'
 	| 'rnaseqGeneCount'
+	| 'isoformExpressionCount'
 	| 'dnaMethylation'
 	| 'junction'
 	| 'NIdata'

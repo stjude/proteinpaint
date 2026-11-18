@@ -28,14 +28,15 @@ import {
 import type { DeCacheResult } from '../../routes/types.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { genomes } from '#src/initGenomesDs.js'
+import { ISOFORM_EXPRESSION } from '#types'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
 
 export const payload: RoutePayload = {
 	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
-	// is evaluated; the route is only set up when at least one ds has ds.queries.rnaseqGeneCount or
-	// ds.queries.singleCell.pseudobulk, the two count sources supported by resolveDE()
+	// is evaluated; the route is only set up when at least one ds has one of the count sources supported by
+	// resolveDE(): ds.queries.rnaseqGeneCount, ds.queries.isoformExpressionCount or ds.queries.singleCell.pseudobulk
 	get init() {
 		return hasDeDs(genomes) ? init : null
 	},
@@ -53,7 +54,10 @@ export const api: RouteApi = {
 
 export function hasDeDs(genomes) {
 	return Object.values(genomes).some((g: any) =>
-		Object.values(g.datasets || {}).some((ds: any) => ds.queries?.rnaseqGeneCount || ds.queries?.singleCell?.pseudobulk)
+		Object.values(g.datasets || {}).some(
+			(ds: any) =>
+				ds.queries?.rnaseqGeneCount || ds.queries?.isoformExpressionCount || ds.queries?.singleCell?.pseudobulk
+		)
 	)
 }
 
@@ -160,6 +164,8 @@ function deKeyInputs(req: DERequest) {
 		min_total_count: req.min_total_count,
 		cpm_cutoff: req.cpm_cutoff,
 		method: req.method ?? null,
+		// left out of a gene run's key, as JSON.stringify drops an undefined value, so its cached results stay valid
+		termType: isIsoformDE(req) ? ISOFORM_EXPRESSION : undefined,
 		pseudobulk: req.pseudobulk ?? null,
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
@@ -216,7 +222,18 @@ export async function getDeCacheResult(
 		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
 			const { countsFile, allSampleSet, buildCountsFile, maxSamples } = resolveDE(req, ds)
-			return runDeFresh(req, countsFile, allSampleSet, ds, term_results, term_results2, buildCountsFile, maxSamples)
+			const result = await runDeFresh(
+				req,
+				countsFile,
+				allSampleSet,
+				ds,
+				term_results,
+				term_results2,
+				buildCountsFile,
+				maxSamples
+			)
+			if (isIsoformDE(req)) addIsoformGenes(result.geneRows, genomes[req.genome])
+			return result
 		}
 	})
 	return { result, cacheId }
@@ -237,7 +254,33 @@ type ResolvedDE = {
 	maxSamples?: number
 }
 
-function resolveDE(req, ds): ResolvedDE {
+/** the run tests transcripts, from ds.queries.isoformExpressionCount, rather than genes. Throws for a data type
+ * that the route does not test */
+export function isIsoformDE(req: DERequest): boolean {
+	if (req.termType == undefined || req.termType == 'geneExpression') return false
+	if (req.termType == ISOFORM_EXPRESSION) return true
+	throw new Error('invalid termType')
+}
+
+/** Names the gene of each row of an isoform run as row.gene, from the genome's gene annotation. The row keeps its
+ * transcript id as gene_name, the item that the DE engines report. The id may carry a version suffix (.8), which the
+ * annotation leaves out. A transcript that the annotation does not have gets no gene. */
+export function addIsoformGenes(rows: GeneDEEntry[], genome: any) {
+	const lookup = genome?.genedb?.getnamebyisoform
+	if (!lookup) return
+	for (const row of rows) {
+		const gene = lookup.get(row.gene_name)?.name || lookup.get(row.gene_name.replace(/\.\d+$/, ''))?.name
+		if (gene) row.gene = gene
+	}
+}
+
+export function resolveDE(req, ds): ResolvedDE {
+	if (isIsoformDE(req)) {
+		if (req.pseudobulk) throw 'pseudobulk is not supported for isoform expression'
+		const c = ds.queries?.isoformExpressionCount
+		if (!c?.file) throw 'no isoformExpressionCount for DE'
+		return { countsFile: c.file, allSampleSet: c.allSampleSet, maxSamples: c.maxSamples }
+	}
 	if (req.pseudobulk) {
 		const co =
 			ds.queries?.singleCell?.pseudobulk?.[req.pseudobulk.assay]?.[req.pseudobulk.memberId]?.categories?.[

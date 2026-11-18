@@ -5,7 +5,7 @@ import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI, sa
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { DNA_METHYLATION, GENE_EXPRESSION, DMR_SCAN_ELEMENT_TYPE } from '#types'
-import { findVolcanoHandler, getVolcanoHandler } from '../handlers'
+import { findVolcanoHandler, getVolcanoHandler, type ClusterTerms } from '../handlers'
 import type { DmrScanSummary } from '#types'
 import { CCRE_TRACK_NAME } from '#plots/dmr/viewModel/DmrViewModel.ts'
 import { getGEunit } from '#tw/geneExpression'
@@ -515,34 +515,26 @@ export class VolcanoInteractions {
 		})
 	}
 
+	/** Launches hierCluster of the up to 100 significant rows with the smallest adjusted p-values, as the terms of
+	 * the handler's clusterTerms: the gene expression of each row's gene when the handler has none */
 	async launchDEGClustering() {
-		//Sort the DEG rows by q-value in ascending order
-		const geneIndex = this.pValueTableData.columns.findIndex(col => col.label === 'Gene Name')
-		const adjustedPValIndex = this.pValueTableData.columns.findIndex(col => col.label === 'Adjusted p-value')
-		const rowsSorted = [...this.pValueTableData.rows].sort((a, b) => {
-			const aQVal = Number(a[adjustedPValIndex].value)
-			const bQVal = Number(b[adjustedPValIndex].value)
-			return aQVal - bQVal
-		})
-
-		// Launch hierCluster for up to 100 DEGs with the smallest q-values
-		const geneList = rowsSorted.slice(0, 100).map(r => ({ gene: r[geneIndex].value }))
-
-		const tws = geneList.map(d => {
-			const gene = d.gene
-			const unit = getGEunit(this.app.vocabApi)
-			const name = `${gene} ${unit}`
-			const term = { gene, name, type: GENE_EXPRESSION }
-			return { term, q: {} }
-		})
+		const volcanoConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		const cluster = getVolcanoHandler(volcanoConfig.termType).clusterTerms || geneClusterTerms
+		// response.data.dots: the significant rows, which the p-value table lists
+		const tws = [...this.data]
+			.sort((a, b) => Number(a.adjusted_p_value) - Number(b.adjusted_p_value))
+			.map(d => cluster.getTerm(d, this.app.vocabApi))
+			.filter(term => term)
+			.slice(0, 100)
+			.map(term => ({ term, q: {} }))
 
 		const group = { lst: tws, type: 'hierCluster' }
-		const customVariable = this.app.getState().plots.find((p: any) => p.id === this.id).tw
+		const customVariable = volcanoConfig.tw
 		const annotationGroup = { lst: [customVariable] }
 		const config = {
 			chartType: 'hierCluster',
 			termgroups: [group, annotationGroup],
-			dataType: GENE_EXPRESSION,
+			dataType: cluster.dataType,
 			filter: {
 				in: true,
 				join: '',
@@ -554,5 +546,14 @@ export class VolcanoInteractions {
 			type: 'plot_create',
 			config: structuredClone(config)
 		})
+	}
+}
+
+/** the rows of a handler without clusterTerms, by the expression of their gene */
+const geneClusterTerms: ClusterTerms = {
+	dataType: GENE_EXPRESSION,
+	getTerm: (d, vocabApi) => {
+		if (!d.gene_name) return
+		return { gene: d.gene_name, name: `${d.gene_name} ${getGEunit(vocabApi)}`, type: GENE_EXPRESSION }
 	}
 }
