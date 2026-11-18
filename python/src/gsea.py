@@ -135,20 +135,22 @@ def _selftest():
     assert list(_recompute_fdr(clean.copy())['fdr']) == ['untouched'] * 3, 'clean runs must be left alone'
 
     # the smoothed null must follow the anchor fits. These are the anchor sizes and the fitted
-    # scales of one run on random normal scores, for which lowess with its robust iterations puts
-    # the scale at 108 genes at 0.34 of its fitted value; without them every anchor of 5 genes or
-    # more (smaller sets are not tested) stays between 0.92 and 1.10. The curve comes from
-    # blitz.estimate_parameters, the library's own null fitting, with only the permutation step
-    # (estimate_anchor) replaced by these fits, so this also fails if the library stops smoothing
-    # through the replacement above. A signature of 4056 genes gives the anchors at 1, 4, 6, 2028
-    # (half) and 4000 (max_size); the library's set sizes are laid out so that its 20 percentiles
-    # give the rest.
-    sizes = [1, 4, 5, 6, 7, 8, 10, 11, 12, 14, 16, 18, 22, 26, 31, 39, 49, 69, 108, 2028, 4000]
-    scales = [0.031258, 0.0417733, 0.045009, 0.0360382, 0.0402187, 0.0376618, 0.0310034, 0.0330648,
-              0.0296003, 0.0277773, 0.0257849, 0.024948, 0.0201065, 0.0184957, 0.0197434, 0.0141217,
-              0.0111754, 0.0081409, 0.00655173, 0.000563282, 0.00028813]
+    # scales of one run in the linux x86_64 container on random normal scores of 19475 coding genes
+    # against MSigDB GO BP, which gave 417 gene sets at FDR < 0.05: lowess with its robust
+    # iterations puts the scale at 162 genes at 0.12 of its fitted value; without them every anchor
+    # of 5 genes or more (smaller sets are not tested) stays between 0.97 and 1.05. The robust
+    # iterations can come out differently on x86_64 and arm64 for the same anchors, so this run was
+    # chosen because it fails on both. The curve comes from blitz.estimate_parameters, the
+    # library's own null fitting, with only the permutation step (estimate_anchor) replaced by these
+    # fits, so this also fails if the library stops smoothing through the replacement above. A
+    # signature of 19475 genes gives the anchors at 1, 4, 6, the largest set (1940) and 4000
+    # (max_size); the library's set sizes are laid out so that its 20 percentiles give the rest.
+    sizes = [1, 4, 5, 6, 7, 8, 10, 11, 13, 15, 18, 22, 26, 33, 41, 54, 71, 103, 162, 321, 1940, 4000]
+    scales = [0.03246, 0.0432354, 0.0400062, 0.0370845, 0.0362438, 0.0342615, 0.0295229, 0.0309388,
+              0.0292362, 0.0288916, 0.0240235, 0.0199153, 0.0192426, 0.0151624, 0.0140581, 0.0111392,
+              0.00974012, 0.00651222, 0.00451307, 0.00275653, 0.000508675, 0.000314363]
     fits = dict(zip(sizes, scales))
-    percentile_sizes = [5, 5, 7, 8, 10, 11, 12, 14, 16, 18, 22, 26, 31, 39, 49, 69, 108, 108, 108, 108]
+    percentile_sizes = [5, 5, 6, 7, 8, 10, 11, 13, 15, 18, 22, 26, 33, 41, 54, 71, 103, 162, 321, 1940]
     positions = np.linspace(2, 100, 20) / 100 * 999
     library = {f'set{i}': [''] * percentile_sizes[int(np.argmin(abs(positions - i)))] for i in range(1000)}
     anchors = []
@@ -158,7 +160,7 @@ def _selftest():
     permuting_anchor = blitz.estimate_anchor
     blitz.estimate_anchor = fitted_anchor
     try:
-        smoothed = blitz.estimate_parameters(pd.DataFrame(index=range(4056)), None, None, library, processes=1)[1]
+        smoothed = blitz.estimate_parameters(pd.DataFrame(index=range(19475)), None, None, library, processes=1)[1]
     finally:
         blitz.estimate_anchor = permuting_anchor
     assert anchors == sizes, f'blitzgsea chose different anchor sizes: {anchors}'
