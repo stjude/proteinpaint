@@ -514,9 +514,8 @@ async function getSampleData(q, ds) {
 
 /** map sample hierarchy for non-dictionary data */
 export async function mayMapNonDictionaryData(tw, q, sample2value) {
-	const mapParent2Children = shouldMapParent2Children(tw, q.ds, q.sampleMapping, q.sampleTypes)
-	const mapChildren2Parent = shouldMapChildren2Parent(tw, q.ds, q.sampleMapping, q.sampleTypes)
-	if (!mapParent2Children && !mapChildren2Parent) return sample2value
+	const mapping = getAnnotationSampleMapping(q, tw)
+	if (!mapping) return sample2value
 
 	const db = q.ds.cohort?.db
 	if (!db?.connection) throw new Error('sample hierarchy mapping requires sql db')
@@ -524,15 +523,13 @@ export async function mayMapNonDictionaryData(tw, q, sample2value) {
 	const mappedValues = Object.create(null)
 	if (!sampleIds.length) return mappedValues
 
-	const source = mapParent2Children ? sql`sa.ancestor_id` : sql`sa.sample_id`
-	const target = mapParent2Children ? sql`sa.sample_id` : sql`sa.ancestor_id`
 	const rows = db.connection
 		.prepare(
-			sql`SELECT ${source} AS source, ${target} AS target
+			sql`SELECT ${mapping.source} AS source, ${mapping.target} AS target
 			FROM sample_ancestry sa
-			JOIN sampleidmap sm ON ${target} = sm.id
-			WHERE ${source} IN (${sql.list(sampleIds)})
-			AND sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})`
+			JOIN sampleidmap sm ON ${mapping.target} = sm.id
+			WHERE ${mapping.source} IN (${sql.list(sampleIds)})
+			AND sm.sample_type IN (${mapping.targetTypes})`
 		)
 		.all()
 
