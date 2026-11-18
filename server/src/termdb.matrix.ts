@@ -549,10 +549,11 @@ function twlstGeneCountReducer(sum, tw) {
 }
 
 async function setGeneVariantDataForTw(q, tw, samples) {
-	const data = await q.ds.mayGetGeneVariantData(tw, q)
-	for (const [sampleId, value] of data.entries()) {
-		const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
-		sampleEntry[tw.$id] = value[tw.$id]
+	const term2sample2value = await q.ds.mayGetGeneVariantData(tw, q)
+	const sample2value = term2sample2value.get(tw.$id)
+	for (const [sid, value] of Object.entries(sample2value)) {
+		const sampleEntry = getOrCreateSampleEntry(samples, sid, { sample: Number(sid) })
+		sampleEntry[tw.$id] = value
 	}
 }
 
@@ -1213,8 +1214,9 @@ async function mayQueryMutatedSamples(q) {
 				name: geneName
 			}
 		}
-		const data = await q.ds.mayGetGeneVariantData(
+		const term2sample2value = await q.ds.mayGetGeneVariantData(
 			{
+				$id: geneName,
 				term: {
 					name: geneName,
 					genes: [gene],
@@ -1225,8 +1227,8 @@ async function mayQueryMutatedSamples(q) {
 			},
 			q
 		)
-		for (const sampleId of data.keys()) {
-			sampleSet.add(sampleId)
+		for (const sampleId of Object.keys(term2sample2value.get(geneName))) {
+			sampleSet.add(Number(sampleId))
 		}
 	}
 	return sampleSet
