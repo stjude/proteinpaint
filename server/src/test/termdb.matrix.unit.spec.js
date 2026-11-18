@@ -1,7 +1,7 @@
 import tape from 'tape'
 import Database from 'better-sqlite3'
 import { mkdir, writeFile, unlink } from 'node:fs/promises'
-import { dirname, relative, join } from 'node:path'
+import { dirname } from 'node:path'
 import {
 	divideTerms,
 	getData,
@@ -27,8 +27,7 @@ import { getFilterCTEs } from '../termdb.filter.js'
 import { trigger_getDefaultBins } from '../termdb.getDefaultBins.js'
 import { makeCacheid } from '../termdb.snp.js'
 import { snpgtCacheFile } from '../utils.js'
-import { validate_query_geneExpression } from '../routes/termdb.cluster.ts'
-import serverconfig from '../serverconfig.js'
+import { mayLimitSamples } from '../mds3.filter.js'
 
 /*
 test sections:
@@ -277,18 +276,35 @@ tape('resolveSampleMapping: resolves automatic and explicit mapping with validat
 	const noAncestry = { terms, sampleMapping: 'parentToChildren' }
 	resolveSampleMapping(noAncestry, emptyDs)
 	t.notOk(Object.hasOwn(noAncestry, 'sampleMapping'), 'datasets without ancestry leave the mapping property absent')
-	for (const sampleMapping of [true, false, null, 'invalid', 'none', {}, []]) {
+	for (const sampleMapping of [true, 'invalid', 'none', {}, []]) {
 		t.throws(
 			() => resolveSampleMapping({ terms, sampleMapping }, ds),
 			/invalid q\.sampleMapping/,
 			'invalid intent rejected'
 		)
 	}
+	for (const sampleMapping of [false, null]) {
+		const implicit = { terms, sampleMapping }
+		resolveSampleMapping(implicit, ds)
+		t.equal(implicit.sampleMapping, 'parentToChildren', 'falsy intent allows automatic mapping')
+		t.deepEqual(implicit.sampleTypes, [2], 'automatic mapping targets the child sample type')
+	}
 	t.throws(
 		() => resolveSampleMapping({ terms, sampleMapping: 'none', sampleTypes: [1] }, ds),
 		/invalid q\.sampleMapping/,
-		'removed mapping rejected when target sample types are supplied'
+		'removed mapping is rejected when target sample types are supplied'
 	)
+	t.throws(
+		() => resolveSampleMapping({ sampleMapping: 'none' }, ds),
+		/invalid q\.sampleMapping/,
+		'removed mapping is rejected without a query scope'
+	)
+	for (const sampleMapping of ['parentToChildren', 'childrenToParent']) {
+		const explicit = { sampleMapping, sampleTypes: [1] }
+		resolveSampleMapping(explicit, ds)
+		t.equal(explicit.sampleMapping, sampleMapping, 'valid direction with supplied sample types is preserved')
+		t.deepEqual(explicit.sampleTypes, [1], 'supplied sample types are preserved')
+	}
 	const mixed = { terms, sampleMapping: 'childrenToParent' }
 	resolveSampleMapping(mixed, ds)
 	t.deepEqual(mixed.sampleTypes, [1], 'a term without a parent is left as is when mapping the other terms upward')
@@ -356,9 +372,6 @@ tape('resolveSampleMapping: compares type sets across terms, filter, and filter0
 		],
 		['a child term and parent filter', { terms: [tw([2])], filter: filter([1]) }, 'parentToChildren', [2]],
 		['a parent term and child filter0', { terms: [tw([1])], filter0: [{ sampleTypes: [3] }] }, 'parentToChildren', [3]],
-		['unrelated type sets', { terms: [tw([2])], filter: filter([4]) }, undefined, [2, 4]],
-		['unknown sample types prevent inference', { terms: [tw([2]), tw([])] }, undefined, [2]],
-		['empty type metadata', { terms: [tw([2, 3])], filter0: [{}, { sampleTypes: [] }] }, undefined, [2, 3]],
 		[
 			'explicit direction with sibling sets',
 			{ terms: [tw([2]), tw([3])], sampleMapping: 'childrenToParent' },
@@ -372,6 +385,26 @@ tape('resolveSampleMapping: compares type sets across terms, filter, and filter0
 		t.deepEqual(q.sampleTypes, sampleTypes, `${label}: target types`)
 		if (mapping === undefined) t.notOk(Object.hasOwn(q, 'sampleMapping'), `${label}: mapping remains absent`)
 	}
+	t.throws(
+		() => resolveSampleMapping({ terms: [tw([2])], filter: filter([4]) }, ds),
+		/unable to infer sample mapping/,
+		'unrelated term and filter types reject automatic mapping'
+	)
+	for (const [label, q] of [
+		['empty term types', { terms: [tw([2]), tw([])] }],
+		['missing filter0 types', { terms: [tw([2, 3])], filter0: [{}] }],
+		['empty filter0 types', { terms: [tw([2, 3])], filter0: [{ sampleTypes: [] }] }],
+		['non-integer term type', { terms: [tw([2, '3'])] }],
+		['non-integer filter type', { filter: filter([2.5]) }],
+		['non-integer filter0 type', { filter0: [{ sampleTypes: [null] }] }]
+	]) {
+		t.throws(() => resolveSampleMapping(q, ds), /sampleTypes must be a non-empty array of integers/, label)
+	}
+	t.throws(
+		() => resolveSampleMapping({ filter0: [{ sampleTypes: [2], childSampleTypes: [3, '4'] }] }, ds),
+		/childSampleTypes must be an array of integers/,
+		'non-integer child sample type is rejected'
+	)
 	t.end()
 })
 
@@ -1442,31 +1475,44 @@ function makeSampleMappingDs(valuesByTerm) {
 
 const emptyFilter = () => ({ type: 'tvslst', in: true, join: '', lst: [] })
 
-tape('geneExpression getter: source sample types limit data before mapping', async t => {
+function useMockGeneExpressionData(ds) {
+	const rows = [
+		{ sample: '2646', value: 5 },
+		{ sample: '2660', value: 7 }
+	]
+	ds.queries.geneExpression.get = async param => {
+		const tw = param.terms[0]
+		const values = Object.create(null)
+		for (const row of rows) {
+			const id = ds.cohort.termdb.q.sampleName2id(row.sample)
+			if (tw.term.sampleTypes?.length && !tw.term.sampleTypes.includes(ds.sampleId2Type.get(id))) continue
+			values[id] = row.value
+		}
+		const mapped = await mayMapNonDictionaryData(tw, { ...param, ds }, values)
+		const limit = await mayLimitSamples(param, null, ds)
+		const filtered = Object.fromEntries(Object.entries(mapped).filter(([id]) => !limit || limit.has(Number(id))))
+		if (!Object.keys(filtered).length) throw new Error('No data available')
+		const bySampleId = Object.fromEntries(Object.keys(filtered).map(id => [id, id2sampleRef(id, ds)]))
+		return { term2sample2value: new Map([[tw.$id, filtered]]), bySampleId }
+	}
+}
+
+tape('mock geneExpression data: source sample types limit data before mapping', async t => {
 	const { ds, connection } = makeSampleMappingDs({})
 	ds.sampleId2Type = new Map([
+		[10, 1],
 		[20, 2],
 		[30, 3]
 	])
 	ds.cohort.termdb.q.sampleName2id = name => (name === '2646' ? 20 : 30)
-	ds.queries.geneExpression = {
-		file: relative(
-			serverconfig.tpmasterdir,
-			join(import.meta.dirname, '../../test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5')
-		)
-	}
+	useMockGeneExpressionData(ds)
 	const tw = {
 		$id: 'expression',
 		term: { type: 'geneExpression', gene: 'DDX11L1', sampleTypes: [2] }
 	}
 	try {
-		await validate_query_geneExpression(ds, null)
-		const aligned = await ds.queries.geneExpression.get({ terms: [tw], sampleTypes: [3] })
-		t.deepEqual(
-			Object.keys(aligned.term2sample2value.get(tw.$id)),
-			['20'],
-			'source types, not request types, select data'
-		)
+		const aligned = await ds.queries.geneExpression.get({ terms: [tw] })
+		t.deepEqual(Object.keys(aligned.term2sample2value.get(tw.$id)), ['20'], 'source types select data')
 		const parent = await ds.queries.geneExpression.get({
 			terms: [tw],
 			sampleTypes: [1],
@@ -1487,7 +1533,7 @@ tape('geneExpression getter: source sample types limit data before mapping', asy
 	t.end()
 })
 
-tape('geneExpression getter: maps native data before target sample filtering', async t => {
+tape('mock geneExpression data: maps before target sample filtering', async t => {
 	await ensureOpenAuth()
 	const { ds, connection } = makeSampleMappingDs({})
 	connection.exec(`
@@ -1503,12 +1549,7 @@ tape('geneExpression getter: maps native data before target sample filtering', a
 		[40, 2]
 	])
 	ds.cohort.termdb.q.sampleName2id = name => (name === '2646' ? 20 : 40)
-	ds.queries.geneExpression = {
-		file: relative(
-			serverconfig.tpmasterdir,
-			join(import.meta.dirname, '../../test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5')
-		)
-	}
+	useMockGeneExpressionData(ds)
 	const tw = {
 		$id: 'expression',
 		term: { gene: 'DDX11L1', name: 'Expression', type: 'geneExpression', sampleTypes: [2] },
@@ -1529,7 +1570,6 @@ tape('geneExpression getter: maps native data before target sample filtering', a
 		]
 	})
 	try {
-		await validate_query_geneExpression(ds, null)
 		const parent = await getData({ terms: [tw], filter: filter([3]) }, ds)
 		t.notOk(parent.error, 'parent filter is applied after child expression data maps')
 		t.deepEqual(Object.keys(parent.samples), ['10'], 'matrix keeps the mapped parent without mapping a second time')

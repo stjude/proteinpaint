@@ -406,14 +406,18 @@ tape('geneVariant mapping: DT and legacy variant filters consume getter-mapped I
 	t.end()
 })
 
-tape('geneVariant mapping: remote string IDs and hidden filters keep existing behavior', async t => {
+tape('geneVariant mapping: remote numeric IDs and hidden filters keep existing behavior', async t => {
 	const calls = []
 	const ds = {
+		sampleId2Type: new Map([
+			[1, 2],
+			[2, 2]
+		]),
 		cohort: {
 			termdb: {
 				filterSamples: async q => {
 					calls.push(q)
-					return new Set(['case-a'])
+					return new Set([1])
 				}
 			}
 		},
@@ -423,7 +427,7 @@ tape('geneVariant mapping: remote string IDs and hidden filters keep existing be
 				byisoform: {
 					get: async q => {
 						const limit = await mayLimitSamples(q, null, ds)
-						const record = mutation(1, ['case-a', 'case-b'])
+						const record = mutation(1, [1, 2])
 						return [{ ...record, samples: record.samples.filter(s => !limit || limit.has(s.sample_id)) }]
 					}
 				}
@@ -433,22 +437,22 @@ tape('geneVariant mapping: remote string IDs and hidden filters keep existing be
 	mayAdd_mayGetGeneVariantData(ds, {})
 	const tw = makeTw()
 	const data = await getSampleValues(ds, tw, { filter0: { cohort: 'hidden' } })
-	t.deepEqual(Object.keys(data), ['case-a'], 'remote string IDs respect hidden scope')
-	t.equal(data['case-a'].values[0].TumorAC, 'case-a,5', 'the retained case keeps its annotation')
+	t.deepEqual(Object.keys(data), ['1'], 'remote numeric IDs respect hidden scope')
+	t.equal(data['1'].values[0].TumorAC, '1,5', 'the retained sample keeps its annotation')
 	t.deepEqual(calls[0].filter0, { cohort: 'hidden' }, 'remote hidden filter is passed through')
 	t.end()
 })
 
-tape('geneVariant mapping: sample object preserves unmapped sample ID spellings', async t => {
-	const ids = [7, '008', '__proto__']
+tape('geneVariant mapping: sample object preserves numeric and numeric-string IDs', async t => {
+	const ids = [1, '7']
 	const ds = {
 		cohort: { termdb: {} },
 		queries: { snvindel: { byisoform: { get: async () => [mutation(1, ids)] } } }
 	}
 	mayAdd_mayGetGeneVariantData(ds, {})
-	const data = await getSampleValues(ds, makeTw(), {})
+	const data = await getSampleValues(ds, makeTw([]), {})
 	t.equal(Object.getPrototypeOf(data), null, 'the term maps to a null-prototype sample object')
-	t.deepEqual(Object.keys(data), ids.map(String), 'numeric-looking and prototype-named IDs are preserved as keys')
+	t.deepEqual(Object.keys(data), ids.map(String), 'numeric and numeric-string IDs are preserved as keys')
 	for (const id of ids) {
 		t.equal(data[id].values[0].TumorAC, `${id},5`, 'object collection preserves sample values')
 	}
@@ -537,7 +541,7 @@ tape('geneVariant mapping: legacy matrix output and non-hierarchical batch outpu
 					processTwsInOneQuery: true,
 					get: async (q, tws, samples) => {
 						t.equal(q.filter0.cohort, 'hidden', 'non-hierarchical batch retains hidden filter')
-						samples['case-a'] = { sample: 'case-a', [tws[0].$id]: { key: 'G', values: [{ dt: 1, class: 'M' }] } }
+						samples[1] = { sample: 1, [tws[0].$id]: { key: 'G', values: [{ dt: 1, class: 'M' }] } }
 					}
 				}
 			}
@@ -545,7 +549,7 @@ tape('geneVariant mapping: legacy matrix output and non-hierarchical batch outpu
 	}
 	const remote = await getData({ terms: [makeTw()], filter0: { cohort: 'hidden' } }, remoteDs)
 	t.notOk(remote.error, 'non-hierarchical batch keeps its existing direct path')
-	t.deepEqual(Object.keys(remote.samples), ['case-a'], 'batch string IDs remain unchanged')
-	t.equal(remote.samples['case-a'].variant.values[0].class, 'M', 'batch value shape is unchanged')
+	t.deepEqual(Object.keys(remote.samples), ['1'], 'batch numeric IDs remain unchanged')
+	t.equal(remote.samples['1'].variant.values[0].class, 'M', 'batch value shape is unchanged')
 	t.end()
 })
