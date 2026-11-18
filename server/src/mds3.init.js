@@ -176,6 +176,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_getTopMutatedGenes(ds, genome)
 			await validate_query_getSampleImages(ds, genome)
 			await validate_query_rnaseqGeneCount(ds, genome)
+			await validate_query_isoformExpressionCount(ds)
 			await validate_query_singleSampleMutation(ds, genome)
 			await validate_query_singleSampleGenomeQuantification(ds, genome)
 			await validate_query_singleSampleGbtk(ds, genome)
@@ -4321,4 +4322,15 @@ async function validate_query_rnaseqGeneCount(ds) {
 		if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
 	}
 	console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
+}
+
+/* read counts of transcripts, for differential isoform expression: an h5 file of rnaseqGeneCount's layout, with
+transcript ids as the items. A static file only, as the DE route builds no isoform counts on demand */
+async function validate_query_isoformExpressionCount(ds) {
+	const q = ds.queries.isoformExpressionCount
+	if (!q) return
+	if (q.buildCountsFile || q.previewCountsFiles) throw 'isoformExpressionCount takes a file, not buildCountsFile'
+	await setFile(q, 'isoformExpressionCount')
+	q.allSampleSet = new Set(await getH5samples(q.file))
+	console.log(q.allSampleSet.size, `isoformExpressionCount samples from ${ds.label}`)
 }

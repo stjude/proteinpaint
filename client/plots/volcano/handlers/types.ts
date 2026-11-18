@@ -31,7 +31,7 @@ export type VolcanoAction =
 	| 'highlight'
 	| 'statistics'
 	| 'pValueTable'
-	/** hierarchical clustering of the DE genes */
+	/** hierarchical clustering of the significant rows, see VolcanoHandler.clusterTerms */
 	| 'clustering'
 	/** the expression test on the genes under gene-body loss DMRs, when the dataset has gene counts */
 	| 'geneBodyLoss'
@@ -130,6 +130,9 @@ export type VolcanoHandler = {
 
 	/** the click actions of a dot, in order */
 	getRowActions?(d: any, ctx: RowActionContext): ActionMenuItem[]
+	/** The rows of the clustering action, as terms of hierCluster's data type. The gene expression of
+	 * each row's gene when left out */
+	clusterTerms?: ClusterTerms
 
 	/** the labels of the two groups above the plot, control first. Each group's name and size when
 	 * left out */
@@ -142,6 +145,16 @@ export type VolcanoHandler = {
 
 	/** the pre-analysis panel that launches the analysis */
 	preAnalysis?: PreAnalysisHandler
+}
+
+/** The terms that the clustering action clusters the significant rows by */
+export type ClusterTerms = {
+	/** the hierCluster dataType of the terms */
+	dataType: string
+	/** the term of a row, or undefined for a row that cannot be clustered */
+	getTerm(d: any, vocabApi: any): object | undefined
+	/** whether the dataset has the data of the terms. Offered always when left out */
+	isAvailable?(termdbConfig: any): boolean
 }
 
 /** What the controls of a data type are built from */

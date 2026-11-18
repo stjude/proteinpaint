@@ -6,6 +6,7 @@ import { dnaMethylationHandler } from './dnaMethylation'
 import { junctionHandler } from './junction'
 import { singleCellCellTypeHandler } from './singleCellCellType'
 import { proteomeDAPHandler } from './proteomeDAP'
+import { isoformExpressionHandler } from './isoformExpression'
 
 export type {
 	VolcanoHandler,
@@ -17,7 +18,7 @@ export type {
 	TooltipRow,
 	SharedTooltipRows
 } from './types'
-export type { ControlContext, RowActionContext, MethodOption, PreAnalysisHandler } from './types'
+export type { ControlContext, RowActionContext, MethodOption, PreAnalysisHandler, ClusterTerms } from './types'
 export { getPlottedEffect, countGroupSamples } from './shared'
 export {
 	DMRCATE_DEFAULTS,
@@ -33,9 +34,14 @@ plain object, so a termType such as '__proto__' or 'toString' finds no handler.
 SINGLECELL_GENE_EXPRESSION is enabled in diffAnalysis/enabledTermTypes but has no route yet, so it
 has no handler. */
 const handlers = new Map<string, VolcanoHandler>(
-	[geneExpressionHandler, dnaMethylationHandler, junctionHandler, singleCellCellTypeHandler, proteomeDAPHandler].map(
-		h => [h.termType, h]
-	)
+	[
+		geneExpressionHandler,
+		isoformExpressionHandler,
+		dnaMethylationHandler,
+		junctionHandler,
+		singleCellCellTypeHandler,
+		proteomeDAPHandler
+	].map(h => [h.termType, h])
 )
 
 /** the handler of a data type, or undefined when the volcano does not support it. For code that

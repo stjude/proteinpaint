@@ -221,10 +221,12 @@ export class VolcanoPlotView {
 				})
 			})
 		}
-		if (numSigGenes && numSigGenes >= 3) {
-			// Launch hierCluster for DEGs between the two groups
+		const termdbConfig = this.interactions.app.vocabApi.termdbConfig
+		if (numSigGenes && numSigGenes >= 3 && (this.handler.clusterTerms?.isAvailable?.(termdbConfig) ?? true)) {
+			// Launch hierCluster for the significant rows between the two groups
+			const noun = this.handler.getSignificantNoun?.(this.settings, this.viewData.scan) ?? 'DE genes'
 			this.addActionButton(
-				`Hierarchical clustering of ${numSigGenes > 100 ? 'top 100' : numSigGenes} DE genes`,
+				`Hierarchical clustering of ${numSigGenes > 100 ? 'top 100' : numSigGenes} ${noun}`,
 				'clustering',
 				async () => {
 					await this.interactions.launchDEGClustering()

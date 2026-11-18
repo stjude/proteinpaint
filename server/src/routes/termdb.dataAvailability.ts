@@ -48,6 +48,7 @@ request may not read is left out of every group.
 const dataTypeLabels: { [dataType in DataAvailabilityType]: string } = {
 	geneExpression: termType2label(TermTypes.GENE_EXPRESSION),
 	rnaseqGeneCount: 'RNA-seq gene counts',
+	isoformExpressionCount: 'RNA-seq isoform counts',
 	dnaMethylation: termType2label(TermTypes.DNA_METHYLATION),
 	junction: termType2label(TermTypes.JUNCTION),
 	NIdata: 'Brain imaging',
@@ -297,6 +298,7 @@ async function getEligibleSampleSets(
 		['geneExpression', () => sampleNames(ds, ds.queries?.geneExpression?.samples)],
 		// allSampleSet may be a getter on api-backed datasets, so it is read here
 		['rnaseqGeneCount', () => ds.queries?.rnaseqGeneCount?.allSampleSet],
+		['isoformExpressionCount', () => ds.queries?.isoformExpressionCount?.allSampleSet],
 		['dnaMethylation', () => (ds.queries?.dnaMethylation ? eligibleMethylationSamples(ds, undefined) : undefined)],
 		['junction', () => ds.queries?.junction?.cluster?.allSampleSet],
 		['NIdata', () => getImagingSamples(q, ds)]

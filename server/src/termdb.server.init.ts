@@ -865,6 +865,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	// leave it configured and unreachable. Mirrors the same allowance in termdb.config.ts.
 	DA: ({ ds }) =>
 		ds.queries?.rnaseqGeneCount ||
+		ds.queries?.isoformExpressionCount ||
 		ds.queries?.dnaMethylation?.promoter ||
 		(ds.queries?.dnaMethylation?.elements && Object.keys(ds.queries.dnaMethylation.elements).length) ||
 		Object.values(ds.queries?.singleCell?.pseudobulk || {}).some((assay: any) =>

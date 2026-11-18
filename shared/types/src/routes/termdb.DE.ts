@@ -18,6 +18,9 @@ export type DERequest = {
 	cpm_cutoff: number
 	/** Method of DE used wilcoxon/edgeR */
 	method?: string
+	/** The data type that the run tests. 'isoformExpression' tests transcripts, from
+	 * ds.queries.isoformExpressionCount. Genes when left out */
+	termType?: 'geneExpression' | 'isoformExpression'
 	/** Term for confounding variable1 (if present) */
 	tw?: any
 	/** Term for confounding variable2 (if present) */
@@ -28,7 +31,8 @@ export type DERequest = {
 	 * PNG dimensions, and dot styling. The server always renders the volcano PNG
 	 * and returns it plus the threshold-passing rows as the interactive `data`. */
 	volcanoRender: VolcanoRenderRequest
-	/** if present, loads data from pseudobulk. otherwise loads from rnaseqGeneCount
+	/** if present, loads data from pseudobulk. otherwise loads from rnaseqGeneCount, or from
+	 * isoformExpressionCount for termType 'isoformExpression'
 	 */
 	pseudobulk?: {
 		assay: string
@@ -301,7 +305,10 @@ export type DataEntry = {
 
 export type GeneDEEntry = DataEntry & {
 	gene_id: string
+	/** the item of the counts file: the gene, or the transcript id of an isoform run */
 	gene_name: string
+	/** of an isoform run, the gene of the transcript, when the genome's annotation has it */
+	gene?: string
 }
 
 export type DEImage = {

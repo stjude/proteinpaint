@@ -598,21 +598,31 @@ function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
 
 function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 	// DA app can be applied to multiple datatypes. show options based on availability for each datatype
-	if (self.app.vocabApi.termdbConfig.queries?.rnaseqGeneCount) {
-		// hardcoded! rnaseq genecount will correspond to gene exp term type on DA ui
+	/* differential expression of genes and of isoforms: the same analysis, on the gene counts or the transcript
+	counts of the dataset. The term type of the run selects the counts */
+	for (const { query, termType, testid } of [
+		{ query: 'rnaseqGeneCount', termType: TermTypes.GENE_EXPRESSION, testid: 'sjpp-da-option' },
+		{ query: 'isoformExpressionCount', termType: TermTypes.ISOFORM_EXPRESSION, testid: 'sjpp-da-isoform-option' }
+	]) {
+		if (!self.app.vocabApi.termdbConfig.queries?.[query]) continue
 		const itemDiv = div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.attr('data-testid', 'sjpp-da-option')
-			.text(`Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
+			.attr('data-testid', testid)
+			.text(`Differential ${termType2label(termType)} Analysis`)
 			.on('click', async () => {
 				const tip = self.tip2
 				tip.clear().showunderoffset(itemDiv.node())
 				const loading = tip.d.append('div').text('Loading ...')
 				try {
-					const preAnalysisData = await getGeneExpressionPreAnalysis(self.app, samplelstTW, self.state.termfilter)
+					const preAnalysisData = await getGeneExpressionPreAnalysis(
+						self.app,
+						samplelstTW,
+						self.state.termfilter,
+						termType
+					)
 					loading.remove()
-					renderPreAnalysisData({ preAnalysisData, samplelstTW, groups: samplelstTW.q.groups, tip, self })
+					renderPreAnalysisData({ preAnalysisData, samplelstTW, groups: samplelstTW.q.groups, tip, termType, self })
 				} catch (e) {
 					loading.remove()
 					sayerror(tip.d.append('div'), e)
@@ -848,7 +858,8 @@ function renderCountsFileInfo(holder, preview, sampleLabel) {
 }
 
 /** Counts and available methods for the expression pre-analysis panel used by group pickers. */
-export async function getGeneExpressionPreAnalysis(app, samplelstTW, termfilter = {}) {
+/* termType: TermTypes.ISOFORM_EXPRESSION counts the samples with transcript counts. Genes when left out */
+export async function getGeneExpressionPreAnalysis(app, samplelstTW, termfilter = {}, termType = undefined) {
 	const groups = samplelstTW.q.groups
 	if (groups.length != 2 || groups.some(g => !groupHasSamples(g))) {
 		throw new Error('Differential analysis requires two groups containing samples')
@@ -859,6 +870,7 @@ export async function getGeneExpressionPreAnalysis(app, samplelstTW, termfilter 
 		samplelst: { groups },
 		filter: termfilter.filter,
 		filter0: termfilter.filter0,
+		...(termType == TermTypes.ISOFORM_EXPRESSION ? { termType } : {}),
 		preAnalysis: true
 	}
 	const res = await dofetch3('termdb/DE', { body })

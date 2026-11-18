@@ -7,6 +7,7 @@ import * as DE from '../termdb.DE.ts'
 Tests:
 	DE route is not set up when no ds has rnaseqGeneCount or pseudobulk
 	DE route is set up when a ds has ds.queries.rnaseqGeneCount
+	DE route is set up when a ds has ds.queries.isoformExpressionCount
 	DE route is set up when a ds has ds.queries.singleCell.pseudobulk
 
 the DE route checks the loaded genomes when augen sets up the route, so each case
@@ -48,6 +49,15 @@ tape('DE route is set up when a ds has ds.queries.rnaseqGeneCount', test => {
 		getMounted({ hg19: {}, hg38: { datasets: { A: {}, B: { queries: { rnaseqGeneCount: {} } } } } }),
 		['get /termdb/DE', 'post /termdb/DE'],
 		'should set up the GET and POST routes when at least one ds has rnaseqGeneCount'
+	)
+	test.end()
+})
+
+tape('DE route is set up when a ds has ds.queries.isoformExpressionCount', test => {
+	test.deepEqual(
+		getMounted({ hg38: { datasets: { A: { queries: { isoformExpressionCount: {} } } } } }),
+		['get /termdb/DE', 'post /termdb/DE'],
+		'should set up the GET and POST routes when at least one ds has isoformExpressionCount'
 	)
 	test.end()
 })
