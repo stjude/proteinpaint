@@ -115,6 +115,9 @@ export type VolcanoOpts = {
 	}
 	overrides?: ValidatedVolcanoSettings
 	parentId?: string
+	/** from the differential analysis plot: shows or hides its tabs, which the volcano hides when its
+	 * analysis fails since the other tabs are run off that analysis */
+	showTabs?: (show: boolean) => void
 }
 
 /** Main dom elements created on init() */

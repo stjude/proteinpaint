@@ -158,9 +158,14 @@ export class Volcano extends PlotBase implements RxComponent {
 				const msg = response?.error || 'No data returned from server'
 				if (response?.code === 'CACHE_BUSY') {
 					if (window.confirm(msg)) this.main()
-				} else sayerror(this.dom.error, msg)
+				} else {
+					// ComponentApi.update() hides dom.error before main(), so it is shown again here
+					sayerror(this.dom.error.style('display', ''), msg)
+					this.opts.showTabs?.(false)
+				}
 				return
 			}
+			this.opts.showTabs?.(true)
 
 			/** Format response into an object for rendering */
 			const viewModel = new VolcanoViewModel(config, response, settings)
@@ -205,7 +210,7 @@ export class Volcano extends PlotBase implements RxComponent {
 						`p-value magnitude, and do not compare the p-values against another analysis.`
 				)
 			}
-			if (notes.length) this.dom.error.text(notes.join(' ')).style('color', '#555')
+			if (notes.length) this.dom.error.text(notes.join(' ')).style('color', '#555').style('display', '')
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)

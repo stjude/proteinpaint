@@ -4,7 +4,7 @@ import { getCombinedTermFilter } from '#filter'
 import { PROTEOME_DAP, SINGLECELL_CELLTYPE } from '#types'
 import { getDefaultGseaSettings } from './settings/defaults'
 import { GSEAModel } from './model/GSEAModel'
-import { isValidGseaParams } from './model/GseaParams'
+import { isValidGseaParamsForTermType } from './model/GseaParams'
 import { setControls } from './view/GSEAControls'
 import { GSEAViewModel } from './viewModel/GSEAViewModel'
 import { GSEAView } from './view/GSEAView'
@@ -97,7 +97,7 @@ export class GSEA extends PlotBase implements RxComponent {
 		 * mutated as necessary. */
 		validateConfigByTermType(config)
 
-		if (!isValidGseaParams(config.gsea_params)) {
+		if (!isValidGseaParamsForTermType(config.gsea_params, config.termType)) {
 			this.gsea_params = await this.model.getGseaParams(config.gsea_params, state, config)
 		} else {
 			this.gsea_params = config.gsea_params

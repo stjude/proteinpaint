@@ -8,6 +8,8 @@ export type DiffAnalysisDom = {
 	controls: Elem
 	/** Holder */
 	div: Elem
+	/** where PlotBase.printError() shows an error of this plot, such as one from the init of a child plot */
+	errdiv: Elem
 	/** Sandbox header, if provided */
 	header?: Elem
 	/** Toggle between plots */

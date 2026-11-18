@@ -438,7 +438,8 @@ export class VolcanoInteractions {
 	async launchSpliceGenomeBrowser(d: { cluster_id: string; genes?: string; chr: string; start: number; stop: number }) {
 		const data = await dofetch3('termdb/diffSplice', { body: { ...this.daRequest, clusterId: d.cluster_id } })
 		if (data.error) {
-			sayerror(this.dom.error, data.error)
+			// dom.error may still be hidden by the last ComponentApi.update()
+			sayerror(this.dom.error.style('display', ''), data.error)
 			return
 		}
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
