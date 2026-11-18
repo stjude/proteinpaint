@@ -839,10 +839,14 @@ export class VolcanoPlotView {
 	 * Used by both the single-gene click flow and the multi-gene click-menu rows so the launchers stay
 	 * in lock-step. */
 	private getActionMenuOpts(d: DataPointEntry): ActionMenuItem[] {
+		const { app, id } = this.interactions
+		const termdbConfig = app.vocabApi.termdbConfig
 		return (
 			this.handler.getRowActions?.(d, {
 				interactions: this.interactions,
-				queries: this.interactions.app.vocabApi.termdbConfig?.queries,
+				config: app.getState?.().plots.find((p: any) => p.id === id),
+				termdbConfig,
+				queries: termdbConfig?.queries,
 				scan: this.viewData.scan
 			}) || []
 		)

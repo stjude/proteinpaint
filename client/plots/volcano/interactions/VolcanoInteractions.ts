@@ -192,6 +192,11 @@ export class VolcanoInteractions {
 		})
 	}
 
+	/** Launches a plot of a dot, such as one that a handler builds, in a separate sandbox */
+	launchPlot(config: any) {
+		this.app.dispatch({ type: 'plot_create', config })
+	}
+
 	/** When clicking on a gene, launches the box plot of its expression in a separate sandbox */
 	launchBoxPlot(value: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)

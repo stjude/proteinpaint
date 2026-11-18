@@ -8,6 +8,7 @@ import * as testData from './testData'
 
 /* Tests:
 	- the click actions of a dot by data type
+	- the click actions of a single-cell cell type gene
 	- the box plot and violin of a gene
 	- the download menu by data type
 	- the group labels, sample size rows and provenance by data type
@@ -20,13 +21,21 @@ const launchers = [
 	'launchSpliceGenomeBrowser',
 	'launchDmr',
 	'launchBoxPlot',
-	'launchMethylationLocus'
+	'launchMethylationLocus',
+	'launchPlot'
 ]
 
 /** the click actions of dot d, each as [label, the launcher it calls, its arguments] */
-async function getActions(termType: string, d: any, queries: any, scan?: any) {
+async function getActions(termType: string, d: any, queries: any, scan?: any, more: any = {}) {
 	const calls: any[] = []
-	const interactions: any = { app: { vocabApi: { termdbConfig: { queries } } } }
+	const { config, termType2terms } = more
+	const interactions: any = {
+		id: 'v',
+		app: {
+			vocabApi: { termdbConfig: { queries, termType2terms } },
+			getState: () => ({ plots: [{ id: 'v', ...config }] })
+		}
+	}
 	for (const name of launchers) interactions[name] = (...args: any[]) => calls.push([name, ...args])
 	const holder = select(document.body).append('div')
 	const view: any = new VolcanoPlotView({ holder } as any, interactions, termType)
@@ -99,9 +108,90 @@ tape('click actions of a dot by data type', async test => {
 		[['Genome browser', 'launchSpliceGenomeBrowser', cluster]],
 		'a cluster opens the browser'
 	)
-	for (const termType of [tt.SINGLECELL_CELLTYPE, tt.PROTEOME_DAP]) {
-		test.deepEqual(await getActions(termType, gene, cpg), [], `a ${termType} dot has no action`)
+	test.deepEqual(await getActions(tt.PROTEOME_DAP, gene, cpg), [], 'a proteome dot has no action')
+	test.end()
+})
+
+tape('click actions of a single-cell cell type gene', async test => {
+	const gene = { gene_name: 'CD74', fold_change: 1 }
+	const sample = { sID: 's1', eID: 'e1' }
+	const config = { termType: tt.SINGLECELL_CELLTYPE, sample, termId: 'Cluster', categoryName: 'Cluster 3' }
+	const term = {
+		q: { mode: 'continuous' },
+		term: { type: 'singleCellGeneExpression', gene: 'CD74', name: 'CD74 UMI', sample, unit: 'UMI' }
 	}
+	const queries = { singleCell: { geneExpression: { unit: 'UMI' } } }
+	const plotsOf = (actions: any[]) => actions.map(([label, launcher, plot]) => [label, launcher, plot.childType])
+
+	test.deepEqual(
+		await getActions(tt.SINGLECELL_CELLTYPE, gene, {}, undefined, { config }),
+		[],
+		'a gene has no action without single-cell gene expression'
+	)
+
+	const clusterTerm = { type: 'singleCellCellType', name: 'Cluster', plot: 'UMAP', values: {} }
+	const all = await getActions(tt.SINGLECELL_CELLTYPE, gene, queries, undefined, {
+		config,
+		termType2terms: { 'Single-cell Cell Type': [clusterTerm] }
+	})
+	test.deepEqual(
+		plotsOf(all),
+		[
+			['Violin plot', 'launchPlot', 'violin'],
+			['Box plot', 'launchPlot', 'boxplot']
+		],
+		'a gene opens its violin and box plot'
+	)
+	test.deepEqual(
+		all[0][2],
+		{
+			chartType: 'summary',
+			childType: 'violin',
+			term,
+			term2: { term: { ...clusterTerm, sample } },
+			hidePlotFilter: true
+		},
+		'of its expression in the sample, by each category of a term that lists none'
+	)
+
+	const values = {
+		'Cluster 3': { key: 'Cluster 3', label: 'Cluster 3' },
+		'Cluster 4': { key: 'Cluster 4', label: 'Cluster 4' },
+		'Cluster 5': { key: 'Cluster 5' }
+	}
+	const split = await getActions(tt.SINGLECELL_CELLTYPE, gene, queries, undefined, {
+		config,
+		termType2terms: { 'Single-cell Cell Type': [{ ...clusterTerm, values }] }
+	})
+	test.deepEqual(
+		split[1][2].term2.q,
+		{
+			type: 'custom-groupset',
+			customset: {
+				groups: [
+					{
+						name: 'Not in Cluster Cluster 3',
+						type: 'values',
+						values: [
+							{ key: 'Cluster 4', label: 'Cluster 4' },
+							{ key: 'Cluster 5', label: 'Cluster 5' }
+						]
+					},
+					{ name: 'Cluster Cluster 3', type: 'values', values: [{ key: 'Cluster 3', label: 'Cluster 3' }] }
+				]
+			}
+		},
+		'split into the analyzed category and the rest, named as the volcano names them'
+	)
+
+	const noTerm = await getActions(tt.SINGLECELL_CELLTYPE, gene, queries, undefined, {
+		config: { ...config, sample: { ...sample, isMetaResult: true } }
+	})
+	test.deepEqual(
+		[noTerm[0][2].term2, noTerm[0][2].hidePlotFilter],
+		[undefined, false],
+		'of all the cells without the cell type term, and with the filter for a meta result'
+	)
 	test.end()
 })
 

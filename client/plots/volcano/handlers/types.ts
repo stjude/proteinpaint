@@ -156,6 +156,9 @@ export type ControlContext = {
 export type RowActionContext = {
 	/** VolcanoInteractions, whose launchers the actions call */
 	interactions: any
+	/** the config of the volcano plot */
+	config: any
+	termdbConfig: any
 	/** termdbConfig.queries */
 	queries: any
 	/** set on a DMR scan */
