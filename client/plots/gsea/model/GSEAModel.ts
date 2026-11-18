@@ -95,6 +95,9 @@ export class GSEAModel {
 
 		params.cacheId = response.data.cacheId
 		params.daRequest = response.daRequest
+		// the analysis is read from the cacheId; drop any genes[] and fold_change[] kept from an earlier run
+		delete params.genes
+		delete params.fold_change
 		params.genes_length = response.data.totalRows
 		/* A scan's rows are DMRs, and GSEA ranks genes by gene-body delta-beta instead, so totalRows
 		would put the DMR count in a header that says "genes". The ranked list comes back from the

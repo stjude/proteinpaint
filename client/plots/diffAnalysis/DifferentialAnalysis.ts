@@ -41,11 +41,14 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 			.style('padding', '5px')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
+		// own error div: otherwise PlotBase.printError() would write into the error bar of a child plot, hidden with its tab
+		const errdiv = div.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 		const tabsDiv = div.append('div').attr('id', 'sjpp-diff-analysis-tabs').style('display', 'inline-block')
 		const plots = div.append('div').attr('id', 'sjpp-diff-analysis-tabs-content')
 		this.dom = {
 			controls: controls.style('display', 'inline-block'),
 			div,
+			errdiv,
 			tabsDiv,
 			plots: plots,
 			tip: new Menu({ padding: '' })
@@ -104,7 +107,10 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 			id: this.id,
 			parent: this.api,
 			controls: this.plotsControlsDiv[config.childType],
-			termType: config.termType
+			termType: config.termType,
+			/* the volcano hides the tabs when its analysis fails: the other tabs (GSEA) are run off
+			that analysis, and there is nothing to switch to */
+			showTabs: (show: boolean) => this.dom.tabsDiv.style('display', show ? 'inline-block' : 'none')
 		}
 		const _ = await importPlot(config.childType, `unsupported childType='${config.childType}'`)
 		this.components.plots[config.childType] = await _.componentInit(opts)
