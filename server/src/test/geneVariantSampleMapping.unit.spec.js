@@ -75,6 +75,11 @@ function makeTw(sampleTypes = [2]) {
 	}
 }
 
+async function getSampleValues(ds, tw, q) {
+	const term2sample2value = await ds.mayGetGeneVariantData(tw, q)
+	return term2sample2value.get(tw.$id)
+}
+
 function filter(key = 'keep', sampleType = 2) {
 	return {
 		type: 'tvslst',
@@ -164,30 +169,37 @@ for (const source of ['byrange', 'byisoform', 'fusion', 'sv', 'cnv', 'geneCnv', 
 				const before = structuredClone(record)
 				const tw = makeTw([down ? 1 : 2])
 				const q = { sampleMapping: down ? 'parentToChildren' : 'childrenToParent', sampleTypes: [down ? 2 : 1] }
-				const data = await ds.mayGetGeneVariantData(tw, q)
-				t.deepEqual([...data.keys()], down ? [20, 21, 22] : [10, 11], 'only related target sample types returned')
-				t.equal(data.get(down ? 20 : 10).sample, down ? 20 : 10, 'outer sample is the target ID')
-				t.equal(
-					data.get(down ? 20 : 10).variant.values[0].TumorAC,
-					`${sourceIds[0]},5`,
-					'source format fields are intact'
-				)
-				if (!down) t.equal(data.get(10).variant.values.length, 1, 'multiple children retain one complete annotation')
-				const aligned = await ds.mayGetGeneVariantData(tw, {})
+				const term2sample2value = await ds.mayGetGeneVariantData(tw, q)
+				t.deepEqual([...term2sample2value.keys()], [tw.$id], 'annotations are keyed by term wrapper ID')
+				const data = term2sample2value.get(tw.$id)
 				t.deepEqual(
-					[...aligned.keys()],
-					sourceIds.filter(id => id !== 30),
+					Object.keys(data),
+					down ? ['20', '21', '22'] : ['10', '11'],
+					'only related target sample types returned'
+				)
+				const annotation = data[down ? 20 : 10]
+				t.deepEqual(Object.keys(annotation), ['key', 'values'], 'annotation has no sample or term wrapper')
+				t.equal(annotation.values[0].TumorAC, `${sourceIds[0]},5`, 'source format fields are intact')
+				if (!down) t.equal(data[10].values.length, 1, 'multiple children retain one complete annotation')
+				const aligned = await getSampleValues(ds, tw, {})
+				t.deepEqual(
+					Object.keys(aligned),
+					sourceIds.filter(id => id !== 30).map(String),
 					'source types restrict unmapped data'
 				)
-				const filtered = await ds.mayGetGeneVariantData(tw, { ...q, filter: filter() })
-				t.deepEqual([...filtered.keys()], [down ? 20 : 10], 'target filter does not discard source data prematurely')
+				const filtered = await getSampleValues(ds, tw, { ...q, filter: filter() })
+				t.deepEqual(
+					Object.keys(filtered),
+					[down ? '20' : '10'],
+					'target filter does not discard source data prematurely'
+				)
 				t.deepEqual(calls.at(-1).filterObj, filter(), 'target filter is passed into variant getter')
 				t.equal(calls.at(-1).sampleMapping, q.sampleMapping, 'variant getter receives mapping direction')
 				t.equal(calls.at(-1).skipSampleFiltering, true, 'variant getter is told to defer sample filtering')
-				const excluded = await ds.mayGetGeneVariantData(tw, { ...q, filter: filter('absent') })
-				t.equal(excluded.size, 0, 'excluding all targets returns an empty Map')
-				const empty = await ds.mayGetGeneVariantData(tw, { ...q, filter: { type: 'tvslst', lst: [] } })
-				t.deepEqual([...empty.keys()], [...data.keys()], 'empty filter preserves all mapped samples')
+				const excluded = await getSampleValues(ds, tw, { ...q, filter: filter('absent') })
+				t.deepEqual(Object.keys(excluded), [], 'excluding all targets returns an empty sample object')
+				const empty = await getSampleValues(ds, tw, { ...q, filter: { type: 'tvslst', lst: [] } })
+				t.deepEqual(Object.keys(empty), Object.keys(data), 'empty filter preserves all mapped samples')
 				t.deepEqual(record, before, 'source records are not mutated')
 				t.notOk(Object.hasOwn(q, 'filter'), 'original query is not mutated')
 			}
@@ -247,34 +259,34 @@ tape('geneVariant mapping: assay availability is selected and mapped with mutati
 		const snapshot = structuredClone(ds.assayAvailability)
 		const tw = makeTw()
 		const q = { sampleMapping: 'childrenToParent', sampleTypes: [1] }
-		const data = await ds.mayGetGeneVariantData(tw, q)
-		t.deepEqual([...data.keys()], [10, 11], 'availability contributes only selected source types')
-		t.equal(data.get(10).variant.values[0].class, 'M', 'first child mutation retained over other child status')
-		t.equal(data.get(11).variant.values[0].class, 'Blank', 'not-tested child maps to parent')
-		t.equal(data.get(11).variant.values[0].origin, 'somatic', 'origin is preserved')
-		t.equal(data.get(11).variant.values[0]._SAMPLEID_, 22, 'status source provenance is preserved')
-		const disabled = await ds.mayGetGeneVariantData(tw, { ...q, disableAssayAvailability: true })
-		t.deepEqual([...disabled.keys()], [10], 'availability disable flag is preserved')
+		const data = await getSampleValues(ds, tw, q)
+		t.deepEqual(Object.keys(data), ['10', '11'], 'availability contributes only selected source types')
+		t.equal(data[10].values[0].class, 'M', 'first child mutation retained over other child status')
+		t.equal(data[11].values[0].class, 'Blank', 'not-tested child maps to parent')
+		t.equal(data[11].values[0].origin, 'somatic', 'origin is preserved')
+		t.equal(data[11].values[0]._SAMPLEID_, 22, 'status source provenance is preserved')
+		const disabled = await getSampleValues(ds, tw, { ...q, disableAssayAvailability: true })
+		t.deepEqual(Object.keys(disabled), ['10'], 'availability disable flag is preserved')
 		installGetter(ds, 'byisoform', [])
-		const wt = await ds.mayGetGeneVariantData(tw, { ...q, filter: filter() })
-		t.deepEqual([...wt.keys()], [10], 'empty mutation data still maps and filters availability')
-		t.equal(wt.get(10).variant.values[0].class, 'WT', 'assayed source without mutations remains WT')
+		const wt = await getSampleValues(ds, tw, { ...q, filter: filter() })
+		t.deepEqual(Object.keys(wt), ['10'], 'empty mutation data still maps and filters availability')
+		t.equal(wt[10].values[0].class, 'WT', 'assayed source without mutations remains WT')
 		t.deepEqual(ds.assayAvailability, snapshot, 'cached availability sets are unchanged')
-		const empty = await ds.mayGetGeneVariantData(tw, { ...q, disableAssayAvailability: true })
-		t.equal(empty.size, 0, 'empty data without availability remains empty')
+		const empty = await getSampleValues(ds, tw, { ...q, disableAssayAvailability: true })
+		t.deepEqual(Object.keys(empty), [], 'empty data without availability remains empty')
 		ds.assayAvailability.byDt[1] = {
 			bySampleType: {
 				1: { yesSamples: new Set([10]), noSamples: new Set([11]) },
 				3: { yesSamples: new Set([30]), noSamples: new Set() }
 			}
 		}
-		const children = await ds.mayGetGeneVariantData(makeTw([1]), {
+		const children = await getSampleValues(ds, makeTw([1]), {
 			sampleMapping: 'parentToChildren',
 			sampleTypes: [2],
 			filter: filter()
 		})
-		t.deepEqual([...children.keys()], [20], 'availability without origins maps downward before target filtering')
-		t.equal(children.get(20).variant.values[0].class, 'WT', 'parent status is copied to selected child')
+		t.deepEqual(Object.keys(children), ['20'], 'availability without origins maps downward before target filtering')
+		t.equal(children[20].values[0].class, 'WT', 'parent status is copied to selected child')
 	} finally {
 		connection.close()
 	}
@@ -316,10 +328,10 @@ tape('geneVariant mapping: groups are evaluated on source samples before mapping
 			{ type: 'predefined-groupset', predefined_groupset_idx: 0 }
 		]) {
 			tw.q = mode
-			const data = await ds.mayGetGeneVariantData(tw, q)
-			t.equal(data.get(10).variant.key, 'Chosen', `${mode.type}: target receives selected group`)
+			const data = await getSampleValues(ds, tw, q)
+			t.equal(data[10].key, 'Chosen', `${mode.type}: target receives selected group`)
 			t.deepEqual(
-				data.get(10).variant.values.map(v => v.gene),
+				data[10].values.map(v => v.gene),
 				['G', 'H'],
 				'first child has complete geneset, not combined children'
 			)
@@ -328,16 +340,16 @@ tape('geneVariant mapping: groups are evaluated on source samples before mapping
 			{ ...record, class: 'N', samples: [record.samples[0]] },
 			{ ...record, samples: [record.samples[1]] }
 		])
-		const grouped = await ds.mayGetGeneVariantData(tw, q)
-		t.deepEqual([...grouped.keys()], [10], 'matching second child is available when the first child has no group')
-		t.equal(grouped.get(10).sample, 10, 'mapped grouped annotation stores the target sample ID')
-		t.equal(grouped.get(10).variant.key, 'Chosen', 'group assignment survives mapping')
+		const grouped = await getSampleValues(ds, tw, q)
+		t.deepEqual(Object.keys(grouped), ['10'], 'matching second child is available when the first child has no group')
+		t.deepEqual(Object.keys(grouped[10]), ['key', 'value', 'values'], 'grouped annotation has no row wrapper')
+		t.equal(grouped[10].value, 'Chosen', 'group assignment survives mapping')
 		t.ok(
-			grouped.get(10).variant.values.every(v => v.TumorAC === '21,5'),
+			grouped[10].values.every(v => v.TumorAC === '21,5'),
 			'mapped values belong to the matching source'
 		)
-		const filtered = await ds.mayGetGeneVariantData(tw, { ...q, filter: filter() })
-		t.deepEqual([...filtered.keys()], [10], 'target filtering follows source group assignment and mapping')
+		const filtered = await getSampleValues(ds, tw, { ...q, filter: filter() })
+		t.deepEqual(Object.keys(filtered), ['10'], 'target filtering follows source group assignment and mapping')
 	} finally {
 		connection.close()
 	}
@@ -353,10 +365,10 @@ tape('geneVariant mapping: outer pipeline selects one complete source annotation
 		installGetter(ds, 'cnv', [21])
 		const tw = makeTw()
 		tw.term.genes.push({ ...tw.term.genes[0], id: 'H', gene: 'H', name: 'H', isoform: 'J' })
-		const data = await ds.mayGetGeneVariantData(tw, { sampleMapping: 'childrenToParent', sampleTypes: [1] })
-		t.deepEqual([...data.keys()], [10], 'source data maps to one parent')
+		const data = await getSampleValues(ds, tw, { sampleMapping: 'childrenToParent', sampleTypes: [1] })
+		t.deepEqual(Object.keys(data), ['10'], 'source data maps to one parent')
 		t.deepEqual(
-			data.get(10).variant.values.map(v => [v.gene, v.dt, v.TumorAC]),
+			data[10].values.map(v => [v.gene, v.dt, v.TumorAC]),
 			[['G', 1, '20,5']],
 			'selected child annotation is not combined with another child across genes or data types'
 		)
@@ -420,25 +432,25 @@ tape('geneVariant mapping: remote string IDs and hidden filters keep existing be
 	}
 	mayAdd_mayGetGeneVariantData(ds, {})
 	const tw = makeTw()
-	const data = await ds.mayGetGeneVariantData(tw, { filter0: { cohort: 'hidden' } })
-	t.deepEqual([...data.keys()], ['case-a'], 'remote string IDs remain strings and respect hidden scope')
-	t.equal(data.get('case-a').sample, 'case-a', 'remote outer ID is unchanged')
+	const data = await getSampleValues(ds, tw, { filter0: { cohort: 'hidden' } })
+	t.deepEqual(Object.keys(data), ['case-a'], 'remote string IDs respect hidden scope')
+	t.equal(data['case-a'].values[0].TumorAC, 'case-a,5', 'the retained case keeps its annotation')
 	t.deepEqual(calls[0].filter0, { cohort: 'hidden' }, 'remote hidden filter is passed through')
 	t.end()
 })
 
-tape('geneVariant mapping: object collection preserves unmapped sample ID types', async t => {
+tape('geneVariant mapping: sample object preserves unmapped sample ID spellings', async t => {
 	const ids = [7, '008', '__proto__']
 	const ds = {
 		cohort: { termdb: {} },
 		queries: { snvindel: { byisoform: { get: async () => [mutation(1, ids)] } } }
 	}
 	mayAdd_mayGetGeneVariantData(ds, {})
-	const data = await ds.mayGetGeneVariantData(makeTw(), {})
-	t.deepEqual([...data.keys()], ids, 'numeric, numeric-looking and prototype-named IDs retain their types')
+	const data = await getSampleValues(ds, makeTw(), {})
+	t.equal(Object.getPrototypeOf(data), null, 'the term maps to a null-prototype sample object')
+	t.deepEqual(Object.keys(data), ids.map(String), 'numeric-looking and prototype-named IDs are preserved as keys')
 	for (const id of ids) {
-		t.equal(data.get(id).sample, id, 'outer sample ID matches its Map key')
-		t.equal(data.get(id).variant.values[0].TumorAC, `${id},5`, 'object collection preserves sample values')
+		t.equal(data[id].values[0].TumorAC, `${id},5`, 'object collection preserves sample values')
 	}
 	t.end()
 })
@@ -453,6 +465,7 @@ tape('geneVariant mapping: matrix inference and batch getter constraints', async
 		let data = await getData({ terms: [dict, variant] }, ds)
 		t.notOk(data.error, 'mixed sibling types infer upward mapping')
 		t.deepEqual(Object.keys(data.samples), ['10', '11'], 'dictionary and variants share target rows')
+		t.equal(data.samples[10].sample, 10, 'matrix row stores the target sample ID')
 		t.equal(data.samples[10].variant.values[0].TumorAC, '30,5', 'selected sister-type source mapped')
 		t.equal(data.refs.bySampleId[10].label, 'sample-10', 'references describe target IDs')
 

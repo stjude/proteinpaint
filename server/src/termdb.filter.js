@@ -214,15 +214,9 @@ function get_samplelst(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 // performed by get_dtTerm()
 async function get_geneVariant(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	const tw = { $id, term: tvs.term, q: {} }
-	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename, sampleMapping, sampleTypes })
-	/*
-	data here is map of sampleId-mutationData pairs, e.g.
-	63 => { sample: 63, TP53: { key: 'TP53', values: [Array], label: 'TP53' } },
-	56 => {}, ...
-	*/
+	const term2sample2value = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename, sampleMapping, sampleTypes })
 	const samplenames = []
-	for (const [key, value] of data) {
-		const sampleValues = value[$id].values
+	for (const [key, { values: sampleValues }] of Object.entries(term2sample2value.get($id))) {
 		/*
 		sampleVlaues here is an array of results for each available dt for the sampleID. e.g.
 		[
@@ -557,7 +551,7 @@ async function get_dtTerm(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	// mayGetGeneVariantData(); ask for the allele counts it will read (a getter that must fetch them
 	// separately, like gdc's, only does so on request)
 	const addReadDepth = tvsUsesMafFilter(tvs)
-	const data = await ds.mayGetGeneVariantData(tw, {
+	const term2sample2value = await ds.mayGetGeneVariantData(tw, {
 		genome: ds.genomename,
 		sampleMapping,
 		sampleTypes,
@@ -565,8 +559,9 @@ async function get_dtTerm(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 	})
 
 	const samples = []
-	for (const [sample, value] of data) {
-		const mlst = value[$id]?.values
+	const sample2value = term2sample2value.get($id)
+	for (const [sample, value] of Object.entries(sample2value)) {
+		const mlst = value.values
 		if (!mlst) throw 'mlst is missing'
 		const filter = { type: 'tvs', tvs }
 		const [pass, tested] = filterByItem(filter, mlst)

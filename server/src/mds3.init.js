@@ -3199,18 +3199,9 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 			returned values (get_dtTerm() in termdb.filter.js), so that the allele counts mayFilterByMaf()
 			reads are fetched. a maf filter inside tw's own groupset is detected here and needs no flag
 
-	output a map:
-		k: sample id
-		v: {}
-			sample: int
-			<gene> : {}
-				key:<gene>
-				label:<gene>
-				values: [ {} ]
-					gene
-					isoform
-					chr/pos
-					mname/class
+	output: Map keyed by tw.$id, containing an object keyed by sample ID with
+		{ key, values } or { key, value, values } for a groupset.
+		Each entry in values describes a variant or assay status.
 
 	this function is diverging from mds3.load, each becoming specialized
 	1. it returns sample level data points {class/mname/sample/origin}
@@ -3234,7 +3225,6 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// to perform essential query
 
 		const sample2mlst = new Map() // collect genomic query results indexed by sample; key: sample id, value: array
-		const data = new Map() // to return
 
 		// collect dts to query
 		const dts = getDtsToQuery(tw, ds)
@@ -3430,28 +3420,23 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 				// store sample data
 				// key will be the name of the assigned group
-				sample2value[sample] = {
-					sample,
-					[tw.$id]: { key: group.name, value: group.name, values }
-				}
+				sample2value[sample] = { key: group.name, value: group.name, values }
 			} else {
 				// groupsetting is not active
-				sample2value[sample] = {
-					sample,
-					[tw.$id]: { key: tw.term.name, values: mlst }
-				}
+				sample2value[sample] = { key: tw.term.name, values: mlst }
 			}
 		}
 
 		const mappedValues = await mayMapNonDictionaryData(tw, { ...q, ds }, sample2value)
 		const limitSamples = await mayLimitSamples(q, null, ds)
+		const filteredValues = Object.create(null)
 		for (const [sid, value] of Object.entries(mappedValues)) {
-			const sampleId = Number(sid)
-			if (limitSamples && !limitSamples.has(sampleId)) continue
-			data.set(sampleId, value)
+			if (limitSamples && !limitSamples.has(Number(sid))) continue
+			filteredValues[sid] = value
 		}
 
-		return data
+		const term2sample2value = new Map([[tw.$id, filteredValues]])
+		return term2sample2value
 	}
 }
 

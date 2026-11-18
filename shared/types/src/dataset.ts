@@ -3083,7 +3083,11 @@ export type Mds3 = BaseMds & {
 	noGenomicMode4lollipopTk?: true
 	/** if ds.queries{} exists, server launch adds this convenient getter to wrap multiple queries data types
 	 */
-	mayGetGeneVariantData?: (f: any) => void
+	/** Returns a Map from term wrapper $id to an object keyed by sample ID. */
+	mayGetGeneVariantData?: (
+		tw: { $id: string; term: BaseTerm; q: object },
+		q: object
+	) => Promise<Map<string, Record<string, { key: string; value?: string; label?: string; values: unknown[] }>>>
 	/** optional key-value pairs to pass to genomic queries getter when called in mayGetGeneVariantData() 
 	- only used in mayGetGeneVariantData! not in mds3.load.js
 	- for now only passed to snvindel.*.get and not yet other data types; add when needed
