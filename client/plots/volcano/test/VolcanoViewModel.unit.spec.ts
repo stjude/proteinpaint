@@ -11,6 +11,7 @@ import { VolcanoViewModel } from '../viewModel/VolcanoViewModel'
     - setStatsData
 	- setUserActions
 	- pValueLabel per term type (scan, corrected scan, proteome DAP)
+	- labels and hidden actions by data type
 */
 
 const mockSettings = {
@@ -423,7 +424,7 @@ tape('setUserActions', function (test) {
 
 	viewModel.settings.method = 'wilcoxon'
 	result = viewModel.setUserActions()
-	expected = { noShow: new Set(['Confounding factors']) }
+	expected = { noShow: new Set(['confounders']) }
 	test.deepEqual(result, expected, `Should properly set user actions when method is ${viewModel.settings.method}`)
 
 	test.end()
@@ -507,7 +508,7 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	test.ok(vm.viewData.singlePValue, 'a scan has one p per row')
 	test.equal(vm.viewData.pValueLabel, 'FDR vs matched background', 'and names it after the correction')
 	test.equal(vm.viewData.scan, scan, 'the scan summary is passed through for the view')
-	test.ok(vm.viewData.userActions.noShow.has('Confounding factors'), 'the scan offers no confounders')
+	test.ok(vm.viewData.userActions.noShow.has('confounders'), 'the scan offers no confounders')
 
 	const labels = vm.viewData.statsData.map(d => d.label)
 	test.ok(labels.includes('DMRs with 5+ CpGs'), 'stats state the CpG floor and the count meeting it')
@@ -577,5 +578,72 @@ tape('a proteome DAP volcano calls its single p an FDR', function (test) {
 		['Identifier', 'Gene', 'log₂(fold-change)', 'FDR'],
 		'so the p column is titled FDR, not Adjusted p-value'
 	)
+	test.end()
+})
+
+tape('labels and hidden actions by data type', function (test) {
+	test.timeoutAfter(1000)
+	const cases: [string, any, string, string, boolean][] = [
+		// termType, settings overrides, row noun, p-value label, single p
+		['geneExpression', {}, 'genes', 'adjusted p-value', false],
+		['dnaMethylation', { elementType: 'promoter_pls' }, 'cCRE promoters', 'adjusted p-value', false],
+		['junction', {}, 'clusters', 'adjusted p-value', false],
+		['singleCellCellType', {}, 'genes', 'adjusted p-value', false],
+		['proteomeDAP', {}, 'proteins', 'FDR', true]
+	]
+	// a splicing row is a cluster, keyed by its cluster_id
+	const spliceResponse = {
+		...mockResponse,
+		data: { ...mockResponse.data, dots: mockResponse.data.dots.map((d: any) => ({ ...d, cluster_id: 'clu_1' })) }
+	}
+	for (const [termType, overrides, noun, pLabel, singleP] of cases) {
+		const response = termType == 'junction' ? spliceResponse : mockResponse
+		const vm = new VolcanoViewModel({ ...mockConfig, termType } as any, response, {
+			...mockSettings,
+			...overrides
+		} as any)
+		test.equal(vm.dataType, noun, `${termType} rows should be ${noun}`)
+		test.equal(vm.viewData.pValueLabel, pLabel, `${termType} p-values should be labeled "${pLabel}"`)
+		test.equal(vm.singlePValue, singleP, `${termType} should ${singleP ? '' : 'not '}report a single p`)
+		test.deepEqual(
+			vm.viewData.statsData.slice(0, 3).map(d => d.label),
+			[`Percentage of significant ${noun}`, `Number of significant ${noun}`, `Number of total ${noun}`],
+			`${termType} stats rows should count ${noun}`
+		)
+	}
+
+	const noShow = (termType: string, settings: any, config: any = {}, response: any = mockResponse) => [
+		...new VolcanoViewModel({ ...mockConfig, termType, ...config } as any, response, {
+			...mockSettings,
+			...settings
+		} as any).viewData.userActions.noShow
+	]
+	test.deepEqual(noShow('geneExpression', { method: 'edgeR' }), [], 'edgeR on few samples may adjust for confounders')
+	test.deepEqual(noShow('geneExpression', { method: 'limma' }), [], 'limma may adjust for confounders')
+	test.deepEqual(
+		noShow('geneExpression', { method: 'wilcoxon' }),
+		['confounders'],
+		'wilcoxon adjusts for no confounder'
+	)
+	const many = Array.from({ length: 101 }, (_, i) => ({ sampleId: i, sample: `s${i}` }))
+	const bigGroups = [
+		{ ...testData.groups[0], values: many },
+		{ ...testData.groups[1], values: [] }
+	]
+	test.deepEqual(
+		noShow('geneExpression', { method: 'edgeR' }, { samplelst: { groups: bigGroups } }),
+		['confounders'],
+		'edgeR on over 100 samples does not offer confounders'
+	)
+	test.deepEqual(
+		noShow('dnaMethylation', { method: 'wilcoxon' }, { samplelst: { groups: bigGroups } }),
+		[],
+		'the expression method rules do not apply to methylation'
+	)
+	const dm = new VolcanoViewModel({ ...mockConfig, termType: 'dnaMethylation' } as any, mockResponse, {
+		...mockSettings
+	} as any)
+	dm.scan = { yAxis: 'min_smoothed_fdr' } as any
+	test.deepEqual([...dm.setUserActions().noShow], ['confounders'], 'a DMR scan fits no covariates')
 	test.end()
 })

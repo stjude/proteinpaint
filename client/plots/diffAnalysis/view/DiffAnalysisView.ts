@@ -1,7 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { Tabs, type RenderedTab } from '#dom'
 import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
-import { PROTEOME_DAP, JUNCTION } from '#types'
+import { findVolcanoHandler } from '../../volcano/handlers'
 
 export class DiffAnalysisView {
 	app: MassAppApi
@@ -46,7 +46,10 @@ function setRenderers(self) {
 				active: self.config.childType === 'gsea',
 				id: 'gsea',
 				label: 'Gene Set Enrichment Analysis',
-				isVisible: () => self.config.termType !== PROTEOME_DAP && self.config.termType !== JUNCTION,
+				/* GSEA ranks the analysis' rows as genes, so a data type whose rows are not genes, such as
+				splicing clusters, offers none. One with no volcano handler has no analysis to rank,
+				and is left to fail in the volcano, as it did before handlers. */
+				isVisible: () => findVolcanoHandler(self.config.termType)?.gsea ?? true,
 				// isVisible: () => self.config.termType === TermTypes.GENE_EXPRESSION,
 				getPlotConfig: () => {
 					return {

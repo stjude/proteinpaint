@@ -10,10 +10,16 @@ import type { DEFullResponse, DmrScanSummary } from '#types'
 import { bplen } from '#shared/common.js'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getSampleNum, SCAN_Y_AXIS_OPTIONS, onDeltaBetaAxis } from '../settings/defaults'
-import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { getGroupColors } from '../colors'
-import { DATermTypes as tt, enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
+import { enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
+import {
+	getPlottedEffect,
+	getVolcanoHandler,
+	SCAN_Y_AXIS_OPTIONS,
+	type VolcanoAction,
+	type VolcanoColumn,
+	type VolcanoHandler
+} from '../handlers'
 
 /* Group names are user-supplied and can be arbitrarily long, so they are shortened before going
 into any label. Shared by the two group labels above the plot and by the delta-beta axis label,
@@ -28,6 +34,10 @@ const DEPTH_RATIO_WARN = 1.5
 
 export class VolcanoViewModel {
 	config: any
+	/** the code that differs by config.termType */
+	handler: VolcanoHandler
+	/** the columns of the p-value table, each with its cell */
+	tableColumns: VolcanoColumn[]
 	dataType: string
 	response: DEFullResponse
 	pValueTable: VolcanoPValueTableData
@@ -86,36 +96,30 @@ export class VolcanoViewModel {
 		with the assignment further down every DAP label read "adjusted p-value" for data that is an
 		FDR. */
 		this.termType = config.termType
+		this.handler = getVolcanoHandler(config.termType)
 		this.scan = (response as any).scan
-		this.singlePValue = config.termType == tt.PROTEOME_DAP || !!this.scan
+		this.singlePValue = !!this.handler.fdrOnly || !!this.scan
 		this.pValueLabel = this.setPValueLabel(settings)
 
+		this.settings = settings
+		const { columns, effectIndex } = this.getTableColumns()
+		this.tableColumns = columns
 		this.pValueTable = {
-			columns: [
-				// a scan's effect size is delta-beta; the fold change is a difference of logits
-				{ label: this.scan ? 'Δβ' : 'log₂(fold-change)', barplot, sortable: true },
-				// DAP files carry a single FDR (adjusted p-value) and a scan a single p; other term
-				// types report both a raw and an adjusted p-value.
-				...(this.singlePValue
-					? [{ label: this.pValueLabel, sortable: true }]
-					: [
-							{ label: 'Original p-value', sortable: true },
-							{ label: 'Adjusted p-value', sortable: true }
-					  ])
-			],
+			// the effect-size column is drawn as a bar
+			columns: columns.map((c, i) =>
+				i == effectIndex ? { label: c.label, barplot, sortable: true } : { label: c.label, sortable: true }
+			),
 			/** Filled in setPointData(), one row per threshold-passing dot. Populated even when the
 			 * table is hidden — the download reads it. */
 			rows: [],
 			rowKeys: new Map(),
 			height: settings.height + this.topPad
 		}
-		this.settings = settings
 		this.dataType = this.setDataType()
 
 		this.setMinMaxValues()
 
 		const plotDim = this.setPlotDimensions()
-		this.setPTableColumns()
 		const pointData = this.setPointData(plotDim, controlColor, caseColor)
 
 		// sort by effect size, for the rendered table and the downloaded one alike; it is the one
@@ -177,7 +181,7 @@ export class VolcanoViewModel {
 	/** What the y axis and the p column are called. Named here once so the axis, the table header,
 	 * the hover rows and the multi-hit table cannot disagree. */
 	setPValueLabel(settings: ValidatedVolcanoSettings): string {
-		if (this.termType == tt.PROTEOME_DAP) return 'FDR'
+		if (this.handler.fdrOnly) return 'FDR'
 		if (this.scan)
 			return this.scan.backgroundCorrection
 				? 'FDR vs matched background'
@@ -186,19 +190,9 @@ export class VolcanoViewModel {
 		return `${settings.pValueType} p-value`
 	}
 
+	/** what a dot is, plural: names the stats rows */
 	setDataType() {
-		if (this.termType == tt.GENE_EXPRESSION) return 'genes'
-		/* Methylation rows are only promoters when the promoter class was tested. With an
-		element class selected they are eQTM blocks or cCREs, and calling them promoters
-		misreports what was analysed in the stats panel, the row count, and the p-value
-		table header. Taken from the selected class rather than the server response so no
-		extra field has to be plumbed through. */
-		if (this.termType == tt.DNA_METHYLATION) return elementNoun(this.settings?.elementType).many
-		if (this.termType == tt.JUNCTION) return 'clusters'
-		if (this.termType == tt.SINGLECELL_CELLTYPE) return 'genes'
-		if (this.termType == tt.PROTEOME_DAP) return 'proteins'
-		if (this.termType == tt.SINGLECELL_GENE_EXPRESSION) return 'cells'
-		throw new Error(`Unknown termType: ${this.termType}`)
+		return this.handler.getRowNoun(this.settings)
 	}
 
 	setMinMaxValues() {
@@ -299,54 +293,23 @@ export class VolcanoViewModel {
 	) {
 		if (!enabledTermTypes.has(this.termType as any)) return
 
-		if (this.termType == tt.PROTEOME_DAP) {
-			// FIXME this shouldn't be needed. there should be a way for caller to supply names for each group, and avoid this special logic and SINGLECELL_CELLTYPE
-			return {
-				y: plotDim.top.y + 10,
-				first: {
-					label: shortenGroupName(`Control (${this.response.sample_size1})`),
-					x: 0
-				},
-				second: {
-					label: shortenGroupName(`Case (${this.response.sample_size2})`),
-					x: this.settings.width
-				}
-			}
-		}
-
-		if (this.termType == tt.SINGLECELL_CELLTYPE) {
-			/* quick fix - this only works for gdc's precomputed DE genes (selected cluster vs rest of cells)
-			this won't work for dynamic DE (user-selected cluster A vs cluster B)
-			thus not okay to hardcode `Not in` here
-			!! FIXME !!
-			sc should come up with actual names, and cell counts, for precompute/dynamic groups
-			*/
-			const groupLabel = `${this.config.termId} ${this.config.categoryName}`
-			return {
-				y: plotDim.top.y + 10,
-				first: {
-					label: shortenGroupName(`Not in ${groupLabel}`),
-					x: 0
-				},
-				second: {
-					label: shortenGroupName(groupLabel),
-					x: this.settings.width
-				}
-			}
-		}
-
+		// the data type may label its groups otherwise, such as a precomputed analysis with no groups of its own
+		const [first, second] = this.handler.getGroupLabels?.(this.config, this.response) || [
+			`${this.config.samplelst.groups[0].name} (${this.response.sample_size1})`,
+			`${this.config.samplelst.groups[1].name} (${this.response.sample_size2})`
+		]
 		return {
 			//Set slightly above the plot
 			y: plotDim.top.y + 10,
 			first: {
 				// color: controlColor || this.settings.defaultSignColor,
-				label: shortenGroupName(`${this.config.samplelst.groups[0].name} (${this.response.sample_size1})`),
+				label: shortenGroupName(first),
 				x: 0
 				// rectX: this.settings.width/2 - 10,
 			},
 			second: {
 				// color: caseColor || this.settings.defaultSignColor,
-				label: shortenGroupName(`${this.config.samplelst.groups[1].name} (${this.response.sample_size2})`),
+				label: shortenGroupName(second),
 				x: this.settings.width
 				// rectX: this.settings.width/2 + 10,
 			}
@@ -364,83 +327,24 @@ export class VolcanoViewModel {
 		this.pValueTable.rowKeys.clear()
 		const dataCopy: any = structuredClone(this.dataRows)
 		for (const d of dataCopy) {
-			const highlightKey =
-				this.termType === tt.DNA_METHYLATION
-					? d.promoter_id
-					: this.termType === tt.JUNCTION
-					? (d as any).cluster_id
-					: d.gene_name
+			const highlightKey = this.handler.getRowKey(d)
 			d.highlighted = this.config?.highlightedData?.includes(highlightKey)
 			// Every row in response.data passed the server's thresholds by definition.
 			d.significant = true
 			this.getGenesColor(d, d.significant, controlColor, caseColor)
 			if (d.significant) {
 				this.numSignificant++
-				// DAP and the scan carry a single p (in original_p_value); keep the row cells in
-				// lock-step with the column set built in the constructor.
-				const row = this.singlePValue
-					? [
-							{ value: roundValueAuto(this.scan ? d.delta_beta : d.fold_change) },
-							{ value: roundValueAuto(d.original_p_value) }
-					  ]
-					: [
-							{ value: roundValueAuto(d.fold_change) },
-							{ value: roundValueAuto(d.original_p_value) },
-							{ value: d.adjusted_p_value != undefined ? roundValueAuto(d.adjusted_p_value) : '' }
-					  ]
-				if (this.termType == tt.DNA_METHYLATION) {
-					/* Two splices, in this order, mirroring setPTableColumns exactly: the beta cells
-					go in after fold-change (index 1) while it is still at index 0, then the
-					Promoter/Gene prefix shifts everything right. Swapping the order puts Δβ under the
-					wrong header. */
-					if (this.scan) {
-						row.splice(
-							1,
-							0,
-							// fold_change carries the peak per-CpG delta-beta on a scan row
-							{ value: roundValueAuto(d.fold_change) },
-							{ value: d.no_cpgs },
-							{ value: d.stop - d.start },
-							...(this.scan.backgroundCorrection ? [{ value: d.excess == null ? '' : roundValueAuto(d.excess) }] : [])
-						)
-					} else {
-						row.splice(
-							1,
-							0,
-							{ value: roundValueAuto((d as any).delta_beta) },
-							{ value: roundValueAuto((d as any).mean_beta_control) },
-							{ value: roundValueAuto((d as any).mean_beta_case) }
-						)
-					}
-					row.splice(0, 0, { value: formatPromoterLabel(d as any) }, { value: d.gene_name || '' })
-				} else if (this.termType == tt.JUNCTION) {
-					/* Same two-splice order as setPTableColumns: the effect-size cell is overwritten
-					in place (index 0 is the fold-change slot, which a splicing row does not use),
-					then the PSI cells go in after it, then the Cluster/Gene prefix shifts
-					everything right. */
-					row[0] = { value: roundValueAuto((d as any).delta_psi) }
-					row.splice(
-						1,
-						0,
-						{ value: roundValueAuto((d as any).psi_control) },
-						{ value: roundValueAuto((d as any).psi_case) },
-						{ value: (d as any).n_junc }
-					)
-					row.splice(0, 0, { value: (d as any).cluster_id }, { value: (d as any).genes || '' })
-				} else if (this.termType == tt.PROTEOME_DAP) {
-					row.splice(0, 0, { value: d.gene_name || '' }, { value: d.gene || '' })
-				} else {
-					row.splice(0, 0, { value: d.gene_name || '' })
-				}
+				// header and cell come from one column, so a cell cannot land under another column's header
+				const row = this.tableColumns.map(c => ({ value: c.value(d) }))
 				/* Always collected, whether or not the table is displayed: "Download p-value table"
 				reads these rows, and gating them on showPValueTable made that download emit a
 				header with no rows. `row` above is built either way, so this only adds the push. */
 				this.pValueTable.rows.push(row)
 				/* Record the dot identity for this row. The methylation Promoter cell shows a
-				formatted label (formatPromoterLabel), so row[0].value can no longer be used to
-				find the dot -- hover/click highlighting must go through this map instead. Reuses
-				the same highlightKey compared against config.highlightedData above, so the three
-				stay in lock-step by construction. */
+				formatted label (formatPromoterLabel), so row[0].value cannot be used to find the dot --
+				hover/click highlighting must go through this map instead. Reuses the same highlightKey
+				compared against config.highlightedData above, so the three stay in lock-step by
+				construction. */
 				this.pValueTable.rowKeys.set(row, highlightKey)
 			} else {
 				this.numNonSignificant++
@@ -466,19 +370,14 @@ export class VolcanoViewModel {
 	}
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
-		// splicing rows carry `genes` (a cluster may span several, or none), never gene_name
-		if (!d.gene_name && this.termType != tt.DNA_METHYLATION && this.termType != tt.JUNCTION)
-			throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
+		// the key of a row: gene_name, or the element of a methylation row, or the cluster of a splicing row
+		if (!this.handler.getRowKey(d)) throw new Error(`Missing the row key in data: ${JSON.stringify(d)}`)
 		if (significant) {
 			/* The value the server classified and drew: delta-beta on the Δβ axis, less the median when
 			centred. Colouring from raw fold_change painted a point between 0 and a positive median as
 			"up" over a PNG dot the server had drawn as "down". */
-			const x =
-				this.termType == tt.JUNCTION
-					? (d as any).delta_psi
-					: onDeltaBetaAxis(this.termType, this.settings)
-					? (d as any).delta_beta - (this.response.data.xOffset ?? 0)
-					: d.fold_change
+			const { field } = getPlottedEffect(this.handler, this.settings)
+			const x = field == 'delta_beta' ? (d as any).delta_beta - (this.response.data.xOffset ?? 0) : (d as any)[field]
 			if (controlColor && caseColor) d.color = x > 0 ? caseColor : controlColor
 			else d.color = this.settings.defaultSignColor
 		} else d.color = this.settings.defaultNonSignColor
@@ -508,53 +407,13 @@ export class VolcanoViewModel {
 		const conf = this.config.confounderTws?.map((t: any) => t?.term?.name || t?.term?.id).filter(Boolean)
 		parts.push(`confounders: ${conf?.length ? conf.join(' + ') : 'none'}`)
 
-		if (this.termType == tt.DNA_METHYLATION) {
-			/* Recorded FIRST because it is the only setting that changes what was tested rather
-			than how: promoters, cCRE promoters, eQTM blocks and the full cCRE set are different
-			features with different coordinates and wildly different test counts, so two exports
-			are not comparable without it. Everything else here was already recorded; this was
-			the one missing field, which made a saved p-value table impossible to attribute to a
-			matrix after the fact. */
-			parts.push(`element class: ${s.elementType || 'promoter'}`)
-			// Which effect size the run was thresholded on. Two exports with the same p cutoff but
-			// different axes are not comparable, and nothing else in the line would reveal it.
-			parts.push(`x axis: ${onDeltaBetaAxis(this.termType, s) ? 'delta-beta' : 'log2(fold-change)'}`)
-			/* Which reading the counts came from. Two runs of the same contrast give different
-			hyper:hypo ratios depending on this one flag, so a file without it cannot be told
-			apart from the other run. Records the offset too, since it is a result in itself. */
-			const off = this.response.data.xOffset ?? 0
-			if (this.response.data.centered)
-				parts.push(`centered on median delta-beta ${off > 0 ? '+' : ''}${roundValueAuto(off)}`)
-			if (this.scan) {
-				// what was scanned and how the DMRs were selected, since the scan has no element matrix to name
-				parts.push(`scan: ${s.scanChromosome || 'whole genome'}`)
-				parts.push(`background correction: ${s.backgroundCorrection ? 'yes' : 'no'}`)
-				parts.push(`min CpGs per DMR: ${s.minCpgs}`)
-			} else parts.push(`min samples per group: ${s.minSamplesPerGroup}`)
-			parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)
-		} else if (this.termType == tt.GENE_EXPRESSION) {
-			parts.push(`method: ${s.method}`)
-		} else if (this.termType == tt.JUNCTION) {
-			/* The engine the server actually ran, not the requested one: pickDsEngine may override
-			the request, and the two engines compute different quantities (a Simes-adjusted
-			exon-level p vs a Dirichlet-multinomial LRT), so a file that does not name the engine
-			cannot be compared with another. */
-			parts.push(`method: ${this.response.method || s.method}`)
-			// the cluster filters decide what was TESTED, so two exports are not comparable without them
-			parts.push(`min samples per intron: ${s.minSamplesPerIntron}; min samples per group: ${s.minSamplesPerGroup}`)
-			parts.push(`min counts per cluster: ${s.minCountsPerCluster}`)
-		}
+		// the settings of the data type, such as the method or the element class
+		parts.push(...(this.handler.getProvenance?.(s, this.response, this.scan) || []))
 
 		// Name the effect-size measure the cutoff was applied to, not just its number — the
 		// threshold moves to deltaBetaCutoff when the axis does, and "0.1" alone is ambiguous.
-		const onDeltaBeta = onDeltaBetaAxis(this.termType, s)
-		// splicing is always thresholded on delta-PSI; it never displays a log2 fold change
-		const effect =
-			this.termType == tt.JUNCTION
-				? `|delta-PSI| > ${s.deltaPsiCutoff}`
-				: onDeltaBeta
-				? `|delta-beta| > ${s.deltaBetaCutoff}`
-				: `|log2(fold-change)| > ${s.foldChangeCutoff}`
+		const axis = this.handler.getEffectAxis?.(s) || { cutoff: s.foldChangeCutoff }
+		const effect = `|${getPlottedEffect(this.handler, s).provenance}| > ${axis.cutoff}`
 		parts.push(`significance: ${s.pValueType} p < ${roundValueAuto(Math.pow(10, -s.pValue))}, ${effect}`)
 
 		return parts.join('; ')
@@ -575,29 +434,16 @@ export class VolcanoViewModel {
 				value: this.numSignificant + this.numNonSignificant
 			}
 		]
-		if (this.termType == tt.GENE_EXPRESSION || this.termType == tt.DNA_METHYLATION || this.termType == tt.JUNCTION) {
+		// a data type that compares groups names them; one that does not may label control and case
+		const groups = this.config.samplelst?.groups
+		const sizeLabels = this.handler.comparesGroups
+			? [`${groups[0].name} sample size (control group)`, `${groups[1].name} sample size (case group)`]
+			: this.handler.sampleSizeLabels
+		if (sizeLabels)
 			tableRows.push(
-				{
-					label: this.config.samplelst.groups[0].name + ' sample size (control group)',
-					value: this.response.sample_size1
-				},
-				{
-					label: this.config.samplelst.groups[1].name + ' sample size (case group)',
-					value: this.response.sample_size2
-				}
+				{ label: sizeLabels[0], value: this.response.sample_size1 },
+				{ label: sizeLabels[1], value: this.response.sample_size2 }
 			)
-		} else if (this.termType == tt.PROTEOME_DAP) {
-			tableRows.push(
-				{
-					label: 'Control sample size',
-					value: this.response.sample_size1
-				},
-				{
-					label: 'Case sample size',
-					value: this.response.sample_size2
-				}
-			)
-		}
 
 		if (this.response.bcv !== undefined && this.response.bcv !== null) {
 			tableRows.push({
@@ -783,72 +629,36 @@ export class VolcanoViewModel {
 		return rows
 	}
 
-	setPTableColumns() {
-		if (this.termType == tt.DNA_METHYLATION) {
-			/* Δβ sits next to log₂(fold-change) so the two effect sizes read as a pair: the
-			fold-change is a logit difference and does not say how much methylation moved, Δβ does.
-			The group means follow because a Δβ of 0.2 means something different at 0.1→0.3 than at
-			0.7→0.9. Insert at 1 (after fold-change) BEFORE the Promoter/Gene prefix shifts indices —
-			setPointData splices its cells in the same order for the same reason. */
-			if (this.scan) {
-				/* A DMR is a called region, so what a row needs is its extent and its evidence -- the
-				peak CpG's delta-beta, how many CpGs, how wide -- plus, corrected, how far it moved
-				beyond its matched background. There are no two group means to show. */
-				this.pValueTable.columns.splice(
-					1,
-					0,
-					{ label: 'Peak Δβ', sortable: true },
-					{ label: 'CpGs', sortable: true },
-					{ label: 'Width (bp)', sortable: true },
-					...(this.scan.backgroundCorrection ? [{ label: 'Excess Δβ', sortable: true }] : [])
-				)
-			} else {
-				this.pValueTable.columns.splice(
-					1,
-					0,
-					{ label: 'Δβ', sortable: true },
-					{ label: 'Mean β (group 1)', sortable: true },
-					{ label: 'Mean β (group 2)', sortable: true }
-				)
-			}
-			/* This column header is what lands in the downloaded p-value table, so a block
-			run exported a column titled "Promoter" holding block coordinates. */
-			this.pValueTable.columns.splice(
-				0,
-				0,
-				{ label: elementNoun(this.settings?.elementType).one, sortable: true },
-				{ label: 'Gene(s)', sortable: true }
-			)
-		} else if (this.termType == tt.JUNCTION) {
-			this.pValueTable.columns[0].label = 'ΔPSI'
-			this.pValueTable.columns.splice(
-				1,
-				0,
-				{ label: 'PSI (group 1)', sortable: true },
-				{ label: 'PSI (group 2)', sortable: true },
-				{ label: 'Junctions', sortable: true }
-			)
-			// a cluster is the row, and it may map to several genes or none
-			this.pValueTable.columns.splice(0, 0, { label: 'Cluster', sortable: true }, { label: 'Gene(s)', sortable: true })
-		} else if (this.termType == tt.PROTEOME_DAP) {
-			this.pValueTable.columns.splice(0, 0, { label: 'Identifier', sortable: true }, { label: 'Gene', sortable: true })
-		} else {
-			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name', sortable: true })
+	/** The p-value table's columns: the columns naming a row, the effect size, the columns of the data
+	 * type, then the p-values. Each column holds its header and its cell, so the two cannot drift
+	 * apart. effectIndex is the index of the effect-size column. */
+	getTableColumns(): { columns: VolcanoColumn[]; effectIndex: number } {
+		const run = { settings: this.settings, config: this.config, scan: this.scan }
+		const effect = this.handler.getTableEffectColumn?.(run) || {
+			label: 'log₂(fold-change)',
+			value: d => roundValueAuto(d.fold_change)
+		}
+		// DAP files carry a single FDR and a scan a single p, both in original_p_value; other data types
+		// report both a raw and an adjusted p-value
+		const pValues: VolcanoColumn[] = this.singlePValue
+			? [{ label: this.pValueLabel, value: d => roundValueAuto(d.original_p_value) }]
+			: [
+					{ label: 'Original p-value', value: d => roundValueAuto(d.original_p_value) },
+					{
+						label: 'Adjusted p-value',
+						value: d => (d.adjusted_p_value != undefined ? roundValueAuto(d.adjusted_p_value) : '')
+					}
+			  ]
+		const idColumns = this.handler.getIdColumns(this.settings)
+		return {
+			columns: [...idColumns, effect, ...(this.handler.getExtraColumns?.(run) || []), ...pValues],
+			effectIndex: idColumns.length
 		}
 	}
 
+	/** the actions of the data type that this run cannot offer */
 	setUserActions() {
-		const userActions = {
-			noShow: new Set<string>()
-		}
-		// the scan resolves its own two groups and fits no covariates
-		if (this.scan) userActions.noShow.add('Confounding factors')
-		if (this.termType == tt.GENE_EXPRESSION) {
-			if (this.settings.method == 'edgeR' && getSampleNum(this.config) > 100) {
-				userActions.noShow.add('Confounding factors')
-			}
-			if (this.settings.method == 'wilcoxon') userActions.noShow.add('Confounding factors')
-		}
-		return userActions
+		const run = { settings: this.settings, config: this.config, scan: this.scan }
+		return { noShow: new Set<VolcanoAction>(this.handler.getHiddenActions?.(run) || []) }
 	}
 }

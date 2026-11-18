@@ -12,6 +12,7 @@ import type {
 	TermWrapper
 } from '#types'
 import type { ValidatedVolcanoSettings } from './settings/Settings'
+import type { VolcanoAction } from './handlers'
 
 /** Attributes are added in the view model
  * to the response data for rendering. */
@@ -140,8 +141,8 @@ export type VolcanoDom = {
 export type VolcanoPValueTableData = {
 	columns: TableColumn[]
 	rows: TableCell[][]
-	/** Row -> the identity used to match a table row back to its volcano dot
-	 * (promoter_id for DNA methylation, gene_name otherwise). Keyed by the row
+	/** Row -> the identity used to match a table row back to its volcano dot, from the handler's
+	 * getRowKey() (promoter_id for DNA methylation, cluster_id for splicing). Keyed by the row
 	 * array itself rather than by index, because renderTable sorts rows in place
 	 * and the first cell's value is a formatted display label, not the identity. */
 	rowKeys: Map<TableCell[], string>
@@ -190,9 +191,9 @@ export type VolcanoViewData = {
 	/** One-line record of the groups, sample sizes and result-affecting settings behind this
 	 * run. Written into exported tables so a file can be traced back to how it was produced. */
 	provenance: string
-	/** special logic per termtype for userActions */
+	/** the actions of the action bar that this run cannot offer, from the handler of the data type */
 	userActions: {
-		noShow: Set<string>
+		noShow: Set<VolcanoAction>
 	}
 	/** x-axis label for the delta-beta axis, naming the two groups in subtraction order
 	 * (e.g. "Δβ (NSD2 Higher − NSD2 Lower)") so the direction of the effect is readable off the

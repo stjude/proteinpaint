@@ -3,15 +3,20 @@ import { axisBottom, axisLeft, rgb, select, selectAll } from 'd3'
 import type { DataPointEntry, VolcanoDom, VolcanoPlotDimensions, VolcanoViewData } from '../VolcanoTypes'
 import type { VolcanoPlotDom } from './VolcanoPlotDom'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
-import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
-import { onDeltaBetaAxis } from '../settings/defaults'
-import { formatPromoterLabel, elementNoun } from '../promoterLabel'
 import { plotManhattan, manhattanLayoutDefaults } from '#plots/manhattan/manhattan.ts'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { geneBodyLossTest } from '../interactions/geneBodyLossDE'
 import { dmrGeneLinkPanel } from '../interactions/dmrGeneLink'
+import {
+	getPlottedEffect,
+	getVolcanoHandler,
+	type SharedTooltipRows,
+	type TooltipRow,
+	type VolcanoAction,
+	type VolcanoHandler
+} from '../handlers'
 import { bplen } from '#shared/common.js'
 
 /** One of the scan's three figures, for mirroring a hover across them. Items are matched by genomic
@@ -67,6 +72,12 @@ export class VolcanoPlotView {
 		} as Partial<VolcanoPlotDom> as VolcanoPlotDom
 	}
 
+	/** looked up on use, not in the constructor: a volcano of an unsupported type is still created,
+	 * and fails when it asks for data */
+	get handler(): VolcanoHandler {
+		return getVolcanoHandler(this.termType)
+	}
+
 	render(settings: ValidatedVolcanoSettings, viewData: VolcanoViewData) {
 		this.settings = settings
 		this.viewData = viewData
@@ -117,15 +128,11 @@ export class VolcanoPlotView {
 		//Images may have a large margin. Hide the overflow.
 		this.dom.actionsTip.d.style('overflow', 'hidden')
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
-		this.addActionButton('Confounding factors', [tt.GENE_EXPRESSION, tt.DNA_METHYLATION], () =>
-			this.interactions.confoundersMenu()
-		)
-		this.addActionButton('Highlight genes', [tt.GENE_EXPRESSION, tt.SINGLECELL_CELLTYPE, tt.DNA_METHYLATION], () =>
-			this.interactions.launchGeneSetEdit()
-		)
+		this.addActionButton('Confounding factors', 'confounders', () => this.interactions.confoundersMenu())
+		this.addActionButton('Highlight genes', 'highlight', () => this.interactions.launchGeneSetEdit())
 		this.addActionButton(
 			'Statistics',
-			[tt.GENE_EXPRESSION, tt.SINGLECELL_CELLTYPE, tt.DNA_METHYLATION],
+			'statistics',
 			() => {
 				this.renderStatsMenu()
 			},
@@ -141,7 +148,7 @@ export class VolcanoPlotView {
 		if (hasExpression && gb?.genes.length) {
 			this.addActionButton(
 				`Expression of ${gb.genes.length.toLocaleString()} gene-body loss genes`,
-				[tt.DNA_METHYLATION],
+				'geneBodyLoss',
 				() =>
 					geneBodyLossTest(
 						this.dom.actionsTip,
@@ -153,7 +160,7 @@ export class VolcanoPlotView {
 			)
 		}
 		if (hasExpression && this.viewData.scan?.cacheId) {
-			this.addActionButton('Genes, expression and literature', [tt.DNA_METHYLATION], () =>
+			this.addActionButton('Genes, expression and literature', 'dmrGeneLink', () =>
 				dmrGeneLinkPanel(
 					this.dom.actionsTip,
 					this.interactions.app.getState().plots.find((p: any) => p.id == this.interactions.id),
@@ -168,13 +175,8 @@ export class VolcanoPlotView {
 			hasExpression &&
 			this.interactions.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg'
 		) {
-			this.addActionButton('Methylation vs expression by gene', [tt.DNA_METHYLATION], () =>
-				this.interactions.launchStarburst()
-			)
+			this.addActionButton('Methylation vs expression by gene', 'starburst', () => this.interactions.launchStarburst())
 		}
-		/* Must match the label the view model built from the same helper, otherwise the
-		find() below silently misses and the count disappears from the action bar. */
-		const dmNoun = elementNoun(this.settings?.elementType)
 		/* The view model builds exactly one "Number of significant <noun>" row, the noun following the
 		term type. Matching a hardcoded "genes" missed proteomics ("proteins") entirely, so its caption
 		and direction split never rendered. */
@@ -190,51 +192,40 @@ export class VolcanoPlotView {
 			hits are not direction-balanced, so counting what reached the browser would misreport
 			the ratio. Named for the CASE group, matching the x-axis subtraction order, so the
 			label reads the same way round as the plot. */
-			const isDM = this.termType == tt.DNA_METHYLATION
 			const up = this.viewData.numSignificantUp
 			const down = this.viewData.numSignificantDown
+			const words = this.handler.directions || { up: 'up', down: 'down' }
 			const split =
-				up + down > 0
-					? ` (${up.toLocaleString()} ${isDM ? 'hyper' : 'up'} / ${down.toLocaleString()} ${isDM ? 'hypo' : 'down'})`
-					: ''
+				up + down > 0 ? ` (${up.toLocaleString()} ${words.up} / ${down.toLocaleString()} ${words.down})` : ''
 			/* Name the centring in the caption, with the offset it removed. Both counts are then
 			self-describing wherever the line is read or screenshotted, and the raw and centred
 			numbers cannot be confused for each other. */
 			const off = this.viewData.xOffset
 			const centered = this.viewData.centered ? `, centered on median Δβ ${off > 0 ? '+' : ''}${off.toFixed(3)}` : ''
-			/* A DMR is differentially methylated by definition, so "DM DMRs" would say it twice. Expression
-			keeps "DE genes"; any other term type names what the stats row counted. */
-			const noun = isDM
-				? this.viewData.scan
-					? dmNoun.many
-					: `DM ${dmNoun.many}`
-				: this.termType == tt.GENE_EXPRESSION
-				? 'DE genes'
-				: `significant ${sigRow!.label.slice(SIG_PREFIX.length)}`
+			// the data type may name the count, as "DE genes"; otherwise it is named for what the stats row counted
+			const noun =
+				this.handler.getSignificantNoun?.(this.settings, this.viewData.scan) ??
+				`significant ${sigRow!.label.slice(SIG_PREFIX.length)}`
 			const sigText = `${n} ${noun}` + split + centered + ':'
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
 			const pValueTableButtonText = this.settings.showPValueTable ? 'Hide p-value table' : 'Show p-value table'
-			this.addActionButton(
-				pValueTableButtonText,
-				[tt.GENE_EXPRESSION, tt.SINGLECELL_CELLTYPE, tt.DNA_METHYLATION],
-				async () => {
-					/** TODO: This is very slow to render. Need to optimize rendering
-					 * and server response to increase performance.*/
-					const showTable = !this.settings.showPValueTable
-					await this.interactions.app.dispatch({
-						type: 'plot_edit',
-						id: this.interactions.id,
-						config: { settings: { volcano: { showPValueTable: showTable } } }
-					})
-				}
-			)
+			this.addActionButton(pValueTableButtonText, 'pValueTable', async () => {
+				/** TODO: This is very slow to render. Need to optimize rendering
+				 * and server response to increase performance.*/
+				const showTable = !this.settings.showPValueTable
+				await this.interactions.app.dispatch({
+					type: 'plot_edit',
+					id: this.interactions.id,
+					config: { settings: { volcano: { showPValueTable: showTable } } }
+				})
+			})
 		}
 		if (numSigGenes && numSigGenes >= 3) {
 			// Launch hierCluster for DEGs between the two groups
 			this.addActionButton(
 				`Hierarchical clustering of ${numSigGenes > 100 ? 'top 100' : numSigGenes} DE genes`,
-				[tt.GENE_EXPRESSION],
+				'clustering',
 				async () => {
 					await this.interactions.launchDEGClustering()
 				}
@@ -242,7 +233,8 @@ export class VolcanoPlotView {
 		}
 	}
 
-	/** Use the termTypes arr to render the buttons in a consistent order.
+	/** Renders the button of an action that the handler of the data type offers and this run does not
+	 * hide. The buttons keep the order of the calls in renderUserActions().
 	 *
 	 * Pass `opts.whenOpen` to make the button a toggle: clicking once opens
 	 * the actionsTip with the callback's content and swaps the button text
@@ -251,9 +243,9 @@ export class VolcanoPlotView {
 	 * closes via Esc or outside-click (Menu.onHide hook), and when another
 	 * action button hijacks the tip (the loop below resets all toggles
 	 * before showing the new content). */
-	addActionButton(text: string, termTypes: string[], callback: any, opts?: { whenOpen?: string }) {
-		if (this.viewData.userActions.noShow.has(text)) return
-		if (!termTypes.includes(this.termType)) return
+	addActionButton(text: string, action: VolcanoAction, callback: any, opts?: { whenOpen?: string }) {
+		if (this.viewData.userActions.noShow.has(action)) return
+		if (!this.handler.actions.includes(action)) return
 		const button = this.volcanoDom.actions
 			.append('button')
 			.attr('class', 'sja_menuoption')
@@ -336,10 +328,11 @@ export class VolcanoPlotView {
 		this.setSvgSubscriptLabel(this.volcanoDom.yAxisLabel, '-log', '10', `(${this.viewData.pValueLabel})`)
 
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
-		if (this.termType === tt.JUNCTION) {
+		const { field } = getPlottedEffect(this.handler, this.settings)
+		if (field == 'delta_psi') {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
 			this.volcanoDom.xAxisLabel.text(this.viewData.deltaPsiAxisLabel || 'ΔPSI (case − control)')
-		} else if (onDeltaBetaAxis(this.termType, this.settings)) {
+		} else if (field == 'delta_beta') {
 			this.volcanoDom.xAxisLabel.selectAll('*').remove()
 			/* Prefer the group-named form built by the view model ("Δβ (NSD2 Higher − NSD2 Lower)"):
 			case/control are slot names, so the role-based wording does not say which direction a
@@ -694,8 +687,7 @@ export class VolcanoPlotView {
 				//Previously highlighted data points are not affected
 				const circles = this.volcanoDom.plot.selectAll('circle').nodes()
 				const key = this.viewData.pValueTableData.rowKeys.get(row)
-				const dataKey = this.termType === tt.DNA_METHYLATION ? 'promoter_id' : 'gene_name'
-				const circle = circles.find((d: any) => d.__data__[dataKey] == key) as any
+				const circle = circles.find((d: any) => this.handler.getRowKey(d.__data__) == key) as any
 				if (!circle || circle.__data__.highlighted) return
 
 				/** Circles may render behind several other circles, making it hard
@@ -814,225 +806,70 @@ export class VolcanoPlotView {
 				this.addTooltipRows(d, tbl)
 			},
 			// a methylation hit is known by its element or region: it may name no gene, or share one with other hits
-			getRowKey: d => (this.termType === tt.DNA_METHYLATION && (d as any).promoter_id) || d.gene_name
+			getRowKey: d => this.handler.getRowKey(d)
 		}).attach()
 	}
 
-	/** Multi-hit hover table for differential splicing: one row per intron cluster. */
-	private get onDeltaBeta() {
-		return onDeltaBetaAxis(this.termType, this.settings)
-	}
-
-	private buildSpliceMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
+	/** The hover table of several dots: the columns that name a row, the plotted effect size, and the
+	 * p-value that the y axis plots */
+	private buildMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
+		const idColumns = this.handler.getIdColumns(this.settings)
+		// must match the column header, or the header names one number and the cell holds another
+		const effect = getPlottedEffect(this.handler, this.settings)
+		// a single p (DAP's FDR, a scan's p) lives in original_p_value whatever the p-value type says
 		const { pValueLabel, singlePValue } = this.viewData
 		const pLabel = pValueLabel.charAt(0).toUpperCase() + pValueLabel.slice(1)
 		const pField = (singlePValue ? 'original_p_value' : `${this.settings.pValueType}_p_value`) as
 			| 'original_p_value'
 			| 'adjusted_p_value'
 		const columns = [
-			{ label: 'Cluster' },
-			{ label: 'Gene(s)' },
-			{ label: 'ΔPSI', sortable: true },
+			...idColumns.map(c => ({ label: c.short ?? c.label })),
+			{ label: effect.short, sortable: true },
 			{ label: pLabel, sortable: true }
 		]
 		const rows = dots.map(d => [
-			{ value: (d as any).cluster_id },
-			{ value: (d as any).genes || '' },
-			{ value: roundValueAuto((d as any).delta_psi) },
+			...idColumns.map(c => ({ value: c.value(d) })),
+			{ value: roundValueAuto(d[effect.field]) },
 			{ value: roundValueAuto(d[pField]) }
 		])
 		return { columns, rows }
 	}
 
-	// p-value rows duplicate those in addTooltipRows
-	private addSpliceTooltipRows(d: DataPointEntry, table: any) {
-		const c = d as any
-		addTooltipRow(table, 'Cluster', c.cluster_id)
-		if (c.genes) addTooltipRow(table, 'Gene(s)', c.genes)
-		if (c.chr) addTooltipRow(table, 'Position', `${c.chr}:${c.start}-${c.stop}`)
-		addTooltipRow(table, 'ΔPSI', roundValueAuto(c.delta_psi))
-		/** Both group means, because a ΔPSI of 0.2 means something different
-		 * depending on the underlying changes (e.g., 0.1→0.3 vs. 0.7→0.9) */
-		if (c.psi_control != null) addTooltipRow(table, 'PSI (group 1)', roundValueAuto(c.psi_control))
-		if (c.psi_case != null) addTooltipRow(table, 'PSI (group 2)', roundValueAuto(c.psi_case))
-		if (c.n_junc != null) addTooltipRow(table, 'Junctions', c.n_junc)
-		if (c.top_intron) addTooltipRow(table, 'Top intron', c.top_intron)
-		if (this.viewData.singlePValue) {
-			addTooltipRow(table, this.viewData.pValueLabel, roundValueAuto(d.original_p_value))
-		} else {
-			addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
-			if (d.adjusted_p_value != undefined) addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
-		}
-	}
-
-	private buildMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
-		if (this.termType === tt.JUNCTION) return this.buildSpliceMultiHitTable(dots)
-		const isDM = this.termType === tt.DNA_METHYLATION
-		const isDAP = this.termType === tt.PROTEOME_DAP
-		const effectLabel = this.onDeltaBeta ? 'Δβ' : 'log₂(FC)'
-		const pValueType = this.settings.pValueType
-		// a single p (DAP's FDR, a scan's p) lives in original_p_value whatever the p-value type says
-		const { pValueLabel, singlePValue } = this.viewData
-		const pLabel = pValueLabel.charAt(0).toUpperCase() + pValueLabel.slice(1)
-		const pField = (singlePValue ? 'original_p_value' : `${pValueType}_p_value`) as
-			| 'original_p_value'
-			| 'adjusted_p_value'
-		const columns = isDM
-			? [
-					{ label: elementNoun(this.settings?.elementType).one },
-					{ label: 'Gene(s)' },
-					{ label: effectLabel, sortable: true },
-					{ label: pLabel, sortable: true }
-			  ]
-			: isDAP
-			? [
-					{ label: 'Identifier' },
-					{ label: 'Gene' },
-					{ label: effectLabel, sortable: true },
-					{ label: pLabel, sortable: true }
-			  ]
-			: [{ label: 'Gene' }, { label: effectLabel, sortable: true }, { label: pLabel, sortable: true }]
-		const rows = dots.map(d => {
-			// must match effectLabel above, or the column header names one number and the cell holds another
-			const fc = { value: roundValueAuto(this.onDeltaBeta ? (d as any).delta_beta : d.fold_change) }
-			const pval = { value: roundValueAuto(d[pField]) }
-			if (isDM) {
-				return [{ value: formatPromoterLabel(d as any) }, { value: d.gene_name || '' }, fc, pval]
-			}
-			if (isDAP) {
-				return [{ value: d.gene_name || '' }, { value: (d as any).gene || '' }, fc, pval]
-			}
-			return [{ value: d.gene_name || '' }, fc, pval]
-		})
-		return { columns, rows }
-	}
-
-	/** Per-data-point action menu items (Violin / DMR / Box-plot). Used by
-	 * both the single-gene click flow and the multi-gene click-menu rows so
-	 * the launchers stay in lock-step. */
+	/** Per-data-point action menu items (Violin / DMR / Box-plot), from the handler of the data type.
+	 * Used by both the single-gene click flow and the multi-gene click-menu rows so the launchers stay
+	 * in lock-step. */
 	private getActionMenuOpts(d: DataPointEntry): ActionMenuItem[] {
-		const termType = this.termType
-		const interactions = this.interactions
-		// a methylation element may list several genes; the first is the one it is named for
-		const gene = d.gene_name?.split(',')[0]?.trim()
-		const all = [
-			{
-				label: 'Violin plot',
-				isVisible: () => termType === tt.DNA_METHYLATION || termType === tt.GENE_EXPRESSION,
-				onClick: async () => {
-					if (termType === tt.DNA_METHYLATION) interactions.launchDNAMethViolin(d as any)
-					if (termType === tt.GENE_EXPRESSION) interactions.launchViolinGeneExp(d.gene_name)
-				}
-			},
-			{
-				/* A scan has already called every DMR: the browser shows them from the cache, beside
-				the genes and cCREs, with no per-CpG detail; the region view below adds that detail. An
-				element-class hit (promoter, cCRE) opens on the genes and cCREs around it. */
-				label: 'Genome browser',
-				isVisible: () => termType === tt.DNA_METHYLATION,
-				onClick: async () => {
-					const dm = d as DataPointEntry & { chr: string; start: number; stop: number }
-					await interactions.launchMethylationGenomeBrowser(dm, this.viewData.scan)
-				}
-			},
-			{
-				label: 'Genome browser',
-				isVisible: () => termType === tt.JUNCTION,
-				onClick: async () => {
-					await interactions.launchSpliceGenomeBrowser(d as any)
-				}
-			},
-			{
-				/* The region view on a scan's DMR only. An element-class hit (promoter, cCRE) comes from a
-				per-element test; the region view draws DMRcate's de novo calls, which need not agree with it,
-				and showing one under the other mixes two analyses. The violin and the browser above serve
-				elements. */
-				label: 'Differentially Methylated Region (DMR) Analysis',
-				isVisible: () => termType === tt.DNA_METHYLATION && !!this.viewData.scan,
-				onClick: async () => {
-					const dm = d as DataPointEntry & { chr: string; start: number; stop: number }
-					await interactions.launchDmr({ chr: dm.chr, start: dm.start, stop: dm.stop }, this.viewData.scan!)
-				}
-			},
-			{
-				label: 'Box plot',
-				isVisible: () => termType === tt.GENE_EXPRESSION,
-				onClick: async () => {
-					interactions.launchBoxPlot(d.gene_name)
-				}
-			},
-			{
-				label: `Methylation & expression at ${gene}`,
-				isVisible: () => {
-					const q = interactions.app.vocabApi.termdbConfig?.queries
-					return (
-						(termType === tt.GENE_EXPRESSION || termType === tt.DNA_METHYLATION) &&
-						!!gene &&
-						q?.dnaMethylation?.regionAnalysis == 'cpg' &&
-						!!q?.geneExpression
-					)
-				},
-				onClick: async () => interactions.launchMethylationLocus({ gene: gene! }, this.viewData.scan?.bedjFile)
-			},
-			{
-				/* a methylation hit that names no gene, or any on a dataset without expression: the same track on
-				its region, without expression */
-				label: `Methylation at ${(d as any).chr}:${(d as any).start}-${(d as any).stop}`,
-				isVisible: () => {
-					const q = interactions.app.vocabApi.termdbConfig?.queries
-					return (
-						termType === tt.DNA_METHYLATION &&
-						(!gene || !q?.geneExpression) &&
-						Number.isFinite((d as any).start) &&
-						q?.dnaMethylation?.regionAnalysis == 'cpg'
-					)
-				},
-				onClick: async () => {
-					const dm = d as any
-					return interactions.launchMethylationLocus(
-						{ chr: dm.chr, start: dm.start, stop: dm.stop },
-						this.viewData.scan?.bedjFile
-					)
-				}
-			}
-		]
-		return all.filter(o => o.isVisible()).map(({ label, onClick }) => ({ label, onClick }))
+		const { app, id } = this.interactions
+		const termdbConfig = app.vocabApi.termdbConfig
+		return (
+			this.handler.getRowActions?.(d, {
+				interactions: this.interactions,
+				config: app.getState?.().plots.find((p: any) => p.id === id),
+				termdbConfig,
+				queries: termdbConfig?.queries,
+				scan: this.viewData.scan
+			}) || []
+		)
 	}
 
-	/** Populates a `table2col` instance with the standard volcano hover rows
-	 * (gene/promoter, fold-change, original + adjusted p-values). */
+	/** Populates a `table2col` instance with the tooltip of one dot: the rows of the data type, around
+	 * the plotted effect size and the p-values that every data type shows */
 	private addTooltipRows(d: DataPointEntry, table: any) {
-		if (this.termType === tt.JUNCTION) {
-			this.addSpliceTooltipRows(d, table)
-			return
-		}
-		if (this.termType === tt.DNA_METHYLATION) {
-			if ('promoter_id' in d)
-				addTooltipRow(table, elementNoun(this.settings?.elementType).one, formatPromoterLabel(d as any))
-			if (d.gene_name) addTooltipRow(table, 'Gene(s)', d.gene_name)
-		} else if (this.termType === tt.PROTEOME_DAP) {
-			addTooltipRow(table, 'Identifier', d.gene_name)
-			if ('gene' in d) addTooltipRow(table, 'Gene', (d as any).gene)
-		} else {
-			addTooltipRow(table, 'Gene name', d.gene_name)
-		}
-		// report the effect size the plot is actually drawing -- see the onDeltaBeta getter
-		if (this.onDeltaBeta) {
-			addTooltipRow(table, 'Δβ', roundValueAuto((d as any).delta_beta))
-		} else {
-			addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
-		}
-		if (this.viewData.singlePValue) {
+		const effect = getPlottedEffect(this.handler, this.settings)
+		const shared: SharedTooltipRows = {
+			effect: [effect.tooltip, roundValueAuto(d[effect.field])],
 			// DAP carries a single FDR, a scan a single p; both are stored in original_p_value
-			addTooltipRow(table, this.viewData.pValueLabel, roundValueAuto(d.original_p_value))
-			// a scan DMR's call statistic, beside the one it is plotted by when that is another
-			const sfdr = (d as any).min_smoothed_fdr
-			if (sfdr != null && (this.viewData.scan?.yAxis ?? 'min_smoothed_fdr') != 'min_smoothed_fdr')
-				addTooltipRow(table, 'Min smoothed FDR', roundValueAuto(sfdr))
-		} else {
-			addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
-			if (d.adjusted_p_value != undefined) addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
+			pValues: this.viewData.singlePValue
+				? [[this.viewData.pValueLabel, roundValueAuto(d.original_p_value)]]
+				: [
+						['Original p-value', roundValueAuto(d.original_p_value)],
+						...(d.adjusted_p_value != undefined
+							? [['Adjusted p-value', roundValueAuto(d.adjusted_p_value)] as TooltipRow]
+							: [])
+				  ]
 		}
+		const run = { settings: this.settings, scan: this.viewData.scan }
+		for (const [label, value] of this.handler.getTooltipRows(d, run, shared)) addTooltipRow(table, label, value)
 	}
 }
 

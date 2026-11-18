@@ -18,6 +18,7 @@ import { renderPreAnalysisData, getSamplelstTWFromFilters } from '#mass/groups'
 import { TermTypeGroups, termType2label } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { uiLabel } from '#shared'
+import { getVolcanoHandler } from '#plots/volcano/handlers/index.ts'
 
 const colorScale = getColors(5)
 
@@ -25,9 +26,9 @@ const colorScale = getColors(5)
 
 Serves both differential gene expression and differential DNA methylation, selected by
 config.termType (default gene expression, so existing callers are unchanged). The two differ
-in only three places, all branched on `isGE` below: which ds query proves the assay exists,
-which server route the pre-analysis hits, and the expression-source tabs (methylation has no
-pseudobulk counterpart). The group table, filter prompt and submit flow are shared.
+in only three places: which ds query proves the assay exists and the expression-source tabs
+(methylation has no pseudobulk counterpart), both branched on `isGE` below, and which server route
+the pre-analysis hits, the route of the data type's volcano handler. The group table, filter prompt and submit flow are shared.
 
 config.filter limits the group picker, sample counts, and analysis to the plot's selected samples.
 The results view is a separate chart, 'differentialAnalysis'; this plot only builds groups
@@ -493,8 +494,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			preAnalysis: true
 		}
 		if (this.expressionSource === 'pseudobulk') body.pseudobulk = this.pseudobulk
-		// both routes accept the same preAnalysis body and answer with the same {data:{groupName:n}}
-		const preAnalysisData = await dofetch3(this.isGE ? 'termdb/DE' : 'termdb/diffMeth', { body })
+		// the route of the analysis: both accept the same preAnalysis body and answer with the same {data:{groupName:n}}
+		const preAnalysisData = await dofetch3(getVolcanoHandler(this.termType).route, { body })
 
 		this.dom.loading.style('display', 'none')
 

@@ -12,7 +12,8 @@ import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
-import { GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION, DMR_SCAN_ELEMENT_TYPE } from '#types'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
+import { findVolcanoHandler } from './handlers'
 import { uiLabel } from '#shared'
 
 /* Below this many samples in the smaller group, the wilcoxon p-values are worth a caveat.
@@ -149,7 +150,7 @@ export class Volcano extends PlotBase implements RxComponent {
 				this.dom.wait.style('display', 'block')
 			}, 500)
 			//a methylation analysis counts the time in its message, so a long wait is seen to be still running
-			if (this.termType == DNA_METHYLATION) stopTimer = startElapsedTimer(this.dom.wait, waitText)
+			if (findVolcanoHandler(this.termType)?.showsElapsedTime) stopTimer = startElapsedTimer(this.dom.wait, waitText)
 
 			/** Fetch data */
 			const response = await this.model.getData(config, settings)
@@ -239,10 +240,11 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		termType: opts.termType
 	}
 
-	//Define Gene Expression and DNA Methylation config. Both run confounder-adjusted
-	//two-group analyses off a samplelst, so both need their confounder tws filled here
-	//-- otherwise a session rehydrated with confounders already set carries unfilled tws.
-	if (opts.termType == GENE_EXPRESSION || opts.termType == DNA_METHYLATION) {
+	const handler = findVolcanoHandler(opts.termType)
+	//A data type that adjusts for confounders runs a two-group analysis off a samplelst, so its
+	//confounder tws are filled here -- otherwise a session rehydrated with confounders already set
+	//carries unfilled tws.
+	if (handler?.actions.includes('confounders')) {
 		if (opts.confounderTws) {
 			try {
 				for (const tw of opts.confounderTws) {
@@ -259,17 +261,8 @@ export async function getPlotConfig(opts: any, app: AppApi) {
 		})
 	}
 
-	//Define Single Cell Cell Type config
-	if (opts.termType == SINGLECELL_CELLTYPE) {
-		Object.assign(config, {
-			//TODO: Fix this logic
-			sample: opts.experimentID || opts.sample || opts.samples?.[0]?.experiments[0]?.experimentID,
-			termId: app.vocabApi.termdbConfig.queries.singleCell.DEgenes.termId,
-			//TODO: 'Cluster' is a fallback for development
-			//Should require opts.categoryName in the future
-			categoryName: opts.categoryName || 'Cluster'
-		})
-	}
+	//the plot config of the data type, such as the sample and category of a single-cell cell type
+	if (handler?.getPlotConfig) Object.assign(config, handler.getPlotConfig(opts, app))
 
 	//Validate user submitted unavailable/inappropriate settings
 	validateVolcanoSettings(config, opts)
