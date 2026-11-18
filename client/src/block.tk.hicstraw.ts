@@ -3,6 +3,7 @@ import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
 import { hicparsestat, hicparsefragdata } from '../tracks/hic/data/parseData.ts'
 import { ColorScale } from '#dom'
+import { hicstrawSubpanelsKey } from './block.tk.hicstraw.adaptor'
 
 /*
 single-sample hic
@@ -149,6 +150,8 @@ function setResolution(tk: any, block: any) {
 	}
 
 	tk.regions = regions
+	// the subpanels that this load uses, see hicstrawloadsubpanels()
+	tk.subpanelsKey = hicstrawSubpanelsKey(block)
 
 	if (tk.textdata || tk.bedfile || tk.bedurl) {
 		return
@@ -391,7 +394,23 @@ function updateNormalizationArray(hic: any) {
 	}
 }
 
-function loadStrawdata(tk: any, block: any): Promise<string | undefined> {
+/** at most this many position pairs are sent in one hicdata request, which is at most the server's limit */
+const PAIRS_PER_REQUEST = 100
+
+/** at most this many hicdata requests of a track are in flight at once */
+const REQUESTS_IN_FLIGHT = 2
+
+type StrawTask = {
+	pos1: string
+	pos2: string
+	/** for the data within a region */
+	regionidx?: number
+	/** for the data between a pair of regions */
+	leftregionidx?: number
+	rightregionidx?: number
+}
+
+async function loadStrawdata(tk: any, block: any): Promise<string | undefined> {
 	/*
 	at the end, set tk.data[]
 	*/
@@ -407,101 +426,62 @@ function loadStrawdata(tk: any, block: any): Promise<string | undefined> {
 			(resolution_bp ? r.start + ':' + r.stop : r.frag.startidx + ':' + r.frag.stopidx)
 	}
 
-	const tasks = [] as any
-
-	type RegionPar = {
-		jwt: any
-		file?: string
-		url?: string
-		pos1: number
-		pos2: number
-		nmeth: string
-		mincutoff: number
-		resolution?: number
-		isfrag?: boolean
-	}
-
+	const tasks: StrawTask[] = []
 	// 1: load data within each region
-
 	for (const [i, r] of tk.regions.entries()) {
-		const par: RegionPar = {
-			jwt: block.jwt,
-			file: tk.file,
-			url: tk.url,
-			pos1: r._str,
-			pos2: r._str,
-			nmeth: tk.normalizationmethod,
-			mincutoff: tk.mincutoff
-		}
-		if (resolution_bp) {
-			par.resolution = resolution_bp
-		} else {
-			par.resolution = resolution_frag
-			par.isfrag = true
-		}
-		tasks.push(
-			client
-				.dofetch2('hicdata', {
-					method: 'POST',
-					body: JSON.stringify(par)
-				})
-				.then(data => {
-					if (data.error) throw data.error
-					if (!data.items || data.items.length == 0) {
-						// a region have no data
-						return null
-					}
-					return {
-						items: data.items,
-						regionidx: i
-					}
-				})
-		)
+		tasks.push({ pos1: r._str, pos2: r._str, regionidx: i })
 	}
-
 	// 2: load data from each pair of regions
-
 	for (let i = 0; i < tk.regions.length - 1; i++) {
 		for (let j = i + 1; j < tk.regions.length; j++) {
-			const par: RegionPar = {
-				jwt: block.jwt,
-				file: tk.file,
-				url: tk.url,
-				pos1: tk.regions[i]._str,
-				pos2: tk.regions[j]._str,
-				nmeth: tk.normalizationmethod,
-				mincutoff: tk.mincutoff
-			}
-			if (resolution_bp) {
-				par.resolution = resolution_bp
-			} else {
-				par.resolution = resolution_frag
-				par.isfrag = true
-			}
-			tasks.push(
-				client
-					.dofetch2('hicdata', {
-						method: 'POST',
-						body: JSON.stringify(par)
-					})
-					.then(data => {
-						if (data.error) throw { message: data.error }
-						if (!data.items || data.items.length == 0) {
-							return null
-						}
-						return {
-							items: data.items,
-							leftregionidx: i,
-							rightregionidx: j
-						}
-					})
-			)
+			tasks.push({ pos1: tk.regions[i]._str, pos2: tk.regions[j]._str, leftregionidx: i, rightregionidx: j })
 		}
 	}
 
-	return Promise.all(tasks).then(data => {
-		return parseStrawData(data, resolution_bp, resolution_frag, tk, block)
-	})
+	const par: any = {
+		jwt: block.jwt,
+		file: tk.file,
+		url: tk.url,
+		nmeth: tk.normalizationmethod,
+		mincutoff: tk.mincutoff
+	}
+	if (resolution_bp) {
+		par.resolution = resolution_bp
+	} else {
+		par.resolution = resolution_frag
+		par.isfrag = true
+	}
+
+	// the tasks are sent in batches, instead of one request per task; a task that the server skips because
+	// its response reached the limit of data points is sent again in a later batch
+	// in the same order as tasks[], where a task without data is null
+	const datalst: any[] = tasks.map(() => null)
+	const queue = tasks.map((t, idx) => ({ t, idx }))
+	const fetchBatch = async () => {
+		while (queue.length) {
+			const batch = queue.splice(0, PAIRS_PER_REQUEST)
+			const data = await client.dofetch2('hicdata', {
+				method: 'POST',
+				body: JSON.stringify({ ...par, pairs: batch.map(({ t }) => [t.pos1, t.pos2]) })
+			})
+			if (data.error) throw { message: data.error }
+			if (!Array.isArray(data.pairs) || data.pairs.length != batch.length) throw { message: 'invalid hicdata response' }
+			for (const [k, result] of data.pairs.entries()) {
+				const { t, idx } = batch[k]
+				if (result.error) throw { message: result.error }
+				if (result.skipped) {
+					queue.push(batch[k])
+					continue
+				}
+				// a region or a pair of regions may have no data
+				if (!result.items?.length) continue
+				const { regionidx, leftregionidx, rightregionidx } = t
+				datalst[idx] = { regionidx, leftregionidx, rightregionidx, items: result.items }
+			}
+		}
+	}
+	await Promise.all(Array.from({ length: Math.min(REQUESTS_IN_FLIGHT, queue.length) }, fetchBatch))
+	return parseStrawData(datalst, resolution_bp, resolution_frag, tk, block)
 }
 
 function parseStrawData(datalst: any, resolution_bp: number, resolution_frag: number, tk: any, block: any) {

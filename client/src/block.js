@@ -42,7 +42,7 @@ import {
 } from './block.tk.bigwigstranded'
 import { bedjfromtemplate, bedjmaketk, bedjload, bedjloadsubpanel } from './block.tk.bedj'
 import { gmtkfromtemplate, gmtkmaketk, gmtkrender } from './block.tk.usegm'
-import { hicstrawfromtemplate, hicstrawmaketk, hicstrawload } from './block.tk.hicstraw.adaptor'
+import { hicstrawfromtemplate, hicstrawmaketk, hicstrawload, hicstrawloadsubpanels } from './block.tk.hicstraw.adaptor'
 
 import { mdsjunctionfromtemplate, mdsjunctionmaketk, mdsjunctionload } from './block.mds.junction.adaptor'
 import { mdssvcnvfromtemplate, mdssvcnvmaketk, mdssvcnvload } from './block.mds.svcnv.adaptor'
@@ -4003,6 +4003,8 @@ seekrange(chr,start,stop) {
 			this.clean_subpanel()
 			return
 		}
+		// a hicstraw track loads all subpanels at once, so it is loaded after all subpanels are updated
+		const hicstrawtks = new Set()
 		for (let panelidx = 0; panelidx < this.subpanels.length; panelidx++) {
 			const panelrecord = this.subpanels[panelidx]
 
@@ -4061,7 +4063,7 @@ seekrange(chr,start,stop) {
 						bigwigstrandedloadsubpanel(tk, this, thispanel)
 						break
 					case client.tkt.hicstraw:
-						hicstrawload(tk, this)
+						hicstrawtks.add(tk)
 						break
 					case client.tkt.mdsjunction:
 						mdsjunctionload(tk, this)
@@ -4084,6 +4086,7 @@ seekrange(chr,start,stop) {
 				}
 			}
 		}
+		for (const tk of hicstrawtks) hicstrawloadsubpanels(tk, this)
 		this.clean_subpanel()
 	}
 

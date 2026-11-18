@@ -34,3 +34,16 @@ export function hicstrawload(tk: any, block: any) {
 		module.loadTk(tk, block)
 	})
 }
+
+/** the subpanel coordinates of a block, to tell whether a hicstraw track has loaded the current subpanels */
+export function hicstrawSubpanelsKey(block: any) {
+	return block.subpanels.map(p => [p.chr, p.start, p.stop, p.width].join(':')).join(',')
+}
+
+/** called by block.add_subpanel() after it updates the subpanels of a track; a hicstraw track loads all subpanels
+ * together with the main view, so it is loaded once instead of once per updated subpanel, and not again when its
+ * latest load already used the current subpanels, such as the load when the block is created */
+export function hicstrawloadsubpanels(tk: any, block: any) {
+	if (tk.subpanelsKey == hicstrawSubpanelsKey(block)) return
+	hicstrawload(tk, block)
+}
