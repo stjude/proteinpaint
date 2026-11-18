@@ -258,6 +258,7 @@ function setRenderers(self) {
 				if (tab.isVisible) tab.wrapper.style('display', isVisible ? '' : 'none')
 				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
 				tab.tab.style('color', tab.active ? activeColor : inactiveColor)
+				tab.tab.attr('active', tab.active ? 'active' : 'inactive')
 				tab.line.style('visibility', tab.active ? 'visible' : 'hidden')
 				tab.tab.html(tab.label) // re-print tab label since the label value could have been updated by outside code
 			})
