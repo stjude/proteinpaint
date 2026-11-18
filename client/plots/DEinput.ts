@@ -60,6 +60,10 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	groupsSeeded?: boolean
 	/** set once config.autoSubmit has triggered clickSubmit() */
 	autoSubmitted?: boolean
+	/** Counts the pre-analysis requests and the reruns of main(). A response is rendered only if nothing has
+	 * changed since its request: main() clears the panel when the groups, source or data type change, and a
+	 * response that comes after must not redraw it with the counts of the earlier selection */
+	preAnalysisRequest = 0
 	/** geneExpression (default), isoformExpression or dnaMethylation. Resolved in init() from state.config, NOT from
 	 * opts: mass/plot.js hands the component only {app, holder, header, id, ...}, so config fields
 	 * are not on opts and reading it in the constructor would silently always be undefined.
@@ -137,6 +141,9 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		so the throw permanently skips seeding and config.groups[] silently never appears. The
 		framework calls main() again right after init(), so nothing is lost by returning. */
 		if (!this.state) return
+		// the pending pre-analysis, if any, is of the earlier selection
+		this.preAnalysisRequest++
+		this.dom.loading.style('display', 'none')
 		this.dom.preAnalysis.selectAll('*').remove()
 		if (!this.expressionSource || (this.expressionSource === 'pseudobulk' && !this.pseudobulk)) {
 			this.dom.table.style('display', 'none')
@@ -517,6 +524,10 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	}
 
 	async clickSubmit(groups) {
+		// a second click supersedes the request of the first
+		const request = ++this.preAnalysisRequest
+		// the data type of this request: this.termType may change while it is pending
+		const termType = this.termType
 		this.dom.loading.style('display', 'block')
 		// ignore filter0 when cohort0 is used
 		const filter0 = this.hasCohort0 ? null : this.state.termfilter.filter0
@@ -546,9 +557,10 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		}
 		if (this.expressionSource === 'pseudobulk') body.pseudobulk = this.pseudobulk
 		// counts the samples with transcript counts, as the run of termdb/DE on isoforms does
-		if (this.termType == TermTypes.ISOFORM_EXPRESSION) body.termType = this.termType
+		if (termType == TermTypes.ISOFORM_EXPRESSION) body.termType = termType
 		// the route of the analysis: both accept the same preAnalysis body and answer with the same {data:{groupName:n}}
-		const preAnalysisData = await dofetch3(getVolcanoHandler(this.termType).route, { body })
+		const preAnalysisData = await dofetch3(getVolcanoHandler(termType).route, { body })
+		if (request != this.preAnalysisRequest) return
 
 		this.dom.loading.style('display', 'none')
 
@@ -560,7 +572,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			samplelstTW,
 			groups: samplelstTW.q.groups,
 			holder: this.dom.preAnalysis,
-			termType: this.termType,
+			termType,
 			self: this
 		})
 	}
