@@ -84,35 +84,37 @@ export function parentCorsMessage(res, flag = '') {
 	const child = window.open(embedder.href, '_blank')
 }
 
-// TODO: change this function to async, so that it can be awaited before runpp() reaches/calls mass appInit()
-//       this will address the race condition in the comment inside the function below
-export function childCorsMessage(opts) {
-	if (!window.opener) return
+// Resolves when the window.opener has posted the session state, or after a timeout if no state is posted.
+// Callers must await this before mass appInit(), since storeInit() reads opts.embeddedSessionState
+// once during init and the dynamic import of mass/app may finish before the opener's reply arrives.
+export function childCorsMessage(opts, timeout = 1000): Promise<void> {
+	if (!window.opener) return Promise.resolve()
 	const hostURL = sessionStorage.getItem('hostURL')
-	if (hostURL === window.location.origin) return
+	if (hostURL === window.location.origin) return Promise.resolve()
 
 	// if this is a child window or tab, refreshing it will need previously hydrated session state,
 	// in case the window.opener has already removed its message listener
 	opts.embeddedSessionState = JSON.parse(sessionStorage.getItem('embeddedSessionState') || `{}`)
+
+	let resolve
+	const received = new Promise<void>(r => (resolve = r))
 	const messageListener = event => {
 		if (event.origin != window.location.origin && event.origin !== hostURL) return
-		//
-		// !!! Potential race-condition
-		// - assumes that the message event from the window.opener will be received
-		//   before the storeInit() is triggered within the storeInit() call in mass/app.js
-		// - low-risk(?) since the postMessage() between browser tabs should be faster than
-		//   the dynamic code loading below and in mass/app
-		// !!!
-		if (event.data.state) {
+		if (event.data?.state) {
 			window.removeEventListener('message', messageListener)
 			Object.assign(opts.embeddedSessionState, event.data.state)
 			// see the comment above for when this stored embeddedState may be used
 			sessionStorage.setItem('embeddedSessionState', JSON.stringify(opts.embeddedSessionState))
+			resolve()
 		}
 	}
 	window.addEventListener('message', messageListener, false)
-	// limit the time to listen for the window.opener's message
-	setTimeout(() => window.removeEventListener('message', messageListener), 1000)
+	// limit the time to listen for the window.opener's message, for example when
+	// the opener is not a proteinpaint or embedder window that will respond
+	setTimeout(() => {
+		window.removeEventListener('message', messageListener)
+		resolve()
+	}, timeout)
 	// the window.opener can be either
 	// - an embedder site when clicking on `Open Session`
 	// - a proteinpaint site when clicking on a shared URL link
@@ -140,4 +142,5 @@ export function childCorsMessage(opts) {
 	} catch (e) {
 		console.log(e)
 	}
+	return received
 }

@@ -1350,7 +1350,7 @@ async function launchmass(arg, app) {
 	opts.getDatasetAccessToken = arg.getDatasetAccessToken
 	opts.addLoginCallback = arg.addLoginCallback
 	opts.pkgver = app.pkgver
-	childCorsMessage(opts)
+	await childCorsMessage(opts)
 	const _ = await import('../mass/app')
 	return await _.appInit(opts)
 }
