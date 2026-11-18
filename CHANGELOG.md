@@ -16,6 +16,7 @@ Features:
 
 Fixes:
 - A genome-level gene set db built by the current buildTermdb no longer stops the server from starting
+- gene set enrichment with blitzgsea: the null distribution follows its fitted values, so the number of significant gene sets swings much less between runs of one analysis, and random scores give far fewer significant sets
 
 
 ## 2.228.0
