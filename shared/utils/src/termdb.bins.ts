@@ -331,7 +331,9 @@ export function get_bin_label(bin: any, binconfig: any, valueConversion?: any) {
 	if (bin.label) return bin.label
 
 	const bc = binconfig
-	if (!bc.binLabelFormatter) bc.binLabelFormatter = getNumDecimalsFormatter(bc)
+	/* binconfig is not mutated here: it may be a caller's frozen tw.q, as in a termsetting edit menu.
+	compute_bins() sets bc.binLabelFormatter for the duration of its loop, to reuse one formatter */
+	const binLabelFormatter = bc.binLabelFormatter || getNumDecimalsFormatter(bc)
 	if (!bin.startunbounded && !bin.stopunbounded && !('startinclusive' in bin) && !('stopinclusive' in bin)) {
 		if (bc.startinclusive) bin.startinclusive = true
 		else if (bc.stopinclusive) bin.stopinclusive = true
@@ -342,8 +344,8 @@ export function get_bin_label(bin: any, binconfig: any, valueConversion?: any) {
 
 	let label_offset = 0
 	if ('label_offset' in bc) {
-		bc.label_offset_ignored = 'bin_size' in bc && bc.bin_size < bc.label_offset
-		if (!bc.label_offset_ignored) label_offset = bc.label_offset
+		const label_offset_ignored = 'bin_size' in bc && bc.bin_size < bc.label_offset
+		if (!label_offset_ignored) label_offset = bc.label_offset
 	} else if (bc.bin_size === 1 && bc.termtype == 'integer') {
 		label_offset = 1
 	}
@@ -354,7 +356,7 @@ export function get_bin_label(bin: any, binconfig: any, valueConversion?: any) {
 		const oper = bin.stopinclusive ? '≤' : '<' // \u2264
 		const v1 = valueConversion
 			? convertUnits(stop, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
-			: bc.binLabelFormatter(stop) //bin.startinclusive && label_offset ? stop - label_offset : stop)
+			: binLabelFormatter(stop) //bin.startinclusive && label_offset ? stop - label_offset : stop)
 		return oper + v1
 	}
 	// a data value may coincide with the last bin's start
@@ -362,7 +364,7 @@ export function get_bin_label(bin: any, binconfig: any, valueConversion?: any) {
 		const oper = bin.startinclusive /*|| label_offset*/ ? '≥' : '>' // \u2265
 		const v0 = valueConversion
 			? convertUnits(start, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
-			: bc.binLabelFormatter(start) //bin.startinclusive || start == min ? start : start + label_offset)
+			: binLabelFormatter(start) //bin.startinclusive || start == min ? start : start + label_offset)
 		return oper + v0
 	}
 
@@ -374,12 +376,12 @@ export function get_bin_label(bin: any, binconfig: any, valueConversion?: any) {
 				'' +
 				(valueConversion
 					? convertUnits(start, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
-					: bc.binLabelFormatter(start))
+					: binLabelFormatter(start))
 			)
 		} else {
 			const v0 = valueConversion
 				? convertUnits(start, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
-				: bc.binLabelFormatter(start)
+				: binLabelFormatter(start)
 			const v1 = valueConversion
 				? convertUnits(
 						stop - label_offset,
@@ -388,7 +390,7 @@ export function get_bin_label(bin: any, binconfig: any, valueConversion?: any) {
 						valueConversion.scaleFactor,
 						true
 				  )
-				: bc.binLabelFormatter(stop - label_offset)
+				: binLabelFormatter(stop - label_offset)
 			// ensure that last two bin labels make sense (the last is stopunbounded)
 			return +v0 >= +v1 ? v0.toString() : v0 + ' to ' + v1
 		}
@@ -400,12 +402,12 @@ export function get_bin_label(bin: any, binconfig: any, valueConversion?: any) {
 			? convertUnits(start, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
 			: Number.isInteger(start)
 			? start
-			: bc.binLabelFormatter(start)
+			: binLabelFormatter(start)
 		const v1 = valueConversion
 			? convertUnits(stop, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
 			: Number.isInteger(stop)
 			? stop
-			: bc.binLabelFormatter(stop)
+			: binLabelFormatter(stop)
 		// after rounding the bin labels, the bin start may equal the last bin stop as derived from actual data
 		if (+v0 >= +v1) {
 			const oper = bin.startinclusive ? '≥' : '>' // \u2265
