@@ -825,10 +825,8 @@ export function resolveSampleMapping(q, ds) {
 		delete q.sampleMapping
 		return
 	}
-	if (q.sampleMapping && q.sampleTypes) {
-		validateQuerySampleTypes(q, ds)
-		return
-	}
+	validateSampleMapping(q, ds)
+	if (q.sampleMapping && q.sampleTypes) return
 	const sampleTypesLst = getSampleTypesLst(q, ds)
 	if (!sampleTypesLst.length) return
 	if (q.sampleMapping) {
@@ -860,7 +858,7 @@ export function resolveSampleMapping(q, ds) {
 		// infer sample mapping
 		inferSampleMapping(q, sampleTypesLst, ds)
 	}
-	validateQuerySampleTypes(q, ds)
+	validateSampleMapping(q, ds)
 }
 
 function inferSampleMapping(q, sampleTypesLst: TwSampleTypes[], ds): void {
@@ -907,7 +905,11 @@ function sampleTypesAreAligned(sampleTypesLst: TwSampleTypes[]): boolean {
 	})
 }
 
-function validateQuerySampleTypes(q, ds) {
+function validateSampleMapping(q, ds) {
+	if (q.sampleMapping && q.sampleMapping !== 'parentToChildren' && q.sampleMapping !== 'childrenToParent') {
+		throw new Error('invalid q.sampleMapping')
+	}
+	if (q.sampleTypes === undefined) return
 	if (!Array.isArray(q.sampleTypes)) throw 'q.sampleTypes is not array'
 	q.sampleTypes = q.sampleTypes.map(st => getSampleTypeId(st, ds))
 }
@@ -1053,7 +1055,16 @@ function getSampleTypesLst(q, ds): TwSampleTypes[] {
 	const twTypes = getTwSampleTypesLst(twLst, ds)
 	const filterTypes = getFilterSampleTypesLst(filter, ds)
 	const filter0Types = ds.getFilter0SampleTypesLst ? ds.getFilter0SampleTypesLst(filter0, ds) : []
-	return [...twTypes, ...filterTypes, ...filter0Types]
+	const sampleTypesLst = [...twTypes, ...filterTypes, ...filter0Types]
+	for (const st of sampleTypesLst) {
+		if (!Array.isArray(st.sampleTypes) || !st.sampleTypes.length || !st.sampleTypes.every(Number.isInteger)) {
+			throw new Error('sampleTypes must be a non-empty array of integers')
+		}
+		if (st.childSampleTypes && (!Array.isArray(st.childSampleTypes) || !st.childSampleTypes.every(Number.isInteger))) {
+			throw new Error('childSampleTypes must be an array of integers')
+		}
+	}
+	return sampleTypesLst
 }
 
 function getTwSampleTypesLst(twLst, ds): TwSampleTypes[] {
