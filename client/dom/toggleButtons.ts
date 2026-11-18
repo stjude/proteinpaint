@@ -164,6 +164,7 @@ function setRenderers(self) {
 				tab.tab //Button text
 					.attr('data-testid', `sjpp-toggle_button-text-${tab.label.toLowerCase().replace(/\s/g, '-')}`)
 					.style('color', tab.active ? activeColor : inactiveColor)
+					.attr('active', tab.active ? 'active' : 'inactive')
 					.style('text-align', textAlign)
 					.style('padding', '5px')
 					.html(tab.label)
