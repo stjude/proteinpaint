@@ -143,6 +143,7 @@ async function run_genesetEnrichment_analysis(
  * detail-image requests share one cached result and one pickle. */
 export function gseaKeyInputs(q: GenesetEnrichmentRequest, genes: string[], fold_change: number[], genomes: any) {
 	return {
+		v: GSEA_CACHE_VERSION,
 		genes,
 		fold_change,
 		/* the gene set db file, so a result computed on one MSigDB release is not served after the genome
@@ -160,6 +161,10 @@ export function gseaKeyInputs(q: GenesetEnrichmentRequest, genes: string[], fold
 			: {})
 	}
 }
+
+/** Bump when python/src/gsea.py gives a different table for the same inputs, so that a table cached
+ * before the change is not served. 2: the null parameters are smoothed without robust iterations. */
+const GSEA_CACHE_VERSION = 2
 
 /** Largest gene set a DMR scan's gene-body ranking is fitted against. */
 const SCAN_MAX_GENESET_SIZE = 500
