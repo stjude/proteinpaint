@@ -4,7 +4,8 @@ import { getGroupForRegion, withOthersGroup } from '#mass/groups'
 import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI, sayerror } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
-import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION, DMR_SCAN_ELEMENT_TYPE } from '#types'
+import { DNA_METHYLATION, GENE_EXPRESSION, DMR_SCAN_ELEMENT_TYPE } from '#types'
+import { findVolcanoHandler, getVolcanoHandler } from '../handlers'
 import type { DmrScanSummary } from '#types'
 import { CCRE_TRACK_NAME } from '#plots/dmr/viewModel/DmrViewModel.ts'
 import { getGEunit } from '#tw/geneExpression'
@@ -49,7 +50,7 @@ export class VolcanoInteractions {
 	async confoundersMenu() {
 		const state = this.app.getState()
 		const config = state.plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		if (config.termType !== GENE_EXPRESSION && config.termType !== DNA_METHYLATION) return
+		if (!findVolcanoHandler(config.termType)?.actions.includes('confounders')) return
 
 		/** Find terms used to create the groups and disable in the
 		 * termsetting UI. Prevents users from trying to control for
@@ -116,7 +117,7 @@ export class VolcanoInteractions {
 				: []),
 			{
 				// DAP volcanoes report a single FDR rather than a p-value.
-				text: termType === PROTEOME_DAP ? 'Download FDR table' : 'Download p-value table',
+				text: findVolcanoHandler(termType)?.fdrOnly ? 'Download FDR table' : 'Download p-value table',
 				callback: (itemDiv: any) => this.downloadPvalueTable(termType, itemDiv)
 			}
 		]
@@ -141,7 +142,7 @@ export class VolcanoInteractions {
 		// name the file after what is in it and when it was run -- these downloads pile up in
 		// one folder across cohorts and reruns
 		const date = fileDateStamp()
-		const label = termType === PROTEOME_DAP ? 'fdr' : 'p-value'
+		const label = findVolcanoHandler(termType)?.fdrOnly ? 'fdr' : 'p-value'
 		let { rows, columns } = this.pValueTableData
 		let subsetNote: string | undefined
 
@@ -191,8 +192,7 @@ export class VolcanoInteractions {
 		})
 	}
 
-	/** When clicking on a data point, launches the box plot in a separate sandbox
-	 * For geneExpression, value == gene symbol */
+	/** When clicking on a gene, launches the box plot of its expression in a separate sandbox */
 	launchBoxPlot(value: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const values = {}
@@ -203,27 +203,12 @@ export class VolcanoInteractions {
 				list: group.values
 			}
 		}
-		/** Gene variant and expression terms do not have an id
-		 * need to be handled separately.
-		 * TODO: In the future with more use cases, simplify this logic. */
-		const setTerm = () => {
-			if (config.termType == GENE_EXPRESSION) {
-				return {
-					q: { mode: 'continuous' },
-					term: {
-						gene: value,
-						name: value,
-						type: config.termType
-					}
-				}
-			} else return config.term
-		}
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
 				chartType: 'summary',
 				childType: 'boxplot',
-				term: setTerm(),
+				term: { q: { mode: 'continuous' }, term: { gene: value, name: value, type: GENE_EXPRESSION } },
 				term2: {
 					q: { groups: config.tw.q.groups, type: 'custom-samplelst' },
 					term: config.tw.term
@@ -292,8 +277,9 @@ export class VolcanoInteractions {
 	launchGeneSetEdit() {
 		const plotConfig = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const holder = this.dom.actionsTip.d.append('div').style('padding', '5px') as any
-		const limitedGenesList =
-			plotConfig.termType === DNA_METHYLATION ? this.data.map(d => d.promoter_id) : this.data.map(d => d.gene_name)
+		// the keys that config.highlightedData holds
+		const rowKey = getVolcanoHandler(plotConfig.termType).getRowKey
+		const limitedGenesList = this.data.map(d => rowKey(d))
 		new GeneSetEditUI({
 			holder,
 			genome: this.app.opts.genome,

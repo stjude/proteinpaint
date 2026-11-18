@@ -1,15 +1,13 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
-import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
-import type { DiffSpliceRequest } from '#types'
-import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
-import { DMR_SCAN_ELEMENT_TYPE } from '#types'
+import type { VolcanoRenderRequest } from '#types'
 import { getGroupColors, toHex } from '../colors'
-import { DMRCATE_DEFAULTS, onDeltaBetaAxis } from '../settings/defaults'
 import { withOthersGroup } from '#mass/groups'
-// import type { Volcano } from '../Volcano'
+import { getVolcanoHandler, type EffectAxis, type VolcanoHandler, type VolcanoRequestContext } from '../handlers'
 
-export class VolcanoModel {
+/** Fetches the analysis of config.termType. The request differs by data type and is built by the
+ * handler of that type (../handlers/); this class holds what every request shares. */
+export class VolcanoModel implements VolcanoRequestContext {
 	plot: any
 	app: MassAppApi
 	config!: any
@@ -25,159 +23,26 @@ export class VolcanoModel {
 		this.termType = termType
 	}
 
-	/** May use mapper instead as more termTypes are added */
+	/** looked up on use, not in the constructor: a volcano of an unsupported type is still created,
+	 * and fails when it asks for data */
+	get handler(): VolcanoHandler {
+		return getVolcanoHandler(this.termType)
+	}
+
 	async getData(config: any, settings: any) {
 		this.config = config
 		this.settings = settings
 
-		if (this.termType === tt.GENE_EXPRESSION) {
-			const body = await this.getGERequestBody()
-			const response = await dofetch3('termdb/DE', { body, signal: this.plot.api?.getAbortSignal() })
-			// Surface the DE request so downstream plots (GSEA) can snapshot
-			// it and later ask the server to recompute the DA cache if the
-			// file is missing on a peer node or after TTL eviction.
-			if (response && !response.error) {
-				response.daRequest = body
-				this.setGroupSizes(response)
-			}
-			return response
+		const handler = this.handler
+		const body = await handler.getRequestBody(this)
+		const response = await dofetch3(handler.route, { body, signal: this.plot.api?.getAbortSignal() })
+		// Surface the request so downstream plots (GSEA) can snapshot it and later ask the server to
+		// recompute the DA cache if the file is missing on a peer node or after TTL eviction.
+		if (handler.comparesGroups && response && !response.error) {
+			response.daRequest = body
+			this.setGroupSizes(response)
 		}
-		if (this.termType === tt.DNA_METHYLATION) {
-			const body = await this.getDMRequestBody()
-			const response = await dofetch3('termdb/diffMeth', { body, signal: this.plot.api?.getAbortSignal() })
-			// Surface the DM request the same way the GE branch above does so
-			// the GSEA tab can snapshot it and the server can recompute the DM
-			// cache if the file is missing on a peer node or after TTL.
-			if (response && !response.error) {
-				response.daRequest = body
-				this.setGroupSizes(response)
-			}
-			return response
-		}
-		if (this.termType === tt.JUNCTION) {
-			const body = await this.getDSRequestBody()
-			const response = await dofetch3('termdb/diffSplice', { body, signal: this.plot.api?.getAbortSignal() })
-			if (response && !response.error) {
-				response.daRequest = body
-				this.setGroupSizes(response)
-			}
-			return response
-		}
-		if (this.termType === tt.SINGLECELL_CELLTYPE) {
-			const body = await this.getSCCTRequestBody()
-			return await dofetch3('termdb/singlecellDEgenes', { body, signal: this.plot.api?.getAbortSignal() })
-		}
-		if (this.termType === tt.PROTEOME_DAP) {
-			const body = this.getDapRequestBody()
-			return await dofetch3('termdb/dapVolcano', { body, signal: this.plot.api?.getAbortSignal() })
-		}
-		if (this.termType === tt.SINGLECELL_GENE_EXPRESSION) {
-			//TODO
-		}
-		throw new Error(`Volcano plot does not support route for termType='${this.termType}'`)
-	}
-
-	//Gene expression
-	async getGERequestBody() {
-		this.setOthersGroup(this.config.samplelst)
-		const state = this.app.getState()
-		const body = {
-			kind: 'DE',
-			genome: this.app.vocabApi.vocab.genome,
-			dslabel: this.app.vocabApi.vocab.dslabel,
-			method: this.settings.method,
-			min_count: this.settings.minCount,
-			min_total_count: this.settings.minTotalCount,
-			samplelst: this.config.samplelst,
-			filter: state.termfilter.filter,
-			filter0: state.termfilter.filter0,
-			cpm_cutoff: this.settings.cpmCutoff,
-			volcanoRender: this.getVolcanoRender()
-		} as Partial<DERequest> //remove Partial when storage_type is removed from DERequest
-		const pseudobulk = this.config.tw?.pseudobulk
-		if (pseudobulk) body.pseudobulk = pseudobulk
-
-		this.addConfounderTw(body)
-
-		return body
-	}
-
-	//DNA methylation
-	async getDMRequestBody() {
-		this.setOthersGroup(this.config.samplelst)
-		const state = this.app.getState()
-		const body = {
-			kind: 'DM',
-			genome: this.app.vocabApi.vocab.genome,
-			dslabel: this.app.vocabApi.vocab.dslabel,
-			samplelst: this.config.samplelst,
-			filter: state.termfilter.filter,
-			filter0: state.termfilter.filter0,
-			min_samples_per_group: this.settings.minSamplesPerGroup,
-			exclude_sex_chr: this.settings.excludeSexChr,
-			/* Omitted rather than sent as 'promoter' when it is the default, so a request
-			from a promoter-only dataset is byte-identical to what this client sent before
-			the element picker existed. The server resolves an absent element_type to
-			'promoter'. This does NOT preserve cache keys -- the key object gained the
-			field server-side, so every pre-existing dm/ entry is orphaned on deploy
-			regardless of what the client sends. */
-			...(this.settings.elementType && this.settings.elementType != 'promoter'
-				? { element_type: this.settings.elementType }
-				: {}),
-			// the scan's own knobs; the server ignores them for any other element type
-			...(this.settings.elementType == DMR_SCAN_ELEMENT_TYPE
-				? {
-						scan: {
-							...(this.settings.scanChromosome ? { chromosome: this.settings.scanChromosome } : {}),
-							backgroundCorrection: !!this.settings.backgroundCorrection,
-							// display only: the rows are rebuilt from the cached scan on every request
-							yAxis: this.settings.scanYAxis,
-							minCpgs: this.settings.minCpgs,
-							// display only, like yAxis: what the scan counts, not what it runs
-							minDeltaBeta: this.settings.deltaBetaCutoff,
-							profileBinBp: this.settings.profileBinBp,
-							// only when changed: an explicit default would orphan every cached scan
-							...(this.settings.lambda != DMRCATE_DEFAULTS.lambda ? { lambda: this.settings.lambda } : {}),
-							...(this.settings.C != DMRCATE_DEFAULTS.C ? { C: this.settings.C } : {}),
-							...(this.settings.fdrCutoff != DMRCATE_DEFAULTS.fdrCutoff ? { fdrCutoff: this.settings.fdrCutoff } : {})
-						}
-				  }
-				: {}),
-			volcanoRender: this.getVolcanoRender()
-		} as Partial<DiffMethRequest>
-
-		/* The scan fits no covariates and the server rejects a scan request carrying them. Confounders
-		chosen under an element class stay in the config when the class switches to the scan, so they
-		are left off here rather than failing every scan until the user finds and clears them. */
-		if (this.settings.elementType != DMR_SCAN_ELEMENT_TYPE) this.addConfounderTw(body)
-
-		return body
-	}
-
-	//Splicing
-	async getDSRequestBody() {
-		this.setOthersGroup(this.config.samplelst)
-		const state = this.app.getState()
-		const body = {
-			kind: 'DS',
-			genome: this.app.vocabApi.vocab.genome,
-			dslabel: this.app.vocabApi.vocab.dslabel,
-			samplelst: this.config.samplelst,
-			filter: state.termfilter.filter,
-			filter0: state.termfilter.filter0,
-			method: this.settings.method,
-			/* leafcutter's own cluster filters, applied by the edgeR screen too so both engines
-			rank the same cluster set. Sent already scaled to cohort size by validateDSSettings --
-			as absolute counts they silently loosen as N grows. */
-			minSamplesPerIntron: this.settings.minSamplesPerIntron,
-			minSamplesPerGroup: this.settings.minSamplesPerGroup,
-			minCountsPerCluster: this.settings.minCountsPerCluster,
-			volcanoRender: this.getVolcanoRender()
-		} as Partial<DiffSpliceRequest>
-
-		this.addConfounderTw(body)
-
-		return body
+		return response
 	}
 
 	/** Parameters telling the server to run the `volcano` Rust renderer and return a
@@ -191,25 +56,17 @@ export class VolcanoModel {
 		// Resolve case/control colors via the shared helper (see colors.ts) so the
 		// PNG and the SVG overlay paint each side with the exact same hex string.
 		const { caseColor, controlColor } = getGroupColors(this.config)
-		/* Only differential methylation carries delta_beta, and only it offers the axis toggle, so
-		other term types always fall through to fold_change. The cutoff sent must be in the units
-		of the field sent -- otherwise the server draws threshold lines that do not correspond to
-		what it classified. */
-		const useDeltaBeta = onDeltaBetaAxis(this.termType, this.settings)
+		/* The handler names the effect size on the x axis and the cutoff in that field's units:
+		fold_change unless the data type plots another (delta_beta, delta_psi). */
+		const axis: EffectAxis = this.handler.getEffectAxis?.(this.settings) || { cutoff: this.settings.foldChangeCutoff }
 		const render: VolcanoRenderRequest = {
 			significanceThresholds: {
 				pValueCutoff: this.settings.pValue,
 				pValueType: this.settings.pValueType,
-				foldChangeCutoff: useDeltaBeta ? this.settings.deltaBetaCutoff : this.settings.foldChangeCutoff
+				foldChangeCutoff: axis.cutoff
 			},
-			...(useDeltaBeta ? { xField: 'delta_beta' as const } : {}),
-			// Tied to the delta-beta axis: the control that sets it is only offered for
-			// methylation, and centering a log2 fold-change axis is a different conversation.
-			/* Not on a scan, whose control is hidden but whose setting survives a switch from an element
-			class: the scan counts, Manhattan and track use raw Δβ, and a centered volcano would disagree. */
-			...(useDeltaBeta && this.settings.centerDeltaBeta && this.settings.elementType != DMR_SCAN_ELEMENT_TYPE
-				? { centerX: true }
-				: {}),
+			...(axis.xField ? { xField: axis.xField } : {}),
+			...(axis.centerX ? { centerX: true } : {}),
 			pixelWidth: this.settings.width,
 			pixelHeight: this.settings.height,
 			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),
@@ -229,13 +86,6 @@ export class VolcanoModel {
 			// bitmap memory bounded.
 			devicePixelRatio: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) * 2
 		}
-
-		// Splicing always plots delta_psi
-		if (this.termType === tt.JUNCTION) {
-			render.xField = 'delta_psi'
-			render.significanceThresholds.foldChangeCutoff = this.settings.deltaPsiCutoff
-		}
-
 		return render
 	}
 
@@ -245,31 +95,6 @@ export class VolcanoModel {
 		if (confounders?.length) {
 			body.tw = this.config.confounderTws[0]
 			if (confounders.length > 1) body.tw2 = this.config.confounderTws[1]
-		}
-	}
-
-	//Single cell cell type
-	getSCCTRequestBody(): TermdbSingleCellDEgenesRequest {
-		const body = {
-			genome: this.app.vocabApi.vocab.genome,
-			dslabel: this.app.vocabApi.vocab.dslabel,
-			sample: this.config.sample,
-			termId: this.config.termId,
-			categoryName: this.config.categoryName,
-			volcanoRender: this.getVolcanoRender()
-		}
-		return body
-	}
-
-	getDapRequestBody() {
-		const { organism, assay, cohort } = this.config.proteomeDetails
-		return {
-			genome: this.app.vocabApi.vocab.genome,
-			dslabel: this.app.vocabApi.vocab.dslabel,
-			organism,
-			assay,
-			cohort,
-			volcanoRender: this.getVolcanoRender()
 		}
 	}
 

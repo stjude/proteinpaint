@@ -18,11 +18,7 @@ import { uiLabel } from '#shared'
 import { TermTypes, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { dofetch3 } from '#common/dofetch'
 import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
-import {
-	scaleDsFilters,
-	getSpliceMethodOptions,
-	BACKGROUND_CORRECTION_TITLE
-} from '../plots/volcano/settings/defaults.ts'
+import { BACKGROUND_CORRECTION_TITLE, findVolcanoHandler } from '../plots/volcano/handlers/index.ts'
 import { getGEunit } from '#tw/geneExpression'
 import { renderDataAvailability } from './groupDataAvailability.ts'
 
@@ -883,7 +879,9 @@ arg.onLaunch optionally handles creating the plot for an embedded group picker. 
 export function renderPreAnalysisData(arg) {
 	const { preAnalysisData, samplelstTW, groups, holder, tip, self } = arg
 	const termType = arg.termType || TermTypes.GENE_EXPRESSION
-	const isGE = termType == TermTypes.GENE_EXPRESSION
+	// the parts of the panel that differ by data type
+	const pre = findVolcanoHandler(termType)?.preAnalysis || {}
+	const termdbConfig = self?.app?.vocabApi?.termdbConfig
 
 	if (!preAnalysisData?.data) return
 
@@ -897,30 +895,12 @@ export function renderPreAnalysisData(arg) {
 	const sampleLabel = uiLabels?.samples || 'samples'
 
 	/* the analysis methods, for expression and splicing: methylation has a single engine (diffMeth.R), so
-	there is nothing to choose. Every method is listed, and one that cannot run on these groups is grayed
-	out with the reason as its tooltip: small groups rule out wilcoxon here, the server lists the methods
-	that would be refused for memory, and a cohort over the sample limit comes as the alert, which grays
-	out every method below. */
-	const sample_size_limit = 8
+	there is nothing to choose. Every method is listed, and one that cannot run is grayed out with the
+	reason as its tooltip, by the handler of the data type; a cohort over the sample limit comes as the
+	alert, which grays out every method below. */
 	const lowMemoryMethods = preAnalysisData.lowMemoryMethods || []
 	const total = numControl + numCase
-	const options = isGE
-		? [
-				{ label: 'edgeR', value: 'edgeR' },
-				{ label: 'Wilcoxon', value: 'wilcoxon' },
-				{ label: 'Limma', value: 'limma' }
-		  ].map(o => {
-				const reason =
-					numControl <= sample_size_limit && numCase <= sample_size_limit && o.value == 'wilcoxon'
-						? `Wilcoxon needs more than ${sample_size_limit} ${sampleLabel} in at least one group`
-						: lowMemoryMethods.includes(o.value)
-						? `Server memory is too low to run ${o.label} on ${total} ${sampleLabel}`
-						: ''
-				return reason ? { ...o, disabled: true, reason } : o
-		  })
-		: termType == TermTypes.JUNCTION
-		? getSpliceMethodOptions()
-		: []
+	const options = pre.getMethodOptions?.({ numControl, numCase, lowMemoryMethods, sampleLabel }) || []
 	// with every method grayed out there is nothing to run, so the alert hides the run button
 	if (options.length && options.every(o => o.disabled)) {
 		const msg = `Server memory is too low to run this analysis on ${total} ${sampleLabel}. Please select a smaller cohort.`
@@ -961,10 +941,9 @@ export function renderPreAnalysisData(arg) {
 	eligible samples. So a change of class goes back to the caller (arg.onElementType), which
 	fetches the counts for that class and renders this panel again. The class is offered under an
 	alert too: another class may have the samples this one lacks. */
-	const dm =
-		termType == TermTypes.DNA_METHYLATION ? self?.app?.vocabApi?.termdbConfig?.queries?.dnaMethylation : undefined
-	const elementTypes = dm?.elementTypes || []
-	const elementType = arg.elementType || dm?.defaultElementType || 'promoter'
+	const classes = pre.getElementClasses?.(termdbConfig)
+	const elementTypes = classes?.elementTypes || []
+	const elementType = arg.elementType || classes?.defaultElementType || 'promoter'
 	const isScan = elementType == DMR_SCAN_ELEMENT_TYPE
 	const offersClass =
 		!!arg.onElementType && elementTypes.length > 1 && elementTypes.some(e => e.key == DMR_SCAN_ELEMENT_TYPE)
@@ -1000,7 +979,7 @@ export function renderPreAnalysisData(arg) {
 	on a 1370-case cohort). this only moves the preferred method to the front -- it is preselected as the
 	first method that is not grayed out -- so every method stays available and nothing changes for other
 	datasets. */
-	const preferredMethod = self?.app?.vocabApi?.termdbConfig?.queries?.rnaseqGeneCount?.defaultMethod
+	const preferredMethod = pre.getPreferredMethod?.(termdbConfig)
 	if (preferredMethod) {
 		const i = options.findIndex(o => o.value == preferredMethod)
 		if (i > 0) options.unshift(options.splice(i, 1)[0])
@@ -1084,9 +1063,8 @@ export function renderPreAnalysisData(arg) {
 				const volcano = {}
 				// methylation carries no method; passing an undefined one would fail volcano settings validation
 				if (selectedMethod) volcano.method = selectedMethod
-				/* splicing filters scale with the samples that will actually be tested, which only the
-				pre-analysis counts know: the raw groups include samples absent from the splicing h5 */
-				if (termType == TermTypes.JUNCTION) Object.assign(volcano, scaleDsFilters(numControl + numCase))
+				// settings that follow from the samples with data, such as the scaled splicing filters
+				if (pre.getLaunchSettings) Object.assign(volcano, pre.getLaunchSettings(numControl + numCase))
 				// a group defined by a filter lists no sample: the plot counts it by its samples with data
 				for (const g of groups) {
 					if (g.filter && !Array.isArray(g.values)) g.sampleCount = preAnalysisData.data[g.name]

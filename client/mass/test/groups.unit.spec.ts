@@ -25,6 +25,7 @@ import { TermTypes } from '#types'
  *  - groups getSamplelstTW()
  *  - groups getAvailabilityGroups()
  *  - groups renderPreAnalysisData()
+ *  - groups renderPreAnalysisData() by data type
  *  - groups isGroupsDisabled()
  */
 
@@ -616,6 +617,142 @@ tape('groups renderPreAnalysisData()', test => {
 		'should offer the splicing methods again in the next menu without an alert'
 	)
 
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('groups renderPreAnalysisData() by data type', test => {
+	const holder: any = d3s.select('body').append('div')
+	const samplelstTW = {
+		q: { groups: [{ name: 'g1' }, { name: 'g2' }] },
+		term: { values: { g1: { color: 'red' }, g2: { color: 'blue' } } }
+	}
+	/** renders the panel, and returns its method radios, its selects, and the config that the run button dispatches */
+	const render = (termType: string, data: any, more: any = {}, queries: any = {}) => {
+		holder.selectAll('*').remove()
+		const dispatched: any[] = []
+		const self = {
+			state: {},
+			app: {
+				dispatch: (a: any) => dispatched.push(a),
+				vocabApi: { termdbConfig: { queries } },
+				opts: { genome: { majorchrorder: ['chr1', 'chrM'] } }
+			}
+		}
+		renderPreAnalysisData({
+			preAnalysisData: { data, ...more },
+			samplelstTW,
+			groups: [],
+			holder,
+			self,
+			termType,
+			...more
+		})
+		const radios = (holder.selectAll('input[type=radio]').nodes() as HTMLInputElement[]).map(i => ({
+			value: i.value,
+			checked: i.checked,
+			disabled: i.disabled,
+			title: (i.closest('[title]') as HTMLElement | null)?.title
+		}))
+		const selects = (holder.selectAll('select').nodes() as HTMLSelectElement[]).map(s => [
+			s.getAttribute('data-testid'),
+			s.value,
+			[...s.options].map(o => o.value)
+		])
+		const run = holder.select('[data-testid=sjpp-da-run-btn]')
+		if (!run.empty()) (run.node() as HTMLElement).click()
+		return {
+			radios,
+			selects,
+			checkbox: !holder.select('[data-testid=sjpp-da-background-checkbox]').empty(),
+			runText: run.empty() ? null : run.text(),
+			config: dispatched[0]?.config
+		}
+	}
+
+	const ge = render(TermTypes.GENE_EXPRESSION, { g1: 5, g2: 5 }, { lowMemoryMethods: ['limma'] })
+	test.deepEqual(
+		ge.radios.map(r => [r.value, r.checked, r.disabled]),
+		[
+			['edgeR', true, false],
+			['wilcoxon', false, true],
+			['limma', false, true]
+		],
+		'expression grays out wilcoxon on small groups and a method over memory'
+	)
+	test.ok(
+		ge.radios[1].title?.includes('Wilcoxon needs more than 8 samples in at least one group'),
+		'and says why wilcoxon cannot run'
+	)
+	test.ok(ge.radios[2].title?.includes('Server memory is too low to run Limma on 10 samples'), 'and why limma cannot')
+	test.equal(ge.runText, 'Run Differential Gene Expression Analysis', 'expression run button')
+	test.deepEqual(
+		[ge.config?.chartType, ge.config?.termType, ge.config?.settings],
+		['differentialAnalysis', TermTypes.GENE_EXPRESSION, { volcano: { method: 'edgeR' } }],
+		'expression launches with the checked method'
+	)
+	const preferred = render(
+		TermTypes.GENE_EXPRESSION,
+		{ g1: 100, g2: 100 },
+		{},
+		{ rnaseqGeneCount: { defaultMethod: 'wilcoxon' } }
+	)
+	test.deepEqual(
+		preferred.radios.map(r => [r.value, r.checked]),
+		[
+			['wilcoxon', true],
+			['edgeR', false],
+			['limma', false]
+		],
+		'expression leads with the method that the dataset prefers'
+	)
+
+	const dmQueries = {
+		dnaMethylation: {
+			elementTypes: [
+				{ key: 'promoter', label: 'Promoter' },
+				{ key: 'dmr_scan', label: 'DMR scan' }
+			]
+		}
+	}
+	const dm = render(TermTypes.DNA_METHYLATION, { g1: 20, g2: 20 }, { onElementType: () => {} }, dmQueries)
+	test.deepEqual(dm.radios, [], 'methylation offers no method')
+	test.deepEqual(
+		dm.selects,
+		[['sjpp-da-element-select', 'promoter', ['promoter', 'dmr_scan']]],
+		'methylation offers its element classes'
+	)
+	test.deepEqual(dm.config?.settings, { volcano: { elementType: 'promoter' } }, 'and launches on the class')
+	const scan = render(
+		TermTypes.DNA_METHYLATION,
+		{ g1: 20, g2: 20 },
+		{ onElementType: () => {}, elementType: 'dmr_scan' },
+		dmQueries
+	)
+	test.deepEqual(
+		scan.selects,
+		[
+			['sjpp-da-element-select', 'dmr_scan', ['promoter', 'dmr_scan']],
+			['sjpp-da-scan-select', '', ['', 'chr1']]
+		],
+		'the scan offers the genome and its chromosomes'
+	)
+	test.ok(scan.checkbox, 'and the background correction')
+	test.equal(scan.runText, 'Run Differential DNA Methylation Analysis', 'methylation run button')
+	test.deepEqual(scan.config?.settings, { volcano: { elementType: 'dmr_scan' } }, 'and launches the whole-genome scan')
+	const noChoice = render(TermTypes.DNA_METHYLATION, { g1: 20, g2: 20 }, {}, dmQueries)
+	test.deepEqual(
+		[noChoice.selects, noChoice.config?.settings],
+		[[], undefined],
+		'methylation offers no class without a caller to refetch the counts'
+	)
+
+	const ds = render(TermTypes.JUNCTION, { g1: 600, g2: 400 })
+	test.deepEqual(
+		ds.config?.settings,
+		{ volcano: { method: 'edgeR', minSamplesPerIntron: 20, minSamplesPerGroup: 10 } },
+		'splicing launches with its filters scaled to the samples with data'
+	)
 	if (test['_ok']) holder.remove()
 	test.end()
 })
