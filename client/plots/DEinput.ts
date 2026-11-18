@@ -24,11 +24,15 @@ const colorScale = getColors(5)
 
 /* Group-building submission UI for a two-group differential analysis.
 
-Serves both differential gene expression and differential DNA methylation, selected by
-config.termType (default gene expression, so existing callers are unchanged). The two differ
+Serves differential gene expression, isoform expression and DNA methylation, selected by
+config.termType (default gene expression, so existing callers are unchanged). They differ
 in only three places: which ds query proves the assay exists and the expression-source tabs
-(methylation has no pseudobulk counterpart), both branched on `isGE` below, and which server route
+(methylation has no pseudobulk counterpart), both branched on `isExpression` below, and which server route
 the pre-analysis hits, the route of the data type's volcano handler. The group table, filter prompt and submit flow are shared.
+
+Gene and isoform expression are the two count types of bulk RNA-seq: when the dataset has both
+ds.queries.rnaseqGeneCount and ds.queries.isoformExpressionCount, the bulk source offers a choice of
+the two, which switches this.termType. Pseudobulk counts are of genes only.
 
 config.filter limits the group picker, sample counts, and analysis to the plot's selected samples.
 The results view is a separate chart, 'differentialAnalysis'; this plot only builds groups
@@ -56,10 +60,14 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	groupsSeeded?: boolean
 	/** set once config.autoSubmit has triggered clickSubmit() */
 	autoSubmitted?: boolean
-	/** geneExpression (default) or dnaMethylation. Resolved in init() from state.config, NOT from
+	/** geneExpression (default), isoformExpression or dnaMethylation. Resolved in init() from state.config, NOT from
 	 * opts: mass/plot.js hands the component only {app, holder, header, id, ...}, so config fields
-	 * are not on opts and reading it in the constructor would silently always be undefined. */
+	 * are not on opts and reading it in the constructor would silently always be undefined.
+	 * Switches between gene and isoform expression with the expression source and the bulk count type */
 	termType!: string
+	/** the count type that the bulk source analyzes, gene or isoform expression. Kept apart from termType, which is
+	 * gene expression under the pseudobulk source, so returning to bulk restores the choice */
+	bulkTermType?: string
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
@@ -68,8 +76,15 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		this.groups = []
 	}
 
-	get isGE() {
-		return this.termType == TermTypes.GENE_EXPRESSION
+	/** gene or isoform expression, the data types of the expression-source ui, as opposed to DNA methylation */
+	get isExpression() {
+		return expressionTermTypes.has(this.termType)
+	}
+
+	/** sets the data type of the analysis and the header that names it */
+	setTermType(termType: string) {
+		this.termType = termType
+		this.dom.header?.html(`Differential ${termType2label(termType)}`)
 	}
 
 	getDom() {
@@ -110,8 +125,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 	async init(appState) {
 		const state = this.getState(appState)
-		this.termType = state.config.termType || TermTypes.GENE_EXPRESSION
-		this.dom.header?.html(`Differential ${termType2label(this.termType)}`)
+		this.setTermType(state.config.termType || TermTypes.GENE_EXPRESSION)
 		await this.renderExpressionSourceUI()
 	}
 
@@ -193,7 +207,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		is nothing to choose -- skip the tabs entirely. the ds gate mirrors the one the Groups menu
 		applies (mass/groups.js): a promoter matrix OR any element type is enough, so a ds offering
 		only non-promoter classes is still reachable. */
-		if (!this.isGE) {
+		if (!this.isExpression) {
 			const dm = config.queries?.dnaMethylation
 			if (!dm?.promoter && !dm?.elementTypes?.length)
 				throw new Error('No DNA methylation data configured for differential analysis')
@@ -201,14 +215,25 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			return
 		}
 
-		const hasBulk = !!config.queries?.rnaseqGeneCount
+		// the bulk count types of the dataset, genes first
+		const bulkTermTypes = [
+			...(config.queries?.rnaseqGeneCount ? [TermTypes.GENE_EXPRESSION] : []),
+			...(config.queries?.isoformExpressionCount ? [TermTypes.ISOFORM_EXPRESSION] : [])
+		]
+		const hasBulk = bulkTermTypes.length > 0
 		const terms = config.termType2terms?.[TermTypeGroups.PSEUDOBULK] || []
 		const hasPseudobulk = terms.length > 0
+		if (this.termType == TermTypes.ISOFORM_EXPRESSION && !bulkTermTypes.includes(this.termType))
+			throw new Error('No isoform expression count data configured for differential analysis')
 		if (!hasBulk && !hasPseudobulk)
 			throw new Error('No gene expression count data configured for differential analysis')
+		// the termType of the config when the dataset has its counts, else the first count type
+		this.bulkTermType = bulkTermTypes.includes(this.termType) ? this.termType : bulkTermTypes[0]
 
 		if (hasBulk && !hasPseudobulk) {
 			this.expressionSource = 'bulk'
+			this.setTermType(this.bulkTermType!)
+			this.renderBulkTermTypeSelection(this.dom.expressionSource, bulkTermTypes)
 			return
 		}
 
@@ -222,8 +247,11 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			{
 				label: 'Bulk RNA-seq',
 				active: true,
-				callback: async () => {
+				callback: async (_event, tab) => {
 					this.expressionSource = 'bulk'
+					this.setTermType(this.bulkTermType!)
+					tab.contentHolder.selectAll('*').remove()
+					this.renderBulkTermTypeSelection(tab.contentHolder, bulkTermTypes)
 					await this.main()
 				}
 			},
@@ -231,6 +259,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				label: 'Single-cell pseudobulk',
 				callback: async (_event, tab) => {
 					this.expressionSource = 'pseudobulk'
+					this.setTermType(TermTypes.GENE_EXPRESSION)
 					tab.contentHolder.selectAll('*').remove()
 					this.renderPseudobulkSelection(tab.contentHolder, terms)
 					await this.main()
@@ -238,6 +267,28 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			}
 		]
 		await new Tabs({ holder: this.dom.expressionSource, tabs }).main()
+	}
+
+	/** the choice of gene or isoform counts in the bulk source. Nothing to choose with one count type */
+	renderBulkTermTypeSelection(holder, bulkTermTypes: string[]) {
+		if (bulkTermTypes.length < 2) return
+		holder.append('div').style('opacity', 0.7).text('Analyze:')
+		make_radios({
+			holder: holder.append('div'),
+			inputName: `sjpp-de-bulk-termtype-${this.id}`,
+			options: bulkTermTypes.map(termType => ({
+				label: termType2label(termType),
+				value: termType,
+				checked: termType == this.bulkTermType,
+				testid: `sjpp-de-bulk-termtype-${termType}`
+			})),
+			styles: { display: 'inline-block', padding: '3px 5px' },
+			callback: async termType => {
+				this.bulkTermType = termType
+				this.setTermType(termType)
+				await this.main()
+			}
+		})
 	}
 
 	renderPseudobulkSelection(holder, terms) {
@@ -494,6 +545,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			preAnalysis: true
 		}
 		if (this.expressionSource === 'pseudobulk') body.pseudobulk = this.pseudobulk
+		// counts the samples with transcript counts, as the run of termdb/DE on isoforms does
+		if (this.termType == TermTypes.ISOFORM_EXPRESSION) body.termType = this.termType
 		// the route of the analysis: both accept the same preAnalysis body and answer with the same {data:{groupName:n}}
 		const preAnalysisData = await dofetch3(getVolcanoHandler(this.termType).route, { body })
 
@@ -516,7 +569,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 export const DEinputInit = getCompInit(DEinputPlot)
 export const componentInit = DEinputInit
 
-const supportedTermTypes = new Set([TermTypes.GENE_EXPRESSION, TermTypes.DNA_METHYLATION])
+const expressionTermTypes = new Set([TermTypes.GENE_EXPRESSION, TermTypes.ISOFORM_EXPRESSION])
+const supportedTermTypes = new Set([...expressionTermTypes, TermTypes.DNA_METHYLATION])
 
 export async function getPlotConfig(opts, app?) {
 	if (opts.termType && !supportedTermTypes.has(opts.termType))
