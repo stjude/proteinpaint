@@ -190,7 +190,7 @@ upon error, throw err message as a string
 			launchDate: arg.app.launchDate
 		}
 		if (!opts.genome) throw 'invalid genome'
-		childCorsMessage(opts)
+		await childCorsMessage(opts)
 
 		const _ = await import('../mass/app')
 		const subapp = await _.appInit(opts)
@@ -212,7 +212,7 @@ upon error, throw err message as a string
 		} else if (state?.vocab?.genome) {
 			opts.genome = arg.genomes[state.vocab.genome]
 		}
-		childCorsMessage(opts)
+		await childCorsMessage(opts)
 
 		const _ = await import('../mass/app')
 		const subapp = await _.appInit(opts)
