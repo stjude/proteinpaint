@@ -81,6 +81,18 @@ export function getSampleTypesSqlList(sampleTypes, ds) {
 	)
 }
 
+export function getAnnotationSampleMapping(q, tw) {
+	const parent2Children = shouldMapParent2Children(tw, q.ds, q.sampleMapping, q.sampleTypes)
+	const children2Parent = shouldMapChildren2Parent(tw, q.ds, q.sampleMapping, q.sampleTypes)
+	if (!parent2Children && !children2Parent) return
+	if (parent2Children && children2Parent) throw new Error('cannot map samples in both directions')
+	return {
+		source: parent2Children ? sql`sa.ancestor_id` : sql`sa.sample_id`,
+		target: parent2Children ? sql`sa.sample_id` : sql`sa.ancestor_id`,
+		targetTypes: getSampleTypesSqlList(q.sampleTypes, q.ds)
+	}
+}
+
 function getSampleTypeId(st, ds) {
 	const n = Number(st)
 	if (!Number.isInteger(n)) throw `sample type='${st}' is not an integer`
@@ -1086,17 +1098,15 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
 		// for "samplelst" term, term.id is missing and must use term.name
 		const termId = tw.$id || tw.term.id || tw.term.name
 		const table = sql.id(t.tablename)
-		const mapParent2Children = shouldMapParent2Children(tw, q.ds, q.sampleMapping, q.sampleTypes)
-		const mapChildren2Parent = shouldMapChildren2Parent(tw, q.ds, q.sampleMapping, q.sampleTypes)
-		if (mapParent2Children || mapChildren2Parent) {
+		const mapping = getAnnotationSampleMapping(q, tw)
+		if (mapping) {
 			mappedTermIds.add(termId)
-			const source = mapParent2Children ? sql`sa.ancestor_id` : sql`sa.sample_id`
-			const target = mapParent2Children ? sql`sa.sample_id` : sql`sa.ancestor_id`
+			const { source, target, targetTypes } = mapping
 			return sql`SELECT ${target} as sample, key, value, ${termId} as term_id
 				FROM sample_ancestry sa
 				JOIN ${table} ON ${source} = sample
 				JOIN sampleidmap sm ON ${target} = sm.id
-				WHERE sm.sample_type IN (${getSampleTypesSqlList(q.sampleTypes, q.ds)})
+				WHERE sm.sample_type IN (${targetTypes})
 				${filterCTE ? sql`AND ${target} IN ${filterCTE}` : sql``}`
 		}
 		// query annotations directly
@@ -1114,18 +1124,21 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
 
 	const rows = q.ds.cohort.db.connection.prepare(query).all()
 
-	// keep first mapped value for each target sample and term.
-	const seenValues = new Map()
-	const filteredRows = rows.filter(row => {
-		if (!mappedTermIds.has(row.term_id)) return true
-		let termIds = seenValues.get(row.sample)
-		if (!termIds) seenValues.set(row.sample, (termIds = new Set()))
-		if (termIds.has(row.term_id)) return false
-		termIds.add(row.term_id)
-		return true
-	})
+	if (mappedTermIds.size) {
+		// term data has been mapped to different sample hierarchy
+		// keep first mapped value for each target sample.
+		const seenValues = new Map()
+		return rows.filter(row => {
+			if (!mappedTermIds.has(row.term_id)) return true
+			let termIds = seenValues.get(row.sample)
+			if (!termIds) seenValues.set(row.sample, (termIds = new Set()))
+			if (termIds.has(row.term_id)) return false
+			termIds.add(row.term_id)
+			return true
+		})
+	}
 
-	return filteredRows
+	return rows
 }
 
 const termTypesWithJsonValue = new Set(['termCollection'])

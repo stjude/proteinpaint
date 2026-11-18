@@ -290,7 +290,7 @@ index
 filter
 	{} or null
 	returned by getFilterCTEs
-	required when making numeric bins and need to compute percentile for first/last bin
+	scopes min, max and percentiles for data-dependent numeric bins
 
 termWrapper{}
 	.id term.id
@@ -354,8 +354,7 @@ export async function get_term_cte(q, index, filter, termWrapper = null) {
 		CTE = await categoricalSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, groupset)
 	} else if (isNumericTerm(term)) {
 		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
-		// the error is coming from this
-		CTE = await numericSql[mode].getCTE(tablename, term, q.ds, termq, index, filter)
+		CTE = await numericSql[mode].getCTE(tablename, term, q.ds, termq, index, filter, q)
 	} else if (term.type == 'condition') {
 		const mode = termq.mode || 'discrete'
 		CTE = await conditionSql[mode].getCTE(tablename, term, q.ds, termq)
@@ -428,12 +427,12 @@ filter
 
 returns bins{}
 */
-export function get_bins(q, term, ds, index, filter) {
+export function get_bins(q, term, ds, index, filter, mapping) {
 	if (q.mode == 'continuous' || q.mode == 'spline') return
-	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles))
+	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles, mapping))
 }
 
-export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
+export function get_numericMinMaxPct(ds, term, filter, percentiles = [], mapping) {
 	/* 
 	similar arguments to get_numericSummary()
 	but min, max, percentilex are calculated by sqlite db
@@ -478,13 +477,29 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 		cols.push(sql`${tablename}.value AS ${sql.id('p' + n)}`)
 	}
 
+	let sampleFilter = sql``
+	if (filter) {
+		// samples in filter may have been mapped to a target hierarchy
+		// if so, then need to map back to source hierarchy to filter
+		// the sample data
+		const filteredSamples = sql.id(filter.CTEname)
+		sampleFilter = mapping
+			? sql`sample IN (
+				SELECT ${mapping.source}
+				FROM sample_ancestry sa
+				JOIN sampleidmap sm ON ${mapping.target} = sm.id
+				WHERE sm.sample_type IN (${mapping.targetTypes})
+				AND ${mapping.target} IN ${filteredSamples}
+			) AND`
+			: sql`sample IN ${filteredSamples} AND`
+	}
 	const query = sql`WITH
 		${filter ? sql`${filter.filters}, ` : sql``} 
 		vals AS (
 			SELECT value
 			FROM ${sql.id(annoTable)}
 			WHERE
-			${filter ? sql`sample IN ${sql.id(filter.CTEname)} AND ` : sql``}
+			${sampleFilter}
 			term_id=${term.id}
 			${excludevalues.length ? sql`AND value NOT IN (${sql.list(excludevalues.map(Number))})` : sql``}
 			ORDER BY value ASC
