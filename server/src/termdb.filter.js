@@ -1,13 +1,7 @@
 import { getBin, dictionaryNumericTypes, dtTermTypes, isNonDictionaryType } from '#shared/terms.js'
 import { TermTypes } from '#types'
 import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
-import {
-	getSnpData,
-	getData,
-	shouldMapParent2Children,
-	shouldMapChildren2Parent,
-	getSampleTypesSqlList
-} from './termdb.matrix.js'
+import { getSnpData, getData, getAnnotationSampleMapping } from './termdb.matrix.js'
 import { filterByItem, tvsUsesMafFilter } from './mds3.init.js'
 import { sql } from './sql.ts'
 
@@ -723,15 +717,12 @@ function get_multivalue(tvs, CTEname, ds, sampleMapping, sampleTypes) {
 }
 
 function mayMapSamples(query, tw, ds, sampleMapping, sampleTypes) {
-	const mapParent2Children = shouldMapParent2Children(tw, ds, sampleMapping, sampleTypes)
-	const mapChildren2Parent = shouldMapChildren2Parent(tw, ds, sampleMapping, sampleTypes)
-	if (!mapParent2Children && !mapChildren2Parent) return query
+	const mapping = getAnnotationSampleMapping({ ds, sampleMapping, sampleTypes }, tw)
+	if (!mapping) return query
 
-	const source = mapParent2Children ? sql`sa.ancestor_id` : sql`sa.sample_id`
-	const target = mapParent2Children ? sql`sa.sample_id` : sql`sa.ancestor_id`
-	return sql`SELECT DISTINCT ${target} as sample
+	return sql`SELECT DISTINCT ${mapping.target} as sample
 	FROM sample_ancestry sa
-	JOIN sampleidmap sm ON ${target} = sm.id
-	WHERE ${source} in (${query})
-	AND sm.sample_type IN (${getSampleTypesSqlList(sampleTypes, ds)})`
+	JOIN sampleidmap sm ON ${mapping.target} = sm.id
+	WHERE ${mapping.source} in (${query})
+	AND sm.sample_type IN (${mapping.targetTypes})`
 }

@@ -1589,6 +1589,17 @@ tape('mayMapNonDictionaryData: accepts and returns sample2value objects', async 
 		t.deepEqual({ ...mapped }, { 10: 0 }, 'the first value wins even when it is zero')
 		t.equal(Object.getPrototypeOf(mapped), null, 'mapped object has no inherited sample keys')
 		t.deepEqual(values, { 20: 0, 40: 13 }, 'source object is unchanged')
+		const parentTw = { term: { ...tw.term, sampleTypes: [1] } }
+		const mappedChildren = await mayMapNonDictionaryData(
+			parentTw,
+			{ ds, sampleMapping: 'parentToChildren', sampleTypes: [2, 3] },
+			{ 10: 5 }
+		)
+		t.deepEqual(
+			{ ...mappedChildren },
+			{ 20: 5, 30: 5, 40: 5 },
+			'parent values map to children of the requested sample types'
+		)
 		t.equal(
 			await mayMapNonDictionaryData(tw, { ds, sampleTypes: [2] }, values),
 			values,
