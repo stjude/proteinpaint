@@ -119,6 +119,18 @@ export function drawStarburst(
 	if (data.isoforms) for (const gn of data.genes) transcriptsOf.set(gn, (transcriptsOf.get(gn) || 0) + 1)
 	const yl = limit(data.log2fc)
 	const y = scaleLinear().domain([-yl, yl]).range([H, 0]).clamp(true).nice()
+	/* A point beyond the axis range is drawn as a triangle with its tip where the scales clamp it and its base 2r inward,
+	pointing the way it went: the unit vector of that way, or null for a point in range. Its hover/click target is the
+	triangle's middle, r inward from the tip, so that the hit radius covers the whole glyph. */
+	const outlierDir = (dbv: number, fcv: number): [number, number] | null => {
+		const [xlo, xhi] = x.domain(),
+			[ylo, yhi] = y.domain()
+		const dx = dbv > xhi ? 1 : dbv < xlo ? -1 : 0
+		const dy = fcv > yhi ? -1 : fcv < ylo ? 1 : 0
+		if (!dx && !dy) return null
+		return dx && dy ? [dx * Math.SQRT1_2, dy * Math.SQRT1_2] : [dx, dy]
+	}
+	const triangleR = (pass: boolean) => (pass ? 4 : 3)
 	const svg = holder
 		.append('svg')
 		.attr('data-testid', 'sjpp-methylationStarburst-svg')
@@ -180,20 +192,17 @@ export function drawStarburst(
 		const ctx = canvas.getContext('2d')!
 		ctx.scale(dpr, dpr)
 		const order = idx.map((_, j) => j).sort((a, b) => +passes(db[a], q[a], cutoffs) - +passes(db[b], q[b], cutoffs))
-		const [xlo, xhi] = x.domain(),
-			[ylo, yhi] = y.domain()
 		for (const j of order) {
 			const pass = passes(db[j], q[j], cutoffs)
 			ctx.globalAlpha = pass ? 0.9 : 0.35
 			ctx.fillStyle = pass ? (db[j] > 0 == fc[j] > 0 ? colors.same : colors.opposite) : colors.below
 			const [cx, cy] = [x(db[j]), y(fc[j])]
 			// beyond the axis range: a small triangle on the edge, pointing the way it went, not a dot piled on the border
-			const dx = db[j] > xhi ? 1 : db[j] < xlo ? -1 : 0
-			const dy = fc[j] > yhi ? -1 : fc[j] < ylo ? 1 : 0
+			const dir = outlierDir(db[j], fc[j])
 			ctx.beginPath()
-			if (dx || dy) {
-				const r = pass ? 4 : 3
-				const [ux, uy] = dx && dy ? [dx * Math.SQRT1_2, dy * Math.SQRT1_2] : [dx, dy]
+			if (dir) {
+				const r = triangleR(pass)
+				const [ux, uy] = dir
 				// the tip on the edge where the scale clamps the point, the base inward, so no part is clipped off
 				ctx.moveTo(cx, cy)
 				ctx.lineTo(cx - 2 * ux * r - uy * r * 0.8, cy - 2 * uy * r + ux * r * 0.8)
@@ -309,7 +318,12 @@ export function drawStarburst(
 			cover,
 			hoverLayer,
 			hoverTip: tip,
-			points: idx.map((i, j) => ({ i, x: x(db[j]), y: y(fc[j]) })),
+			points: idx.map((i, j) => {
+				const dir = outlierDir(db[j], fc[j])
+				const r = dir ? triangleR(passes(db[j], q[j], cutoffs)) : 0
+				// an outlier's target is its triangle's middle, not its tip
+				return { i, x: x(db[j]) - (dir ? dir[0] * r : 0), y: y(fc[j]) - (dir ? dir[1] * r : 0) }
+			}),
 			getX: pt => pt.x,
 			getY: pt => pt.y,
 			hitRadius: 5,

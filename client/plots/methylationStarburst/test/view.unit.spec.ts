@@ -18,6 +18,7 @@ Tests:
 	- draws a promoter and a body panel with stats, corner counts and the dots image
 	- highlighted genes are named where they have a value
 	- a click passes the nearest gene
+	- a click on an out-of-range point's triangle, not only its tip, reaches it
 	- gene sets: three cells a set, most significant merged first, dots at q < 0.05, a square only when merged, a row cap
 */
 
@@ -144,6 +145,39 @@ tape('click opens the actions of the nearest point, in a menu that stays', test 
 		),
 		'should keep the menu open while the pointer moves'
 	)
+	drawn.destroy()
+	holder.remove()
+	tip.destroy()
+	test.end()
+})
+
+tape("a click on an out-of-range triangle's body reaches its point", test => {
+	const holder = d3s.select('body').append('div')
+	const tip = new Menu()
+	// 2000 points at the panel's left and right edges, and Z far above the axis range in the middle of x
+	const n = 2000
+	const data: StarburstData = {
+		genes: [...Array.from({ length: n }, (_, k) => `G${k}`), 'Z'],
+		log2fc: [...Array.from({ length: n }, (_, k) => (k / n - 0.5) * 2), 100],
+		q: [...Array(n).fill(0.5), 0.5],
+		promoter: [...Array.from({ length: n }, (_, k) => (k % 2 ? 0.2 : -0.2)), 0],
+		body: [...Array(n).fill(0), 0],
+		sampleSize1: 10,
+		sampleSize2: 12,
+		corrected: false
+	}
+	let clicked = ''
+	const drawn = drawStarburst(holder, data, { minDeltaBeta: 0.05, maxQ: 0.05 }, ['ref', 'case'], tip, i => {
+		clicked = data.genes[i]
+		return []
+	})
+	const node = holder
+		.select('[data-testid=sjpp-methylationStarburst-promoter] [data-testid=sjpp-methylationStarburst-hit]')
+		.node() as SVGRectElement
+	const r = node.getBoundingClientRect()
+	// Z's tip is on the top edge; its triangle reaches 6 px down. 6 px down is beyond the hit radius of the tip
+	node.dispatchEvent(new MouseEvent('click', { clientX: r.x + r.width / 2, clientY: r.y + 6, bubbles: true }))
+	test.equal(clicked, 'Z', 'should reach the point from the base of its triangle')
 	drawn.destroy()
 	holder.remove()
 	tip.destroy()
