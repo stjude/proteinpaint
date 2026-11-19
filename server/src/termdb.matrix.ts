@@ -94,6 +94,7 @@ export function getAnnotationSampleMapping(q, tw) {
 }
 
 function getSampleTypeId(st, ds) {
+	if (st === null || st === undefined) throw `sample type='${st}' is not defined`
 	const n = Number(st)
 	if (!Number.isInteger(n)) throw `sample type='${st}' is not an integer`
 	if (!ds.cohort.termdb.sampleTypes[n]) throw `invalid sample type='${st}'`
@@ -1057,11 +1058,11 @@ function getSampleTypesLst(q, ds): TwSampleTypes[] {
 	const filter0Types = ds.getFilter0SampleTypesLst ? ds.getFilter0SampleTypesLst(filter0, ds) : []
 	const sampleTypesLst = [...twTypes, ...filterTypes, ...filter0Types]
 	for (const st of sampleTypesLst) {
-		if (!Array.isArray(st.sampleTypes) || !st.sampleTypes.length || !st.sampleTypes.every(Number.isInteger)) {
-			throw new Error('sampleTypes must be a non-empty array of integers')
-		}
-		if (st.childSampleTypes && (!Array.isArray(st.childSampleTypes) || !st.childSampleTypes.every(Number.isInteger))) {
-			throw new Error('childSampleTypes must be an array of integers')
+		if (!Array.isArray(st.sampleTypes) || !st.sampleTypes.length) throw new Error('sampleTypes is empty')
+		st.sampleTypes.forEach(sampleType => getSampleTypeId(sampleType, ds))
+		if (st.childSampleTypes) {
+			if (!Array.isArray(st.childSampleTypes)) throw new Error('childSampleTypes is not array')
+			st.childSampleTypes.forEach(sampleType => getSampleTypeId(sampleType, ds))
 		}
 	}
 	return sampleTypesLst
