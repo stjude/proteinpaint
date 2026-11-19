@@ -48,8 +48,13 @@ function setRenderers(self) {
 				label: 'Gene Set Enrichment Analysis',
 				/* GSEA ranks the analysis' rows as genes, so a data type whose rows are not genes, such as
 				splicing clusters, offers none. One with no volcano handler has no analysis to rank,
-				and is left to fail in the volcano, as it did before handlers. */
-				isVisible: () => findVolcanoHandler(self.config.termType)?.gsea ?? true,
+				and is left to fail in the volcano, as it did before handlers. Hidden too when the server
+				cannot run any GSEA method. */
+				isVisible: () => {
+					const unavailable = self.app.vocabApi?.termdbConfig?.unavailable || []
+					if (['blitzgsea', 'cerno'].every(m => unavailable.includes(m))) return false
+					return findVolcanoHandler(self.config.termType)?.gsea ?? true
+				},
 				// isVisible: () => self.config.termType === TermTypes.GENE_EXPRESSION,
 				getPlotConfig: () => {
 					return {

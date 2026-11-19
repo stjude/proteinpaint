@@ -468,6 +468,31 @@ tape('GSEA tab by data type', test => {
 	test.end()
 })
 
+tape('GSEA tab is hidden when the server cannot run a GSEA method', test => {
+	const holder: any = select(document.body).append('div')
+	for (const [unavailable, visible] of [
+		[['blitzgsea'], true],
+		[['cerno', 'ora'], true],
+		[['blitzgsea', 'cerno', 'ora'], false]
+	] as [string[], boolean][]) {
+		const view = new DiffAnalysisView(
+			{ vocabApi: { termdbConfig: { unavailable } } } as any,
+			{ termType: tt.GENE_EXPRESSION, childType: 'volcano' } as any,
+			{
+				tabsDiv: holder.append('div')
+			} as any
+		)
+		const gsea = view.tabsData.find(t => t.id == 'gsea') as any
+		test.equal(
+			gsea.isVisible(),
+			visible,
+			`unavailable=[${unavailable}] should ${visible ? 'show' : 'hide'} the GSEA tab`
+		)
+	}
+	holder.remove()
+	test.end()
+})
+
 tape('getRowKey() by data type', test => {
 	const cases: [string, any, string][] = [
 		[tt.GENE_EXPRESSION, { gene_name: 'TP53' }, 'TP53'],

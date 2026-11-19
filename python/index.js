@@ -6,6 +6,10 @@ import { Readable } from 'stream'
 const __dirname = import.meta.dirname
 
 let python = 'python3'
+// a child process is allowed without the permission model
+const canSpawn = process.permission ? process.permission.has('child') : true
+// false when setPythonBinPath() was given a missing binpath
+let hasPython = true
 // This should be called at the beginning of the server runtime code,
 // so that the same binpath will be reused throughoutt the server lifetime.
 // TODO: may limit the reset to once?
@@ -15,6 +19,13 @@ export function setPythonBinPath(binpath) {
 	if (!fs.existsSync(binpath))
 		console.warn(`WARNING: python binpath='${binpath}' does not exist, requests that need python will fail`)
 	python = binpath
+	hasPython = fs.existsSync(binpath)
+}
+
+/* true when run_python() can spawn python: a child process is allowed and the python binpath, when it is set, exists.
+The python packages that a script imports are not checked. */
+export function canRunPython() {
+	return canSpawn && hasPython
 }
 
 export function run_python(pyfile, input_data, { signal } = {}) {
