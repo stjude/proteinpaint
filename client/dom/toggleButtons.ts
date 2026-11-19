@@ -164,6 +164,7 @@ function setRenderers(self) {
 				tab.tab //Button text
 					.attr('data-testid', `sjpp-toggle_button-text-${tab.label.toLowerCase().replace(/\s/g, '-')}`)
 					.style('color', tab.active ? activeColor : inactiveColor)
+					.attr('active', tab.active ? 'active' : 'inactive')
 					.style('text-align', textAlign)
 					.style('padding', '5px')
 					.html(tab.label)
@@ -257,6 +258,7 @@ function setRenderers(self) {
 				if (tab.isVisible) tab.wrapper.style('display', isVisible ? '' : 'none')
 				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
 				tab.tab.style('color', tab.active ? activeColor : inactiveColor)
+				tab.tab.attr('active', tab.active ? 'active' : 'inactive')
 				tab.line.style('visibility', tab.active ? 'visible' : 'hidden')
 				tab.tab.html(tab.label) // re-print tab label since the label value could have been updated by outside code
 			})
