@@ -390,20 +390,43 @@ tape('resolveSampleMapping: compares type sets across terms, filter, and filter0
 		/unable to infer sample mapping/,
 		'unrelated term and filter types reject automatic mapping'
 	)
-	for (const [label, q] of [
-		['empty term types', { terms: [tw([2]), tw([])] }],
-		['missing filter0 types', { terms: [tw([2, 3])], filter0: [{}] }],
-		['empty filter0 types', { terms: [tw([2, 3])], filter0: [{ sampleTypes: [] }] }],
-		['non-integer term type', { terms: [tw([2, '3'])] }],
-		['non-integer filter type', { filter: filter([2.5]) }],
-		['non-integer filter0 type', { filter0: [{ sampleTypes: [null] }] }]
+	for (const [label, q, error] of [
+		['empty term types', { terms: [tw([2]), tw([])] }, /sampleTypes is empty/],
+		['missing filter0 types', { terms: [tw([2, 3])], filter0: [{}] }, /sampleTypes is empty/],
+		['empty filter0 types', { terms: [tw([2, 3])], filter0: [{ sampleTypes: [] }] }, /sampleTypes is empty/],
+		['non-integer term type', { terms: [tw([2, 3.5])] }, /sample type='3.5' is not an integer/],
+		['non-integer filter type', { filter: filter([2.5]) }, /sample type='2.5' is not an integer/],
+		['non-integer filter0 type', { filter0: [{ sampleTypes: [null] }] }, /sample type='null' is not defined/]
 	]) {
-		t.throws(() => resolveSampleMapping(q, ds), /sampleTypes must be a non-empty array of integers/, label)
+		t.throws(() => resolveSampleMapping(q, ds), error, label)
+	}
+	const dsWithZeroSampleType = {
+		cohort: { termdb: { hasSampleAncestry: true, sampleTypes: { 0: { parent_id: null } } } }
 	}
 	t.throws(
-		() => resolveSampleMapping({ filter0: [{ sampleTypes: [2], childSampleTypes: [3, '4'] }] }, ds),
-		/childSampleTypes must be an array of integers/,
+		() => resolveSampleMapping({ sampleTypes: [null] }, dsWithZeroSampleType),
+		/sample type='null' is not defined/,
+		'null sample type is rejected before numeric conversion'
+	)
+	t.throws(
+		() => resolveSampleMapping({ sampleTypes: [undefined] }, dsWithZeroSampleType),
+		/sample type='undefined' is not defined/,
+		'undefined sample type is rejected before numeric conversion'
+	)
+	t.throws(
+		() => resolveSampleMapping({ filter0: [{ sampleTypes: [2], childSampleTypes: [3, 4.5] }] }, ds),
+		/sample type='4.5' is not an integer/,
 		'non-integer child sample type is rejected'
+	)
+	t.throws(
+		() => resolveSampleMapping({ terms: [tw([6])] }, ds),
+		/invalid sample type='6'/,
+		'unknown term sample type is rejected'
+	)
+	t.throws(
+		() => resolveSampleMapping({ filter0: [{ sampleTypes: [2], childSampleTypes: [6] }] }, ds),
+		/invalid sample type='6'/,
+		'unknown child sample type is rejected'
 	)
 	t.end()
 })
