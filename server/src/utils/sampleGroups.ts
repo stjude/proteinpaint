@@ -125,7 +125,7 @@ export async function samplesOfRequest(q: any, ds: any, eligible: Set<string>): 
 	if (!q.filter?.lst?.length && !q.filter0) return readableSamples(eligible, ds, q.__protected__)
 	// isFilterGroup() needs a filter object, so a request with only a filter0 gets an empty one
 	const filter = q.filter || { type: 'tvslst', in: true, join: '', lst: [] }
-	const [all] = await resolveGroups([{ name: 'all', filter, mapParent2Children: true }], q, ds)
+	const [all] = await resolveGroups([{ name: 'all', filter, sampleMapping: 'parentToChildren' }], q, ds)
 	return (await buildGroupValues(all.values, eligible, ds, null, null, null, null, q.__protected__)).names
 }
 

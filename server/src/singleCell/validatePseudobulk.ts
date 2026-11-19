@@ -215,6 +215,7 @@ export async function validatePseudobulk(ds: any) {
 
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			const limitSamples = await mayLimitSamples(param, null, ds)
+			if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue
