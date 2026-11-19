@@ -2,6 +2,7 @@ import { scaleLinear } from 'd3-scale'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { table2col } from '#dom/table2col'
 import { DataPointInteractions } from '#dom/dataPointInteractions'
+import { axisstyle } from '#dom/axisstyle'
 import type { ActionMenuItem } from '#dom/dataPointClickMenu'
 import type { MethylationStarburstResponse } from '#types'
 
@@ -12,11 +13,12 @@ type Region = 'promoter' | 'body'
 /* A gene passing both cutoffs is colored by whether methylation and expression moved the same way (hyper and up,
 hypo and down) or opposite ways (hyper and down, hypo and up: the silencing direction). Position already says
 which quadrant; the color makes the balance between the two diagonals visible, which the odds ratio states. */
-export const colors = { same: '#d95f02', opposite: '#7570b3', below: '#bbb' }
+export { STARBURST_COLORS as colors } from '#shared/dmrColors.js'
+import { STARBURST_COLORS as colors } from '#shared/dmrColors.js'
 
 export const regionLabels: Record<Region, string> = {
 	promoter: 'Core promoter (TSS −2 kb to +500 bp)',
-	body: 'Gene body'
+	body: 'Transcript body'
 }
 
 /** ranks with ties averaged, 1-based */
@@ -72,9 +74,9 @@ function passes(db: number, q: number, c: Cutoffs) {
 
 /** the symmetric limit of an axis: the 99.9th percentile of |v|, so a few extreme fold changes do not squash the
  * cloud; points past it are drawn on the edge */
+/** the axis half-range: every point's |value|, with 5% to spare so none sits on the edge */
 function limit(v: number[]) {
-	const a = v.map(Math.abs).sort((x, y) => x - y)
-	return a[Math.min(a.length - 1, Math.floor(a.length * 0.999))] * 1.05 || 1
+	return v.reduce((m, x) => Math.max(m, Math.abs(x)), 0) * 1.05 || 1
 }
 
 // a value that rounds to zero prints without a sign, not as -0.000
@@ -88,7 +90,8 @@ const fmtQ = (q: number) => (q < 1e-4 ? q.toExponential(1) : q.toPrecision(2))
 const circlePath = (r: number) => `M${r},0 A${r},${r} 0 1,1 ${-r},0 A${r},${r} 0 1,1 ${r},0 Z`
 
 /** a point of one panel: its index in data, and where it is drawn */
-type Point = { i: number; x: number; y: number }
+/** r: the drawn radius, which the hover ring hugs */
+type Point = { i: number; x: number; y: number; r: number }
 
 /** Two scatter panels, core promoter and gene body, sharing both axes. `highlight` genes (or, by isoform, transcript
  * ids) are ringed and named. Hover and click are the portal's DataPointInteractions, as on the Manhattan and volcano
@@ -100,43 +103,36 @@ export function drawStarburst(
 	cutoffs: Cutoffs,
 	groups: [string, string],
 	tip: any,
-	/** the actions of the point at index i of data; by isoform, its transcript is data.isoforms[i] */
+	/** the actions of the point at index i of data; its transcript is data.isoforms[i] */
 	getActions: (i: number) => ActionMenuItem[],
-	highlight: string[] = []
+	highlight: string[] = [],
+	/** each panel's plot height; embedded, the volcano's, so the two plots are the same height */
+	H = 300
 ) {
 	const W = 300
-	const H = 300
-	const m = { top: 84, left: 60, bottom: 64, gap: 48 }
+	/* Axes as the DM volcano draws them (VolcanoPlotView renderScale): axisstyle black with the axis line, each set
+	AXIS_OFFSET px off the plot area, titles inheriting the page font and size ~50 px beyond the axis */
+	const AXIS_OFFSET = 20
+	const m = { top: 84, left: 100, bottom: 110, gap: 80 }
 	const regions: Region[] = ['promoter', 'body']
 	const allDb = regions.flatMap(r => data[r].filter(v => v != null) as number[])
 	const x = scaleLinear()
 		.domain([-limit(allDb), limit(allDb)])
 		.range([0, W])
-		.clamp(true)
 		.nice()
-	// by isoform, each gene's number of transcripts in the plot, for the tooltip
+	// each gene's number of transcripts in the plot, for the tooltip
 	const transcriptsOf = new Map<string, number>()
-	if (data.isoforms) for (const gn of data.genes) transcriptsOf.set(gn, (transcriptsOf.get(gn) || 0) + 1)
+	for (const gn of data.genes) transcriptsOf.set(gn, (transcriptsOf.get(gn) || 0) + 1)
 	const yl = limit(data.log2fc)
-	const y = scaleLinear().domain([-yl, yl]).range([H, 0]).clamp(true).nice()
-	/* A point beyond the axis range is drawn as a triangle with its tip where the scales clamp it and its base 2r inward,
-	pointing the way it went: the unit vector of that way, or null for a point in range. Its hover/click target is the
-	triangle's middle, r inward from the tip, so that the hit radius covers the whole glyph. */
-	const outlierDir = (dbv: number, fcv: number): [number, number] | null => {
-		const [xlo, xhi] = x.domain(),
-			[ylo, yhi] = y.domain()
-		const dx = dbv > xhi ? 1 : dbv < xlo ? -1 : 0
-		const dy = fcv > yhi ? -1 : fcv < ylo ? 1 : 0
-		if (!dx && !dy) return null
-		return dx && dy ? [dx * Math.SQRT1_2, dy * Math.SQRT1_2] : [dx, dy]
-	}
-	const triangleR = (pass: boolean) => (pass ? 4 : 3)
+	const y = scaleLinear().domain([-yl, yl]).range([H, 0]).nice()
+	const radius = (pass: boolean) => (pass ? 2.5 : 1.5)
 	const svg = holder
 		.append('svg')
 		.attr('data-testid', 'sjpp-methylationStarburst-svg')
+		// block: a top margin, which lines the plots up with the volcano's, applies to a block
+		.style('display', 'block')
 		.attr('width', m.left + 2 * W + m.gap + 30)
 		.attr('height', m.top + H + m.bottom + 30)
-		.style('font-family', 'Arial, sans-serif')
 
 	const interactions: DataPointInteractions<Point>[] = []
 
@@ -160,9 +156,7 @@ export function drawStarburst(
 			.attr('y', -50)
 			.attr('font-size', 11)
 			.attr('fill', '#555')
-		stats
-			.append('tspan')
-			.text(`${idx.length.toLocaleString()} ${data.isoforms ? 'transcripts' : 'genes'} · ρ = ${fmt(rho, 2)}`)
+		stats.append('tspan').text(`${idx.length.toLocaleString()} transcripts · ρ = ${fmt(rho, 2)}`)
 		if (quad.or)
 			stats
 				.append('tspan')
@@ -196,19 +190,8 @@ export function drawStarburst(
 			const pass = passes(db[j], q[j], cutoffs)
 			ctx.globalAlpha = pass ? 0.9 : 0.35
 			ctx.fillStyle = pass ? (db[j] > 0 == fc[j] > 0 ? colors.same : colors.opposite) : colors.below
-			const [cx, cy] = [x(db[j]), y(fc[j])]
-			// beyond the axis range: a small triangle on the edge, pointing the way it went, not a dot piled on the border
-			const dir = outlierDir(db[j], fc[j])
 			ctx.beginPath()
-			if (dir) {
-				const r = triangleR(pass)
-				const [ux, uy] = dir
-				// the tip on the edge where the scale clamps the point, the base inward, so no part is clipped off
-				ctx.moveTo(cx, cy)
-				ctx.lineTo(cx - 2 * ux * r - uy * r * 0.8, cy - 2 * uy * r + ux * r * 0.8)
-				ctx.lineTo(cx - 2 * ux * r + uy * r * 0.8, cy - 2 * uy * r - ux * r * 0.8)
-				ctx.closePath()
-			} else ctx.arc(cx, cy, pass ? 2.5 : 1.5, 0, 2 * Math.PI)
+			ctx.arc(x(db[j]), y(fc[j]), radius(pass), 0, 2 * Math.PI)
 			ctx.fill()
 		}
 		g.append('image')
@@ -223,7 +206,7 @@ export function drawStarburst(
 			const t = g
 				.append('g')
 				.attr('class', 'sjpp-methylationStarburst-count')
-				.attr('transform', `translate(${right ? W : 0},${top ? -8 : H + 56})`)
+				.attr('transform', `translate(${right ? W : 0},${top ? -8 : H + 98})`)
 			t.append('circle')
 				.attr('cx', right ? -4 : 4)
 				.attr('cy', -4)
@@ -250,7 +233,7 @@ export function drawStarburst(
 		for (const gene of highlight) {
 			// by isoform a gene has a point per transcript: each is ringed, the name goes by the one furthest from 0
 			// a gene, or by isoform a transcript id
-			const js = idx.map((i, j) => (data.genes[i] == gene || data.isoforms?.[i] == gene ? j : -1)).filter(j => j != -1)
+			const js = idx.map((i, j) => (data.genes[i] == gene || data.isoforms[i] == gene ? j : -1)).filter(j => j != -1)
 			if (!js.length) continue
 			const h = g.append('g').attr('class', 'sjpp-methylationStarburst-highlight')
 			for (const j of js)
@@ -275,20 +258,27 @@ export function drawStarburst(
 				.text(js.length > 1 ? `${gene} (${js.length})` : gene)
 		}
 
-		g.append('g').attr('transform', `translate(0,${H})`).call(axisBottom(x).ticks(5))
-		g.append('g').call(axisLeft(y).ticks(6))
+		for (const [axis, at] of [
+			[axisBottom(x).ticks(5), `translate(0,${H + AXIS_OFFSET})`],
+			[axisLeft(y).ticks(6), `translate(${-AXIS_OFFSET},0)`]
+		] as const)
+			axisstyle({ axis: g.append('g').attr('transform', at).call(axis), color: 'black', showline: true })
+		// worded as the volcano's x axis
 		g.append('text')
 			.attr('x', W / 2)
-			.attr('y', H + 36)
+			.attr('y', H + AXIS_OFFSET + 50)
 			.attr('text-anchor', 'middle')
-			.attr('font-size', 12)
-			.text(`Δβ${data.corrected ? ' beyond background' : ''}, ${groups[1]} − ${groups[0]}`)
-		if (k == 0)
-			g.append('text')
-				.attr('transform', `translate(-42,${H / 2}) rotate(-90)`)
+			.text(`Δβ (${groups[1]} − ${groups[0]})`)
+		if (k == 0) {
+			// log₂ with a subscript, as the volcano's fold-change label
+			const yl = g
+				.append('text')
+				.attr('transform', `translate(${-AXIS_OFFSET - 47},${H / 2}) rotate(-90)`)
 				.attr('text-anchor', 'middle')
-				.attr('font-size', 12)
-				.text(`log2 fold change, ${groups[1]} / ${groups[0]}`)
+			yl.append('tspan').text('log')
+			yl.append('tspan').attr('baseline-shift', 'sub').attr('font-size', '0.7em').text('2')
+			yl.append('tspan').text(`(fold-change, ${groups[1]} / ${groups[0]})`)
+		}
 
 		const hoverLayer = g.append('g').style('pointer-events', 'none')
 		const cover = g
@@ -298,17 +288,16 @@ export function drawStarburst(
 			.attr('height', H)
 			.attr('fill', 'transparent')
 			.style('pointer-events', 'all')
-			.style('cursor', 'pointer')
+			// the plain pointer, as on the volcano
+			.style('cursor', 'default')
 		const other: Region = region == 'promoter' ? 'body' : 'promoter'
 		const info = (pt: Point, holder: any) => {
 			const i = pt.i
 			const table = table2col({ holder })
 			table.addRow('Gene', data.genes[i])
-			if (data.isoforms) {
-				table.addRow('Isoform', data.isoforms[i])
-				const n = transcriptsOf.get(data.genes[i]) || 1
-				if (n > 1) table.addRow('Transcripts of the gene', String(n))
-			}
+			table.addRow('Isoform', data.isoforms[i])
+			const n = transcriptsOf.get(data.genes[i]) || 1
+			if (n > 1) table.addRow('Transcripts of the gene', String(n))
 			table.addRow(`Δβ, ${region}`, fmt(data[region][i]))
 			table.addRow(`Δβ, ${other}`, fmt(data[other][i]))
 			table.addRow('log2 fold change', fmt(data.log2fc[i], 2))
@@ -319,16 +308,14 @@ export function drawStarburst(
 			hoverLayer,
 			hoverTip: tip,
 			points: idx.map((i, j) => {
-				const dir = outlierDir(db[j], fc[j])
-				const r = dir ? triangleR(passes(db[j], q[j], cutoffs)) : 0
-				// an outlier's target is its triangle's middle, not its tip
-				return { i, x: x(db[j]) - (dir ? dir[0] * r : 0), y: y(fc[j]) - (dir ? dir[1] * r : 0) }
+				return { i, x: x(db[j]), y: y(fc[j]), r: radius(passes(db[j], q[j], cutoffs)) }
 			}),
 			getX: pt => pt.x,
 			getY: pt => pt.y,
 			hitRadius: 5,
-			toHoverSpec: pt => ({ path: circlePath(5), transform: `translate(${pt.x},${pt.y})`, strokeWidth: 1.5 }),
-			itemNoun: data.isoforms ? 'transcript' : 'gene',
+			// 1 px out from the point's edge, so the ring sits right around it
+			toHoverSpec: pt => ({ path: circlePath(pt.r + 1), transform: `translate(${pt.x},${pt.y})`, strokeWidth: 1 }),
+			itemNoun: 'transcript',
 			renderSingleHoverTooltip: (pt, holder) => {
 				info(pt, holder)
 				holder
@@ -341,14 +328,14 @@ export function drawStarburst(
 			buildMultiHitTableData: pts => ({
 				columns: [
 					{ label: 'Gene' },
-					...(data.isoforms ? [{ label: 'Isoform' }] : []),
+					{ label: 'Isoform' },
 					{ label: `Δβ, ${region}` },
 					{ label: 'log2 fold change' },
 					{ label: 'DE q' }
 				],
 				rows: pts.map(pt => [
 					{ value: data.genes[pt.i] },
-					...(data.isoforms ? [{ value: data.isoforms[pt.i] }] : []),
+					{ value: data.isoforms[pt.i] },
 					{ value: fmt(data[region][pt.i]) },
 					{ value: fmt(data.log2fc[pt.i], 2) },
 					{ value: fmtQ(data.q[pt.i]) }
@@ -382,173 +369,6 @@ export function drawStarburst(
 			.text(label)
 		lx += 12 + (t.node()?.getComputedTextLength?.() || label.length * 6) + 18
 	}
-	return { svg, destroy: () => interactions.forEach(d => d.destroy()) }
-}
-
-export type StarburstPathways = NonNullable<StarburstData['pathways']>
-
-const layerLabels = ['Expression', 'Gene body', 'Both, merged']
-/** signed -log10 q, blue for sets whose genes went down or lost methylation, orange up or gained (the figure's) */
-const CAP = 8
-const heat = scaleLinear<string>()
-	.domain([-CAP, -CAP / 2, 0, CAP / 2, CAP])
-	.range(['#2b6cb0', '#c6d6ea', '#ffffff', '#f4cfae', '#c2410c'])
-	.clamp(true)
-const SIG = Math.log10(0.05)
-
-/** HALLMARK_TNFA_SIGNALING_VIA_NFKB -> Tnfa signaling via nfkb */
-export function setLabel(id: string) {
-	const s = id
-		.replace(/^(HALLMARK|GOBP|GOMF|GOCC|REACTOME|WP)_/, '')
-		.replace(/_/g, ' ')
-		.toLowerCase()
-	return s.charAt(0).toUpperCase() + s.slice(1)
-}
-
-/** The gene sets significant in any layer as three heatmap columns sharing rows, most significant merged first:
- * expression, gene body, and both merged. Dots: q < 0.05; squares: significant only when merged. Returns the svg. */
-export function drawPathways(holder: any, pw: StarburstPathways, groups: [string, string], tip: any, maxRows = 40) {
-	const sets = [...pw.sets].sort((a, b) => a.layers[2].log10q - b.layers[2].log10q).slice(0, maxRows)
-	const cell = { w: 34, h: 15 }
-	// room above the cells for the column labels, drawn at 45 degrees
-	const m = { top: 112, left: 10 }
-	const labelX = m.left + 3 * cell.w + 8
-	const svg = holder
-		.append('svg')
-		.attr('data-testid', 'sjpp-methylationStarburst-pathways')
-		// room for the legend line under the columns
-		.attr('width', Math.max(labelX + 420, 780))
-		.attr('height', m.top + sets.length * cell.h + 78)
-		.style('font-family', 'Arial, sans-serif')
-	svg
-		.append('text')
-		.attr('x', m.left)
-		.attr('y', 16)
-		.attr('font-weight', 'bold')
-		.attr('font-size', 13)
-		.text(`Gene sets: ${pw.geneSetGroup}`)
-	svg
-		.append('text')
-		.attr('data-testid', 'sjpp-methylationStarburst-pathwayStats')
-		.attr('x', m.left)
-		.attr('y', 33)
-		.attr('font-size', 11)
-		.attr('fill', '#555')
-		.text(
-			`${pw.genes.toLocaleString()} genes with both, ${pw.tested.toLocaleString()} sets tested, ` +
-				`${pw.sets.length.toLocaleString()} at q < 0.05` +
-				(pw.sets.length > sets.length ? ` (top ${sets.length} shown)` : '') +
-				`; genes at p ≤ 0.05: ${pw.passing.map(n => n.toLocaleString()).join(', ')}`
-		)
-	layerLabels.forEach((label, j) =>
-		svg
-			.append('text')
-			.attr('transform', `translate(${m.left + j * cell.w + cell.w / 2},${m.top - 6}) rotate(-45)`)
-			.attr('font-size', 11)
-			.text(label)
-	)
-	const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`)
-	sets.forEach((s, i) => {
-		const merged = s.layers[2].log10q < SIG
-		const onlyMerged = merged && s.layers[0].log10q >= SIG && s.layers[1].log10q >= SIG
-		s.layers.forEach((l, j) => {
-			const c = g
-				.append('g')
-				.attr('class', 'sjpp-methylationStarburst-pathwayCell')
-				.attr('transform', `translate(${j * cell.w},${i * cell.h})`)
-			c.append('rect')
-				.attr('width', cell.w - 1)
-				.attr('height', cell.h - 1)
-				// direction 0: the set's picked genes split evenly, so the cell stays neutral and the dot carries the q
-				.attr('fill', heat(-l.log10q * (l.direction ?? 1)))
-				.attr('stroke', '#eee')
-			if (l.log10q < SIG)
-				c.append('circle')
-					.attr('class', 'sjpp-methylationStarburst-pathwaySig')
-					.attr('cx', cell.w / 2)
-					.attr('cy', cell.h / 2)
-					.attr('r', 2.5)
-			if (j == 2 && onlyMerged)
-				c.append('rect')
-					.attr('class', 'sjpp-methylationStarburst-pathwayMergedOnly')
-					.attr('x', cell.w / 2 - 5)
-					.attr('y', cell.h / 2 - 5)
-					.attr('width', 10)
-					.attr('height', 10)
-					.attr('fill', 'none')
-					.attr('stroke', '#000')
-			c.on('mouseover', (event: any) => {
-				tip.clear().show(event.clientX, event.clientY)
-				const table = table2col({ holder: tip.d })
-				table.addRow('Gene set', s.id)
-				table.addRow('Genes in set', `${s.size} with both layers`)
-				s.layers.forEach((x, k) =>
-					table.addRow(
-						layerLabels[k],
-						`q ${fmtQ(10 ** x.log10q)}, ${x.overlap} genes picked` +
-							(x.direction ? `, mostly ${x.direction > 0 ? (k == 1 ? 'gained' : 'up') : k == 1 ? 'lost' : 'down'}` : '')
-					)
-				)
-				if (s.genes.length) table.addRow('Merged, top genes', s.genes.slice(0, 15).join(', '))
-			}).on('mouseout', () => tip.hide())
-		})
-		g.append('text')
-			.attr('x', labelX - m.left)
-			.attr('y', i * cell.h + cell.h / 2 + 4)
-			.attr('font-size', 11)
-			.text(setLabel(s.id).slice(0, 70))
-			.append('title')
-			.text(s.id)
-	})
-
-	// legend: the color scale, then the marks
-	const ly = m.top + sets.length * cell.h + 22
-	const grad = `sjpp-starburst-heat-${Math.random().toString(36).slice(2)}`
-	const lg = svg.append('defs').append('linearGradient').attr('id', grad)
-	heat.range().forEach((c, k, a) =>
-		lg
-			.append('stop')
-			.attr('offset', k / (a.length - 1))
-			.attr('stop-color', c)
-	)
-	svg
-		.append('rect')
-		.attr('x', m.left)
-		.attr('y', ly)
-		.attr('width', 120)
-		.attr('height', 10)
-		.attr('fill', `url(#${grad})`)
-		.attr('stroke', '#999')
-	for (const [x, t] of [
-		[0, `≤ −${CAP}`],
-		[60, '0'],
-		[120, `≥ ${CAP}`]
-	] as [number, string][])
-		svg
-			.append('text')
-			.attr('x', m.left + x)
-			.attr('y', ly + 22)
-			.attr('text-anchor', 'middle')
-			.attr('font-size', 10)
-			.text(t)
-	svg
-		.append('text')
-		.attr('x', m.left + 132)
-		.attr('y', ly + 9)
-		.attr('font-size', 11)
-		.text(
-			`signed −log10 q: lower or lost in ${groups[1]} (blue), higher or gained (orange); ● q < 0.05; □ only when merged`
-		)
-	for (const [k, line] of [
-		"Gene body: each patient's gene-body β, centered on their median, Welch t-test.",
-		`Merged: directional P-value merging, same direction (Brown df ${pw.brown.df.toFixed(1)} of 4).`
-	].entries())
-		svg
-			.append('text')
-			.attr('x', m.left + 132)
-			.attr('y', ly + 24 + 13 * k)
-			.attr('font-size', 10)
-			.attr('fill', '#777')
-			.text(line)
-	return svg
+	// plotTop: where the panels' plot areas start in the svg, for lining them up with the volcano's
+	return { svg, plotTop: m.top, destroy: () => interactions.forEach(d => d.destroy()) }
 }

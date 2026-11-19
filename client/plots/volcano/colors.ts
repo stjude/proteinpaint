@@ -1,4 +1,5 @@
 import { rgb } from 'd3-color'
+import { STARBURST_COLORS } from '#shared/dmrColors.js'
 
 /** Resolve the case/control dot colors for a volcano plot in one place so the
  * interactive SVG overlay (VolcanoViewModel) and the server-rendered PNG
@@ -10,6 +11,9 @@ import { rgb } from 'd3-color'
  * so the Rust renderer's hex-only parser doesn't fall back to a muted tuple.
  */
 export function getGroupColors(config: any): { caseColor: string; controlColor: string } {
+	// methylation draws hyper and hypo in the isoform starburst's palette, whatever the group colours
+	if (config?.termType == 'dnaMethylation')
+		return { caseColor: STARBURST_COLORS.same, controlColor: STARBURST_COLORS.opposite }
 	const groups = config?.samplelst?.groups
 	const termValues = config?.tw?.term?.values
 	const rawDown = termValues?.[groups?.[0]?.name]?.color || 'red'

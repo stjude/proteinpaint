@@ -72,14 +72,13 @@ tape('getDefaultVolcanoSettings() by data type', test => {
 			elementType: 'promoter',
 			xAxis: 'delta_beta',
 			deltaBetaCutoff: 0.1,
+			defaultNonSignColor: '#bbb',
 			scanChromosome: '',
-			backgroundCorrection: false,
 			scanYAxis: 'min_smoothed_fdr',
 			minCpgs: DEFAULT_MIN_CPGS,
 			lambda: 1000,
 			C: 2,
-			fdrCutoff: 0.05,
-			profileBinBp: 100_000
+			fdrCutoff: 0.05
 		}
 		test.deepEqual(
 			getDefaultVolcanoSettings({}, { termType: tt.DNA_METHYLATION }),
@@ -213,8 +212,8 @@ tape('control inputs by data type', test => {
 		{ key: 'promoter', label: 'Promoter' },
 		{ key: 'dmr_scan', label: 'DMR scan' }
 	]
-	const scanPlot = { settings: { volcano: { elementType: 'dmr_scan', backgroundCorrection: false } } }
-	const elementPlot = { settings: { volcano: { elementType: 'promoter', backgroundCorrection: false } } }
+	const scanPlot = { settings: { volcano: { elementType: 'dmr_scan' } } }
+	const elementPlot = { settings: { volcano: { elementType: 'promoter' } } }
 	const show = (v: any) => v || 'show'
 	const keys = (termType: string) =>
 		new VolcanoControlInputs({ ...config, termType } as any, termType, elementTypes, ['chr1', 'chrM']).inputs.map(
@@ -240,13 +239,11 @@ tape('control inputs by data type', test => {
 		[
 			'elementType',
 			'scanChromosome:show/none',
-			'backgroundCorrection:show/none',
 			'scanYAxis:show/none',
 			'minCpgs:show/none',
 			'lambda:show/none',
 			'C:show/none',
 			'fdrCutoff:show/none',
-			'profileBinBp:show/none',
 			'minSamplesPerGroup:none/show',
 			'excludeSexChr',
 			'centerDeltaBeta:none/show',
@@ -302,13 +299,6 @@ tape('control inputs by data type', test => {
 			{ value: 'chr1', label: 'chr1' }
 		],
 		'the scan offers the genome and its chromosomes but chrM'
-	)
-	test.equal(
-		inputOf(tt.DNA_METHYLATION, 'scanYAxis').getDisplayStyle({
-			settings: { volcano: { elementType: 'dmr_scan', backgroundCorrection: true } }
-		}),
-		'none',
-		'the corrected scan has no y axis choice'
 	)
 	test.deepEqual(
 		new VolcanoControlInputs({ ...config, termType: tt.DNA_METHYLATION } as any, tt.DNA_METHYLATION, [

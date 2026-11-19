@@ -69,10 +69,7 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	/** DMR scan only (elementType == DMR_SCAN_ELEMENT_TYPE): one chromosome to scan, or '' for the
 	 * whole genome. */
 	scanChromosome: string
-	/** DMR scan only: score each DMR against matched intergenic background, so the y axis asks
-	 * "moved more than a region like it drifts" rather than "moved at all". */
-	backgroundCorrection: boolean
-	/** DMR scan only: the region statistic on the y axis, when not background-corrected */
+	/** DMR scan only: the region statistic on the y axis */
 	scanYAxis: DmrScanYAxis
 	/** DMR scan only: drop DMRs called from fewer CpGs than this. */
 	minCpgs: number
@@ -82,10 +79,6 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 	C: number
 	/** DMR scan only: per-CpG FDR a CpG must pass to seed or extend a DMR. */
 	fdrCutoff: number
-	/** DMR scan only: the width, in bp, the methylome-wide profile's bins are DRAWN at. The metric
-	 * is computed at 100 kb and the statistics stay there; several bins are averaged into one dot
-	 * for display, because at 100 kb the dots overlap. A dropdown holds this as a string. */
-	profileBinBp: number
 }
 
 export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}

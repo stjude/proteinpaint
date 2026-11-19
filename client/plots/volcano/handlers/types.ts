@@ -33,11 +33,7 @@ export type VolcanoAction =
 	| 'pValueTable'
 	/** hierarchical clustering of the significant rows, see VolcanoHandler.clusterTerms */
 	| 'clustering'
-	/** the expression test on the genes under gene-body loss DMRs, when the dataset has gene counts */
-	| 'geneBodyLoss'
-	/** the genes near the scan's DMRs, with expression and literature, when the dataset has gene counts */
-	| 'dmrGeneLink'
-	/** methylation against expression change by gene, when the dataset has gene counts and per-CpG data */
+	/** methylation against expression change by isoform, when the dataset has transcript counts and per-CpG data */
 	| 'starburst'
 
 /** What decides whether an offered action applies to this run */

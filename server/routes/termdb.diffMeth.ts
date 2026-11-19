@@ -2,16 +2,10 @@ import path from 'path'
 import fs from 'fs'
 import { randomUUID } from 'crypto'
 import serverconfig from '#src/serverconfig.js'
-import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, DmrScanSummary } from '#types'
-import { DMR_SCAN_ELEMENT_TYPE, clearsMinDeltaBeta } from '#types'
+import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest } from '#types'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { runDmrBatch } from '#src/routes/termdb.dmrBatch.ts'
-import {
-	dmrScanToRows,
-	restrictScanPayload,
-	summarizeProfile,
-	coarsenProfile,
-	dmrBedjLines
-} from '#src/utils/dmrScanRows.ts'
+import { dmrScanToRows, restrictScanPayload, summarizeProfile, dmrBedjLines } from '#src/utils/dmrScanRows.ts'
 import {
 	resolveGroupNames,
 	matchedSamplelst,
@@ -23,8 +17,6 @@ import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { formatElapsedTime, sampleLimitAlert } from '#shared'
 import { renderVolcano } from '../src/renderVolcano.ts'
-import { renderManhattanPoints } from '../src/renderManhattan.ts'
-import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import { getAvailableMemoryMB, admitRun, type MemoryCost } from '#src/utils/memory.ts'
 import { getH5samples } from '#src/utils/h5samples.ts'
@@ -87,12 +79,8 @@ export function init({ genomes }) {
 				throw new Error(
 					!result.scan
 						? 'No promoters passed filtering. Try relaxing group criteria or selecting more samples.'
-						: result.scan.kept && result.scan.backgroundCorrection
-						? /* rows omit unscored DMRs under the correction, so none plotted does not mean
-						none met the floor */
-						  `None of the ${result.scan.kept.toLocaleString()} DMRs meeting the CpG floor could be scored against matched background. Turn off the background correction to see them.`
 						: result.scan.withoutStatistic
-						? // the same for a y-axis statistic the run could not compute for any of them
+						? // a y-axis statistic the run could not compute for any of them
 						  `None of the ${result.scan.kept.toLocaleString()} DMRs meeting the CpG floor has a ${
 								result.scan.yAxis
 						  } value. Choose another Y axis to see them.`
@@ -111,24 +99,9 @@ export function init({ genomes }) {
 				output.scan = result.scan
 				if (result.scan.binMethylation) {
 					output.scan.profileSummary = summarizeProfile(result.scan.binMethylation)
-					output.scan.profile = await renderMethylationProfile(
-						result.scan,
-						genomes[q.genome],
-						q.volcanoRender?.devicePixelRatio,
-						// display width only; the summary rows above stay on the native 100 kb bin
-						q.scan?.profileBinBp
-					)
-					/* The bins themselves are not sent: ~30,000 rows the client would only re-derive
-					the picture and the summary from, both of which are already in the response. */
+					// ~30,000 bins the client has no use for once summarized
 					delete output.scan.binMethylation
 				}
-				output.scan.manhattan = await renderScanManhattan(
-					// the counted DMRs: those under the Min Δβ stay on the volcano only
-					result.promoterRows.filter(r => clearsMinDeltaBeta(r.delta_beta, result.scan!.minDeltaBeta)),
-					result.scan.chromosomes,
-					genomes[q.genome],
-					q.volcanoRender?.devicePixelRatio
-				)
 			}
 			res.send(output)
 		} catch (e: any) {
@@ -265,8 +238,7 @@ export function scanChromosomes(req: DiffMethRequest, genome: any): string[] {
 /* A genome-wide DMR scan presented as differential methylation.
 
 The scan (termdb/dmrBatch) already does the expensive part and caches it; this maps its DMRs onto
-the rows the volcano renders -- delta-beta on x, DMRcate's smoothed FDR (or, corrected, the
-FDR against matched intergenic background) on y -- so the PNG, the p-value table, hover,
+the rows the volcano renders -- delta-beta on x, the chosen DMRcate region statistic on y -- so the PNG, the p-value table, hover,
 highlight, download and the region drill-down are the ones every other element class uses, and the
 scan needs no UI of its own. Group sizes come from the same resolver the scan uses internally, so
 the volcano's caption and the scan agree on who was compared. */
@@ -297,7 +269,6 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 			group1: groups[0].values,
 			group2: groups[1].values,
 			scanChromosomes: runChromosomes,
-			backgroundCorrection: !!req.scan?.backgroundCorrection,
 			// the genome-wide profile: the metric the methylome literature compares cohorts with
 			binMethylation: true,
 			lambda: positiveOrUndefined(req.scan?.lambda),
@@ -320,9 +291,7 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 	const { rows, scan } = dmrScanToRows(view, {
 		chromosomes,
 		runChromosomes,
-		run: payload,
 		minCpgs: req.scan?.minCpgs,
-		backgroundCorrection: !!req.scan?.backgroundCorrection,
 		yAxis: req.scan?.yAxis,
 		minDeltaBeta: req.scan?.minDeltaBeta
 	})
@@ -354,149 +323,6 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 function positiveOrUndefined(v: unknown): number | undefined {
 	const n = Number(v)
 	return v != null && Number.isFinite(n) && n > 0 ? n : undefined
-}
-
-/** How many dots the client can hover and click in EACH direction, on both genome-wide figures:
- * DMRs ranked by evidence, profile bins by |Δβ|. Per direction rather than overall because hyper
- * carries the larger evidence on MMRF and would otherwise take every slot. Everything is in the
- * PNG; only these carry pixel coordinates. */
-const SCAN_INTERACTIVE_PER_SIDE = 1000
-
-/* Dots on both scan figures. Genome-wide, 120,000 DMRs and 29,000 bins need small dots, and open
-circles so overlaps still read; one chromosome holds a few thousand, which read better large and
-filled, and at one size so the two figures look like one. */
-function scanDotStyle(chromosomes: string[], genomeRadius: number) {
-	const filled = chromosomes.length == 1
-	return { filled, dotRadius: filled ? 3 : genomeRadius }
-}
-
-/* The x axis of both scan figures: only the chromosomes the scan covered, so a one-chromosome
-scan fills the plot instead of drawing as a sliver among 23 empty chromosomes. */
-function scanChrSizes(chromosomes: string[], genome: any): Record<string, number> {
-	return Object.fromEntries(chromosomes.map(c => [c, genome.majorchr[c]]))
-}
-
-/* Where the DMRs are, along the whole genome: hyper above the line, hypo below, height = evidence,
--log10 of the q the volcano plots (DMRcate's HMFDR, or corrected the FDR against
-matched background), capped as GRIN2 caps it so a few extreme regions do not flatten the rest.
-Drawn from EVERY kept row rather than the volcano's capped dots, which would draw the wrong picture
-of 120,000 regions. Fixed size rather than the volcano's, because this figure is read as a strip
-under the volcano at whatever width the volcano has. */
-async function renderScanManhattan(
-	rows: DiffMethEntry[],
-	chromosomes: string[],
-	genome: any,
-	devicePixelRatio?: number
-): Promise<NonNullable<DmrScanSummary['manhattan']>> {
-	const chrSizes = scanChrSizes(chromosomes, genome)
-	const points = rows.map(r => {
-		const p = r.original_p_value
-		// a q of 0 is the most significant thing there is and is parked at the cap
-		const mag = p > 0 ? -Math.log10(p) : Infinity
-		return {
-			chrom: r.chr,
-			pos: r.start,
-			y: r.delta_beta < 0 ? -mag : mag,
-			color: r.delta_beta < 0 ? HYPO_COLOR : HYPER_COLOR,
-			start: r.start,
-			stop: r.stop,
-			delta_beta: r.delta_beta,
-			fold_change: r.fold_change,
-			p,
-			no_cpgs: r.no_cpgs,
-			min_smoothed_fdr: r.min_smoothed_fdr,
-			gene_name: r.gene_name,
-			...(r.excess != null ? { excess: r.excess } : {})
-		}
-	})
-	const plotWidth = 1000
-	const plotHeight = 300
-	const { filled, dotRadius } = scanDotStyle(chromosomes, 2)
-	const { png, plot_data } = await renderManhattanPoints({
-		points,
-		chrSizes,
-		plotWidth,
-		plotHeight,
-		devicePixelRatio: devicePixelRatio || 1,
-		pngDotRadius: dotRadius,
-		// the GRIN2 defaults: raise the cap only when more than 5 dots would sit on it
-		maxCappedPoints: 5,
-		hardCap: 200,
-		binSize: 10,
-		interactive: SCAN_INTERACTIVE_PER_SIDE,
-		signed: true,
-		// open circles genome-wide, as the volcano draws the same DMRs; see scanDotStyle
-		hollow: !filled
-	})
-	return { png, plotData: plot_data, interactive: SCAN_INTERACTIVE_PER_SIDE, plotWidth, plotHeight, dotRadius, filled }
-}
-
-/* The genome-wide methylation profile: mean beta per group in 100 kb bins, drawn as the per-bin
-difference along the genome. This is the metric the methylome literature uses for a genome-wide
-comparison of two groups, and it answers the question a DMR list cannot: how much of the methylome
-moved, and where, INCLUDING the parts where nothing was called. A DMR plot shows only the regions
-that passed a threshold, so a genome that shifted everywhere by a little and a genome that shifted
-nowhere both look like sparse dots; this shows the difference between them.
-
-Every bin with a probe is a dot and the axis is uncapped, because a beta difference is bounded.
-The largest per direction are interactive: a band of 29,000 dots says nothing on its own, and a
-reader points at what stands out to ask what it is. */
-function renderMethylationProfile(
-	scan: DmrScanSummary,
-	genome: any,
-	devicePixelRatio?: number,
-	profileBinBp?: number
-): Promise<NonNullable<DmrScanSummary['profile']>> | undefined {
-	if (!scan.binMethylation?.bins.length) return undefined
-	// the reader's chosen display width, or the native one; see coarsenProfile
-	const bm = coarsenProfile(scan.binMethylation, profileBinBp)
-	const chrSizes = scanChrSizes(scan.chromosomes, genome)
-	/* Only what the tooltip cannot derive: the bin's span is binBp from its pos, and with capping
-	off the plotted y IS the difference. 2,000 interactive bins carry these, so a field that can be
-	recomputed on the client is payload for nothing. */
-	const points = bm.bins.map(b => {
-		const d = b.case - b.control
-		return {
-			chrom: b.chr,
-			pos: b.start,
-			y: d,
-			color: d < 0 ? HYPO_COLOR : HYPER_COLOR,
-			control: b.control,
-			case: b.case,
-			n_probes: b.n_probes
-		}
-	})
-	const plotWidth = 1000
-	const plotHeight = 160
-	// 1 px genome-wide: at 100 kb there are ~30,000 bins, and a 2 px dot makes the genome one solid band
-	const { dotRadius } = scanDotStyle(scan.chromosomes, 1)
-	return renderManhattanPoints({
-		points,
-		chrSizes,
-		plotWidth,
-		plotHeight,
-		devicePixelRatio: devicePixelRatio || 1,
-		pngDotRadius: dotRadius,
-		maxCappedPoints: 5,
-		hardCap: 200,
-		binSize: 10,
-		/* The bins that moved most, each way. Ranking is |y| = |Δβ| here rather than evidence: on
-		this figure the effect size IS the result, and the bins a reader wants to identify are the
-		excursions away from the zero line. */
-		interactive: SCAN_INTERACTIVE_PER_SIDE,
-		signed: true,
-		capping: false
-	}).then(({ png, plot_data }) => ({
-		png,
-		plotData: plot_data,
-		binBp: bm.binBp,
-		plotWidth,
-		plotHeight,
-		dotRadius,
-		bins: bm.bins.length,
-		// what the top-N-per-side rule actually left live, which at a coarse width is every bin
-		interactive: plot_data.points.length
-	}))
 }
 
 type DiffMethInput = {

@@ -416,7 +416,6 @@ async function resolveGseaGenesAndFoldChange({
 		Negative means the body lost methylation in the case group. Same groups as the scan. */
 		if (dm.element_type === DMR_SCAN_ELEMENT_TYPE) {
 			const groups = dm.samplelst.groups
-			// with the scan's correction on, rank by the excess over matched background, as the scan does
 			const deltas = await getGeneBodyDeltas(
 				{
 					genome: dm.genome,
@@ -425,7 +424,6 @@ async function resolveGseaGenesAndFoldChange({
 					group1: groups[0].values ?? groups[0],
 					group2: groups[1].values ?? groups[1],
 					filter0: (dm as any).filter0,
-					corrected: !!dm.scan?.backgroundCorrection,
 					__protected__: dm.__protected__,
 					/* The chromosomes the scan itself ran on. Without this the ranking covered the
 					whole genome while the volcano showed one chromosome, and on a sex-imbalanced

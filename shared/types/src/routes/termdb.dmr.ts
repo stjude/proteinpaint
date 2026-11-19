@@ -36,12 +36,10 @@ export type TermdbDmrRequest = {
 	 * the scan's, so it shows the DMRs the volcano drew. Absent = the whole genome; a list without chr is
 	 * refused, since that region was not in the run. */
 	scanChromosomes?: string[]
-	/** That scan's background correction, which is in its run's cache key, so the view finds the run */
-	backgroundCorrection?: boolean
 	/** That scan's CpG floor: DMRs from fewer CpGs are left out, as the scan leaves them out. Absent = 1 */
 	minCpgs?: number
 	/** That scan's y-axis statistic: DMRs without it are left out, as the scan leaves them out. Absent =
-	 * min_smoothed_fdr; ignored with backgroundCorrection, whose background p is the one then */
+	 * min_smoothed_fdr */
 	yAxis?: DmrScanYAxis
 	filter?: Filter
 	__protected__?: any

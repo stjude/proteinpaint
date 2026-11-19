@@ -1,5 +1,7 @@
 import tape from 'tape'
 import { groupColors } from '../groupColors'
+import { getGroupColors } from '../colors'
+import { STARBURST_COLORS } from '#shared/dmrColors.js'
 
 /*
 test sections:
@@ -66,5 +68,23 @@ tape('groupColors falls back to the colour on the group itself', t => {
 		}
 	})
 	t.deepEqual(both, { group1: '#aaaaaa', group2: '#654321' }, 'the term wins where it has one, group fills the rest')
+	t.end()
+})
+
+tape('getGroupColors: methylation draws in the starburst palette, other data types in the group colours', t => {
+	const config = {
+		samplelst: { groups: [{ name: 'A' }, { name: 'B' }] },
+		tw: { term: { values: { A: { color: '#111111' }, B: { color: '#222222' } } } }
+	}
+	t.deepEqual(
+		getGroupColors({ ...config, termType: 'dnaMethylation' }),
+		{ caseColor: STARBURST_COLORS.same, controlColor: STARBURST_COLORS.opposite },
+		'hyper in the starburst orange, hypo in its purple, whatever the groups are coloured'
+	)
+	t.deepEqual(
+		getGroupColors({ ...config, termType: 'geneExpression' }),
+		{ caseColor: '#222222', controlColor: '#111111' },
+		'expression keeps the group colours'
+	)
 	t.end()
 })

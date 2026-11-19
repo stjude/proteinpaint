@@ -117,8 +117,6 @@ function init({ genomes }) {
 					lambda: q.lambda,
 					C: q.C,
 					fdr_cutoff: q.fdr_cutoff,
-					// in the run's cache key: the scan's own setting, or this misses its run and refits
-					backgroundCorrection: !!q.backgroundCorrection,
 					__protected__: q.__protected__
 				},
 				genomes,
@@ -130,7 +128,7 @@ function init({ genomes }) {
 			const minCpgs = Math.max(1, Math.floor(Number(q.minCpgs) || 1))
 			// nor any other DMR the volcano leaves out of its rows, by the volcano's own test
 			const yAxis: DmrScanYAxis = DMR_SCAN_Y_AXES.includes(q.yAxis as DmrScanYAxis) ? q.yAxis! : 'min_smoothed_fdr'
-			const plotted = (d: Dmr) => d.no_cpgs >= minCpgs && isPlottedDmr(d, q.backgroundCorrection, yAxis)
+			const plotted = (d: Dmr) => d.no_cpgs >= minCpgs && isPlottedDmr(d, yAxis)
 			const dmrInput = {
 				matrices: [{ file: matrixFile, chrs: [q.chr] }],
 				...dmrcateValues(matrix),

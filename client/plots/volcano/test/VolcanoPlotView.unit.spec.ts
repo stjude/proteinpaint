@@ -83,9 +83,10 @@ tape('renderUserActions(): gene expression', test => {
 })
 
 tape('renderUserActions(): dna methylation', test => {
+	const isoformQueries = { isoformExpressionCount: true, dnaMethylation: { regionAnalysis: 'cpg' } }
 	test.deepEqual(
 		renderActions(
-			getView(tt.DNA_METHYLATION, { rnaseqGeneCount: true, dnaMethylation: { regionAnalysis: 'cpg' } }),
+			getView(tt.DNA_METHYLATION, isoformQueries),
 			{ elementType: 'promoter' },
 			{
 				statsData: sigStats('promoters', 7),
@@ -99,41 +100,40 @@ tape('renderUserActions(): dna methylation', test => {
 			'Confounding factors',
 			'Highlight genes',
 			'Statistics',
-			'Methylation vs expression by gene',
+			'Methylation vs expression by isoform',
 			{ caption: '7 DM promoters (4 hyper / 3 hypo), centered on median Δβ +0.012:' },
 			'Show p-value table'
 		],
-		'should caption the DM elements hyper and hypo, and offer the starburst with cpg region analysis'
+		'should caption the DM elements hyper and hypo, and offer the isoform starburst with transcript counts'
 	)
 	test.deepEqual(
 		renderActions(
-			getView(tt.DNA_METHYLATION, { rnaseqGeneCount: true }),
+			getView(tt.DNA_METHYLATION, { rnaseqGeneCount: true, dnaMethylation: { regionAnalysis: 'cpg' } }),
+			{ elementType: 'promoter' },
+			{ statsData: sigStats('promoters', 1) }
+		),
+		['Confounding factors', 'Highlight genes', 'Statistics', { caption: '1 DM promoters:' }, 'Show p-value table'],
+		'should not offer the starburst with gene counts only: there is no gene-level starburst'
+	)
+	test.deepEqual(
+		renderActions(
+			getView(tt.DNA_METHYLATION, isoformQueries),
 			{ elementType: DMR_SCAN_ELEMENT_TYPE },
 			{
 				statsData: sigStats('DMRs', 9),
 				numSignificantUp: 9,
-				scan: { cacheId: 'c1', geneBodyLoss: { genes: ['A', 'B'] } },
+				scan: { cacheId: 'c1' },
 				userActions: { noShow: new Set(['confounders']) }
 			}
 		),
 		[
 			'Highlight genes',
 			'Statistics',
-			'Expression of 2 gene-body loss genes',
-			'Genes, expression and literature',
+			'Methylation vs expression by isoform',
 			{ caption: '9 DMRs (9 hyper / 0 hypo):' },
 			'Show p-value table'
 		],
-		'should offer the expression of the DMR genes on a scan, and not say "DM DMRs"'
-	)
-	test.deepEqual(
-		renderActions(
-			getView(tt.DNA_METHYLATION, {}),
-			{ elementType: DMR_SCAN_ELEMENT_TYPE },
-			{ statsData: sigStats('DMRs', 1), scan: { cacheId: 'c1', geneBodyLoss: { genes: ['A'] } } }
-		),
-		['Confounding factors', 'Highlight genes', 'Statistics', { caption: '1 DMRs:' }, 'Show p-value table'],
-		'should leave out the expression actions on a dataset without gene counts'
+		'should offer the starburst on a scan too, which opens it beside the volcano, and not say "DM DMRs"'
 	)
 	test.end()
 })

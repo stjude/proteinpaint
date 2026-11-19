@@ -737,7 +737,7 @@ tape('groups renderPreAnalysisData() by data type', test => {
 		],
 		'the scan offers the genome and its chromosomes'
 	)
-	test.ok(scan.checkbox, 'and the background correction')
+	test.notOk(scan.checkbox, 'and no background correction')
 	test.equal(scan.runText, 'Run Differential DNA Methylation Analysis', 'methylation run button')
 	test.deepEqual(scan.config?.settings, { volcano: { elementType: 'dmr_scan' } }, 'and launches the whole-genome scan')
 	const noChoice = render(TermTypes.DNA_METHYLATION, { g1: 20, g2: 20 }, {}, dmQueries)

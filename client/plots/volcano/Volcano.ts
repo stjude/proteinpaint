@@ -9,10 +9,10 @@ import type { VolcanoOpts, VolcanoDom } from './VolcanoTypes'
 import { VolcanoModel } from './model/VolcanoModel'
 import { VolcanoViewModel } from './viewModel/VolcanoViewModel'
 import { VolcanoInteractions } from './interactions/VolcanoInteractions'
-import { VolcanoPlotView } from './view/VolcanoPlotView'
+import { VolcanoPlotView, hasIsoformStarburst } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
-import { DMR_SCAN_ELEMENT_TYPE } from '#types'
+import { DMR_SCAN_ELEMENT_TYPE, DNA_METHYLATION } from '#types'
 import { findVolcanoHandler } from './handlers'
 import { uiLabel } from '#shared'
 
@@ -30,7 +30,7 @@ const MIN_WILCOXON_GROUP_SIZE = 20
 export class Volcano extends PlotBase implements RxComponent {
 	static type = 'volcano'
 	type: string
-	components: { controls: any }
+	components: { controls: any; starburst?: any }
 	dom: VolcanoDom
 	interactions?: VolcanoInteractions
 	model!: VolcanoModel
@@ -122,6 +122,21 @@ export class Volcano extends PlotBase implements RxComponent {
 		this.model = new VolcanoModel(this, this.termType)
 		this.view = new VolcanoPlotView(this.dom, this.interactions, this.termType)
 		await this.setControls()
+		/* A DMR scan's volcano has the isoform starburst of the same groups beside it, as a child sharing this plot's
+		config: rx updates it after this volcano's main(), and it shows itself only on the scan, once its button is clicked.
+		Imported on demand, since the starburst imports from the volcano. */
+		if (this.termType == DNA_METHYLATION && hasIsoformStarburst(this.app.vocabApi.termdbConfig)) {
+			const { componentInit } = await import('../methylationStarburst/MethylationStarburst.ts')
+			this.components.starburst = await componentInit({
+				app: this.app,
+				id: this.id,
+				holder: this.view.starburstDiv,
+				embedded: true,
+				// the volcano's svg and plot area, which the starburst lines its plots up with
+				volcanoPlot: () =>
+					this.view.viewData ? { svg: this.view.volcanoDom.svg, plot: this.view.viewData.plotDim.plot } : null
+			})
+		}
 	}
 
 	async main() {

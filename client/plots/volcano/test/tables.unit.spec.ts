@@ -98,7 +98,6 @@ const scanDot = {
 	original_p_value: 0.012,
 	adjusted_p_value: 0.012,
 	no_cpgs: 14,
-	excess: -0.17,
 	min_smoothed_fdr: 0.004
 }
 const scan = {
@@ -110,9 +109,7 @@ const scan = {
 	hyper: 1,
 	hypo: 1,
 	width: { median: 1000, q1: 800, q3: 1500 },
-	yAxis: 'HMFDR',
-	backgroundCorrection: { windows: 2000, scored: 2, unscored: 0, significant: 1, matchedOn: ['CpG density'] },
-	geneBodyLoss: { regions: 1, genes: ['GENEA'] }
+	yAxis: 'HMFDR'
 }
 const scanSettings = {
 	elementType: 'dmr_scan',
@@ -121,7 +118,6 @@ const scanSettings = {
 	minSamplesPerGroup: 3,
 	excludeSexChr: false,
 	scanChromosome: '',
-	backgroundCorrection: true,
 	minCpgs: 5,
 	scanYAxis: 'HMFDR'
 }
@@ -359,7 +355,7 @@ tape('dna methylation tables', test => {
 
 tape('DMR scan tables', test => {
 	const t = getTables('dnaMethylation', [scanDot], scanSettings, { scan }, scanDot.promoter_id)
-	const p = 'FDR vs matched background'
+	const p = 'HMFDR'
 	test.deepEqual(
 		t.columns,
 		[
@@ -369,14 +365,13 @@ tape('DMR scan tables', test => {
 			['Peak Δβ', true, false],
 			['CpGs', true, false],
 			['Width (bp)', true, false],
-			['Excess Δβ', true, false],
 			[p, true, false]
 		],
 		'p-value table columns, the mean delta-beta drawn as the bar'
 	)
 	test.deepEqual(
 		t.rows,
-		[['chr1:1000-2000', 'GENEA, GENEB', r(-0.21), r(-0.35), 14, 1000, r(-0.17), r(0.012)]],
+		[['chr1:1000-2000', 'GENEA, GENEB', r(-0.21), r(-0.35), 14, 1000, r(0.012)]],
 		'p-value table rows'
 	)
 	test.deepEqual(t.rowKeys, ['chr1:1000-2000'], 'rows keyed by region')
