@@ -1,6 +1,6 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { groupColors } from '../groupColors'
-import { getGroupForRegion, withOthersGroup } from '#mass/groups'
+import { getGroupFilterEntry, getGroupForRegion, withOthersGroup } from '#mass/groups'
 import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI, sayerror } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
@@ -535,12 +535,7 @@ export class VolcanoInteractions {
 			chartType: 'hierCluster',
 			termgroups: [group, annotationGroup],
 			dataType: cluster.dataType,
-			filter: {
-				in: true,
-				join: '',
-				type: 'tvslst',
-				lst: [{ type: 'tvs', tvs: { term: customVariable.term } }]
-			}
+			filter: getGroupsFilter(customVariable)
 		}
 		await this.app.dispatch({
 			type: 'plot_create',
@@ -549,11 +544,22 @@ export class VolcanoInteractions {
 	}
 }
 
-/** the rows of a handler without clusterTerms, by the expression of their gene */
+/** The filter of the samples of the groups of a samplelst tw. A tvs of the term needs the samples that each
+ * category lists, which a group defined by a filter does not have: the filter then joins the entries of its groups */
+export function getGroupsFilter(tw: any) {
+	if (!tw.q?.groups?.some(g => g.filter && !Array.isArray(g.values))) {
+		return { in: true, join: '', type: 'tvslst', lst: [{ type: 'tvs', tvs: { term: tw.term } }] }
+	}
+	const lst = tw.q.groups.map(g => getGroupFilterEntry(tw, g.name))
+	return { in: true, join: lst.length > 1 ? 'or' : '', type: 'tvslst', lst }
+}
+
+/** the rows of a handler without clusterTerms, by the expression of their gene. A row whose gene the genome does not
+ * have is left out: the server refuses a request that names it (row.unknownGene, from termdb/DE) */
 const geneClusterTerms: ClusterTerms = {
 	dataType: GENE_EXPRESSION,
 	getTerm: (d, vocabApi) => {
-		if (!d.gene_name) return
+		if (!d.gene_name || d.unknownGene) return
 		return { gene: d.gene_name, name: `${d.gene_name} ${getGEunit(vocabApi)}`, type: GENE_EXPRESSION }
 	}
 }

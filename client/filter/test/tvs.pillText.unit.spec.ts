@@ -153,5 +153,12 @@ tape('get_pill_label: samplelst', test => {
 	// a user-defined group name becomes the samplelst term name
 	const tvs = { term: { name: text, values: { a: { list: [{ sampleId: 1 }, { sampleId: 2 }] } } } }
 	assertLiteral(test, samplelst.get_pill_label(tvs).txt, `${text} n=2`, 'group name')
+
+	const byFilter = { term: { name: 'A vs B', values: { A: { key: 'A' }, B: { key: 'B' } } } }
+	test.equal(
+		samplelst.get_pill_label(byFilter).txt,
+		'A vs B',
+		'should show only the name, without a count, when the groups are defined by filters'
+	)
 	test.end()
 })

@@ -73,12 +73,17 @@ function get_pill_label(tvs) {
 	return { txt: getGroupLabel(tvs.term) }
 }
 
+/* The group name, with the number of samples that the categories list. A category of a group that is defined by a
+filter lists no sample (getSamplelstTWFromFilters() in mass/groups.js), so the label then has no count. */
 function getGroupLabel(term) {
+	// the pill renders this with .html(); the name is a user-defined group name
+	const name = escapeHtml(term.name)
 	let n = 0
 	for (const item in term.values) {
 		if (term.values[item].in === false) continue
-		n += term.values[item].list.length
+		const list = term.values[item].list
+		if (!Array.isArray(list)) return name
+		n += list.length
 	}
-	// the pill renders this with .html(); the name is a user-defined group name
-	return `${escapeHtml(term.name)} n=${n}`
+	return `${name} n=${n}`
 }

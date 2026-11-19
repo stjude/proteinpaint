@@ -309,6 +309,9 @@ export type GeneDEEntry = DataEntry & {
 	gene_name: string
 	/** of an isoform run, the gene of the transcript, when the genome's annotation has it */
 	gene?: string
+	/** of a gene run, set when the genome's gene db does not have gene_name, so that a gene expression term of it
+	 * would be refused */
+	unknownGene?: true
 }
 
 export type DEImage = {
