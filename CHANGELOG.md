@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Add a drug sensitivity chart: select a sample from the chart button to see a radial bar chart; click a bar to see the drug's molecule structure and dose-response curves, or shift-click bars to overlay the dose-response curves of several drugs
+
 
 ## 2.229.0
 
