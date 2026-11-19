@@ -122,13 +122,21 @@ class ChemicalSensitivity extends PlotBase implements RxComponent {
 			this.dom.errdiv.style('display', 'none')
 			const sample: string | undefined = this.state.config.sample
 			if (!sample) throw 'no sample selected'
+			const sequenceId = this.api!.getSequenceId()
 			const saved: SelectedDrug[] = this.state.config.drugs || []
-			const result = await fetchChemicalSensitivity(this.app.vocabApi, {
-				genome: this.state.genome,
-				dslabel: this.state.dslabel,
-				sample,
-				drugs: saved.length ? saved.map(d => d.name) : undefined
-			})
+			let result: ChemicalSensitivityResponse
+			try {
+				result = await fetchChemicalSensitivity(this.app.vocabApi, {
+					genome: this.state.genome,
+					dslabel: this.state.dslabel,
+					sample,
+					drugs: saved.length ? saved.map(d => d.name) : undefined
+				})
+			} catch (e) {
+				if (this.api!.isStaleSequenceId(sequenceId)) return
+				throw e
+			}
+			if (this.api!.isStaleSequenceId(sequenceId)) return
 			// a drug of a saved session that is no longer in the data is not shown
 			this.drugNames = new Set(result.drugs.map(d => d.name))
 			const selected = this.getSelectedDrugs()
