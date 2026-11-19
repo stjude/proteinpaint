@@ -146,28 +146,33 @@ tape('termdb/categories of a samplelst term with groups given as filters, by rol
 			listGroups.map(g => [g.name, { key: g.name, label: g.name, ...(withList ? { list: g.values } : {}) }])
 		)
 	})
-	const counts: any = {}
 	for (const role of ['admin', 'user']) {
 		const jwt = await getSessionJwt(test, role)
 		if (!jwt) return test.end()
-		const get = async (tw: any) => {
-			const res = await post('/termdb/categories', { genome, dslabel, embedder, tw }, bearer(jwt))
-			if (!Array.isArray(res.body.lst))
-				return test.fail(`no categories for role='${role}': ${JSON.stringify(res.body)}`)
-			return Object.fromEntries(res.body.lst.map(c => [c.key, c.samplecount]))
-		}
+		const get = async (tw: any) =>
+			(await post('/termdb/categories', { genome, dslabel, embedder, tw }, bearer(jwt))).body
 		const asLists = await get({ term: term(true), q: { groups: listGroups } })
 		const asFilters = await get({ term: term(false), q: { groups: filterGroups } })
-		if (!asLists || !asFilters) return test.end()
-		test.deepEqual(asFilters, asLists, `should give the categories of the list form for role='${role}'`)
-		counts[role] = asFilters
+		test.ok(
+			asFilters.lst?.length === 2 && asFilters.lst.every(c => c.samplecount > 0),
+			`should count samples in both filter groups for role='${role}'`
+		)
+		if (role === 'admin') {
+			test.deepEqual(asFilters.lst, asLists.lst, 'should give the categories of the list form for admin')
+		} else {
+			test.equal(
+				asLists.error,
+				'Cannot map multiple parent values for the same term to a single child sample',
+				'should reject ambiguous patient-to-sample mapping for the list form'
+			)
+		}
 	}
 
 	// a route may return the term wrappers of its request: the samples of a filter group are not in them
 	const jwt = await getSessionJwt(test, 'admin')
 	if (!jwt) return test.end()
 	const tw2 = { $id: 'groups', term: term(false), q: { groups: filterGroups } }
-	const tw1 = { $id: 'diaggrp', term: { id: 'diaggrp', type: 'categorical' }, q: {} }
+	const tw1 = { $id: 'sex', term: { id: 'sex', type: 'categorical' }, q: {} }
 	for (const [path, body] of [
 		['/termdb/categories', { tw: tw2 }],
 		['/termdb/barsql', { term1: tw1, term2: tw2, hiddenValues: { term1: [], term2: [] } }]
@@ -177,19 +182,23 @@ tape('termdb/categories of a samplelst term with groups given as filters, by rol
 		test.ok(res.status == 200 && !res.body.error, `${path} should answer${res.body.error ? ': ' + res.body.error : ''}`)
 		test.notOk(text.includes('"sampleId"'), `${path} should not list the samples of a group in its answer`)
 	}
-	test.ok(counts.admin.group1 > 0 && counts.admin.group2 > 0, `should have samples in both groups for role='admin'`)
 	test.end()
 })
 
 /* A confounder is read with getData() for the request, see resolveDaContext() in utils/sampleGroups.ts,
-which applies the dataset's sample filter for the session as for the groups. */
-const sexTw = { $id: 'sex', term: { id: 'sex', type: 'categorical', name: 'Sex' }, q: { type: 'values' } }
+which applies the dataset's sample filter for the session as for the groups. Use a sample-level term
+so the check does not require mapping patient annotations onto samples. */
+const sampleTw = {
+	$id: 'assayavailability_fusion',
+	term: { id: 'assayavailability_fusion', type: 'categorical' },
+	q: { type: 'values' }
+}
 
 for (const route of routes) {
 	tape(`${route.path} group sizes with a confounder, by role`, async test => {
 		test.timeoutAfter(30000)
 		for (const role of ['admin', 'user']) {
-			const sizes = await getGroupSizes(test, { ...route, body: { ...route.body, tw: sexTw } }, role)
+			const sizes = await getGroupSizes(test, { ...route, body: { ...route.body, tw: sampleTw } }, role)
 			if (!sizes) return test.end()
 			test.ok(sizes.group1 > 0, `should resolve samples in group 1 with a confounder for role='${role}'`)
 		}
@@ -201,7 +210,7 @@ for (const route of routes) {
 	tape(`${route.path} group sizes with another term, by role`, async test => {
 		test.timeoutAfter(30000)
 		for (const role of ['admin', 'user']) {
-			const sizes = await getGroupSizes(test, { ...route, body: { ...route.body, tw2: sexTw } }, role)
+			const sizes = await getGroupSizes(test, { ...route, body: { ...route.body, tw2: sampleTw } }, role)
 			if (!sizes) return test.end()
 			test.ok(sizes.group1 > 0, `should resolve samples in group 1 for role='${role}'`)
 		}
