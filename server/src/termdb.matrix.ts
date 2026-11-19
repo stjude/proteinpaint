@@ -512,6 +512,8 @@ async function getSampleData(q, ds) {
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
 }
 
+const multipleParentValuesError = 'Cannot map multiple parent values for the same term to a single child sample'
+
 /** map sample hierarchy for non-dictionary data */
 export async function mayMapNonDictionaryData(tw, q, sample2value) {
 	const mapping = getAnnotationSampleMapping(q, tw)
@@ -535,8 +537,8 @@ export async function mayMapNonDictionaryData(tw, q, sample2value) {
 
 	for (const { source, target } of rows) {
 		if (Object.hasOwn(mappedValues, target)) {
-			// multiple source values map to target value
-			// just using first one
+			if (q.sampleMapping === 'parentToChildren') throw new Error(multipleParentValuesError)
+			// Keep the first child value when mapping to a parent.
 			continue
 		}
 		mappedValues[target] = sample2value[source]
@@ -1141,7 +1143,10 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
 			if (!mappedTermIds.has(row.term_id)) return true
 			let termIds = seenValues.get(row.sample)
 			if (!termIds) seenValues.set(row.sample, (termIds = new Set()))
-			if (termIds.has(row.term_id)) return false
+			if (termIds.has(row.term_id)) {
+				if (q.sampleMapping === 'parentToChildren') throw new Error(multipleParentValuesError)
+				return false
+			}
 			termIds.add(row.term_id)
 			return true
 		})
