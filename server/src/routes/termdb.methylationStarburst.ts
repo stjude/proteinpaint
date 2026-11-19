@@ -17,7 +17,6 @@ import { formatElapsedTime, stripAccessionVersion } from '#shared'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 import { ISOFORM_EXPRESSION } from '#types'
-import { getH5samples } from '#src/utils/h5samples.ts'
 
 /* Methylation change against expression change, one point per gene, for the two groups of a volcano: the
 starburst plot (Noushmehr 2010, PMID 20399149). Two regions per gene, the core promoter and the body, because
@@ -119,10 +118,8 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 	const rows: any[] = (result as any)?.geneRows || []
 	// the methylation side is keyed by unversioned id, as the gene table has it
 	const idOf = (r: any) => (byIsoform ? stripAccessionVersion(String(r.gene_name)) : r.gene_name)
-	/* By isoform, every transcript of the counts file is measured, not just those this DE run tested: which those are
-	follows the DE method and count cutoffs, and keying the two genome-wide methylation runs on that would recompute
-	them on every DE setting change for the same groups. */
-	const isoforms = byIsoform ? await countsFileTranscripts(ds.queries.isoformExpressionCount) : undefined
+	// by isoform, the transcripts the DE run tested; the gene-body cache key includes this list
+	const isoforms = byIsoform ? rows.map(idOf) : undefined
 	const deltas = (region?: 'promoter') =>
 		getGeneBodyDeltas({ ...groupArgs, corrected: !!q.corrected, region, isoforms }, genomes)
 	// one after the other: each is a genome-wide rust run admitted against server memory
@@ -224,18 +221,4 @@ function getPathways(
 			.filter(s => s.layers.some(l => l.log10q < sig))
 			.map(s => ({ ...s, layers: s.layers as StarburstPathways['sets'][0]['layers'], genes: s.genes.slice(0, 30) }))
 	}
-}
-
-/** the transcript ids of an isoform counts h5 (its 'item' dataset, the rows the DE engines read), unversioned; read once
- * per counts query */
-const transcriptsOf = new WeakMap<object, Promise<string[]>>()
-function countsFileTranscripts(c: { file: string }): Promise<string[]> {
-	let p = transcriptsOf.get(c)
-	if (!p) {
-		p = getH5samples(c.file, 'item').then(ids => ids.map(stripAccessionVersion))
-		// a failed read is not kept: the next request tries again
-		p.catch(() => transcriptsOf.delete(c))
-		transcriptsOf.set(c, p)
-	}
-	return p
 }
