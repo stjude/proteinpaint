@@ -248,6 +248,7 @@ tape(`initialization, non-empty credentials`, async test => {
 			[
 				{
 					dslabel: 'testds',
+					dslabelPattern: 'testds',
 					route: '/**',
 					type: 'basic',
 					headerKey: 'x-ds-access-token',
@@ -389,6 +390,7 @@ tape(`auth methods`, async test => {
 		[
 			{
 				dslabel: 'ds100',
+				dslabelPattern: 'ds100',
 				route: 'termdb',
 				type: 'jwt',
 				headerKey: 'x-ds-access-token',
@@ -397,6 +399,7 @@ tape(`auth methods`, async test => {
 			},
 			{
 				dslabel: 'ds100',
+				dslabelPattern: 'ds100',
 				route: 'burden',
 				type: 'forbidden',
 				headerKey: undefined,
@@ -417,6 +420,7 @@ tape(`auth methods`, async test => {
 		[
 			{
 				dslabel: 'ds100',
+				dslabelPattern: 'ds100',
 				route: 'termdb',
 				type: 'forbidden',
 				headerKey: undefined,
@@ -425,6 +429,7 @@ tape(`auth methods`, async test => {
 			},
 			{
 				dslabel: 'ds100',
+				dslabelPattern: 'ds100',
 				route: 'burden',
 				type: 'forbidden',
 				headerKey: undefined,
