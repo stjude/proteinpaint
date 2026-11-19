@@ -256,20 +256,25 @@ export class Auth {
 		}
 	}
 
-	// returns the dsCredentials entries that apply to a client-supplied dslabel, ordered by precedence:
+	// returns the dsCredentials keys that apply to a client-supplied dslabel, ordered by precedence:
 	// an exact key, then glob pattern keys (e.g. 'realD*'), then the '*' wildcard;
 	// keys that start with '#' (comment) or '__' (not a dslabel) are not used as glob patterns
-	getMatchedDsEntries(dslabel) {
+	getMatchedDsKeys(dslabel) {
 		assertStringOrUndefined(dslabel, 'dslabel')
 		const creds = this.creds
-		const entries: any[] = []
-		if (typeof dslabel == 'string' && Object.hasOwn(creds, dslabel)) entries.push(creds[dslabel])
+		const keys: string[] = []
+		if (typeof dslabel == 'string' && Object.hasOwn(creds, dslabel)) keys.push(dslabel)
 		for (const pattern in creds) {
 			if (pattern == dslabel || pattern == '*' || pattern.startsWith('#') || pattern.startsWith('__')) continue
-			if (patternMatches(dslabel, pattern)) entries.push(creds[pattern])
+			if (patternMatches(dslabel, pattern)) keys.push(pattern)
 		}
-		if (creds['*']) entries.push(creds['*'])
-		return entries
+		if (creds['*']) keys.push('*')
+		return keys
+	}
+
+	// returns the dsCredentials entries for the keys from getMatchedDsKeys(), in the same order
+	getMatchedDsEntries(dslabel) {
+		return this.getMatchedDsKeys(dslabel).map(k => this.creds[k])
 	}
 
 	// returns the route keys, such as 'termdb', 'burden', or '/**', that are configured for a dslabel
@@ -301,6 +306,14 @@ export class Auth {
 				const cred = getMatchedEntry(ds[routeKey], embedder)
 				if (cred) return getRequiredCredOrOpen(cred)
 			}
+		}
+	}
+
+	// the dsCredentials key whose entry supplies the credential returned by getRouteCred()
+	getRouteCredPattern(dslabel, routeKey, embedder) {
+		for (const key of this.getMatchedDsKeys(dslabel)) {
+			const ds = this.creds[key]
+			if (Object.hasOwn(ds, routeKey) && getMatchedEntry(ds[routeKey], embedder)) return key
 		}
 	}
 

@@ -684,6 +684,7 @@ tape(`session flow for glob dslabel and embedder credential keys`, async test =>
 		[
 			{
 				dslabel: 'realDs1',
+				dslabelPattern: 'realD*',
 				route: 'termdb',
 				type: 'jwt',
 				headerKey: 'x-ds-access-token',
