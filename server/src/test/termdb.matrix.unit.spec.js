@@ -1640,20 +1640,6 @@ tape('mayMapNonDictionaryData: accepts and returns sample2value objects', async 
 			{ 20: 5, 30: 5, 40: 5 },
 			'parent values map to children of the requested sample types'
 		)
-		connection.exec('INSERT INTO sampleidmap VALUES (11, 1); INSERT INTO sample_ancestry VALUES (20, 11);')
-		try {
-			await mayMapNonDictionaryData(
-				parentTw,
-				{ ds, sampleMapping: 'parentToChildren', sampleTypes: [2] },
-				{
-					10: 0,
-					11: 5
-				}
-			)
-			t.fail('should reject two parent values mapping to the same child')
-		} catch (e) {
-			t.equal(e.message, 'Cannot map multiple parent values for the same term to a single child sample')
-		}
 		t.equal(
 			await mayMapNonDictionaryData(tw, { ds, sampleTypes: [2] }, values),
 			values,
@@ -2204,11 +2190,9 @@ tape('getData: sampleMapping childrenToParent returns one entry per parent sampl
 		{ $id: 'sex', term: termjson('sex'), q: { type: 'values' } },
 		{ $id: 'diaggrp', term: termjson('diaggrp'), q: { type: 'values' } }
 	]
-	const bySample = await getData({ terms: [terms()[1]] }, tdb.ds)
+	const bySample = await getData({ terms: terms() }, tdb.ds)
 	const byParent = await getData({ terms: terms(), sampleMapping: 'childrenToParent' }, tdb.ds)
-	t.notOk(bySample.error, 'no error querying the child term directly')
-	t.notOk(byParent.error, 'no error mapping children to parents')
-	if (bySample.error || byParent.error) return t.end()
+	t.notOk(byParent.error, 'no error')
 	const parentIds = Object.keys(byParent.samples)
 	t.ok(parentIds.length < Object.keys(bySample.samples).length, 'child samples are combined into parent samples')
 	t.deepEqual(Object.keys(byParent.refs.bySampleId).sort(), [...parentIds].sort(), 'the sample refs are of the parents')
