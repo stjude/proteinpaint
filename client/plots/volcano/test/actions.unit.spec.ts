@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { VolcanoPlotView } from '../view/VolcanoPlotView'
-import { VolcanoInteractions } from '../interactions/VolcanoInteractions'
+import { VolcanoInteractions, getGroupsFilter } from '../interactions/VolcanoInteractions'
 import { VolcanoViewModel } from '../viewModel/VolcanoViewModel'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import * as testData from './testData'
@@ -10,6 +10,7 @@ import * as testData from './testData'
 	- the click actions of a dot by data type
 	- the click actions of an isoform
 	- clustering of the significant rows
+	- the samples that clustering keeps
 	- the click actions of a single-cell cell type gene
 	- the box plot and violin of a gene
 	- the download menu by data type
@@ -181,6 +182,16 @@ tape('clustering of the significant rows', async test => {
 		'genes are clustered by their expression, the smallest adjusted p-value first'
 	)
 	test.deepEqual(
+		(
+			await getClusterConfig(tt.GENE_EXPRESSION, [
+				{ gene_name: 'KRAS', adjusted_p_value: 0.01 },
+				{ gene_name: 'AC011767.1', adjusted_p_value: 0.001, unknownGene: true }
+			])
+		).names,
+		['KRAS FPKM'],
+		'a gene that the genome does not have is left out'
+	)
+	test.deepEqual(
 		await getClusterConfig(tt.ISOFORM_EXPRESSION, [
 			{ gene_name: 'ENST2', gene: 'KRAS', adjusted_p_value: 0.01 },
 			{ gene_name: 'ENST1', gene: 'TP53', adjusted_p_value: 0.001 },
@@ -188,6 +199,35 @@ tape('clustering of the significant rows', async test => {
 		]),
 		{ dataType: 'isoformExpression', names: ['ENST1 TPM', 'ENST2 TPM'] },
 		'isoforms are clustered by their isoform expression, leaving out a transcript without a gene'
+	)
+	test.end()
+})
+
+tape('the samples that clustering keeps', test => {
+	const listed = {
+		term: { type: 'samplelst', name: 'A vs B', values: { A: { key: 'A', list: [{ sampleId: 1 }] } } },
+		q: { groups: [{ name: 'A', in: true, values: [{ sampleId: 1 }] }] }
+	}
+	test.deepEqual(
+		getGroupsFilter(listed),
+		{ in: true, join: '', type: 'tvslst', lst: [{ type: 'tvs', tvs: { term: listed.term } }] },
+		'are those that the categories of the term list, when the groups list their samples'
+	)
+	const filterA = { type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term: { id: 'a' } } }] }
+	const filterB = { type: 'tvslst', in: true, join: '', lst: [{ type: 'tvs', tvs: { term: { id: 'b' } } }] }
+	const byFilters = {
+		term: { type: 'samplelst', name: 'A vs B', values: { A: { key: 'A' }, B: { key: 'B' } } },
+		q: {
+			groups: [
+				{ name: 'A', in: true, filter: filterA },
+				{ name: 'B', in: true, filter: filterB }
+			]
+		}
+	}
+	test.deepEqual(
+		getGroupsFilter(byFilters),
+		{ in: true, join: 'or', type: 'tvslst', lst: [filterA, filterB] },
+		'are those that pass the filter of either group, when the groups are defined by filters'
 	)
 	test.end()
 })

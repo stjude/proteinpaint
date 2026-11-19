@@ -168,6 +168,14 @@ export function validateSkipGeneNameValidation(ds: any): void {
  * Anything else exempts nothing, so that a value this module cannot read leaves the check
  * on rather than turning it off. validateSkipGeneNameValidation() has already rejected such
  * a value at init, so this is only the fail-closed backstop */
+/* Whether a request that names a gene/isoform of this term type has it checked against the genome's gene db by
+mayValidateRequestGeneRefs(), for this dataset: a genome with the lookups, and a dataset that does not opt the term type
+out. A route that offers names for later requests uses it to tell which of them those requests would refuse. */
+export function isGeneRefChecked(genome: any, ds: any, termType: string): boolean {
+	if (!genome?.genedb?.mapByName || !refsByTermType[termType]) return false
+	return !getSkippedTermTypes(ds).has(termType)
+}
+
 function getSkippedTermTypes(ds: any): Set<string> {
 	const skip = ds?.cohort?.termdb?.skipGeneNameValidation
 	if (skip === true) return new Set(Object.keys(refsByTermType))

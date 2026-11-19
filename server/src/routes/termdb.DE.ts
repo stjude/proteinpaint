@@ -28,7 +28,8 @@ import {
 import type { DeCacheResult } from '../../routes/types.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { genomes } from '#src/initGenomesDs.js'
-import { ISOFORM_EXPRESSION } from '#types'
+import { GENE_EXPRESSION, ISOFORM_EXPRESSION } from '#types'
+import { isGeneRefChecked, isKnownGeneName } from '#src/geneRefValidation.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -136,6 +137,10 @@ export function init({ genomes }) {
 
 			const rendered = await renderVolcano<GeneDEEntry>(result.geneRows, q.volcanoRender)
 			rendered.cacheId = cacheId
+			if (!isIsoformDE(q)) {
+				const genome = genomes[q.genome]
+				flagUnknownGenes(rendered.dots, genome, genome?.datasets?.[q.dslabel])
+			}
 
 			const output: DEFullResponse = {
 				data: rendered,
@@ -271,6 +276,17 @@ export function addIsoformGenes(rows: GeneDEEntry[], genome: any) {
 	for (const row of rows) {
 		const gene = lookup.get(row.gene_name)?.name || lookup.get(row.gene_name.replace(/\.\d+$/, ''))?.name
 		if (gene) row.gene = gene
+	}
+}
+
+/** Flags each row of a gene run whose gene a gene expression term of a later request could not name, as
+ * row.unknownGene: one that the genome's gene db does not have, such as a clone-based name (AC011767.1) of the counts
+ * file, which the server refuses in a request (geneRefValidation.ts). Done on the rows of the response, not on the
+ * cached result, so a cached run is flagged as well. */
+export function flagUnknownGenes(rows: GeneDEEntry[], genome: any, ds: any) {
+	if (!isGeneRefChecked(genome, ds, GENE_EXPRESSION)) return
+	for (const row of rows) {
+		if (!isKnownGeneName(genome, row.gene_name)) row.unknownGene = true
 	}
 }
 

@@ -7,6 +7,7 @@ import {
 	selectedColumnSpan,
 	isIsoformDE,
 	addIsoformGenes,
+	flagUnknownGenes,
 	resolveDE
 } from '#src/routes/termdb.DE.ts'
 
@@ -21,6 +22,7 @@ import {
  * - isIsoformDE()
  * - resolveDE() picks the counts of the term type
  * - addIsoformGenes()
+ * - flagUnknownGenes()
  */
 
 /**************
@@ -266,5 +268,38 @@ tape('addIsoformGenes', function (test) {
 	const unchanged: any[] = [{ gene_name: 'ENST00000269305' }]
 	addIsoformGenes(unchanged, {})
 	test.notOk('gene' in unchanged[0], 'names no gene on a genome without gene annotation')
+	test.end()
+})
+
+tape('flagUnknownGenes', function (test) {
+	const genome = {
+		genomicNameRegexp: /[^a-zA-Z0-9.:_-]/,
+		genedb: {
+			mapByName: new Map([['TP53', 'TP53']]),
+			mapByIsoform: new Map(),
+			mapByAlias: new Map([['P53', ['TP53']]])
+		}
+	}
+	const getRows = (): any[] => [{ gene_name: 'TP53' }, { gene_name: 'p53' }, { gene_name: 'AC011767.1' }]
+
+	const rows = getRows()
+	flagUnknownGenes(rows, genome, {})
+	test.notOk('unknownGene' in rows[0], 'does not flag a gene that the gene db has')
+	test.notOk('unknownGene' in rows[1], 'does not flag an alias that the gene db has')
+	test.equal(rows[2].unknownGene, true, 'flags a gene that the gene db does not have')
+
+	const skipped = getRows()
+	flagUnknownGenes(skipped, genome, { cohort: { termdb: { skipGeneNameValidation: ['geneExpression'] } } })
+	test.notOk(
+		skipped.some(r => r.unknownGene),
+		'flags no gene for a dataset whose gene expression names are not checked'
+	)
+
+	const noGenedb = getRows()
+	flagUnknownGenes(noGenedb, {}, {})
+	test.notOk(
+		noGenedb.some(r => r.unknownGene),
+		'flags no gene on a genome without gene db lookups'
+	)
 	test.end()
 })
