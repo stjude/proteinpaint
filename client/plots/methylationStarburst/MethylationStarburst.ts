@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '../PlotBase'
-import { Menu, addGeneSearchbox } from '#dom'
+import { Menu, addGeneSearchbox, startElapsedTimer } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { launchMethylationBrowser } from '../../dnameth/launch'
 import { withOthersGroup } from '#mass/groups'
@@ -103,16 +103,25 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 		if (key != this.dataKey) {
 			this.dom.holder.selectAll('*').remove()
 			if (!this.dom.header) this.dom.holder.append('div').style('font-weight', 'bold').text(title)
-			this.dom.holder
+			/* As the volcano waits: a padded, softer line with the time elapsed, so a first run of minutes is seen to be
+			running. A readable minimum width: beside a scan's volcano the slot is as narrow as its content
+			(min-content), which for text alone is its longest word, one or two words to a line. */
+			const wait = this.dom.holder
 				.append('div')
-				.style('color', '#777')
-				.text(
-					'Computing promoter and body methylation and expression for every transcript. A first run takes a few minutes.'
-				)
-			const data: MethylationStarburstResponse = await dofetch3('termdb/methylationStarburst', {
-				signal: this.api?.getAbortSignal(),
-				body
-			})
+				.attr('data-testid', 'sjpp-methylationStarburst-wait')
+				.style('min-inline-size', '36em')
+				.style('padding-block', '20px')
+				.style('opacity', 0.75)
+			const stopTimer = startElapsedTimer(
+				wait,
+				'Computing promoter and body methylation and expression for every transcript. A first run takes a few minutes.'
+			)
+			let data: MethylationStarburstResponse
+			try {
+				data = await dofetch3('termdb/methylationStarburst', { signal: this.api?.getAbortSignal(), body })
+			} finally {
+				stopTimer()
+			}
 			if ('error' in data) throw new Error(data.error)
 			this.data = data
 			this.dataKey = key
