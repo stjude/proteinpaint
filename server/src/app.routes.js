@@ -70,6 +70,7 @@ export const routeFiles = [
 	import('./routes/termdb.bubbleHeatmap.ts'),
 	import('./routes/termdb.cellTypeBubbleHeatmap.ts'),
 	import('./routes/termdb.categories.ts'),
+	import('./routes/termdb.chemicalSensitivity.ts'),
 	import('./routes/termdb.cluster.ts'),
 	import('./routes/termdb.cohort.summary.ts'),
 	import('./routes/termdb.cohorts.ts'),

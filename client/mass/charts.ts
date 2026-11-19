@@ -353,6 +353,11 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'Drug Sensitivity',
+			clickTo: self.loadChartSpecificMenu,
+			chartType: 'chemicalSensitivity'
+		},
+		{
 			label: 'Brain Imaging',
 			// launches a sandbox with the sample table; the plot itself handles sample/template selection
 			clickTo: self.prepPlot,

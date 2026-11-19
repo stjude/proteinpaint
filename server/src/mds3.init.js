@@ -55,6 +55,7 @@ import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.
 import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGenes.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
 import { validate_query_swimmer } from '#routes/termdb.swimmer.ts'
+import { validate_query_chemicalSensitivity } from '#routes/termdb.chemicalSensitivity.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import {
 	dtTermTypes,
@@ -185,6 +186,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_trackLst(ds, genome)
 			await validate_query_NIdata(ds)
 			await validate_query_swimmer(ds)
+			await validate_query_chemicalSensitivity(ds)
 
 			await validate_variant2samples(ds)
 			await validate_ssm2canonicalisoform(ds)
