@@ -55,6 +55,12 @@ const wasmDir = path.join(__dirname, '/target/wasm/')
 // the file name of a binary or wasm module
 const binaryName = /^[A-Za-z0-9_][A-Za-z0-9_-]*$/
 
+/* true when run_rust() can run a binary in this server process: when a child process is allowed, or the binary has a
+wasm module. A binary that is not built is not checked, so that a call of it still fails with the spawn error. */
+export function canRunRust(binfile) {
+	return canSpawn || hasWasmModule(binfile)
+}
+
 export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 	if (!canSpawn || hasWasmModule(binfile)) return run_wasm(binfile, input_data, args, { signal })
 	return new Promise((resolve, reject) => {
