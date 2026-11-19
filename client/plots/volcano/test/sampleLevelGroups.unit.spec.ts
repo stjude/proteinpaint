@@ -26,10 +26,11 @@ tape('sampleLevelGroups()', test => {
 tape('isoform volcano row actions plot the samples of filter groups', async test => {
 	const filterGroup = { name: 'a', in: true, filter: { type: 'tvslst', in: true, join: '', lst: [] } }
 	let launched: any
+	const plotFilter = { type: 'tvslst', in: true, join: '', lst: [] }
 	const termdbConfig = { hasSampleAncestry: true, queries: { isoformExpression: { unit: 'TPM' } } }
 	const ctx: any = {
 		interactions: { launchPlot: (c: any) => (launched = c) },
-		config: { tw: { q: { groups: [filterGroup, filterGroup] }, term: { type: 'samplelst' } } },
+		config: { tw: { q: { groups: [filterGroup, filterGroup] }, term: { type: 'samplelst' } }, filter: plotFilter },
 		termdbConfig,
 		queries: termdbConfig.queries
 	}
@@ -40,6 +41,7 @@ tape('isoform volcano row actions plot the samples of filter groups', async test
 		[true, true],
 		"each filter group asks for its patients' samples"
 	)
+	test.equal(launched.filter, plotFilter, "the volcano's plot-local filter goes to the plot")
 	test.equal(launched.term.term.isoform, 'ENST00000256078.10', 'the term keeps the id as the DE run reports it')
 	test.end()
 })

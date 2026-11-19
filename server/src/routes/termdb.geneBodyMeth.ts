@@ -1,6 +1,7 @@
 import type { RouteApi, RoutePayload } from '#types'
 import serverconfig from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
+import { sql } from '#src/sql.ts'
 import { formatElapsedTime } from '#shared'
 import {
 	resolveMethylationMatrix,
@@ -318,15 +319,30 @@ export function isoformLoci(
 
 type Locus = { name: string; start: number; stop: number; aliases?: string[] }
 
+/** the genes-table rows of these transcripts only, by the isoform index in batches: the gene model json is the table's
+ * largest column, and the genome has several times more transcripts (hg38 517k rows) than a counts file */
+export function isoformRows(db: any, ids: string[]): { isoform: string; genemodel: string }[] {
+	const BATCH = 500
+	const unique = [...new Set(ids)]
+	const rows: { isoform: string; genemodel: string }[] = []
+	for (let i = 0; i < unique.length; i += BATCH)
+		rows.push(
+			...db
+				.prepare(sql`select isoform, genemodel from genes where isoform in (${sql.list(unique.slice(i, i + BATCH))})`)
+				.all()
+		)
+	return rows
+}
+
 /** each chromosome's gene bodies, or with 'promoter' core promoters, one locus per gene symbol; with isoforms, one
  * per transcript, those of the same coordinates measured once (the others are its aliases) */
 function lociByChr(genome: any, region?: 'promoter', isoforms?: string[]) {
 	let locusOf: Map<string, { chr: string; start: number; stop: number }>
 	if (isoforms) {
-		const rows: any[] = genome?.genedb?.db?.prepare('select isoform, genemodel from genes').all() || []
-		if (!rows.length) throw new Error('This genome has no gene models.')
+		const db = genome?.genedb?.db
+		if (!db) throw new Error('This genome has no gene models.')
 		const major = new Set(validateChromosomes(genome, undefined, true))
-		locusOf = isoformLoci(rows, new Set(isoforms), region, major)
+		locusOf = isoformLoci(isoformRows(db, isoforms), new Set(isoforms), region, major)
 	} else if (region == 'promoter') {
 		const rows: any[] = genome?.genedb?.db?.prepare('select name, genemodel from genes where isdefault=1').all() || []
 		if (!rows.length) throw new Error('This genome has no default isoforms.')

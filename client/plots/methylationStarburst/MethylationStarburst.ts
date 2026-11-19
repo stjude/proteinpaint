@@ -262,6 +262,8 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 				config: {
 					chartType: 'summary',
 					childType,
+					// the plot-local filter that the starburst's own DE and methylation runs apply
+					filter: config.filter,
 					term: { q: { mode: 'continuous' }, term: getIsoformTerm({ gene_name: isoform, gene }, termdbConfig) },
 					term2: {
 						q: { groups: sampleLevelGroups(groups, termdbConfig), type: 'custom-samplelst' },

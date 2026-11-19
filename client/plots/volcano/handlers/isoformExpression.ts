@@ -38,6 +38,8 @@ export const isoformExpressionHandler: VolcanoHandler = {
 		const summary = (childType: 'violin' | 'boxplot') => ({
 			chartType: 'summary',
 			childType,
+			// the volcano's plot-local sample filter, which its DE run applies
+			filter: ctx.config.filter,
 			term: { q: { mode: 'continuous' }, term: getIsoformTerm(d, ctx.termdbConfig) },
 			term2: {
 				q: { groups: sampleLevelGroups(ctx.config.tw.q.groups, ctx.termdbConfig), type: 'custom-samplelst' },
