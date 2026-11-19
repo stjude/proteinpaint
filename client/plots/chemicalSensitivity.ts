@@ -268,7 +268,7 @@ function renderRadialChart(
 ): { highlightDrug: (drug?: string) => void } {
 	const drug2result = new Map(results.map(r => [r.drug, r]))
 	const step = (2 * Math.PI) / data.drugs.length
-	const lengthScale = scaleSqrt().domain([0, data.aocMax]).range([0, BAR_LENGTH])
+	const lengthScale = scaleSqrt().domain([0, data.aocMax || 1]).range([0, BAR_LENGTH])
 	const [ic50Min, ic50Max] = data.ic50Range
 	const colorScale = scaleLinear<string>()
 		.domain([ic50Min, (ic50Min + ic50Max) / 2, ic50Max])
