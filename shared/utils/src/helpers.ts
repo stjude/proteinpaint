@@ -138,7 +138,7 @@ ids such as ENSMUST00000108658.2 (ENS, a species code, a feature letter, 11 digi
 carry no version, while a client or a counts file may. Only applied to something shaped like an
 accession, so that a gene symbol ending in a number (MIR1-1, and any future symbol with a dot) is
 left alone. */
-const versionedAccession = /^(?:[A-Za-z]{2,6}_?\d+|ENS[A-Za-z]{1,5}\d{11})\.\d+$/
+const versionedAccession = /^(?:[a-z]{2,6}_?\d+|ens[a-z]{1,5}\d{11})\.\d+$/i
 export function stripAccessionVersion(value: string): string {
 	return versionedAccession.test(value) ? value.replace(/\.\d+$/, '') : value
 }

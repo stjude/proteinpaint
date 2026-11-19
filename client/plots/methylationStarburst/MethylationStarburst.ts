@@ -231,6 +231,9 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 					const id = isoformOf.get(stripAccessionVersion(typed).toUpperCase())
 					if (!id) return
 					event.stopPropagation()
+					// the gene search's pending lookup sees an empty input and does not reopen its menu
+					;(event.target as HTMLInputElement).value = ''
+					this.searchTip.hide()
 					msg.text('')
 					if (!pinned.includes(id)) edit([...pinned, id])
 				},

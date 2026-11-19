@@ -286,7 +286,7 @@ export function promoterLoci(rows: { name: string; genemodel: string }[], chrs?:
 	return locusOf
 }
 
-/** Loci of transcripts, keyed by transcript id: with 'promoter' its core promoter around its own TSS, else its body
+/** Loci of transcripts, keyed by upper-case transcript id (keep holds upper-case ids): with 'promoter' its core promoter around its own TSS, else its body
  * trimmed by GENE_BODY_PAD at both ends as a gene body is. From the genes table's rows of {isoform, genemodel}; only the
  * ids in keep, on the chrs. A body shorter than twice the pad has no locus. */
 export function isoformLoci(
@@ -297,13 +297,15 @@ export function isoformLoci(
 ) {
 	const locusOf = new Map<string, { chr: string; start: number; stop: number }>()
 	for (const r of rows) {
-		if (!keep.has(r.isoform) || locusOf.has(r.isoform)) continue
+		// ids compare in upper case, as the gene db's collate nocase does; keep holds them so
+		const id = r.isoform.toUpperCase()
+		if (!keep.has(id) || locusOf.has(id)) continue
 		const gm = JSON.parse(r.genemodel)
 		if (chrs && !chrs.has(gm.chr)) continue
 		if (region == 'promoter') {
 			const minus = gm.strand == '-'
 			const tss = minus ? gm.stop : gm.start
-			locusOf.set(r.isoform, {
+			locusOf.set(id, {
 				chr: gm.chr,
 				start: Math.max(0, tss - (minus ? PROMOTER_DOWN : PROMOTER_UP)),
 				stop: tss + (minus ? PROMOTER_UP : PROMOTER_DOWN)
@@ -311,7 +313,7 @@ export function isoformLoci(
 		} else {
 			const start = gm.start + GENE_BODY_PAD,
 				stop = gm.stop - GENE_BODY_PAD
-			if (stop > start) locusOf.set(r.isoform, { chr: gm.chr, start, stop })
+			if (stop > start) locusOf.set(id, { chr: gm.chr, start, stop })
 		}
 	}
 	return locusOf
@@ -323,7 +325,9 @@ type Locus = { name: string; start: number; stop: number; aliases?: string[] }
  * largest column, and the genome has several times more transcripts (hg38 517k rows) than a counts file */
 export function isoformRows(db: any, ids: string[]): { isoform: string; genemodel: string }[] {
 	const BATCH = 500
-	const unique = [...new Set(ids)]
+	/* sorted: the cache key holds the sorted ids, so the same set in any order must give the rows in the same order
+	(the background correction samples widths by index) */
+	const unique = [...new Set(ids)].sort()
 	const rows: { isoform: string; genemodel: string }[] = []
 	for (let i = 0; i < unique.length; i += BATCH)
 		rows.push(
@@ -342,7 +346,9 @@ function lociByChr(genome: any, region?: 'promoter', isoforms?: string[]) {
 		const db = genome?.genedb?.db
 		if (!db) throw new Error('This genome has no gene models.')
 		const major = new Set(validateChromosomes(genome, undefined, true))
-		locusOf = isoformLoci(isoformRows(db, isoforms), new Set(isoforms), region, major)
+		// upper case: the db matches ids case-insensitively, and the loci are keyed in upper case
+		const ids = isoforms.map(i => i.toUpperCase())
+		locusOf = isoformLoci(isoformRows(db, ids), new Set(ids), region, major)
 	} else if (region == 'promoter') {
 		const rows: any[] = genome?.genedb?.db?.prepare('select name, genemodel from genes where isdefault=1').all() || []
 		if (!rows.length) throw new Error('This genome has no default isoforms.')

@@ -76,6 +76,19 @@ tape('isoformRows() reads only the transcripts asked for, across batches', test 
 		rows.some(r => r.isoform == 'ENST1100'),
 		'a transcript not asked for is not read'
 	)
+	const shuffled = [...ids].reverse()
+	test.deepEqual(
+		isoformRows(db, shuffled).map(r => r.isoform),
+		rows.map(r => r.isoform),
+		'the same ids in another order give the rows in the same order'
+	)
 	db.close()
+	test.end()
+})
+
+tape('isoformLoci() matches ids regardless of case', test => {
+	const rows = [model('enst9', 'chr1', 10000, 50000, '+')]
+	const loci = isoformLoci(rows, new Set(['ENST9']))
+	test.ok(loci.has('ENST9'), 'a lower-case db id is keyed in upper case')
 	test.end()
 })

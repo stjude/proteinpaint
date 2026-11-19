@@ -194,9 +194,10 @@ export function drawStarburst(
 			if (dx || dy) {
 				const r = pass ? 4 : 3
 				const [ux, uy] = dx && dy ? [dx * Math.SQRT1_2, dy * Math.SQRT1_2] : [dx, dy]
-				ctx.moveTo(cx + ux * r, cy + uy * r)
-				ctx.lineTo(cx - ux * r - uy * r * 0.8, cy - uy * r + ux * r * 0.8)
-				ctx.lineTo(cx - ux * r + uy * r * 0.8, cy - uy * r - ux * r * 0.8)
+				// the tip on the edge where the scale clamps the point, the base inward, so no part is clipped off
+				ctx.moveTo(cx, cy)
+				ctx.lineTo(cx - 2 * ux * r - uy * r * 0.8, cy - 2 * uy * r + ux * r * 0.8)
+				ctx.lineTo(cx - 2 * ux * r + uy * r * 0.8, cy - 2 * uy * r - ux * r * 0.8)
 				ctx.closePath()
 			} else ctx.arc(cx, cy, pass ? 2.5 : 1.5, 0, 2 * Math.PI)
 			ctx.fill()

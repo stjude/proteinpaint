@@ -116,8 +116,9 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 		genomes
 	)
 	const rows: any[] = (result as any)?.geneRows || []
-	// the methylation side is keyed by unversioned id, as the gene table has it
-	const idOf = (r: any) => (byIsoform ? stripAccessionVersion(String(r.gene_name)) : r.gene_name)
+	// the methylation side is keyed by unversioned upper-case id (termdb/geneBodyMeth isoformLoci); the response keeps the
+	// DE run's own id
+	const idOf = (r: any) => (byIsoform ? stripAccessionVersion(String(r.gene_name)).toUpperCase() : r.gene_name)
 	// by isoform, the transcripts the DE run tested; the gene-body cache key includes this list
 	const isoforms = byIsoform ? rows.map(idOf) : undefined
 	const deltas = (region?: 'promoter') =>
