@@ -3,8 +3,7 @@
 
 	Covers every row x column term type combination that TermdbTest can serve, so that the supported
 	combinations are documented by the test: dictionary (categorical, float), geneExpression, ssGSEA,
-	and geneVariant. Combinations requiring ambiguous parent-to-child mapping are rejected.
-	pseudobulk is not configured in TermdbTest, so only its rejection is tested here;
+	and geneVariant. pseudobulk is not configured in TermdbTest, so only its rejection is tested here;
 	its method availability is covered by server/src/aggregateMatrix/test/aggregateMethods.unit.spec.ts.
 
 	Run from the server dir:
@@ -16,7 +15,6 @@ import { startTestServer, type TestServer } from '../../test/testServer.ts'
 
 const genome = 'hg38-test'
 const dslabel = 'TermdbTest'
-const multipleParentValuesError = 'Cannot map multiple parent values for the same term to a single child sample'
 
 let server: TestServer
 
@@ -152,17 +150,13 @@ tape('available methods for columns of different term types in one axis', async 
 	test.end()
 })
 
-tape('every row x column term type combination returns a matrix or a mapping error', async test => {
+tape('every row x column term type combination returns a matrix', async test => {
 	test.timeoutAfter(240000)
 	for (const row of rowKinds) {
 		for (const column of columnKinds) {
 			const [gradientMethod, sizeMethod] = column.numeric ? ['mean', 'percent'] : ['percent', 'count']
 			const name = `rows=${row.label} columns=${column.label} (${gradientMethod}/${sizeMethod})`
 			const res = await post({ rows: row.axis, columns: column.axis, gradientMethod, sizeMethod })
-			if ((row.label == 'categorical') != (column.label == 'categorical')) {
-				test.equal(res.error, multipleParentValuesError, `${name}: should reject ambiguous parent-to-child mapping`)
-				continue
-			}
 			if (res.error) {
 				test.fail(`${name}: ${res.error}`)
 				continue
@@ -202,7 +196,7 @@ tape('geneVariant terms identified only by genes[]', async test => {
 	const krasRegion = byGenes({ kind: 'coord', chr: 'chr12', start: 25205246, stop: 25250936, name: 'KRASregion' })
 	const methods = { gradientMethod: 'percent', sizeMethod: 'count' }
 
-	let res = await post({ rows: { Genes: [tp53, krasRegion] }, columns: { Diagnosis: [diaggrp] }, ...methods })
+	let res = await post({ rows: { Genes: [tp53, krasRegion] }, columns: kinds[0].axis, ...methods })
 	test.notOk(res.error, 'should not return an error for rows that are only identified by genes[]')
 	test.deepEqual(
 		res.axesLayout?.rows.sections[0].terms,
@@ -218,7 +212,7 @@ tape('geneVariant terms identified only by genes[]', async test => {
 		'should use the identifiers in the cells'
 	)
 
-	res = await post({ rows: { Diagnosis: [diaggrp] }, columns: { Genes: [tp53, krasRegion] }, ...methods })
+	res = await post({ rows: kinds[0].axis, columns: { Genes: [tp53, krasRegion] }, ...methods })
 	test.notOk(res.error, 'should not return an error for columns that are only identified by genes[]')
 	test.deepEqual(
 		res.axesLayout?.columns.sections[0].terms.map(term => term.id),
@@ -238,8 +232,14 @@ tape('geneVariant terms identified only by genes[]', async test => {
 	test.end()
 })
 
-tape('geneVariant terms with patient-level sex reject ambiguous mapping', async test => {
+tape('geneVariant terms only match samples with a variant', async test => {
 	test.timeoutAfter(30000)
+	/* Not every sample with data for a gene has a variant: TermdbTest annotates wildtype (WT) and not tested (Blank)
+	samples too, and those must not count. The expected counts do not come from this route. They were counted
+	independently from the termdb/matrix response of sex and each gene variant term, keeping the samples that have
+	a value with a class other than WT and Blank (a matrix value without a $ code). TP53 has 6 such samples, of
+	which 3 for each sex key, and the KRAS region has 4, of which 3 for sex key 1 and 1 for sex key 2.
+	The sex term has no values, so the columns are identified by the sex keys. */
 	const byGenes = (gene: any) => ({ term: { type: 'geneVariant', genes: [{ ...gene, type: 'geneVariant' }] }, q: {} })
 	const tp53 = byGenes({ kind: 'gene', gene: 'TP53' })
 	const krasRegion = byGenes({ kind: 'coord', chr: 'chr12', start: 25205246, stop: 25250936, name: 'KRASregion' })
@@ -250,7 +250,13 @@ tape('geneVariant terms with patient-level sex reject ambiguous mapping', async 
 		gradientMethod: 'percent',
 		sizeMethod: 'count'
 	})
-	test.equal(res.error, multipleParentValuesError, 'should reject multiple patient annotations for one sample')
+	test.notOk(res.error, 'should not return an error')
+	const counts = Object.fromEntries(res.data.flat().map(cell => [`${cell.row}/${cell.column}`, cell.sizeValue]))
+	test.deepEqual(
+		counts,
+		{ 'TP53/1': 3, 'TP53/2': 3, 'KRASregion/1': 3, 'KRASregion/2': 1 },
+		'should count only the samples with a variant, by sex'
+	)
 	test.end()
 })
 
@@ -330,14 +336,13 @@ tape('pies are returned only when a geneVariant term is on an axis', async test 
 	}
 
 	const methods = { gradientMethod: 'percent', sizeMethod: 'count' }
-	const categories = { Diagnosis: [diaggrp] }
-	checkPies(await post({ rows: kinds[4].axis, columns: categories, ...methods }), 'geneVariant rows')
-	checkPies(await post({ rows: categories, columns: kinds[4].axis, ...methods }), 'geneVariant columns')
+	checkPies(await post({ rows: kinds[4].axis, columns: kinds[0].axis, ...methods }), 'geneVariant rows')
+	checkPies(await post({ rows: kinds[0].axis, columns: kinds[4].axis, ...methods }), 'geneVariant columns')
 
 	// a gradient is never applied to a pie, so a chart of only pies needs no gradient method and has no color scale
 	const sizeOnly: any = { ...methods }
 	delete sizeOnly.gradientMethod
-	const noGradient = await post({ rows: kinds[4].axis, columns: categories, ...sizeOnly })
+	const noGradient = await post({ rows: kinds[4].axis, columns: kinds[0].axis, ...sizeOnly })
 	checkPies(noGradient, 'geneVariant rows without a gradient method')
 	test.notOk('colorScale' in noGradient, 'should not return a color scale when every dot is a pie')
 	test.ok(
@@ -345,7 +350,7 @@ tape('pies are returned only when a geneVariant term is on an axis', async test 
 		'should not return color values when every dot is a pie'
 	)
 
-	const res = await post({ rows: categories, columns: kinds[2].axis, gradientMethod: 'mean', sizeMethod: 'percent' })
+	const res = await post({ rows: kinds[0].axis, columns: kinds[2].axis, gradientMethod: 'mean', sizeMethod: 'percent' })
 	test.notOk(res.error, 'should not return an error without a geneVariant term')
 	test.notOk(
 		res.data?.flat().some(cell => 'pie' in cell),
@@ -415,7 +420,7 @@ tape('dictionary values are labeled by the dataset term', async test => {
 	const sexWith = (values?: any) => ({ term: { id: 'sex', name: 'Sex', type: 'categorical', values }, q: {} })
 	const labels = res => res.axesLayout?.columns.sections[0].terms.map(term => `${term.id}=${term.label}`)
 	const request = (sexTw: any) =>
-		post({ rows: kinds[0].axis, columns: { Sex: [sexTw] }, gradientMethod: 'percent', sizeMethod: 'count' })
+		post({ rows: kinds[4].axis, columns: { Sex: [sexTw] }, gradientMethod: 'percent', sizeMethod: 'count' })
 
 	let res = await request(sexWith())
 	test.notOk(res.error, 'should not return an error for a term without values')
@@ -454,7 +459,7 @@ tape('percent is bounded by the cohort', async test => {
 	test.timeoutAfter(30000)
 	const res = await post({
 		rows: kinds[2].axis,
-		columns: { Diagnosis: [diaggrp] },
+		columns: kinds[0].axis,
 		gradientMethod: 'percent',
 		sizeMethod: 'count'
 	})
@@ -471,7 +476,7 @@ tape('percent is bounded by the cohort', async test => {
 tape('sections keep the order and grouping of the request', async test => {
 	test.timeoutAfter(30000)
 	const rows = { B: [gv('TP53')], A: [gv('KRAS')] }
-	const res = await post({ rows, columns: { Diagnosis: [diaggrp] }, gradientMethod: 'percent', sizeMethod: 'count' })
+	const res = await post({ rows, columns: kinds[0].axis, gradientMethod: 'percent', sizeMethod: 'count' })
 	test.notOk(res.error, 'should not return an error')
 	test.deepEqual(
 		res.axesLayout?.rows.sections.map(s => s.id),
