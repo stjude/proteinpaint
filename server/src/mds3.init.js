@@ -2073,6 +2073,7 @@ export async function validate_query_ssGSEA(ds, genome) {
 
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			const limitSamples = await mayLimitSamples(param, null, ds)
+			if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue
@@ -2313,6 +2314,7 @@ export async function validate_query_dnaMethylation(ds, genome) {
 			}
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			const limitSamples = await mayLimitSamples(param, null, ds)
+			if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue
@@ -2579,6 +2581,7 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 		const samples = q.samples || []
 
 		const term2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
+		const byTermId = {}
 		for (const tw of param.terms) {
 			if (!tw) continue
 
@@ -2601,6 +2604,7 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 			})
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			const limitSamples = await mayLimitSamples(param, null, ds)
+			if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue
@@ -2610,8 +2614,6 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 			}
 			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 		}
-		// pass blank byTermId to match with expected output structure
-		const byTermId = {}
 		if (term2sample2value.size == 0)
 			throw 'no data available for the input ' + param.terms?.map(tw => tw.term.name).join(', ')
 		return { term2sample2value, byTermId, bySampleId }

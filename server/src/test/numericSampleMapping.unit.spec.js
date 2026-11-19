@@ -9,7 +9,7 @@ import {
 	validate_query_dnaMethylation,
 	validate_query_metaboliteIntensity
 } from '../mds3.init.js'
-import { validateQueryIsoformExpression } from '../routes/termdb.cluster.ts'
+import { validate_query_geneExpression, validateQueryIsoformExpression } from '../routes/termdb.cluster.ts'
 import { validate_query_proteome } from '../routes/termdb.proteome.ts'
 import { validatePseudobulk } from '../singleCell/validatePseudobulk.ts'
 import { getJunctionData } from '../j2/validate.ts'
@@ -65,6 +65,7 @@ function makeDs(down) {
 }
 
 for (const type of [
+	'geneExpression',
 	'isoformExpression',
 	'ssGSEA',
 	'metaboliteIntensity',
@@ -87,7 +88,12 @@ for (const type of [
 					sampleTypes: [down ? 1 : 2]
 				}
 				let details
-				if (type === 'isoformExpression') {
+				if (type === 'geneExpression') {
+					ds.queries.geneExpression = { file: `${fixture}/rnaseq/TermdbTest.fpkm.matrix.new.h5` }
+					await validate_query_geneExpression(ds, {})
+					term.gene = 'DDX11L1'
+					getter = ds.queries.geneExpression.get
+				} else if (type === 'isoformExpression') {
 					ds.queries.isoformExpression = { file: `${fixture}/rnaseq/TermdbTest.isoform.tpm.h5` }
 					await validateQueryIsoformExpression(ds, {})
 					term.isoform = 'ENST00000370314'
@@ -287,20 +293,18 @@ for (const type of [
 						lst: [{ type: 'tvs', tvs: { ...filter.lst[0].tvs, values: [{ key: 'absent' }] } }]
 					}
 				}
-				if (['elements', 'shards', 'junction'].includes(type)) {
-					const excluded = await getter(excludedRequest)
-					t.equal(
-						excluded.term2sample2value.size,
-						0,
-						'a filter excluding all targets returns the empty result structure'
-					)
-					if (excluded.bySampleId)
-						t.equal(Object.keys(excluded.bySampleId).length, 0, 'excluded targets leave no references')
-				} else {
-					await getter(excludedRequest).then(
-						() => t.fail('empty filtered data should throw'),
-						error =>
-							t.ok(/no data available/i.test(String(error)), 'empty filtered data raises the original no-data error')
+				const excluded = await getter(excludedRequest)
+				t.ok(excluded.term2sample2value instanceof Map, 'empty result retains a Map')
+				t.equal(excluded.term2sample2value.size, 0, 'a filter excluding all targets returns no values')
+				if (type !== 'junction') t.deepEqual(excluded.byTermId, {}, 'empty result retains term references')
+				if (excluded.bySampleId)
+					t.equal(Object.keys(excluded.bySampleId).length, 0, 'excluded targets leave no references')
+				if (excluded.controlSampleIds) t.equal(excluded.controlSampleIds.size, 0, 'no controls are returned')
+				if (type === 'metaboliteIntensity') {
+					const missing = { ...param, terms: [{ ...tw, term: { ...term, name: 'missing' } }] }
+					await getter(missing).then(
+						() => t.fail('missing input data should throw without a filter'),
+						error => t.ok(/no data available/i.test(String(error)), 'missing input data still raises an error')
 					)
 				}
 			} finally {
