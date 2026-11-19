@@ -12,9 +12,11 @@ combinePPfilterAndTid2value - filterObj only
 combinePPfilterAndTid2value - tid2value only
 combinePPfilterAndTid2value - filter + tid2value combined
 combinePPfilterAndTid2value - filterObj + filter + tid2value combined
-mayLimitSamples - sampleTypes must be an array
-mayLimitSamples - sampleTypes array filters samples
+mayLimitSamples - sampleTypes filters samples
+mayLimitSamples - sampleTypes intersects sample filters
+mayLimitSamples - sampleTypes applies with only filter0 on a sqlite dataset
 mayLimitSamples - omitted sampleTypes does not filter
+mayLimitSamples - skipSampleFiltering defers filtering
 */
 tape('\n', function (test) {
 	test.comment('-***- src/mds3.filter specs -***-')
@@ -187,28 +189,114 @@ tape('combinePPfilterAndTid2value - filterObj + filter + tid2value combined', fu
 	)
 	test.end()
 })
-tape('mayLimitSamples - sampleTypes must be an array', async function (test) {
-	const ds = getMockSampleTypeDs()
-	for (const sampleTypes of ['1', 1, { 0: 1, length: 1 }]) {
-		try {
-			await mayLimitSamples({ sampleTypes }, null, ds)
-			test.fail(`should throw on sampleTypes=${JSON.stringify(sampleTypes)}`)
-		} catch (e: any) {
-			test.equal(
-				e.message,
-				'sampleTypes must be an array',
-				`should throw on sampleTypes=${JSON.stringify(sampleTypes)}`
-			)
+tape('mayLimitSamples - skipSampleFiltering defers filtering', async function (test) {
+	let filterCalls = 0
+	let validationCalls = 0
+	const ds = {
+		sampleId2Type: new Map([
+			[10, 1],
+			[11, 2]
+		]),
+		validate_filter0: filter => {
+			validationCalls++
+			return filter
+		},
+		cohort: {
+			termdb: {
+				filterSamples: async () => {
+					filterCalls++
+					return new Set([10, 11])
+				}
+			}
 		}
 	}
+	const param = {
+		sampleTypes: [1],
+		filterObj: { type: 'tvslst', lst: [makeTvs({ id: 'sex', type: 'categorical' }, 'M')] },
+		filter0: { cohort: 'hidden' }
+	}
+	test.equal(
+		await mayLimitSamples({ ...param, skipSampleFiltering: true }, [10], ds),
+		undefined,
+		'skip flag returns no restriction even with filters and a supplied sample list'
+	)
+	test.equal(validationCalls, 0, 'deferred filters are not validated here')
+	test.equal(filterCalls, 0, 'deferred filters are not queried here')
+	for (const skipSampleFiltering of [false, undefined]) {
+		test.deepEqual(
+			await mayLimitSamples({ ...param, skipSampleFiltering }, [10], ds),
+			new Set([10]),
+			'false or absent flag preserves filtering and sample intersection'
+		)
+	}
+	test.equal(validationCalls, 2, 'normal calls still validate the hidden filter')
+	test.equal(filterCalls, 2, 'normal calls still query matching samples')
 	test.end()
 })
-tape('mayLimitSamples - sampleTypes array filters samples', async function (test) {
+tape('mayLimitSamples - sampleTypes filters samples', async function (test) {
 	const ds = getMockSampleTypeDs()
 	const result = await mayLimitSamples({ sampleTypes: [1] }, null, ds)
-	test.deepEqual([...result!].sort(), [10, 12], 'should return samples of the requested sample type')
+	test.deepEqual(result, new Set([10, 12]), 'selects dataset samples of the requested type')
 	const limited = await mayLimitSamples({ sampleTypes: [1] }, [12, 13], ds)
-	test.deepEqual([...limited!], [12], 'should intersect with the supplied sample list')
+	test.deepEqual(limited, new Set([12]), 'restricts the supplied integer sample list')
+	test.deepEqual(
+		await mayLimitSamples({ sampleTypes: [2] }, [{ name: 10 }, { name: 11 }], ds),
+		new Set([11]),
+		'restricts samples from file headers'
+	)
+	test.deepEqual(
+		await mayLimitSamples({ sampleTypes: [1, 2] }, null, ds),
+		new Set([10, 11, 12, 13]),
+		'accepts multiple sample types'
+	)
+	test.deepEqual(
+		await mayLimitSamples({ sampleTypes: [3] }, null, ds),
+		new Set(),
+		'returns an empty set when no sample types match'
+	)
+	test.deepEqual(
+		await mayLimitSamples({ sampleTypes: [1] }, [], ds),
+		new Set(),
+		'preserves an empty supplied sample list'
+	)
+	test.end()
+})
+tape('mayLimitSamples - sampleTypes intersects sample filters', async function (test) {
+	const matchingSamples = new Set([10, 11, 12])
+	const ds = {
+		...getMockSampleTypeDs(),
+		cohort: { termdb: { filterSamples: async () => matchingSamples } }
+	}
+	const filterObj = { type: 'tvslst', lst: [makeTvs({ id: 'sex', type: 'categorical' }, 'M')] }
+	test.deepEqual(
+		await mayLimitSamples({ sampleTypes: [1], filterObj }, [11, 12, 13], ds),
+		new Set([12]),
+		'intersects sample types, sample filters and supplied samples'
+	)
+	test.deepEqual(matchingSamples, new Set([10, 11, 12]), 'does not mutate the filter result')
+	test.deepEqual(
+		await mayLimitSamples({ sampleTypes: [], filterObj }, [11, 12, 13], ds),
+		new Set([11, 12]),
+		'empty sampleTypes preserves existing filtering'
+	)
+	test.deepEqual(
+		await mayLimitSamples({ sampleTypes: [2], filterObj }, [10, 12], ds),
+		new Set(),
+		'returns an empty intersection when no supplied samples match the type'
+	)
+	test.end()
+})
+tape('mayLimitSamples - sampleTypes applies with only filter0 on a sqlite dataset', async function (test) {
+	const ds = {
+		...getMockSampleTypeDs(),
+		cohort: { db: {} },
+		validate_filter0: filter => filter
+	}
+	test.deepEqual(
+		await mayLimitSamples({ sampleTypes: [1], filter0: {} }, null, ds),
+		new Set([10, 12]),
+		'does not bypass type selection when there is no pp filter'
+	)
 	test.end()
 })
 tape('mayLimitSamples - omitted sampleTypes does not filter', async function (test) {
@@ -219,6 +307,7 @@ tape('mayLimitSamples - omitted sampleTypes does not filter', async function (te
 		undefined,
 		'should return undefined when sampleTypes is null'
 	)
+	test.equal(await mayLimitSamples({ sampleTypes: [] }, [12, 13], ds), undefined, 'empty types do not filter samples')
 	test.end()
 })
 /**************

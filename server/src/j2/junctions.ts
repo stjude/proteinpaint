@@ -1,6 +1,7 @@
 import type { RouteApi, RoutePayload, TermdbJunctionsRequest, TermdbJunctionsResponse } from '#types'
 import { genomes } from '#src/initGenomesDs.js'
 import { authApi } from '#src/auth.js'
+import { resolveSampleMapping } from '#src/termdb.matrix.js'
 
 /*
 list junctions from a locus
@@ -43,6 +44,10 @@ export function init({ genomes }) {
 			const ds = gn.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
 			if (!ds.queries?.junction) throw 'junction query not supported'
+			// assuming genomic data in tk is at sample-level, so setting
+			// sampleMapping=parentToChildren to allow parent-level term data to be mapped
+			// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
+			resolveSampleMapping(Object.assign(q, { sampleMapping: 'parentToChildren' }), ds)
 			const result = await ds.queries.junction.listJunctions(q)
 			// the matrix has a row per sample: only for a user who may see sample names
 			if (result.matrix && !authApi.canDisplaySampleIds(req, ds)) delete result.matrix

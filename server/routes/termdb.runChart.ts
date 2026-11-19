@@ -70,10 +70,10 @@ export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChart
 		{
 			filter: q.filter,
 			terms,
+			sampleMapping: 'parentToChildren',
 			__protected__: q.__protected__
 		},
-		ds,
-		true
+		ds
 	)
 
 	if (data.error) throw new Error(data.error)

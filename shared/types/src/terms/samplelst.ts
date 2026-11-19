@@ -1,3 +1,4 @@
+import type { SampleMapping } from '../termdb.matrix.ts'
 import type { BaseTerm, MinBaseQ } from '../index.ts'
 import type { TermWrapper } from './tw.ts'
 import type { Filter } from '../filter.ts'
@@ -33,7 +34,7 @@ export type SampleLstGroupByList = SampleLstGroupBase & {
 	filter?: never
 	filter0?: never
 	sampleCount?: never
-	mapParent2Children?: never
+	sampleMapping?: never
 }
 
 /** A group defined by a filter: the server resolves the samples that the filter selects for the
@@ -47,12 +48,12 @@ export type SampleLstGroupByFilter = SampleLstGroupBase & {
 	/** the number of samples that the client was told the filter selects when the group was made */
 	sampleCount?: number
 	/** as for the termdb getsamplelist query */
-	mapParent2Children?: boolean
+	sampleMapping?: SampleMapping
 }
 
 /** A group that is defined by a filter, as a request gives one that has no use for a group name:
 the filter with what its samples depend on */
-export type SampleFilterGroup = Pick<SampleLstGroupByFilter, 'filter' | 'filter0' | 'mapParent2Children'>
+export type SampleFilterGroup = Pick<SampleLstGroupByFilter, 'filter' | 'filter0' | 'sampleMapping'>
 
 export type SampleLstTermValues = {
 	[index: string | number]: {

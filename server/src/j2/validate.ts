@@ -2,10 +2,10 @@ import computePercentile from '#shared/compute.percentile.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
 import { JT_na, JT_canonical, JT_ir } from '#shared/common.js'
 import * as utils from '../utils.js'
-import { mayLimitSamples, combinePPfilterAndTid2value } from '../mds3.filter.js'
-import { setFile, validateSampleHeader, getTermSampleLimiter } from '../mds3.init.js'
+import { mayLimitSamples } from '../mds3.filter.js'
+import { setFile, validateSampleHeader } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
-import { mapParent2ChildrenWithSampleTypes } from '../utils/sampleTypes.ts'
+import { mayMapNonDictionaryData } from '../termdb.matrix.js'
 import { getH5samples } from '../utils/h5samples.ts'
 import { setQuerySampleTypes } from '#shared/terms.js'
 
@@ -55,13 +55,6 @@ export async function validate_query_junction(ds: any, genome: any) {
 			hiddenTypes = new Set(param.hiddenTypes.trim().split(','))
 			if (!hiddenTypes.size) throw new Error('param.hiddenTypes invalid')
 		}
-
-		// QUICKFIX
-		// assuming genomic data in mds3 tk is at sample-level, so setting
-		// mapParent2Children=true to allow parent-level term data to be mapped
-		// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
-		// with the sample types chosen in the genome browser; the filter is param.filterObj of the j2 track, as in mds3
-		mapParent2ChildrenWithSampleTypes(param, ds, combinePPfilterAndTid2value(param, ds))
 
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
@@ -238,7 +231,9 @@ export async function validate_query_junction(ds: any, genome: any) {
 	/*
 	called by getData() and return sample level numeric values in required format
 	*/
-	q.get = async (param: { terms?: any[]; [key: string]: any }) => getJunctionData(param, q.listJunctions, ds)
+	q.get = async (param: { terms: any[]; [key: string]: any }) => {
+		return getJunctionData(param, q.listJunctions, ds)
+	}
 
 	/*
 	get sample details of one junction
@@ -307,13 +302,10 @@ async function validate_junction_cluster(ds: any, junctionQ: any) {
 export async function getJunctionData(
 	param: { terms?: any[]; [key: string]: any },
 	listJunctions: (param: any, keepList: { start: number; stop: number; strand: string }[]) => Promise<any>,
-	/** for the sample types of a term, see getTermSampleLimiter() */
 	ds: any
 ) {
 	if (!Array.isArray(param?.terms) || !param.terms.length) throw new Error('junction.get(): terms[] is required')
 	const term2sample2value = new Map<string, Record<string, number>>()
-	// the samples of each term's own sample types
-	const limitSamples = getTermSampleLimiter(param, undefined, ds)
 	for (const tw of param.terms) {
 		if (!tw?.$id) throw new Error('junction.get(): term wrapper $id is required')
 		const term = tw.term
@@ -327,11 +319,9 @@ export async function getJunctionData(
 		const query = {
 			...param,
 			rglst: [{ chr: term.chr, start: term.start, stop: term.stop }],
-			readcountCutoff: tw.q?.readcountCutoff ?? param.readcountCutoff
+			readcountCutoff: tw.q?.readcountCutoff ?? param.readcountCutoff,
+			skipSampleFiltering: true // defer sample filtering until source samples are mapped (see below)
 		}
-		delete query.terms
-		// the term's own sample types are applied below, not those of the request, which may be for other terms
-		delete (query as any).sampleTypes
 		const keepList = [{ start: term.start, stop: term.stop, strand: term.strand }]
 		const result = await listJunctions(query, keepList)
 		const junction = result.junctions.find(
@@ -340,15 +330,23 @@ export async function getJunctionData(
 		/* by sample, the read count of the junction, or for a term of measure IR, the IR ratio. An IR term of a junction
 		with no IR event has no value */
 		const sn2value = term.measure == JT_ir ? junction?.sn2ir : junction?.sn2rc
-		let samples: [string | number, number][] = [...(sn2value || [])]
-		/* the samples of the sample types chosen for this term in the term picker. Applied here, per term,
-		rather than through the request, whose sample types listJunctions() would apply to every term of it:
-		a request may hold terms that chose different sample types */
-		if (term.sampleTypes != null) {
-			const keep = await limitSamples(term)
-			if (keep) samples = samples.filter(([sid]) => keep.has(sid))
+		// filter samples by sample type of term
+		const s2v = Object.create(null)
+		for (const [sid, value] of sn2value || []) {
+			if (term.sampleTypes?.length && !term.sampleTypes.includes(ds.sampleId2Type.get(sid))) continue
+			if (!Number.isFinite(value)) continue
+			s2v[sid] = value
 		}
-		term2sample2value.set(tw.$id, Object.fromEntries(samples))
+		// map to target sample type
+		const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
+		// filter samples
+		const limitSamples = await mayLimitSamples(param, null, ds)
+		const filteredValues = Object.create(null)
+		for (const [sid, value] of Object.entries(mappedValues)) {
+			if (limitSamples && !limitSamples.has(Number(sid))) continue
+			filteredValues[sid] = value
+		}
+		if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 	}
 	return { term2sample2value }
 }

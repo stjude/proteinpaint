@@ -1,6 +1,5 @@
 import type { RouteApi, RoutePayload, TermdbFacetRequest, TermdbFacetResponse } from '#types'
-import { getData } from '#src/termdb.matrix.js'
-import { getTermSampleTypeIds, mapParent2ChildrenWithSampleTypes } from '#src/utils/sampleTypes.ts'
+import { getData, resolveSampleMapping } from '#src/termdb.matrix.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import type { ReqQueryAddons } from './types.js'
 
@@ -32,17 +31,14 @@ function init({ genomes }) {
 			if (!Array.isArray(facet.tracks)) throw 'facet.tracks[] missing'
 
 			let tracks = facet.tracks
-			if (q.filter) {
-				/* the samples of the filter, its cases mapped to their samples as for the other tracks of the genome
-				browser. The chosen sample types are kept below, so that none of them leaves no track */
-				const param: any = { filter: q.filter, __protected__: q.__protected__ }
-				mapParent2ChildrenWithSampleTypes(param, ds)
-				// undefined for a filter that limits nothing
-				const samples = await mayLimitSamples(param, null, ds)
-				if (samples) tracks = facet.tracks.filter(track => samples.has(ds.cohort.termdb.q.sampleName2id(track.sample)))
-			}
+			// track data is at sample-level, so map
+			// parent samples to child samples
+			resolveSampleMapping(Object.assign(q, { sampleMapping: 'parentToChildren' }), ds)
+			// undefined for a filter that limits nothing
+			const samples = await mayLimitSamples(q, null, ds)
+			if (samples) tracks = facet.tracks.filter(track => samples.has(ds.cohort.termdb.q.sampleName2id(track.sample)))
 			// chosen in the sample type row of the genome browser
-			const sampleTypes = getTermSampleTypeIds(q, ds)
+			const sampleTypes = q.sampleTypes
 			if (sampleTypes)
 				tracks = tracks.filter(track =>
 					sampleTypes.includes(ds.sampleId2Type?.get(ds.cohort.termdb.q.sampleName2id(track.sample)))

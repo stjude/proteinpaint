@@ -94,10 +94,14 @@ type bcfMafFile = {
 type SnvindelByIsoform = {
 	/** getter function to retrieve data. dynamically added or ds-supplied
 	first argument is required and allow for 2 additional ones
+	For per-term calls, mayGetGeneVariantData() passes skipSampleFiltering=true so sample filters
+	are applied after source samples are collected and hierarchy-mapped.
 	*/
 	get?: (f: any, f2?: any, f3?: any) => void
 	/** if true, all tw from one client query must be processed via one call to snvindel.byisoform.get()
 	and no longer processes each tw by calling mayGetGeneVariantData()
+	The getter owns source-type selection, hierarchy mapping and target filtering, and writes
+	target-sample annotations into the supplied samples object without replacing other terms.
 	*/
 	processTwsInOneQuery?: true
 }
@@ -118,7 +122,10 @@ type SnvindelByRange = {
 	bcfMafFile?: bcfMafFile
 	/** allow to apply special configurations to certain INFO fields of the bcf file */
 	infoFields?: InfoFieldEntry[]
-	/** getter function to retrieve data. dynamically added or ds-supplied */
+	/** getter function to retrieve data. dynamically added or ds-supplied.
+	When mayGetGeneVariantData() calls the getter, skipSampleFiltering=true defers sample filtering
+	until source samples have been collected and hierarchy-mapped.
+	*/
 	get?: (f: any, f2?: any) => void
 }
 
@@ -167,7 +174,7 @@ type DictApi = {
 	/** gets dictionary term data; returns [samples{}, byTermId{}]
 	see getSampleData_dictionaryTerms() of server/src/termdb.matrix.js
 
-	sample hierarchy is signaled on q (q.mapParent2Children, with
+	sample hierarchy is signaled on q (q.sampleMapping, with
 	ds.cohort.termdb.sampleTypes and .term2SampleType), not by an arg here.
 	do not add an onlyChildren arg: that one belongs to barchart_data() of
 	server/src/termdb.barchart.js, and passing it here would land on useCache */
@@ -382,8 +389,15 @@ type SnvindelComputeGroup_info = {
 	infoKey: string
 }
 
+type QuerySampleTypes = {
+	/** Unique sample types present in the query's data, set at init. */
+	sampleTypes?: number[]
+	/** Dataset sampleTypesByTerms filtered to the query's sample types. */
+	sampleTypesByTerms?: SampleTypesByTerms
+}
+
 /** a data type under ds.queries{} */
-type SnvIndelQuery = {
+type SnvIndelQuery = QuerySampleTypes & {
 	forTrack?: boolean
 	/** allow to query data by either isoform or range; either or both can be used; cannot be both missing */
 	byisoform?: SnvindelByIsoform
@@ -414,7 +428,7 @@ so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig canno
 	shown?: boolean
 }
 
-type SvFusion = {
+type SvFusion = QuerySampleTypes & {
 	/** Optional PNG reports of events. An event may carry the image file prefix as its optional "eventImage" value,
 	 * in the mattr{} of the svfusion file, or on the event in the singleSampleMutation data.
 	 * The images of an event are the png files in the folder whose names start with the prefix followed by "_".
@@ -794,7 +808,7 @@ configs for types of cnv data
 important: presence of filtering properties indiate the type of cnv quantification
 and will trigger rendering of ui controls
 */
-type CnvSegmentQuery = {
+type CnvSegmentQuery = QuerySampleTypes & {
 	/** ds supplied or dynamically added getter
 	todo properly type input/output
 	returns:
@@ -879,7 +893,7 @@ type CnvSegmentQuery = {
 	maxReturnCutoff?: number
 }
 /** ITDs */
-type ITDQuery = {
+type ITDQuery = QuerySampleTypes & {
 	/** file is bgzipped with a header line and columns:
 	1. chr
 	2. start, 0-based
@@ -3044,7 +3058,7 @@ export type Mds3 = BaseMds & {
 	output: validated filter0 obj, or undefined
 	*/
 	validate_filter0?: (f: any) => void
-	getFilter0SampleTypes?: (filter: any, ds: any) => void
+	getFilter0SampleTypesLst?: (filter: any, ds: any) => { sampleTypes?: number[]; childSampleTypes?: number[] }[]
 	/** ds-supplied getter, maps a ssm id to a canonical ENST name */
 	ssm2canonicalisoform?: { get?: (q: any) => any }
 	/** mds3 tk displays presence and occurrence of genomic alterations, but not including samples harboring each alteration
@@ -3063,7 +3077,11 @@ export type Mds3 = BaseMds & {
 	noGenomicMode4lollipopTk?: true
 	/** if ds.queries{} exists, server launch adds this convenient getter to wrap multiple queries data types
 	 */
-	mayGetGeneVariantData?: (f: any) => void
+	/** Returns a Map from term wrapper $id to an object keyed by sample ID. */
+	mayGetGeneVariantData?: (
+		tw: { $id: string; term: BaseTerm; q: object },
+		q: object
+	) => Promise<Map<string, Record<string, { key: string; value?: string; label?: string; values: unknown[] }>>>
 	/** optional key-value pairs to pass to genomic queries getter when called in mayGetGeneVariantData() 
 	- only used in mayGetGeneVariantData! not in mds3.load.js
 	- for now only passed to snvindel.*.get and not yet other data types; add when needed

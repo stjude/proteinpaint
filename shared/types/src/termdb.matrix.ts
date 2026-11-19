@@ -7,6 +7,12 @@
  * Use this type for that purpose.
  */
 
+/**
+ * Sample hierarchy mapping direction; omit for automatic inference.
+ * term.sampleTypes identifies source types, and query sampleTypes identifies target types.
+ */
+export type SampleMapping = 'parentToChildren' | 'childrenToParent'
+
 type SampleEntry = {
 	/** stringified integer sample id  */
 	sample: string | number

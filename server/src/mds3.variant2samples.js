@@ -449,10 +449,12 @@ async function mayAddSampleAnnotationByTwLst(samples, twLst, ds, q) {
 
 	// Get data for all terms at once.
 	// FIXME inefficient as it pulls data for all samples.
-	// FIXME hardcoded true as 3rd arg to obtain sample-level values for patient-level terms
 	// __protected__ from the route query is required by authApi.mayAdjustFilter() inside
 	// getData(), so that a ds getAdditionalFilter() can restrict to authorized samples
-	const data = await getData({ terms: twLst, __protected__: q?.__protected__ }, ds, true)
+	const data = await getData(
+		{ terms: twLst, __protected__: q?.__protected__, sampleMapping: q.sampleMapping, sampleTypes: q.sampleTypes },
+		ds
+	)
 	if (data.error) throw data.error
 
 	// For every term, append term values to each sample

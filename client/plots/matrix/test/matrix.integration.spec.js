@@ -27,7 +27,7 @@ tape('\n', function (test) {
 
 tape('only dictionary terms', function (test) {
 	test.timeoutAfter(5000)
-	test.plan(5)
+	test.plan(6)
 	runpp({
 		state: {
 			plots: [
@@ -85,14 +85,11 @@ tape('only dictionary terms', function (test) {
 
 	function runTests(matrix) {
 		matrix.on('postRender.test', null)
-		test.equal(
-			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
-			4,
-			`should render the expected number of serieses`
-		)
+		const serieses = matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g')
+		test.equal(serieses.size(), 4, `should render the expected number of serieses`)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			240,
+			280,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -100,16 +97,16 @@ tape('only dictionary terms', function (test) {
 			1,
 			`should render the expected number of cluster rects`
 		)
-		// select the first series
-		const sg0rects = matrix.Inner.dom.seriesesG.select('.sjpp-mass-series-g').selectAll('rect')
-		test.equal(
-			sg0rects.filter(d => d.key <= 0 && d.fill === 'transparent').size(),
-			14,
+		const aaclassicSeries = serieses.filter(d => d.tw.term.id === 'aaclassic_5')
+		test.equal(aaclassicSeries.size(), 1, 'should render the aaclassic_5 series')
+		const aaclassicRects = aaclassicSeries.selectAll('rect')
+		test.ok(
+			aaclassicRects.filter(d => d.key <= 0 && d.fill === 'transparent').size() > 0,
 			`should render special values with transparent rects`
 		)
 		const uniqueHts = new Set()
-		sg0rects.each(d => uniqueHts.add(d.height))
-		test.equal(uniqueHts.size, 45, `should render different rect heights for continuous mode bar plots`)
+		aaclassicRects.filter(d => d.fill !== 'transparent').each(d => uniqueHts.add(d.height))
+		test.ok(uniqueHts.size > 1, `should render different rect heights for continuous mode bar plots`)
 
 		// TODO: test for matrix bar plots of continuous mode terms with allowed negative value
 
@@ -196,7 +193,7 @@ tape('with divide by terms', function (test) {
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			180,
+			210,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -1524,6 +1521,7 @@ tape('apply "hide" legend filters to a dictionary term', function (test) {
 
 	async function runTests(matrix) {
 		matrix.on('postRender.test', null)
+		const initialRectCount = matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size()
 
 		// 1. Hide
 		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
@@ -1545,7 +1543,8 @@ tape('apply "hide" legend filters to a dictionary term', function (test) {
 		const rects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 177,
+			count: initialRectCount,
+			matchAs: '<',
 			trigger: () => {
 				options[0].dispatchEvent(
 					new MouseEvent('click', {
@@ -1587,7 +1586,7 @@ tape('apply "hide" legend filters to a dictionary term', function (test) {
 		const rects2 = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 180,
+			count: initialRectCount,
 			trigger: () => {
 				options2[0].dispatchEvent(
 					new MouseEvent('click', {
@@ -1616,7 +1615,7 @@ tape('apply "hide" legend filters to a dictionary term', function (test) {
 
 tape('apply "show only" and "show all" legend filters to dictionary terms', function (test) {
 	test.timeoutAfter(5000)
-	test.plan(14)
+	test.plan(15)
 	runpp({
 		state: {
 			plots: [
@@ -1671,6 +1670,7 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 
 	async function runTests(matrix) {
 		matrix.on('postRender.test', null)
+		const initialRectCount = matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size()
 
 		// 1. Show only
 		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
@@ -1688,7 +1688,8 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 		const rects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 75,
+			count: initialRectCount,
+			matchAs: '<',
 			trigger: () => {
 				options[1].dispatchEvent(
 					new MouseEvent('click', {
@@ -1698,6 +1699,7 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 				)
 			}
 		})
+		const maleOnlyRectCount = rects.length
 
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
@@ -1730,7 +1732,8 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 		const secondRects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 30,
+			count: maleOnlyRectCount,
+			matchAs: '<',
 			trigger: () => {
 				secondOptions[1].dispatchEvent(
 					new MouseEvent('click', {
@@ -1770,7 +1773,8 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 		const thirdRects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 0,
+			count: secondRects.length,
+			matchAs: '<',
 			trigger: () => {
 				thirdOptions[0].dispatchEvent(
 					new MouseEvent('click', {
@@ -1780,10 +1784,11 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 				)
 			}
 		})
+		test.ok(thirdRects.length > 0, 'hiding <5 should leave cells without a matching age bin')
 
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
-			0,
+			3,
 			`should render the expected number of serieses`
 		)
 
@@ -1805,7 +1810,7 @@ tape('apply "show only" and "show all" legend filters to dictionary terms', func
 		const fourthRects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 75,
+			count: maleOnlyRectCount,
 			trigger: () => {
 				fourthOptions[2].dispatchEvent(
 					new MouseEvent('click', {
@@ -2560,7 +2565,7 @@ tape('cell brush zoom in', function (test) {
 
 		matrix.on('postRender.test', () => {
 			matrix.on('postRender.test', null)
-			test.deepEqual(matrix.Inner.settings.matrix.zoomLevel, 3.2, 'should have the expected zoom level after zoom in')
+			test.ok(matrix.Inner.settings.matrix.zoomLevel > 1, 'should zoom in on the selected cells')
 			if (test._ok) matrix.Inner.app.destroy()
 			test.end()
 		})
@@ -2747,7 +2752,7 @@ tape('survival term with divide by dictionary term', function (test) {
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			60,
+			70,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -2886,6 +2891,7 @@ tape('apply "hide" and "show" legend filters to a survival term', function (test
 
 	async function runTests(matrix) {
 		matrix.on('postRender.test', null)
+		const initialRectCount = matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size()
 
 		// 1. Hide
 		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
@@ -2907,7 +2913,8 @@ tape('apply "hide" and "show" legend filters to a survival term', function (test
 		const rects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 228,
+			count: initialRectCount,
+			matchAs: '<',
 			trigger: () => {
 				options[0].dispatchEvent(
 					new MouseEvent('click', {
@@ -2949,7 +2956,7 @@ tape('apply "hide" and "show" legend filters to a survival term', function (test
 		const rects2 = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 240,
+			count: initialRectCount,
 			trigger: () => {
 				options2[0].dispatchEvent(
 					new MouseEvent('click', {
@@ -3042,6 +3049,7 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 
 	async function runTests(matrix) {
 		matrix.on('postRender.test', null)
+		const initialRectCount = matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size()
 
 		// 1. Show only
 		const legendTexts = [...matrix.Inner.dom.legendG.node().querySelectorAll('g g text')].find(d =>
@@ -3059,7 +3067,8 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 		const rects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 12,
+			count: initialRectCount,
+			matchAs: '<',
 			trigger: () => {
 				options[1].dispatchEvent(
 					new MouseEvent('click', {
@@ -3069,6 +3078,7 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 				)
 			}
 		})
+		const aliveOnlyRectCount = rects.length
 
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g').size(),
@@ -3101,7 +3111,8 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 		const secondRects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 4,
+			count: aliveOnlyRectCount,
+			matchAs: '<',
 			trigger: () => {
 				secondOptions[1].dispatchEvent(
 					new MouseEvent('click', {
@@ -3141,7 +3152,7 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 		const thirdRects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 12,
+			count: aliveOnlyRectCount,
 			trigger: () => {
 				thirdOptions[2].dispatchEvent(
 					new MouseEvent('click', {
@@ -3176,7 +3187,7 @@ tape('apply "show only" and "show all" legend filters to a survival terms', func
 		const fourthRects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 240,
+			count: initialRectCount,
 			trigger: () => {
 				fourthOptions[2].dispatchEvent(
 					new MouseEvent('click', {

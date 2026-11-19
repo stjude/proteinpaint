@@ -11,8 +11,7 @@ import { genomes } from '#src/initGenomesDs.js'
 import { validGenomeDs } from '#routes/common.ts'
 import { get_rows_by_one_key } from '#src/termdb.sql.js'
 import { validateRglst } from '#src/utils.js'
-import { mapParent2ChildrenWithSampleTypes } from '#src/utils/sampleTypes.ts'
-import { combinePPfilterAndTid2value } from '#src/mds3.filter.js'
+import { resolveSampleMapping } from '#src/termdb.matrix.js'
 
 export const payload: RoutePayload = {
 	get init() {
@@ -175,14 +174,15 @@ async function getResultsWithMlst(q, ds): Promise<ValidMds3VariantReponse> {
 	which byrange.get() keeps the samples of, as the filter maps its cases to them; one per filter, as the mapping
 	sets the sample types of the parameter */
 	const getParam = filterObj => {
-		const param = {
+		const param: any = {
 			rglst: [{ chr: q.chr, start: q.start, stop: q.stop }],
 			addFormatValues: true, // allows to add FORMAT including GT in each
 			variantFilter: q.variantFilter,
 			filterObj,
+			sampleMapping: 'parentToChildren',
 			sampleTypes: q.sampleTypes
 		}
-		mapParent2ChildrenWithSampleTypes(param, ds, combinePPfilterAndTid2value(param, ds))
+		resolveSampleMapping(param, ds)
 		return param
 	}
 

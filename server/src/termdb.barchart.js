@@ -60,8 +60,6 @@ ds{}
 	server-side dataset obj
 tdb{}
 	ds.cohort.termdb
-onlyChildren: boolean
-	passed to getData()
 
 output an object:
 .charts=[]
@@ -72,7 +70,7 @@ output an object:
 			.dataId=str // key of term2 category, '' if no term2
 			.total=int // size of this term1-term2 combination
 */
-export async function barchart_data(q, ds, tdb, onlyChildren) {
+export async function barchart_data(q, ds, tdb) {
 	/* existing code to work with mds2 which only supports backend-termdb
 	as later mds2 will be deprecated and migrated to mds3,
 	there should be no need to check for isMds3 flag
@@ -84,9 +82,16 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 	const map = getTwByIndex(q)
 	const terms = [...map.values()]
 	const data = await getData(
-		{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
-		q.ds,
-		onlyChildren
+		{
+			filter: q.filter,
+			filter0: q.filter0,
+			terms,
+			__protected__: q.__protected__,
+			__abortSignal: q.__abortSignal,
+			sampleTypes: q.sampleTypes,
+			sampleMapping: q.sampleMapping
+		},
+		q.ds
 	)
 	if (data.error) throw data.error
 	const samplesMap = new Map()

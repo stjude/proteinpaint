@@ -237,8 +237,8 @@ function addMatrixplots(c, ds) {
  * @param ds Entire dataset configuration from ds file. ds.queries{} contains diverse query types covering genomic, molecular, imaging etc
  * @param genome Genome obj.
  */
-/** What the sample type selector of a term picker reads from a query (geneExpression, dnaMethylation,
- * junction): the sample types of its data, set at init by setQuerySampleTypes() in #shared/terms.js,
+/** What term pickers and the genome browser read from a query for sample type selection:
+ * the sample types of its data, set at init by setQuerySampleTypes() in #shared/terms.js,
  * and the sample types by terms when the dataset groups them that way */
 function getSampleTypesPayload(q: { sampleTypes?: number[]; sampleTypesByTerms?: any }) {
 	return { sampleTypes: q.sampleTypes, ...(q.sampleTypesByTerms && { sampleTypesByTerms: q.sampleTypesByTerms }) }
@@ -256,6 +256,7 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	// copy from q{} to q2{}
 	if (q.snvindel) {
 		q2.snvindel = {
+			...getSampleTypesPayload(q.snvindel),
 			allowSNPs: q.snvindel.allowSNPs,
 			// details{} lists default method for computing variants, can be modified and is part of state
 			// some of the stuff here are to provide user-selectable choices
@@ -267,13 +268,13 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		if (q.snvindel.byisoform?.processTwsInOneQuery) q2.snvindel.byisoform = { processTwsInOneQuery: true } // quick fix; may revise later
 	}
 	if (q.svfusion) {
-		q2.svfusion = { dtLst: q.svfusion.dtLst }
+		q2.svfusion = { dtLst: q.svfusion.dtLst, ...getSampleTypesPayload(q.svfusion) }
 		if (q.svfusion.eventImages) {
 			q2.svfusion.eventImages = { label: q.svfusion.eventImages.label }
 		}
 	}
 	if (q.cnv) {
-		q2.cnv = {}
+		q2.cnv = getSampleTypesPayload(q.cnv)
 		for (const k of [
 			'type',
 			'cnvMaxLength',
@@ -288,7 +289,7 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		}
 	}
 	if (q.itd) {
-		q2.itd = {}
+		q2.itd = getSampleTypesPayload(q.itd)
 	}
 	if (q.geneCnv) {
 		// gdc cnv is gene-level cnv but still expose as ".cnv{}" to see if client can handle it the same way as segment-based cnv.

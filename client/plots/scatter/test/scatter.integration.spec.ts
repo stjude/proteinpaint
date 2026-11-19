@@ -456,7 +456,16 @@ tape('Disco plot and lollipop', test => {
 
 	runpp({
 		holder,
-		state: state2ssgsea,
+		state: {
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					colorTW: { id: 'diaggrp' },
+					term: { id: 'agedx', q: { mode: 'continuous' } },
+					term2: { id: 'agelastvisit', q: { mode: 'continuous' } }
+				}
+			]
+		},
 		sampleScatter: { callbacks: { 'postRender.test': runTests } }
 	})
 

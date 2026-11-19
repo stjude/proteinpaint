@@ -109,20 +109,17 @@ tape('getJunctionData: reformats sn2rc for termdb.matrix', async test => {
 	const result = await getJunctionData(
 		{ terms: [tw], filter: { type: 'tvslst', lst: [] }, sampleTypes: [1] },
 		async (query, keepList) => {
-			test.notOk(
-				'sampleTypes' in query,
-				'should not read the sample types of the request, which may be for other terms'
-			)
+			test.deepEqual(query.sampleTypes, [1], 'passes request sample types to listJunctions')
 			test.deepEqual(query.rglst, [{ chr: 'chr1', start: 100, stop: 200 }], 'queries the junction region')
 			test.equal(query.readcountCutoff, 3, 'passes the term read-count cutoff')
 			test.deepEqual(keepList, [{ start: 100, stop: 200, strand: '+' }], 'limits results to the selected junction')
 			return {
-				junctions: [{ start: 100, stop: 200, strand: '+', sn2rc: new Map([['sample-1', 12]]) }]
+				junctions: [{ start: 100, stop: 200, strand: '+', sn2rc: new Map([[1, 12]]) }]
 			}
 		},
-		{}
+		{ sampleId2Type: new Map([[1, 1]]) }
 	)
-	test.deepEqual(result.term2sample2value.get('junction-1'), { 'sample-1': 12 }, 'returns sample-to-count values')
+	test.deepEqual({ ...result.term2sample2value.get('junction-1') }, { 1: 12 }, 'returns sample-to-count values')
 	test.end()
 })
 
@@ -164,22 +161,24 @@ tape('getJunctionData: keeps the samples of the sample types chosen for each ter
 			terms: [
 				{ $id: 'all', term: junction },
 				{ $id: 'diagnosis', term: { ...junction, sampleTypes: [2] } },
-				{ $id: 'relapse', term: { ...junction, sampleTypes: ['3'] } }
+				{ $id: 'relapse', term: { ...junction, sampleTypes: [3] } },
+				{ $id: 'emptyTypes', term: { ...junction, sampleTypes: [] } }
 			]
 		},
 		listJunctions,
 		ds
 	)
 	test.deepEqual(
-		result.term2sample2value.get('all'),
+		{ ...result.term2sample2value.get('all') },
 		{ 1: 5, 2: 7, 3: 9, 4: 1 },
 		'a term without sample types reads every sample'
 	)
-	test.deepEqual(result.term2sample2value.get('diagnosis'), { 1: 5, 3: 9 }, 'a term reads only its sample types')
+	test.deepEqual({ ...result.term2sample2value.get('diagnosis') }, { 1: 5, 3: 9 }, 'a term reads only its sample types')
+	test.deepEqual({ ...result.term2sample2value.get('relapse') }, { 2: 7 }, 'a second term selects its own sample types')
 	test.deepEqual(
-		result.term2sample2value.get('relapse'),
-		{ 2: 7 },
-		'a sample type given as a numeric string matches too'
+		{ ...result.term2sample2value.get('emptyTypes') },
+		{ ...result.term2sample2value.get('all') },
+		'empty sample types keep all source values'
 	)
 
 	// sample ids that are strings, as on a dataset keyed by case uuid
@@ -198,20 +197,26 @@ tape('getJunctionData: keeps the samples of the sample types chosen for each ter
 			])
 		)
 	)
-	test.deepEqual(uuids.term2sample2value.get('d'), { 'uuid-a': 5 }, 'matches string sample ids as they are')
+	test.deepEqual({ ...uuids.term2sample2value.get('d') }, { 'uuid-a': 5 }, 'matches string sample ids as they are')
+	const filteredSamples = await getJunctionData(
+		{
+			terms: [{ $id: 'd', term: junction }],
+			filter: { type: 'tvslst', lst: [{ type: 'tvs', tvs: { term: { id: 'status' } } }] }
+		},
+		listJunctionsOf(
+			new Map([
+				[1, 5],
+				[2, 7]
+			])
+		),
+		{ cohort: { termdb: { filterSamples: async () => new Set([1]) } } }
+	)
+	test.deepEqual(
+		{ ...filteredSamples.term2sample2value.get('d') },
+		{ 1: 5 },
+		'request filtering compares object keys with numeric sample IDs'
+	)
 
-	const refuses = async (sampleTypes: any, d: any, expected: string, message: string) => {
-		try {
-			await getJunctionData({ terms: [{ $id: 'x', term: { ...junction, sampleTypes } }] }, listJunctions, d)
-			test.fail(message)
-		} catch (e: any) {
-			test.ok(String(e.message || e).includes(expected), message)
-			test.equal(e.status, 400, 'as an error of the request')
-		}
-	}
-	await refuses('2', ds, 'must be an array', 'refuses sample types that are not an array')
-	await refuses(['abc'], ds, "invalid sample type='abc'", 'refuses a sample type that is not an integer')
-	await refuses([9], ds, "invalid sample type='9'", 'refuses a sample type unknown to the dataset')
 	test.end()
 })
 
@@ -288,7 +293,7 @@ tape('listJunctions: intron retention', async test => {
 	test.end()
 })
 
-tape('listJunctions: filterObj is mapped from patients to their samples as filter is', async test => {
+tape('listJunctions: passes sampleMapping with filter and filterObj', async test => {
 	const seen: any[] = []
 	// samples S1-S4 of the file are diagnosis samples (2) of patients (1), and 'sex' annotates patients
 	const q = await getJunctionQuery({
@@ -309,10 +314,11 @@ tape('listJunctions: filterObj is mapped from patients to their samples as filte
 		}
 	})
 	const sex = { type: 'tvslst', join: '', in: true, lst: [{ type: 'tvs', tvs: { term: { id: 'sex' } } }] }
-	const byFilter = await listJunctions(q, { filter: sex })
-	const byFilterObj = await listJunctions(q, { filterObj: sex })
-	test.equal(seen[1].mapParent2Children, seen[0].mapParent2Children, 'maps filterObj from patients as filter is')
-	test.equal(seen[1].mapParent2Children, true, 'which maps patients to their samples')
+	const sampleMapping = 'parentToChildren'
+	const byFilter = await listJunctions(q, { filter: sex, sampleMapping })
+	const byFilterObj = await listJunctions(q, { filterObj: sex, sampleMapping })
+	test.equal(seen[1].sampleMapping, seen[0].sampleMapping, 'passes the same mapping with filter and filterObj')
+	test.equal(seen[1].sampleMapping, sampleMapping, 'passes the parent-to-child mapping direction')
 	test.deepEqual(seen[1].filter, sex, 'filters samples by filterObj')
 	test.equal((byFilterObj.byStart.get(1000) as any).sampleCount, 2, 'keeps the samples that filterObj passes')
 	test.deepEqual(byFilterObj, byFilter, 'lists the same junctions as by filter')
@@ -328,9 +334,9 @@ tape('getJunctionData: IR ratio of a junction term of measure IR', async test =>
 			{ $id: 'rc', term },
 			{ $id: 'ir', term: { ...term, measure: 'IR' } }
 		])
-		test.deepEqual(data.get('rc'), { S1: 8, S2: 6, S4: 9 }, 'a term without measure reads the read counts')
+		test.deepEqual({ ...data.get('rc') }, { S1: 8, S2: 6, S4: 9 }, 'a term without measure reads the read counts')
 		test.deepEqual(
-			data.get('ir'),
+			{ ...data.get('ir') },
 			{ S1: 0.3, S2: 0, S4: 0.5 },
 			'reads the IR ratio after the value of another event, 0 for a sample of the junction with none'
 		)
@@ -340,14 +346,18 @@ tape('getJunctionData: IR ratio of a junction term of measure IR', async test =>
 			readcountCutoff: 10
 		})
 		test.deepEqual(
-			data.get('ir'),
+			{ ...data.get('ir') },
 			{ S1: 0.2, S2: 0.4, S4: 0.1 },
 			'reads the IR ratio of a sample only when its read count passes the cutoff'
 		)
 	}
 	{
 		const data = await get([{ $id: 'ir', term: { ...term, start: 5000, stop: 6000, measure: 'IR' } }])
-		test.deepEqual(data.get('ir'), { S1: 0, S2: 0 }, 'every sample of the junction has 0 when none retains the intron')
+		test.deepEqual(
+			{ ...data.get('ir') },
+			{ S1: 0, S2: 0 },
+			'every sample of the junction has 0 when none retains the intron'
+		)
 	}
 	{
 		// a junction that is found, with read counts but no IR event, so listJunctions() gives no sn2ir
@@ -363,7 +373,7 @@ tape('getJunctionData: IR ratio of a junction term of measure IR', async test =>
 			listJunctions,
 			{}
 		)
-		test.deepEqual(result.term2sample2value.get('ir'), {}, 'a junction with no IR event has no IR ratio')
+		test.notOk(result.term2sample2value.has('ir'), 'omits a term with no IR ratio')
 	}
 	try {
 		await get([{ $id: 'x', term: { ...term, measure: 'exonskip' } }])

@@ -10,6 +10,10 @@ import {
 	mayAdd_mayGetGeneVariantData,
 	mayFilterByMaf,
 	mayValidateBcfMafFilter,
+	validate_query_snvindel,
+	validate_query_cnv,
+	validate_query_svfusion,
+	validate_query_itd,
 	setFile,
 	svfusionByNameGetter_file,
 	plotSampleGenomeQuantification
@@ -71,6 +75,51 @@ Tests:
 test('\n', t => {
 	t.pass('-***- mds3.init unit tests -***-')
 	t.end()
+})
+
+test('mutation query sample types', async t => {
+	const originalTpMasterDir = serverconfig.tpmasterdir
+	serverconfig.tpmasterdir = path.resolve(import.meta.dirname, '../../test/tp')
+	const folder = 'files/hg38/TermdbTest/'
+	const ds = {
+		label: 'test',
+		sampleId2Type: new Map([
+			[3444, 2],
+			[3332, 3]
+		]),
+		cohort: {
+			termdb: {
+				q: { sampleName2id: Number },
+				sampleTypesByTerms: { visit: { Diagnosis: [2], Relapse: [3], Other: [4] } }
+			}
+		},
+		queries: {
+			snvindel: { byrange: { bcffile: folder + 'TermdbTest.bcf.gz' } },
+			cnv: { file: folder + 'TermdbTest_CNV_gene.gz' },
+			svfusion: { byrange: { file: folder + 'TermdbTest_Fusion.gz' } },
+			itd: { file: folder + 'TermdbTest_ITD.gz' }
+		}
+	}
+	try {
+		for (const [type, validate, expected] of [
+			['snvindel', validate_query_snvindel, [2, 3]],
+			['cnv', validate_query_cnv, [3]],
+			['svfusion', validate_query_svfusion, [2, 3]],
+			['itd', validate_query_itd, [2, 3]]
+		]) {
+			await validate(ds, { majorchr: {} })
+			const query = ds.queries[type]
+			t.deepEqual(query.sampleTypes.slice().sort(), expected, `${type} derives unique sample types from its header`)
+			t.deepEqual(
+				query.sampleTypesByTerms,
+				{ visit: type == 'cnv' ? { Relapse: [3] } : { Diagnosis: [2], Relapse: [3] } },
+				`${type} restricts term-based choices to available sample types`
+			)
+		}
+	} finally {
+		serverconfig.tpmasterdir = originalTpMasterDir
+		t.end()
+	}
 })
 
 test('setFile: validates and resolves files', async t => {
@@ -3113,24 +3162,24 @@ test('mayGetGeneVariantData: requests read depth from the snvindel getter only w
 	}
 
 	// values mode: nothing filters by maf
-	let data = await ds.mayGetGeneVariantData({ $id, term, q: { type: 'values' } }, {})
+	let results = await ds.mayGetGeneVariantData({ $id, term, q: { type: 'values' } }, {})
 	t.equal(calls.at(-1), false, 'values mode does not request read depth')
-	t.notOk('TumorAC' in data.get('case-1')[$id].values[0], 'no allele counts on the value')
+	t.notOk('TumorAC' in results.get($id)['case-1'].values[0], 'no allele counts on the value')
 
 	// groupset without a maf filter: still no read depth, sample is missense
-	data = await ds.mayGetGeneVariantData({ $id, term, q: groupset(missense()) }, {})
+	results = await ds.mayGetGeneVariantData({ $id, term, q: groupset(missense()) }, {})
 	t.equal(calls.at(-1), false, 'groupset without maf filter does not request read depth')
-	t.equal(data.get('case-1')[$id].key, 'KRAS Missense', 'sample assigned to the mutant group')
+	t.equal(results.get($id)['case-1'].key, 'KRAS Missense', 'sample assigned to the mutant group')
 
 	// groupset with a maf filter, the request the gdc summary chart makes: read depth is requested,
 	// the counts are flattened onto the value, and the maf filter passes on them
-	data = await ds.mayGetGeneVariantData({ $id, term, q: groupset(missense({ mafFilter })) }, {})
+	results = await ds.mayGetGeneVariantData({ $id, term, q: groupset(missense({ mafFilter })) }, {})
 	t.equal(calls.at(-1), true, 'groupset with maf filter requests read depth')
-	t.equal(data.get('case-1')[$id].key, 'KRAS Missense', 'sample at maf 0.3 stays in the mutant group')
-	t.equal(data.get('case-1')[$id].values[0].TumorAC, '70,30', 'allele counts travel on the value')
+	t.equal(results.get($id)['case-1'].key, 'KRAS Missense', 'sample at maf 0.3 stays in the mutant group')
+	t.equal(results.get($id)['case-1'].values[0].TumorAC, '70,30', 'allele counts travel on the value')
 
 	// a caller that applies its own dt-term filter afterwards asks through q, see get_dtTerm()
-	data = await ds.mayGetGeneVariantData({ $id, term, q: { type: 'values' } }, { addReadDepth: true })
+	await ds.mayGetGeneVariantData({ $id, term, q: { type: 'values' } }, { addReadDepth: true })
 	t.equal(calls.at(-1), true, 'q.addReadDepth requests read depth without a groupset')
 })
 
@@ -3187,11 +3236,12 @@ test('mayGetGeneVariantData: ungrouped term returns every origin', async t => {
 	}
 	/* an ungrouped term has no tvs to carry an origin selection, so it is not narrowed by
 	origin at all. A groupset narrows per tvs instead, see filterByItem() */
-	const data = await ds.mayGetGeneVariantData({ $id: 'kras', term, q: { type: 'values' } }, {})
+	const results = await ds.mayGetGeneVariantData({ $id: 'kras', term, q: { type: 'values' } }, {})
+	const data = results.get('kras')
 
-	t.equal(data.has('somatic-case'), true, 'should keep somatic values')
-	t.equal(data.has('germline-case'), true, 'should keep germline values')
-	t.equal(data.get('germline-case').kras.values[0].origin, 'germline', 'should preserve the origin annotation')
+	t.equal(Object.hasOwn(data, 'somatic-case'), true, 'should keep somatic values')
+	t.equal(Object.hasOwn(data, 'germline-case'), true, 'should keep germline values')
+	t.equal(data['germline-case'].values[0].origin, 'germline', 'should preserve the origin annotation')
 })
 
 /* one groupset whose groups differ by origin, which is what per-tvs origins exist for: the
@@ -3228,17 +3278,18 @@ test('mayGetGeneVariantData: groupset groups filter by their own tvs origins', a
 		type: 'custom-groupset',
 		customset: { groups: [group('germline grp', ['germline']), group('somatic grp', ['somatic'])] }
 	}
-	const data = await ds.mayGetGeneVariantData({ $id: 'kras', term, q }, {})
+	const results = await ds.mayGetGeneVariantData({ $id: 'kras', term, q }, {})
+	const data = results.get('kras')
 
-	t.equal(data.get('germline-case').kras.key, 'germline grp', 'germline sample lands in the germline group')
-	t.equal(data.get('somatic-case').kras.key, 'somatic grp', 'somatic sample lands in the somatic group')
+	t.equal(data['germline-case'].key, 'germline grp', 'germline sample lands in the germline group')
+	t.equal(data['somatic-case'].key, 'somatic grp', 'somatic sample lands in the somatic group')
 	t.equal(
-		data.get('germline-case').kras.values.every(v => v.origin == 'germline'),
+		data['germline-case'].values.every(v => v.origin == 'germline'),
 		true,
 		'germline group keeps only germline values'
 	)
 	t.equal(
-		data.get('somatic-case').kras.values.every(v => v.origin == 'somatic'),
+		data['somatic-case'].values.every(v => v.origin == 'somatic'),
 		true,
 		'somatic group keeps only somatic values'
 	)
@@ -3252,8 +3303,8 @@ test('mayGetGeneVariantData: an unknown tvs origin matches no sample', async t =
 	mayAdd_mayGetGeneVariantData(ds, null)
 
 	const term = { type: 'geneVariant', name: 'KRAS', genes: [getKrasGene()], groupsetting: { disabled: false } }
-	const data = await ds.mayGetGeneVariantData({ $id: 'kras', term, q: getOriginGroupsetQ(['relapse']) }, {})
-	t.equal(data.size, 0, 'should assign no sample to the group')
+	const results = await ds.mayGetGeneVariantData({ $id: 'kras', term, q: getOriginGroupsetQ(['relapse']) }, {})
+	t.deepEqual(Object.keys(results.get('kras')), [], 'should assign no sample to the group')
 })
 
 /* filtering by origin on a dt whose values carry none would silently drop every value, so

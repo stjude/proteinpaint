@@ -27,6 +27,7 @@ const handlers = {
 
 /*
 	tw: {
+		$id,
 		term: {
 			type: 'geneVariant', 
 			name: '...'
@@ -45,8 +46,9 @@ export async function mayGetGeneVariantData(tw, q) {
 	const ds = this
 	const tname = tw.term.name
 	const flagset = await get_flagset(ds, q.genome)
-	const bySampleId = new Map()
-	if (!flagset) return bySampleId
+	const sample2value = Object.create(null)
+	const term2sample2value = new Map([[tw.$id, sample2value]])
+	if (!flagset) return term2sample2value
 
 	let filterSamples
 	if (q?.filter?.lst.length > 0) {
@@ -62,23 +64,8 @@ export async function mayGetGeneVariantData(tw, q) {
 		for (const d of flag.data[tname]) {
 			const sid = d._SAMPLEID_
 			if (filterSamples && !filterSamples.includes(sid)) continue
-			if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
-			const sampleData = bySampleId.get(sid)
-			if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
-			sampleData[tname].values.push(d)
+			getSampleValue(sample2value, sid, tname).values.push(d)
 		}
-		/*
-			process and store each sampleId in bySampleId as below. May only some entries in values[] has origin
-				<sampleId> : {
-					<gene>: {
-						values: [
-							{ dt, class, mname, origin }          // a mutation data point
-							{ dt, class:'WT', origin }    // if this sample is wildtype
-							{ dt, class:'Blank', origin}  // if is not assayed for this dt
-						]
-					}
-				}
-		*/
 		if (ds.assayAvailability?.byDt) {
 			for (const dtKey in ds.assayAvailability.byDt) {
 				const dt = ds.assayAvailability.byDt[dtKey]
@@ -88,40 +75,29 @@ export async function mayGetGeneVariantData(tw, q) {
 						const sub_dt = dt.byOrigin[origin]
 						// an origin may be split by sample type; each leaf carries its own yes/no sample sets
 						const leaves = sub_dt.bySampleType ? Object.values(sub_dt.bySampleType) : [sub_dt]
-						for (const leaf of leaves) addDataAvailability(dtKey, leaf, bySampleId, tname, origin, filterSamples)
+						for (const leaf of leaves) addDataAvailability(dtKey, leaf, sample2value, tname, origin, filterSamples)
 					}
-				} else addDataAvailability(dtKey, dt, bySampleId, tname, false, filterSamples)
+				} else addDataAvailability(dtKey, dt, sample2value, tname, false, filterSamples)
 			}
 		}
 	}
-	return bySampleId
+	return term2sample2value
 }
 
-function addDataAvailability(dtKey, dt, bySampleId, tname, origin, filterSamples) {
-	for (const sid of dt.yesSamples) {
-		if (filterSamples && !filterSamples.includes(sid)) continue
-		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
-		const sampleData = bySampleId.get(sid)
-		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
-		if (origin) {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
-				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'WT', _SAMPLEID_: sid, origin: origin })
-		} else {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey))
-				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'WT', _SAMPLEID_: sid })
-		}
-	}
-	for (const sid of dt.noSamples) {
-		if (filterSamples && !filterSamples.includes(sid)) continue
-		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
-		const sampleData = bySampleId.get(sid)
-		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
-		if (origin) {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
-				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid, origin: origin })
-		} else {
-			if (!sampleData[tname].values.some(val => val.dt == dtKey))
-				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid })
+function getSampleValue(sample2value, sid, tname) {
+	return (sample2value[sid] ??= { key: tname, values: [], label: tname })
+}
+
+function addDataAvailability(dtKey, dt, sample2value, tname, origin, filterSamples) {
+	for (const [ids, mclass] of [
+		[dt.yesSamples, 'WT'],
+		[dt.noSamples, 'Blank']
+	]) {
+		for (const sid of ids) {
+			if (filterSamples && !filterSamples.includes(sid)) continue
+			const { values } = getSampleValue(sample2value, sid, tname)
+			if (values.some(val => val.dt == dtKey && (!origin || val.origin == origin))) continue
+			values.push({ dt: parseInt(dtKey), class: mclass, _SAMPLEID_: sid, ...(origin && { origin }) })
 		}
 	}
 }
