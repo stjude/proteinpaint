@@ -1,1 +1,3 @@
-
+Features:
+- Methylation starburst can plot one point per transcript ("By isoform") on datasets with transcript expression counts, each transcript against its own promoter and body methylation
+- Methylation starburst: highlight genes or transcripts by search, and a click menu with the methylation track and, by isoform, an isoform expression plot
