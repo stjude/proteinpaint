@@ -873,6 +873,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		),
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	swimmer: ({ ds }) => ds.queries?.swimmer,
+	chemicalSensitivity: ({ ds }) => ds.queries?.chemicalSensitivity,
 	sunburst: ({ ds }) => ds.cohort?.termdb?.sunburst,
 	wsi: ({ ds }) => ds.queries?.w2,
 	imagePlot: ({ ds }) => ds.queries?.images,

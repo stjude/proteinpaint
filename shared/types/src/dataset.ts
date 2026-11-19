@@ -4,6 +4,12 @@ import type { CategoryKey } from './terms/termCollection.ts'
 import type { TermdbSingleCellSamplesRequest, CountsFilePreview } from './index.ts'
 import type { AggregateMethodOption } from './routes/termdb.aggregateMatrix.ts'
 import type { TermdbMds3EventImageRequest, EventImage } from './routes/termdb.mds3.eventImage.ts'
+import type {
+	ChemicalSensitivitySample,
+	ChemicalSensitivityDrug,
+	ChemicalSensitivityResult,
+	ChemicalSensitivityDoseResponse
+} from './routes/termdb.chemicalSensitivity.ts'
 /*** General usage types ***/
 type FileObj = {
 	file: string
@@ -513,6 +519,39 @@ type NIdataQueryRef = {
 	parameters?: NIdataQueryRefParams
 	/** optional terms to show as table columns and annotate samples */
 	sampleColumns?: { termid: string }[]
+}
+
+/** drug screen of samples (e.g. cell lines), served by the termdb/chemicalSensitivity route and rendered by the
+mass "chemicalSensitivity" chart: a radial bar chart of a sample's results with one bar per drug, and the
+dose-response curves of the clicked drugs. The samples are not looked up in the termdb. */
+export type ChemicalSensitivityQuery = {
+	/** tp-relative path to the data file: tab-delimited with a header row, one row per sample and drug, read by
+	column position: sample name, drug, drug class, molecule image file name (in moleculeImageFolder), AOC, log10
+	IC50 (nM), then any number of optional sample attributes (e.g. Type, Subtype), each labeled by its header. the
+	drug columns repeat in all rows of a drug and the attributes in all rows of a sample. samples and drugs are in
+	the order they first appear, which is the order of the chart button menu and of the bars. a blank or NA value is
+	unset */
+	file: string
+	/** optional tp-relative folder of the dose-response json files, in any subfolders. a file has the
+	Compound (drug) and Model (sample name) fields, ConcLow and ConcHigh (log10 nM), Metrics.IC50 and Metrics.AOC
+	(one value per curve, in the Curves order) and Curves: {<name>: {Raw?: {Conc, Act}, DR: {Conc, Act}}}. files are
+	matched by their Compound and Model fields, not by file name */
+	doseResponseFolder?: string
+	/** optional tp-relative folder of the molecule image svg files named in the data file */
+	moleculeImageFolder?: string
+	/** set at server launch by validate_query_chemicalSensitivity() */
+	data?: {
+		samples: ChemicalSensitivitySample[]
+		drugs: ChemicalSensitivityDrug[]
+		/** results of each sample, in the drugs order */
+		sample2results: Map<string, ChemicalSensitivityResult[]>
+		aocMax: number
+		ic50Range: [number, number]
+		/** keyed by sample name, then drug name */
+		doseResponse: Map<string, Map<string, ChemicalSensitivityDoseResponse>>
+		/** svg text keyed by drug name */
+		moleculeImages: Map<string, string>
+	}
 }
 
 /** swimmer plot data: per-patient time intervals (treatment phases) and point events,
@@ -1593,6 +1632,7 @@ type Mds3Queries = {
 	singleSampleMutation?: SingleSampleMutationQuery
 	NIdata?: NIdataQuery
 	swimmer?: SwimmerQuery
+	chemicalSensitivity?: ChemicalSensitivityQuery
 	geneExpression?: GeneExpressionQuery
 	isoformExpression?: IsoformExpressionQuery
 	/** single-sample gsea precomputed scores for rnaseq samples, for genesets from geneset db

@@ -5,6 +5,10 @@
 	"termdb/barsql": [
 		"minSampleSize"
 	],
+	"termdb/chemicalSensitivity": [
+		"termdb",
+		"samples"
+	],
 	"termdb/cuminc": [
 		"minSampleSize"
 	],

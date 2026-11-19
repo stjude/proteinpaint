@@ -165,6 +165,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'swimmer':
 			return await import('./swimmer.ts')
 
+		case 'chemicalSensitivity':
+			return await import('./chemicalSensitivity.ts')
+
 		case 'survival':
 			return await import(`./survival/survival.js`)
 
