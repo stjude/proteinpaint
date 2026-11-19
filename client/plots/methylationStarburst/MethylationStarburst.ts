@@ -7,7 +7,8 @@ import { withOthersGroup } from '#mass/groups'
 import { getCombinedTermFilter } from '#filter'
 import { getDefaultVolcanoSettings } from '../volcano/settings/defaults'
 import type { MethylationStarburstResponse } from '#types'
-import { getIsoformTerm } from '../volcano/handlers/isoformExpression'
+import { stripAccessionVersion } from '#shared'
+import { getIsoformTerm, sampleLevelGroups } from '../volcano/handlers/isoformExpression'
 import { drawStarburst, drawPathways, type Cutoffs, type StarburstData } from './view'
 
 /* Methylation change against expression change per gene, core promoter and gene body side by side, for the two
@@ -19,6 +20,8 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 	static type = 'methylationStarburst'
 	type = MethylationStarburst.type
 	tip = new Menu({ padding: '5px' })
+	/** the gene search's own menu, made once rather than on every render */
+	searchTip = new Menu({ padding: '0px' })
 	data?: StarburstData
 	dataKey?: string
 	pathwaySvg?: any
@@ -147,6 +150,13 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 		}
 		num('|Δβ| >', 'minDeltaBeta', 0.01)
 		num('DE q <', 'maxQ', 0.01)
+		const l = div.append('label').style('margin-right', '15px')
+		l.append('input')
+			.attr('type', 'checkbox')
+			.attr('data-testid', 'sjpp-methylationStarburst-corrected')
+			.property('checked', !!config.corrected)
+			.on('change', (event: any) => edit({ corrected: event.target.checked }))
+		l.append('span').text(' Δβ beyond matched background')
 		// one point per transcript, where the dataset has transcript counts
 		const isoformCounts = !!this.app.vocabApi.termdbConfig?.queries?.isoformExpressionCount
 		if (isoformCounts) {
@@ -190,7 +200,7 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 		const msg = row.append('span').style('margin-left', '6px').style('color', '#b00')
 		const inPlot = new Set(this.data?.genes || [])
 		const search = addGeneSearchbox({
-			tip: new Menu({ padding: '0px' }),
+			tip: this.searchTip,
 			genome: this.app.opts.genome,
 			row: searchRow,
 			searchOnly: 'gene',
@@ -209,22 +219,20 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 			}
 		})
 		/* By isoform, a transcript id pins that one transcript. The gene search knows genes only and would answer "not
-		found", so an id is taken on the way down to its input (capture on the row), before the search's own keyup. */
-		const isoforms = new Set(this.data?.isoforms || [])
-		if (isoforms.size)
+		found", so an id of the plot is taken on the way down to its input (capture on the row), before the search's own
+		keyup; any other text goes on to the search. Matched without version and case, pinned as the plot names it. */
+		const isoformOf = new Map((this.data?.isoforms || []).map(id => [stripAccessionVersion(id).toUpperCase(), id]))
+		if (isoformOf.size)
 			row.node().addEventListener(
 				'keyup',
 				(event: KeyboardEvent) => {
-					if (event.key != 'Enter') return
-					const v = String((event.target as HTMLInputElement).value || '')
-						.trim()
-						.toUpperCase()
-						.replace(/\.\d+$/, '')
-					if (!/^ENST\d+$/.test(v)) return
+					if (event.key != 'Enter' || event.isComposing) return
+					const typed = String((event.target as HTMLInputElement).value || '').trim()
+					const id = isoformOf.get(stripAccessionVersion(typed).toUpperCase())
+					if (!id) return
 					event.stopPropagation()
-					if (!isoforms.has(v)) return void msg.text(`${v} is not in this plot`)
 					msg.text('')
-					if (!pinned.includes(v)) edit([...pinned, v])
+					if (!pinned.includes(id)) edit([...pinned, id])
 				},
 				true
 			)
@@ -284,6 +292,7 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 	destroy() {
 		this.destroyInteractions?.()
 		this.tip.destroy()
+		this.searchTip.destroy()
 	}
 
 	getChartImages() {
@@ -293,15 +302,6 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 		if (this.pathwaySvg && !this.pathwaySvg.empty()) out.push({ name: 'Gene sets', svg: this.pathwaySvg })
 		return out
 	}
-}
-
-/* The groups for a plot of a sample-level value, such as isoform expression. A group defined by a filter (the Groups
-tab) resolves to what its filter selects, which on a dataset with sample ancestry is the patients, whose samples carry the
-expression: such a group then plotted no value ("no visible violin plot data"). The analyses map patients to their
-samples on the server; a summary plot does that only for a group that asks for it, so each filter group asks. */
-export function sampleLevelGroups(groups: any[], termdbConfig: any) {
-	if (!termdbConfig?.hasSampleAncestry) return groups
-	return groups.map(g => (g.filter && !Array.isArray(g.values) ? { ...g, mapParent2Children: true } : g))
 }
 
 export const componentInit = getCompInit(MethylationStarburst)

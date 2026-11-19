@@ -132,3 +132,11 @@ export class CustomError extends Error {
 		if (opts.level) this.level = opts.level
 	}
 }
+
+/* ENSG00000141510.16 -> ENSG00000141510, NM_000546.6 -> NM_000546. Gene db rows carry no
+version, while a client or a counts file may. Only applied to something shaped like an accession,
+so that a gene symbol ending in a number (MIR1-1, and any future symbol with a dot) is left
+alone. */
+export function stripAccessionVersion(value: string): string {
+	return /^[A-Za-z]{2,6}_?\d+\.\d+$/.test(value) ? value.replace(/\.\d+$/, '') : value
+}

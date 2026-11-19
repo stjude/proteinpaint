@@ -39,7 +39,10 @@ export const isoformExpressionHandler: VolcanoHandler = {
 			chartType: 'summary',
 			childType,
 			term: { q: { mode: 'continuous' }, term: getIsoformTerm(d, ctx.termdbConfig) },
-			term2: { q: { groups: ctx.config.tw.q.groups, type: 'custom-samplelst' }, term: ctx.config.tw.term }
+			term2: {
+				q: { groups: sampleLevelGroups(ctx.config.tw.q.groups, ctx.termdbConfig), type: 'custom-samplelst' },
+				term: ctx.config.tw.term
+			}
 		})
 		return [
 			{ label: 'Violin plot', onClick: async () => ctx.interactions.launchPlot(summary('violin')) },
@@ -71,4 +74,13 @@ export function getIsoformTerm(d: any, termdbConfig: RowActionContext['termdbCon
 		name: `${d.gene_name} ${unit}`,
 		unit
 	}
+}
+
+/* The groups for a plot of a sample-level value, such as isoform expression. A group defined by a filter (the Groups
+tab) resolves to what its filter selects, which on a dataset with sample ancestry is the patients, whose samples carry the
+expression: such a group then plotted no value ("no visible violin plot data"). The analyses map patients to their
+samples on the server; a summary plot does that only for a group that asks for it, so each filter group asks. */
+export function sampleLevelGroups(groups: any[], termdbConfig: any) {
+	if (!termdbConfig?.hasSampleAncestry) return groups
+	return groups.map(g => (g.filter && !Array.isArray(g.values) ? { ...g, mapParent2Children: true } : g))
 }

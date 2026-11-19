@@ -13,10 +13,11 @@ import { scanChromosomes } from '../../routes/termdb.diffMeth.ts'
 import { matchedSamplelst, eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { resolveGroups, samplesOfRequest } from '#src/utils/sampleGroups.ts'
 import { mayLog } from '#src/helpers.ts'
-import { formatElapsedTime } from '#shared'
+import { formatElapsedTime, stripAccessionVersion } from '#shared'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 import { ISOFORM_EXPRESSION } from '#types'
+import { getH5samples } from '#src/utils/h5samples.ts'
 
 /* Methylation change against expression change, one point per gene, for the two groups of a volcano: the
 starburst plot (Noushmehr 2010, PMID 20399149). Two regions per gene, the core promoter and the body, because
@@ -115,10 +116,13 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 		} as any,
 		genomes
 	)
-	// with byIsoform, the transcripts the DE run tested, without the version suffix the gene table leaves out
 	const rows: any[] = (result as any)?.geneRows || []
-	const idOf = (r: any) => (byIsoform ? String(r.gene_name).replace(/\.\d+$/, '') : r.gene_name)
-	const isoforms = byIsoform ? rows.map(idOf) : undefined
+	// the methylation side is keyed by unversioned id, as the gene table has it
+	const idOf = (r: any) => (byIsoform ? stripAccessionVersion(String(r.gene_name)) : r.gene_name)
+	/* By isoform, every transcript of the counts file is measured, not just those this DE run tested: which those are
+	follows the DE method and count cutoffs, and keying the two genome-wide methylation runs on that would recompute
+	them on every DE setting change for the same groups. */
+	const isoforms = byIsoform ? await countsFileTranscripts(ds.queries.isoformExpressionCount) : undefined
 	const deltas = (region?: 'promoter') =>
 		getGeneBodyDeltas({ ...groupArgs, corrected: !!q.corrected, region, isoforms }, genomes)
 	// one after the other: each is a genome-wide rust run admitted against server memory
@@ -141,7 +145,8 @@ async function getStarburst(q: MethylationStarburstRequest, genomes: any): Promi
 		if ((p == null && b == null) || !Number.isFinite(r.fold_change)) continue
 		// a transcript the gene annotation does not name keeps its id as its gene
 		out.genes.push(byIsoform ? r.gene || idOf(r) : r.gene_name)
-		out.isoforms?.push(idOf(r))
+		// as the DE run reports it, with any version suffix: the isoform expression term of the volcano's rows uses the same
+		out.isoforms?.push(r.gene_name)
 		out.log2fc.push(r.fold_change)
 		out.q.push(r.adjusted_p_value ?? r.original_p_value ?? 1)
 		out.promoter.push(p)
@@ -219,4 +224,18 @@ function getPathways(
 			.filter(s => s.layers.some(l => l.log10q < sig))
 			.map(s => ({ ...s, layers: s.layers as StarburstPathways['sets'][0]['layers'], genes: s.genes.slice(0, 30) }))
 	}
+}
+
+/** the transcript ids of an isoform counts h5 (its 'item' dataset, the rows the DE engines read), unversioned; read once
+ * per counts query */
+const transcriptsOf = new WeakMap<object, Promise<string[]>>()
+function countsFileTranscripts(c: { file: string }): Promise<string[]> {
+	let p = transcriptsOf.get(c)
+	if (!p) {
+		p = getH5samples(c.file, 'item').then(ids => ids.map(stripAccessionVersion))
+		// a failed read is not kept: the next request tries again
+		p.catch(() => transcriptsOf.delete(c))
+		transcriptsOf.set(c, p)
+	}
+	return p
 }

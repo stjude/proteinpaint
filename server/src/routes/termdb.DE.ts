@@ -4,7 +4,7 @@ import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { formatElapsedTime, maxDESampleCutoff, sampleLimitAlert } from '#shared'
+import { formatElapsedTime, maxDESampleCutoff, sampleLimitAlert, stripAccessionVersion } from '#shared'
 import { renderVolcano } from '#src/renderVolcano.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
@@ -264,7 +264,8 @@ type ResolvedDE = {
 export function isIsoformDE(req: DERequest): boolean {
 	if (req.termType == undefined || req.termType == 'geneExpression') return false
 	if (req.termType == ISOFORM_EXPRESSION) return true
-	throw new Error('invalid termType')
+	// a client error: 400, not a server fault
+	throw Object.assign(new Error('invalid termType'), { status: 400 })
 }
 
 /** Names the gene of each row of an isoform run as row.gene, from the genome's gene annotation. The row keeps its
@@ -274,7 +275,7 @@ export function addIsoformGenes(rows: GeneDEEntry[], genome: any) {
 	const lookup = genome?.genedb?.getnamebyisoform
 	if (!lookup) return
 	for (const row of rows) {
-		const gene = lookup.get(row.gene_name)?.name || lookup.get(row.gene_name.replace(/\.\d+$/, ''))?.name
+		const gene = lookup.get(row.gene_name)?.name || lookup.get(stripAccessionVersion(row.gene_name))?.name
 		if (gene) row.gene = gene
 	}
 }

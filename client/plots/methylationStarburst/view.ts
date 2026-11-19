@@ -114,6 +114,9 @@ export function drawStarburst(
 		.range([0, W])
 		.clamp(true)
 		.nice()
+	// by isoform, each gene's number of transcripts in the plot, for the tooltip
+	const transcriptsOf = new Map<string, number>()
+	if (data.isoforms) for (const gn of data.genes) transcriptsOf.set(gn, (transcriptsOf.get(gn) || 0) + 1)
 	const yl = limit(data.log2fc)
 	const y = scaleLinear().domain([-yl, yl]).range([H, 0]).clamp(true).nice()
 	const svg = holder
@@ -293,7 +296,7 @@ export function drawStarburst(
 			table.addRow('Gene', data.genes[i])
 			if (data.isoforms) {
 				table.addRow('Isoform', data.isoforms[i])
-				const n = data.genes.reduce((c, gn) => c + (gn == data.genes[i] ? 1 : 0), 0)
+				const n = transcriptsOf.get(data.genes[i]) || 1
 				if (n > 1) table.addRow('Transcripts of the gene', String(n))
 			}
 			table.addRow(`Δβ, ${region}`, fmt(data[region][i]))
