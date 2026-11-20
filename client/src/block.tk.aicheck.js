@@ -84,7 +84,7 @@ function makeTk(tk, block) {
 		.text('G coverage')
 
 	tk.config_handle = block.maketkconfighandle(tk).on('click', event => {
-		tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+		block.showtkconfigtip(tk)
 		configPanel(tk, block)
 	})
 }

@@ -251,7 +251,7 @@ function _load(tk, block) {
 }
 
 function configPanel(tk, block) {
-	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+	block.showtkconfigtip(tk)
 	const holder = tk.tkconfigtip.d
 
 	// read count cutoff, not for custom data junctions, as the server applies it

@@ -11,6 +11,7 @@ import {
 } from '#dom'
 import { TabsRenderer } from './TabsRenderer.ts'
 import { GeneSearchRenderer } from './GeneSearchRenderer.ts'
+import { renderSampleTracksButton } from './facetTrackMenu.ts'
 
 export class View {
 	state: any
@@ -152,7 +153,10 @@ export class View {
 			for (const n of this.state.config.trackLst.activeTracks) {
 				for (const f of this.facetData) {
 					for (const t of f.tracks || []) {
-						if (t.name == n) tklst.push(t)
+						if (t.name != n) continue
+						// its CONFIG panel lists the other tracks of its sample in this facet table
+						const configPanelExtra = holder => renderSampleTracksButton(holder, f.name, t, this.interactions)
+						tklst.push({ ...t, configPanelExtra })
 					}
 				}
 			}

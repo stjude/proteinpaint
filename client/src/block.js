@@ -3610,6 +3610,17 @@ seekrange(chr,start,stop) {
 			.attr('class', 'sja_clbtext2')
 	}
 
+	/* clears tk.tkconfigtip and shows it under the CONFIG handle. The handle is at the right edge of the block, often of
+	the window, so the panel shifts left as needed to fit in the window, for an assumed width: it is still empty when
+	shown, so Menu.show() cannot measure it. width: of a panel wider than most */
+	showtkconfigtip(tk, width = 300) {
+		const margin = 20 // room for a scrollbar
+		const handle = tk.config_handle.node()
+		const left = handle.getBoundingClientRect().left
+		const offsetX = Math.max(-left, Math.min(0, window.innerWidth - margin - width - left))
+		return tk.tkconfigtip.clear().showunder(handle, { offsetX })
+	}
+
 	maketklefthandle(tk, y) {
 		return tk.gleft
 			.append('text')
