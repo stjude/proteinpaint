@@ -1,19 +1,34 @@
 import type { RoutePayload, RouteApi } from '#types'
 import * as common from '#shared/common.js'
-import type { DatasetRequest, DatasetResponse } from '#types'
+import type { LegacyDsRequest, LegacyDsResponse } from '#types'
+import { genomes } from '#src/initGenomesDs.js'
+
+/*
+returns a client-side copy of a legacy dataset, which is either a legacy mds or an older non-mds dataset;
+a mds3 dataset is not served here, its client reads termdb/config instead
+*/
 
 export const payload: RoutePayload = {
-	init,
-	request: { typeId: 'DatasetRequest' /*, checkers: TODO write validator */ },
-	response: { typeId: 'DatasetResponse' }
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one legacy ds is loaded
+	get init() {
+		return hasLegacyDs(genomes) ? init : null
+	},
+	request: { typeId: 'LegacyDsRequest' /*, checkers: TODO write validator */ },
+	response: { typeId: 'LegacyDsResponse' }
 }
 
 export const api: RouteApi = {
-	endpoint: 'getDataset', // should rename to simply 'dataset', method is based on HTTP method
+	endpoint: 'legacyDs',
 	methods: {
 		get: payload,
 		post: payload
 	}
+}
+
+// returns true when any loaded ds from any genome is not mds3
+export function hasLegacyDs(genomes) {
+	return Object.values(genomes).some((g: any) => Object.values(g.datasets || {}).some((ds: any) => !ds.isMds3))
 }
 
 export function init({ genomes }) {
@@ -25,7 +40,7 @@ export function init({ genomes }) {
 		allow case-insensitive match with dsname
 		*/
 		try {
-			const q: DatasetRequest = req.query
+			const q: LegacyDsRequest = req.query
 			const genome = genomes[q.genome]
 			if (!genome) throw 'unknown genome'
 			if (!genome.datasets) throw 'genomeobj.datasets{} missing'
@@ -41,7 +56,7 @@ export function init({ genomes }) {
 			if (ds.isMds3) throw 'not a legacy dataset'
 			const copy = ds.isMds ? mds_clientcopy(ds) : copy_legacyDataset(ds)
 
-			return res.send({ ds: copy } satisfies DatasetResponse)
+			return res.send({ ds: copy } satisfies LegacyDsResponse)
 		} catch (e: any) {
 			res.send({ error: e.message || e })
 		}

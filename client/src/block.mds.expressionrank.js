@@ -254,11 +254,7 @@ function renderTk(tk, block) {
 	client.axisstyle({
 		axis: tk.rankaxis.g.call(
 			axisLeft()
-				.scale(
-					scaleLinear()
-						.domain([minv, maxv])
-						.range([tk.barheight, 0])
-				)
+				.scale(scaleLinear().domain([minv, maxv]).range([tk.barheight, 0]))
 				.tickValues([minv, maxv])
 		),
 		showline: true
@@ -317,7 +313,7 @@ async function makeTk(tk, block) {
 		if (!tk.mds) throw 'dataset not found: invalid value for dslabel'
 
 		if (tk.mds.mdsIsUninitiated) {
-			const d = await client.dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.dslabel}`)
+			const d = await client.dofetch3(`legacyDs?genome=${block.genome.name}&dsname=${tk.dslabel}`)
 			if (d.error) throw d.error
 			if (!d.ds) throw 'ds missing'
 			Object.assign(tk.mds, d.ds)
@@ -383,10 +379,7 @@ function configPanel(tk, block) {
 
 	{
 		// rank/value toggle and ranking group printout are shown together
-		const table = tk.tkconfigtip.d
-			.append('table')
-			.style('margin-bottom', '15px')
-			.style('border-spacing', '5px')
+		const table = tk.tkconfigtip.d.append('table').style('margin-bottom', '15px').style('border-spacing', '5px')
 
 		const radioname = Math.random()
 		let rrank, rvalue
