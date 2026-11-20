@@ -1,4 +1,5 @@
 import fs from 'fs'
+import path from 'path'
 import { canRunRust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 
@@ -6,9 +7,9 @@ import serverconfig from '#src/serverconfig.js'
 // since an image may replace that package with one that only rejects its calls
 const canSpawn = process.permission ? process.permission.has('child') : true
 
-/** true when the python binpath is not set, so that the default python is used, or when the binpath exists */
+/** checks explicit paths; the default interpreter and bare command names are resolved when spawned */
 export function hasPythonBin(binpath: string | undefined = serverconfig.python): boolean {
-	return !binpath || fs.existsSync(binpath)
+	return !binpath || !binpath.includes(path.sep) || fs.existsSync(binpath)
 }
 
 /* the geneset db analyses, by the name in termdbConfig.unavailable[], and whether this server can run each one.
