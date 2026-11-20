@@ -46,7 +46,12 @@ function setRenderers(self) {
 				active: self.config.childType === 'gsea',
 				id: 'gsea',
 				label: 'Gene Set Enrichment Analysis',
-				isVisible: () => self.config.termType !== PROTEOME_DAP && self.config.termType !== JUNCTION,
+				// hidden for a data type whose rows are not genes, or when the server cannot run any GSEA method
+				isVisible: () => {
+					const unavailable = self.app.vocabApi?.termdbConfig?.unavailable || []
+					if (['blitzgsea', 'cerno'].every(m => unavailable.includes(m))) return false
+					return self.config.termType !== PROTEOME_DAP && self.config.termType !== JUNCTION
+				},
 				// isVisible: () => self.config.termType === TermTypes.GENE_EXPRESSION,
 				getPlotConfig: () => {
 					return {

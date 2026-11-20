@@ -5,6 +5,7 @@ import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
 import { filterTerms } from '#src/termdb.server.init.ts'
 import { typeGroup } from '#shared/terms.js'
+import { getUnavailableAnalysesOnce } from '#src/utils/unavailableAnalyses.ts'
 import {
 	SINGLECELL_CELLTYPE,
 	GENE_EXPRESSION,
@@ -93,6 +94,8 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		renamedChartTypes: ds.cohort.renamedChartTypes,
 		allowedTermTypes: getDsAllowedTermTypes(ds),
 		massSessionDuration: serverconfig.features.massSessionDuration || 30,
+		// the geneset db analyses that this server build cannot run, which a client hides
+		unavailable: getUnavailableAnalysesOnce(),
 		dataDownloadCatch: tdb.dataDownloadCatch,
 		matrix: tdb.matrix,
 		hierCluster: tdb.hierCluster,
