@@ -174,7 +174,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		try {
 			const model = new Model(state, this.app)
 			const [data, facetData] = await Promise.all([model.preComputeData(), this.getFacetData(state)])
-			this.interactions.setFacetTrackNames(getFacetTrackNames(facetData))
+			this.interactions.setFacetData(facetData)
 			const view = new View(state, this.blockInstance, data, this.dom, opts, this.interactions, facetData)
 			await view.main()
 			this.blockInstance = view.blockInstance
@@ -228,16 +228,6 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		}
 		return opts
 	}
-}
-
-function getFacetTrackNames(facets) {
-	const names = new Set<string>()
-	for (const facet of facets || []) {
-		for (const track of facet.tracks || []) {
-			if (track.name) names.add(track.name)
-		}
-	}
-	return names
 }
 
 export const genomeBrowserInit = getCompInit(TdbGenomeBrowser)

@@ -354,7 +354,7 @@ async function makeTk(tk, block) {
 }
 
 function configPanel(tk, block) {
-	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+	block.showtkconfigtip(tk)
 
 	{
 		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '15px')

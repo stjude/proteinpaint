@@ -3014,7 +3014,7 @@ function multi_changemode(tk, block) {
 }
 
 function configPanel(tk, block) {
-	tk.tkconfigtip.clear()
+	block.showtkconfigtip(tk)
 
 	may_show_samplematrix_button(tk, block)
 
@@ -3029,8 +3029,6 @@ function configPanel(tk, block) {
 	may_allow_togglewaterfall_single(tk, block)
 
 	configPanel_cnvloh(tk, block)
-
-	tk.tkconfigtip.showunder(tk.config_handle.node())
 }
 
 function makeoption_sampleset(tk, block) {

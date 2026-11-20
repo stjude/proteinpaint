@@ -1019,7 +1019,7 @@ function movetrack(t, tk, y0) {
 }
 
 function configPanel(tk, block) {
-	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+	block.showtkconfigtip(tk)
 
 	const d = tk.tkconfigtip.d
 

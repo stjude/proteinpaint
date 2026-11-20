@@ -136,7 +136,7 @@ function init(tk: any, block: any) {
 }
 
 function configMenu(tk: any, block: any) {
-	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+	block.showtkconfigtip(tk)
 	const div = tk.tkconfigtip.d.append('div').style('padding', '10px')
 	const row1 = div.append('div').style('margin-bottom', '10px')
 	row1.append('span').text('Gene for expression ')

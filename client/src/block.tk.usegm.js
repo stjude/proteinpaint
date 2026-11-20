@@ -62,7 +62,7 @@ export function gmtkmaketk(tk, block) {
 
 function configpanel(tk, block) {
 	// config panel for gm track
-	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+	block.showtkconfigtip(tk)
 	const holder = tk.tkconfigtip.d
 
 	const table = holder.append('table')

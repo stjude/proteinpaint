@@ -2,6 +2,7 @@ import { Tabs, make_one_checkbox, renderTable } from '#dom'
 import { filterInit } from '#filter'
 import { mayUpdateGroupTestMethodsIdx } from '../interactions/Interactions.ts'
 import { appInit } from '#termdb/app'
+import { renderFacetTrackToggles } from './facetTrackMenu.ts'
 
 export class TabsRenderer {
 	state: any
@@ -308,43 +309,7 @@ export class TabsRenderer {
 
 	clickFacetCell(event, tklst) {
 		this.dom.tip.clear().showunder(event.target)
-		const activeTracks = this.getLatestActiveTracks() || this.state.config.trackLst.activeTracks
-		const table = this.dom.tip.d.append('table').style('margin', '5px 5px 5px 2px')
-		for (const tk of tklst) {
-			const tr = table.append('tr')
-			const td1 = tr
-				.append('td')
-				.style('font-size', '.8em')
-				.text(activeTracks.includes(tk.name) ? 'SHOWN' : '')
-			tr.append('td')
-				.attr('class', 'sja_menuoption')
-				.text(tk.name)
-				.on('click', () => {
-					const currentActiveTracks = this.getLatestActiveTracks() || activeTracks
-					let newActiveTracks, newRemoveTracks
-					if (currentActiveTracks.includes(tk.name)) {
-						td1.text('')
-						newActiveTracks = structuredClone(currentActiveTracks).filter(n => n != tk.name)
-						newRemoveTracks = [tk.name]
-					} else {
-						td1.text('SHOWN')
-						newActiveTracks = [...new Set([...currentActiveTracks, tk.name])]
-						newRemoveTracks = []
-					}
-					const config = {
-						trackLst: {
-							activeTracks: newActiveTracks,
-							removeTracks: newRemoveTracks
-						}
-					}
-					this.interactions.launchFacet(config)
-				})
-		}
-	}
-
-	getLatestActiveTracks() {
-		const config = this.interactions.app.getState().plots.find(p => p.id === this.interactions.id)
-		return config?.trackLst?.activeTracks
+		renderFacetTrackToggles(this.dom.tip.d, tklst, this.interactions)
 	}
 
 	async mayRenderGroups() {
