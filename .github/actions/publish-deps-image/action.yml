@@ -19,7 +19,7 @@ runs:
         password: ${{ inputs.TOKEN }}
 
     # the docker-container driver supports the registry build cache that deps/build.sh uses with PPDEPS_CACHE_REF
-    - uses: docker/setup-buildx-action@v3
+    - uses: docker/setup-buildx-action@v4
 
     - uses: actions/setup-node@v6
       with:
