@@ -2,10 +2,15 @@ import type { RouteApi, RoutePayload, TermdbFacetRequest, TermdbFacetResponse } 
 import { getData } from '#src/termdb.matrix.js'
 import { getTermSampleTypeIds, mapParent2ChildrenWithSampleTypes } from '#src/utils/sampleTypes.ts'
 import { mayLimitSamples } from '#src/mds3.filter.js'
+import { genomes } from '#src/initGenomesDs.js'
 import type { ReqQueryAddons } from './types.js'
 
 export const payload: RoutePayload = {
-	init,
+	// a getter so that the loaded genomes are checked when augen sets up the route, not when this module
+	// is evaluated; the route is only set up when at least one ds has ds.queries.trackLst.facets[]
+	get init() {
+		return hasFacetDs(genomes) ? init : null
+	},
 	request: { typeId: 'TermdbFacetRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'TermdbFacetResponse' }
 }
@@ -16,6 +21,12 @@ export const api: RouteApi = {
 		get: payload,
 		post: payload
 	}
+}
+
+export function hasFacetDs(genomes) {
+	return Object.values(genomes).some((g: any) =>
+		Object.values(g.datasets || {}).some((ds: any) => ds.queries?.trackLst?.facets?.length)
+	)
 }
 
 function init({ genomes }) {
