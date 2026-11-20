@@ -20,7 +20,7 @@ import {
 	TERM_COLLECTION,
 	SINGLECELL_NUMERIC_VALUE
 } from '#types'
-import type { Mds3WithCohort } from '#types'
+import type { Mds3, Mds3WithCohort } from '#types'
 
 const payload: RoutePayload = {
 	init,
@@ -41,6 +41,10 @@ export function init({ genomes }) {
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
+
+			const mds3 = genome.datasets?.[q.dslabel]
+			// a mds3 dataset may have only genomic data and no dictionary, e.g. clinvar; its track still reads this config
+			if (mds3?.isMds3 && !mds3.cohort?.termdb) return makeWithoutTermdb(q, req, res, mds3, genome)
 
 			const [ds] = get_ds_tdb(genome, q)
 			return make(q, req, res, ds, genome)
@@ -166,6 +170,8 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.sunburst) c.sunburst = tdb.sunburst
 	if (tdb.sampleTypeTerms) c.sampleTypeTerms = tdb.sampleTypeTerms
 	if (tdb.sampleTypesByTerms) c.sampleTypesByTerms = tdb.sampleTypesByTerms
+	if (tdb.allowCaseDetails) c.allowCaseDetails = { sample_id_key: tdb.allowCaseDetails.sample_id_key }
+	addMds3TrackSettings(c, ds)
 	addRestrictAncestries(c, tdb)
 	addMatrixplots(c, ds)
 	addNonDictionaryQueries(c, ds, genome)
@@ -191,6 +197,40 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	tdb.pruneTermdbConfig?.(c, q, ds)
 
 	res.send({ termdbConfig: c })
+}
+
+/*
+the config of a mds3 dataset that has no termdb, to be read by its mds3 track.
+it has no dictionary attributes, and noTermdb tells the client not to query the dictionary
+*/
+function makeWithoutTermdb(q, req, res, ds: Mds3, genome) {
+	const c: any = {
+		noTermdb: true,
+		title: { text: ds.label }
+	}
+	addMds3TrackSettings(c, ds)
+	addNonDictionaryQueries(c, ds, genome)
+	c.requiredAuth = authApi.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
+	const info: any = authApi.getNonsensitiveInfo(req)
+	c.clientAuthResult = info?.clientAuthResult || {}
+	res.send({ termdbConfig: c })
+}
+
+/* dataset-level settings of the mds3 track */
+function addMds3TrackSettings(c, ds: Mds3) {
+	if (ds.viewModes) c.viewModes = ds.viewModes
+	if (ds.noGenomicMode4lollipopTk) c.noGenomicMode4lollipopTk = true
+	if (ds.variant2samples) {
+		const v = ds.variant2samples
+		c.variant2samples = {
+			sunburst_twLst: v.sunburst_twLst,
+			twLst: v.twLst,
+			type_samples: v.type_samples,
+			type_summary: v.type_summary,
+			type_sunburst: v.type_sunburst,
+			variantkey: v.variantkey
+		}
+	}
 }
 
 function addRestrictAncestries(c, tdb) {
@@ -247,7 +287,7 @@ function getSampleTypesPayload(q: { sampleTypes?: number[]; sampleTypesByTerms?:
 	return { sampleTypes: q.sampleTypes, ...(q.sampleTypesByTerms && { sampleTypesByTerms: q.sampleTypesByTerms }) }
 }
 
-export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
+export function addNonDictionaryQueries(c, ds: Mds3, genome): void {
 	const q = ds.queries
 	if (!q) return
 	// this ds supports genomic query methods
@@ -265,8 +305,17 @@ export function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			// e.g. computing methods, info fields, populations.
 			details: q.snvindel.details,
 			populations: q.snvindel.populations,
-			mafFilter: q.snvindel.mafFilter
+			mafFilter: q.snvindel.mafFilter,
+			// for the mds3 track
+			forTrack: q.snvindel.forTrack,
+			vcfid4skewerName: q.snvindel.vcfid4skewerName,
+			skewerRim: q.snvindel.skewerRim,
+			ssmUrl: q.snvindel.ssmUrl,
+			// vcf INFO and FORMAT fields, for the track legend and tables
+			info: q.snvindel.info,
+			format: q.snvindel.format
 		}
+		if (q.snvindel.m2csq) q2.snvindel.m2csq = { by: q.snvindel.m2csq.by }
 		if (q.snvindel.byisoform?.processTwsInOneQuery) q2.snvindel.byisoform = { processTwsInOneQuery: true } // quick fix; may revise later
 	}
 	if (q.svfusion) {

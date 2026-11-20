@@ -5,7 +5,7 @@ import { mayAddInfoField } from '../makeTk'
 test sections:
 
 mayAddInfoField()
-	- no info field on any variant: returns early, tk.mds.bcf not set
+	- no info field on any variant: returns early, snvindel.info not set
 	- categorical only: sets Type=String with categories and colors
 	- numeric only: sets Type=Float with no categories
 	- mixed keys: categorical and numeric fields coexist
@@ -26,10 +26,10 @@ tape('\n', test => {
 tape('mayAddInfoField() - no info field on any variant: returns early', test => {
 	const tk: any = {
 		custom_variants: [{ dt: 1 }, { dt: 1 }],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	mayAddInfoField(tk)
-	test.false(tk.mds.bcf, 'tk.mds.bcf is not set when no variant has an info field')
+	test.false(tk.mds.termdbConfig.queries.snvindel, 'snvindel config is not set when no variant has an info field')
 	test.end()
 })
 
@@ -40,11 +40,11 @@ tape('mayAddInfoField() - categorical only: sets Type=String with categories and
 			{ dt: 1, info: { consequence: 'nonsense' } },
 			{ dt: 1, info: { consequence: 'missense' } }
 		],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	mayAddInfoField(tk)
-	test.true(tk.mds.bcf, 'tk.mds.bcf is set')
-	const field = tk.mds.bcf.info['consequence']
+	test.true(tk.mds.termdbConfig.queries.snvindel?.info, 'snvindel.info is set')
+	const field = tk.mds.termdbConfig.queries.snvindel.info['consequence']
 	test.equal(field.ID, 'consequence', 'field ID is correct')
 	test.equal(field.Type, 'String', 'field Type is String')
 	test.equal(field.Number, '.', 'field Number is .')
@@ -63,11 +63,11 @@ tape('mayAddInfoField() - numeric only: sets Type=Float with no categories', tes
 			{ dt: 1, info: { score: 0.9 } },
 			{ dt: 1, info: { score: 0.1 } }
 		],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	mayAddInfoField(tk)
-	test.true(tk.mds.bcf, 'tk.mds.bcf is set')
-	const field = tk.mds.bcf.info['score']
+	test.true(tk.mds.termdbConfig.queries.snvindel?.info, 'snvindel.info is set')
+	const field = tk.mds.termdbConfig.queries.snvindel.info['score']
 	test.equal(field.ID, 'score', 'field ID is correct')
 	test.equal(field.Type, 'Float', 'field Type is Float')
 	test.equal(field.Number, '.', 'field Number is .')
@@ -81,10 +81,10 @@ tape('mayAddInfoField() - mixed keys: categorical and numeric fields coexist', t
 			{ dt: 1, info: { consequence: 'missense', af: 0.05 } },
 			{ dt: 1, info: { consequence: 'nonsense', af: 0.12 } }
 		],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	mayAddInfoField(tk)
-	const info = tk.mds.bcf.info
+	const info = tk.mds.termdbConfig.queries.snvindel.info
 	test.equal(info['consequence'].Type, 'String', 'consequence field is String (categorical)')
 	test.equal(info['af'].Type, 'Float', 'af field is Float (numeric)')
 	test.true(info['consequence'].categories, 'consequence has categories')
@@ -99,7 +99,7 @@ tape('mayAddInfoField() - categorical then numeric on same key: throws', test =>
 			{ dt: 1, info: { mixed: 'pathogenic' } },
 			{ dt: 1, info: { mixed: 0.99 } }
 		],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	test.throws(
 		() => mayAddInfoField(tk),
@@ -116,7 +116,7 @@ tape('mayAddInfoField() - numeric then categorical on same key: throws', test =>
 			{ dt: 1, info: { mixed: 1.5 } },
 			{ dt: 1, info: { mixed: 'low' } }
 		],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	test.throws(
 		() => mayAddInfoField(tk),
@@ -129,7 +129,7 @@ tape('mayAddInfoField() - numeric then categorical on same key: throws', test =>
 tape('mayAddInfoField() - non-string non-number value (e.g. object): throws', test => {
 	const tk: any = {
 		custom_variants: [{ dt: 1, info: { flag: { nested: true } } }],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	test.throws(
 		() => mayAddInfoField(tk),
@@ -142,7 +142,7 @@ tape('mayAddInfoField() - non-string non-number value (e.g. object): throws', te
 tape('mayAddInfoField() - boolean info value: throws', test => {
 	const tk: any = {
 		custom_variants: [{ dt: 1, info: { flag: true } }],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	test.throws(
 		() => mayAddInfoField(tk),
@@ -155,11 +155,11 @@ tape('mayAddInfoField() - boolean info value: throws', test => {
 tape('mayAddInfoField() - CSQ field is skipped', test => {
 	const tk: any = {
 		custom_variants: [{ dt: 1, info: { CSQ: { nested: true }, consequence: 'missense' } }],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	mayAddInfoField(tk)
-	test.false(tk.mds.bcf.info['CSQ'], 'CSQ is not added as an info field')
-	test.true(tk.mds.bcf.info['consequence'], 'valid neighboring info field is still collected')
+	test.false(tk.mds.termdbConfig.queries.snvindel.info['CSQ'], 'CSQ is not added as an info field')
+	test.true(tk.mds.termdbConfig.queries.snvindel.info['consequence'], 'valid neighboring info field is still collected')
 	test.end()
 })
 
@@ -169,13 +169,21 @@ tape('mayAddInfoField() - null and undefined values are skipped', test => {
 			{ dt: 1, info: { nullValue: null, score: 0.9 } },
 			{ dt: 1, info: { undefinedValue: undefined, consequence: 'missense' } }
 		],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	mayAddInfoField(tk)
-	test.false(tk.mds.bcf.info['nullValue'], 'field with null value is not added')
-	test.false(tk.mds.bcf.info['undefinedValue'], 'field with undefined value is not added')
-	test.equal(tk.mds.bcf.info['score'].Type, 'Float', 'valid numeric info field is still collected')
-	test.equal(tk.mds.bcf.info['consequence'].Type, 'String', 'valid categorical info field is still collected')
+	test.false(tk.mds.termdbConfig.queries.snvindel.info['nullValue'], 'field with null value is not added')
+	test.false(tk.mds.termdbConfig.queries.snvindel.info['undefinedValue'], 'field with undefined value is not added')
+	test.equal(
+		tk.mds.termdbConfig.queries.snvindel.info['score'].Type,
+		'Float',
+		'valid numeric info field is still collected'
+	)
+	test.equal(
+		tk.mds.termdbConfig.queries.snvindel.info['consequence'].Type,
+		'String',
+		'valid categorical info field is still collected'
+	)
 	test.end()
 })
 
@@ -185,11 +193,11 @@ tape('mayAddInfoField() - variant with non-object info is skipped', test => {
 			{ dt: 1, info: 'bad-info' }, // not an object, skipped
 			{ dt: 1, info: { consequence: 'missense' } }
 		],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	mayAddInfoField(tk)
-	test.true(tk.mds.bcf, 'tk.mds.bcf is set despite malformed info on one variant')
-	test.true(tk.mds.bcf.info['consequence'], 'valid info field is still collected')
+	test.true(tk.mds.termdbConfig.queries.snvindel?.info, 'snvindel.info is set despite malformed info on one variant')
+	test.true(tk.mds.termdbConfig.queries.snvindel.info['consequence'], 'valid info field is still collected')
 	test.end()
 })
 
@@ -201,10 +209,10 @@ tape('mayAddInfoField() - multiple variants contribute to the same categorical f
 			{ dt: 1, info: { effect: 'benign' } },
 			{ dt: 1, info: { effect: 'VUS' } }
 		],
-		mds: {}
+		mds: { termdbConfig: { queries: {} } }
 	}
 	mayAddInfoField(tk)
-	const cats = tk.mds.bcf.info['effect'].categories
+	const cats = tk.mds.termdbConfig.queries.snvindel.info['effect'].categories
 	test.equal(Object.keys(cats).length, 3, 'three unique categories: benign, pathogenic, VUS')
 	test.true('benign' in cats, 'benign present')
 	test.true('pathogenic' in cats, 'pathogenic present')

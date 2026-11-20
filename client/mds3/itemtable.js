@@ -109,7 +109,7 @@ export async function itemtable_oneItem(arg) {
 	// if there are multiple samples, this <div> won't be used
 	// a new table will be created under arg.div to show sample table
 
-	if (arg.tk.mds.variant2samples) {
+	if (arg.tk.mds.termdbConfig.variant2samples) {
 		if (m.occurrence) {
 			// has valid occurrence; display samples carrying this variant
 			if (arg.svfusionSampleTable) {
@@ -185,12 +185,12 @@ async function itemtable_multiItems(arg) {
 	}
 	// info fields?
 	let infoFields = null
-	if (arg.tk.mds.bcf?.info) {
+	if (arg.tk.mds.termdbConfig.queries?.snvindel?.info) {
 		infoFields = []
-		for (const k in arg.tk.mds.bcf.info) {
-			if (arg.tk.mds.bcf.info[k].categories) {
+		for (const k in arg.tk.mds.termdbConfig.queries?.snvindel?.info) {
+			if (arg.tk.mds.termdbConfig.queries?.snvindel?.info[k].categories) {
 				infoFields.push(k)
-				columns.push({ label: arg.tk.mds.bcf.info[k].name || k })
+				columns.push({ label: arg.tk.mds.termdbConfig.queries?.snvindel?.info[k].name || k })
 			}
 		}
 		if (infoFields.length == 0) infoFields = null
@@ -221,7 +221,7 @@ async function itemtable_multiItems(arg) {
 				if (v == undefined) {
 					row.push({}) // unannotated
 				} else {
-					const o = arg.tk.mds.bcf.info[k].categories[v]
+					const o = arg.tk.mds.termdbConfig.queries?.snvindel?.info[k].categories[v]
 					if (o?.color) {
 						row.push({ html: `<span style="background:${o.color}">&nbsp;&nbsp;</span> ${o.label || v}` })
 					} else {
@@ -256,7 +256,7 @@ async function itemtable_multiItems(arg) {
 		noRadioBtn: true
 	})
 
-	if (!arg.doNotListSample4multim && arg.tk.mds.variant2samples) {
+	if (!arg.doNotListSample4multim && arg.tk.mds.termdbConfig.variant2samples) {
 		const totalOccurrence = arg.mlst.reduce((i, j) => i + (j.occurrence || 0), 0)
 		if (totalOccurrence) {
 			arg.div
@@ -305,7 +305,7 @@ async function table_snvindel({ mlst, tk, block }, table) {
 	if (m.info) {
 		/* info fields are available for this variant
 		later to add more features for info field display
-		by referencing tk.mds.bcf.info{} for instructions to display each info field
+		by referencing tk.mds.termdbConfig.queries?.snvindel?.info{} for instructions to display each info field
 		*/
 		for (const key in m.info) {
 			if (key == 'CSQ') {
@@ -323,7 +323,7 @@ async function table_snvindel({ mlst, tk, block }, table) {
 			// value can be array or one string
 
 			const infoValue = m.info[key]
-			const infoField = tk.mds?.bcf?.info?.[key] // client-side obj about this info field, could be missing for custom track!!
+			const infoField = tk.mds.termdbConfig.queries?.snvindel?.info?.[key] // client-side obj about this info field, could be missing for custom track!!
 
 			// TODO improve code
 			if (Array.isArray(infoValue)) {
@@ -443,7 +443,7 @@ export function print_snv(holder, m, tk, block) {
 	const ssmNameDom = holder.append('span').text(`${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`)
 
 	// ssm url definition can come from two places! see type def
-	const urlConfig = tk.mds.termdbConfig?.urlTemplates?.ssm || tk.mds.queries?.snvindel?.ssmUrl
+	const urlConfig = tk.mds.termdbConfig?.urlTemplates?.ssm || tk.mds.termdbConfig.queries?.snvindel?.ssmUrl
 	if (urlConfig) {
 		const separateUrls = makeSsmLink(urlConfig, m, ssmNameDom, block.genome.name)
 		if (separateUrls?.length) {
@@ -458,7 +458,7 @@ function add_csqButton(m, tk, td, table) {
 	// tk:
 	// td: the <td> to show current csq label
 	// table: 2-col
-	if (tk.mds.queries && tk.mds.queries.snvindel.m2csq && m.csqcount > 1) {
+	if (tk.mds.getM2csq && m.csqcount > 1) {
 		const a = td.append('a')
 		a.html(m.mname + ' <span style="font-size:.8em">' + mclass[m.class].label.toUpperCase() + '</span> &#9660;')
 		// click link to query for csq list
@@ -477,7 +477,7 @@ function add_csqButton(m, tk, td, table) {
 			first = false
 			const wait = td2.append('div').text('Loading...')
 			try {
-				const data = await tk.mds.queries.snvindel.m2csq.get(m)
+				const data = await tk.mds.getM2csq(m)
 				if (data.error) throw data.error
 				wait.remove()
 				const table = td2.append('table').style('margin-bottom', '10px')
@@ -858,11 +858,11 @@ async function getGm(p, block, geneName, isoform) {
 }
 
 function table_snvindel_mayInsertLD(m, tk, table) {
-	if (!tk.mds.queries?.ld) return // not available
+	if (!tk.mds.termdbConfig.queries?.ld) return // not available
 	const [td1, td2] = table.addRow()
 	td1.text('LD overlay')
 
-	const m0 = tk.mds.queries.ld.mOverlay?.m
+	const m0 = tk.ld?.mOverlay?.m
 
 	if (m0) {
 		// doing overlay now. indicate some informational info; m0 is the selected variant
@@ -870,13 +870,12 @@ function table_snvindel_mayInsertLD(m, tk, table) {
 		if (m.ssm_id == m0.ssm_id) {
 			// the clicked variant is same as m0
 			row.html(
-				tk.mds.queries.ld.mOverlay.ldtkname +
-					' r<sup>2</sup> values against this variant are displayed on all the other variants.'
+				tk.ld.mOverlay.ldtkname + ' r<sup>2</sup> values against this variant are displayed on all the other variants.'
 			)
 		} else {
 			// not the same as m0
 			let r2 = null
-			for (const v of tk.mds.queries.ld.mOverlay.data || []) {
+			for (const v of tk.ld.mOverlay.data || []) {
 				if (v.pos == m.pos && v.alleles == m.ref + '.' + m.alt) {
 					r2 = v.r2
 					break
@@ -885,7 +884,7 @@ function table_snvindel_mayInsertLD(m, tk, table) {
 			if (r2 == null) {
 				row.html('No r<sup>2</sup> value is found.')
 			} else {
-				row.html(tk.mds.queries.ld.mOverlay.ldtkname + ' r<sup>2</sup> = ' + r2)
+				row.html(tk.ld.mOverlay.ldtkname + ' r<sup>2</sup> = ' + r2)
 			}
 		}
 	}
@@ -896,7 +895,7 @@ function table_snvindel_mayInsertLD(m, tk, table) {
 		.style('font-size', '.8em')
 		.style('opacity', 0.5)
 
-	for (const o of tk.mds.queries.ld.tracks) {
+	for (const o of tk.mds.termdbConfig.queries.ld.tracks) {
 		// o = {name}
 		const btn = td2
 			.append('button')
@@ -905,7 +904,7 @@ function table_snvindel_mayInsertLD(m, tk, table) {
 
 		if (m0 && m0.ssm_id == m.ssm_id) {
 			// the same index variant everybody else's overlaying against
-			if (o.name == tk.mds.queries.ld.mOverlay.ldtkname) {
+			if (o.name == tk.ld.mOverlay.ldtkname) {
 				// the same ld tk
 				btn.property('disabled', true)
 				continue
@@ -916,7 +915,7 @@ function table_snvindel_mayInsertLD(m, tk, table) {
 		btn.on('click', () => {
 			tk.itemtip.hide()
 			// create the object to indicate overlaying is active
-			tk.mds.queries.ld.mOverlay = {
+			tk.ld.mOverlay = {
 				ldtkname: o.name,
 				m: {
 					chr: m.chr,

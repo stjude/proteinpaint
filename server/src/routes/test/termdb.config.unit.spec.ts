@@ -1,5 +1,13 @@
 import tape from 'tape'
-import { getDsAllowedTermTypes, getLoneTermByType, getUserTab, getClientMassNav } from '../termdb.config.ts'
+import {
+	getDsAllowedTermTypes,
+	getLoneTermByType,
+	getUserTab,
+	getClientMassNav,
+	addNonDictionaryQueries,
+	init
+} from '../termdb.config.ts'
+import { getAuthApi, authApi } from '../../auth.js'
 import {
 	CATEGORICAL,
 	FLOAT,
@@ -683,3 +691,84 @@ tape(
 		test.end()
 	}
 )
+
+tape('\n', function (test) {
+	test.comment('-***- #routes/termdb.config mds3 track settings -***-')
+	test.end()
+})
+
+/* a mds3 ds with genomic data and no termdb, such as clinvar */
+function getGenomeWithMds3NoTermdb() {
+	const ds: any = {
+		isMds3: true,
+		label: 'NoTermdbDs',
+		viewModes: [{ type: 'numeric', byInfo: 'AF' }],
+		noGenomicMode4lollipopTk: true,
+		queries: {
+			snvindel: {
+				forTrack: true,
+				byrange: { get: () => {} },
+				info: { CLNSIG: { ID: 'CLNSIG', Type: 'String' } },
+				m2csq: { by: 'ssm_id', get: () => {} }
+			}
+		}
+	}
+	return { name: 'hg38', defaultcoord: { chr: 'chr1' }, datasets: { NoTermdbDs: ds, LegacyDs: { label: 'LegacyDs' } } }
+}
+
+async function ensureOpenAuth() {
+	if (authApi) return
+	const app = { doNotFreezeAuthApi: true, get() {}, post() {}, all() {}, use() {} }
+	await getAuthApi(app, {}, {}, true)
+}
+
+async function callInit(genome, dslabel) {
+	await ensureOpenAuth()
+	let sent: any
+	const res: any = { send: d => (sent = d) }
+	await init({ genomes: { hg38: genome } })({ query: { genome: 'hg38', dslabel } }, res)
+	return sent
+}
+
+tape('init() - serves the mds3 track settings of a mds3 ds without termdb', async function (test) {
+	const data = await callInit(getGenomeWithMds3NoTermdb(), 'NoTermdbDs')
+	const c = data.termdbConfig
+	test.ok(c, 'Should send termdbConfig')
+	test.equal(c.noTermdb, true, 'Should flag that the ds has no termdb')
+	test.deepEqual(c.title, { text: 'NoTermdbDs' }, 'Should use the ds label as the title')
+	test.deepEqual(c.viewModes, [{ type: 'numeric', byInfo: 'AF' }], 'Should send viewModes')
+	test.equal(c.noGenomicMode4lollipopTk, true, 'Should send noGenomicMode4lollipopTk')
+	test.equal(c.queries.snvindel.forTrack, true, 'Should send snvindel.forTrack')
+	test.deepEqual(c.queries.snvindel.info, { CLNSIG: { ID: 'CLNSIG', Type: 'String' } }, 'Should send snvindel.info')
+	test.deepEqual(c.queries.snvindel.m2csq, { by: 'ssm_id' }, 'Should send m2csq.by without the getter')
+	test.equal(c.supportedChartTypes, undefined, 'Should not send dictionary attributes')
+	test.end()
+})
+
+tape('init() - still rejects a non-mds3 ds without termdb', async function (test) {
+	const data = await callInit(getGenomeWithMds3NoTermdb(), 'LegacyDs')
+	test.equal(data.error, '.cohort.termdb not found on this dataset', 'Should send the error')
+	test.end()
+})
+
+tape('addNonDictionaryQueries() - copies the snvindel settings of the mds3 track', function (test) {
+	const ds: any = {
+		queries: {
+			snvindel: {
+				vcfid4skewerName: true,
+				skewerRim: { type: 'format', formatKey: 'origin', rim1value: 'germline', noRimValue: 'somatic' },
+				ssmUrl: { base: 'https://example.org/', key: 'ssm_id' },
+				format: { origin: { ID: 'origin', Description: 'Origin' } }
+			}
+		}
+	}
+	const c: any = {}
+	addNonDictionaryQueries(c, ds, { defaultcoord: {} })
+	const q = c.queries.snvindel
+	test.equal(q.vcfid4skewerName, true, 'Should copy vcfid4skewerName')
+	test.deepEqual(q.skewerRim, ds.queries.snvindel.skewerRim, 'Should copy skewerRim')
+	test.deepEqual(q.ssmUrl, ds.queries.snvindel.ssmUrl, 'Should copy ssmUrl')
+	test.deepEqual(q.format, ds.queries.snvindel.format, 'Should copy format')
+	test.notOk('m2csq' in q, 'Should not add m2csq when the ds has none')
+	test.end()
+})

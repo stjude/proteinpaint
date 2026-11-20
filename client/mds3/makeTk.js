@@ -1,7 +1,7 @@
 import { Menu } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
-import { loadTk, rangequery_rglst } from './tk'
+import { loadTk, rangequery_rglst, getSkewerRimArg } from './tk'
 import urlmap from '#common/urlmap'
 import {
 	mclass,
@@ -33,11 +33,15 @@ and creates getter callbacks to abstract dataset details
 makeTk
 ********************** INTERNAL
 get_ds
-	validateCustomVariants
-		validateCustomSnvindel
-		validateCustomSvfusion
-	mayDeriveSkewerOccurrence4samples
-mayInitTermdb
+	getOfficialDs
+		setHasSkewer
+	getCustomDs
+		validateCustomVariants
+			validateCustomSnvindel
+			validateCustomSvfusion
+		mayDeriveSkewerOccurrence4samples
+		mayInitCustomTermdb
+	initVocabApi
 mayInitSkewer
 	setSkewerMode
 mayInitCnv
@@ -74,7 +78,7 @@ see mayHighlightDiskBySsmid()
 view modes applicable to current data are declared in tk.skewer.viewModes[]
 each element is one mode, defines how to show snv/indel data points; will also control fusion
 obj can offer flexibility on defining complex data source/method/arithmetics
-viewModes[] is a merge from tk.skewerModes (custom) and tk.mds.skewerModes (official)
+viewModes[] is a merge from tk.skewerModes (custom) and tk.mds.termdbConfig.viewModes (official)
 viewModes[] is dynamically modified in may_render_skewer, upon getting new data
 later may add cnv.viewModes[] to control mode of other data types
 
@@ -159,7 +163,7 @@ export async function makeTk(tk, block) {
 
 	tk.mnamegetter = m => {
 		// may require m.dt=1
-		if (tk.mds.queries?.snvindel?.vcfid4skewerName && m.vcf_id) return m.vcf_id
+		if (tk.mds.termdbConfig.queries?.snvindel?.vcfid4skewerName && m.vcf_id) return m.vcf_id
 		const s = m.mname
 		if (!s) return ''
 		// trim too long names
@@ -170,11 +174,8 @@ export async function makeTk(tk, block) {
 	}
 
 	await get_ds(tk, block)
-	// tk.mds{} is created for both official and custom track
+	// tk.mds{} is created for both official and custom track, and tk.mds.termdbConfig{} describes the data
 	// following procedures are only based on tk.mds
-
-	// must init termdb first to get termdbconfig, and do all the rest (inform what queries are available, has vocabApi methods etc)
-	await mayInitTermdb(tk, block)
 
 	await mayInit_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
@@ -212,21 +213,22 @@ export async function makeTk(tk, block) {
 			}
 		}
 
-		if (tk.mds.queries?.ld?.mOverlay?.data) {
-			const m0 = tk.mds.queries.ld.mOverlay.m
+		if (tk.ld?.mOverlay?.data) {
+			const overlay = tk.mds.termdbConfig.queries.ld.overlay
+			const m0 = tk.ld.mOverlay.m
 			if (m.chr == m0.chr && m.pos == m0.pos && m.ref == m0.ref && m.alt == m0.alt) {
 				// the same variant as has been clicked for overlaying
-				return tk.mds.queries.ld.overlay.color_1
+				return overlay.color_1
 			}
 			// this variant is not the "index" one, find a matching variant from returned data
-			for (const m1 of tk.mds.queries.ld.mOverlay.data) {
+			for (const m1 of tk.ld.mOverlay.data) {
 				if (m1.pos == m.pos && m1.alleles == m.ref + '.' + m.alt) {
 					// found match
-					return tk.mds.queries.ld.colorScale(m1.r2)
+					return tk.ld.colorScale(m1.r2)
 				}
 			}
 			// no match
-			return tk.mds.queries.ld.overlay.color_0
+			return overlay.color_0
 		}
 
 		if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4mclass != undefined) {
@@ -469,8 +471,9 @@ function setSkewerMode(tk) {
 	if (!tk.skewer.viewModes) tk.skewer.viewModes = []
 	const vm = tk.skewer.viewModes
 	if (!Array.isArray(vm)) throw 'skewerModes[] is not array'
-	if (tk.mds.skewerModes) {
-		for (const n of tk.mds.skewerModes) vm.push(n)
+	if (tk.mds.termdbConfig.viewModes) {
+		// copy, as the track changes its view modes
+		for (const n of tk.mds.termdbConfig.viewModes) vm.push(structuredClone(n))
 	}
 	if (!vm.find(n => n.type == 'skewer')) vm.push({ type: 'skewer' })
 	for (const n of vm) {
@@ -502,30 +505,44 @@ input:
 	block{}
 no output
 
-effect: creates tk.mds{}
+effect: creates tk.mds{}, with .termdbConfig{} that describes the data of the track
 
-
-for official dataset, query ?getDataset to obtain a fresh copy
-for custom dataset, generate an object from scratch
+for official dataset, query termdb/config
+for custom dataset, generate termdbConfig{} from the custom data
 */
 async function get_ds(tk, block) {
-	if (tk.dslabel) {
-		// this tk loads from an official dataset
-		const data = await dofetch3('getDataset', { body: { genome: block.genome.name, dsname: tk.dslabel } })
-		if (data.error) throw 'Error: ' + data.error
-		if (!data.ds) throw 'data.ds{} missing'
-		if (!data.ds.isMds3) throw 'A legacy dataset cannot be loaded as a mds3 track'
-		tk.mds = data.ds
-		tk.name = data.ds.label
-		return
+	if (tk.dslabel) return await getOfficialDs(tk, block)
+	await getCustomDs(tk, block)
+}
+
+async function getOfficialDs(tk, block) {
+	const vocabApi = await initVocabApi({ genome: block.genome.name, dslabel: tk.dslabel }, block)
+	let termdbConfig
+	try {
+		termdbConfig = await vocabApi.getTermdbConfig()
+	} catch (e) {
+		throw 'Error: ' + (e.message || e)
 	}
+	tk.mds = { label: tk.dslabel, termdbConfig }
+	tk.name = tk.dslabel
+	// a dataset may have no termdb, e.g. clinvar, and then the track has no dictionary features
+	if (!termdbConfig.noTermdb) tk.mds.termdb = { vocabApi }
+	setHasSkewer(tk)
+}
 
-	// this tk loads as a custom track
+function setHasSkewer(tk) {
+	// convenient flag for downstream to decide if to set tk.skewer{}
+	const q = tk.mds.termdbConfig.queries
+	tk.mds.has_skewer = Boolean(
+		(q?.snvindel && !tk.hiddenMclassDt.has(dtsnvindel)) ||
+			(q?.svfusion && !tk.hiddenMclassDt.has(mclasssv) && !tk.hiddenMclassDt.has(mclassfusionrna))
+	)
+}
 
+async function getCustomDs(tk, block) {
 	if (!tk.name) tk.name = 'Custom data'
-	// create the dataset object
-	tk.mds = {}
-	// fill in details to tk.mds
+	// create the dataset object; custom data sources fill in termdbConfig{} in the same shape as an official dataset
+	tk.mds = { termdbConfig: { queries: {} } }
 
 	///////////// custom data sources
 	if (tk.bcf) {
@@ -540,81 +557,43 @@ async function get_ds(tk, block) {
 		throw 'unknown data source for custom track'
 	}
 
-	mayProcessSampleAnnotation(tk)
+	await mayInitCustomTermdb(tk, block)
 }
 
-function mayProcessSampleAnnotation(tk) {
+async function mayInitCustomTermdb(tk, block) {
 	// temp function to process custom sample annotation
 	if (!tk.sampleAnnotation) return
-	// use this data to initiate tk.mds.termdb{}
 	if (!Array.isArray(tk.sampleAnnotation.terms)) throw 'sampleAnnotation.terms is not array'
-	if (!tk.mds.termdb) tk.mds.termdb = {}
-	tk.mds.termdb.terms = tk.sampleAnnotation.terms
-	tk.mds.termdb.annotations = tk.sampleAnnotation.annotations
+	const vocabApi = await initVocabApi(
+		{ terms: tk.sampleAnnotation.terms, sampleannotation: tk.sampleAnnotation.annotations },
+		block
+	)
+	tk.mds.termdb = { vocabApi }
+	Object.assign(tk.mds.termdbConfig, await vocabApi.getTermdbConfig())
 }
 
-async function mayInitTermdb(tk, block) {
-	const tdb = tk.mds.termdb
-	if (!tdb) return
-
-	{
-		const arg = {}
-		if (tk.mds.label) {
-			// official dataset
-			arg.vocab = {
-				genome: block.genome.name,
-				dslabel: tk.mds.label
-			}
-		} else if (tdb.terms) {
-			// custom dataset
-			arg.vocab = {
-				terms: tdb.terms,
-				sampleannotation: tdb.annotations
-			}
-		} else {
-			throw 'do not know how to init vocab'
-		}
-		const _ = await import('#termdb/vocabulary')
-		tdb.vocabApi = _.vocabInit(arg)
-
-		if (!tdb.vocabApi.app) {
-			/**** Note!
-			when tk is doing sample filtering (e.g. a subtk), vocabApi will be passed to filter UI code
-			and filter UI will call termdb app with term type selector, which requires genome obj to be accessible
-			via vocabApi.app.opts.genome for gene search to function
-			here .app is missing, and since vocabApi is not frozen, this quick fix supplies it in entirely adhoc manner
-			*/
-			tdb.vocabApi.app = { opts: { genome: block.genome } }
-		}
+async function initVocabApi(vocab, block) {
+	const _ = await import('#termdb/vocabulary')
+	const vocabApi = _.vocabInit({ vocab })
+	if (!vocabApi.app) {
+		/**** Note!
+		when tk is doing sample filtering (e.g. a subtk), vocabApi will be passed to filter UI code
+		and filter UI will call termdb app with term type selector, which requires genome obj to be accessible
+		via vocabApi.app.opts.genome for gene search to function
+		here .app is missing, and since vocabApi is not frozen, this quick fix supplies it in entirely adhoc manner
+		*/
+		vocabApi.app = { opts: { genome: block.genome } }
 	}
-
-	tk.mds.termdbConfig = await tdb.vocabApi.getTermdbConfig()
-
-	if (tk.mds.termdbConfig.queries) {
-		tk.mds.has_skewer = false // convenient flag for downstream to decide if to set tk.skewer{}
-		if (tk.mds.termdbConfig.queries.snvindel && !tk.hiddenMclassDt.has(dtsnvindel)) {
-			tk.mds.has_skewer = true
-		} else if (
-			tk.mds.termdbConfig.queries.svfusion &&
-			!tk.hiddenMclassDt.has(mclasssv) &&
-			!tk.hiddenMclassDt.has(mclassfusionrna)
-		) {
-			tk.mds.has_skewer = true
-		}
-	} else {
-		// queries missing for custom tk. in such case no check
-	}
-
-	if (tk.mds.termdb.allowCaseDetails) {
-		tk.mds.termdb.allowCaseDetails.get = async acase => {}
-	}
+	return vocabApi
 }
 
+/* if termdbConfig.queries.snvindel.m2csq{} is present, add tk.mds.getM2csq() */
 function mayaddGetter_m2csq(tk, block) {
-	if (!tk.mds.queries?.snvindel?.m2csq) return
-	tk.mds.queries.snvindel.m2csq.get = async m => {
+	const cfg = tk.mds.termdbConfig.queries?.snvindel?.m2csq
+	if (!cfg) return
+	tk.mds.getM2csq = async m => {
 		const body = { genome: block.genome.name, dslabel: tk.mds.label, m2csq: 1 }
-		if (tk.mds.queries.snvindel.m2csq.by == 'ssm_id') {
+		if (cfg.by == 'ssm_id') {
 			body.ssm_id = m.ssm_id
 		} else {
 			return { error: 'unknown query method' }
@@ -658,7 +637,7 @@ function addSampleFilterParameters(tk, par, headers, tid2value) {
 	if (tid2value) par.tid2value = tid2value
 
 	// add in parameters that will filter samples
-	par.skewerRim = tk.mds.queries.snvindel?.skewerRim
+	par.skewerRim = getSkewerRimArg(tk)
 
 	if (tk.legend?.formatFilter) {
 		// add format fields to filter samples
@@ -681,15 +660,16 @@ function addSampleFilterParameters(tk, par, headers, tid2value) {
 	}
 }
 
-/* to add tk.mds.variant2samples.get()
+/* if termdbConfig.variant2samples{} is present, add tk.mds.getVariant2samples()
 with different implementation for client/server-based data sources
 
 note inconsistency in getSamples() for client/server
-where server function queries v2s.get()
-but client function does not do v2s.get() but should do the same to support sunburst and summary
+where server function queries getVariant2samples()
+but client function does not do getVariant2samples() but should do the same to support sunburst and summary
 */
 async function mayInit_variant2samples(tk, block) {
-	if (!tk.mds.variant2samples) return
+	const v2s = tk.mds.termdbConfig.variant2samples
+	if (!v2s) return
 
 	if (tk.custom_variants) {
 		addV2Sgetter_custom(tk, block)
@@ -697,26 +677,27 @@ async function mayInit_variant2samples(tk, block) {
 		addV2Sgetter_native(tk, block)
 	}
 
-	if (tk.mds.variant2samples.twLst) {
-		if (!Array.isArray(tk.mds.variant2samples.twLst)) throw 'v2s.twLst[] not array'
+	if (v2s.twLst) {
+		if (!Array.isArray(v2s.twLst)) throw 'v2s.twLst[] not array'
 		if (!tk.mds.termdb?.vocabApi) throw 'mds.termdb.vocabApi should be present for initiating v2s.twLst'
-		for (const t of tk.mds.variant2samples.twLst) await fillTermWrapper(t, tk.mds.termdb.vocabApi)
+		for (const t of v2s.twLst) await fillTermWrapper(t, tk.mds.termdb.vocabApi)
 	}
 }
 
 function addV2Sgetter_custom(tk, block) {
+	const v2s = tk.mds.termdbConfig.variant2samples
 	// TODO auto generate variant2samples.twLst[] based on sample data
 
 	/* getter implemented for custom data
 	currently only provides list of samples
 	TODO support summary and sunburst
 	*/
-	tk.mds.variant2samples.get = arg => {
+	tk.mds.getVariant2samples = arg => {
 		/*
 		arg{}
 		.mlst[]
 		*/
-		if (arg.querytype == tk.mds.variant2samples.type_samples) {
+		if (arg.querytype == v2s.type_samples) {
 			const samples = []
 			for (const m of arg.mlst) {
 				if (!m.samples) continue
@@ -728,10 +709,10 @@ function addV2Sgetter_custom(tk, block) {
 			}
 			return { samples }
 		}
-		if (arg.querytype == tk.mds.variant2samples.type_summary) {
+		if (arg.querytype == v2s.type_summary) {
 			throw 'todo: summary'
 		}
-		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
+		if (arg.querytype == v2s.type_sunburst) {
 			throw 'todo: sunburst'
 		}
 		throw 'unknown querytype'
@@ -756,10 +737,11 @@ function addV2Sgetter_custom(tk, block) {
 }
 
 function addV2Sgetter_native(tk, block) {
+	const v2s = tk.mds.termdbConfig.variant2samples
 	/*
 	works for both official and custom bcf
 
-	call v2s.get() with querytype=?
+	call getVariant2samples() with querytype=?
 	based on querytype, get() finds terms from appropriate places to retrieve attributes
 	thus no need to directly supply list of terms to get()
 
@@ -770,7 +752,7 @@ function addV2Sgetter_native(tk, block) {
 	.rglst[] // requires one of (mlst, isoform, rglst)
 	.tid2value{}
 	*/
-	tk.mds.variant2samples.get = async arg => {
+	tk.mds.getVariant2samples = async arg => {
 		const par = {
 			genome: block.genome.name,
 			variant2samples: 1,
@@ -801,7 +783,7 @@ function addV2Sgetter_native(tk, block) {
 		}
 
 		if (arg.mlst) {
-			if (tk.mds.variant2samples.variantkey == 'ssm_id') {
+			if (v2s.variantkey == 'ssm_id') {
 				// TODO detect too long string length that will result url-too-long error
 				// in such case, need alternative query method
 				// call encodeURIComponent to pass plus strand from sv/fusion
@@ -821,16 +803,16 @@ function addV2Sgetter_native(tk, block) {
 		addSampleFilterParameters(tk, par, headers, arg.tid2value)
 
 		// supply list of terms based on querytype
-		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
+		if (arg.querytype == v2s.type_sunburst) {
 			// TODO may change to vocabApi.getNestedChartSeriesData
-			if (tk.mds.variant2samples.sunburst_twLst) {
-				par.twLst = tk.mds.variant2samples.sunburst_twLst
+			if (v2s.sunburst_twLst) {
+				par.twLst = v2s.sunburst_twLst
 			}
-		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
-			if (tk.mds.variant2samples.twLst) par.twLst = tk.mds.variant2samples.twLst
-		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
+		} else if (arg.querytype == v2s.type_samples) {
+			if (v2s.twLst) par.twLst = v2s.twLst
+		} else if (arg.querytype == v2s.type_summary) {
 			// TODO querytype=summary should be replaced by client barchar issuing its own query
-			if (tk.mds.variant2samples.twLst) par.twLst = tk.mds.variant2samples.twLst
+			if (v2s.twLst) par.twLst = v2s.twLst
 		} else {
 			throw 'unknown querytype'
 		}
@@ -839,11 +821,11 @@ function addV2Sgetter_native(tk, block) {
 		if (data.error) throw data.error
 		const r = data.variant2samples
 		if (!r) throw 'result error'
-		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
+		if (arg.querytype == v2s.type_sunburst) {
 			if (!Array.isArray(r.nodes)) throw 'nodes[] not array from return'
-		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
+		} else if (arg.querytype == v2s.type_samples) {
 			if (!Array.isArray(r.samples)) throw 'samples[] not array from return'
-		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
+		} else if (arg.querytype == v2s.type_summary) {
 			if (!Array.isArray(r.summary)) throw 'summary[] not array from return'
 		} else {
 			throw 'unknown querytype'
@@ -862,15 +844,15 @@ function addV2Sgetter_native(tk, block) {
 	*/
 	tk.mds.getSamples = async (arg = {}) => {
 		if (arg.isSummary) {
-			arg.querytype = tk.mds.variant2samples.type_summary
+			arg.querytype = v2s.type_summary
 		} else {
 			// must be calling from "List" option of #case menu
-			arg.querytype = tk.mds.variant2samples.type_samples
+			arg.querytype = v2s.type_samples
 			// supply this flag so server will group ssm by case
 			arg.groupSsmBySample = 1
 		}
 		rangequery_rglst(tk, block, arg)
-		return await tk.mds.variant2samples.get(arg)
+		return await tk.mds.getVariant2samples(arg)
 	}
 }
 
@@ -1069,7 +1051,7 @@ if "sample_id" is present but "occurrence" is missing, do below:
 - dedup the list by merging m{} of same variant together. only apply to ssm!
 - on unique m{}, create .samples[] to collect list of samples harboring that variant
 - derive m.occurrence:int, as the samples[] array length
-- enable tk.mds.variant2samples{}
+- enable termdbConfig.variant2samples{}
 
 may share code with server
 */
@@ -1135,11 +1117,7 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 	tk.custom_variants = ungrouped
 	for (const m of key2m.values()) tk.custom_variants.push(m)
 	// enable variant2samples
-	if (!tk.mds.variant2samples) tk.mds.variant2samples = {}
-	const v = tk.mds.variant2samples
-	v.type_samples = 'samples'
-	v.type_summary = 'summary'
-	v.type_sunburst = 'sunburst'
+	tk.mds.termdbConfig.variant2samples = { type_samples: 'samples', type_summary: 'summary', type_sunburst: 'sunburst' }
 }
 
 export function mayAddInfoField(tk) {
@@ -1180,7 +1158,14 @@ export function mayAddInfoField(tk) {
 	for (const k of nkeys) {
 		info[k] = { ID: k, Number: '.', Type: 'Float' }
 	}
-	tk.mds.bcf = { info }
+	getSnvindelConfig(tk).info = info
+}
+
+/* the termdbConfig.queries.snvindel{} of a custom track, created when missing */
+function getSnvindelConfig(tk) {
+	const q = tk.mds.termdbConfig.queries
+	if (!q.snvindel) q.snvindel = {}
+	return q.snvindel
 }
 
 /*
@@ -1201,22 +1186,20 @@ async function getbcfheader_customtk(tk, genome) {
 	if (data.error) throw data.error
 	const [info, format, samples, errs] = data.header
 	if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
-	tk.mds.bcf = {
+	tk.mds.termdbConfig.queries.snvindel = {
+		forTrack: true,
 		info,
 		format // can be null
 	}
 	if (samples?.length) {
 		// bcf file has samples
-		tk.mds.bcf.samples = samples
 		// add v2s; later getter will be added
-		tk.mds.variant2samples = {
+		tk.mds.termdbConfig.variant2samples = {
 			//twLst:[], // TODO should not be required
 			type_samples: 'samples',
 			variantkey: 'ssm_id'
 		}
 	}
-	if (!tk.mds.queries) tk.mds.queries = {}
-	tk.mds.queries.snvindel = { forTrack: true }
 }
 
 function validateSelectSamples(tk) {

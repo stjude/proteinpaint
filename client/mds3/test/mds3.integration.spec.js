@@ -158,7 +158,7 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 		test.ok(div, 'Sample summary table rendered in menutip')
 
 		/* skipped as callbackOnRender() is now also triggered by subtk
-		for (const tw of tk.mds.variant2samples.twLst) {
+		for (const tw of tk.mds.termdbConfig.variant2samples.twLst) {
 			// each tw should show up in div as a tab
 			const twDiv = tk.menutip.d
 				.selectAll('div')
@@ -626,8 +626,8 @@ tape('Incorrect dslabel', test => {
 		const errorDivFound = tk.gmiddle
 			.selectAll('text')
 			.nodes()
-			.find(i => i.textContent == 'Error: invalid dsname')
-		test.ok(errorDivFound, 'Should display invalid dsname error')
+			.find(i => i.textContent == 'Error: invalid dslabel')
+		test.ok(errorDivFound, 'Should display invalid dslabel error')
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -1803,9 +1803,10 @@ function testLegend_info(test, tk) {
 
 	// collect all "lengendable" INFO keys
 	const infoKey4legend = new Set()
-	if (tk.mds.bcf?.info) {
-		for (const k in tk.mds.bcf.info) {
-			if (tk.mds.bcf.info[k].categories) infoKey4legend.add(k)
+	const info = tk.mds.termdbConfig.queries?.snvindel?.info
+	if (info) {
+		for (const k in info) {
+			if (info[k].categories) infoKey4legend.add(k)
 		}
 	}
 	if (infoKey4legend.size == 0) {
@@ -1840,7 +1841,7 @@ function testLegend_info(test, tk) {
 //function testLegend_format(test, tk) {}
 
 function testLegend_skewerRim(test, tk) {
-	if (!tk.mds.queries?.snvindel?.skewerRim) {
+	if (!tk.mds.termdbConfig.queries?.snvindel?.skewerRim) {
 		test.ok(!tk.legend.skewerRim, 'tk.leged.skewerRim is missing when skewerRim is not configured')
 		return
 	}
@@ -1989,15 +1990,15 @@ async function testClickOnSsm(m, test, tk) {
 	{
 		// rows for FORMAT fields
 		const d = tk.itemtip.d.selectAll('[data-testid="sjpp-mds3tk-singlemtablerow4formatkey"]')._groups[0]
-		if (tk.mds.bcf?.format && d.length) {
+		if (tk.mds.termdbConfig.queries?.snvindel?.format && d.length) {
 			// for some
-			//test.ok(d.length,'tk.mds.bcf.format{} is present and hope sample table shows at least 1 format field')
+			//test.ok(d.length,'snvindel.format{} is present and hope sample table shows at least 1 format field')
 			for (const f of d) {
 				const k = f.getAttribute('__key__')
-				test.ok(k in tk.mds.bcf.format, `sample table shows row for FORMAT key "${k}"`)
+				test.ok(k in tk.mds.termdbConfig.queries?.snvindel?.format, `sample table shows row for FORMAT key "${k}"`)
 			}
 		} else {
-			test.ok(d.length == 0, 'tk.mds.bcf.format not present and sample table displays no format rows')
+			test.ok(d.length == 0, 'snvindel.format not present and sample table displays no format rows')
 		}
 	}
 	await testSingletonItemtipButtons(test, tk)
@@ -2005,7 +2006,7 @@ async function testClickOnSsm(m, test, tk) {
 
 async function testSingletonItemtipButtons(test, tk) {
 	{
-		if (tk.mds.queries?.singleSampleMutation) {
+		if (tk.mds.termdbConfig.queries?.singleSampleMutation) {
 			const btn = await detectOne({
 				elem: tk.itemtip.dnode,
 				selector: '[data-testid="sjpp-mds3tk-disc-table-disco-button"]'

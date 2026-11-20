@@ -43,8 +43,8 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 		if (
 			'occurrence' in d &&
 			d.occurrence >= minoccur4sunburst &&
-			tk.mds.variant2samples &&
-			tk.mds.variant2samples.sunburst_twLst
+			tk.mds.termdbConfig.variant2samples &&
+			tk.mds.termdbConfig.variant2samples.sunburst_twLst
 		) {
 			// show sunburst when meeting conditions: mutation have occurrence, have v2s.sunburst_twLst[]
 			await click2sunburst(d, tk, block, tippos)
@@ -60,9 +60,9 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 
 async function click2sunburst(d, tk, block, tippos) {
 	tk.glider.style('cursor', 'wait')
-	const data = await tk.mds.variant2samples.get({
+	const data = await tk.mds.getVariant2samples({
 		mlst: d.mlst,
-		querytype: tk.mds.variant2samples.type_sunburst
+		querytype: tk.mds.termdbConfig.variant2samples.type_sunburst
 	})
 	tk.glider.style('cursor', 'auto')
 
@@ -111,7 +111,7 @@ async function click2sunburst(d, tk, block, tippos) {
 			(by first setting .occurrence=0 for entire param.mlst[], then just set param.mlst[0].occurrence=d2.value)
 			*/
 			param.mlst = d.mlst.map(m => {
-				if (tk.mds.variant2samples.variantkey == 'ssm_id') {
+				if (tk.mds.termdbConfig.variant2samples.variantkey == 'ssm_id') {
 					return { ssm_id: m.ssm_id, occurrence: 0 }
 				}
 				throw 'unknown variant2samples.variantkey'
