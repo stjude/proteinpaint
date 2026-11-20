@@ -336,6 +336,92 @@ function buildPyInput(
 	}
 }
 
+/** Mean delta-beta over every gene body for the groups of a DMR scan request, keyed by gene symbol */
+export async function scanBodyDeltas(dm: any, genomes: any): Promise<Record<string, number>> {
+	const groups = dm.samplelst.groups
+	return await getGeneBodyDeltas(
+		{
+			genome: dm.genome,
+			dslabel: dm.dslabel,
+			// a group that lists no samples is defined by a filter, and is resolved there
+			group1: groups[0].values ?? groups[0],
+			group2: groups[1].values ?? groups[1],
+			filter0: dm.filter0,
+			__protected__: dm.__protected__,
+			/* The chromosomes the scan itself ran on. Without this the ranking covered the
+			whole genome while the volcano showed one chromosome, and on a sex-imbalanced
+			cohort chrX dominated a ranking the header called the scan's own. It also keeps
+			chrM out, which has no CpG shard and would fall back to a whole element-matrix
+			fit to describe 13 mitochondrial genes. */
+			chromosomes: scanChromosomes(dm, genomes[dm.genome])
+		},
+		genomes
+	)
+}
+
+/** each gene's median expression in the request's dataset, see geneMedians */
+export async function datasetGeneMedians(q: { genome: string; dslabel: string }, genomes: any) {
+	const gE = genomes[q.genome]?.datasets?.[q.dslabel]?.queries?.geneExpression
+	if (!gE?.file) throw new Error('This dataset has no gene expression file to adjust the ranking by.')
+	return await geneMedians(gE.file)
+}
+
+/** Expression-level bins of a gene-body ranking, see levelResiduals */
+export const LEVEL_BINS = 20
+
+/* A scan's gene-body ranking with expression level taken out. Gene-body methylation follows transcription, and in a
+subtype whose global methylation moves, how much a body moves depends on how much the gene is expressed, so the raw
+ranking mostly sorts genes by level and enriches the sets of highly or lowly expressed genes. On MMRF t(4;14) vs the
+reference, level explained 49% of the body delta-beta variance; this residual correlated 0.96 with a level x PMD/HMD
+domain model, and gave 18 of its 21 hallmark sets.
+
+Genes are binned into LEVEL_BINS quantiles of their median expression (genes without one are dropped), and each
+gene's value is its delta-beta minus its bin's mean, the least-squares fit of one level per bin. z is that residual over
+its bin's standard deviation: how far the gene stands out from genes expressed as much, the gene-body layer's
+p-value for termdb/activePathways. bins 1 leaves level in (one bin of every gene with a level). */
+export function levelResiduals(
+	genes: string[],
+	fold_change: number[],
+	level: Record<string, number>,
+	bins = LEVEL_BINS
+) {
+	const kept = genes.map((g, i) => ({ g, fc: fold_change[i], lv: level[g] })).filter(x => Number.isFinite(x.lv))
+	// rank order, ties broken by position, as pandas qcut(rank(method='first')) does
+	const order = kept.map((_, i) => i).sort((a, b) => kept[a].lv - kept[b].lv || a - b)
+	const bin = new Array(kept.length)
+	order.forEach((k, r) => (bin[k] = Math.min(bins - 1, Math.floor((r * bins) / kept.length))))
+	const sum = new Array(bins).fill(0),
+		sq = new Array(bins).fill(0),
+		n = new Array(bins).fill(0)
+	kept.forEach((x, k) => {
+		sum[bin[k]] += x.fc
+		n[bin[k]]++
+	})
+	const resid = kept.map((x, k) => x.fc - sum[bin[k]] / n[bin[k]])
+	resid.forEach((r, k) => (sq[bin[k]] += r * r))
+	const sd = sq.map((s, b) => (n[b] > 1 ? Math.sqrt(s / (n[b] - 1)) : 0))
+	return {
+		genes: kept.map(x => x.g),
+		fold_change: resid,
+		z: resid.map((r, k) => (sd[bin[k]] > 0 ? r / sd[bin[k]] : 0))
+	}
+}
+
+// ponytail: one in-process copy per expression file, never refreshed; key on the file's mtime if files get swapped live
+const medianCache = new Map<string, Promise<Record<string, number>>>()
+
+/** each gene's median expression over the whole file (python/src/geneMedians.py), once per file per server process */
+function geneMedians(file: string): Promise<Record<string, number>> {
+	let p = medianCache.get(file)
+	if (!p) {
+		p = run_python('geneMedians.py', JSON.stringify({ input_file: file })).then((out: string) => JSON.parse(out))
+		// a failed read is not kept, so a retry runs again
+		p.catch(() => medianCache.delete(file))
+		medianCache.set(file, p)
+	}
+	return p
+}
+
 /* One value per gene from a differential methylation result, which has one row per tested element
 and so repeats a gene once for each of its promoters: the mean fold change of the gene's rows.
 
@@ -415,27 +501,12 @@ async function resolveGseaGenesAndFoldChange({
 		delta-beta over its body instead -- one signed number per gene, genome-wide, length-free.
 		Negative means the body lost methylation in the case group. Same groups as the scan. */
 		if (dm.element_type === DMR_SCAN_ELEMENT_TYPE) {
-			const groups = dm.samplelst.groups
-			const deltas = await getGeneBodyDeltas(
-				{
-					genome: dm.genome,
-					dslabel: dm.dslabel,
-					// a group that lists no samples is defined by a filter, and is resolved there
-					group1: groups[0].values ?? groups[0],
-					group2: groups[1].values ?? groups[1],
-					filter0: (dm as any).filter0,
-					__protected__: dm.__protected__,
-					/* The chromosomes the scan itself ran on. Without this the ranking covered the
-					whole genome while the volcano showed one chromosome, and on a sex-imbalanced
-					cohort chrX dominated a ranking the header called the scan's own. It also keeps
-					chrM out, which has no CpG shard and would fall back to a whole element-matrix
-					fit to describe 13 mitochondrial genes. */
-					chromosomes: scanChromosomes(dm, genomes[dm.genome])
-				},
-				genomes
-			)
+			const deltas = await scanBodyDeltas(dm, genomes)
 			const genes = Object.keys(deltas)
-			return { genes, fold_change: genes.map(g => deltas[g]) }
+			const fold_change = genes.map(g => deltas[g])
+			if (!q.adjust_expression_level) return { genes, fold_change }
+			const r = levelResiduals(genes, fold_change, await datasetGeneMedians(dm, genomes))
+			return { genes: r.genes, fold_change: r.fold_change }
 		}
 		return meanFoldChangeByGene(result.promoterRows)
 	}

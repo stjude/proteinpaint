@@ -66,8 +66,10 @@ export async function validate_query_junction(ds: any, genome: any) {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
-			return { junctions: [], maxReadCount: 0 }
+			return { junctions: [], maxReadCount: 0, sampleTotal: 0 }
 		}
+		// the samples of the file that the request covers: the denominator of a junction's sampleCount
+		const sampleTotal = limitSamples ? q.samples.filter((s: any) => limitSamples.has(s.name)).length : q.samples.length
 
 		/* if both sample and readcount are valid and pass filter, return [readcount, samplename, IR ratio]
 		str is "n;v1;v2;..": read count, then one value per element of info.events[], in the same order;
@@ -180,6 +182,8 @@ export async function validate_query_junction(ds: any, genome: any) {
 					}
 					for (const rc of readcounts) maxReadCount = Math.max(maxReadCount, rc)
 					j.sampleCount = readcounts.length
+					// the reads of the junction over its samples: its share of a splice site's reads, see client/j2/sashimi.ts
+					j.totalReadCount = readcounts.reduce((a, b) => a + b, 0)
 					if (readcounts.length == 1) {
 						j.medianReadCount = readcounts[0]
 						// singleton. attach sample name
@@ -213,7 +217,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 			})
 		}
 		// no matrix with keepLst: its junctions carry sn2rc instead, and have no sampleCount to rank by
-		if (!param.matrixTop || keepLst?.length) return { junctions, maxReadCount, totalCount }
+		if (!param.matrixTop || keepLst?.length) return { junctions, maxReadCount, totalCount, sampleTotal }
 
 		// the columns of the samples that the request covers
 		const columns: number[] = []
@@ -233,7 +237,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 				return { chr: j.chr, start: j.start, stop: j.stop, strand: j.strand, readcounts }
 			})
 		}
-		return { junctions, maxReadCount, totalCount, matrix }
+		return { junctions, maxReadCount, totalCount, sampleTotal, matrix }
 	}
 	/*
 	called by getData() and return sample level numeric values in required format

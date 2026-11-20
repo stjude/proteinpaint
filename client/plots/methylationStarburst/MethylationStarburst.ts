@@ -6,11 +6,16 @@ import { launchMethylationBrowser } from '../../dnameth/launch'
 import { withOthersGroup } from '#mass/groups'
 import { getCombinedTermFilter } from '#filter'
 import { getDefaultVolcanoSettings } from '../volcano/settings/defaults'
-import type { MethylationStarburstResponse } from '#types'
+import type { MethylationStarburstResponse, ActivePathwaysResponse } from '#types'
 import { stripAccessionVersion } from '#shared'
 import { getIsoformTerm, sampleLevelGroups } from '../volcano/handlers/isoformExpression'
-import { DMR_SCAN_ELEMENT_TYPE } from '#types'
-import { drawStarburst, type Cutoffs, type StarburstData } from './view'
+import { DMR_SCAN_ELEMENT_TYPE, TermTypes } from '#types'
+import { drawStarburst, RING_COLOR, type Cutoffs, type StarburstData } from './view'
+import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
+import { formatSetName } from '../gseaCompare/viewModel'
+import { drawPathwayHeatmap, LAYERS } from './pathwayHeatmap'
+import { GseaCompareModel, getColumns, getColumnConfig } from '../gseaCompare/model'
+import type { Column } from '../gseaCompare/viewModel'
 
 const defaultSettings: Cutoffs = { minDeltaBeta: 0.05, maxQ: 0.05 }
 
@@ -25,7 +30,29 @@ settings.methylationStarburst, which the volcano's state leaves out, so changing
 sex chromosomes follow the volcano's own setting. */
 
 /** embedded, `open` is toggled by the volcano's button */
-type StarburstSettings = Cutoffs & { highlightGenes?: string[]; open?: boolean }
+type StarburstSettings = Cutoffs & {
+	highlightGenes?: string[]
+	open?: boolean
+	/** ActivePathways under the transcript starburst (renderPathways): shown or not, its gene-set group, its options */
+	/** adjusted: the methylation layer is net of expression level (on unless false) */
+	pathways?: {
+		open?: boolean
+		pathway?: string
+		adjusted?: boolean
+	}
+	/** a gene set whose leading-edge genes are ringed on the transcript starburst */
+	/* cleared by writing NO_RING, not undefined: a plot_edit is merged into the config (rx copyMerge), and merging
+	undefined or null into an object leaves the object as it was */
+	ring?: { name: string; genes: string[] }
+}
+
+const HALLMARK = 'H: hallmark gene sets'
+/** no gene set ringed: what a clear writes (see StarburstSettings.ring) */
+const NO_RING = { name: '', genes: [] }
+/** a gene set is significant in a ranking at this q */
+const PATHWAY_Q = 0.05
+/** ActivePathways' two analyses, in this order: getColumns gives one column per data type */
+const PATHWAY_TYPES = [TermTypes.GENE_EXPRESSION, TermTypes.DNA_METHYLATION]
 
 class MethylationStarburst extends PlotBase implements RxComponent {
 	static type = 'methylationStarburst'
@@ -51,6 +78,8 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 		const embedded = !!this.opts.embedded
 		const volcano = config.settings?.volcano || {}
 		return {
+			// the whole config, from which ActivePathways' analyses are made (renderPathways)
+			config,
 			embedded,
 			// embedded, only beside the volcano of a DMR scan, once its button is clicked
 			show:
@@ -142,7 +171,8 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 			this.tip,
 			i => this.getActions(i, groups),
 			s.highlightGenes,
-			this.opts.volcanoPlot?.()?.plot.height
+			this.opts.volcanoPlot?.()?.plot.height,
+			new Set(s.ring?.genes || [])
 		)
 		this.dom.svg = drawn.svg
 		this.alignWithVolcano(drawn.svg, drawn.plotTop)
@@ -157,6 +187,209 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 					'Each point is a transcript, its own core promoter and body against its own expression change. ' +
 					'Click a point for its options.'
 			)
+		await this.renderPathways(groups, names)
+	}
+
+	pathwayKey = ''
+	pathwayResult?: ActivePathwaysResponse
+	pathwayMenu?: Menu
+
+	/* ActivePathways, on request under the transcript starburst: gene sets tested on expression, on gene-body
+	methylation and on the two merged with the constraint that they move the same way (server/src/routes/
+	termdb.activePathways.ts), as a heatmap of three columns sharing rows (the pathway comparison's grid, ../gseaCompare/
+	view.ts). Its two layers are the differential analyses of the pathway comparison (gseaCompare/model.ts) for this
+	pair; embedded, the methylation one is this volcano's own scan, so both are cache hits. A cell's menu rings the set's
+	genes on the transcript starburst and opens either ranking's enrichment plot. */
+	async renderPathways(groups: any[], names: [string, string]) {
+		const s = this.state.settings as StarburstSettings
+		const open = !!s.pathways?.open
+		// on unless turned off: a gene body's change otherwise mostly says how expressed the gene is
+		const adjusted = s.pathways?.adjusted ?? true
+		const sec = this.dom.holder
+			.append('div')
+			.attr('data-testid', 'sjpp-methylationStarburst-pathwaySection')
+			.style('margin-top', '14px')
+		const bar = sec.append('div').style('display', 'flex').style('gap', '12px').style('align-items', 'center')
+		bar
+			.append('button')
+			.attr('type', 'button')
+			.attr('aria-expanded', open)
+			.attr('data-testid', 'sjpp-methylationStarburst-pathwayToggle')
+			.text(open ? 'Hide pathways' : 'Pathways: expression and methylation (ActivePathways)')
+			.on('click', () => this.editSettings({ pathways: { ...s.pathways, open: !open } }))
+		if (s.ring?.name) {
+			const note = bar.append('span').style('font-size', '0.9em')
+			note.append('span').style('color', RING_COLOR).style('font-weight', 'bold').text('○ ')
+			note.append('span').text(`ringed: genes of ${formatSetName(s.ring.name)} (${s.ring.genes.length}) `)
+			note
+				.append('button')
+				.attr('type', 'button')
+				.text('Clear')
+				.on('click', () => this.editSettings({ ring: NO_RING }))
+		}
+		if (!open) return
+
+		const lst = (this.app.opts.genome?.termdbs?.msigdb?.analysisGenesetGroups || []).filter(g => g.value != '-')
+		const pathway = s.pathways?.pathway || lst.find(g => g.value == HALLMARK)?.value || lst[0]?.value
+		const label = bar.append('label').style('display', 'inline-flex').style('gap', '6px').style('align-items', 'center')
+		label.append('span').text('Gene sets')
+		const sel = label
+			.append('select')
+			.on('change', (e: any) => this.editSettings({ pathways: { ...s.pathways, open: true, pathway: e.target.value } }))
+		for (const g of lst)
+			sel
+				.append('option')
+				.attr('value', g.value)
+				.property('selected', g.value == pathway)
+				.text(g.label)
+		const adj = bar
+			.append('label')
+			.style('display', 'inline-flex')
+			.style('gap', '4px')
+			.style('align-items', 'center')
+			.attr(
+				'title',
+				"A gene's methylation evidence is how far its gene-body Δβ stands out from genes expressed as much. Gene-body " +
+					'methylation follows transcription, so without this the methylation layer mostly says how expressed a gene is.'
+			)
+		adj
+			.append('input')
+			.attr('type', 'checkbox')
+			.property('checked', adjusted)
+			.on('change', (e: any) =>
+				this.editSettings({ pathways: { ...s.pathways, open: true, adjusted: e.target.checked } })
+			)
+		adj.append('span').text('Methylation net of expression level')
+
+		const body = sec.append('div').style('margin-top', '6px')
+		const { config, termfilter, embedded } = this.state
+		const cfg = {
+			samplelst: { groups },
+			tw: { term: this.state.term, q: { groups } },
+			termTypes: PATHWAY_TYPES,
+			settings: { gseaCompare: { pathway } }
+		}
+		const [expr, meth] = getColumns(cfg) as [Column, Column]
+		const exprConfig = getColumnConfig(cfg, expr, this.app)
+		// embedded, this volcano's own config: its scan, with any settings changed from the defaults
+		// a copy: the request builder fills in the groups (VolcanoModel.setOthersGroup), and app state is read-only
+		const methConfig = structuredClone(embedded ? config : getColumnConfig(cfg, meth, this.app))
+		methConfig.settings.gsea = { ...methConfig.settings.gsea, adjust_expression_level: adjusted }
+		const key = JSON.stringify([groups, pathway, termfilter, adjusted, embedded ? config.settings.volcano : null])
+		if (key != this.pathwayKey) {
+			const wait = body.append('div').style('padding-block', '10px').style('opacity', 0.75)
+			const stop = startElapsedTimer(
+				wait,
+				'Running ActivePathways on expression and gene-body methylation. A first expression run takes a minute or two.'
+			)
+			try {
+				this.pathwayResult = await this.runActivePathways(exprConfig, methConfig, pathway, adjusted)
+				this.pathwayKey = key
+			} catch (e: any) {
+				if (e?.name == 'AbortError') throw e
+				body
+					.append('div')
+					.attr('class', 'sja_errorbar')
+					.text(`ActivePathways: ${e?.message || e}`)
+				return
+			} finally {
+				stop()
+				wait.remove()
+			}
+		}
+		const ap = this.pathwayResult!
+		const status = body.append('div').attr('role', 'status').style('font-size', '0.85em').style('opacity', 0.8)
+		// the menus of the previous drawing live on <body>: dispose of them before drawing again
+		this.destroyPathways?.()
+		const heat = drawPathwayHeatmap(body.append('div'), ap, {
+			groups: names,
+			tip: this.tip,
+			getActions: id => {
+				const set = ap.sets.find(x => x.id == id)!
+				return this.pathwayActions(set.id, set.genes, cfg, exprConfig, methConfig)
+			}
+		})
+		this.destroyPathways = heat.destroy
+		const total = ap.sets.length
+		const shown = heat.shown < total ? `, top ${heat.shown} shown` : ''
+		status.text(
+			`${ap.genes.toLocaleString()} genes with both layers, ${ap.tested.toLocaleString()} sets tested, ` +
+				`${total} at q < ${PATHWAY_Q} in some column${shown}; genes at p ≤ 0.05: ` +
+				ap.passing.map((n, i) => `${LAYERS[i].toLowerCase()} ${n.toLocaleString()}`).join(', ')
+		)
+		body
+			.append('div')
+			.style('font-size', '0.8em')
+			.style('opacity', 0.7)
+			.style('max-width', '760px')
+			.text(
+				`ActivePathways (Paczkowska 2020) with directional P-value merging (Slobodyanyuk 2024): expression by the DE ` +
+					`p-value, gene body by how far the gene's body Δβ stands out from ${
+						adjusted ? 'genes expressed as much' : 'all genes'
+					}, merged where the two move the same way (Brown df ${ap.brown.df.toFixed(1)} of 4). Color: −log10 q, ` +
+					`signed by whether the set's genes went up or gained methylation in ${names[1]}.`
+			)
+	}
+
+	destroyPathways?: () => void
+
+	/** the expression DE and the DMR scan of this pair, then ActivePathways on the two */
+	async runActivePathways(exprConfig: any, methConfig: any, pathway: string, adjusted: boolean) {
+		const requestOf = async (c: any) => {
+			const da = await new VolcanoModel(this, c.termType).getData(c, c.settings.volcano)
+			if (da?.error) throw new Error(da.error)
+			if (!da?.daRequest) throw new Error('the analysis returned no request to run on')
+			return da.daRequest
+		}
+		const [deRequest, dmRequest] = await Promise.all([requestOf(exprConfig), requestOf(methConfig)])
+		return (await new GseaCompareModel(this).fetchWithRetry(
+			{
+				genome: this.app.vocabApi.vocab.genome,
+				dslabel: this.app.vocabApi.vocab.dslabel,
+				deRequest,
+				dmRequest,
+				geneSetGroup: pathway,
+				adjust_expression_level: adjusted
+			},
+			'termdb/activePathways'
+		)) as ActivePathwaysResponse
+	}
+
+	/** what a click on a gene set offers */
+	pathwayActions(key: string, genes: string[], cfg: any, exprConfig: any, methConfig: any) {
+		const ringed = this.state.settings.ring?.name == key
+		return [
+			ringed
+				? { label: 'Clear the rings', onClick: () => this.editSettings({ ring: NO_RING }) }
+				: {
+						label: `Ring its ${genes.length} genes`,
+						onClick: () => this.editSettings({ ring: { name: key, genes } })
+				  },
+			{ label: 'Enrichment plot by expression', onClick: () => this.openGsea(exprConfig, key, cfg) },
+			{ label: 'Enrichment plot by body Δβ', onClick: () => this.openGsea(methConfig, key, cfg) }
+		]
+	}
+
+	/** the differential analysis of this pair on its GSEA tab, with the gene set's enrichment plot */
+	openGsea(c: any, genesetName: string, cfg: any) {
+		this.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'differentialAnalysis',
+				childType: 'gsea',
+				termType: c.termType,
+				samplelst: c.samplelst,
+				...(c.tw ? { tw: c.tw } : {}),
+				settings: {
+					volcano: c.settings.volcano,
+					gsea: {
+						pathway: cfg.settings.gseaCompare.pathway,
+						...(c.settings.gsea?.adjust_expression_level ? { adjust_expression_level: true } : {})
+					}
+				},
+				gsea_params: { geneset_name: genesetName }
+			}
+		})
 	}
 
 	/* Embedded, the starburst's plots and the volcano's start at the same height: whichever is higher on the page is
@@ -303,7 +536,8 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 			this.app,
 			{ gene },
 			{ q: { groups, type: 'custom-samplelst' }, term },
-			undefined,
+			// embedded beside a DMR scan's volcano: the scan's DMRs, which the track marks; on its own there is no scan
+			this.opts.volcanoPlot?.()?.dmrFile,
 			filter
 		)
 	}
@@ -311,6 +545,7 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 	/** remove the body-mounted menus: the click menus of the plot's points and the tooltip */
 	destroy() {
 		this.destroyInteractions?.()
+		this.destroyPathways?.()
 		this.tip.destroy()
 		this.searchTip.destroy()
 	}

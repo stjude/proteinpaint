@@ -54,6 +54,15 @@ export class View {
 		}
 	}
 
+	/** two or more sample groups for the junction track's sashimi plot: config.junction.sashimiGroupTw, else the
+	 * methylation track's groupTw */
+	sashimiGroupTw() {
+		const tw =
+			this.state.config.junction?.sashimiGroupTw ||
+			(this.state.config.tracks || []).find(t => t.type == 'dnameth')?.groupTw
+		return Object.keys(tw?.term?.values || {}).length >= 2 ? tw : undefined
+	}
+
 	async generateTracks() {
 		// handle multiple possibilities of generating genome browser tracks
 
@@ -169,9 +178,14 @@ export class View {
 				hiddentypes: this.state.config.junction.hiddentypes,
 				readcountCutoff: this.state.config.junction.readcountCutoff,
 				sampleHeatmap: this.state.config.junction.sampleHeatmap,
+				/* groups for a sashimi plot: the junction config's own, else those of the methylation track, so that the
+				junctions can be read by the same groups as the methylation above them */
+				sashimiGroupTw: this.sashimiGroupTw(),
 				// keeps the heatmap choice of the track's menu in the state
 				callbackOnRender: () => this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 			}
+			// the sashimi choice of the track's menu, kept in the state
+			if (this.state.config.junction.sashimi && tk.sashimiGroupTw) tk.sashimi = { groupTw: tk.sashimiGroupTw }
 			// the label names the sample types on the junction terms of Details and Select
 			Object.assign(tk, this.trackSampleTypes)
 			// the global filter, as the mds3 track gets it

@@ -3,6 +3,7 @@ import { makeTk } from './makeTk'
 import { renderTk, renderHeatmap } from './render'
 import { rangequery_rglst } from '../mds3/tk'
 import { JT_ir } from '#shared/common.js'
+import { renderSashimi } from './sashimi.ts'
 //import { make_leftlabels } from './leftlabel'
 
 /*
@@ -42,6 +43,17 @@ export async function loadTk(tk, block) {
 		if (tk.uninitialized) {
 			await makeTk(tk, block)
 			delete tk.uninitialized
+		}
+
+		/* two sample groups as a sashimi plot, in place of the lollipops; the heatmap of samples is not drawn with it */
+		if (tk.sashimi?.groupTw && !tk.custom_data) {
+			if (tk.rows?.heatmap.data) {
+				delete tk.rows.heatmap.data
+				renderHeatmap(tk, block)
+			}
+			const drawn = await renderSashimi(tk, block)
+			tk._finish(drawn ? undefined : { junctions: [] })
+			return
 		}
 
 		const data = await getTkData(tk, block)

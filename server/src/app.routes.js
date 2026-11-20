@@ -86,6 +86,7 @@ export const routeFiles = [
 	import('./routes/termdb.dmr.ts'),
 	import('./routes/termdb.dmrBatch.ts'),
 	import('./routes/termdb.geneBodyMeth.ts'),
+	import('./routes/termdb.activePathways.ts'),
 	import('./routes/termdb.facet.ts'),
 	import('./routes/termdb.filterTermValues.ts'),
 	import('./routes/termdb.isoformAvailability.ts'),

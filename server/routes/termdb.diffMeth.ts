@@ -68,6 +68,11 @@ export function init({ genomes }) {
 				return
 			}
 
+			if (q.scanTrackOnly) {
+				res.send(await scanTrackOnly(q, genomes))
+				return
+			}
+
 			const { result, cacheId } = await getDmCacheResult(q, genomes)
 
 			const rendered = await renderVolcano<DiffMethEntry>(result.promoterRows, q.volcanoRender)
@@ -187,6 +192,19 @@ function dmKeyInputs(req: DiffMethRequest, imputeMissing: boolean) {
  * route handler above and by genesetEnrichment.ts when projecting
  * gene_name + fold_change off a cached DM result. cacheOrRecompute's
  * pending map dedupes concurrent identical calls. */
+/* The DMR track file of a scan that has already run, for a view opened from another analysis of the same groups (the
+expression volcano's methylation track): never runs the scan, which takes minutes */
+async function scanTrackOnly(q: DiffMethRequest, genomes: any): Promise<{ bedjFile: string | null }> {
+	if (q.element_type !== DMR_SCAN_ELEMENT_TYPE) throw new Error('scanTrackOnly is for a DMR scan')
+	try {
+		const { result } = await getDmrScanAsDm({ ...q, cacheOnly: true } as any, genomes)
+		return { bedjFile: result.scan?.bedjFile || null }
+	} catch (e: any) {
+		if (e?.code == 'NOT_CACHED') return { bedjFile: null }
+		throw e
+	}
+}
+
 export async function getDmCacheResult(
 	req: DiffMethRequest,
 	genomes: any
@@ -274,7 +292,8 @@ async function getDmrScanAsDm(req: DiffMethRequest, genomes: any): Promise<{ res
 			lambda: positiveOrUndefined(req.scan?.lambda),
 			C: positiveOrUndefined(req.scan?.C),
 			fdr_cutoff: positiveOrUndefined(req.scan?.fdrCutoff),
-			__protected__: req.__protected__
+			__protected__: req.__protected__,
+			cacheOnly: (req as any).cacheOnly
 		},
 		genomes
 	)

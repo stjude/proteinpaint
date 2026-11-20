@@ -96,6 +96,38 @@ tape('an isoform other than the default', async test => {
 	test.end()
 })
 
+// the test isoform file has one TP53 transcript, ENST00000269305, so its usage and its promoter's are 1
+tape('the usage of an isoform or of its promoter', async test => {
+	test.timeoutAfter(30000)
+	const isoform = 'ENST00000269305'
+	const gene = await request(test, 'admin', { gene: 'TP53' })
+	test.deepEqual(gene?.expressedIsoforms, [isoform], 'should list the isoforms that have isoform expression')
+	test.equal(gene?.usage, undefined, 'should have no usage for gene expression')
+	for (const expression of ['isoform', 'promoter']) {
+		const res = await request(test, 'admin', { gene: 'TP53', isoform, expression })
+		test.equal(res?.unit, 'usage', `${expression}: should report a usage`)
+		test.deepEqual(
+			res?.usage,
+			{ by: expression, isoform, transcripts: [isoform], ofTranscripts: 1 },
+			`${expression}: should name the transcripts of the usage`
+		)
+		test.ok(
+			res?.samples?.length && res.samples.every(s => s.value === 1),
+			`${expression}: should give each sample the share of the gene that is the isoform's`
+		)
+	}
+	const unexpressed = await request(test, 'admin', { gene: 'TP53', isoform: 'ENST00000576024', expression: 'isoform' })
+	test.ok(
+		String(unexpressed?.error).includes('No isoform expression data for ENST00000576024'),
+		'should reject an isoform without data'
+	)
+	const noIsoform = await request(test, 'admin', { gene: 'TP53', expression: 'promoter' })
+	test.ok(String(noIsoform?.error).includes('requires an isoform'), 'should require an isoform for a usage')
+	const bad = await request(test, 'admin', { gene: 'TP53', isoform, expression: 'exon' })
+	test.ok(String(bad?.error).includes('invalid expression'), 'should reject an unknown expression')
+	test.end()
+})
+
 tape('groups defined by a filter on a patient-level term', async test => {
 	// sex annotates patients, while the methylation and expression are on their samples
 	test.timeoutAfter(30000)

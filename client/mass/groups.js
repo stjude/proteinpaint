@@ -274,6 +274,8 @@ function renderGroupActions(self, menuDiv, samplelstTW, id) {
 	const availabilityDiv = menuDiv.append('div')
 	if (self.state.currentCohortChartTypes.includes('DA') && samplelstTW.q.groups.length == 2)
 		addDiffAnalysisPlotMenuItem(menuDiv, self, samplelstTW)
+	if (self.state.currentCohortChartTypes.includes('DA') && samplelstTW.q.groups.length >= 3)
+		addPathwayCompareMenuItem(menuDiv, self, samplelstTW)
 	addSummarizeOptions(menuDiv, self, samplelstTW, id)
 	mayAddHierClusterPlotMenuItem('geneExpression', menuDiv, 'Gene expression', self.tip2, samplelstTW, id, self, true)
 	mayAddMatrixMenuItems(menuDiv, 'Matrix', self.tip2, samplelstTW, id, self, self.state, true, () => self.newId)
@@ -782,6 +784,105 @@ the group name and color are supplied by the user or an embedder -- a name is ty
 table, and plots/DEinput.ts accepts prebuilt groups from runpp -- so both are set as text and style
 properties, and must not be interpolated into markup
 */
+/* Pathway comparison (plots/gseaCompare): gene-set enrichment of every other group against one reference group, side
+by side, on each data type the dataset has for it: gene expression (DE) and the gene-body ranking of a DNA methylation
+scan. The user picks the reference and the data types; the chart runs one analysis per group and data type. */
+function addPathwayCompareMenuItem(div, self, samplelstTW) {
+	const queries = self.app.vocabApi.termdbConfig.queries || {}
+	const dataTypes = [
+		queries.rnaseqGeneCount && { termType: TermTypes.GENE_EXPRESSION, label: 'Gene expression (DE fold change)' },
+		queries.dnaMethylation?.elementTypes?.some(e => e.key == DMR_SCAN_ELEMENT_TYPE) && {
+			termType: TermTypes.DNA_METHYLATION,
+			label: 'DNA methylation (gene-body Δβ of a DMR scan)'
+		}
+	].filter(Boolean)
+	if (!dataTypes.length) return
+	const groups = samplelstTW.q.groups
+	const itemDiv = div
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.attr('data-testid', 'sjpp-gseaCompare-option')
+		.text('Compare pathways across groups')
+		.on('click', () => {
+			const tip = self.tip2
+			tip.clear().showunderoffset(itemDiv.node())
+			const panel = tip.d.append('form').style('padding', '8px').style('max-width', '420px')
+			// a group that reads as the reference is the starting choice
+			let ref = Math.max(
+				0,
+				groups.findIndex(g => /reference|control|normal/i.test(g.name))
+			)
+			const chosen = new Set(dataTypes.map(d => d.termType))
+
+			const refSet = panel.append('fieldset').style('border', 'none').style('padding', 0).style('margin', '0 0 8px')
+			refSet.append('legend').style('font-weight', 'bold').text('Reference group')
+			groups.forEach((g, i) => {
+				const l = refSet.append('label').style('display', 'flex').style('gap', '6px').style('align-items', 'center')
+				l.append('input')
+					.attr('type', 'radio')
+					.attr('name', 'sjpp-gseaCompare-ref')
+					.property('checked', i == ref)
+					.on('change', () => {
+						ref = i
+						update()
+					})
+				const color = samplelstTW.term.values[g.name]?.color
+				l.append('span')
+					.style('width', '10px')
+					.style('height', '10px')
+					.style('background', color || '#ccc')
+				l.append('span').text(g.name)
+			})
+
+			const dataSet = panel.append('fieldset').style('border', 'none').style('padding', 0).style('margin', '0 0 8px')
+			dataSet.append('legend').style('font-weight', 'bold').text('Rank genes by')
+			for (const d of dataTypes) {
+				const l = dataSet.append('label').style('display', 'flex').style('gap', '6px')
+				l.append('input')
+					.attr('type', 'checkbox')
+					.property('checked', true)
+					.on('change', e => {
+						if (e.target.checked) chosen.add(d.termType)
+						else chosen.delete(d.termType)
+						update()
+					})
+				l.append('span').text(d.label)
+			}
+
+			const summary = panel.append('p').style('margin', '6px 0').style('font-size', '.9em')
+			const launch = panel.append('button').attr('type', 'submit').attr('data-testid', 'sjpp-gseaCompare-launch')
+			panel.on('submit', e => {
+				e.preventDefault()
+				const order = [groups[ref], ...groups.filter((_, i) => i != ref)]
+				const tw = structuredClone(samplelstTW)
+				tw.q.groups = order
+				self.tip.hide()
+				tip.hide()
+				self.app.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'gseaCompare',
+						samplelst: { groups: structuredClone(order) },
+						tw,
+						termTypes: dataTypes.map(d => d.termType).filter(t => chosen.has(t))
+					}
+				})
+			})
+			const update = () => {
+				const n = (groups.length - 1) * chosen.size
+				summary.text(
+					n
+						? `${groups.length - 1} groups, each against ${groups[ref].name}, on ${chosen.size} data type${
+								chosen.size > 1 ? 's' : ''
+						  }: ${n} comparisons. Analyses already run are reused; a first methylation scan takes minutes.`
+						: 'Choose at least one data type.'
+				)
+				launch.property('disabled', !n).text(`Compare ${n} comparisons`)
+			}
+			update()
+		})
+}
+
 function addGroupCountRow(table, role, samplelstTW, i, count, sampleLabel) {
 	const name = samplelstTW.q.groups[i].name
 	const color = samplelstTW.term.values[name].color

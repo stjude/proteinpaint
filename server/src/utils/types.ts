@@ -7,6 +7,10 @@ export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	 * changing them still hits cache. */
 	computeArgument: TArgs
 
+	/** Read the cache only: on a miss, throw an error with code NOT_CACHED instead of computing, e.g. to find out
+	 * whether an expensive result exists without starting it */
+	cacheOnly?: boolean
+
 	/** Optional, separates the cacheIds of identical computeArguments, e.g. a user or session
 	 * identifier when the result depends on what the requester may access. Omit it for results
 	 * that are the same for every requester, so that they share one cache file. */

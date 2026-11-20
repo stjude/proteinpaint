@@ -321,6 +321,25 @@ function configPanel(tk, block) {
 		row.append('label').text('Heatmap of samples by the most frequent junctions').attr('for', id)
 	}
 
+	// the junctions of two sample groups as a sashimi plot, offered where the genome browser has groups (sashimi.ts)
+	if (!tk.custom_data && tk.sashimiGroupTw) {
+		const row = holder.append('div').style('margin-bottom', '15px')
+		const id = 'sjpp-j2-sashimi-' + Math.random().toString(36).slice(2)
+		row
+			.append('input')
+			.attr('type', 'checkbox')
+			.style('margin-right', '10px')
+			.attr('id', id)
+			.property('checked', !!tk.sashimi)
+			.on('change', () => {
+				tk.sashimi = tk.sashimi ? undefined : { groupTw: tk.sashimiGroupTw }
+				tk.tkconfigtip.hide()
+				loadTk(tk, block)
+			})
+		const names = Object.keys(tk.sashimiGroupTw.term.values).slice(0, 2)
+		row.append('label').text(`Sashimi plot: ${names[0]} above, ${names[1]} below`).attr('for', id)
+	}
+
 	// height
 	{
 		const k = tk.rows.jug

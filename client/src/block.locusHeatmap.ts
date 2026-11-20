@@ -6,7 +6,7 @@ of a block track, with a line from each column down to its place in the genomic 
 
 	tk.rows.statistics   optional rows of a value per column, each statRowHeight tall
 	tk.rows.heatmap      the matrix, with its annotation columns on the right
-	tk.rows.linkage      the lines
+	tk.rows.linkage      the lines, and under them the optional intervals row: items drawn at their genomic extent
 
 Each is { g, height, data }, with the height drawn: 0 when there is nothing to draw. The heatmap also has
 leftG and rightG for its labels and annotation columns, and leftWidth, the width of the labels on the left
@@ -25,8 +25,20 @@ export type LocusHeatmapStat = {
 	bars?: ({ v: number; color: string; opacity?: number } | null)[]
 	/** lines across the columns, e.g. the mean of a group of rows */
 	lines?: { color: string; values: (number | null)[] }[]
-	/** a filled dot is solid, the others are faded */
-	dots?: { col: number; v: number; color: string; filled: boolean }[]
+	/** the gap between two series of values shaded in each column, colors[1] where the second is higher, else colors[0],
+	 * e.g. between the means of two groups */
+	fill?: { values: [(number | null)[], (number | null)[]]; colors: [string, string] }
+}
+
+/** a column on the right of the heatmap: colors, or parts */
+export type LocusHeatmapAnnotation = {
+	label: string
+	/** a color per row; with widths (0 to 1), a bar per row */
+	colors?: string[]
+	widths?: number[]
+	/** per row, the parts of one bar from the left, each a share (0 to 1) of the column's width, e.g. the makeup
+	of a total */
+	parts?: { color: string; width: number }[][]
 }
 
 export type LocusHeatmapData = {
@@ -44,12 +56,20 @@ export type LocusHeatmapData = {
 	color: (v: number) => string
 	missingColor: string
 	stats?: LocusHeatmapStat[]
-	/** columns on the right of the heatmap, each with a color per row; with widths (0 to 1), a bar per row */
-	annotations?: { label: string; colors: string[]; widths?: number[] }[]
+	/** columns on the right of the heatmap, see LocusHeatmapAnnotation */
+	annotations?: LocusHeatmapAnnotation[]
 	/** rows that start a new block of rows, e.g. the first sample of a group: a gap is drawn above each */
 	rowBreaks?: number[]
 	/** lines of text on the left of the heatmap, shown when the rows are too thin for their names */
 	note?: string[]
+	/** a row under the lines, in genomic coordinates like the block's other tracks: an item from x0 to x1 (px in the
+	 * block view, at least 2 px wide), e.g. the DMRs of a scan at their full length */
+	intervals?: {
+		label: string
+		items: { x0: number; x1: number; color: string }[]
+		onHover?: (event: any, i: number) => void
+		onOut?: () => void
+	}
 	/** col and row under the pointer */
 	onHover?: (event: any, col: number, row: number) => void
 	onOut?: () => void
@@ -57,10 +77,13 @@ export type LocusHeatmapData = {
 }
 
 const annW = 12, // width of an annotation column of colors
-	annBarW = 40, // and of one of bars
+	annBarW = 40, // of one of bars
+	annPartsW = 60, // and of one of bars in parts
 	statRowHeight = 40,
 	statGap = 4,
-	linkageHeight = 60
+	linkageHeight = 60,
+	intervalHeight = 10,
+	intervalGap = 6
 
 /** tk.rows.statistics, heatmap and linkage, in tk.glider, tk.gleft and tk.gright; other rows of tk.rows are kept */
 export function initLocusHeatmapRows(tk: any) {
@@ -123,6 +146,19 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 				.attr('fill', b.color)
 				.attr('fill-opacity', b.opacity ?? 1)
 		})
+		// under the lines, faint, so that the lines stay on top
+		if (s.fill)
+			s.fill.values[0].forEach((a, i) => {
+				const b = s.fill!.values[1][i]
+				if (a === null || b === null || b === undefined || a == b) return
+				g.append('rect')
+					.attr('x', i * cw)
+					.attr('y', sy(Math.max(a, b)))
+					.attr('width', cw)
+					.attr('height', Math.abs(sy(a) - sy(b)))
+					.attr('fill', s.fill!.colors[b > a ? 1 : 0])
+					.attr('fill-opacity', 0.35)
+			})
 		for (const l of s.lines || []) {
 			// a gap in the values breaks the line; a value with none next to it is a dash as wide as its column
 			let d = '',
@@ -135,17 +171,6 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 			})
 			g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', l.color).attr('stroke-width', 1.5)
 		}
-		/* solid or faded, which still reads when the dots are a few px wide, as a ring does not. The solid ones
-		are drawn last, with a white edge that sets them off from the bars and from each other. */
-		for (const d of [...(s.dots || [])].sort((a, b) => Number(a.filled) - Number(b.filled)))
-			g.append('circle')
-				.attr('cx', (d.col + 0.5) * cw)
-				.attr('cy', sy(d.v))
-				.attr('r', Math.min(3.5, Math.max(2.5, cw / 2)))
-				.attr('fill', d.color)
-				.attr('fill-opacity', d.filled ? 1 : 0.25)
-				.attr('stroke', d.filled ? 'white' : 'none')
-				.attr('stroke-width', 0.5)
 		leftLabel(
 			k * (statRowHeight + statGap) + statRowHeight / 2 + (k ? 0 : 6),
 			`${s.label} (${s.domain[0]} to ${s.domain[1]})`
@@ -181,26 +206,47 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 	// under the track's label when the heatmap starts at the top
 	else (data.note || []).forEach((text, i) => leftLabel(Math.max(y1, 16) + 8 + i * 14, text))
 
+	// px under the heatmap for a column's label, which starts 4 px down: to the end of the linkage row, intervals and all
+	const labelRoom = linkageHeight + (data.intervals ? intervalGap + intervalHeight + 2 : 0) - 4
 	let ax = 0
 	for (const a of data.annotations || []) {
-		const w = a.widths ? annBarW : annW
+		const w = a.parts ? annPartsW : a.widths ? annBarW : annW
 		const c = document.createElement('canvas')
-		c.width = w
+		// parts get more pixels than they are shown at, for the small ones
+		c.width = a.parts ? 240 : w
 		c.height = nr
 		const actx = c.getContext('2d')!
-		a.colors.forEach((color, j) => {
-			actx.fillStyle = color
-			actx.fillRect(0, j, a.widths ? Math.max(1, Math.round(a.widths[j] * w)) : w, 1)
-		})
+		if (a.parts)
+			a.parts.forEach((row, j) => {
+				let x = 0
+				for (const p of row) {
+					actx.fillStyle = p.color
+					actx.fillRect(Math.round(x * c.width), j, Math.max(1, Math.round(p.width * c.width)), 1)
+					x += p.width
+				}
+			})
+		else
+			(a.colors || []).forEach((color, j) => {
+				actx.fillStyle = color
+				actx.fillRect(0, j, a.widths ? Math.max(1, Math.round(a.widths[j] * w)) : w, 1)
+			})
 		image(heatmap.rightG, c, ax, w)
-		// under the column and reading down, clear of the config handle above
-		heatmap.rightG
+		// under the column and reading down, clear of the config handle above; cut to the room under the heatmap, so that
+		// a long label does not run into the next track, with the whole of it on hover
+		const text = heatmap.rightG
 			.append('text')
 			.attr('transform', `translate(${ax + annW / 2},${y2 + 4}) rotate(90)`)
 			.attr('dominant-baseline', 'central')
 			.attr('font-size', 10)
-			.text(a.label)
+		fitLabel(text.node(), a.label, labelRoom)
+		text.append('title').text(a.label)
 		ax += w + 3
+	}
+
+	// the block's room on the right of the tracks is fixed: more when the columns need it
+	if (ax + 10 > block.rightheadw) {
+		block.rightheadw = ax + 10
+		block.blocksetw()
 	}
 
 	// a gap across the heatmap and the annotation columns, under the hit layer
@@ -271,9 +317,46 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 		})
 		.on('click', (event: any) => data.onClick?.(...at(event)))
 
+	// the intervals: genomic, under the ends of the lines, so they line up with the ruler and the other tracks
+	let below = 0
+	if (data.intervals) {
+		const iv = data.intervals
+		const iy = y2 + linkageHeight + intervalGap
+		leftLabel(iy + intervalHeight / 2, iv.label)
+		linkage.g
+			.append('line')
+			.attr('x2', block.width)
+			.attr('y1', iy + intervalHeight / 2)
+			.attr('y2', iy + intervalHeight / 2)
+			.attr('stroke', '#eee')
+		iv.items.forEach((it, i) => {
+			const x0 = Math.max(0, Math.min(it.x0, it.x1)),
+				x1 = Math.min(block.width, Math.max(it.x0, it.x1))
+			if (x1 < 0 || x0 > block.width) return
+			const w = Math.max(2, x1 - x0)
+			linkage.g
+				.append('rect')
+				.attr('x', x1 - x0 < 2 ? (x0 + x1) / 2 - 1 : x0)
+				.attr('y', iy)
+				.attr('width', w)
+				.attr('height', intervalHeight)
+				.attr('fill', it.color)
+				.style('cursor', iv.onHover ? 'default' : null)
+				.on('mouseover', (event: any) => iv.onHover?.(event, i))
+				.on('mouseout', () => iv.onOut?.())
+		})
+		below = intervalGap + intervalHeight + 2
+	}
+	statistics.height = y1
+	linkage.height = linkageHeight + below
 	heatmap.leftWidth = heatmap.leftG.node().getBBox().width
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth || 0, heatmap.leftWidth)
-	statistics.height = y1
-	linkage.height = linkageHeight
 	return locusHeatmapHeight(tk)
+}
+
+/** sets an svg text to label, cut with an ellipsis until it is at most px long as drawn */
+export function fitLabel(node: SVGTextElement, label: string, px: number) {
+	node.textContent = label
+	for (let n = label.length - 1; n > 0 && node.getComputedTextLength() > px; n--)
+		node.textContent = label.slice(0, n) + '…'
 }

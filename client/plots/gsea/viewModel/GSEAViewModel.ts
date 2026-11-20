@@ -1,5 +1,6 @@
 import type { GSEA } from '../GSEA'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 
 type PathwayOpt = { label: string; value: string; selected?: boolean }
 
@@ -147,6 +148,7 @@ export class GSEAViewModel {
 			body.cacheId = p.cacheId
 			if (p.daRequest) body.daRequest = p.daRequest
 			if (p.dslabel) body.dslabel = p.dslabel
+			if (this.adjustLevel()) body.adjust_expression_level = true
 		} else if (p.dapParams) {
 			body.dapParams = p.dapParams
 			body.dslabel = p.dslabel
@@ -346,7 +348,8 @@ export class GSEAViewModel {
 			...(this.gsea.gsea_params.cacheId
 				? {
 						cacheId: this.gsea.gsea_params.cacheId,
-						daRequest: this.gsea.gsea_params.daRequest
+						daRequest: this.gsea.gsea_params.daRequest,
+						adjust_expression_level: this.adjustLevel()
 				  }
 				: { dapParams: this.gsea.gsea_params.dapParams })
 		})
@@ -359,9 +362,17 @@ export class GSEAViewModel {
 	}
 
 	getRankedDECacheKey() {
-		if (this.gsea.gsea_params.cacheId) return `cache:${this.gsea.gsea_params.cacheId}`
+		if (this.gsea.gsea_params.cacheId) return `cache:${this.gsea.gsea_params.cacheId}:${this.adjustLevel()}`
 		if (this.gsea.gsea_params.dapParams) return `dap:${JSON.stringify(this.gsea.gsea_params.dapParams)}`
 		const genes = this.gsea.gsea_params.genes || []
 		return `inline:${genes.length}:${genes[0] || ''}:${genes[genes.length - 1] || ''}`
+	}
+
+	/** whether a DMR scan's gene-body ranking is taken net of expression level (settings.gsea.adjust_expression_level) */
+	adjustLevel(): boolean {
+		return (
+			!!this.gsea.state.config.settings.gsea.adjust_expression_level &&
+			this.gsea.gsea_params.daRequest?.element_type === DMR_SCAN_ELEMENT_TYPE
+		)
 	}
 }

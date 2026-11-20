@@ -10,6 +10,8 @@ export type Junction = {
 	types: string[]
 	info?: any
 	sampleCount?: number
+	/** the junction's reads summed over its samples */
+	totalReadCount?: number
 	medianReadCount?: number
 	readcountBoxplot?: number[]
 	/** for a junction with an intron retention event, of its samples, those with a nonzero IR ratio.
@@ -56,6 +58,9 @@ export type TermdbJunctionsDataResponse = {
 	/** number of junctions read from the file in rglst, including those not returned in junctions[],
 	e.g. of no sample passing the filter or read count cutoff, or of hidden types; absent when no sample passes the filter */
 	totalCount?: number
+	/** number of samples of the junction file that the request covers (filter and sample types applied): the
+	denominator of each junction's sampleCount */
+	sampleTotal?: number
 	alert?: string
 	/** read counts by sample of the junctions found in the most samples, when matrixTop was requested */
 	matrix?: {

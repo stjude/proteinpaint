@@ -1,5 +1,6 @@
 import type { GSEA } from '../GSEA'
 import { controlsInit } from '#plots/controls.js'
+import { DMR_SCAN_ELEMENT_TYPE } from '#types'
 
 export async function setControls(controlsDiv, gsea: GSEA) {
 	const inputs: any = [
@@ -26,6 +27,20 @@ export async function setControls(controlsDiv, gsea: GSEA) {
 			settingsKey: 'filter_non_coding_genes',
 			title: 'Filter non-coding genes',
 			boxLabel: ''
+		},
+		{
+			label: 'Net of Expression Level',
+			type: 'checkbox',
+			chartType: 'gsea',
+			settingsKey: 'adjust_expression_level',
+			title:
+				'Rank genes by gene-body Δβ minus the mean of genes at the same expression level, so that the ranking is not mostly how expressed a gene is',
+			boxLabel: '',
+			getDisplayStyle: plot =>
+				plot.gsea_params?.daRequest?.element_type === DMR_SCAN_ELEMENT_TYPE ||
+				plot.settings?.volcano?.elementType === DMR_SCAN_ELEMENT_TYPE
+					? ''
+					: 'none'
 		},
 		{
 			label: 'FDR or Top Gene Sets',

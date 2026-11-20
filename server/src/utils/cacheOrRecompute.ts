@@ -83,6 +83,12 @@ export async function cacheOrRecompute<TArgs, TResult>(
 	const file = cacheFilePath(cacheSubdir, cacheId)
 	const dedupKey = `${cacheSubdir}:${cacheId}`
 
+	if (opts.cacheOnly) {
+		const cached = disableFileCache ? null : await tryReadJson<TResult>(file)
+		if (cached !== null) return { result: cached, cacheId, cacheFilePath: file }
+		throw Object.assign(new Error('not cached'), { code: 'NOT_CACHED' })
+	}
+
 	const inFlight = pending.get(dedupKey)
 	if (inFlight) return inFlight as Promise<CacheOrRecomputeResult<TResult>>
 

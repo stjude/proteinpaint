@@ -29,6 +29,9 @@ export function clearsMinDeltaBeta(deltaBeta: number | null | undefined, minDelt
 }
 
 export type DiffMethRequest = {
+	/** a DMR scan only: answer { bedjFile } with the DMR track file of this scan when it has been run, else
+	 * { bedjFile: null }, without running it or drawing the volcano */
+	scanTrackOnly?: boolean
 	/** Discriminator tag. Matches the `kind` field on `DmCacheResult` and
 	 * lets the GSEA route tell a snapshot DM request apart from a snapshot
 	 * DE request without structural-shape probing. */

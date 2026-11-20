@@ -16,6 +16,8 @@ export const DMRCATE_PARAM_RANGES = {
 export type TermdbDmrBatchRequest = {
 	genome: string
 	dslabel: string
+	/** only a run already in the cache: throws with code NOT_CACHED instead of running (see cacheOrRecompute) */
+	cacheOnly?: boolean
 	/** each group as the list of its samples, or defined by a filter that the server resolves;
 	 * sample ids are resolved server-side to matrix names */
 	group1: { sampleId: number | string }[] | SampleFilterGroup

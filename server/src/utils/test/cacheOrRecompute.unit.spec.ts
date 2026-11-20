@@ -16,6 +16,7 @@ cacheScope separates the cacheIds and cache files of identical args
 canonicalizeSamplelst sorts values by sampleId
 first call: miss → computeFresh runs; second call: hit, no recompute
 shouldPersist false: the result is returned but not cached, so the next call recomputes
+cacheOnly: a miss throws NOT_CACHED without computing, and a hit is returned
 100 concurrent same-input calls dedup to one computeFresh (conference-room property)
 corrupted JSON file is treated as a miss and recomputed
 caller can evict a stale cache file by unlinking before recompute
@@ -143,6 +144,34 @@ tape('first call: miss → computeFresh runs; second call: hit, no recompute', a
 	t.equal(computeCount, 1, 'computeFresh did not run on second call (hit)')
 	t.equal(r2.cacheId, r1.cacheId, 'same cacheId across calls with same args')
 
+	cleanup()
+	t.end()
+})
+
+tape('cacheOnly: a miss throws NOT_CACHED without computing, and a hit is returned', async t => {
+	ensureSubdir()
+	const tag = crypto.randomBytes(8).toString('hex')
+	let computeCount = 0
+	const opts = {
+		computeArgument: { tag, kind: 'cache-only' },
+		cacheSubdir: 'de' as const,
+		computeFresh: async ({ cacheId }: { cacheId: string }) => {
+			computeCount++
+			trackCachePath(cacheId)
+			return { payload: 'fresh-result' }
+		}
+	}
+	try {
+		await cacheOrRecompute({ ...opts, cacheOnly: true })
+		t.fail('a miss should throw')
+	} catch (e: any) {
+		t.equal(e.code, 'NOT_CACHED', 'a miss throws NOT_CACHED')
+	}
+	t.equal(computeCount, 0, 'and computes nothing')
+	await cacheOrRecompute(opts)
+	const r = await cacheOrRecompute({ ...opts, cacheOnly: true })
+	t.equal(r.result.payload, 'fresh-result', 'a hit is returned')
+	t.equal(computeCount, 1, 'without computing again')
 	cleanup()
 	t.end()
 })

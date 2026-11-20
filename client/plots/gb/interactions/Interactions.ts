@@ -103,15 +103,21 @@ export class Interactions {
 				}
 			}
 		}
-		// the gene and sort chosen in the methylation track's menu
+		// the gene, expression, isoform and sort chosen in the methylation track's menu
 		const dnameth = blockInstance.tklst.find(t => t.type == 'dnameth')
 		const savedDnameth = config.tracks?.find(t => t.type == 'dnameth')
-		if (dnameth && savedDnameth) Object.assign(savedDnameth, { gene: dnameth.gene, sortBy: dnameth.sortBy })
+		if (dnameth && savedDnameth) {
+			const { gene, expression, isoform, sortBy } = dnameth
+			Object.assign(savedDnameth, { gene, expression, isoform, sortBy })
+		}
 		// removed with the block's Remove Track: gone from the state too, so that it does not come back
 		else if (savedDnameth) config.tracks = config.tracks.filter(t => t.type != 'dnameth')
 		// the heatmap choice of the junction track's menu
 		const j2 = blockInstance.tklst.find(t => t.type == 'j2' && t.dslabel == state.vocab?.dslabel)
-		if (j2 && config.junction) config.junction.sampleHeatmap = !!j2.sampleHeatmap
+		if (j2 && config.junction) {
+			config.junction.sampleHeatmap = !!j2.sampleHeatmap
+			config.junction.sashimi = !!j2.sashimi
+		}
 		let facetActiveTracksChanged = false
 		if (config.trackLst?.activeTracks && this.facetTrackNames.size) {
 			/* active facet tracks are inuse; if user deletes such tracks from block ui, remove from activeTracks. One the

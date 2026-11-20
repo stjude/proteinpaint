@@ -17,6 +17,8 @@ export type GseaSettings = {
 	filter_non_coding_genes: boolean
 	/** Strategy for selecting reported results: by FDR threshold or top-ranked sets. */
 	fdr_or_top: 'fdr' | 'top'
+	/** DMR scan only: rank genes by gene-body delta-beta net of expression level, see levelResiduals() on the server */
+	adjust_expression_level?: boolean
 	/** GSEA algorithm implementation to run. */
 	gsea_method: 'blitzgsea' | 'cerno'
 }

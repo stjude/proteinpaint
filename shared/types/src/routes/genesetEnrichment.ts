@@ -25,6 +25,9 @@ export type GenesetEnrichmentRequest = {
 	 * This mirrors the partial DE payload shape sent by clients. */
 	daRequest?: Partial<DERequest> | Partial<DiffMethRequest>
 	fetchDE?: boolean
+	/** DMR scan only: rank genes by gene-body delta-beta net of expression level (the mean of the gene's level bin,
+	 * see levelResiduals in genesetEnrichment.ts); genes the dataset has no expression for are left out */
+	adjust_expression_level?: boolean
 	/** Filter non-coding genes */
 	filter_non_coding_genes: boolean
 	/** Genome build */

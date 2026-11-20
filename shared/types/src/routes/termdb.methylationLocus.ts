@@ -8,8 +8,14 @@ export type MethylationLocusRequest = {
 	/** gene symbol: samples are sorted by its expression, which each bin is correlated with, and without a region
 	the locus is an isoform of it with 5 kb added on each side. Required unless region is given. */
 	gene?: string
-	/** isoform of the gene that sets the locus; default is the gene's default isoform. Expression stays gene-level. */
+	/** isoform of the gene that sets the locus without a region, default the gene's default isoform; and the isoform
+	whose usage is the expression when expression is 'isoform' or 'promoter' */
 	isoform?: string
+	/** what each bin is correlated with and samples are sorted by, on a dataset with isoform expression for the last two:
+	'gene' (default): the gene's expression
+	'isoform': the share of the gene's transcript expression that is the isoform's
+	'promoter': the share that is from the transcripts starting near the isoform's start (its promoter) */
+	expression?: 'gene' | 'isoform' | 'promoter'
 	/** the locus to read instead of the isoform and its flanks, e.g. the view range of a genome browser track */
 	region?: { chr: string; start: number; stop: number }
 	/** number of bins the locus is cut into, default 40; a locus with no more CpGs than this gets one bin per CpG */
@@ -35,7 +41,19 @@ export type MethylationLocusBin = {
 	/** BH-adjusted p across the bins with a rho */
 	q?: number
 	/** rho and q within each group, in the order of response.groups; present when groups were requested */
-	byGroup?: { group: string; rho?: number; q?: number }[]
+	byGroup?: { group: string; rho?: number; q?: number; n?: number }[]
+	/** with groups: rho within the groups, pooled (Fisher's z weighted by n - 3), and its BH q across the bins */
+	rhoWithin?: number
+	qWithin?: number
+}
+
+/** A sample of the locus */
+export type MethylationLocusSample = {
+	name: string
+	value?: number
+	group?: string
+	/** expression of each of expressedIsoforms, in its order */
+	isoformValues?: number[]
 }
 
 /** an isoform as the genome's gene db stores it; each feature is a list of [start, stop] */
@@ -63,10 +81,15 @@ export type MethylationLocusResponse =
 			/** every isoform of the gene, for choosing one and marking their TSSs */
 			isoforms?: MethylationLocusIsoform[]
 			region: { chr: string; start: number; stop: number }
-			/** unit of samples[].value, e.g. TPM */
+			/** unit of samples[].value, e.g. TPM; 'usage' for a share of the gene's transcript expression */
 			unit?: string
+			/** with expression 'isoform' or 'promoter': the transcripts whose share samples[].value is, and how many
+			transcripts of the gene it is a share of */
+			usage?: { by: 'isoform' | 'promoter'; isoform: string; transcripts: string[]; ofTranscripts: number }
+			/** the gene's isoforms that have isoform expression, for choosing the one whose usage to show */
+			expressedIsoforms?: string[]
 			/** ascending by the gene's expression (value) when a gene was requested */
-			samples: { name: string; value?: number; group?: string }[]
+			samples: MethylationLocusSample[]
 			/** the requested groups that have samples here, in request order; with two, the difference is the second minus the first */
 			groups?: string[]
 			bins: MethylationLocusBin[]

@@ -15,6 +15,8 @@ import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { dofetch3 } from '#common/dofetch'
 import { launchMethylationBrowser } from '../../../dnameth/launch'
 import { getGroupColors } from '../colors'
+import { VolcanoModel } from '../model/VolcanoModel'
+import { getPlotConfig as getDiffAnalysisConfig } from '#plots/diffAnalysis/DifferentialAnalysis.ts'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -244,9 +246,11 @@ export class VolcanoInteractions {
 
 	/** Per-sample methylation along a gene, next to its expression, or over a region, with the volcano's groups as a
 	 * strip. dmrFile: the track file of this volcano's scan, whose DMRs the track then marks */
-	launchMethylationLocus(at: { gene: string } | { chr: string; start: number; stop: number }, dmrFile?: string) {
+	async launchMethylationLocus(at: { gene: string } | { chr: string; start: number; stop: number }, dmrFile?: string) {
 		const state = this.app.getState()
 		const config = state.plots.find((p: VolcanoPlotConfig) => p.id === this.id)
+		// from another analysis of the groups, e.g. expression: the DMRs of their methylation scan, when it has run
+		if (!dmrFile) dmrFile = await this.scanTrackOf(config)
 		// an in:false "others" placeholder becomes the group it stands for, as the volcano's own request sends it
 		const groups = withOthersGroup(config.tw.q.groups, state.termfilter)
 		return launchMethylationBrowser(
@@ -256,6 +260,37 @@ export class VolcanoInteractions {
 			dmrFile,
 			config.filter
 		)
+	}
+
+	/** The DMR track file of the DMR scan of this volcano's groups, with the scan's default settings, when that scan has
+	 * run; undefined otherwise, or from a methylation volcano. Never starts a scan: it takes minutes. */
+	async scanTrackOf(config: any): Promise<string | undefined> {
+		if (
+			config.termType == DNA_METHYLATION ||
+			this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis != 'cpg'
+		)
+			return
+		try {
+			const c = getDiffAnalysisConfig(
+				{
+					termType: DNA_METHYLATION,
+					// copies: the request builder fills in the groups, and app state is read-only
+					samplelst: structuredClone(config.samplelst),
+					...(config.tw ? { tw: structuredClone(config.tw) } : {}),
+					settings: { volcano: { elementType: DMR_SCAN_ELEMENT_TYPE } }
+				},
+				this.app
+			)
+			const model = new VolcanoModel({ app: this.app }, DNA_METHYLATION)
+			model.config = c
+			model.settings = c.settings.volcano
+			const body = await model.handler.getRequestBody(model)
+			const out = await dofetch3('termdb/diffMeth', { body: { ...body, scanTrackOnly: true } })
+			return out?.bedjFile || undefined
+		} catch (_e) {
+			// the track opens without DMRs
+			return
+		}
 	}
 
 	/** Every gene's promoter and body methylation change against its expression change, for this volcano's groups */

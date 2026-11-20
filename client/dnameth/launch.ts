@@ -32,6 +32,9 @@ export async function launchMethylationBrowser(
 	const queries = app.vocabApi.termdbConfig?.queries || {}
 	const off: any = {}
 	for (const k of ['snvindel', 'junction']) if (queries[k]) off[k] = { ...structuredClone(queries[k]), shown: false }
+	/* with groups, the junction track starts as a sashimi plot of them (j2/sashimi.ts): turned on from its tab, it shows
+	how each group splices the gene under its methylation */
+	if (off.junction && groupTw) off.junction.sashimi = true
 	app.dispatch({
 		type: 'plot_create',
 		config: {

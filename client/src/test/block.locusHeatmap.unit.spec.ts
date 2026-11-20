@@ -1,10 +1,13 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { renderLocusHeatmap, locusHeatmapHeight, type LocusHeatmapData } from '../block.locusHeatmap'
+import { renderLocusHeatmap, locusHeatmapHeight, fitLabel, type LocusHeatmapData } from '../block.locusHeatmap'
 
 /**
  * Tests
  *   - draws the statistics rows, heatmap, annotation columns and a line per column with an x, and reports the cell under the pointer
+ *   - draws intervals at their genomic extent under the lines
+ *   - draws an annotation column of parts, and widens the block's right side for it
+ *   - fitLabel cuts a label to its room
  */
 
 function getTk() {
@@ -31,11 +34,7 @@ tape('renderLocusHeatmap', t => {
 			{
 				label: 'rho',
 				domain: [-1, 1],
-				bars: [{ v: 1, color: 'black' }, { v: -0.5, color: 'black' }, null],
-				dots: [
-					{ col: 0, v: 0, color: 'green', filled: true },
-					{ col: 0, v: 0, color: 'red', filled: false }
-				]
+				bars: [{ v: 1, color: 'black' }, { v: -0.5, color: 'black' }, null]
 			},
 			{
 				label: 'mean',
@@ -43,7 +42,14 @@ tape('renderLocusHeatmap', t => {
 				lines: [
 					{ color: 'red', values: [0, null, 1] },
 					{ color: 'blue', values: [0, 1, null] }
-				]
+				],
+				fill: {
+					values: [
+						[0.5, null, 0.75],
+						[0.25, 1, 1]
+					],
+					colors: ['blue', 'orange']
+				}
 			}
 		],
 		annotations: [
@@ -63,7 +69,8 @@ tape('renderLocusHeatmap', t => {
 		'and keeps the height of each row, which add up to it'
 	)
 	t.ok(heatmap.leftWidth > 0, 'and the width of the labels on the left')
-	const bars = statistics.g.selectAll('rect').nodes()
+	const [rhoRow, meanRow] = statistics.g.selectAll(':scope > g').nodes()
+	const bars = d3s.select(rhoRow).selectAll('rect').nodes() as Element[]
 	t.equal(bars.length, 2, 'one bar per column with a value')
 	t.deepEqual(
 		bars.map(b => [Number(b.getAttribute('y')), Number(b.getAttribute('height'))]),
@@ -73,12 +80,14 @@ tape('renderLocusHeatmap', t => {
 		],
 		'bars run from zero, up for a positive value and down for a negative one'
 	)
-	const dots = statistics.g.selectAll('circle').nodes()
-	t.equal(dots.length, 2, 'a dot per given dot')
+	const band = d3s.select(meanRow).selectAll('rect').nodes() as Element[]
 	t.deepEqual(
-		dots.map((d: any) => `${d.getAttribute('fill')} ${d.getAttribute('fill-opacity')}`),
-		['red 0.25', 'green 1'],
-		'a dot that is not filled is faded and under a filled one'
+		band.map(r => [r.getAttribute('fill'), Number(r.getAttribute('y')), Number(r.getAttribute('height'))]),
+		[
+			['blue', 20, 10],
+			['orange', 0, 10]
+		],
+		'the gap between two series is shaded in each column with both, by which is higher'
 	)
 	t.deepEqual(
 		statistics.g
@@ -136,5 +145,102 @@ tape('renderLocusHeatmap', t => {
 	t.equal(heatmap.g.selectAll('*').size(), 0, 'and the rows are cleared')
 	t.equal(locusHeatmapHeight(tk), 0, 'and their heights are 0')
 	t.equal(heatmap.highlight, undefined, 'and there is no column to highlight')
+	t.end()
+})
+
+tape('renderLocusHeatmap draws intervals at their genomic extent under the lines', t => {
+	const tk = getTk()
+	const block = { width: 300, tkleftlabel_xshift: -10 }
+	let hovered = -1
+	const data: LocusHeatmapData = {
+		rows: ['s1'],
+		cols: [{ x: 10, values: [0] }],
+		color: () => 'red',
+		missingColor: 'gray',
+		intervals: {
+			label: 'DMRs',
+			items: [
+				{ x0: 20, x1: 120, color: 'orange' },
+				// reversed ends, as on a minus-strand view
+				{ x0: 200, x1: 150, color: 'blue' },
+				// shorter than 2 px still shows
+				{ x0: 250, x1: 250.5, color: 'blue' },
+				// outside the view: not drawn
+				{ x0: 400, x1: 450, color: 'blue' }
+			],
+			onHover: (_, i) => (hovered = i)
+		}
+	}
+	const height = renderLocusHeatmap(tk, block, data)
+	const { linkage } = tk.rows
+	// heatmap 100, linkage 60 + the interval row 6 + 10 + 2
+	t.equal(linkage.height, 78, 'the interval row adds to the linkage height')
+	t.equal(height, 178, 'and to the height returned')
+	const rects = linkage.g.selectAll('rect').nodes()
+	t.deepEqual(
+		rects.map(r => [Number(r.getAttribute('x')), Number(r.getAttribute('width')), r.getAttribute('fill')]),
+		[
+			[20, 100, 'orange'],
+			[150, 50, 'blue'],
+			[249.25, 2, 'blue']
+		],
+		'one rect per item in view, from its start to its end, at least 2 px wide'
+	)
+	t.ok(
+		rects.every(r => Number(r.getAttribute('y')) == 100 + 60 + 6),
+		'under the lines'
+	)
+	rects[1].dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+	t.equal(hovered, 1, 'hover reports the item')
+	t.ok(
+		tk.rows.heatmap.leftG
+			.selectAll('text')
+			.nodes()
+			.some(n => n.textContent == 'DMRs'),
+		'with its label on the left'
+	)
+	t.end()
+})
+
+tape('renderLocusHeatmap: an annotation column of parts', t => {
+	const tk = getTk()
+	let widened = 0
+	const block = { width: 300, tkleftlabel_xshift: -10, rightheadw: 50, blocksetw: () => widened++ }
+	const data = {
+		rows: ['s1', 's2'],
+		cols: [{ values: [0, 1] }],
+		color: () => 'red',
+		missingColor: 'gray',
+		annotations: [
+			{
+				label: 'parts',
+				parts: [
+					[
+						{ color: 'red', width: 0.25 },
+						{ color: 'blue', width: 0.75 }
+					],
+					[]
+				]
+			}
+		]
+	}
+	renderLocusHeatmap(tk, block, data)
+	const ann = tk.rows.heatmap.rightG.select('image')
+	t.equal(Number(ann.attr('width')), 60, 'a column of parts has its own width')
+	t.equal(block.rightheadw, 60 + 3 + 10, "the block's right side is widened to hold the column")
+	t.equal(widened, 1, 'and the block is told to lay out again')
+	renderLocusHeatmap(tk, block, data)
+	t.equal(widened, 1, 'a column that fits does not lay the block out again')
+	t.end()
+})
+
+tape('fitLabel cuts a label to its room', t => {
+	const text = d3s.select('body').append('svg').append('text').attr('font-size', 10)
+	const node = text.node() as SVGTextElement
+	fitLabel(node, 'Isoform share', 76)
+	t.equal(node.textContent, 'Isoform share', 'whole when it fits')
+	fitLabel(node, 'ENST00000382888 usage', 76)
+	t.ok(node.textContent!.endsWith('…') && node.getComputedTextLength() <= 76, 'cut with an ellipsis to the room')
+	;(text.node()!.parentNode as Element).remove()
 	t.end()
 })

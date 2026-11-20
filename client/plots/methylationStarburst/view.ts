@@ -16,6 +16,9 @@ which quadrant; the color makes the balance between the two diagonals visible, w
 export { STARBURST_COLORS as colors } from '#shared/dmrColors.js'
 import { STARBURST_COLORS as colors } from '#shared/dmrColors.js'
 
+/** the rings of a pathway's leading-edge genes: a green that none of the point colors uses */
+export const RING_COLOR = '#0a8a5a'
+
 export const regionLabels: Record<Region, string> = {
 	promoter: 'Core promoter (TSS −2 kb to +500 bp)',
 	body: 'Transcript body'
@@ -107,7 +110,9 @@ export function drawStarburst(
 	getActions: (i: number) => ActionMenuItem[],
 	highlight: string[] = [],
 	/** each panel's plot height; embedded, the volcano's, so the two plots are the same height */
-	H = 300
+	H = 300,
+	/** genes whose transcripts are ringed without names, in RING_COLOR: the genes ActivePathways picked for a gene set */
+	ringGenes: Set<string> = new Set()
 ) {
 	const W = 300
 	/* Axes as the DM volcano draws them (VolcanoPlotView renderScale): axisstyle black with the axis line, each set
@@ -227,6 +232,21 @@ export function drawStarburst(
 		corner('hyper, up', quad.n.hyperUp, colors.same, true, true)
 		corner('hypo, down', quad.n.hypoDown, colors.same, false, false)
 		corner('hyper, down', quad.n.hyperDown, colors.opposite, true, false)
+
+		// a pathway's leading-edge genes: rings only, too many to name, under the named genes' rings
+		if (ringGenes.size) {
+			const rg = g.append('g').attr('class', 'sjpp-methylationStarburst-ring')
+			idx.forEach((i, j) => {
+				if (!ringGenes.has(data.genes[i])) return
+				rg.append('circle')
+					.attr('cx', x(db[j]))
+					.attr('cy', y(fc[j]))
+					.attr('r', 4.5)
+					.attr('fill', 'none')
+					.attr('stroke', RING_COLOR)
+					.attr('stroke-width', 1.5)
+			})
+		}
 
 		// named genes: a ring on the dot and the name beside it, on the side with more room, and under the dot
 		// near the top edge, where the corner counts are

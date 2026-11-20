@@ -323,6 +323,7 @@ export async function runDmrBatch(
 		computeArgument: cacheKey,
 		cacheScope: scope,
 		cacheSubdir: 'dmr',
+		cacheOnly: q.cacheOnly,
 		computeFresh: async () => {
 			const out: TermdbDmrBatchSuccessResponse['regions'] = []
 			/* One cohort for the whole run, resolved once, so every chromosome compares the same
