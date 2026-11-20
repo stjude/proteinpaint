@@ -4,8 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- DMR scan: removed the genome-wide DMR plot and methylome profile, the genes/expression/literature panel, the gene-body loss expression test, and the matched-background correction; cached scans and gene-body results recompute once
+
 Features:
 - Add a drug sensitivity chart: select a sample from the chart button to see a radial bar chart; click a bar to see the drug's molecule structure and dose-response curves, or shift-click bars to overlay the dose-response curves of several drugs
+- Methylation starburst plots one point per transcript, each against its own promoter and body methylation, on datasets with transcript expression counts; it has no gene-level mode
+- DMR scan: a "Methylation vs expression by isoform" button shows the isoform starburst beside the volcano, with the volcano's axis style, plot height and colors
+- Methylation starburst: highlight genes or transcripts by search, and a click menu with the methylation track and an isoform expression plot
 
 
 ## 2.229.0
