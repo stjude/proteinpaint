@@ -196,8 +196,8 @@ export async function mayShowAuthUi(init, path, opts = {}) {
 async function loginWithEmbedderToken(a) {
 	const token = await getDatasetAccessToken(a.route)
 	if (!token) return
-	const { dofetch3 } = await import('./dofetch')
-	const data = await dofetch3('/jwt-status', {
+	const { dofetch2 } = await import('./dofetch')
+	const data = await dofetch2('/jwt-status', {
 		method: 'POST',
 		headers: { [a.headerKey]: token, authorization: `Bearer ${btoa(token)}` },
 		body: { dslabel: a.dslabel, route: a.route, embedder: location.hostname }

@@ -30,31 +30,12 @@ export function dofetch(path, arg, opts = null) {
 			opts
 		)
 	} else {
-		// path should be "path" but not "/path"
-		if (path[0] == '/') {
-			path = path.slice(1)
-		}
-
-		let url = path
-		const host = sessionStorage.getItem('hostURL') || window.testHost || ''
-		if (host) {
-			// hostURL can end with / or not, must use 'host/path'
-			if (host.endsWith('/')) {
-				url = host + path
-			} else {
-				url = host + '/' + path
-			}
-		}
-
-		return fetch(
-			new Request(url, {
-				method: 'POST',
-				headers: {
-					'content-type': 'application/json'
-				},
-				body: JSON.stringify(arg)
-			})
-		).then(r => r.json())
+		// goes through dofetch2() so that the dataset login and session token are handled
+		return dofetch2(path, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: { ...arg }
+		})
 	}
 }
 
