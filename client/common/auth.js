@@ -83,7 +83,7 @@ export let includeEmbedder = false
 */
 export async function setDsAuthOk(opts) {
 	dsAuth = opts.dsAuth
-	getDatasetAccessToken = opts.getDatasetAccessToken
+	if (opts.getDatasetAccessToken) getDatasetAccessToken = opts.getDatasetAccessToken
 	authUi = opts.ui || defaultAuthUi
 	authUiHolder = opts.holder || select('body')
 	for (const auth of dsAuth) {
