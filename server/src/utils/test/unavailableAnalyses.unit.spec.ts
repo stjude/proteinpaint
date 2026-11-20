@@ -1,11 +1,12 @@
 import tape from 'tape'
-import { getUnavailableAnalyses, genesetAnalyses } from '#src/utils/unavailableAnalyses.ts'
+import { getUnavailableAnalyses, genesetAnalyses, hasPythonBin } from '#src/utils/unavailableAnalyses.ts'
 
 /*
 test sections:
 
 lists the analyses whose check is false, in the order of the checks
 the default checks return a list of known analysis names
+hasPythonBin() is false only for a binpath that does not exist
 */
 
 tape('\n', test => {
@@ -35,5 +36,12 @@ tape('the default checks return a list of known analysis names', test => {
 		unavailable.every(n => names.includes(n)),
 		'should only list known names'
 	)
+	test.end()
+})
+
+tape('hasPythonBin() is false only for a binpath that does not exist', test => {
+	test.equal(hasPythonBin(''), true, 'should be true when the binpath is not set')
+	test.equal(hasPythonBin(process.execPath), true, 'should be true for an existing binpath')
+	test.equal(hasPythonBin('/no/such/dir/python3'), false, 'should be false for a missing binpath')
 	test.end()
 })
