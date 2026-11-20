@@ -65,7 +65,9 @@ if [[ "$MODE" == "push" ]]; then
 		# destination is a url instead of a configured remote. This excludes the commits that are already
 		# in the remote master, such as after the branch is rebased onto a newer master, which the range
 		# $REMOTESHA..$LOCALSHA would include. The remote sha is excluded with ^ before --not, which
-		# reverses the meaning of each revision after it
+		# reverses the meaning of each revision after it. With a url, such as for `git subrepo push` or a
+		# tag push to a subrepo's repo, the commits that git-subrepo fetched from a subrepo's repo are also
+		# excluded, since they are already in that repo
 		RANGE=("$LOCALSHA")
 		if [[ "$REMOTESHA" =~ [1-9a-f] ]] && git cat-file -e "$REMOTESHA" 2>/dev/null; then
 			RANGE+=("^$REMOTESHA")
@@ -73,7 +75,7 @@ if [[ "$MODE" == "push" ]]; then
 		if [[ "$REMOTE" != "" ]] && git remote get-url "$REMOTE" > /dev/null 2>&1; then
 			RANGE+=(--not "--remotes=$REMOTE")
 		else
-			RANGE+=(--not --remotes)
+			RANGE+=(--not --remotes --glob='refs/subrepo/*/fetch')
 		fi
 		git log --format=%B "${RANGE[@]}" | "$0" text "commit messages to push" || STATUS=1
 		# --remerge-diff shows the lines that a merge commit adds, such as when resolving a conflict
