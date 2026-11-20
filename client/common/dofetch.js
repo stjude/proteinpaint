@@ -30,36 +30,12 @@ export function dofetch(path, arg, opts = null) {
 			opts
 		)
 	} else {
-		// path should be "path" but not "/path"
-		if (path[0] == '/') {
-			path = path.slice(1)
-		}
-
-		const jwt = sessionStorage.getItem('jwt')
-		if (jwt) {
-			arg.jwt = jwt
-		}
-
-		let url = path
-		const host = sessionStorage.getItem('hostURL') || window.testHost || ''
-		if (host) {
-			// hostURL can end with / or not, must use 'host/path'
-			if (host.endsWith('/')) {
-				url = host + path
-			} else {
-				url = host + '/' + path
-			}
-		}
-
-		return fetch(
-			new Request(url, {
-				method: 'POST',
-				headers: {
-					'content-type': 'application/json'
-				},
-				body: JSON.stringify(arg)
-			})
-		).then(r => r.json())
+		// goes through dofetch2() so that the dataset login and session token are handled
+		return dofetch2(path, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: { ...arg }
+		})
 	}
 }
 
@@ -112,19 +88,13 @@ export function dofetch2(path, init = {}, opts = {}) {
 		init.headers['content-type'] = 'application/json'
 	}
 
-	// this jwt is site-wide for a particular PP host, not dslabel-specific
-	const jwt = sessionStorage.getItem('jwt')
-	if (jwt) {
-		init.headers.authorization = 'Bearer ' + jwt
-	}
-
 	/*
 		this is client-side "gatekeeper", will not proceed
 		to the usual request handling unless no credentials
 		are required or a valid session has already been established
 	*/
 	return mayShowAuthUi(init, url).then(async () => {
-		if (!jwt) mayAddJwtToRequest(init, body, url)
+		mayAddJwtToRequest(init, body, url)
 		if (opts.serverData) {
 			return namedFetch(url, init, opts)
 		} else {

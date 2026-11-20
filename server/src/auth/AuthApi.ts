@@ -156,6 +156,7 @@ export class AuthApi implements AuthInterface {
 					: undefined
 				dsAuth.push({
 					dslabel,
+					dslabelPattern: this.#auth.getRouteCredPattern(dslabel, routeKey, embedder),
 					route: routeKey,
 					type: cred.type || 'basic',
 					headerKey: cred.headerKey,
