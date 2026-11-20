@@ -740,7 +740,8 @@ class singleCellPlot {
 				callback: () => showActiveDETab(DE_GENES_TAB)
 			}
 		]
-		if (this.app.opts.genome.termdbs) {
+		const unavailable = this.state.termdbConfig.unavailable || []
+		if (this.app.opts.genome.termdbs && !['blitzgsea', 'cerno'].every(m => unavailable.includes(m))) {
 			// assumption is that can run gsea on the differential genes, when the genome-level termdb is available (which is right now geneset dbs)
 			tabs.push({
 				label: 'Gene Set Enrichment Analysis (GSEA)',

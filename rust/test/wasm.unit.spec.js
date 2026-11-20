@@ -18,7 +18,7 @@ function runChecks(checks, permissionFlags = []) {
 	const code = `
 		import assert from 'node:assert/strict'
 		import { Readable } from 'node:stream'
-		import { run_rust } from ${JSON.stringify(path.join(rustDir, 'index.js'))}
+		import { run_rust, canRunRust } from ${JSON.stringify(path.join(rustDir, 'index.js'))}
 		${checks}
 		console.log('checks passed')`
 	// no write path, since a module's stdin, stdout and stderr are in memory
@@ -180,3 +180,15 @@ tape(
 		test.end()
 	}
 )
+
+tape('canRunRust tells whether a binary can run', test => {
+	const result = runChecks(`
+		assert.equal(canRunRust('DEanalysis'), false, 'a binary without a wasm module cannot run in this test process')
+		assert.equal(canRunRust('../fisher'), false, 'an invalid binary name cannot run')
+		${hasModules ? "assert.equal(canRunRust('fisher'), true, 'a binary with a wasm module can run')" : ''}`)
+	test.equal(result.status, 0, `the checks exit cleanly ${result.status ? result.stderr : ''}`)
+	test.ok(result.stdout.includes('checks passed'), 'the checks ran')
+	const allowed = runChecks(`assert.equal(canRunRust('DEanalysis'), true)`, ['--allow-child-process'])
+	test.equal(allowed.status, 0, `any binary can run with the added flag ${allowed.status ? allowed.stderr : ''}`)
+	test.end()
+})
