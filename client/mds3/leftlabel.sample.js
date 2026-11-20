@@ -35,7 +35,7 @@ export function makeSampleLabel(data, tk, block, laby) {
 				const buttonrow = tk.menutip.d.append('div').style('margin', '10px')
 
 				menu_listSamples(buttonrow, data, tk, block)
-				// TODO new button "Customize variables", launch tree in submit_lst mode to update tk.mds.variant2samples.twLst
+				// TODO new button "Customize variables", launch tree in submit_lst mode to update tk.mds.termdbConfig.variant2samples.twLst
 			})
 	} else {
 		// current data has no sample, disable label
@@ -93,7 +93,7 @@ function mayAddGetCategoryArgs(arg, block) {
 }
 
 async function mayShowSummary(tk, block) {
-	if (!tk.mds.variant2samples.twLst) {
+	if (!tk.mds.termdbConfig.variant2samples.twLst) {
 		// no terms to summarize for
 		return
 	}
@@ -126,7 +126,7 @@ async function showSummary4terms(data, div, tk, block) {
 	for (const { termid, numbycategory } of data) {
 		tabs.push({
 			label:
-				tk.mds.variant2samples.twLst.find(i => i.term.id == termid).term.name +
+				tk.mds.termdbConfig.variant2samples.twLst.find(i => i.term.id == termid).term.name +
 				(numbycategory
 					? `<span style="font-size:.8em;float:right;margin-left: 5px;">n=${numbycategory.length}</span>`
 					: ''),
@@ -195,7 +195,7 @@ numbycategory = []
 	[2] = total number of cases from this category
 */
 function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
-	const tw = tk.mds.variant2samples.twLst.find(i => i.term.id == termid)
+	const tw = tk.mds.termdbConfig.variant2samples.twLst.find(i => i.term.id == termid)
 	if (!tw) throw 'showSummary4oneTerm(): tw not found from variant2samples.twLst'
 
 	const rows = []

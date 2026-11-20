@@ -73,8 +73,6 @@ import { runToolOutput } from './tools/index.ts'
 
 /*
 init
-client_copy
-	copy_queries
 validate_termdb
 	mayInitiateScatterplots
 	mayValidateSelectCohort
@@ -237,47 +235,6 @@ export async function init(ds, genome, totalDsLst = 0) {
 		if (!ds.init) ds.init = {}
 		ds.init.status = 'done'
 	}
-}
-
-export function client_copy(ds) {
-	/* make client copy of the ds
-	to be stored at genome.datasets
-*/
-	const ds2_client = {
-		isMds3: true,
-		label: ds.label
-	}
-
-	if (ds.viewModes) ds2_client.skewerModes = ds.viewModes
-
-	if (ds.noGenomicMode4lollipopTk) ds2_client.noGenomicMode4lollipopTk = true
-
-	copy_queries(ds, ds2_client)
-	// .queries{} may be set
-
-	if (ds.cohort?.termdb) {
-		ds2_client.termdb = {}
-		// if using flat list of terms, do not send terms[] to client
-		// as this is official ds, and client will create vocabApi
-		// to query /termdb server route with standard methods
-		if (ds.cohort.termdb.allowCaseDetails) {
-			ds2_client.termdb.allowCaseDetails = {
-				sample_id_key: ds.cohort.termdb.allowCaseDetails.sample_id_key // optional key
-			}
-		}
-	}
-	if (ds.variant2samples) {
-		const v = ds.variant2samples
-		ds2_client.variant2samples = {
-			sunburst_twLst: v.sunburst_twLst,
-			twLst: v.twLst,
-			type_samples: v.type_samples,
-			type_summary: v.type_summary,
-			type_sunburst: v.type_sunburst,
-			variantkey: v.variantkey
-		}
-	}
-	return ds2_client
 }
 
 export async function validate_termdb(ds) {
@@ -655,66 +612,6 @@ export async function validate_cumburden(ds) {
 			throw `Cannot connect or invalid db ${db.file}: ${e.message || e}`
 		}
 	}
-}
-
-function copy_queries(ds, dscopy) {
-	if (!ds.queries) return
-	const copy = {}
-
-	if (ds.queries.singleSampleMutation) {
-		copy.singleSampleMutation = {
-			sample_id_key: ds.queries.singleSampleMutation.sample_id_key,
-			discoSkipChrM: ds.queries.singleSampleMutation.discoSkipChrM
-		}
-	}
-
-	if (ds.queries.singleSampleGenomeQuantification) {
-		copy.singleSampleGenomeQuantification = {}
-		for (const k in ds.queries.singleSampleGenomeQuantification) {
-			copy.singleSampleGenomeQuantification[k] = JSON.parse(
-				JSON.stringify(ds.queries.singleSampleGenomeQuantification[k])
-			)
-			delete copy.singleSampleGenomeQuantification[k].folder
-		}
-	}
-
-	if (ds.queries.singleSampleGbtk) {
-		copy.singleSampleGbtk = {}
-		for (const k in ds.queries.singleSampleGbtk) {
-			copy.singleSampleGbtk[k] = JSON.parse(JSON.stringify(ds.queries.singleSampleGbtk[k]))
-			delete copy.singleSampleGbtk[k].folder
-		}
-	}
-
-	const qs = ds.queries.snvindel
-	if (qs) {
-		dscopy.has_skewer = true
-		copy.snvindel = {
-			forTrack: qs.forTrack,
-			vcfid4skewerName: qs.vcfid4skewerName,
-			skewerRim: qs.skewerRim,
-			ssmUrl: qs.ssmUrl
-		}
-
-		if (qs.m2csq) {
-			copy.snvindel.m2csq = { by: qs.m2csq.by }
-		}
-
-		// copy over info and format fields
-		// TODO may move to dscopy.info{} and dscopy.format{}
-		if (qs.info) dscopy.bcf = { info: qs.info }
-		if (qs.format) {
-			if (!dscopy.bcf) dscopy.bcf = {}
-			dscopy.bcf.format = qs.format
-		}
-	}
-	if (ds.queries.ld) {
-		copy.ld = JSON.parse(JSON.stringify(ds.queries.ld))
-		for (const i of copy.ld.tracks) {
-			delete i.file
-		}
-	}
-	dscopy.queries = copy
 }
 
 function sort_mclass(set) {

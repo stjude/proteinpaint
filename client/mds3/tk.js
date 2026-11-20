@@ -81,7 +81,7 @@ function getParameter(tk, block) {
 		// including skewer or non-skewer
 		forTrack: 1,
 		// may not pass skewerRim if it is not in use (turn off)
-		skewerRim: tk.mds.queries?.snvindel?.skewerRim // instructions for counting rim counts per variant
+		skewerRim: getSkewerRimArg(tk) // instructions for counting rim counts per variant
 	}
 
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
@@ -221,6 +221,14 @@ async function getTkData(tk, block) {
 	}
 	if (data.error) throw data.error
 	return data
+}
+
+/* the skewerRim{} request parameter: the dataset's rim config, with the rim values that the user hid in the legend
+returns undefined when the dataset does not use rims */
+export function getSkewerRimArg(tk) {
+	const sk = tk.mds.termdbConfig.queries?.snvindel?.skewerRim
+	if (!sk) return
+	return { ...sk, hiddenvaluelst: tk.legend?.skewerRim?.hiddenvaluelst || [] }
 }
 
 export function rangequery_rglst(tk, block, par) {
@@ -422,10 +430,10 @@ async function dataFromCustomVariants(tk, block) {
 }
 
 async function mayDoLDoverlay(tk) {
-	if (!tk.mds.queries?.ld?.mOverlay) return
+	if (!tk.ld?.mOverlay) return
 	if (!tk.mds.termdb?.vocabApi) return
-	delete tk.mds.queries.ld.mOverlay.data // delete previous data
-	const data = await tk.mds.termdb.vocabApi.getLDdata(tk.mds.queries.ld.mOverlay.ldtkname, tk.mds.queries.ld.mOverlay.m)
+	delete tk.ld.mOverlay.data // delete previous data
+	const data = await tk.mds.termdb.vocabApi.getLDdata(tk.ld.mOverlay.ldtkname, tk.ld.mOverlay.m)
 	if (data.error || !Array.isArray(data.lst)) return
-	tk.mds.queries.ld.mOverlay.data = data.lst // register returned data to be used
+	tk.ld.mOverlay.data = data.lst // register returned data to be used
 }

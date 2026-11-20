@@ -3909,7 +3909,7 @@ seekrange(chr,start,stop) {
 		allow some mds3 tk to disable genomic view mode, due to gdc ssm genomic range query is not working yet
 		*/
 		for (const t of this.tklst) {
-			if (t.type == 'mds3' && t.mds?.noGenomicMode4lollipopTk) return false
+			if (t.type == 'mds3' && t.mds?.termdbConfig?.noGenomicMode4lollipopTk) return false
 		}
 		return true
 	}

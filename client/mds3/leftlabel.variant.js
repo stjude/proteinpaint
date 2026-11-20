@@ -449,11 +449,11 @@ function getViewmodeName(n) {
 }
 
 async function downloadVariants(tk, block) {
-	if (!tk.mds.variant2samples) {
+	if (!tk.mds.termdbConfig.variant2samples) {
 		console.log('TODO: variant-only')
 		return
 	}
-	// call variant2samples.get() to get sample-level data
+	// call getVariant2samples() to get sample-level data
 	const arg = {
 		querytype: 'samples'
 	}
@@ -462,7 +462,7 @@ async function downloadVariants(tk, block) {
 
 	// FIXME for custom_variants, somehow arg requries .mlst=[]
 
-	const samples = (await tk.mds.variant2samples.get(arg)).samples
+	const samples = (await tk.mds.getVariant2samples(arg)).samples
 	/*
 	array of sample objects
 	each sample will have 1 or more variants

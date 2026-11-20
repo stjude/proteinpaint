@@ -394,6 +394,8 @@ type SnvIndelQuery = {
 	skewerRim?: SkewerRim
 	format4filters?: string[]
 	format?: SnvIndelFormat
+	/** vcf INFO fields from the bcf header, set at server launch */
+	info?: { [key: string]: any }
 	variant_filter?: VariantFilter
 	mafFilter?: MafFilter
 	populations?: Population[]
@@ -2626,6 +2628,10 @@ type Variant2Samples = {
 	variantkey: string
 	twLst?: Tw[]
 	sunburst_twLst?: Tw[]
+	/** the query types, set at server launch */
+	type_samples?: string
+	type_summary?: string
+	type_sunburst?: string
 }
 
 type MutationSet = {

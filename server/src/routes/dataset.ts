@@ -1,5 +1,4 @@
 import type { RoutePayload, RouteApi } from '#types'
-import * as mds3_init from '#src/mds3.init.js'
 import * as common from '#shared/common.js'
 import type { DatasetRequest, DatasetResponse } from '#types'
 
@@ -38,7 +37,9 @@ export function init({ genomes }) {
 				}
 			}
 			if (!ds) throw 'invalid dsname'
-			const copy = ds.isMds3 ? mds3_init.client_copy(ds) : ds.isMds ? mds_clientcopy(ds) : copy_legacyDataset(ds) // to be replaced by mds3
+			// the client of a mds3 dataset reads termdb/config instead
+			if (ds.isMds3) throw 'not a legacy dataset'
+			const copy = ds.isMds ? mds_clientcopy(ds) : copy_legacyDataset(ds)
 
 			return res.send({ ds: copy } satisfies DatasetResponse)
 		} catch (e: any) {

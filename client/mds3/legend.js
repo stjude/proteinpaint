@@ -202,12 +202,12 @@ function may_create_variantShapeName(tk) {
 }
 
 function may_create_infoFields(tk) {
-	if (!tk.mds.bcf?.info) return // not using bcf with info fields
+	if (!tk.mds.termdbConfig.queries?.snvindel?.info) return // not using bcf with info fields
 	// collect info field keys eligible for displaying in legend
 	const infoFields4legend = []
 	// find eligible info field keys to show in legend and create global object with infofield categories as field_category
-	for (const key in tk.mds.bcf.info) {
-		const field = tk.mds.bcf.info[key]
+	for (const key in tk.mds.termdbConfig.queries?.snvindel?.info) {
+		const field = tk.mds.termdbConfig.queries?.snvindel?.info[key]
 		if (field.categories) {
 			infoFields4legend.push(key)
 		}
@@ -220,7 +220,7 @@ function may_create_infoFields(tk) {
 	for (const key of infoFields4legend) {
 		const row = tk.legend.table.append('tr') // html <tr> created for this info field in the legend table
 		// this row will have two columns, just like mclass
-		const headerText = tk.mds.bcf.info[key].name || key
+		const headerText = tk.mds.termdbConfig.queries?.snvindel?.info[key].name || key
 		// column 1 <td>: info field name
 		row
 			.append('td')
@@ -239,11 +239,11 @@ function may_create_infoFields(tk) {
 }
 
 function may_create_formatFilter(tk) {
-	if (!tk.mds.bcf?.format) return // not using bcf with format fields
+	if (!tk.mds.termdbConfig.queries?.snvindel?.format) return // not using bcf with format fields
 	// collect format fields used for filtering
 	const formatFields4legend = []
-	for (const k in tk.mds.bcf.format) {
-		if (tk.mds.bcf.format[k].isFilter) formatFields4legend.push(k)
+	for (const k in tk.mds.termdbConfig.queries?.snvindel?.format) {
+		if (tk.mds.termdbConfig.queries?.snvindel?.format[k].isFilter) formatFields4legend.push(k)
 	}
 	if (!formatFields4legend.length) return // nothing filterable
 
@@ -251,7 +251,7 @@ function may_create_formatFilter(tk) {
 	for (const key of formatFields4legend) {
 		const row = tk.legend.table.append('tr') // html <tr> created for this info field in the legend table
 		// this row will have two columns, just like mclass
-		const headerText = tk.mds.bcf.format[key].Description
+		const headerText = tk.mds.termdbConfig.queries?.snvindel?.format[key].Description
 		// column 1 <td>: format field name
 		row
 			.append('td')
@@ -446,7 +446,7 @@ function may_update_infoFields(data, tk) {
 		// clear holder
 		tk.legend.bcfInfo[infoKey].holder.selectAll('*').remove()
 
-		if (tk.mds.bcf.info[infoKey].Type == 'String') {
+		if (tk.mds.termdbConfig.queries?.snvindel?.info[infoKey].Type == 'String') {
 			// data for the INFO field is categorical, in the legend show unique list of categories and variant count
 			// TODO later use "termType=categorical/integer/float"
 
@@ -469,8 +469,10 @@ function may_update_infoFields(data, tk) {
 				printCategory({
 					holder: tk.legend.bcfInfo[infoKey].holder,
 					key: category,
-					color: tk.mds.bcf.info[infoKey].categories?.[category]?.color || unknown_infoCategory_color,
-					label: tk.mds.bcf.info[infoKey].categories?.[category]?.label || category,
+					color:
+						tk.mds.termdbConfig.queries?.snvindel?.info[infoKey].categories?.[category]?.color ||
+						unknown_infoCategory_color,
+					label: tk.mds.termdbConfig.queries?.snvindel?.info[infoKey].categories?.[category]?.label || category,
 					count,
 					click: event => {
 						const opts = [
@@ -503,7 +505,7 @@ function may_update_infoFields(data, tk) {
 						createLegendTipMenu(opts, tk, event.target)
 
 						// optional description of this category
-						const desc = tk.mds.bcf.info[infoKey].categories?.[category]?.desc
+						const desc = tk.mds.termdbConfig.queries?.snvindel?.info[infoKey].categories?.[category]?.desc
 						if (desc) {
 							tk.legend.tip.d
 								.append('div')
@@ -671,9 +673,9 @@ function update_mclass(tk) {
 }
 
 function may_create_skewerRim(tk, block) {
-	if (!tk.mds.queries?.snvindel?.skewerRim) return // not enabled
-	const R = (tk.legend.skewerRim = {})
-	if (!tk.mds.queries.snvindel.skewerRim.hiddenvaluelst) tk.mds.queries.snvindel.skewerRim.hiddenvaluelst = []
+	if (!tk.mds.termdbConfig.queries?.snvindel?.skewerRim) return // not enabled
+	// hiddenvaluelst[] is the rim values hidden by the user, see getSkewerRimArg()
+	const R = (tk.legend.skewerRim = { hiddenvaluelst: [] })
 
 	R.row = tk.legend.table.append('tr')
 
@@ -687,17 +689,17 @@ function may_create_skewerRim(tk, block) {
 }
 
 function getSkewerRimLegendHeaderName(tk) {
-	const sk = tk.mds.queries.snvindel.skewerRim
+	const sk = tk.mds.termdbConfig.queries.snvindel.skewerRim
 	if (sk.type == 'format') {
 		if (!sk.formatKey) throw 'skewerRim.formatKey missing'
-		return tk.mds.bcf?.format?.[sk.formatKey]?.Description || sk.formatKey
+		return tk.mds.termdbConfig.queries?.snvindel?.format?.[sk.formatKey]?.Description || sk.formatKey
 	}
 	return 'unknown skewerRim.type'
 }
 
 function may_update_skewerRim(data, tk) {
 	if (!data.skewer) return // when missing, do nothing. this is possible when server breaks at loading a subtk
-	const sk = tk.mds.queries?.snvindel?.skewerRim
+	const sk = tk.mds.termdbConfig.queries?.snvindel?.skewerRim
 	if (!sk) return // not enabled
 	let rim1total = 0, // count number of cases, not unique
 		rim2total = 0,
@@ -729,7 +731,7 @@ function may_update_skewerRim(data, tk) {
 					.attr('data-testid', `${testIdPrefix}hide-${sk.rim1value}-option`)
 					.text('Hide')
 					.on('click', () => {
-						sk.hiddenvaluelst.push(sk.rim1value)
+						R.hiddenvaluelst.push(sk.rim1value)
 						reload(tk)
 					})
 			})
@@ -750,7 +752,7 @@ function may_update_skewerRim(data, tk) {
 					.attr('data-testid', testIdPrefix + 'hide-no-rim-option')
 					.text('Hide')
 					.on('click', () => {
-						sk.hiddenvaluelst.push(sk.noRimValue)
+						R.hiddenvaluelst.push(sk.noRimValue)
 						reload(tk)
 					})
 			})
@@ -771,14 +773,14 @@ function may_update_skewerRim(data, tk) {
 					.attr('data-testid', `${testIdPrefix}hide-${sk.rim2value}-option`)
 					.text('Hide')
 					.on('click', () => {
-						sk.hiddenvaluelst.push(sk.rim2value)
+						R.hiddenvaluelst.push(sk.rim2value)
 						reload(tk)
 					})
 			})
 	}
 
 	// hidden ones
-	for (const c of sk.hiddenvaluelst) {
+	for (const c of R.hiddenvaluelst) {
 		let loading = false
 		R.holder
 			.append('div')
@@ -790,7 +792,7 @@ function may_update_skewerRim(data, tk) {
 			.on('click', async event => {
 				if (loading) return
 				loading = true
-				sk.hiddenvaluelst.splice(sk.hiddenvaluelst.indexOf(c), 1)
+				R.hiddenvaluelst.splice(R.hiddenvaluelst.indexOf(c), 1)
 				event.target.innerHTML = 'Updating...'
 				await tk.load()
 			})
@@ -811,8 +813,10 @@ function getRimSvg(rim) {
 }
 
 function may_create_ld(tk, block) {
-	if (!tk.mds.queries?.ld) return
-	tk.mds.queries.ld.colorScale = interpolateRgb(tk.mds.queries.ld.overlay.color_0, tk.mds.queries.ld.overlay.color_1)
+	const ld = tk.mds.termdbConfig.queries?.ld
+	if (!ld) return
+	// tk.ld.mOverlay{} is set when the user overlays the ld r2 values against a variant
+	tk.ld = { colorScale: interpolateRgb(ld.overlay.color_0, ld.overlay.color_1) }
 	const R = (tk.legend.ld = {})
 	R.row = tk.legend.table.append('tr')
 	// contents are filled in dynamically
@@ -823,21 +827,21 @@ function may_create_ld(tk, block) {
 		.style('opacity', 0.7)
 	R.holder = R.row.append('td').attr('data-testid', legendLabelHolderPrefix)
 	R.showHolder = R.holder.append('div').style('display', 'none')
-	showLDlegend(R.showHolder, tk.mds.queries.ld.colorScale)
+	showLDlegend(R.showHolder, tk.ld.colorScale)
 	R.showHolder
 		.append('span')
 		.text('Cancel overlay')
 		.style('font-size', '.7em')
 		.attr('class', 'sja_clbtext')
 		.on('click', () => {
-			delete tk.mds.queries.ld.mOverlay
+			delete tk.ld.mOverlay
 			if (tk.skewer?.hlssmid) delete tk.skewer.hlssmid
 			tk.load()
 		})
 }
 
 function may_update_ld(tk) {
-	if (!tk.mds.queries?.ld?.mOverlay) {
+	if (!tk.ld?.mOverlay) {
 		// not in use
 		if (tk.legend.ld) {
 			tk.legend.ld.headerTd.html('')
@@ -846,7 +850,7 @@ function may_update_ld(tk) {
 		return
 	}
 	// doing overlay
-	tk.legend.ld.headerTd.html(tk.mds.queries.ld.mOverlay.ldtkname + ' LD r<sup>2</sup>')
+	tk.legend.ld.headerTd.html(tk.ld.mOverlay.ldtkname + ' LD r<sup>2</sup>')
 	tk.legend.ld.showHolder.style('display', 'block')
 }
 

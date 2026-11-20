@@ -9,7 +9,7 @@ import { testIdPrefix } from './skewer.render.shapes'
 /*
 ********************** EXPORTED
 init_sampletable()
-	using mds.variant2samples.get() to map mlst[] to samples
+	using mds.getVariant2samples() to map mlst[] to samples
 	always return list of samples, does not return summaries
 	mlst can be mixture of data types, doesn't matter
 
@@ -31,11 +31,11 @@ feedSample2selectCallback
 .mlst[]
 	used for v2s.get() query
 .tk
-	.mds.variant2samples.twLst[]
+	.mds.termdbConfig.variant2samples.twLst[]
 .block
 .div
 .tid2value={}
- 	sample filters by e.g. clicking on a sunburst ring, for tk.mds.variant2samples.get
+ 	sample filters by e.g. clicking on a sunburst ring, for tk.mds.getVariant2samples()
 .singleSampleDiv
 	optional, if just one single sample, can show into this table rather than creating a new one
 */
@@ -43,7 +43,7 @@ feedSample2selectCallback
 const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
-	//run variant2samples.get() to map variants to samples
+	//run getVariant2samples() to map variants to samples
 	const wait = arg.div
 		.append('div')
 		.text('Loading...')
@@ -63,7 +63,7 @@ export async function init_sampletable(arg) {
 }
 
 /*
-query the list of samples carrying the variants of arg.mlst[] via variant2samples.get()
+query the list of samples carrying the variants of arg.mlst[] via getVariant2samples()
 also used by the svfusion breakpoint chart of itemtable.js, which limits the samples to the selected
 breakpoint before rendering them with displaySampleTable()
 */
@@ -75,8 +75,8 @@ export async function getSamples(arg) {
 	arg.tid2value_orig = new Set()
 	if (arg.tid2value) Object.keys(arg.tid2value).forEach(arg.tid2value_orig.add, arg.tid2value_orig)
 
-	arg.querytype = arg.tk.mds.variant2samples.type_samples
-	const out = await arg.tk.mds.variant2samples.get(arg)
+	arg.querytype = arg.tk.mds.termdbConfig.variant2samples.type_samples
+	const out = await arg.tk.mds.getVariant2samples(arg)
 	return out.samples // list of samples
 }
 
@@ -90,7 +90,7 @@ export async function displaySampleTable(samples, args) {
 	//if (args.maxHeight) params.maxHeight = args.maxHeight
 
 	params.columnButtons = []
-	if (args.tk.mds.queries?.singleSampleMutation) {
+	if (args.tk.mds.termdbConfig.queries?.singleSampleMutation) {
 		const width = window.innerWidth
 		const height = screen.height
 		const colButton = {
@@ -112,8 +112,8 @@ export async function displaySampleTable(samples, args) {
 		params.columnButtons.push(colButton)
 	}
 
-	if (args.tk.mds.queries?.singleSampleGenomeQuantification) {
-		for (const k in args.tk.mds.queries.singleSampleGenomeQuantification) {
+	if (args.tk.mds.termdbConfig.queries?.singleSampleGenomeQuantification) {
+		for (const k in args.tk.mds.termdbConfig.queries.singleSampleGenomeQuantification) {
 			const btn = {
 				text: k,
 				dataTestId: `${testIdPrefix}${k}-button`,
@@ -194,8 +194,8 @@ async function make_singleSampleTable(s, arg) {
 		cell2.text(s.caseIsOpenAccess ? 'Open' : 'Controlled')
 	}
 
-	if (arg.tk.mds.variant2samples.twLst) {
-		for (const tw of arg.tk.mds.variant2samples.twLst) {
+	if (arg.tk.mds.termdbConfig.variant2samples.twLst) {
+		for (const tw of arg.tk.mds.termdbConfig.variant2samples.twLst) {
 			const [cell1, cell2] = table.addRow()
 			cell1.text(tw.term.name).style('text-overflow', 'ellipsis')
 			cell2.style('text-overflow', 'ellipsis')
@@ -240,7 +240,7 @@ async function make_singleSampleTable(s, arg) {
 			for (const formatkey in s.ssmid2format[ssmid]) {
 				const value = s.ssmid2format[ssmid][formatkey]
 				const [t1, t2] = table.addRow()
-				const fobj = arg.tk.mds?.bcf?.format?.[formatkey]
+				const fobj = arg.tk.mds.termdbConfig.queries?.snvindel?.format?.[formatkey]
 				t1.text(fobj?.Description || formatkey)
 					.attr('data-testid', testIdPrefix + 'singlemtablerow4formatkey')
 					.attr('__key__', formatkey)
@@ -305,7 +305,7 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 		if (tk.allow2selectSamples.class) btn.attr('class', tk.allow2selectSamples.class)
 	}
 
-	if (tk.mds.queries?.singleSampleMutation) {
+	if (tk.mds.termdbConfig.queries?.singleSampleMutation) {
 		// make disco button
 		extraRow
 			.append('button')
@@ -318,8 +318,8 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 			})
 	}
 
-	if (tk.mds.queries?.singleSampleGenomeQuantification) {
-		for (const k in tk.mds.queries.singleSampleGenomeQuantification) {
+	if (tk.mds.termdbConfig.queries?.singleSampleGenomeQuantification) {
+		for (const k in tk.mds.termdbConfig.queries.singleSampleGenomeQuantification) {
 			extraRow
 				.append('button')
 				.text(k)
@@ -389,7 +389,7 @@ export async function samples2columnsRows(samples, tk) {
 	// detect if these columns appear in the samples
 	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
 		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst),
-		has_format = samples.some(i => i.ssmid2format) && tk.mds?.bcf?.format
+		has_format = samples.some(i => i.ssmid2format) && tk.mds.termdbConfig.queries?.snvindel?.format
 	const displayedFormatKeySet = new Set() // set of format keys for display, to skip keys not in display
 
 	// to be returned by this function, as inputs for renderTable
@@ -401,8 +401,8 @@ export async function samples2columnsRows(samples, tk) {
 		columns.push({ label: 'Access' })
 	}
 
-	if (tk.mds.variant2samples.twLst) {
-		for (const tw of tk.mds.variant2samples.twLst) {
+	if (tk.mds.termdbConfig.variant2samples.twLst) {
+		for (const tw of tk.mds.termdbConfig.variant2samples.twLst) {
 			const cell = { label: tw.term.name }
 			columns.push(cell)
 		}
@@ -423,9 +423,9 @@ export async function samples2columnsRows(samples, tk) {
 			}
 		}
 
-		for (const f in tk.mds.bcf.format) {
+		for (const f in tk.mds.termdbConfig.queries?.snvindel?.format) {
 			if (!displayedFormatKeySet.has(f)) continue
-			const fobj = tk.mds.bcf.format[f]
+			const fobj = tk.mds.termdbConfig.queries?.snvindel?.format[f]
 			columns.push({
 				label: fobj.Description || f
 			})
@@ -462,8 +462,8 @@ export async function samples2columnsRows(samples, tk) {
 			})
 		}
 
-		if (tk.mds.variant2samples.twLst) {
-			for (const tw of tk.mds.variant2samples.twLst) {
+		if (tk.mds.termdbConfig.variant2samples.twLst) {
+			for (const tw of tk.mds.termdbConfig.variant2samples.twLst) {
 				const v = twDisplayValueFromSample(sample, tw)
 				const v2 = value2urlsOrText(v, tw)
 				if (tw.baseURL || tw.pmidOrDoi) {
@@ -487,11 +487,7 @@ export async function samples2columnsRows(samples, tk) {
 						// found m data point
 						let showClass
 						if (m.dt == dtsnvindel) {
-							if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
-								oneHtml.push(`<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`)
-							} else {
-								oneHtml.push(m.mname)
-							}
+							oneHtml.push(m.mname)
 							showClass = true
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 							/* when m has multiple samples, m.pairlst cannot be used to print breakpoint of 
@@ -550,14 +546,14 @@ export async function samples2columnsRows(samples, tk) {
 
 		if (has_format) {
 			if (!ssm_id_lst) throw 'ssm_id_lst missing, cannot show format'
-			for (const fkey in tk.mds.bcf.format) {
+			for (const fkey in tk.mds.termdbConfig.queries?.snvindel?.format) {
 				if (!displayedFormatKeySet.has(fkey)) continue
 				if (!sample.ssmid2format) {
 					// sample does not have format values, return blank cell for each format field
 					row.push({ value: '' })
 					continue
 				}
-				const fobj = tk.mds.bcf.format[fkey]
+				const fobj = tk.mds.termdbConfig.queries?.snvindel?.format[fkey]
 				const htmls = []
 				for (const ssmid of ssm_id_lst) {
 					const value = sample.ssmid2format?.[ssmid]?.[fkey]
