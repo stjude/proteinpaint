@@ -59,6 +59,8 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 			term: config.tw.term,
 			filter: config.filter,
 			excludeSexChr: !!(embedded ? volcano.excludeSexChr : config.excludeSexChr),
+			// embedded, its plots take the volcano's height: a height edit redraws it, from the cached data
+			volcanoHeight: embedded ? volcano.height : undefined,
 			settings: { ...defaultSettings, ...config.settings?.methylationStarburst } as StarburstSettings,
 			// with the sample filter of the volcano it was opened from, when that has one
 			termfilter: getCombinedTermFilter(appState, config.filter)

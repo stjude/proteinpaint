@@ -90,8 +90,11 @@ export class VolcanoInteractions {
 
 	download(termType: string) {
 		this.dom.actionsTip.clear().showunder(this.dom.controls.select('div').node())
-		// a DMR scan draws the isoform starburst beside the volcano; it saves on its own
-		const starburst = this.dom.holder.select('[data-testid="sjpp-volcano-starburst"] svg').node() as Node | null
+		// a DMR scan draws the isoform starburst beside the volcano; it saves on its own, only while shown: a closed one
+		// keeps its svg but no longer follows the groups
+		const starburst = this.dom.holder
+			.select('[data-testid="sjpp-volcano-starburst"]:not([hidden]) svg')
+			.node() as Node | null
 		const opts = [
 			{
 				text: starburst ? 'Download volcano plot' : 'Download plot',
