@@ -2123,7 +2123,7 @@ reverseorient() {
 					/* only for legacy ds
 					can delete this step when migrated to mds3
 					*/
-					const d = await dofetch3(`getDataset?genome=${this.genome.name}&dsname=${ds.label}`)
+					const d = await dofetch3(`legacyDs?genome=${this.genome.name}&dsname=${ds.label}`)
 					if (d.error) throw 'invalid name'
 					if (!d.ds) throw '.ds missing'
 
@@ -4735,7 +4735,7 @@ seekrange(chr,start,stop) {
 				this.blocktip.clear().showunder(event.target)
 
 				if (ds.mdsIsUninitiated) {
-					const d = await dofetch3(`getDataset?genome=${this.genome.name}&dsname=${ds.label}`)
+					const d = await dofetch3(`legacyDs?genome=${this.genome.name}&dsname=${ds.label}`)
 					if (d.error) throw d.error
 					if (!d.ds) throw 'ds missing'
 					Object.assign(ds, d.ds)
@@ -4796,7 +4796,7 @@ seekrange(chr,start,stop) {
 		*/
 
 		if (ds.mdsIsUninitiated) {
-			const d = await dofetch3(`getDataset?genome=${this.genome.name}&dsname=${ds.label}`)
+			const d = await dofetch3(`legacyDs?genome=${this.genome.name}&dsname=${ds.label}`)
 			if (d.error) throw d.error
 			if (!d.ds) throw 'ds missing'
 			Object.assign(ds, d.ds)

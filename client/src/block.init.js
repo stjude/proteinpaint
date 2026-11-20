@@ -300,7 +300,7 @@ async function step3(arg) {
 			// potentially problematic logic: only skip the dataset when that flag is false
 			// if the flag is true, tells the legacy ds is uninitiated
 			if (arg.genome.datasets[dsname] && !arg.genome.datasets[dsname].legacyDsIsUninitiated) continue
-			const d = await dofetch3(`getDataset?genome=${arg.genome.name}&dsname=${dsname}`)
+			const d = await dofetch3(`legacyDs?genome=${arg.genome.name}&dsname=${dsname}`)
 			if (d.error) throw `invalid name from dataset[]: ${d.error}`
 			if (!d.ds) throw '.ds missing'
 

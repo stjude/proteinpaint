@@ -150,7 +150,7 @@ export class Samplematrix {
 			// load from custom dataset: may cache vcf header
 
 			if (this.mds.mdsIsUninitiated) {
-				const d = await client.dofetch3(`getDataset?genome=${this.genome.name}&dsname=${this.mds.label}`)
+				const d = await client.dofetch3(`legacyDs?genome=${this.genome.name}&dsname=${this.mds.label}`)
 				if (d.error) throw d.error
 				if (!d.ds) throw 'ds missing'
 				Object.assign(this.mds, d.ds)
