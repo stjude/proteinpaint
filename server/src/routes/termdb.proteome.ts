@@ -431,6 +431,8 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 	const controlSampleIds = new Set<string>()
 	const bySampleId = Object.create(null)
 
+	const limitSamples = await mayLimitSamples(param, null, ds)
+	if (limitSamples?.size == 0) return { term2sample2value, byTermId: {}, controlSampleIds, bySampleId }
 	for (const tw of param.terms) {
 		if (!tw) continue
 
@@ -462,8 +464,6 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 			{ ...param, ds },
 			s2v
 		)
-		const limitSamples = await mayLimitSamples(param, null, ds)
-		if (limitSamples?.size == 0) return { term2sample2value, byTermId: {}, controlSampleIds, bySampleId }
 		const filteredValues = Object.create(null)
 		for (const [sid, sampleValue] of Object.entries(mappedValues)) {
 			if (limitSamples && !limitSamples.has(Number(sid))) continue

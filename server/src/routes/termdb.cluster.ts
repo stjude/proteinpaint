@@ -400,6 +400,8 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 
 		const genesData = geneData.query_output || {}
 		if (!genesData) throw 'No expression data returned from HDF5 query'
+		const limitSamples = await mayLimitSamples(param, null, ds)
+		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of param.terms) {
 			if (!tw.term.gene) continue
 
@@ -432,8 +434,6 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 			// limitSamples is already mapped
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			// filter sample data
-			const limitSamples = await mayLimitSamples(param, null, ds)
-			if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue
@@ -529,6 +529,8 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 
 		const isoformsData = isoformData.query_output || {}
 		if (!isoformsData) throw 'No expression data returned from HDF5 query'
+		const limitSamples = await mayLimitSamples(param, null, ds)
+		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of param.terms) {
 			if (!tw.term.isoform) continue
 
@@ -551,8 +553,6 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 			}
 
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
-			const limitSamples = await mayLimitSamples(param, null, ds)
-			if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue

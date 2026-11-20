@@ -1952,6 +1952,8 @@ export async function validate_query_ssGSEA(ds, genome) {
 		const results = JSON.parse(tmp)
 		mayLog('ssGSEA h5 file', Date.now() - time1)
 
+		const limitSamples = await mayLimitSamples(param, null, ds)
+		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of param.terms) {
 			const result = results.query_output[tw.term.id]?.samples
 			if (!result) {
@@ -1969,8 +1971,6 @@ export async function validate_query_ssGSEA(ds, genome) {
 			}
 
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
-			const limitSamples = await mayLimitSamples(param, null, ds)
-			if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue
@@ -2160,6 +2160,8 @@ export async function validate_query_dnaMethylation(ds, genome) {
 		}
 
 		const sampleNames = q.samples.map(sid => ds.cohort.termdb.q.id2sampleName(sid))
+		const limitSamples = await mayLimitSamples(param, null, ds)
+		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of dnaMethylTws) {
 			if (!sampleNames.length) continue
 
@@ -2210,8 +2212,6 @@ export async function validate_query_dnaMethylation(ds, genome) {
 				}
 			}
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
-			const limitSamples = await mayLimitSamples(param, null, ds)
-			if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue
@@ -2316,7 +2316,10 @@ function makeElementMethylationGetter(q, nominated, ds) {
 		const byTermId = {}
 		const bySampleId = Object.create(null)
 		const tws = param.terms.filter(tw => tw.term.type == TermTypes.DNA_METHYLATION)
+		if (!tws.length) return { term2sample2value, byTermId, bySampleId }
 
+		const limitSamples = await mayLimitSamples(param, null, ds)
+		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of tws) {
 			const entry = resolveElementEntryForTerm(q, tw.term, nominated)
 			const queryNames = entry.allSampleNames || []
@@ -2402,7 +2405,6 @@ function makeElementMethylationGetter(q, nominated, ds) {
 
 		async function addMappedValues(tw, s2v) {
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
-			const limitSamples = await mayLimitSamples(param, null, ds)
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue
@@ -2479,6 +2481,8 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 
 		const term2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
 		const byTermId = {}
+		const limitSamples = await mayLimitSamples(param, null, ds)
+		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of param.terms) {
 			if (!tw) continue
 
@@ -2500,8 +2504,6 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 				}
 			})
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
-			const limitSamples = await mayLimitSamples(param, null, ds)
-			if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue

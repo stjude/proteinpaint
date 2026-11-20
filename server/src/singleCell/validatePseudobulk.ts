@@ -189,6 +189,8 @@ export async function validatePseudobulk(ds: any) {
 		const requestedGenes = hasGenesArg
 			? geneNames.map(gene => ({ gene, id: gene, tw: param.terms[0] }))
 			: param.terms.filter(tw => tw.term.gene).map(tw => ({ gene: tw.term.gene, id: tw.$id, tw }))
+		const limitSamples = await mayLimitSamples(param, null, ds)
+		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const { gene, id, tw } of requestedGenes) {
 			// Get this gene's data from the batch response
 			const geneResult = genesData[gene]
@@ -214,8 +216,6 @@ export async function validatePseudobulk(ds: any) {
 			}
 
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
-			const limitSamples = await mayLimitSamples(param, null, ds)
-			if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
 				if (limitSamples && !limitSamples.has(Number(sid))) continue

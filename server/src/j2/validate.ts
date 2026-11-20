@@ -306,6 +306,7 @@ export async function getJunctionData(
 ) {
 	if (!Array.isArray(param?.terms) || !param.terms.length) throw new Error('junction.get(): terms[] is required')
 	const term2sample2value = new Map<string, Record<string, number>>()
+	const limitSamples = await mayLimitSamples(param, null, ds)
 	for (const tw of param.terms) {
 		if (!tw?.$id) throw new Error('junction.get(): term wrapper $id is required')
 		const term = tw.term
@@ -340,7 +341,6 @@ export async function getJunctionData(
 		// map to target sample type
 		const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 		// filter samples
-		const limitSamples = await mayLimitSamples(param, null, ds)
 		const filteredValues = Object.create(null)
 		for (const [sid, value] of Object.entries(mappedValues)) {
 			if (limitSamples && !limitSamples.has(Number(sid))) continue

@@ -220,7 +220,7 @@ for (const type of [
 				const tw = { $id: 'value', term, q: {} }
 				const target = down ? 2 : 1
 				const param = {
-					terms: [tw],
+					terms: type === 'junction' ? [tw, { ...tw, $id: 'second-value' }] : [tw],
 					sampleMapping: down ? 'parentToChildren' : 'childrenToParent',
 					sampleTypes: [target],
 					dataTypeDetails: details
@@ -262,7 +262,13 @@ for (const type of [
 						}
 					]
 				}
-				const filtered = await getter({ ...param, filter })
+				let filterLookups = 0
+				ds.validate_filter0 = value => {
+					filterLookups++
+					return value
+				}
+				const filtered = await getter({ ...param, filter, filter0: {} })
+				t.equal(filterLookups, 1, 'getter resolves the request sample filter once')
 				for (const [id, values] of filtered.term2sample2value) {
 					t.deepEqual(Object.keys(values), [down ? '20' : '10'], 'filter selects mapped targets, not source IDs')
 					t.equal(
