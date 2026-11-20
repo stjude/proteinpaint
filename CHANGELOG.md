@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.224.4
 
 Fixes:
 - Hide the GSEA tab of the single-cell DE and differential analysis plots when the server cannot run a GSEA method; the termdb/config response lists the gene set analyses that the server cannot run in termdbConfig.unavailable
