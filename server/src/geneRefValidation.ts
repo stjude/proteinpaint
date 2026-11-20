@@ -42,6 +42,7 @@ DELIBERATELY NOT COVERED
 
 import { TermTypes } from '#types'
 import { dtTermTypes } from '#shared/terms.js'
+import { stripAccessionVersion } from '#shared/helpers.js'
 import serverconfig from './serverconfig.js'
 
 /** the kind of thing a term points at, and how to tell whether the genome knows it */
@@ -288,12 +289,4 @@ export function isKnownIsoform(genome: any, accession: string): boolean {
 	const unversioned = stripAccessionVersion(accession)
 	if (unversioned != accession) return isKnownIsoform(genome, unversioned)
 	return false
-}
-
-/* ENSG00000141510.16 -> ENSG00000141510, NM_000546.6 -> NM_000546. Gene db rows carry no
-version, while a client may send one. Only applied to something shaped like an accession, so
-that a gene symbol ending in a number (MIR1-1, and any future symbol with a dot) is left
-alone. */
-function stripAccessionVersion(value: string): string {
-	return /^[A-Za-z]{2,6}_?\d+\.\d+$/.test(value) ? value.replace(/\.\d+$/, '') : value
 }

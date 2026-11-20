@@ -211,6 +211,11 @@ tape('isIsoformDE', function (test) {
 		/invalid termType/,
 		'throws for a data type the route does not test'
 	)
+	try {
+		isIsoformDE(req('dnaMethylation'))
+	} catch (e: any) {
+		test.equal(e.status, 400, 'an unknown termType is a client error')
+	}
 	test.end()
 })
 

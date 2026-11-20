@@ -10,7 +10,7 @@ import { VolcanoViewModel } from '../viewModel/VolcanoViewModel'
     - setPointData
     - setStatsData
 	- setUserActions
-	- pValueLabel per term type (scan, corrected scan, proteome DAP)
+	- pValueLabel per term type (scan, proteome DAP)
 	- labels and hidden actions by data type
 */
 
@@ -451,7 +451,6 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 		original_p_value: 0.012,
 		adjusted_p_value: 0.012,
 		no_cpgs: 14,
-		excess: -0.17,
 		pixel_x: 10,
 		pixel_y: 10
 	}
@@ -463,15 +462,7 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 		kept: 2,
 		hyper: 1,
 		hypo: 1,
-		width: { median: 1000, q1: 800, q3: 1500 },
-		backgroundCorrection: {
-			windows: 2000,
-			scored: 2,
-			unscored: 0,
-			significant: 1,
-			matchedOn: ['CpG density', 'width']
-		},
-		geneBodyLoss: { regions: 1, genes: ['GENEA'] }
+		width: { median: 1000, q1: 800, q3: 1500 }
 	}
 	const settings = {
 		...mockSettings,
@@ -481,7 +472,6 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 		minSamplesPerGroup: 3,
 		excludeSexChr: false,
 		scanChromosome: '',
-		backgroundCorrection: true,
 		minCpgs: 5
 	}
 	const vm = new VolcanoViewModel(
@@ -495,72 +485,37 @@ tape('DMR scan rows: one p, scan columns paired to their cells, scan stats and p
 	const cell = (label: string) => row[cols.indexOf(label)]?.value
 	test.deepEqual(
 		cols,
-		['DMR', 'Gene(s)', 'Δβ', 'Peak Δβ', 'CpGs', 'Width (bp)', 'Excess Δβ', 'FDR vs matched background'],
-		'scan columns, in order, with a single p column named for the correction'
+		['DMR', 'Gene(s)', 'Δβ', 'Peak Δβ', 'CpGs', 'Width (bp)', 'Min smoothed FDR'],
+		'scan columns, in order, with a single p column named for the statistic'
 	)
 	test.equal(cell('DMR'), 'chr1:1000-2000', 'the row is labelled by its coordinate')
 	test.equal(cell('Δβ'), -0.21, 'Δβ is the mean delta-beta')
 	test.equal(cell('Peak Δβ'), -0.35, 'the peak rides in fold_change')
 	test.equal(cell('CpGs'), 14, 'CpG count under CpGs')
 	test.equal(cell('Width (bp)'), 1000, 'width under Width')
-	test.equal(cell('Excess Δβ'), -0.17, 'excess under Excess')
-	test.equal(cell('FDR vs matched background'), 0.012, 'the one p under the one p column')
+	test.equal(cell('Min smoothed FDR'), 0.012, 'the one p under the one p column')
 	test.ok(vm.viewData.singlePValue, 'a scan has one p per row')
-	test.equal(vm.viewData.pValueLabel, 'FDR vs matched background', 'and names it after the correction')
+	test.equal(vm.viewData.pValueLabel, 'Min smoothed FDR', 'naming no statistic, the p is DMRcate’s smoothed FDR')
 	test.equal(vm.viewData.scan, scan, 'the scan summary is passed through for the view')
 	test.ok(vm.viewData.userActions.noShow.has('confounders'), 'the scan offers no confounders')
 
 	const labels = vm.viewData.statsData.map(d => d.label)
 	test.ok(labels.includes('DMRs with 5+ CpGs'), 'stats state the CpG floor and the count meeting it')
-	test.ok(
-		vm.viewData.statsData.find(d => d.label.startsWith('DMRs moving more than matched background'))?.value ==
-			'1 of 2 (50.0%)',
-		'the correction is reported with its denominator'
-	)
-	test.ok(labels.includes('Gene-body loss regions beating background → genes'), 'the gene-body set is reported')
 
 	const p = vm.viewData.provenance
 	test.ok(p.includes('scan: whole genome'), 'provenance names what was scanned')
-	test.ok(p.includes('background correction: yes'), 'and whether it was corrected')
 	test.ok(p.includes('min CpGs per DMR: 5'), 'and the CpG floor')
 
-	// without the correction the p is the smoothed FDR and there is no excess column
-	const plain = new VolcanoViewModel(
-		{ ...mockConfig, termType: 'dnaMethylation' } as any,
-		{
-			...mockResponse,
-			// the gene set stays: it no longer depends on the correction, only its label does
-			scan: { ...scan, backgroundCorrection: undefined },
-			data: { ...mockResponse.data, dots: [scanDot] as any }
-		} as any,
-		{ ...settings, backgroundCorrection: false } as any
-	)
-	test.equal(
-		plain.viewData.pValueLabel,
-		'Min smoothed FDR',
-		'uncorrected and naming no statistic, the p is DMRcate’s smoothed FDR'
-	)
 	const hm = new VolcanoViewModel(
 		{ ...mockConfig, termType: 'dnaMethylation' } as any,
 		{
 			...mockResponse,
-			scan: { ...scan, backgroundCorrection: undefined, yAxis: 'HMFDR' },
+			scan: { ...scan, yAxis: 'HMFDR' },
 			data: { ...mockResponse.data, dots: [scanDot] as any }
 		} as any,
-		{ ...settings, backgroundCorrection: false, scanYAxis: 'HMFDR' } as any
+		{ ...settings, scanYAxis: 'HMFDR' } as any
 	)
 	test.equal(hm.viewData.pValueLabel, 'HMFDR', 'a chosen statistic names the y axis')
-	test.notOk(
-		plain.pValueTable.columns.some(c => c.label == 'Excess Δβ'),
-		'and there is no excess column'
-	)
-	test.equal(plain.pValueTable.rows[0].length, plain.pValueTable.columns.length, 'cells still match columns')
-	/* The expression follow-up runs on an uncorrected scan too, so the row must not claim a
-	background gate that was never applied. */
-	test.ok(
-		plain.viewData.statsData.some(d => d.label == 'Gene-body loss regions → genes'),
-		'the gene-body set is reported without the background wording'
-	)
 
 	test.end()
 })

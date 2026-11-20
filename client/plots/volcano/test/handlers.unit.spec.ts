@@ -273,10 +273,8 @@ tape('dna methylation request body', async test => {
 			elementType: DMR_SCAN_ELEMENT_TYPE,
 			xAxis: 'fold_change',
 			scanChromosome: 'chr1',
-			backgroundCorrection: true,
 			scanYAxis: 'min_smoothed_fdr',
 			minCpgs: 4,
-			profileBinBp: 2000,
 			lambda: 500,
 			C: 2,
 			fdrCutoff: 0.05
@@ -289,11 +287,9 @@ tape('dna methylation request body', async test => {
 				element_type: DMR_SCAN_ELEMENT_TYPE,
 				scan: {
 					chromosome: 'chr1',
-					backgroundCorrection: true,
 					yAxis: 'min_smoothed_fdr',
 					minCpgs: 4,
 					minDeltaBeta: 0.1,
-					profileBinBp: 2000,
 					lambda: 500
 				},
 				volcanoRender: getExpectedRender({ xField: 'delta_beta' }, { foldChangeCutoff: 0.1 })

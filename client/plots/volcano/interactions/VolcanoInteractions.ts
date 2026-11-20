@@ -15,7 +15,6 @@ import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
 import { dofetch3 } from '#common/dofetch'
 import { launchMethylationBrowser } from '../../../dnameth/launch'
 import { getGroupColors } from '../colors'
-import { downloadManhattanSvg } from '#plots/manhattan/manhattan.ts'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -91,27 +90,24 @@ export class VolcanoInteractions {
 
 	download(termType: string) {
 		this.dom.actionsTip.clear().showunder(this.dom.controls.select('div').node())
-		// a DMR scan draws its Manhattan and methylation profile beside the volcano; each saves on its own
-		const manhattan = this.dom.holder.select('#sjpp-volcano-scanManhattan > svg').node() as SVGSVGElement | null
-		const profile = this.dom.holder
-			.select('[data-testid="sjpp-volcano-methylationProfile"] svg')
-			.node() as SVGSVGElement | null
+		// a DMR scan draws the isoform starburst beside the volcano; it saves on its own, only while shown: a closed one
+		// keeps its svg but no longer follows the groups
+		const starburst = this.dom.holder
+			.select('[data-testid="sjpp-volcano-starburst"]:not([hidden]) svg')
+			.node() as Node | null
 		const opts = [
 			{
-				text: manhattan ? 'Download volcano plot' : 'Download plot',
+				text: starburst ? 'Download volcano plot' : 'Download plot',
 				callback: () => {
-					const svg = this.dom.holder.select('svg').node() as Node
+					const svg = this.dom.holder.select('#sjpp-volcano-svg').node() as Node
 					to_svg(svg, `Differential ${termType} analysis volcano`, { apply_dom_styles: true })
 				}
 			},
-			...(manhattan
-				? [{ text: 'Download DMR plot', callback: () => downloadManhattanSvg(manhattan, 'DMR scan Manhattan') }]
-				: []),
-			...(profile
+			...(starburst
 				? [
 						{
-							text: 'Download methylation profile',
-							callback: () => downloadManhattanSvg(profile, 'DMR scan methylation profile')
+							text: 'Download starburst plot',
+							callback: () => to_svg(starburst, 'Methylation and expression by isoform', { apply_dom_styles: true })
 						}
 				  ]
 				: []),
@@ -273,9 +269,18 @@ export class VolcanoInteractions {
 				tw: { q: { groups: config.tw.q.groups }, term: config.tw.term },
 				// this volcano's own sample filter, when it has one
 				filter: config.filter,
-				corrected: !!s.backgroundCorrection,
 				excludeSexChr: !!s.excludeSexChr
 			}
+		})
+	}
+
+	/** show or hide the starburst beside a DMR scan's volcano: its own setting, which the volcano's state leaves out, so
+	 * the volcano does not re-run */
+	openEmbeddedStarburst(open: boolean) {
+		return this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { settings: { methylationStarburst: { open } } }
 		})
 	}
 
@@ -357,8 +362,6 @@ export class VolcanoInteractions {
 				minDeltaBeta: scan.minDeltaBeta
 			},
 			scanChromosomes: scan.runChromosomes,
-			// also in the run's cache key, so the region finds the scan's run rather than refitting it
-			backgroundCorrection: !!scan.backgroundCorrection,
 			// the scan drops DMRs with fewer CpGs; the region view drops them too
 			minCpgs: scan.minCpgs,
 			// and the DMRs without its y-axis statistic

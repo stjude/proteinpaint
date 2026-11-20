@@ -4,9 +4,6 @@ import { genomes } from '#src/initGenomesDs.js'
 import * as diffMeth from '../termdb.diffMeth.ts'
 import * as dmr from '../termdb.dmr.ts'
 import * as dmrBatch from '../termdb.dmrBatch.ts'
-import * as dmrGeneDE from '../termdb.dmrGeneDE.ts'
-import * as dmrGeneLink from '../termdb.dmrGeneLink.ts'
-import * as dmrLiterature from '../termdb.dmrLiterature.ts'
 import * as geneBodyMeth from '../termdb.geneBodyMeth.ts'
 import * as methylationLocus from '../termdb.methylationLocus.ts'
 import * as methylationStarburst from '../termdb.methylationStarburst.ts'
@@ -20,17 +17,7 @@ the methylation routes check the loaded genomes when augen sets up the routes, s
 sets the genomes before calling setRoutes()
 */
 
-const routes = [
-	diffMeth,
-	dmr,
-	dmrBatch,
-	dmrGeneDE,
-	dmrGeneLink,
-	dmrLiterature,
-	geneBodyMeth,
-	methylationLocus,
-	methylationStarburst
-]
+const routes = [diffMeth, dmr, dmrBatch, geneBodyMeth, methylationLocus, methylationStarburst]
 
 // returns the route methods that augen sets up from the methylation routes for the given genomes
 function getMounted(_genomes) {
@@ -65,17 +52,7 @@ tape('methylation routes are not set up when no ds has ds.queries.dnaMethylation
 tape('methylation routes are set up when a ds has ds.queries.dnaMethylation', test => {
 	const mounted = getMounted({ hg19: {}, hg38: { datasets: { A: {}, B: { queries: { dnaMethylation: {} } } } } })
 	const expected: string[] = []
-	for (const e of [
-		'diffMeth',
-		'dmr',
-		'dmrBatch',
-		'dmrGeneDE',
-		'dmrGeneLink',
-		'dmrLiterature',
-		'geneBodyMeth',
-		'methylationLocus',
-		'methylationStarburst'
-	]) {
+	for (const e of ['diffMeth', 'dmr', 'dmrBatch', 'geneBodyMeth', 'methylationLocus', 'methylationStarburst']) {
 		expected.push('get /termdb/' + e, 'post /termdb/' + e)
 	}
 	test.deepEqual(

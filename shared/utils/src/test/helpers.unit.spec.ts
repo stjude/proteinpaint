@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { convertUnits, getValueConversionFactor, toUserUnit, toStoredUnit } from '../helpers.js'
+import { convertUnits, getValueConversionFactor, toUserUnit, toStoredUnit, stripAccessionVersion } from '../helpers.js'
 
 /*
 Tests the term.valueConversion{} helpers
@@ -187,5 +187,17 @@ tape('convertUnits()', function (test) {
 	test.equal(convertUnits(0, fromUnit, toUnit, scaleFactor), '0 ', 'Should label 0 without a unit')
 	test.equal(convertUnits(365.25, fromUnit, toUnit, scaleFactor, true), '1y', 'Should label exactly 1 year, compact')
 
+	test.end()
+})
+
+tape('stripAccessionVersion()', test => {
+	test.equal(stripAccessionVersion('ENST00000256078.10'), 'ENST00000256078', 'human Ensembl transcript')
+	test.equal(stripAccessionVersion('NM_000546.6'), 'NM_000546', 'RefSeq')
+	test.equal(stripAccessionVersion('ENSMUST00000108658.2'), 'ENSMUST00000108658', 'species-qualified Ensembl')
+	test.equal(stripAccessionVersion('ENSDARG00000002952.9'), 'ENSDARG00000002952', 'zebrafish Ensembl gene')
+	test.equal(stripAccessionVersion('ensmust00000108658.2'), 'ensmust00000108658', 'lowercase species-qualified Ensembl')
+	test.equal(stripAccessionVersion('ENST00000256078'), 'ENST00000256078', 'an unversioned id is left as is')
+	test.equal(stripAccessionVersion('MIR1-1'), 'MIR1-1', 'a gene symbol is left alone')
+	test.equal(stripAccessionVersion('ABCDEFGH12.3'), 'ABCDEFGH12.3', 'a long non-Ensembl prefix is left alone')
 	test.end()
 })

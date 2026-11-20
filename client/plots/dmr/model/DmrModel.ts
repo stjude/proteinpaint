@@ -34,7 +34,6 @@ export class DmrModel {
 				maxLoessRegion: settings.dmr.maxLoessRegion,
 				colors: settings.dmr.colors,
 				scanChromosomes: this.config.scanChromosomes,
-				backgroundCorrection: this.config.backgroundCorrection,
 				minCpgs: this.config.minCpgs,
 				yAxis: this.config.yAxis,
 				filter0: this.config.filter0

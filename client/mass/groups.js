@@ -18,7 +18,7 @@ import { uiLabel } from '#shared'
 import { TermTypes, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { dofetch3 } from '#common/dofetch'
 import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
-import { BACKGROUND_CORRECTION_TITLE, findVolcanoHandler } from '../plots/volcano/handlers/index.ts'
+import { findVolcanoHandler } from '../plots/volcano/handlers/index.ts'
 import { getGEunit } from '#tw/geneExpression'
 import { renderDataAvailability } from './groupDataAvailability.ts'
 
@@ -1032,8 +1032,7 @@ export function renderPreAnalysisData(arg) {
 	// option to launch the analysis
 	if (!preAnalysisData.alert) {
 		let scanChromosome = ''
-		let backgroundCorrection = false
-		// the scan's extent and correction, only while the scan is the class the panel is on
+		// the scan's extent, only while the scan is the class the panel is on
 		if (isScan && elementTypes.length) {
 			addSelectRow(
 				'Scan',
@@ -1048,20 +1047,6 @@ export function renderPreAnalysisData(arg) {
 				scanChromosome,
 				v => (scanChromosome = v)
 			)
-			const backgroundLabel = 'Correct for background drift'
-			const backgroundRow = launchDEDiv.append('tr').attr('title', BACKGROUND_CORRECTION_TITLE)
-			backgroundRow
-				.append('td')
-				.attr('class', 'sja-termdb-config-row-label')
-				.style('padding', '5px')
-				.text(backgroundLabel)
-			backgroundRow
-				.append('td')
-				.append('input')
-				.attr('type', 'checkbox')
-				.attr('aria-label', backgroundLabel)
-				.attr('data-testid', 'sjpp-da-background-checkbox')
-				.on('change', event => (backgroundCorrection = event.target.checked))
 		}
 
 		launchDEDiv
@@ -1085,7 +1070,6 @@ export function renderPreAnalysisData(arg) {
 				if (offersClass) volcano.elementType = elementType
 				if (isScan) {
 					if (scanChromosome) volcano.scanChromosome = scanChromosome
-					if (backgroundCorrection) volcano.backgroundCorrection = true
 				}
 				const config = {
 					chartType: 'differentialAnalysis',

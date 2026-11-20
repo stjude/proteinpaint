@@ -3,7 +3,6 @@ import { DMRCATE_PARAM_RANGES } from '#types'
 import { invalidcoord } from '#shared/common.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime, sampleLimitAlert } from '#shared'
-import { chrSeed } from '#src/utils/dmrStats.ts'
 import {
 	resolveMethylationMatrix,
 	requireCpgShards,
@@ -23,14 +22,6 @@ import {
 	DEFAULT_OVERLAP_FRAC
 } from '#src/utils/regionMask.ts'
 import { buildGeneIndex, genesAt, genesInBody, MAX_GENES_PER_DMR } from '#src/utils/dmrGenes.ts'
-import {
-	buildExclusion,
-	sampleBackground,
-	scoreAgainstBackground,
-	soloWcgwShares,
-	sequenceFiles,
-	BG_WINDOWS_PER_CHR
-} from '#src/utils/dmrBackground.ts'
 import { cacheOrRecompute, generateHash } from '#src/utils/cacheOrRecompute.ts'
 import { sampleFilterScope, resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import fs from 'fs'
@@ -140,7 +131,8 @@ export function buildScanRegions(genome: any, chromosomes: string[]) {
 // 13: solo-WCGW shares count a region's CpGs by their 1-based position, tertiles from usable windows only; bgQ and
 // the summary's significant count left to the view; nullP001 replaces nullP05
 // 14: dmrcate places sample names at the columns meta/samples/col_idx gives them
-const CACHE_VERSION = 14
+// 15: the matched-background correction removed; DMRs no longer carry excess or bgP
+const CACHE_VERSION = 15
 
 /* Fingerprint the data files a result was computed from.
  *
@@ -248,11 +240,6 @@ export async function runDmrBatch(
 	const rawFrac = Number(q.excludeOptions?.overlapFrac)
 	const overlapFrac = Number.isFinite(rawFrac) ? Math.min(Math.max(rawFrac, 0), 1) : DEFAULT_OVERLAP_FRAC
 	let dmrsDropped = 0
-	const bgTotals = { windows: 0, scored: 0, unscored: 0 }
-	// chromosomes scored, and those whose strata could also split on solo-WCGW share (needs the genome sequence)
-	const bgChrs = { scored: 0, soloMatched: 0 }
-	// background windows scored against their own stratum's null: the share at p < 0.001 checks its tail
-	const bgNull = { windows: 0, belowP001: 0 }
 
 	/* Built once for the request, not once per DMR: a genome scan calls >100,000 of them and
 	one sqlite round trip each would cost more than the model fits. Absent on a genome with no
@@ -312,17 +299,10 @@ export async function runDmrBatch(
 		fdr_cutoff,
 		element_type: q.element_type ?? null,
 		mask: { sources: [...appliedNames].sort(), overlapFrac },
-		background: !!q.backgroundCorrection,
 		/* how dmrcate reads the values (read counts, betas or M-values), from the dataset's platform and element unit:
 		changing either changes the model, with the files unchanged */
 		values: dmrcateValues(first),
-		files: fingerprint([
-			...[...resolved.values()].map(r => r.matrixFile),
-			...maskFiles,
-			genome?.genedb?.dbfile,
-			// the correction's solo-WCGW shares come from the reference sequence
-			...(q.backgroundCorrection ? sequenceFiles(genome) : [])
-		])
+		files: fingerprint([...[...resolved.values()].map(r => r.matrixFile), ...maskFiles, genome?.genedb?.dbfile])
 	}
 
 	const time1 = Date.now()
@@ -388,11 +368,9 @@ export async function runDmrBatch(
 				[...files.keys()],
 				'Server memory is too low to run this DMR scan right now. Try again later.'
 			)
-			// the run and its background run share one limit; a one-chromosome scan is the genome-wide run too
+			// a one-chromosome scan is the genome-wide run too
 			const deadline = dmrcateDeadline()
-			const tooLong = `Compare smaller groups${
-				q.backgroundCorrection ? ', or turn off the background drift correction' : ''
-			}.`
+			const tooLong = 'Compare smaller groups.'
 			let result: any
 			try {
 				result = JSON.parse(
@@ -472,74 +450,6 @@ export async function runDmrBatch(
 					}
 					perChr.push({ chr, windows, regions, called: regions.flatMap((r: any) => r?.dmrs || []) })
 				}
-				/* Matched intergenic background, sampled per chromosome and scored per chromosome. A second
-				run, because the windows are matched to the widths of the DMRs the first one called; it
-				reads only each window's delta-beta, with no model. */
-				if (q.backgroundCorrection) {
-					const draws: { chr: string; called: any[]; windows: any[] }[] = []
-					for (const { chr, called } of perChr) {
-						const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
-						const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
-						if (!excl || !chrLen || !called.length) continue
-						const windows = sampleBackground(
-							chr,
-							chrLen,
-							excl,
-							called.map((d: any) => d.stop - d.start),
-							BG_WINDOWS_PER_CHR,
-							// seeded from the chromosome name so the draw is reproducible and cacheable
-							chrSeed(chr)
-						)
-						if (windows.length) draws.push({ chr, called, windows })
-					}
-					if (draws.length) {
-						// only the chromosomes drawn on: this run reads every row of what it is given
-						const drawn = new Set(draws.map(d => d.chr))
-						const matrices = input.matrices
-							.map(m => ({ ...m, chrs: m.chrs.filter(c => drawn.has(c)) }))
-							.filter(m => m.chrs.length)
-						// solo-WCGW shares of DMRs and windows, read from the sequence while rust measures the windows
-						const sharesP = soloWcgwShares(
-							genome,
-							draws.map(d => ({ chr: d.chr, regions: [...d.called, ...d.windows] }))
-						)
-						const bgRes = JSON.parse(
-							await runDmrcate(
-								{ ...input, matrices, background_regions: draws.flatMap(d => d.windows) },
-								tooLong,
-								deadline
-							)
-						)
-						if (bgRes.error) throw new Error(bgRes.error)
-						account('background', bgRes.diagnostic)
-						const shares = await sharesP
-						let bgOffset = 0
-						draws.forEach(({ called, windows }, c) => {
-							// rust returns the windows in input order, so shares[c] lines up with called then background
-							const background = (bgRes.background || []).slice(bgOffset, bgOffset + windows.length)
-							bgOffset += windows.length
-							const { scored, unscored, soloMatched, nullCheck } = scoreAgainstBackground(called, background, {
-								dmrs: shares[c].slice(0, called.length),
-								background: shares[c].slice(called.length)
-							})
-							bgChrs.scored++
-							if (soloMatched) bgChrs.soloMatched++
-							called.forEach((d: any, i: number) => {
-								const sc = scored[i]
-								if (!sc) return
-								d.excess = Math.round(sc.excess * 100000) / 100000
-								d.bgP = sc.p
-							})
-							bgTotals.windows += background.length
-							bgTotals.scored += scored.filter(Boolean).length
-							bgTotals.unscored += unscored
-							bgNull.windows += nullCheck.windows
-							bgNull.belowP001 += nullCheck.belowP001
-						})
-					}
-					/* No FDR here: its family is the DMRs a view plots, which depends on the view's CpG floor, so
-					dmrScanToRows adjusts bgP when it builds the rows. */
-				}
 				for (const { chr, windows, regions } of perChr) {
 					for (let i = 0; i < windows.length; i++) {
 						const r = regions[i]
@@ -602,22 +512,6 @@ export async function runDmrBatch(
 					? { binBp: METHYLATION_BIN_BP, bins: result.bin_methylation || [] }
 					: undefined,
 				regionMask: maskFiles.length ? { sources: appliedNames, overlapFrac, dmrsDropped } : undefined,
-				backgroundCorrection: q.backgroundCorrection
-					? {
-							...bgTotals,
-							matchedOn: [
-								'CpG density',
-								'width',
-								// only as far as it held: a chromosome without enough shares was matched on the two above
-								...(!bgChrs.soloMatched
-									? []
-									: bgChrs.soloMatched == bgChrs.scored
-									? ['solo-WCGW share']
-									: [`solo-WCGW share (${bgChrs.soloMatched} of ${bgChrs.scored} chromosomes)`])
-							],
-							...(bgNull.windows ? { nullP001: bgNull.belowP001 / bgNull.windows } : {})
-					  }
-					: undefined,
 				globalMethylation:
 					gm && Number.isFinite(gm.control_mean_beta) && Number.isFinite(gm.case_mean_beta)
 						? {

@@ -15,8 +15,7 @@ export type DmrConfig = {
 	settings: { dmr: DMRSettings }
 	/** The chromosomes of the scan this view was opened from; see TermdbDmrRequest.scanChromosomes */
 	scanChromosomes?: string[]
-	/** That scan's background correction and CpG floor; see TermdbDmrRequest */
-	backgroundCorrection?: boolean
+	/** That scan's CpG floor; see TermdbDmrRequest */
 	minCpgs?: number
 	yAxis?: DmrScanYAxis
 	/** The app's cohort filter when that scan ran; see TermdbDmrRequest.filter0 */

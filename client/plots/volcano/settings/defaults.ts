@@ -8,7 +8,6 @@ import type { ValidatedVolcanoSettings, DefaultVolcanoSettings } from '../settin
 the code that imports them from the volcano's settings. */
 export {
 	DMRCATE_DEFAULTS,
-	BACKGROUND_CORRECTION_TITLE,
 	SCAN_Y_AXIS_OPTIONS,
 	onDeltaBetaAxis,
 	getSpliceMethodOptions,

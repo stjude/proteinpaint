@@ -1,20 +1,11 @@
 import tape from 'tape'
-import {
-	dmrScanToRows,
-	restrictScanPayload,
-	summarizeProfile,
-	coarsenProfile,
-	dmrBedjLines
-} from '#src/utils/dmrScanRows.ts'
+import { dmrScanToRows, restrictScanPayload, summarizeProfile, dmrBedjLines } from '#src/utils/dmrScanRows.ts'
 
 /*
 test sections:
 
-uncorrected: CpG floor, one p per row, direction split, widths, gene-body loss set
-corrected: unscored DMRs leave the rows but stay counted; the correction adds a p gate to the set
-corrected: the background FDR family is every plotted DMR of the whole run at the CpG floor
+scan: CpG floor, one p per row, direction split, widths
 summarizeProfile: quantiles and moved-fraction of the genome-wide binned profile
-coarsenProfile: probe-weighted re-binning for display
 dmrBedjLines: the plain text bedj file of the kept DMRs
 y follows the requested region statistic, the smoothed FDR by default
 restrictScanPayload: a chromosome view keeps the run calls and counts only its own
@@ -56,7 +47,7 @@ tape('\n', t => {
 	t.end()
 })
 
-tape('uncorrected scan: CpG floor, one p per row, summary counts', t => {
+tape('scan: CpG floor, one p per row, summary counts', t => {
 	const p = payload([
 		dmr({ start: 0, stop: 500, no_cpgs: 2 }), // below the floor
 		dmr({ start: 1000, stop: 2000, genes: ['A', 'B'] }),
@@ -102,131 +93,6 @@ tape('uncorrected scan: CpG floor, one p per row, summary counts', t => {
 		res,
 		'and one with them passes them through to the panel'
 	)
-	t.equal(scan.backgroundCorrection, undefined, 'no correction block without the correction')
-	/* The gene-body loss set does not depend on the correction: without one, a DMR's own smoothed
-	FDR is the evidence, and the expression test is offered on that. Gating it on the correction
-	made the uncorrected scan the only reading you could not follow up. */
-	t.deepEqual(
-		scan.geneBodyLoss,
-		{ regions: 1, genes: ['LOSS'] },
-		'the gene set comes from the hypo, in-body DMR with no background p, and only its body genes'
-	)
-	t.equal(
-		dmrScanToRows(payload([dmr({ direction: 'hypo', inGeneBody: false, genes: ['PROMOTER_ONLY'] })]), opts).scan
-			.geneBodyLoss,
-		undefined,
-		'and is omitted rather than reported as empty when nothing qualifies'
-	)
-	t.end()
-})
-
-tape('corrected scan: unscored DMRs are counted but not plotted; gene-body loss set is gated', t => {
-	const p = payload(
-		[
-			// scored, beats background, in a gene body, hypo -> in the gene set
-			dmr({
-				start: 1000,
-				stop: 2000,
-				direction: 'hypo',
-				delta_beta_mean: -0.2,
-				bgP: 0.01,
-				excess: -0.15,
-				inGeneBody: true,
-				bodyGenes: ['LOSS'],
-				genes: ['LOSS']
-			}),
-			// hypo, beats background, but only clips a promoter -> not in the set
-			dmr({
-				start: 3000,
-				stop: 4000,
-				direction: 'hypo',
-				delta_beta_mean: -0.2,
-				bgP: 0.01,
-				genes: ['PROMOTER_ONLY']
-			}),
-			// hyper in a gene body -> not a loss
-			dmr({ start: 5000, stop: 6000, bgP: 0.01, inGeneBody: true, genes: ['GAIN'] }),
-			// hypo in a gene body, raw p < 0.05 but q >= 0.05 -> not significant, not in the set
-			dmr({
-				start: 7000,
-				stop: 8000,
-				direction: 'hypo',
-				delta_beta_mean: -0.2,
-				bgP: 0.04,
-				inGeneBody: true,
-				bodyGenes: ['NS'],
-				genes: ['NS']
-			}),
-			// unscored: no bgP
-			dmr({ start: 9000, stop: 60000, no_cpgs: 900 }),
-			// scored and far from significant: they fill out the family
-			dmr({ start: 70000, stop: 71000, bgP: 0.9 }),
-			dmr({ start: 72000, stop: 73000, bgP: 0.9 })
-		],
-		{
-			backgroundCorrection: {
-				windows: 2000,
-				scored: 6,
-				unscored: 1,
-				matchedOn: ['CpG density', 'width']
-			}
-		}
-	)
-	const { rows, scan } = dmrScanToRows(p, { ...opts, backgroundCorrection: true })
-	t.equal(scan.kept, 7, 'the unscored DMR is still a kept DMR')
-	t.equal(rows.length, 6, 'but has no p to plot, so it is not a row')
-	t.deepEqual(
-		scan.backgroundCorrection,
-		{ windows: 2000, matchedOn: ['CpG density', 'width'], scored: 6, unscored: 1, significant: 3 },
-		'scored / unscored / significant are counted over kept DMRs, significant on q rather than raw p'
-	)
-	// p 0.01 x 3, 0.04, 0.9 x 2 over a family of 6: q = 0.01 x 6 / 3 for the first three
-	t.ok(Math.abs(rows[0].original_p_value - 0.02) < 1e-12, 'the plotted value is the background FDR, not the raw p')
-	const ns = rows.find(r => r.promoter_id == 'chr1:7000-8000')!
-	t.ok(ns.original_p_value >= 0.05, `raw p 0.04 is q ${ns.original_p_value.toFixed(3)}: not significant`)
-	t.equal(rows[0].excess, -0.15, 'and the excess rides along for the table')
-	t.deepEqual(
-		scan.geneBodyLoss,
-		{ regions: 1, genes: ['LOSS'] },
-		'only the hypo, in-body, significant region contributes genes: NS beats raw p, not q'
-	)
-	t.end()
-})
-
-tape('corrected scan: the background FDR family is every plotted DMR of the whole run at the CpG floor', t => {
-	const run: any = payload([], { backgroundCorrection: { windows: 10, scored: 4, unscored: 1, matchedOn: ['width'] } })
-	run.regions = [
-		{
-			...run.regions[0],
-			chr: 'chr1',
-			dmrs: [
-				dmr({ chr: 'chr1', bgP: 0.5 }),
-				// under Min Δβ: plotted, so in the family
-				dmr({ chr: 'chr1', start: 3000, stop: 4000, delta_beta_mean: 0.01, bgP: 0.6 })
-			]
-		},
-		{
-			...run.regions[0],
-			chr: 'chr2',
-			dmrs: [
-				dmr({ chr: 'chr2', bgP: 0.01 }),
-				// under the CpG floor, and unscored: not plotted, so not in the family
-				dmr({ chr: 'chr2', start: 3000, stop: 3100, no_cpgs: 2, bgP: 1e-6 }),
-				dmr({ chr: 'chr2', start: 5000, stop: 6000 })
-			]
-		}
-	]
-	const { rows } = dmrScanToRows(restrictScanPayload(run, ['chr2']), {
-		chromosomes: ['chr2'],
-		runChromosomes: ['chr1', 'chr2'],
-		run,
-		backgroundCorrection: true,
-		minDeltaBeta: 0.1
-	})
-	t.equal(rows.length, 1, 'the view plots its one scored DMR at the floor')
-	// m = 3: not 1 (the view alone), nor 4 (with the 2-CpG call), nor 2 (without the one under Min Δβ)
-	t.ok(Math.abs(rows[0].original_p_value - 0.03) < 1e-12, `q = 0.01 x 3 (${rows[0].original_p_value})`)
-	t.notOk('bgQ' in run.regions[1].dmrs[0], 'the cached run is not written to')
 	t.end()
 })
 
@@ -246,46 +112,6 @@ tape('summarizeProfile reports how much of the measured methylome moved', t => {
 	t.ok(Math.abs(pf.fractionBeyond05 - 4 / 9) < 1e-9, 'and so is |delta| > 0.05')
 	t.ok(Math.abs(pf.fractionHyper - 4 / 9) < 1e-9, 'a bin at exactly zero is not counted as hyper')
 	t.equal(summarizeProfile({ binBp: 100000, bins: [] }), undefined, 'no bins is no summary, not a zero')
-	t.end()
-})
-
-tape('coarsenProfile averages bins for display, weighted by the probes under them', t => {
-	/* The figure is unreadable at the native width (29,000 dots over 1,000 px), so a reader can
-	draw it coarser. The averaging has to be probe-weighted: a bin resting on 3 CpGs and one resting
-	on 3,000 are not two equal measurements, and a plain mean of bin means would let a sparse bin at
-	a centromere edge pull a megabase's value around. */
-	const bm = {
-		binBp: 100_000,
-		// two bins in the same 1 Mb, wildly different probe counts
-		bins: [
-			{ chr: 'chr1', start: 0, n_probes: 100, control: 0.8, case: 0.9 },
-			{ chr: 'chr1', start: 100_000, n_probes: 900, control: 0.4, case: 0.4 },
-			// a third in the NEXT megabase, and one on another chromosome at the same offset
-			{ chr: 'chr1', start: 1_000_000, n_probes: 10, control: 0.5, case: 0.7 },
-			{ chr: 'chr2', start: 0, n_probes: 50, control: 0.2, case: 0.3 }
-		]
-	}
-	const wide = coarsenProfile(bm, 1_000_000)
-	t.equal(wide.binBp, 1_000_000, 'the reported width is the one drawn')
-	t.equal(wide.bins.length, 3, 'bins merge within a chromosome and a window, never across either')
-	const first = wide.bins[0]
-	t.equal(first.n_probes, 1000, 'probe counts add')
-	t.equal(first.control, (0.8 * 100 + 0.4 * 900) / 1000, 'control is the probe-weighted mean, not the bin mean')
-	t.equal(first.case, (0.9 * 100 + 0.4 * 900) / 1000, 'and so is case')
-	t.notEqual(first.control, 0.6, 'a plain mean of the two bin means would have said 0.6')
-	t.deepEqual(
-		wide.bins.map(b => `${b.chr}:${b.start}`),
-		['chr1:0', 'chr1:1000000', 'chr2:0'],
-		'each wide bin is keyed by chromosome and window start'
-	)
-	/* The native width and anything at or below it must pass through untouched -- the default asks
-	for exactly the width the bins are already at, and that must not re-bin or re-average. */
-	t.equal(coarsenProfile(bm, 100_000), bm, 'the native width returns the same object')
-	t.equal(coarsenProfile(bm, 50_000), bm, 'so does a narrower request: there is nothing to split')
-	t.equal(coarsenProfile(bm, undefined), bm, 'and an absent width')
-	t.equal(coarsenProfile(bm, NaN), bm, 'and a nonsense one')
-	// bounded, so a hostile width cannot ask for one dot per genome
-	t.equal(coarsenProfile(bm, 1e12).binBp, 100_000 * 100, 'the factor is capped at 100x the native width')
 	t.end()
 })
 
@@ -386,23 +212,20 @@ tape('restrictScanPayload: a chromosome view keeps the run calls and counts only
 
 tape('restrictScanPayload keeps the facts of the whole run, which the client labels as such', t => {
 	const globalMethylation = { controlMeanBeta: 0.5, caseMeanBeta: 0.52, shift: 0.02, valuesCounted: 9 }
-	const backgroundCorrection = { windows: 400, scored: 0, unscored: 0, significant: 0, matchedOn: ['width'] }
 	const resources = { workers: 1, wallMs: 60000 }
 	const run: any = payload([dmr({ chr: 'chr1' }), dmr({ chr: 'chr2', start: 5000, stop: 6000 })], {
 		globalMethylation,
-		backgroundCorrection,
 		resources,
 		constants: { lambda: 1000, C: 2, fdr_cutoff: 0.05 }
 	})
 	const view = restrictScanPayload(run, ['chr2'])
 	t.deepEqual(view.globalMethylation, globalMethylation, 'global methylation is the run, measured genome-wide')
-	t.equal(view.backgroundCorrection!.windows, 400, 'background windows are sampled over the run')
 	t.deepEqual(view.resources, resources, 'the cost is the run')
 	t.deepEqual(view.constants, run.constants, 'the constants a region view needs are the run')
 	t.end()
 })
 
-tape('minDeltaBeta: DMRs under the floor stay in the rows but are not counted, tracked or gene-set', t => {
+tape('minDeltaBeta: DMRs under the floor stay in the rows but are not counted or tracked', t => {
 	const p = payload([
 		dmr({ delta_beta_mean: 0.3, direction: 'hyper' }),
 		dmr({ start: 5000, stop: 6000, delta_beta_mean: -0.01, direction: 'hypo', inGeneBody: true, bodyGenes: ['G'] })
@@ -411,7 +234,6 @@ tape('minDeltaBeta: DMRs under the floor stay in the rows but are not counted, t
 	t.equal(rows.length, 2, 'both on the volcano, where its own threshold shows the second as not significant')
 	t.deepEqual([scan.kept, scan.shown, scan.minDeltaBeta], [2, 1, 0.1], 'kept by CpGs, shown by |Δβ|')
 	t.deepEqual([scan.hyper, scan.hypo], [1, 0], 'counts are over the shown DMRs')
-	t.notOk(scan.geneBodyLoss, 'a gene-body loss region under the floor gives no gene set')
 	t.equal(dmrBedjLines(p, 5, 0.1).trim().split('\n').length, 1, 'the browser track holds the shown DMR only')
 	const atFloor = dmrScanToRows(payload([dmr({ delta_beta_mean: 0.1 })]), { chromosomes: ['chr1'], minDeltaBeta: 0.1 })
 	t.equal(atFloor.scan.shown, 0, 'a DMR exactly at the floor is not counted, as the volcano calls |Δβ| > cutoff')

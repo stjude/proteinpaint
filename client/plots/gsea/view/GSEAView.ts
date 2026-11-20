@@ -79,11 +79,7 @@ export class GSEAView {
 				.style('margin-left', '14px')
 				.style('font-size', '.9em')
 				.style('color', '#555')
-				.text(
-					da.scan?.backgroundCorrection
-						? 'Genes ranked by gene-body Δβ in excess of matched intergenic background (case − control); negative is gene-body methylation loss'
-						: 'Genes ranked by gene-body Δβ (case − control); negative is gene-body methylation loss'
-				)
+				.text('Genes ranked by gene-body Δβ (case − control); negative is gene-body methylation loss')
 		}
 
 		this.renderStats(viewData.statsData)

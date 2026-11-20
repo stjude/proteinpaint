@@ -5,17 +5,13 @@ import type { ActionMenuItem } from '#dom'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { elementNoun, formatPromoterLabel } from '../promoterLabel'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { STARBURST_COLORS } from '#shared/dmrColors.js'
 import type { TooltipRow, VolcanoHandler } from './types'
 import { methylationLocusAction } from './shared'
 
 /** DMRcate's own defaults (Peters 2015/2021), which the dmrcate binary also falls back to. The model
  * sends a knob only when it differs from these, so an untouched scan keeps its cache entry. */
 export const DMRCATE_DEFAULTS = { lambda: 1000, C: 2, fdrCutoff: 0.05 }
-/** Tooltip of the scan's background correction, shown by the volcano's control and by the
- * pre-analysis panel (mass/groups.js). */
-export const BACKGROUND_CORRECTION_TITLE =
-	'Score each DMR against intergenic regions of similar width and CpG density instead of against zero. The y axis then asks "did this region move more than comparable background did" rather than "did it move". The two questions agree unless methylation shifts across the whole genome between the groups; when it does, they can disagree, even on whether a region is hyper- or hypomethylated. DMRs with too little matched background to score are counted in Statistics but not plotted. The scan takes longer with this on.'
-
 /** The scan's y-axis choices: DMRcate's region statistics, in the order the menu lists them, with what
  * each measures in plain words for the option's tooltip. Checked against DMRcate 3.6.0's dmrcate(): it
  * calls DMRs from the smoothed FDR and orders them by its minimum; Stouffer, HMFDR and Fisher are
@@ -89,13 +85,11 @@ export const dnaMethylationHandler: VolcanoHandler = {
 				? {
 						scan: {
 							...(settings.scanChromosome ? { chromosome: settings.scanChromosome } : {}),
-							backgroundCorrection: !!settings.backgroundCorrection,
 							// display only: the rows are rebuilt from the cached scan on every request
 							yAxis: settings.scanYAxis,
 							minCpgs: settings.minCpgs,
 							// display only, like yAxis: what the scan counts, not what it runs
 							minDeltaBeta: settings.deltaBetaCutoff,
-							profileBinBp: settings.profileBinBp,
 							// only when changed: an explicit default would orphan every cached scan
 							...(settings.lambda != DMRCATE_DEFAULTS.lambda ? { lambda: settings.lambda } : {}),
 							...(settings.C != DMRCATE_DEFAULTS.C ? { C: settings.C } : {}),
@@ -140,7 +134,7 @@ export const dnaMethylationHandler: VolcanoHandler = {
 		return scan ? noun : `DM ${noun}`
 	},
 	directions: { up: 'hyper', down: 'hypo' },
-	actions: ['confounders', 'highlight', 'statistics', 'pValueTable', 'geneBodyLoss', 'dmrGeneLink', 'starburst'],
+	actions: ['confounders', 'highlight', 'statistics', 'pValueTable', 'starburst'],
 	// the scan resolves its own two groups and fits no covariates
 	getHiddenActions: ({ scan }) => (scan ? ['confounders'] : []),
 	gsea: true,
@@ -159,17 +153,13 @@ export const dnaMethylationHandler: VolcanoHandler = {
 	getTableEffectColumn: ({ scan }) => (scan ? { label: 'Δβ', value: d => roundValueAuto(d.delta_beta) } : undefined),
 	getExtraColumns({ scan }) {
 		/* A DMR is a called region, so what a row needs is its extent and its evidence -- the peak
-		CpG's delta-beta, how many CpGs, how wide -- plus, corrected, how far it moved beyond its
-		matched background. There are no two group means to show. */
+		CpG's delta-beta, how many CpGs, how wide. There are no two group means to show. */
 		if (scan)
 			return [
 				// fold_change carries the peak per-CpG delta-beta on a scan row
 				{ label: 'Peak Δβ', value: d => roundValueAuto(d.fold_change) },
 				{ label: 'CpGs', value: d => d.no_cpgs },
-				{ label: 'Width (bp)', value: d => d.stop - d.start },
-				...(scan.backgroundCorrection
-					? [{ label: 'Excess Δβ', value: d => (d.excess == null ? '' : roundValueAuto(d.excess)) }]
-					: [])
+				{ label: 'Width (bp)', value: d => d.stop - d.start }
 			]
 		/* Δβ sits next to log₂(fold-change) so the two effect sizes read as a pair: the fold-change is
 		a logit difference and does not say how much methylation moved, Δβ does. The group means
@@ -218,23 +208,19 @@ export const dnaMethylationHandler: VolcanoHandler = {
 	not 0.3: that is the log2FC default and would be a 30-point shift here, which almost nothing
 	clears. */
 		defaults.deltaBetaCutoff = 0.1
+		// the isoform starburst's gray, as its hyper and hypo colours are (colors.ts)
+		defaults.defaultNonSignColor = STARBURST_COLORS.below
 		/* DMR scan. Whole genome by default: a scan of one chromosome answers "what happened here", the
 	whole genome "where did anything happen", which is the question the mode exists for, and the run
-	DMRcate's genome-wide prior and corrections are made for. Correction off because it changes what the numbers
-	MEAN (a region that moved vs one that moved more than its matched background drifts) -- under a
-	genome-wide shift the direction can invert -- so it is a second reading to switch to. The CpG floor is
+	DMRcate's genome-wide prior and corrections are made for. The CpG floor is
 	DEFAULT_MIN_CPGS, shared with the server fallback so both mean the same untouched scan. */
 		defaults.scanChromosome = ''
-		defaults.backgroundCorrection = false
 		// what the scan plotted before the choice existed
 		defaults.scanYAxis = 'min_smoothed_fdr'
 		defaults.minCpgs = DEFAULT_MIN_CPGS
 		defaults.lambda = DMRCATE_DEFAULTS.lambda
 		defaults.C = DMRCATE_DEFAULTS.C
 		defaults.fdrCutoff = DMRCATE_DEFAULTS.fdrCutoff
-		/* The native width, so the figure opens as the metric is defined (Zhou 2018, 100 kb bins) and a
-	coarser view is something the reader asks for. */
-		defaults.profileBinBp = 100_000
 	},
 	validateSettings(settings) {
 		const min = settings.minSamplesPerGroup
@@ -290,16 +276,7 @@ export const dnaMethylationHandler: VolcanoHandler = {
 					...chromosomes.filter(c => c != 'chrM' && c != 'chrMT').map(c => ({ value: c, label: c }))
 				],
 				title:
-					'Show the DMRs called de novo across the whole genome, or only those on one chromosome. DMRs are always called over the whole genome, because DMRcate calibrates its cutoff over every CpG tested: one chromosome run alone calls different DMRs. The first scan of a comparison can take a minute or more on a large cohort, longer with the background drift correction; it is cached, so switching chromosomes after that is quick.'
-			},
-			{
-				label: 'Correct for background drift',
-				type: 'checkbox',
-				chartType: 'volcano',
-				settingsKey: 'backgroundCorrection',
-				boxLabel: '',
-				getDisplayStyle: scanOnly,
-				title: BACKGROUND_CORRECTION_TITLE
+					'Show the DMRs called de novo across the whole genome, or only those on one chromosome. DMRs are always called over the whole genome, because DMRcate calibrates its cutoff over every CpG tested: one chromosome run alone calls different DMRs. The first scan of a comparison can take a minute or more on a large cohort; it is cached, so switching chromosomes after that is quick.'
 			},
 			{
 				label: 'Y axis',
@@ -308,8 +285,7 @@ export const dnaMethylationHandler: VolcanoHandler = {
 				settingsKey: 'scanYAxis',
 				title:
 					'Which region statistic the volcano and the DMR plot put on the y axis. DMRcate calls DMRs with the min smoothed FDR; it reports the other three for each DMR. Hover over an option for what it measures.',
-				// the background correction plots its own p, so there is nothing to choose then
-				getDisplayStyle: (plot: any) => (isScanPlot(plot) && !plot.settings.volcano.backgroundCorrection ? '' : 'none'),
+				getDisplayStyle: scanOnly,
 				options: SCAN_Y_AXIS_OPTIONS
 			},
 			{
@@ -360,26 +336,6 @@ export const dnaMethylationHandler: VolcanoHandler = {
 				step: 0.01,
 				title:
 					"The FDR a CpG's smoothed statistic must pass to take part in a DMR. Raising it lets weaker CpGs join, which extends DMRs and bridges gaps between them; lowering it keeps only the strongest CpGs, giving shorter, fewer DMRs. DMRcate's default is 0.05. This is not the volcano's significance threshold, which is applied afterwards to each DMR. Changing it refits the scan."
-			},
-			{
-				/* Display width for the methylome-wide profile only. The metric is the 100 kb bin and
-			the Statistics rows stay on it whatever this says -- this is here because 29,000 dots
-			over 1,000 px overlap however small the dot, so the native figure reads as a band. */
-				label: 'Profile bin width',
-				type: 'dropdown',
-				chartType: 'volcano',
-				settingsKey: 'profileBinBp',
-				getDisplayStyle: scanOnly,
-				options: [
-					{ value: 100_000, label: '100 Kb (native)' },
-					{ value: 500_000, label: '500 Kb' },
-					{ value: 1_000_000, label: '1 Mb' },
-					{ value: 5_000_000, label: '5 Mb' }
-				],
-				// a <select> hands back its value as a string; the setting is a width in bp
-				processInput: (v: string) => Number(v),
-				title:
-					'How wide a bin the methylome-wide profile draws. 100 kb is the width the metric is computed and reported at (Zhou 2018); the coarser widths average neighbouring bins into one dot, weighted by the CpGs each rests on, so a genome-wide shift is legible instead of hidden in a band of overlapping dots. Display only: the Statistics rows and the fraction-of-bins-moved figures stay on the 100 kb bins, and changing this redraws the cached scan rather than refitting it. The most extreme 1,000 bins per direction stay hoverable at any width.'
 			},
 			{
 				label: 'Min samples per group',
@@ -488,7 +444,6 @@ export const dnaMethylationHandler: VolcanoHandler = {
 		if (scan) {
 			// what was scanned and how the DMRs were selected, since the scan has no element matrix to name
 			parts.push(`scan: ${s.scanChromosome || 'whole genome'}`)
-			parts.push(`background correction: ${s.backgroundCorrection ? 'yes' : 'no'}`)
 			parts.push(`min CpGs per DMR: ${s.minCpgs}`)
 		} else parts.push(`min samples per group: ${s.minSamplesPerGroup}`)
 		parts.push(`exclude sex chromosomes: ${s.excludeSexChr ? 'yes' : 'no'}`)

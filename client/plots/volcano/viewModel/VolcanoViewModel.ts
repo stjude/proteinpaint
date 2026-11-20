@@ -183,10 +183,8 @@ export class VolcanoViewModel {
 	setPValueLabel(settings: ValidatedVolcanoSettings): string {
 		if (this.handler.fdrOnly) return 'FDR'
 		if (this.scan)
-			return this.scan.backgroundCorrection
-				? 'FDR vs matched background'
-				: // a scan from before the choice existed plotted the smoothed FDR
-				  SCAN_Y_AXIS_OPTIONS.find(o => o.value == (this.scan!.yAxis ?? 'min_smoothed_fdr'))!.label
+			// a scan from before the choice existed plotted the smoothed FDR
+			return SCAN_Y_AXIS_OPTIONS.find(o => o.value == (this.scan!.yAxis ?? 'min_smoothed_fdr'))!.label
 		return `${settings.pValueType} p-value`
 	}
 
@@ -538,50 +536,10 @@ export class VolcanoViewModel {
 				}
 			}
 		}
-		/* A survival rate is only readable against its denominator, and the unscored are not a
-		random sample -- they are the widest and most CpG-dense regions, which intergenic space
-		cannot match -- so the unscored count is a row of its own rather than folded away. */
-		const bc = s.backgroundCorrection
-		if (bc) {
-			rows.push(
-				{
-					label: `Intergenic background windows sampled${s.chromosomes.length < run.length ? ' (whole run)' : ''}`,
-					value: bc.windows
-				},
-				{ label: `DMRs scored against background (matched on ${bc.matchedOn.join(' and ')})`, value: bc.scored },
-				// too few windows, no spread, or no reference CpG to place in a solo-WCGW tertile
-				{ label: 'DMRs unscored: no usable matched background (not plotted)', value: bc.unscored },
-				// how well the fitted null describes the background's own tail, past the p = 0.05 its scale is set at
-				...(bc.nullP001 != null
-					? [
-							{
-								label: 'Background windows at p < 0.001 vs their own null (~0.1% if the tail fits)',
-								value: `${(100 * bc.nullP001).toFixed(2)}%`
-							}
-					  ]
-					: []),
-				{
-					label: 'DMRs moving more than matched background (FDR < 0.05)',
-					value: `${bc.significant.toLocaleString()} of ${bc.scored.toLocaleString()} (${(
-						(100 * bc.significant) /
-						Math.max(1, bc.scored)
-					).toFixed(1)}%)`
-				}
-			)
-		}
-		if (s.geneBodyLoss)
-			rows.push({
-				// the correction adds the background gate, so the label must say which set this is
-				label: s.backgroundCorrection
-					? 'Gene-body loss regions beating background → genes'
-					: 'Gene-body loss regions → genes',
-				value: `${s.geneBodyLoss.regions.toLocaleString()} → ${s.geneBodyLoss.genes.length.toLocaleString()}`
-			})
 		/* How much of the measured methylome moved. Sits beside the DMR counts because the two say
 		different things: a DMR count is a count of regions that passed a threshold, and on a cohort
 		that drifted genome-wide that count is large whether or not much changed anywhere. The binned
-		profile is the metric the methylome literature compares cohorts with, so these rows are the
-		numbers a reader would quote from that figure. */
+		profile is the metric the methylome literature compares cohorts with. */
 		const pf = s.profileSummary
 		if (pf) {
 			const pct = (v: number) => `${(100 * v).toFixed(1)}%`

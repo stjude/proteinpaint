@@ -1,6 +1,7 @@
 import type { RouteApi, RoutePayload } from '#types'
 import serverconfig from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
+import { sql } from '#src/sql.ts'
 import { formatElapsedTime } from '#shared'
 import {
 	resolveMethylationMatrix,
@@ -10,27 +11,17 @@ import {
 	eligibleMethylationSamples,
 	validateChromosomes,
 	admitDmrcateJobs,
-	admitDmrcateSampleTest,
 	dmrcateDeadline,
 	runDmrcate,
 	dmrcateValues,
 	runJobPool
 } from '#src/utils/methylationMatrix.ts'
 import { getDeCacheResult } from '#src/routes/termdb.DE.ts'
-import { median, chrSeed } from '#src/utils/dmrStats.ts'
+import { median } from '#src/utils/dmrStats.ts'
 import { GENE_BODY_PAD } from '#src/utils/dmrGenes.ts'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import { sampleFilterScope, resolveGroups, resolveGroupPair } from '#src/utils/sampleGroups.ts'
 import { fingerprint } from '#src/routes/termdb.dmrBatch.ts'
-import { buildGeneIndex } from '#src/utils/dmrGenes.ts'
-import {
-	buildExclusion,
-	sampleBackground,
-	scoreAgainstBackground,
-	soloWcgwShares,
-	sequenceFiles,
-	BG_WINDOWS_PER_CHR
-} from '#src/utils/dmrBackground.ts'
 import { genomes } from '#src/initGenomesDs.js'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 
@@ -158,25 +149,19 @@ function init({ genomes }) {
 // 5: corrected deltas take the excess over the stratum's median (was the mean), from 6000 windows per chromosome
 // (was 2000), with strata also split on solo-WCGW share; a stratum with no spread leaves its genes out
 // 6: dmrcate places sample names at the columns meta/samples/col_idx gives them
-const CACHE_VERSION = 6
+// 7: corrected mode removed, and with it the key's `corrected`
+const CACHE_VERSION = 7
 
 /* Mean delta-beta over every gene body, keyed by gene symbol -- one signed number per gene across
 the whole genome. This is the gene-level reading of a methylation scan: a DMR list has many regions
 per gene, none for half of them, and more for long genes, so it cannot rank genes; the body mean
 can, and it is what the GSEA tab ranks on for a scan (see genesetEnrichment.ts).
 
-`corrected` scores each gene body against width-, CpG-density- and solo-WCGW-matched intergenic background
--- the scan's own correction, pointed at fixed regions -- and returns the excess over that background
-instead of the raw delta. Raw, the gain side of the ranking is led by silent, late-replicating gene
-families (olfactory receptors, keratins), which is where genome-wide drift lives; the excess asks
-whether a gene body moved more than a region like it drifted. Genes whose stratum holds too little
-background are left out rather than scored badly.
-
 Cached because it is ~33s of rust across 24 chromosomes and the same contrast asks for it from the
 causality test and from GSEA. Keyed on the samples, the chromosomes and the files read, the same
 way the scan cache is. */
 export async function getGeneBodyDeltas(q: GeneBodyQuery, genomes: any): Promise<Record<string, number>> {
-	return await getCachedGeneBodies(q, genomes, false)
+	return await getCachedGeneBodies(q, genomes)
 }
 
 type GeneBodyQuery = {
@@ -188,25 +173,15 @@ type GeneBodyQuery = {
 	filter0?: any
 	chromosomes?: string[]
 	element_type?: string
-	corrected?: boolean
 	/** 'promoter' measures each gene's core promoter (see promoterLoci) instead of its body */
 	region?: 'promoter'
+	/** transcript ids (no version suffix): measure these transcripts instead of genes, each over its own core promoter
+	 * or body, from its own gene model (see isoformLoci); the result is keyed by transcript id */
+	isoforms?: string[]
 	__protected__?: any
 }
 
-/** a gene body's test across patients: Welch's t and two-sided p of group2 against group1, and the difference of
- * their centered means (beta) */
-export type GeneBodyTest = { t: number; p: number; delta: number }
-
-/* Every gene body tested across patients, keyed by gene symbol: see computeGeneBodyTests. Cached as the deltas are. */
-export async function getGeneBodyTests(
-	q: Omit<GeneBodyQuery, 'corrected' | 'region'>,
-	genomes: any
-): Promise<Record<string, GeneBodyTest>> {
-	return await getCachedGeneBodies(q, genomes, true)
-}
-
-async function getCachedGeneBodies(q: GeneBodyQuery, genomes: any, test: boolean): Promise<any> {
+async function getCachedGeneBodies(q: GeneBodyQuery, genomes: any): Promise<Record<string, number>> {
 	const genome = genomes[q.genome]
 	if (!genome) throw new Error('unknown genome')
 	const ds = genome.datasets?.[q.dslabel]
@@ -237,20 +212,16 @@ async function getCachedGeneBodies(q: GeneBodyQuery, genomes: any, test: boolean
 			group2: q.group2.map(x => x.sampleId).sort(),
 			chromosomes,
 			element_type: q.element_type ?? null,
-			corrected: !!q.corrected,
 			// undefined for a body, which JSON drops, so the existing body entries keep their keys
 			region: q.region,
-			// likewise undefined for the deltas
-			test: test || undefined,
-			// corrected: the solo-WCGW shares come from the reference sequence
-			files: fingerprint(
-				[...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile, q.corrected ? sequenceFiles(genome) : [])
-			)
+			// undefined for genes; sorted, so that the same transcripts in another order share an entry
+			isoforms: q.isoforms ? [...new Set(q.isoforms)].sort() : undefined,
+			files: fingerprint([...new Set<string>(matrixFiles)].concat(genome?.genedb?.dbfile))
 		},
 		cacheScope: sampleFilterScope(q, ds),
 		cacheSubdir: 'geneBodyMeth',
 		// the validated list, so the compute cannot see the raw one
-		computeFresh: async () => (test ? computeGeneBodyTests : computeGeneBodyDeltas)({ ...q, chromosomes }, genome, ds)
+		computeFresh: async () => computeGeneBodyDeltas({ ...q, chromosomes }, genome, ds)
 	})
 	return result
 }
@@ -280,10 +251,69 @@ export function promoterLoci(rows: { name: string; genemodel: string }[], chrs?:
 	return locusOf
 }
 
-/** each chromosome's gene bodies, or with 'promoter' core promoters, one locus per gene symbol */
-function lociByChr(genome: any, region?: 'promoter') {
+/** Loci of transcripts, keyed by upper-case transcript id (keep holds upper-case ids): with 'promoter' its core promoter around its own TSS, else its body
+ * trimmed by GENE_BODY_PAD at both ends as a gene body is. From the genes table's rows of {isoform, genemodel}; only the
+ * ids in keep, on the chrs. A body shorter than twice the pad has no locus. */
+export function isoformLoci(
+	rows: { isoform: string; genemodel: string }[],
+	keep: Set<string>,
+	region?: 'promoter',
+	chrs?: Set<string>
+) {
+	const locusOf = new Map<string, { chr: string; start: number; stop: number }>()
+	for (const r of rows) {
+		// ids compare in upper case, as the gene db's collate nocase does; keep holds them so
+		const id = r.isoform.toUpperCase()
+		if (!keep.has(id) || locusOf.has(id)) continue
+		const gm = JSON.parse(r.genemodel)
+		if (chrs && !chrs.has(gm.chr)) continue
+		if (region == 'promoter') {
+			const minus = gm.strand == '-'
+			const tss = minus ? gm.stop : gm.start
+			locusOf.set(id, {
+				chr: gm.chr,
+				start: Math.max(0, tss - (minus ? PROMOTER_DOWN : PROMOTER_UP)),
+				stop: tss + (minus ? PROMOTER_UP : PROMOTER_DOWN)
+			})
+		} else {
+			const start = gm.start + GENE_BODY_PAD,
+				stop = gm.stop - GENE_BODY_PAD
+			if (stop > start) locusOf.set(id, { chr: gm.chr, start, stop })
+		}
+	}
+	return locusOf
+}
+
+type Locus = { name: string; start: number; stop: number; aliases?: string[] }
+
+/** the genes-table rows of these transcripts only, by the isoform index in batches: the gene model json is the table's
+ * largest column, and the genome has several times more transcripts (hg38 517k rows) than a counts file */
+export function isoformRows(db: any, ids: string[]): { isoform: string; genemodel: string }[] {
+	const BATCH = 500
+	// sorted: the cache key holds the sorted ids, so the same set in any order must give the rows in the same order
+	const unique = [...new Set(ids)].sort()
+	const rows: { isoform: string; genemodel: string }[] = []
+	for (let i = 0; i < unique.length; i += BATCH)
+		rows.push(
+			...db
+				.prepare(sql`select isoform, genemodel from genes where isoform in (${sql.list(unique.slice(i, i + BATCH))})`)
+				.all()
+		)
+	return rows
+}
+
+/** each chromosome's gene bodies, or with 'promoter' core promoters, one locus per gene symbol; with isoforms, one
+ * per transcript, those of the same coordinates measured once (the others are its aliases) */
+function lociByChr(genome: any, region?: 'promoter', isoforms?: string[]) {
 	let locusOf: Map<string, { chr: string; start: number; stop: number }>
-	if (region == 'promoter') {
+	if (isoforms) {
+		const db = genome?.genedb?.db
+		if (!db) throw new Error('This genome has no gene models.')
+		const major = new Set(validateChromosomes(genome, undefined, true))
+		// upper case: the db matches ids case-insensitively, and the loci are keyed in upper case
+		const ids = isoforms.map(i => i.toUpperCase())
+		locusOf = isoformLoci(isoformRows(db, ids), new Set(ids), region, major)
+	} else if (region == 'promoter') {
 		const rows: any[] = genome?.genedb?.db?.prepare('select name, genemodel from genes where isdefault=1').all() || []
 		if (!rows.length) throw new Error('This genome has no default isoforms.')
 		// a symbol's rows on the major chromosomes only: the first may be on a fix or alt contig, which has no matrix
@@ -306,17 +336,33 @@ function lociByChr(genome: any, region?: 'promoter') {
 			if (!prev || e - s > prev.stop - prev.start) locusOf.set(r.name, { chr: r.chr, start: s, stop: e })
 		}
 	}
-	const byChr = new Map<string, { name: string; start: number; stop: number }[]>()
+	const byChr = new Map<string, Locus[]>()
+	// transcripts often share a TSS or a whole model: one region per coordinate pair
+	const seen = new Map<string, Locus>()
 	for (const [name, l] of locusOf) {
+		const key = `${l.chr}:${l.start}-${l.stop}`
+		const same = isoforms ? seen.get(key) : undefined
+		if (same) {
+			;(same.aliases ||= []).push(name)
+			continue
+		}
+		const locus: Locus = { name, start: l.start, stop: l.stop }
+		if (isoforms) seen.set(key, locus)
 		const lst = byChr.get(l.chr) || []
-		lst.push({ name, start: l.start, stop: l.stop })
+		lst.push(locus)
 		byChr.set(l.chr, lst)
 	}
 	return byChr
 }
 
+/** a locus's value under its name and its aliases' */
+function setLocus(out: Record<string, any>, locus: Locus, v: any) {
+	out[locus.name] = v
+	for (const a of locus.aliases || []) out[a] = v
+}
+
 async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Record<string, number>> {
-	const byChr = lociByChr(genome, q.region)
+	const byChr = lociByChr(genome, q.region, q.isoforms)
 
 	/* The validated list the cache key was built from, and with none requested the genome's major
 	chromosomes -- not every contig gene2coord names, which fanned out unkeyed fits over alternate and
@@ -336,13 +382,11 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 	)
 	if (group1.length < 3 || group2.length < 3) throw new Error('Each group needs at least 3 samples.')
 	const deltaOf: Record<string, number> = {}
-	// the exclusion needs the gene index; built once, not per chromosome
-	const geneIdx = q.corrected ? buildGeneIndex(genome) : null
 	const CONCURRENCY = Math.max(1, Number(serverconfig.dmrBatchConcurrency) || 2)
 	/* One rust invocation per MATRIX FILE. Every invocation reads its whole file: with per-chromosome
 	shards a job is one chromosome, but a dataset backed by one genome-wide matrix would otherwise
-	reload that file once per chromosome. Rust returns background regions in input order, so each
-	chromosome's results are sliced back by offset, and no value depends on the grouping. */
+	reload that file once per chromosome. Rust returns background regions in input order, and no
+	value depends on the grouping. */
 	const jobs = new Map<string, string[]>()
 	for (const chr of chrs) {
 		const file = resolveMethylationMatrix(ds, chr, q.element_type).matrixFile
@@ -360,48 +404,13 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 	try {
 		await runJobPool(jobList, CONCURRENCY, async jobChrs => {
 			const matrix = resolveMethylationMatrix(ds, jobChrs[0], q.element_type)
-			/* Corrected: intergenic windows width-matched to the gene bodies ride along in the same
-			rust call, after each chromosome's bodies, so one fit serves both. Same sampler and seed rule
-			as the scan, so the two corrections are the same correction. */
-			const parts: {
-				chr: string
-				bodies: { name: string; start: number; stop: number }[]
-				windows: { chr: string; start: number; stop: number }[]
-			}[] = []
-			for (const chr of jobChrs) {
-				const bodies = byChr.get(chr)!
-				let windows: { chr: string; start: number; stop: number }[] = []
-				if (q.corrected) {
-					const chrLen = genome.chrlookup?.[chr.toUpperCase()]?.len
-					const excl = chrLen ? await buildExclusion(genome, chr, chrLen, geneIdx as any) : null
-					if (!excl) throw new Error('This genome cannot supply an intergenic background (no cCRE track).')
-					windows = sampleBackground(
-						chr,
-						chrLen,
-						excl,
-						bodies.map(b => b.stop - b.start),
-						BG_WINDOWS_PER_CHR,
-						chrSeed(chr)
-					)
-				}
-				parts.push({ chr, bodies, windows })
-			}
-			// solo-WCGW shares of bodies and windows, read from the sequence while rust measures them
-			const sharesP = q.corrected
-				? soloWcgwShares(
-						genome,
-						parts.map(p => ({ chr: p.chr, regions: [...p.bodies, ...p.windows] }))
-				  )
-				: null
+			const bodies = jobChrs.flatMap(chr => byChr.get(chr)!.map(b => ({ chr, ...b })))
 			const out = JSON.parse(
 				await runDmrcate(
 					{
 						matrices: [{ file: matrix.matrixFile, chrs: jobChrs }],
 						...dmrcateValues(matrix),
-						background_regions: parts.flatMap(p => [
-							...p.bodies.map(b => ({ chr: p.chr, start: b.start, stop: b.stop })),
-							...p.windows
-						]),
+						background_regions: bodies.map(b => ({ chr: b.chr, start: b.start, stop: b.stop })),
 						case: group2.join(','),
 						control: group1.join(',')
 					},
@@ -409,99 +418,17 @@ async function computeGeneBodyDeltas(q: any, genome: any, ds: any): Promise<Reco
 					deadline
 				)
 			)
-			if (out.error) throw new Error(`${jobChrs.join(',')}: ${out.error}`)
-			const bg: any[] = out.background || []
-			const shares = await sharesP
-			let offset = 0
-			for (const [c, { bodies, windows }] of parts.entries()) {
-				const bodyRes = bg.slice(offset, offset + bodies.length)
-				const chrWindows = bg.slice(offset + bodies.length, offset + bodies.length + windows.length)
-				offset += bodies.length + windows.length
-				if (!q.corrected) {
-					bodyRes.forEach((b: any, j: number) => {
-						/* A gene body with too few probes has an unstable mean; 5 matches the scan's own
-						minimum CpG count so the two analyses agree on what is measurable. */
-						if (b.delta != null && b.n_probes >= 5) deltaOf[bodies[j].name] = b.delta
-					})
-				} else {
-					const measured = bodyRes
-						.map((b: any, j: number) => ({ j, b }))
-						.filter(({ b }) => b?.delta != null && b.n_probes >= 5)
-					const { scored } = scoreAgainstBackground(
-						measured.map(({ b }) => ({ no_cpgs: b.n_probes, start: b.start, stop: b.stop, delta_beta_mean: b.delta })),
-						chrWindows,
-						{ dmrs: measured.map(({ j }) => shares![c][j]), background: shares![c].slice(bodies.length) }
-					)
-					measured.forEach(({ j }, k) => {
-						const sc = scored[k]
-						if (sc) deltaOf[bodies[j].name] = Math.round(sc.excess * 100000) / 100000
-					})
-				}
-			}
+			if (out.error)
+				throw new Error(`${jobChrs.join(',')}: ${out.error}`)
+				// in input order
+			;(out.background || []).forEach((b: any, j: number) => {
+				/* A gene body with too few probes has an unstable mean; 5 matches the scan's own
+				minimum CpG count so the two analyses agree on what is measurable. */
+				if (b?.delta != null && b.n_probes >= 5) setLocus(deltaOf, bodies[j], b.delta)
+			})
 		})
 	} finally {
 		releaseMemory()
 	}
 	return deltaOf
-}
-
-/* Each patient's methylated reads over all reads of each gene body (rust dmrcate's sample_test, at least 20 reads),
-centered on the patient's median body so that a genome-wide shift does not count, then Welch's t-test between the
-groups per body. The deltas compare group means, which says how far a body moved; this says whether the patients of
-the two groups differ there beyond how much they vary, the p-value a gene-level test needs (the starburst's gene sets).
-One rust run over every matrix file, so each patient's median is genome-wide; it keeps two sums per body and patient
-and nothing per CpG. */
-async function computeGeneBodyTests(q: any, genome: any, ds: any): Promise<Record<string, GeneBodyTest>> {
-	const byChr = lociByChr(genome)
-	const chrs: string[] = (q.chromosomes?.length ? q.chromosomes : validateChromosomes(genome, undefined, true)).filter(
-		(c: string) => byChr.has(c)
-	)
-	if (!chrs.length) throw new Error('No chromosome has gene bodies to test.')
-	const { group1, group2 } = await resolveGroupNames(
-		q.group1,
-		q.group2,
-		eligibleMethylationSamples(ds, q.element_type),
-		ds,
-		q.__protected__
-	)
-	if (group1.length < 3 || group2.length < 3) throw new Error('Each group needs at least 3 samples.')
-	const jobs = new Map<string, string[]>()
-	for (const chr of chrs) {
-		const file = resolveMethylationMatrix(ds, chr, q.element_type).matrixFile
-		jobs.set(file, [...(jobs.get(file) || []), chr])
-	}
-	const bodies = chrs.flatMap(chr => byChr.get(chr)!.map(b => ({ chr, ...b })))
-	const matrix = resolveMethylationMatrix(ds, chrs[0], q.element_type)
-	const releaseMemory = await admitDmrcateSampleTest(
-		[...jobs.keys()],
-		bodies.length * (group1.length + group2.length),
-		'Server memory is too low to test gene-body methylation right now. Try again later.'
-	)
-	try {
-		const out = JSON.parse(
-			await runDmrcate(
-				{
-					matrices: [...jobs].map(([file, chrs]) => ({ file, chrs })),
-					...dmrcateValues(matrix),
-					background_regions: bodies.map(b => ({ chr: b.chr, start: b.start, stop: b.stop })),
-					sample_test: true,
-					// reads where the matrix has depth; values, one a CpG, where it does not (an array)
-					min_reads: matrix.hasDepth ? 20 : 3,
-					case: group2.join(','),
-					control: group1.join(',')
-				},
-				'Compare smaller groups.',
-				dmrcateDeadline()
-			)
-		)
-		if (out.error) throw new Error(out.error)
-		const testOf: Record<string, GeneBodyTest> = {}
-		;(out.background as any[]).forEach((r, i) => {
-			// at least 5 CpGs, as the deltas require
-			if (r.p != null && r.n_probes >= 5) testOf[bodies[i].name] = { t: r.t, p: r.p, delta: r.delta }
-		})
-		return testOf
-	} finally {
-		releaseMemory()
-	}
 }

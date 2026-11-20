@@ -20,8 +20,8 @@ export const DMR_SCAN_ELEMENT_TYPE = 'dmr_scan'
  * structure. Not part of any cache key: the floor is applied to a cached scan's DMRs. */
 export const DEFAULT_MIN_CPGS = 5
 
-/** Whether a DMR's Δβ clears the volcano's Min Δβ, the one test behind the scan's counts, Manhattan, browser track
- * and gene links and the region view's gray DMRs: strictly above the floor, as the volcano renderer classifies
+/** Whether a DMR's Δβ clears the volcano's Min Δβ, the one test behind the scan's counts, browser track
+ * and the region view's gray DMRs: strictly above the floor, as the volcano renderer classifies
  * |x| > cutoff, so a DMR exactly at it is counted nowhere -- at a floor of 0 (or none) too, where a Δβ of exactly 0
  * is not counted. One with no Δβ (no covered cell in a group) has no measured effect and clears no floor. */
 export function clearsMinDeltaBeta(deltaBeta: number | null | undefined, minDeltaBeta: number | undefined): boolean {
@@ -52,26 +52,17 @@ export type DiffMethRequest = {
 	 * than a hardcoded list. */
 	element_type?: string
 	/** Only read when element_type is DMR_SCAN_ELEMENT_TYPE. Every field has a default, so a bare
-	 * scan request scans the whole genome uncorrected and keeps DMRs of 5+ CpGs. */
+	 * scan request scans the whole genome and keeps DMRs of 5+ CpGs. */
 	scan?: {
 		/** one chromosome to scan; absent = every major chromosome except the mitochondrion */
 		chromosome?: string
-		/** score each DMR against matched intergenic background (termdb/dmrBatch
-		 * backgroundCorrection); the volcano's p then becomes the Benjamini-Hochberg q of that background p,
-		 * and DMRs whose stratum gave no usable background are left out of the rows */
-		backgroundCorrection?: boolean
-		/** the region statistic the volcano's y (and the scan Manhattan's) plots; ignored with
-		 * backgroundCorrection, whose background FDR is the y then. Absent = min_smoothed_fdr */
+		/** the region statistic the volcano's y plots. Absent = min_smoothed_fdr */
 		yAxis?: DmrScanYAxis
 		/** the volcano's Min Δβ: DMRs with a |Δβ| no larger stay on the volcano, as not significant, but are
-		 * not counted, nor drawn on the Manhattan or the browser track. Absent = 0 */
+		 * not counted, nor drawn on the browser track. Absent = 0 */
 		minDeltaBeta?: number
 		/** drop DMRs called from fewer CpGs than this before rendering; absent = DEFAULT_MIN_CPGS */
 		minCpgs?: number
-		/** display width of the methylome-wide profile's bins, in bp. Several native bins are
-		 * averaged into one at render time; absent or at/below the native width draws them as
-		 * computed. Not part of any cache key -- changing it redraws a cached scan. */
-		profileBinBp?: number
 		/** DMRcate lambda, C and per-CpG FDR cutoff, passed to termdb/dmrBatch; absent = its defaults.
 		 * Part of the scan's cache key, so changing one refits. */
 		lambda?: number
@@ -130,11 +121,11 @@ export type DmrScanSummary = {
 	/** the minCpgs that was applied, and how many DMRs met it */
 	minCpgs: number
 	kept: number
-	/** the |Δβ| floor applied, and how many kept DMRs met it: what the counts below, the Manhattan, the
-	 * browser track and the gene-body set are over */
+	/** the |Δβ| floor applied, and how many kept DMRs met it: what the counts below and the
+	 * browser track are over */
 	minDeltaBeta: number
 	shown: number
-	/** the region statistic the rows' p is, when not the background p; what the client labels the y axis */
+	/** the region statistic the rows' p is; what the client labels the y axis */
 	yAxis: DmrScanYAxis
 	/** kept DMRs left out of the rows because the run could not compute their yAxis statistic; absent when none */
 	withoutStatistic?: number
@@ -148,25 +139,6 @@ export type DmrScanSummary = {
 	width?: { median: number; q1: number; q3: number }
 	globalMethylation?: TermdbDmrBatchSuccessResponse['globalMethylation']
 	regionMask?: { sources: string[]; overlapFrac: number; dmrsDropped: number }
-	/** present when the correction ran. `scored` and `significant` count the shown DMRs; `unscored`
-	 * shown DMRs had no usable background in their stratum -- too few windows, no spread, or no reference
-	 * CpG to place in a solo-WCGW tertile -- and are not among the rows. `windows` is over the whole run,
-	 * also when `chromosomes` is one chromosome of it */
-	backgroundCorrection?: {
-		windows: number
-		scored: number
-		unscored: number
-		/** shown DMRs at background FDR < 0.05 */
-		significant: number
-		matchedOn: string[]
-		/** background windows' own share at p < 0.001 against their stratum's null; ~0.001 when its tail fits */
-		nullP001?: number
-	}
-	/** genes under shown hypomethylated gene-body DMRs -- the set the expression test
-	 * (termdb/dmrGeneDE) runs on. With the background correction on, a region must also beat its
-	 * matched background (FDR < 0.05), which makes this the stricter of two readings rather than the
-	 * only one. Absent when no DMR qualifies. */
-	geneBodyLoss?: { regions: number; genes: string[] }
 	/** The two groups cut to the samples with methylation data, as sample ids: the cohort any
 	 * expression step after a scan should run on, so both readings come from the same patients.
 	 * A group that the request defined by a filter comes back as that filter, with `sampleCount`
@@ -182,24 +154,6 @@ export type DmrScanSummary = {
 	 * papers plot for a genome-wide comparison, covering every bin with probes rather than only
 	 * the called DMRs. See TermdbDmrBatchSuccessResponse.binMethylation. */
 	binMethylation?: NonNullable<TermdbDmrBatchSuccessResponse['binMethylation']>
-	/** The rendered genome-wide methylation profile: the per-bin group difference along the genome.
-	 * Rendered per request, after the cache, like the DMR Manhattan. `interactive` is how many bins
-	 * per direction carry pixel coordinates; `dotRadius` is the radius the PNG was drawn at, which
-	 * the client's hover layer must match to land on the dots. */
-	profile?: {
-		png: string
-		plotData: any
-		/** the width actually drawn, which is the requested display width when one was asked for */
-		binBp: number
-		plotWidth: number
-		plotHeight: number
-		dotRadius: number
-		/** bins drawn at that width */
-		bins: number
-		/** how many of them are hoverable: the top N per direction by |delta beta|, so at a coarse
-		 * width where the rule reaches every bin this equals `bins` */
-		interactive: number
-	}
 	/** Quantiles of the per-bin difference and the fraction of bins that moved beyond a threshold:
 	 * how much of the measured methylome changed, which the DMR counts alone do not say. */
 	profileSummary?: {
@@ -211,28 +165,12 @@ export type DmrScanSummary = {
 		fractionBeyond10: number
 		fractionHyper: number
 	}
-	/** the cached scan the rows came from, so anything ranked off the same scan (e.g.
-	 * termdb/dmrGeneLink) can reach it without recomputing anything */
+	/** the cached scan the rows came from, so the region view can reach it without recomputing anything */
 	cacheId?: string
 	/** The kept DMRs written as a bedj track file under the "bedj" cache subdir, as its file name.
 	 * A genome browser opened on the scan loads it with isCache:true, so the track is an ordinary
 	 * bedj file tk rather than items the browser has to fetch and swap per chromosome. */
 	bedjFile?: string
-	/** Every kept DMR drawn along the genome, hyper above the line and hypo below, y = signed
-	 * -log10 of the q the volcano plots; the N most significant per direction carry pixel
-	 * coordinates and are interactive. Rendered per request, after the cache, because it depends
-	 * on the client's pixel ratio. */
-	manhattan?: {
-		png: string
-		plotData: any
-		interactive: number
-		plotWidth: number
-		plotHeight: number
-		/** the radius the PNG was drawn at, which the hover layer must match */
-		dotRadius: number
-		/** filled rather than open circles: a one-chromosome scan, where dots are few enough to fill */
-		filled: boolean
-	}
 }
 
 export type DiffMethResponse = DiffMethPreAnalysisResponse | DiffMethFullResponse
@@ -279,10 +217,8 @@ export type DiffMethEntry = DataEntry & {
 	 * the stored M-values, which yields the alpha-smoothed beta and so shrinks the difference
 	 * toward zero by 2/(depth+2) — under 1% at this cohort's typical promoter depth. */
 	delta_beta: number
-	/** DMR-scan rows only (element_class 'dmr'): CpGs the region was called from, and when the
-	 * background correction ran, the observed delta-beta minus the matched drift. */
+	/** DMR-scan rows only (element_class 'dmr'): CpGs the region was called from */
 	no_cpgs?: number
-	excess?: number
 	/** DMR-scan rows only: the least kernel-smoothed FDR in the region, which DMRcate called it by */
 	min_smoothed_fdr?: number
 }

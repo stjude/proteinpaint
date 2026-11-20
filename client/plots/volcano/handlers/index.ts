@@ -20,13 +20,7 @@ export type {
 } from './types'
 export type { ControlContext, RowActionContext, MethodOption, PreAnalysisHandler, ClusterTerms } from './types'
 export { getPlottedEffect, countGroupSamples } from './shared'
-export {
-	DMRCATE_DEFAULTS,
-	BACKGROUND_CORRECTION_TITLE,
-	SCAN_Y_AXIS_OPTIONS,
-	onDeltaBetaAxis,
-	isScanPlot
-} from './dnaMethylation'
+export { DMRCATE_DEFAULTS, SCAN_Y_AXIS_OPTIONS, onDeltaBetaAxis, isScanPlot } from './dnaMethylation'
 export { getSpliceMethodOptions, scaleDsFilters } from './junction'
 
 /* One handler per data type of a differential analysis, keyed by config.termType. A Map, not a
