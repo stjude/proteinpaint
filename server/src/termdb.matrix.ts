@@ -24,7 +24,9 @@ import {
 	SSGSEA,
 	PROTEOME_ABUNDANCE,
 	PSEUDOBULK,
-	JUNCTION
+	JUNCTION,
+	MULTIVALUE,
+	CONDITION
 } from '#types'
 import type { SampleMapping } from '#types'
 import { annotateSingleCellTerm, hydrateMetaResultCellRows } from './singleCell/matrixData.ts'
@@ -1110,7 +1112,12 @@ export async function getAnnotationRows(q, termWrappers, filter, CTEs) {
 		const table = sql.id(t.tablename)
 		const mapping = getAnnotationSampleMapping(q, tw)
 		if (mapping) {
-			mappedTermIds.add(termId)
+			if (![MULTIVALUE, CONDITION].includes(tw.term.type)) {
+				// do not include multivalue terms to prevent
+				// assigning a single value to target sample
+				// see below
+				mappedTermIds.add(termId)
+			}
 			const { source, target, targetTypes } = mapping
 			return sql`SELECT ${target} as sample, key, value, ${termId} as term_id
 				FROM sample_ancestry sa
