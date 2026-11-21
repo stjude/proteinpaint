@@ -18,12 +18,6 @@ const PAD_X = 2 // horizontal inset so the outermost swatch strokes stay inside 
 const FONT_SIZE = '0.8rem'
 
 /*
-Zone swatches carry the same 0.3 opacity the bands are painted at in both charts, so the swatch is
-the color the viewer actually sees rather than the saturated source color.
-*/
-const ZONE_OPACITY = 0.3
-
-/*
 Each series is swatched as the mark that carries it in its chart: in the distribution chart SC is a
 line through every rating (a line with a vertex dot) and POC is a column per rating (a square); in
 the thermometer both are fills (a circle each).
@@ -112,7 +106,6 @@ export function renderImpressionLegend(a: ImpressionLegendArgs) {
 			.attr('width', SWATCH_SIZE)
 			.attr('height', SWATCH_SIZE)
 			.attr('fill', z.color)
-			.attr('opacity', ZONE_OPACITY)
 			.attr('stroke', '#ccc')
 			.attr('stroke-width', 0.5)
 		const label = item

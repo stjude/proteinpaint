@@ -2,17 +2,17 @@ import { scaleBand, scaleLinear } from 'd3-scale'
 import { axisBottom, axisLeft, axisRight } from 'd3-axis'
 import { line } from 'd3-shape'
 import { axisstyle } from '../../dom/axisstyle.js'
-import { impressionTestIdSuffix, type ImpressionZone } from './renderImpressionThermometer.js'
+import { impressionTestIdSuffix, hoverFill, POC_FILL, type ImpressionZone } from './renderImpressionThermometer.js'
 
 /*
 Response-distribution combo chart, one per POC responder group. x = impression rating
 1..maxScore. Site-Coordinator response frequency is a line in the module color on the LEFT
-y-axis (site counts); POC-staff response frequency is grey columns on the RIGHT y-axis (staff
-counts). Three performance zones (Weak/Intermediate/Strong) are drawn as background bands.
+y-axis (site counts); POC-staff response frequency is columns on the RIGHT y-axis (staff
+counts), all in the same POC grey as the thermometer's POC fill. Three performance zones
+(Weak/Intermediate/Strong) are drawn as background bands.
 The two y-axes are independent because POC counts far exceed SC counts (see the reference mock-up).
 */
 
-const POC_COLUMN_FILL = '#bdbdbd'
 // Single neutral color for all axis text (ticks + titles), so labels read consistently.
 const AXIS_COLOR = '#333'
 const POC_COLUMN_STROKE = '#616161'
@@ -109,10 +109,9 @@ export function renderResponseDistribution(a: ResponseDistributionArgs) {
 			.attr('width', zEnd - zStart)
 			.attr('height', PLOT_H)
 			.attr('fill', z.color)
-			.attr('opacity', 0.3)
 	}
 
-	// POC grey columns on the RIGHT axis
+	// POC grey columns on the RIGHT axis; hover darkens the hovered column.
 	for (const r of ratings) {
 		const bin = pocByRating[r]
 		const count = bin?.count || 0
@@ -125,13 +124,10 @@ export function renderResponseDistribution(a: ResponseDistributionArgs) {
 			.attr('y', yRight(count))
 			.attr('width', x.bandwidth())
 			.attr('height', PLOT_H - yRight(count))
-			.attr('fill', POC_COLUMN_FILL)
+			.attr('fill', POC_FILL)
 			.attr('stroke', POC_COLUMN_STROKE)
 			.attr('stroke-width', 0.5)
-		a.attachTip(col, `POC rating ${r}: ${count} response${count === 1 ? '' : 's'}`, {
-			on: { fill: '#8d8d8d' },
-			off: { fill: POC_COLUMN_FILL }
-		})
+		a.attachTip(col, `POC rating ${r}: ${count} response${count === 1 ? '' : 's'}`, hoverFill(POC_FILL))
 	}
 
 	// SC series on the LEFT axis. Multi-site → a line through every rating's site count;

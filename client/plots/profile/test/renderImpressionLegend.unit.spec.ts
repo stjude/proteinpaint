@@ -11,7 +11,7 @@ circle for each fill. Both legends also name the three performance zones.
   • two rows: the series (SC / POC) on the first, the zones on the second, each centered
   • distribution series → a line+dot for SC, a square for POC, one square per zone
   • thermometer series → a filled circle for each series (SC + POC)
-  • zone swatches carry the same 0.3 opacity the charts paint their background bands at
+  • zone swatches are painted at full opacity, like the charts' background bands
   • SC-only module (one series) → the POC entry is absent but the zones remain
   • zones are listed low to high regardless of the order the caller passes them in
 */
@@ -125,13 +125,10 @@ tape('zone swatches match the bands as rendered', function (test) {
 		ZONES.map(z => z.color),
 		'zone swatches use the zone colors'
 	)
-	/*
-	The charts paint their background bands at 0.3, so a fully saturated swatch would not be the
-	color the viewer actually sees beside it.
-	*/
+	// The charts paint their bands in the zone colors as given, so the swatches carry no opacity either.
 	test.ok(
-		opacities.every(o => o === '0.3'),
-		'zone swatches carry the same 0.3 opacity the bands are painted at'
+		opacities.every(o => o === null),
+		'zone swatches are painted at full opacity, like the bands'
 	)
 
 	holder.remove()
