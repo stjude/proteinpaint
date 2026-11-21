@@ -243,7 +243,9 @@ tape('Download icon with more lines opens a menu; the first line downloads the t
 	table.sortByColumn(qCol, true)
 	const saved = catchDownloads(() => {
 		downloadIcon(holder).click()
-		const lines = [...document.querySelectorAll('.sja_menuoption')] as HTMLElement[]
+		// only this table's menu: other specs in the same page can leave their own menus in <body>
+		const menu = document.querySelector('[data-testid="sjpp-grin2-download-top-genes"]')!.parentElement!
+		const lines = [...menu.querySelectorAll('.sja_menuoption')] as HTMLElement[]
 		test.deepEqual(
 			lines.map(l => l.textContent),
 			['Download top 3 genes (TSV)', 'Download all 3 genes in output (TSV)'],
