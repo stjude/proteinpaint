@@ -8,6 +8,7 @@ Input (stdin, JSON):
     lesion              [[sample, chrom, start, end, type], ...]
     lesionTypeMap       {type: label}, e.g. {"mutation": "Mutation", "loss": "Loss"}
     maxGenesToShow      rows in the top-gene table, default 500
+    fullTablePath       when set, every gene's row of the table is also written there as a TSV (see write_full_table)
     excludeEnabled      default true
     excludeBeds         BED files (plain or bgzip) of regions; a gene mostly inside them is dropped before the test
     excludeOverlapFrac  masked fraction of a gene's span at which it is dropped, default 0.5
@@ -73,6 +74,7 @@ struct Input {
     lesion: Lesions,
     lesion_type_map: BTreeMap<String, String>,
     max_genes_to_show: Option<usize>,
+    full_table_path: Option<String>,
     exclude_enabled: Option<bool>,
     #[serde(default)]
     exclude_beds: Vec<String>,
@@ -182,6 +184,19 @@ fn run(input: Input) -> Result<(), String> {
         &q,
         &constellation,
     );
+    if let Some(path) = &input.full_table_path {
+        write_full_table(
+            path,
+            &genes,
+            &order,
+            &types,
+            &input.lesion_type_map,
+            &nsubj,
+            &p,
+            &q,
+            &constellation,
+        )?;
+    }
     let by_type: BTreeMap<&str, usize> = types.iter().map(|t| t.as_str()).zip(counts).collect();
 
     // geneHits reports nsubj and q for each lesion type of lesionTypeMap present in the data
@@ -817,6 +832,59 @@ fn type_label(prefix: &str, ty: &str, lesion_type_map: &BTreeMap<String, String>
     }
 }
 
+/// constellation columns of the table: none without a constellation test
+fn constellation_columns(nt: usize, constellation: &Option<(Vec<f64>, Vec<f64>)>) -> usize {
+    if constellation.is_some() {
+        nt.min(MAX_CONSTELLATION_COLUMNS)
+    } else {
+        0
+    }
+}
+
+/// Column labels of the gene table, shared by the top-gene table of the response and the full-table TSV
+fn table_labels(types: &[String], lesion_type_map: &BTreeMap<String, String>, n_const: usize) -> Vec<String> {
+    let mut labels = vec!["Gene".to_string(), "Chromosome".to_string()];
+    for ty in types {
+        for prefix in ["p.nsubj.", "q.nsubj.", "nsubj."] {
+            labels.push(type_label(prefix, ty, lesion_type_map));
+        }
+    }
+    for k in 1..=n_const {
+        let s = if k > 1 { "s" } else { "" };
+        labels.push(format!("P-value ({k} Lesion Type{s})"));
+        labels.push(format!("Q-value ({k} Lesion Type{s})"));
+    }
+    labels
+}
+
+/// The cells of gene i, in the order of table_labels
+#[allow(clippy::too_many_arguments)]
+fn table_row(
+    i: usize,
+    genes: &[Gene],
+    nt: usize,
+    n_const: usize,
+    nsubj: &[u32],
+    p: &[f64],
+    q: &[f64],
+    constellation: &Option<(Vec<f64>, Vec<f64>)>,
+) -> Vec<Value> {
+    let mut row = vec![json!({"value": genes[i].name}), json!({"value": genes[i].chrom})];
+    for t in 0..nt {
+        let k = i * nt + t;
+        row.push(json!({"value": table_num(p[k])}));
+        row.push(json!({"value": table_num(q[k])}));
+        row.push(json!({"value": nsubj[k]}));
+    }
+    if let Some((cp, cq)) = constellation {
+        for k in 0..n_const {
+            row.push(json!({"value": table_num(cp[i * nt + k])}));
+            row.push(json!({"value": table_num(cq[i * nt + k])}));
+        }
+    }
+    row
+}
+
 #[allow(clippy::too_many_arguments)]
 fn top_gene_table(
     genes: &[Gene],
@@ -831,47 +899,57 @@ fn top_gene_table(
 ) -> Value {
     let nt = types.len();
     let top = &order[..num_rows];
-    let n_const = if constellation.is_some() {
-        nt.min(MAX_CONSTELLATION_COLUMNS)
-    } else {
-        0
-    };
+    let n_const = constellation_columns(nt, constellation);
 
-    let mut columns = vec![
-        json!({"label": "Gene", "sortable": true}),
-        json!({"label": "Chromosome", "sortable": true}),
-    ];
-    for t in 0..nt {
-        for prefix in ["p.nsubj.", "q.nsubj.", "nsubj."] {
-            columns.push(json!({"label": type_label(prefix, &types[t], lesion_type_map), "sortable": true}));
-        }
-    }
-    for k in 1..=n_const {
-        let s = if k > 1 { "s" } else { "" };
-        columns.push(json!({"label": format!("P-value ({k} Lesion Type{s})"), "sortable": true}));
-        columns.push(json!({"label": format!("Q-value ({k} Lesion Type{s})"), "sortable": true}));
-    }
+    let columns: Vec<Value> = table_labels(types, lesion_type_map, n_const)
+        .into_iter()
+        .map(|label| json!({"label": label, "sortable": true}))
+        .collect();
 
     let rows: Vec<Value> = top
         .iter()
-        .map(|&i| {
-            let mut row = vec![json!({"value": genes[i].name}), json!({"value": genes[i].chrom})];
-            for t in 0..nt {
-                let k = i * nt + t;
-                row.push(json!({"value": table_num(p[k])}));
-                row.push(json!({"value": table_num(q[k])}));
-                row.push(json!({"value": nsubj[k]}));
-            }
-            if let Some((cp, cq)) = constellation {
-                for k in 0..n_const {
-                    row.push(json!({"value": table_num(cp[i * nt + k])}));
-                    row.push(json!({"value": table_num(cq[i * nt + k])}));
-                }
-            }
-            Value::Array(row)
-        })
+        .map(|&i| Value::Array(table_row(i, genes, nt, n_const, nsubj, p, q, constellation)))
         .collect();
     json!({"columns": columns, "rows": rows})
+}
+
+/// Writes every gene's row of the gene table, in result order, as a TSV: the columns and values of
+/// top_gene_table, with no limit on the rows. The server asks for it so that the client can offer "download all
+/// genes" without the browser holding a table of every gene. A number is written as the response writes it
+/// (3 significant digits) and a missing value as an empty cell. Written to a temporary file that is renamed when
+/// complete, so that a reader never sees a partial file.
+#[allow(clippy::too_many_arguments)]
+fn write_full_table(
+    path: &str,
+    genes: &[Gene],
+    order: &[usize],
+    types: &[String],
+    lesion_type_map: &BTreeMap<String, String>,
+    nsubj: &[u32],
+    p: &[f64],
+    q: &[f64],
+    constellation: &Option<(Vec<f64>, Vec<f64>)>,
+) -> Result<(), String> {
+    let nt = types.len();
+    let n_const = constellation_columns(nt, constellation);
+    let tmp = format!("{path}.tmp");
+    let err = |e: io::Error| format!("Cannot write the full gene table {tmp}: {e}");
+    let mut out = BufWriter::new(File::create(&tmp).map_err(err)?);
+    writeln!(out, "{}", table_labels(types, lesion_type_map, n_const).join("\t")).map_err(err)?;
+    for &i in order {
+        let cells: Vec<String> = table_row(i, genes, nt, n_const, nsubj, p, q, constellation)
+            .iter()
+            .map(|c| match &c["value"] {
+                Value::String(s) => s.clone(),
+                Value::Null => String::new(),
+                v => v.to_string(),
+            })
+            .collect();
+        writeln!(out, "{}", cells.join("\t")).map_err(err)?;
+    }
+    out.flush().map_err(err)?;
+    drop(out);
+    std::fs::rename(&tmp, path).map_err(|e| format!("Cannot move the full gene table to {path}: {e}"))
 }
 
 #[cfg(test)]
@@ -1069,6 +1147,46 @@ mod tests {
             .unwrap();
         // the count, not 1230 from the 3-significant-digit formatting of the p- and q-value cells
         assert_eq!(table["rows"][0][col]["value"], json!(1234));
+    }
+
+    #[test]
+    fn full_table_has_every_gene_and_the_columns_of_the_top_table() {
+        let gene = |name: &str, start: i64| Gene {
+            name: name.into(),
+            chrom: "chr1".into(),
+            start,
+            end: start + 1,
+        };
+        let genes = [gene("A", 1), gene("B", 10), gene("C", 20)];
+        let types = ["mutation".to_string()];
+        let label = BTreeMap::from([("mutation".to_string(), "Mutation".to_string())]);
+        let (nsubj, p, q) = ([1u32, 1234, 0], [0.5, 1.49e-80, 1.0], [1.0, 2.5e-78, 1.0]);
+        let order = [1usize, 0, 2];
+        let path = std::env::temp_dir().join(format!("grin2_full_table_{}.tsv", std::process::id()));
+        let path = path.to_str().unwrap();
+        write_full_table(path, &genes, &order, &types, &label, &nsubj, &p, &q, &None).unwrap();
+        let text = std::fs::read_to_string(path).unwrap();
+        std::fs::remove_file(path).unwrap();
+        let lines: Vec<Vec<&str>> = text.lines().map(|l| l.split('\t').collect()).collect();
+        let table = top_gene_table(&genes, &order, 3, &types, &label, &nsubj, &p, &q, &None);
+        let columns: Vec<&str> = table["columns"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["label"].as_str().unwrap())
+            .collect();
+        assert_eq!(lines[0], columns, "the columns of the top-gene table");
+        assert_eq!(lines.len(), 4, "a header and a row for every gene");
+        assert_eq!(
+            lines[1],
+            ["B", "chr1", "1.49e-80", "2.5e-78", "1234"],
+            "rows in result order"
+        );
+        assert_eq!(lines[2][4], "1");
+        assert!(
+            !std::path::Path::new(&format!("{path}.tmp")).exists(),
+            "no temporary file is left"
+        );
     }
 
     #[test]

@@ -40,7 +40,12 @@ export class GRIN2ViewModel {
 
 		return {
 			headerText,
-			columns: [{ label: '', width: '20px' }, ...response.topGeneTable.columns],
+			totalGenes: String(totalGenes),
+			// the first column holds the circles of the lesion types whose q-value is below the threshold
+			columns: [
+				{ label: '', width: '20px', tooltip: 'Lesion types with a q-value below the threshold' },
+				...response.topGeneTable.columns
+			],
 			rows,
 			dataItems: response.topGeneTable.rows
 		}

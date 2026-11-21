@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
+import type { GRIN2Dom, GRIN2Opts, GRIN2RequestData } from './GRIN2Types'
 import { GRIN2Model } from './model/GRIN2Model'
 import { GRIN2ViewModel } from './viewModel/GRIN2ViewModel'
 import { GRIN2ResultsView } from './view/GRIN2ResultsView'
@@ -125,6 +125,17 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 	}
 
+	/** TSV text of the table of every gene for the analysis that requestData made */
+	private async fetchFullTable(requestData: GRIN2RequestData): Promise<string> {
+		const response = await this.model.fetchGrin2Data(
+			{ ...requestData, exportFullTable: true },
+			this.api!.getAbortSignal()
+		)
+		if (response.status === 'error' || typeof response.fullTableTsv != 'string')
+			throw new Error(response.error || 'The server returned no table')
+		return response.fullTableTsv
+	}
+
 	private async handleRun() {
 		if (!this.controlsView) return
 		const runFilterSignature = this.cohortFilterSignature
@@ -159,6 +170,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 			if (runFilterSignature !== this.cohortFilterSignature) return
 
 			const vm = new GRIN2ViewModel(response, manhattan, dtUsage)
+			// the table of every gene is exported with the request that made these results, so the server
+			// answers from the result it cached for it
+			this.resultsView.onDownloadAll = () => this.fetchFullTable(requestData)
 			this.resultsView.render(vm.viewData)
 			this.hasResults = true
 			this.inputPanelCollapsed = true

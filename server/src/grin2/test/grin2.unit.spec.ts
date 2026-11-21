@@ -10,6 +10,7 @@ import {
 } from '../lesions.ts'
 import {
 	grin2KeyInputs,
+	grin2FullTablePath,
 	normalizeExcludeOptions,
 	resolveExcludeBeds,
 	getMaxLesions,
@@ -586,12 +587,19 @@ tape('getCnvLesionType', test => {
 	test.end()
 })
 
+tape('grin2FullTablePath', test => {
+	const id = 'a'.repeat(32)
+	test.ok(grin2FullTablePath(id).endsWith(`${id}.tsv`), 'the table of every gene is kept beside the cached result')
+	test.throws(() => grin2FullTablePath('../x'), 'an id that is not a cache hash is refused')
+	test.end()
+})
+
 tape('grin2KeyInputs + normalizeExcludeOptions', test => {
 	const minimal = grin2KeyInputs({ genome: 'hg38', dslabel: 'TermdbTest' } as unknown as GRIN2Request)
 	test.equal(minimal.filter, null, 'missing filter nulled in cache key')
 	test.equal(minimal.cnvOptions, null, 'missing option groups nulled in cache key')
 	test.equal(minimal.excludeOptions, null, 'missing excludeOptions => null')
-	test.equal(minimal.statsVersion, 3, 'statistics version in cache key, so results of older statistics are not reused')
+	test.equal(minimal.statsVersion, 4, 'statistics version in cache key, so results of older statistics are not reused')
 
 	// overlapFrac normalization
 	test.equal(normalizeExcludeOptions({ overlapFrac: NaN })?.overlapFrac, 0.5, 'NaN overlapFrac clamped to default 0.5')

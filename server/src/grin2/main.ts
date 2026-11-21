@@ -1,12 +1,13 @@
 import type { GRIN2Request, GRIN2Response } from '#types'
 import serverconfig from '../serverconfig.js'
 import path from 'path'
+import fs from 'fs'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { renderManhattan } from '../renderManhattan.ts'
 import { mayLog } from '../helpers.ts'
 import { get_samples } from '../termdb.sql.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dtitd, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
-import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
+import { cacheOrRecompute, cacheFilePath } from '../utils/cacheOrRecompute.ts'
 import { mapConcurrent } from '../utils/concurrencyLimiter.ts'
 import {
 	getAvailableMemoryMB,
@@ -142,14 +143,27 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		chromosomelist[c] = g.majorchr[c]
 	}
 
-	const {
-		result: cacheResult,
-		freshCompute,
-		cohortTime,
-		processingTime,
-		grin2AnalysisTime
-	} = await getGrin2CacheResult(request, g, ds, chromosomelist, signal)
+	// results are not kept on disk, so there is no table to serve
+	if (request.exportFullTable && serverconfig.features?.disableFileCache)
+		throw new Error('The table of all genes is not available: the file cache is disabled')
 
+	let cached = await getGrin2CacheResult(request, g, ds, chromosomelist, signal)
+
+	if (request.exportFullTable) {
+		// the table of every gene, for the client's "download all genes": no plot is drawn
+		let fullTableTsv = await readFullTable(cached.cacheId)
+		if (fullTableTsv === null) {
+			// the cached statistics outlived their table (the cache sweep removes files one by one): drop them and
+			// compute again, which writes the table with them
+			await fs.promises.rm(cached.cacheFile, { force: true })
+			cached = await getGrin2CacheResult(request, g, ds, chromosomelist, signal)
+			fullTableTsv = await readFullTable(cached.cacheId)
+		}
+		if (fullTableTsv === null) throw new Error('The table of all genes was not written')
+		return { status: 'success', fromCache: !cached.freshCompute, fullTableTsv }
+	}
+
+	const { result: cacheResult, freshCompute, cohortTime, processingTime, grin2AnalysisTime } = cached
 	const { resultData, processing } = cacheResult
 
 	// Step 5: Render Manhattan PNG. Always re-rendered because rendering
@@ -378,8 +392,9 @@ export function grin2KeyInputs(req: GRIN2Request) {
 	return {
 		// bump when the statistics change their results, so that cached results of the old ones are not reused;
 		// 2 = the Rust grin2 binary, which reports tiny p-values and changed the constellation test;
-		// 3 = exact subject counts in the top-gene table
-		statsVersion: 3,
+		// 3 = exact subject counts in the top-gene table;
+		// 4 = the table of every gene is written beside the cached result (see grin2FullTablePath)
+		statsVersion: 4,
 		genome: req.genome,
 		dslabel: req.dslabel,
 		filter: req.filter ?? null,
@@ -453,9 +468,9 @@ async function getGrin2CacheResult(
 		// a run that hit a cap lowered for low memory is not the full result, so a later request with more memory
 		// recomputes it rather than reading it from the cache
 		shouldPersist: r => !(lesionCapHit(r.processing) && r.processing.lesionCap! < r.processing.lesionCapConfigured!),
-		computeFresh: async () => {
+		computeFresh: async ({ cacheId }) => {
 			freshCompute = true
-			const out = await runGrin2Fresh(request, g, ds, chromosomelist, signal)
+			const out = await runGrin2Fresh(request, g, ds, chromosomelist, cacheId, signal)
 			cohortTime = out.cohortTime
 			processingTime = out.processingTime
 			grin2AnalysisTime = out.grin2AnalysisTime
@@ -475,6 +490,7 @@ async function runGrin2Fresh(
 	g: any,
 	ds: any,
 	chromosomelist: { [key: string]: number },
+	cacheId: string,
 	signal?: AbortSignal
 ): Promise<{
 	cacheResult: Grin2CacheResult
@@ -567,6 +583,8 @@ async function runGrin2Fresh(
 			chromosomelist,
 			lesion: lesions,
 			maxGenesToShow: request.maxGenesToShow,
+			// the binary also writes every gene's row here; not when results are not kept on disk
+			fullTablePath: serverconfig.features?.disableFileCache ? undefined : grin2FullTablePath(cacheId),
 			lesionTypeMap: buildLesionTypeMap(availableDataTypes),
 			excludeEnabled,
 			excludeBeds,
@@ -593,6 +611,22 @@ async function runGrin2Fresh(
 }
 
 // ─── helpers ─── //
+
+/** Where the table of every gene is kept: beside the cached result, with the same cache id, so that the cache
+ * sweep treats the two alike. The grin2 binary writes it while it computes the result. */
+export function grin2FullTablePath(cacheId: string): string {
+	return cacheFilePath('grin2', cacheId).replace(/\.json$/, '.tsv')
+}
+
+/** The table of every gene as TSV text, or null when its file is not there */
+async function readFullTable(cacheId: string): Promise<string | null> {
+	try {
+		return await fs.promises.readFile(grin2FullTablePath(cacheId), 'utf8')
+	} catch (e: any) {
+		if (e?.code === 'ENOENT') return null
+		throw e
+	}
+}
 
 /** The lesion cap for one run, and the release of the memory reserved for a run of that many lesions, to call in a
  * finally once the run ends. The cap leaves out memory that runs in progress have reserved. getAvailable: the
