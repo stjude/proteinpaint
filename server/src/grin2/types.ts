@@ -63,4 +63,7 @@ export interface Grin2Processing {
 export type Grin2CacheResult = {
 	resultData: any
 	processing: Grin2Processing
+	/** names this run's table of every gene (see grin2FullTablePath); absent from results cached before it was added,
+	 * whose table is named by the cache id */
+	fullTableId?: string
 }

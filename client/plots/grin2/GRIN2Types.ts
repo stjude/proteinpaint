@@ -55,6 +55,8 @@ export interface GRIN2RequestData {
 	maxGenesToShow?: number
 	/** ask for the table of every gene as TSV text (response.fullTableTsv) in place of the plot and the top genes */
 	exportFullTable?: boolean
+	/** with exportFullTable: the fullTableId of the analysis response, which names the table of that run */
+	fullTableId?: string
 	lesionTypeColors?: Record<string, string>
 	qValueThreshold?: number
 	maxCappedPoints?: number
@@ -84,6 +86,8 @@ export interface GRIN2Response {
 	pngImg?: any
 	/** every gene's row, as TSV text; only for a request with exportFullTable */
 	fullTableTsv?: string
+	/** names this run's table of every gene; absent when the server cannot export it (no file cache) */
+	fullTableId?: string
 	topGeneTable?: {
 		columns: { label: string; width?: string; sortable?: boolean; tooltip?: string }[]
 		rows: any[][]

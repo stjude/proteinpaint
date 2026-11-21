@@ -125,10 +125,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 	}
 
-	/** TSV text of the table of every gene for the analysis that requestData made */
-	private async fetchFullTable(requestData: GRIN2RequestData): Promise<string> {
+	/** TSV text of the table of every gene of the run that requestData made, which fullTableId names */
+	private async fetchFullTable(requestData: GRIN2RequestData, fullTableId: string): Promise<string> {
 		const response = await this.model.fetchGrin2Data(
-			{ ...requestData, exportFullTable: true },
+			{ ...requestData, exportFullTable: true, fullTableId },
 			this.api!.getAbortSignal()
 		)
 		if (response.status === 'error' || typeof response.fullTableTsv != 'string')
@@ -170,9 +170,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 			if (runFilterSignature !== this.cohortFilterSignature) return
 
 			const vm = new GRIN2ViewModel(response, manhattan, dtUsage)
-			// the table of every gene is exported with the request that made these results, so the server
-			// answers from the result it cached for it
-			this.resultsView.onDownloadAll = () => this.fetchFullTable(requestData)
+			// the table of every gene is exported with the request that made these results and the id of their run's
+			// table, so the download matches what is shown; no id means the server cannot export it (no file cache)
+			const { fullTableId } = response
+			this.resultsView.onDownloadAll = fullTableId ? () => this.fetchFullTable(requestData, fullTableId) : undefined
 			this.resultsView.render(vm.viewData)
 			this.hasResults = true
 			this.inputPanelCollapsed = true

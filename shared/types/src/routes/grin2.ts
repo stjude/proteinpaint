@@ -131,9 +131,10 @@ export type GRIN2Request = {
 	maxGenesToShow?: number // Default: 500
 
 	/** Send the table of every gene as TSV text (response.fullTableTsv) instead of the plot and the top genes.
-	 * The request must otherwise equal the request of the analysis to export, so that its cached result is used;
-	 * the table is computed again only when that result is gone. */
+	 * The request must otherwise equal the request of the analysis to export, and carry its fullTableId. */
 	exportFullTable?: boolean
+	/** With exportFullTable: the fullTableId of the analysis response, which names the table of that run */
+	fullTableId?: string
 }
 
 /** Simple Interface to store the complex plot data from the rust Manhattan plot */
@@ -181,6 +182,9 @@ export type GRIN2Response = {
 	download?: any
 	/** Every gene's row of the table of top genes, as TSV text; set only for a request with exportFullTable */
 	fullTableTsv?: string
+	/** Names the table of every gene of this run, to send back with exportFullTable. Absent when the server does not
+	 * keep results on disk, so the table cannot be exported. */
+	fullTableId?: string
 	/** Sortable table of top genes identified by GRIN2 */
 	topGeneTable?: {
 		/** Column definitions with labels and sort capabilities */
