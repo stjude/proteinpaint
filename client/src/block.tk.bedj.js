@@ -20,6 +20,9 @@ tk {
 	subpanels[]
 		.category2count{}
 			returned from server for each panel
+
+	configPanelExtra(holder)
+		optional; renders options of the app that shows the track at the top of the CONFIG panel
 }
 
 bedj can only be loaded from POST but not GET
@@ -253,8 +256,10 @@ export function bedjloadsubpanel(tk, block, panel) {
 }
 
 function configpanel(tk, block) {
-	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+	block.showtkconfigtip(tk)
 	const holder = tk.tkconfigtip.d
+	// options of the app that shows the track, e.g. the mass genome browser, go at the top
+	if (tk.configPanelExtra) tk.configPanelExtra(holder)
 
 	// height
 	{

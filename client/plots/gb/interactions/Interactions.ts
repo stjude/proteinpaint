@@ -6,6 +6,8 @@ export class Interactions {
 	app: MassAppApi
 	dom: any
 	id: string
+	/** the facet tables as last fetched, each with its tracks[], see GB.getFacetData() */
+	facetData: any[] = []
 	facetTrackNames = new Set<string>()
 	constructor(app: MassAppApi, dom: any, id: string) {
 		this.app = app
@@ -13,8 +15,33 @@ export class Interactions {
 		this.id = id
 	}
 
-	setFacetTrackNames(names: Set<string>) {
-		this.facetTrackNames = names
+	setFacetData(facetData: any[]) {
+		this.facetData = facetData
+		this.facetTrackNames = new Set()
+		for (const facet of facetData) {
+			for (const track of facet.tracks || []) {
+				if (track.name) this.facetTrackNames.add(track.name)
+			}
+		}
+	}
+
+	/** names of the facet tracks shown, as of now: a menu that lists them can stay open across dispatches */
+	getActiveFacetTracks(): string[] {
+		const config = this.app.getState().plots.find(p => p.id === this.id)
+		return config?.trackLst?.activeTracks || []
+	}
+
+	/** shows a facet track, or hides one that is shown; returns whether it is now shown */
+	toggleFacetTrack(name: string): boolean {
+		const activeTracks = this.getActiveFacetTracks()
+		const shown = activeTracks.includes(name)
+		this.launchFacet({
+			trackLst: {
+				activeTracks: shown ? activeTracks.filter(n => n != name) : [...activeTracks, name],
+				removeTracks: shown ? [name] : []
+			}
+		})
+		return !shown
 	}
 
 	onCoordinateChange = (rglst, blockInstance?) => {

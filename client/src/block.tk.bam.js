@@ -1583,11 +1583,8 @@ function getHeaders(tk) {
 }
 
 function configPanel(tk, block) {
-	{
-		// panel is very wide so shift it to left
-		const b = tk.config_handle.node().getBoundingClientRect()
-		tk.tkconfigtip.clear().show(b.x - 300, b.y)
-	}
+	// panel is very wide, up to half the window
+	block.showtkconfigtip(tk, window.innerWidth / 2)
 	const d = tk.tkconfigtip.d.append('div').style('max-width', '50vw')
 
 	{

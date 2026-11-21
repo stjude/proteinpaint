@@ -1818,7 +1818,7 @@ function downloadjunctions(tk) {
 }
 
 function configPanel(tk, block) {
-	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+	block.showtkconfigtip(tk)
 	const holder = tk.tkconfigtip.d
 
 	// read count cutoff

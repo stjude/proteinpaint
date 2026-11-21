@@ -1,9 +1,12 @@
 import tape from 'tape'
-import { copyArgRglst } from '../block.js'
+import { copyArgRglst, Block } from '../block.js'
+import { Menu } from '#dom'
+import { select } from 'd3-selection'
 
 /* list of tests
 
 copyArgRglst()
+Block.showtkconfigtip()
 
 */
 
@@ -64,5 +67,28 @@ tape('copyArgRglst()', test => {
 		rglst[0].start = 5
 		test.equal(input[0].start, 10, 'should not share region objects with the input')
 	}
+	test.end()
+})
+
+tape('Block.showtkconfigtip()', test => {
+	const show = (handleLeft: number, width?: number) => {
+		const config_handle = select('body')
+			.append('div')
+			.style('position', 'fixed')
+			.style('top', '10px')
+			.style('left', handleLeft + 'px')
+			.text('CONFIG')
+		const tk = { config_handle, tkconfigtip: new Menu({ padding: '15px' }) }
+		Block.prototype.showtkconfigtip.call({}, tk, width)
+		const left = tk.tkconfigtip.dnode!.getBoundingClientRect().left - window.scrollX
+		tk.tkconfigtip.destroy()
+		config_handle.remove()
+		return left
+	}
+	const nearRightEdge = window.innerWidth - 60
+	test.equal(show(nearRightEdge), window.innerWidth - 320, 'should shift the panel left to fit 300px in the window')
+	test.equal(show(10), 10, 'should line the panel up with a handle that leaves room for it')
+	test.equal(show(nearRightEdge, 500), window.innerWidth - 520, 'should fit a panel of a given width')
+	test.equal(show(100, window.innerWidth), 0, 'should not shift the panel past the left edge of the window')
 	test.end()
 })

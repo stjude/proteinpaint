@@ -95,7 +95,7 @@ export function bampileload(tk, block) {
 }
 
 function configpanel(tk, block) {
-	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+	block.showtkconfigtip(tk)
 	const holder = tk.tkconfigtip.d
 
 	if (tk.grades) {

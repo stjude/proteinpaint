@@ -106,7 +106,7 @@ export function bigwigstrandedmaketk(tk, block) {
 	}
 
 	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
-		tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+		block.showtkconfigtip(tk)
 		configpanel(tk, block)
 	})
 }

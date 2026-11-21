@@ -912,7 +912,7 @@ function makeTk(tk: any, block: any) {
 }
 
 function configPanel(tk: any, block: any) {
-	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+	block.showtkconfigtip(tk)
 
 	if (tk.textdata) {
 		tk.tkconfigtip.d

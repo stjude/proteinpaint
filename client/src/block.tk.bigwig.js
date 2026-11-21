@@ -6,6 +6,9 @@ import { format as d3format } from 'd3-format'
 import { makeNumericAxisConfig } from '#dom/numericAxis'
 
 /*
+tk.configPanelExtra(holder)
+	optional; renders options of the app that shows the track at the top of the CONFIG panel
+
 FIXME
 bigwigloadsubpanel should return promise and be tracked
 */
@@ -43,7 +46,9 @@ export function bigwigmaketk(tk, block) {
 	tk.leftaxis = tk.gleft.append('g')
 
 	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
-		tk.tkconfigtip.clear().showunder(tk.config_handle.node())
+		block.showtkconfigtip(tk)
+		// options of the app that shows the track, e.g. the mass genome browser, go at the top
+		if (tk.configPanelExtra) tk.configPanelExtra(tk.tkconfigtip.d)
 		bigwigconfigpanel(tk, block, tk.tkconfigtip.d, () => bigwigload(tk, block))
 	})
 }

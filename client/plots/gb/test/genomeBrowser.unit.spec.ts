@@ -1,8 +1,9 @@
 import tape from 'tape'
 import { computeBlockModeFlag } from '../GB.ts'
-import { getBlockState } from '../interactions/Interactions.ts'
+import { getBlockState, Interactions } from '../interactions/Interactions.ts'
 import { View, getGbSampleTypes } from '../view/View.ts'
 import { TabsRenderer } from '../view/TabsRenderer.ts'
+import { getOtherSampleTracks, renderSampleTracksButton } from '../view/facetTrackMenu.ts'
 import * as d3s from 'd3-selection'
 import { makeJunctionTerm } from '../../../j2/render.js'
 import { getParameter } from '../../../j2/tk.js'
@@ -354,5 +355,123 @@ tape('sample types the dropdowns of the genome browser show', test => {
 		undefined,
 		'should read every sample for a set that the dropdowns cannot show, as they show any visit and tissue'
 	)
+	test.end()
+})
+
+const facetData = [
+	{
+		name: 'Cell lines',
+		tracks: [
+			{ name: 'S1 H3K27ac', sample: 'S1', assay: 'H3K27ac', type: 'bigwig' },
+			{ name: 'S1 ATAC', sample: 'S1', assay: 'ATAC', type: 'bigwig' },
+			{ name: 'S1 peaks', sample: 'S1', assay: 'Peaks', type: 'bedj' },
+			{ name: 'S2 ATAC', sample: 'S2', assay: 'ATAC', type: 'bigwig' }
+		]
+	},
+	{ name: 'Tumors', tracks: [{ name: 'S1 tumor ATAC', sample: 'S1', assay: 'ATAC', type: 'bigwig' }] }
+]
+
+tape('other tracks of the sample of a facet track', test => {
+	const names = (facetName, tk) => getOtherSampleTracks(facetData, facetName, tk).map(t => t.name)
+	test.deepEqual(
+		names('Cell lines', facetData[0].tracks[0]),
+		['S1 ATAC', 'S1 peaks'],
+		'should list the tracks of the sample in its facet table, other than the track itself'
+	)
+	test.deepEqual(names('Cell lines', facetData[0].tracks[3]), [], 'should list none for a sample with one track')
+	test.deepEqual(names('Cell lines', { name: 'x' }), [], 'should list none for a track without a sample')
+	test.deepEqual(names('Other', facetData[0].tracks[0]), [], 'should list none for a facet table not fetched')
+	test.end()
+})
+
+tape('CONFIG panel of a facet track lists the other tracks of its sample', test => {
+	let activeTracks = ['S1 H3K27ac', 'S1 peaks']
+	const toggled: string[] = []
+	const interactions = {
+		facetData,
+		getActiveFacetTracks: () => activeTracks,
+		toggleFacetTrack: name => {
+			toggled.push(name)
+			activeTracks = activeTracks.includes(name) ? activeTracks.filter(n => n != name) : [...activeTracks, name]
+			return activeTracks.includes(name)
+		}
+	}
+	const holder: any = d3s.select('body').append('div')
+	renderSampleTracksButton(holder, 'Cell lines', facetData[0].tracks[0], interactions)
+	// the options of the track type, rendered after
+	holder.append('div').attr('class', 'track-option').text('Height')
+	const btn = holder.select('[data-testid="sjpp-gb-sampletracks-btn"]')
+	test.equal(btn.text(), 'List other 2 tracks from S1', 'should name the number of other tracks and the sample')
+	;(btn.node() as HTMLElement).click()
+	test.ok(btn.node().isConnected === false && holder.select('.track-option').empty(), 'should clear the panel')
+	const listDiv = holder.node().firstElementChild
+	test.deepEqual(
+		[holder.node().childElementCount, listDiv.style.maxHeight, listDiv.style.overflowY],
+		[1, '300px', 'auto'],
+		'should list the tracks in a div that scrolls past 300px'
+	)
+	const rows = () =>
+		holder
+			.selectAll('tr')
+			.nodes()
+			.map((tr: any) => [...tr.children].map((td: any) => td.textContent))
+	test.deepEqual(
+		rows(),
+		[
+			['', 'ATAC', 'S1 ATAC'],
+			['SHOWN', 'Peaks', 'S1 peaks']
+		],
+		'should list each track with its assay, marking those shown'
+	)
+	;(holder.selectAll('.sja_menuoption').nodes()[0] as HTMLElement).click()
+	test.deepEqual(toggled, ['S1 ATAC'], 'should show or hide the track clicked')
+	test.equal(rows()[0][0], 'SHOWN', 'should mark a track clicked to show as shown')
+
+	const none: any = d3s.select('body').append('div')
+	renderSampleTracksButton(none, 'Cell lines', facetData[0].tracks[3], interactions)
+	test.equal(none.node().childElementCount, 0, 'should show no button for a track the only one of its sample')
+	if (test['_ok']) for (const d of [holder, none]) d.remove()
+	test.end()
+})
+
+tape('a facet track shown in the block lists the other tracks of its sample', async test => {
+	const state = { config: { trackLst: { activeTracks: ['S1 tumor ATAC'] } }, vocab: { dslabel: 'ds' } }
+	const interactions = { facetData, getActiveFacetTracks: () => [], toggleFacetTrack: () => false }
+	const view = new View(state, null, null, {}, { vocabApi: { termdbConfig: {} } }, interactions, facetData)
+	const [tk] = await view.generateTracks()
+	test.equal(tk.name, 'S1 tumor ATAC', 'should show the active facet track')
+	const holder: any = d3s.select('body').append('div')
+	tk.configPanelExtra(holder)
+	test.equal(holder.node().childElementCount, 0, 'should list only the tracks of its own facet table')
+	test.notOk('configPanelExtra' in facetData[1].tracks[0], 'should leave the facet data as fetched')
+	holder.remove()
+	test.end()
+})
+
+tape('show or hide a facet track', test => {
+	const dispatched: any[] = []
+	let plot: any = { id: 'gb', trackLst: { activeTracks: ['S1 ATAC'] } }
+	const app: any = {
+		getState: () => ({ plots: [plot] }),
+		dispatch: action => {
+			dispatched.push(action)
+			plot = { ...plot, ...action.config }
+		}
+	}
+	const interactions = new Interactions(app, {}, 'gb')
+	test.equal(interactions.toggleFacetTrack('S1 peaks'), true, 'should say a hidden track is now shown')
+	test.deepEqual(
+		dispatched[0],
+		{ type: 'plot_edit', id: 'gb', config: { trackLst: { activeTracks: ['S1 ATAC', 'S1 peaks'], removeTracks: [] } } },
+		'should add a track to show to the active tracks'
+	)
+	test.equal(interactions.toggleFacetTrack('S1 ATAC'), false, 'should say a shown track is now hidden')
+	test.deepEqual(
+		dispatched[1].config.trackLst,
+		{ activeTracks: ['S1 peaks'], removeTracks: ['S1 ATAC'] },
+		'should take a track to hide off the active tracks, as of the latest state, and remove it from the block'
+	)
+	interactions.setFacetData(facetData)
+	test.equal(interactions.facetTrackNames.size, 5, 'should keep the names of the facet tracks')
 	test.end()
 })
