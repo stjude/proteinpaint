@@ -15,9 +15,13 @@ import {
 	resolveExcludeBeds,
 	getMaxLesions,
 	lesionCapHit,
-	CEILING_LESIONS
+	CEILING_LESIONS,
+	init
 } from '../main.ts'
 import serverconfig from '../../serverconfig.js'
+import { generateHash } from '../../utils/cacheOrRecompute.ts'
+import fs from 'fs'
+import path from 'path'
 import {
 	dtsnvindel,
 	dtcnv,
@@ -49,6 +53,7 @@ grin2KeyInputs + normalizeExcludeOptions
 resolveExcludeBeds
 getMaxLesions
 lesionCapHit
+exportFullTable: serves the table the displayed run wrote, without computing again
 */
 
 // Small TermdbTest-style fixtures. CNV objects mirror the dt:4 mlst entries that
@@ -692,5 +697,31 @@ tape('lesionCapHit', test => {
 		'SNV/indel fetch stopped at the cap => hit'
 	)
 	test.equal(lesionCapHit({ ...full, ...lesions, cnvCapReached: true }), true, 'CNV fetch stopped at the cap => hit')
+	test.end()
+})
+
+tape('exportFullTable: serves the table the displayed run wrote, without computing again', async test => {
+	if (serverconfig.features?.disableFileCache) {
+		test.comment('skipped: the file cache is disabled')
+		return test.end()
+	}
+	// a run whose lesion cap was lowered for low memory leaves its table but no cached statistics
+	const request = { genome: 'hg38', dslabel: 'TermdbTest', snvindelOptions: { consequences: ['M'] } }
+	const tsvPath = grin2FullTablePath(generateHash(grin2KeyInputs(request as unknown as GRIN2Request)))
+	await fs.promises.mkdir(path.dirname(tsvPath), { recursive: true })
+	await fs.promises.writeFile(tsvPath, 'gene\tq\nKRAS\t0.01\n')
+
+	let computed = 0
+	const ds = { queries: { singleSampleMutation: { get: () => computed++ } } }
+	const handler = init({ genomes: { hg38: { majorchr: { chr1: 1 }, datasets: { TermdbTest: ds } } } })
+	let sent: any
+	const res = { json: (r: any) => (sent = r), status: () => res, send: (r: any) => (sent = r) }
+	try {
+		await handler({ query: { ...request, exportFullTable: true } }, res)
+		test.equal(sent?.fullTableTsv, 'gene\tq\nKRAS\t0.01\n', 'the table on disk is returned')
+		test.equal(computed, 0, 'no sample data was read to compute again')
+	} finally {
+		await fs.promises.rm(tsvPath, { force: true })
+	}
 	test.end()
 })

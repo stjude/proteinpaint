@@ -7,7 +7,7 @@ import { renderManhattan } from '../renderManhattan.ts'
 import { mayLog } from '../helpers.ts'
 import { get_samples } from '../termdb.sql.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dtitd, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
-import { cacheOrRecompute, cacheFilePath } from '../utils/cacheOrRecompute.ts'
+import { cacheOrRecompute, cacheFilePath, generateHash } from '../utils/cacheOrRecompute.ts'
 import { mapConcurrent } from '../utils/concurrencyLimiter.ts'
 import {
 	getAvailableMemoryMB,
@@ -149,6 +149,16 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 	// results are not kept on disk, so there is no table to serve
 	if (request.exportFullTable && serverconfig.features?.disableFileCache)
 		throw new Error('The table of all genes is not available: the file cache is disabled')
+
+	if (request.exportFullTable) {
+		// The table the displayed run wrote, read before any lookup: a run whose lesion cap was lowered for low memory
+		// writes its table but not its cached statistics, and computing again could use another cap than the
+		// displayed results did. The binary writes the table to a temporary file and renames it, so it is never partial.
+		// ponytail: another run of the same request with another lowered cap would overwrite this table; key the table
+		// by run if that matters.
+		const fullTableTsv = await readFullTable(generateHash(grin2KeyInputs(request)))
+		if (fullTableTsv !== null) return { status: 'success', fromCache: true, fullTableTsv }
+	}
 
 	let cached = await getGrin2CacheResult(request, g, ds, chromosomelist, signal)
 
