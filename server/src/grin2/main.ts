@@ -115,13 +115,16 @@ export function init({ genomes }) {
 			const result = await runGrin2(g, ds, request, signal)
 			res.json(result)
 		} catch (e: any) {
-			if (signal?.aborted) {
+			if (signal?.aborted && res.destroyed) {
 				// Client disconnected, no point sending a response
 				mayLog('[GRIN2] Analysis aborted due to client disconnect')
 				return
 			}
+			// The signal can also be aborted while the client is still connected: xfetch() aborts the request
+			// signal when any upstream (e.g. GDC) request fails. That is a real error, so fall through and
+			// report it instead of hiding it behind a "client disconnect" message.
 
-			console.error('[GRIN2] Error stack:', e.stack)
+			console.error('[GRIN2] Error stack:', e?.stack || e) // upstream (xfetch) errors can be plain strings
 
 			const errorResponse: GRIN2Response = {
 				status: 'error',
