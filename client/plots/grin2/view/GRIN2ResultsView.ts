@@ -13,6 +13,7 @@ const headerFontSize = 14
 export class GRIN2ResultsView {
 	private holder: any
 	private app: any
+	private topGenesTable?: GRIN2TopGenesTable
 	/** Fetches the TSV text of the table of every gene for the displayed analysis; set by the controller */
 	onDownloadAll?: () => Promise<string>
 
@@ -22,6 +23,9 @@ export class GRIN2ResultsView {
 	}
 
 	clear() {
+		// the table's popups live in <body>, so removing the holder's children would leave them behind
+		this.topGenesTable?.remove()
+		this.topGenesTable = undefined
 		this.holder.selectAll('*').remove()
 	}
 
@@ -66,7 +70,7 @@ export class GRIN2ResultsView {
 			headerDiv.append('h3').style('margin', headerMargin).style('font-size', `${headerFontSize}px`).text(headerText)
 			const status = headerDiv.append('span').style('font-size', '0.9em')
 
-			new GRIN2TopGenesTable({
+			this.topGenesTable = new GRIN2TopGenesTable({
 				holder: tableContainer.append('div'),
 				app: this.app,
 				columns,

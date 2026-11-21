@@ -48,8 +48,8 @@ export function sortRows(rows: TableBaseRow[], colIdx: number, ascending: boolea
 }
 
 // Written so that no digit can match two ways. The looser '\d+\.?\d*' backtracks quadratically on a long
-// run of digits followed by a character that fails the match.
-const NUM = '-?(?:\\d+(?:\\.\\d*)?|\\.\\d+)'
+// run of digits followed by a character that fails the match. The optional exponent (1e-9) is for p/q-value columns.
+const NUM = '-?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?'
 const COMPARE = new RegExp(`^(>=|<=|>|<|=)\\s*(${NUM})$`)
 const RANGE = new RegExp(`^(${NUM})\\s*-\\s*(${NUM})$`)
 
