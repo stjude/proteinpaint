@@ -12,6 +12,7 @@ Tests:
 	Download icon without more lines downloads the table at once, without the circles column
 	Download icon with more lines opens a menu; the first line downloads the table as sorted
 	Download icon menu runs the callback of the second line
+	The table can be dragged taller than it starts
 	render() is idempotent and remove() takes the icon and the table away
 */
 
@@ -279,11 +280,29 @@ tape('Download icon menu runs the callback of the second line', test => {
 
 	const saved = catchDownloads(() => {
 		downloadIcon(holder).click()
-		;(document.querySelector('[data-testid="sjpp-grin2-download-all-genes"]') as HTMLElement).click()
+		const line = document.querySelector('[data-testid="sjpp-grin2-download-all-genes"]') as HTMLElement
+		test.equal(line.getAttribute('role'), 'button', 'the line is a button to screen readers')
+		line.click()
+		downloadIcon(holder).click()
+		const space = new KeyboardEvent('keydown', { key: ' ', cancelable: true })
+		;(document.querySelector('[data-testid="sjpp-grin2-download-all-genes"]') as HTMLElement).dispatchEvent(space)
+		test.ok(space.defaultPrevented, 'Space does not scroll the page')
 	})
-	test.equal(called, 1, 'the callback of the second line ran')
+	test.equal(called, 2, 'the callback of the second line ran, on a click and on Space')
 	test.equal(saved.length, 0, 'and the table was not downloaded')
 
+	table.remove()
+	holder.remove()
+	test.end()
+})
+
+tape('The table can be dragged taller than it starts', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const table = makeTable(holder)
+	const wrapper = holder.node().querySelector('.sjpp-table-base') as HTMLElement
+	test.equal(wrapper.style.resize, 'both', 'the corner resizes the table')
+	test.equal(wrapper.style.maxHeight, '', 'no max-height stops it from growing')
 	table.remove()
 	holder.remove()
 	test.end()

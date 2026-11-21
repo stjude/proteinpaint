@@ -210,6 +210,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 		})
 	}
 
+	/** Called by ComponentApi.destroy() when the plot closes, before it removes the plot's DOM: the table's popups
+	 * live in <body>, outside that DOM */
+	destroy() {
+		this.resultsView?.clear()
+	}
+
 	private clearResultsAndShowInputs() {
 		this.resultsView.clear()
 		this.hasResults = false

@@ -124,11 +124,19 @@ export class GRIN2TopGenesTable extends TableBase {
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.attr('data-testid', line.testId)
+				.attr('role', 'button')
 				.attr('tabindex', 0)
 				.text(line.text)
 				.on('click', () => {
 					this.downloadMenu.hide()
 					line.callback()
+				})
+				// Menu.setTabNavigation() clicks on Enter (keyup); Space is the other key that presses a button.
+				// keydown, not keyup, so the menu still adds its own Enter handler, and the page does not scroll.
+				.on('keydown', (event: KeyboardEvent) => {
+					if (event.key != ' ') return
+					event.preventDefault()
+					;(event.currentTarget as HTMLElement).click()
 				})
 		}
 		this.downloadMenu.showunder(this.downloadDiv.node())
@@ -163,9 +171,10 @@ export class GRIN2TopGenesTable extends TableBase {
 
 	/* ---- resize ---- */
 
-	/** The corner of the table can be dragged to resize it. That needs a height, not only a maximum. */
+	/** The corner of the table can be dragged to resize it. That needs a height, not only a maximum, and no
+	 * inherited max-height, which would stop the table from being dragged taller than it starts. */
 	protected createWrapper() {
-		const wrapper = super.createWrapper().style('resize', 'both')
+		const wrapper = super.createWrapper().style('resize', 'both').style('max-height', null)
 		if (this.originalRows.length > RESIZABLE_FROM_ROWS) wrapper.style('height', this.styles.maxHeight)
 		return wrapper
 	}
