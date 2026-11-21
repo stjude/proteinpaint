@@ -64,7 +64,7 @@ function makeTable(holder: any, extra: any = {}) {
 /** the gene names in the order the table shows them. A row starts with the selection cell, then the circles cell */
 function geneOrder(holder: any): string[] {
 	return [...holder.node().querySelectorAll('tbody tr')].map(
-		(tr: HTMLElement) => tr.querySelectorAll('td')[geneCol + 1].textContent
+		(tr: HTMLElement) => tr.querySelectorAll('td')[geneCol + 1].textContent ?? ''
 	)
 }
 
