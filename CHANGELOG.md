@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.230.0
 
 General:
 - DMR scan: removed the genome-wide DMR plot and methylome profile, the genes/expression/literature panel, the gene-body loss expression test, and the matched-background correction; cached scans and gene-body results recompute once
