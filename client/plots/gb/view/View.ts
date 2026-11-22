@@ -395,6 +395,8 @@ export class View {
 			},
 			filter0: this.state.filter0
 		}
+		// a fixed block width in px, e.g. for a figure exported at print size; else the block takes it from the page
+		if (this.state.config.blockWidth) arg.width = this.state.config.blockWidth
 
 		const interactions = this.interactions
 		arg.onCoordinateChange = function (rglst) {

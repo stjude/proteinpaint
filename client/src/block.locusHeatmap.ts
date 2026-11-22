@@ -6,7 +6,8 @@ of a block track, with a line from each column down to its place in the genomic 
 
 	tk.rows.statistics   optional rows of a value per column, each statRowHeight tall
 	tk.rows.heatmap      the matrix, with its annotation columns on the right
-	tk.rows.linkage      the lines, and under them the optional intervals row: items drawn at their genomic extent
+	tk.rows.linkage      the lines, and under them the optional intervals row: items drawn at their genomic extent, and
+	                     the optional model rows: a gene model each, with what goes with it on the right
 
 Each is { g, height, data }, with the height drawn: 0 when there is nothing to draw. The heatmap also has
 leftG and rightG for its labels and annotation columns, and leftWidth, the width of the labels on the left
@@ -41,6 +42,21 @@ export type LocusHeatmapAnnotation = {
 	parts?: { color: string; width: number }[][]
 }
 
+/** a block of rows, a model each at its genomic extent like the block's gene track, e.g. the isoforms of a gene: a line
+ * from line[0] to line[1] and a box per exon, px in the block view. right() draws what goes with row i in the block's
+ * right side, in g at the top of the row; rightWidth is its width there */
+export type LocusHeatmapModels = {
+	label: string
+	/** px above the first row, for its label and what right() draws there, e.g. a title and an axis; default 18 */
+	headerHeight?: number
+	rowHeight: number
+	rows: { label: string; color: string; line: [number, number]; exons: [number, number][] }[]
+	right?: (g: any, i: number) => void
+	rightWidth?: number
+	onHover?: (event: any, i: number) => void
+	onOut?: () => void
+}
+
 export type LocusHeatmapData = {
 	/** row names, top to bottom */
 	rows: string[]
@@ -70,6 +86,8 @@ export type LocusHeatmapData = {
 		onHover?: (event: any, i: number) => void
 		onOut?: () => void
 	}
+	/** blocks of rows under the lines and the column labels, one under the other, see LocusHeatmapModels */
+	models?: LocusHeatmapModels[]
 	/** col and row under the pointer */
 	onHover?: (event: any, col: number, row: number) => void
 	onOut?: () => void
@@ -84,6 +102,7 @@ const annW = 12, // width of an annotation column of colors
 	linkageHeight = 60,
 	intervalHeight = 10,
 	intervalGap = 6,
+	modelGap = 18, // above the model rows, for their label
 	// the longest a column's label is drawn, in px; longer ones are cut with an ellipsis
 	MAX_LABEL = 110
 
@@ -247,8 +266,9 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 	}
 
 	// the block's room on the right of the tracks is fixed: more when the columns need it
-	if (ax + 10 > block.rightheadw) {
-		block.rightheadw = ax + 10
+	const rightWidth = Math.max(ax, ...(data.models || []).filter(m => m.rows.length).map(m => m.rightWidth || 0))
+	if (rightWidth + 10 > block.rightheadw) {
+		block.rightheadw = rightWidth + 10
 		block.blocksetw()
 	}
 
@@ -350,8 +370,60 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 		})
 		below = intervalGap + intervalHeight + 2
 	}
+	// the model rows, under the lines and the column labels
+	const linkageTop = Math.max(linkageHeight + below, labelBottom)
+	let modelsHeight = 0
+	// the part of x0..x1 in the view, at least 1 px
+	const clip = (x0: number, x1: number) => {
+		const a = Math.max(0, Math.min(x0, x1)),
+			b = Math.min(block.width, Math.max(x0, x1))
+		return b < 0 || a > block.width ? null : [a, Math.max(1, b - a)]
+	}
+	for (const m of data.models || []) {
+		if (!m.rows.length) continue
+		const header = m.headerHeight ?? modelGap
+		const top = y2 + linkageTop + modelsHeight + header
+		leftLabel(top - 9, m.label)
+		m.rows.forEach((r, i) => {
+			const y = top + i * m.rowHeight,
+				cy = y + m.rowHeight / 2
+			const row = linkage.g.append('g')
+			const line = clip(r.line[0], r.line[1])
+			if (line)
+				row
+					.append('line')
+					.attr('x1', line[0])
+					.attr('x2', line[0] + line[1])
+					.attr('y1', cy)
+					.attr('y2', cy)
+					.attr('stroke', r.color)
+			for (const e of r.exons) {
+				const c = clip(e[0], e[1])
+				if (c)
+					row
+						.append('rect')
+						.attr('x', c[0])
+						.attr('y', cy - 4)
+						.attr('width', c[1])
+						.attr('height', 8)
+						.attr('fill', r.color)
+			}
+			leftLabel(cy, r.label, 10)
+			if (m.right) m.right(heatmap.rightG.append('g').attr('transform', `translate(0,${y})`), i)
+			// the row as a whole for the pointer, over the gaps between exons too
+			row
+				.append('rect')
+				.attr('y', y)
+				.attr('width', block.width)
+				.attr('height', m.rowHeight)
+				.attr('fill', 'transparent')
+				.on('mouseover', (event: any) => m.onHover?.(event, i))
+				.on('mouseout', () => m.onOut?.())
+		})
+		modelsHeight += header + m.rows.length * m.rowHeight
+	}
 	statistics.height = y1
-	linkage.height = Math.max(linkageHeight + below, labelBottom)
+	linkage.height = linkageTop + modelsHeight
 	heatmap.leftWidth = heatmap.leftG.node().getBBox().width
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth || 0, heatmap.leftWidth)
 	return locusHeatmapHeight(tk)

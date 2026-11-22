@@ -296,14 +296,15 @@ class MethylationStarburst extends PlotBase implements RxComponent {
 		]
 	}
 
-	/* the gene's per-patient methylation and expression, with this plot's groups as the strip */
+	/* the gene's per-patient methylation and expression, with this plot's groups as the strip; in a volcano of a DMR
+	scan, with the scan's DMRs */
 	launchLocus(gene: string, groups: any[]) {
 		const { filter, term } = this.state
 		return launchMethylationBrowser(
 			this.app,
 			{ gene },
 			{ q: { groups, type: 'custom-samplelst' }, term },
-			undefined,
+			this.opts.volcanoPlot?.()?.dmrFile,
 			filter
 		)
 	}

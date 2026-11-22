@@ -130,10 +130,11 @@ export class Interactions {
 				}
 			}
 		}
-		// the gene and sort chosen in the methylation track's menu
+		// the gene, sort and row annotation chosen in the methylation track's menu
 		const dnameth = blockInstance.tklst.find(t => t.type == 'dnameth')
 		const savedDnameth = config.tracks?.find(t => t.type == 'dnameth')
-		if (dnameth && savedDnameth) Object.assign(savedDnameth, { gene: dnameth.gene, sortBy: dnameth.sortBy })
+		if (dnameth && savedDnameth)
+			Object.assign(savedDnameth, { gene: dnameth.gene, sortBy: dnameth.sortBy, annotationTw: dnameth.annotationTw })
 		// removed with the block's Remove Track: gone from the state too, so that it does not come back
 		else if (savedDnameth) config.tracks = config.tracks.filter(t => t.type != 'dnameth')
 		// the heatmap choice of the junction track's menu

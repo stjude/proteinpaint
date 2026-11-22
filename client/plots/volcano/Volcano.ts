@@ -132,9 +132,16 @@ export class Volcano extends PlotBase implements RxComponent {
 				id: this.id,
 				holder: this.view.starburstDiv,
 				embedded: true,
-				// the volcano's svg and plot area, which the starburst lines its plots up with
+				/* the volcano's svg and plot area, which the starburst lines its plots up with, and its scan's track file,
+				so that the methylation track opened from a starburst point marks the scan's DMRs */
 				volcanoPlot: () =>
-					this.view.viewData ? { svg: this.view.volcanoDom.svg, plot: this.view.viewData.plotDim.plot } : null
+					this.view.viewData
+						? {
+								svg: this.view.volcanoDom.svg,
+								plot: this.view.viewData.plotDim.plot,
+								dmrFile: this.view.viewData.scan?.bedjFile
+						  }
+						: null
 			})
 		}
 	}
