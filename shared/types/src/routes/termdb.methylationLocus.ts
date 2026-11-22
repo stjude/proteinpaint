@@ -46,8 +46,8 @@ export type MethylationLocusSample = {
 	name: string
 	value?: number
 	group?: string
-	/** expression of each of expressedIsoforms, in its order */
-	isoformValues?: number[]
+	/** expression of each of expressedIsoforms, in its order; null for an isoform the sample has no value of */
+	isoformValues?: (number | null)[]
 }
 
 /** an isoform as the genome's gene db stores it; each feature is a list of [start, stop] */
@@ -79,6 +79,8 @@ export type MethylationLocusResponse =
 			unit?: string
 			/** the gene's isoforms that have isoform expression, in the order of samples[].isoformValues */
 			expressedIsoforms?: string[]
+			/** unit of samples[].isoformValues, the dataset's isoform expression unit, e.g. TPM */
+			isoformUnit?: string
 			/** ascending by the gene's expression (value) when a gene was requested */
 			samples: MethylationLocusSample[]
 			/** the requested groups that have samples here, in request order; with two, the difference is the second minus the first */

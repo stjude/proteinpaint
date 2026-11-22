@@ -109,46 +109,37 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		if (sample2group && group === undefined) return
 		samples.push({ name, ...(value === undefined ? {} : { value }), ...(group === undefined ? {} : { group }) })
 	}
-	const expressed = q.gene ? expressedIsoforms(ds, models, gm.chr) : undefined
+	let expressed: string[] | undefined
 	if (q.gene) {
 		const exprTw = {
 			$id: 'expression',
 			term: { type: 'geneExpression', gene: q.gene, name: q.gene },
 			q: { mode: 'continuous' }
 		}
-		// each isoform's expression in each sample, read with the gene's: the makeup of the gene's expression
-		const isoformTerms = (expressed || []).map(g => ({
-			$id: g.isoform,
-			term: { type: 'isoformExpression', isoform: g.isoform, name: g.isoform },
-			q: { mode: 'continuous' }
-		}))
 		// true: map parent annotations to child samples, as the differential analyses do (resolveDaContext)
 		const data = await getData(
 			{
 				filter: q.filter,
 				filter0: q.filter0,
-				terms: [exprTw, ...isoformTerms],
+				terms: [exprTw],
 				__protected__: q.__protected__
 			},
 			ds,
 			true
 		)
 		if (data.error) throw new Error(data.error)
-		const isoformValues = new Map<string, number[]>()
+		const name2id = new Map<string, string>()
 		for (const [sid, d] of Object.entries(data.samples as Record<string, any>)) {
 			const value = d[exprTw.$id]?.value
 			if (!Number.isFinite(value)) continue
 			const name = ds.cohort.termdb.q.id2sampleName(Number(sid))
 			add(name, value)
-			if (isoformTerms.length)
-				isoformValues.set(
-					name,
-					isoformTerms.map(t => round3(Number(d[t.$id]?.value) || 0))
-				)
+			name2id.set(name, sid)
 		}
-		for (const s of samples) {
-			const v = isoformValues.get(s.name)
-			if (v) s.isoformValues = v
+		const isoforms = await getIsoformValues(ds, models, gm.chr, new Set(samples.map(s => name2id.get(s.name)!)))
+		if (isoforms) {
+			expressed = isoforms.ids
+			for (const s of samples) s.isoformValues = isoforms.values(name2id.get(s.name)!)
 		}
 		samples.sort((a, b) => a.value! - b.value!)
 	} else {
@@ -208,25 +199,60 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		isoforms: models,
 		region,
 		unit,
-		...(expressed?.length ? { expressedIsoforms: expressed.map(g => g.isoform) } : {}),
+		...(expressed?.length
+			? { expressedIsoforms: expressed, isoformUnit: ds.queries.isoformExpression.unit || 'expression' }
+			: {}),
 		samples,
 		...groupsOf(q),
 		bins
 	}
 }
 
-const round3 = (v: number) => Math.round(v * 1000) / 1000
-
-/* The gene's isoforms that the dataset's isoform expression file has, on the chromosome of the locus: a gene db
-lists an isoform once per place it maps to. undefined without isoform expression. */
-const isoformSets = new WeakMap<any, Set<string>>()
-function expressedIsoforms(ds: any, models: any[], chr: string): any[] | undefined {
-	const items = ds.queries?.isoformExpression?.availableItems
-	if (!Array.isArray(items)) return
-	let set = isoformSets.get(ds)
-	if (!set) isoformSets.set(ds, (set = new Set(items)))
-	const seen = new Set<string>()
-	return models.filter(g => g.chr == chr && set!.has(g.isoform) && !seen.has(g.isoform) && seen.add(g.isoform))
+/* Each of the gene's isoforms' expression in the given samples, the ids of getData() above: which samples the request
+may read is decided there, with its filters, so the isoforms are read for all samples in one call of the dataset's
+getter and kept for these only. The candidates are the gene's isoforms on the chromosome of the locus (a gene db lists an
+isoform once per place it maps to), those of an expression file's items when it lists them; an isoform with no value
+in any of the samples is left out. values() of a sample has null for an isoform it has no value of. undefined without
+isoform expression, or when none of the isoforms has any, e.g. the getter found none of them. */
+async function getIsoformValues(
+	ds: any,
+	models: any[],
+	chr: string,
+	sampleIds: Set<string>
+): Promise<{ ids: string[]; values: (sampleId: string) => (number | null)[] } | undefined> {
+	const query = ds.queries?.isoformExpression
+	if (typeof query?.get != 'function') return
+	const items = Array.isArray(query.availableItems) ? new Set<string>(query.availableItems) : undefined
+	const candidates = [...new Set<string>(models.filter(g => g.chr == chr).map(g => g.isoform))].filter(
+		id => !items || items.has(id)
+	)
+	if (!candidates.length) return
+	const terms = candidates.map(id => ({
+		$id: id,
+		term: { type: 'isoformExpression', isoform: id, name: id },
+		q: { mode: 'continuous' }
+	}))
+	let term2sample2value: Map<string, Record<string, number>>
+	try {
+		term2sample2value = (await query.get({ genome: ds.genomename, dslabel: ds.label, terms }, ds)).term2sample2value
+	} catch (e: any) {
+		// the share column is an extra of the view: without isoform values the rest of it still shows
+		console.error(`methylationLocus: no isoform expression for the isoforms of the locus: ${e?.message || e}`)
+		return
+	}
+	const ids = candidates.filter(id => {
+		const s2v = term2sample2value.get(id)
+		return s2v && [...sampleIds].some(sid => Number.isFinite(s2v[sid]))
+	})
+	if (!ids.length) return
+	return {
+		ids,
+		values: sid =>
+			ids.map(id => {
+				const v = term2sample2value.get(id)![sid]
+				return Number.isFinite(v) ? Number(v) : null
+			})
+	}
 }
 
 // the requested groups, in request order; each has samples, see above

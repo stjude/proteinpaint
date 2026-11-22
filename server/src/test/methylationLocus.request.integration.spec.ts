@@ -106,6 +106,7 @@ tape('the isoforms of the gene that have isoform expression', async test => {
 		res?.samples?.length && res.samples.every(s => s.isoformValues?.length == 1),
 		'should give each sample a value per expressed isoform'
 	)
+	test.equal(typeof res?.isoformUnit, 'string', "should name the isoforms' own unit")
 	test.end()
 })
 

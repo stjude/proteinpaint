@@ -249,7 +249,14 @@ function render(tk: any, block: any): number {
 	/* The DMRs themselves: each at its genomic extent under the lines, as a bed track draws an item, colored by
 	direction. Clipped to the view; a DMR shorter than 2 px still shows. */
 	const viewDmrs = dmrs.filter(d => d.stop >= region.start && d.start <= region.stop)
-	const xAt = (pos: number) => block.seekcoord(region.chr, Math.min(region.stop, Math.max(region.start, pos)))[0]?.x
+	/* px of a position; one at or past an end of the view is that end's edge, on the side that the view's orientation
+	puts it, as seekcoord() can find no x at the view's bounds */
+	const reverse = !!block.rglst[block.startidx].reverse
+	const xAt = (pos: number) => {
+		if (pos <= region.start) return reverse ? block.width : 0
+		if (pos >= region.stop) return reverse ? 0 : block.width
+		return block.seekcoord(region.chr, pos)[0]?.x
+	}
 	const intervals =
 		tk.dmrs && twoGroups
 			? {
@@ -378,16 +385,21 @@ function render(tk: any, block: any): number {
 
 /* The makeup of the gene's expression by isoform: per sample, the share of the summed expression of the gene's
 isoforms that each of the most expressed ones has, and the rest as one last part. undefined without isoform
-expression, or with one isoform. A sample whose isoforms add up to nothing has no parts. */
+expression, or with one isoform. A sample whose isoforms add up to nothing, or that misses the value of one, has no
+parts: its makeup is not known. */
 export function isoformParts(data: {
 	expressedIsoforms?: string[]
 	samples: Pick<MethylationLocusSample, 'isoformValues'>[]
-	unit?: string
+	isoformUnit?: string
 }): { labels: string[]; colors: string[]; shares: number[][]; unit: string } | undefined {
 	const ids = data.expressedIsoforms || []
-	if (ids.length < 2 || !data.samples.some(s => s.isoformValues)) return
-	const total = ids.map((_, k) => data.samples.reduce((sum, s) => sum + (s.isoformValues?.[k] || 0), 0))
-	// the most expressed over all samples first
+	// a sample with a value for every isoform: one whose makeup is known
+	const complete = (v?: (number | null)[]): v is number[] => !!v && v.length == ids.length && v.every(x => x !== null)
+	if (ids.length < 2 || !data.samples.some(s => complete(s.isoformValues))) return
+	// the most expressed over the samples whose makeup is known
+	const total = ids.map((_, k) =>
+		data.samples.reduce((sum, s) => sum + (complete(s.isoformValues) ? s.isoformValues[k] : 0), 0)
+	)
 	const top = ids
 		.map((_, k) => k)
 		.sort((a, b) => total[b] - total[a])
@@ -399,13 +411,15 @@ export function isoformParts(data: {
 		labels: [...top.map(k => ids[k]), ...(hasOther ? [`${ids.length - top.length} other isoforms`] : [])],
 		colors: [...top.map((_, i) => schemeTableau10[i]), ...(hasOther ? [otherIsoformColor] : [])],
 		shares: data.samples.map(s => {
-			const v = s.isoformValues || []
+			const v = s.isoformValues
+			if (!complete(v)) return []
 			const sum = v.reduce((a, b) => a + b, 0)
 			if (!sum) return []
-			const mine = top.map(k => (v[k] || 0) / sum)
+			const mine = top.map(k => v[k] / sum)
 			return hasOther ? [...mine, Math.max(0, 1 - mine.reduce((a, b) => a + b, 0))] : mine
 		}),
-		unit: data.unit || 'expression'
+		// the isoforms' own unit, which a dataset sets apart from the gene's
+		unit: data.isoformUnit || 'expression'
 	}
 }
 
