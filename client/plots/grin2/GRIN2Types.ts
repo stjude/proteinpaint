@@ -53,6 +53,10 @@ export interface GRIN2RequestData {
 	pngDotRadius?: number
 	devicePixelRatio?: number
 	maxGenesToShow?: number
+	/** ask for the table of every gene as TSV text (response.fullTableTsv) in place of the plot and the top genes */
+	exportFullTable?: boolean
+	/** with exportFullTable: the fullTableId of the analysis response, which names the table of that run */
+	fullTableId?: string
 	lesionTypeColors?: Record<string, string>
 	qValueThreshold?: number
 	maxCappedPoints?: number
@@ -80,8 +84,12 @@ export interface GRIN2Response {
 	status: 'success' | 'error'
 	error?: string
 	pngImg?: any
+	/** every gene's row, as TSV text; only for a request with exportFullTable */
+	fullTableTsv?: string
+	/** names this run's table of every gene; absent when the server cannot export it (no file cache) */
+	fullTableId?: string
 	topGeneTable?: {
-		columns: { label: string; width?: string }[]
+		columns: { label: string; width?: string; sortable?: boolean; tooltip?: string }[]
 		rows: any[][]
 	}
 	stats?: { lst: { name: string; rows: [string, any][] }[] }
@@ -93,7 +101,9 @@ export interface GRIN2ViewData {
 	manhattan: { plotData: GRIN2Response; settings: any } | null
 	topGenes: {
 		headerText: string
-		columns: { label: string; width?: string }[]
+		/** total genes GRIN2 tested, formatted for display; the number of rows of the full table */
+		totalGenes: string
+		columns: { label: string; width?: string; sortable?: boolean; tooltip?: string }[]
 		rows: { value?: any; html?: string }[][]
 		/** Original (un-augmented) rows; needed by showResultsTable's matrix integration. */
 		dataItems: any[]

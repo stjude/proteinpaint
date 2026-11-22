@@ -67,47 +67,69 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
 	}
 
 	if (app) {
-		let lastTouchedGene: string | null = null
-		let selectionOrder: number[] = []
-
 		tableOptions.buttonsToLeft = true
-		tableOptions.buttons = [
-			{
-				text: matrixButtonFormat.replace('{n}', '0'),
-				callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					if (selectedIndices.length > 0) {
-						buttonNode.disabled = true
-						const selectedGenes = selectedIndices.map(idx => getRowKey(dataItems[idx]))
-						clickMenu?.hide()
-						createMatrixFromGenes(selectedGenes, app)
-					}
-				},
-				onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					buttonNode.textContent = matrixButtonFormat.replace('{n}', String(selectedIndices.length))
-					buttonNode.disabled = selectedIndices.length === 0
-				}
-			},
-			{
-				text: 'Lollipop',
-				callback: (_selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					if (lastTouchedGene) {
-						buttonNode.disabled = true
-						clickMenu?.hide()
-						createLollipopFromGene(lastTouchedGene, app)
-					}
-				},
-				onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					const result = updateSelectionTracking(selectionOrder, selectedIndices, dataItems, getRowKey)
-					selectionOrder = result.selectionOrder
-					lastTouchedGene = result.lastTouchedGene
-					buttonNode.textContent = result.buttonText
-					buttonNode.disabled = result.buttonDisabled
-				}
-			}
-		]
+		tableOptions.buttons = geneActionButtons({ app, dataItems, getRowKey, matrixButtonFormat, clickMenu })
 	}
 
 	renderTable(tableOptions)
+}
+
+/**
+ * The Matrix and Lollipop buttons of a table of genes. Used by showResultsTable, and by tables that are
+ * their own TableBase subclass (see plots/grin2/view/GRIN2TopGenesTable.ts), so that every table of genes
+ * acts the same. The callbacks receive indexes into `dataItems`, which must be in the order of the table's rows.
+ */
+export function geneActionButtons({
+	app,
+	dataItems,
+	getRowKey = (item: any) => item.gene,
+	matrixButtonFormat = 'Matrix ({n})',
+	clickMenu
+}: {
+	app: any
+	dataItems: any[]
+	getRowKey?: (item: any) => string | number | null | undefined
+	matrixButtonFormat?: string
+	/** Menu instance to hide on button actions */
+	clickMenu?: any
+}) {
+	let lastTouchedGene: string | null = null
+	let selectionOrder: number[] = []
+
+	return [
+		{
+			text: matrixButtonFormat.replace('{n}', '0'),
+			callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+				if (selectedIndices.length > 0) {
+					buttonNode.disabled = true
+					const selectedGenes = selectedIndices.map(idx => getRowKey(dataItems[idx]) as string)
+					clickMenu?.hide()
+					createMatrixFromGenes(selectedGenes, app)
+				}
+			},
+			onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+				buttonNode.textContent = matrixButtonFormat.replace('{n}', String(selectedIndices.length))
+				buttonNode.disabled = selectedIndices.length === 0
+			}
+		},
+		{
+			text: 'Lollipop',
+			callback: (_selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+				if (lastTouchedGene) {
+					buttonNode.disabled = true
+					clickMenu?.hide()
+					createLollipopFromGene(lastTouchedGene, app)
+				}
+			},
+			onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
+				const result = updateSelectionTracking(selectionOrder, selectedIndices, dataItems, getRowKey)
+				selectionOrder = result.selectionOrder
+				lastTouchedGene = result.lastTouchedGene
+				buttonNode.textContent = result.buttonText
+				buttonNode.disabled = result.buttonDisabled
+			}
+		}
+	]
 }
 
 /**

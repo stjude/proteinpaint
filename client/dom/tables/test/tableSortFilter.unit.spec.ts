@@ -111,6 +111,9 @@ tape('parseNumericFilter: comparisons, ranges, plain text', test => {
 	test.ok(accepts('30-20', 25), 'a reversed range works')
 	test.ok(accepts('-5--2', -3) && !accepts('-5--2', 0), 'negative ends')
 	test.ok(accepts('>1.5', 2) && !accepts('>1.5', 1.5), 'decimals')
+	test.ok(accepts('<=1e-9', 1e-12) && !accepts('<=1e-9', 1e-8), 'exponent notation')
+	test.ok(accepts('<2.5E-3', 1e-3) && accepts('>1e+3', 1e4), 'uppercase E and a signed exponent')
+	test.ok(accepts('1e-9-1e-3', 1e-5) && !accepts('1e-9-1e-3', 0.01), 'a range of exponent numbers')
 	test.ok(accepts('>.5', 1), 'a leading decimal point')
 	for (const text of ['', 'abc', '>', '>abc', '>1.2.3', '1-', '--5', '>>5', '5-2-1']) {
 		test.equal(parseNumericFilter(text), undefined, `${JSON.stringify(text)} is plain text`)

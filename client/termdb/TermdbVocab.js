@@ -1,4 +1,5 @@
 import { Vocab } from './Vocab'
+import { dofetch2 } from '#common/dofetch'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
@@ -420,7 +421,11 @@ export class TermdbVocab extends Vocab {
 	async getGrin2Data(body, signal) {
 		const headers = await this.mayGetAuthHeaders('termdb')
 		const payload = { ...body, genome: this.vocab.genome, dslabel: this.vocab.dslabel }
-		const data = await this.dofetch3('grin2', { headers, body: payload, signal }, this.opts.fetchOpts)
+		// The table of every gene is a one-off download, so it skips the dofetch3() response cache, which would
+		// keep the whole TSV in memory after the download.
+		const data = body.exportFullTable
+			? await dofetch2('grin2', { headers, body: payload, signal })
+			: await this.dofetch3('grin2', { headers, body: payload, signal }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}

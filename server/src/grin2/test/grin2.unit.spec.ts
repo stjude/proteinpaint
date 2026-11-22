@@ -10,13 +10,18 @@ import {
 } from '../lesions.ts'
 import {
 	grin2KeyInputs,
+	grin2FullTablePath,
 	normalizeExcludeOptions,
 	resolveExcludeBeds,
 	getMaxLesions,
 	lesionCapHit,
-	CEILING_LESIONS
+	CEILING_LESIONS,
+	init
 } from '../main.ts'
 import serverconfig from '../../serverconfig.js'
+import { generateHash } from '../../utils/cacheOrRecompute.ts'
+import fs from 'fs'
+import path from 'path'
 import {
 	dtsnvindel,
 	dtcnv,
@@ -48,6 +53,7 @@ grin2KeyInputs + normalizeExcludeOptions
 resolveExcludeBeds
 getMaxLesions
 lesionCapHit
+exportFullTable: serves the table of the displayed run, named by its fullTableId, without computing again
 */
 
 // Small TermdbTest-style fixtures. CNV objects mirror the dt:4 mlst entries that
@@ -586,12 +592,22 @@ tape('getCnvLesionType', test => {
 	test.end()
 })
 
+tape('grin2FullTablePath', test => {
+	const id = 'a'.repeat(32)
+	test.ok(grin2FullTablePath(id).endsWith(`${id}.tsv`), 'the table of every gene is kept beside the cached result')
+	const runId = `${id}-${'f'.repeat(16)}`
+	test.ok(grin2FullTablePath(runId).endsWith(`${runId}.tsv`), 'a reduced run keeps its table under its own id')
+	test.throws(() => grin2FullTablePath('../x'), 'an id that is not a cache hash is refused')
+	test.throws(() => grin2FullTablePath(`${id}-../x`), 'a run suffix that is not 16 hex digits is refused')
+	test.end()
+})
+
 tape('grin2KeyInputs + normalizeExcludeOptions', test => {
 	const minimal = grin2KeyInputs({ genome: 'hg38', dslabel: 'TermdbTest' } as unknown as GRIN2Request)
 	test.equal(minimal.filter, null, 'missing filter nulled in cache key')
 	test.equal(minimal.cnvOptions, null, 'missing option groups nulled in cache key')
 	test.equal(minimal.excludeOptions, null, 'missing excludeOptions => null')
-	test.equal(minimal.statsVersion, 3, 'statistics version in cache key, so results of older statistics are not reused')
+	test.equal(minimal.statsVersion, 4, 'statistics version in cache key, so results of older statistics are not reused')
 
 	// overlapFrac normalization
 	test.equal(normalizeExcludeOptions({ overlapFrac: NaN })?.overlapFrac, 0.5, 'NaN overlapFrac clamped to default 0.5')
@@ -686,3 +702,63 @@ tape('lesionCapHit', test => {
 	test.equal(lesionCapHit({ ...full, ...lesions, cnvCapReached: true }), true, 'CNV fetch stopped at the cap => hit')
 	test.end()
 })
+
+/** the route handler with a dataset that counts every read of sample data, which only computing again does */
+function exportHandler() {
+	const counter = { computed: 0 }
+	const ds = { queries: { singleSampleMutation: { get: () => counter.computed++ } } }
+	const handler = init({ genomes: { hg38: { majorchr: { chr1: 1 }, datasets: { TermdbTest: ds } } } })
+	const send = async (query: any) => {
+		let sent: any
+		const res = { json: (r: any) => (sent = r), status: () => res, send: (r: any) => (sent = r) }
+		await handler({ query: { ...query, exportFullTable: true } }, res)
+		return sent
+	}
+	return { counter, send }
+}
+
+tape(
+	'exportFullTable: serves the table of the displayed run, named by its fullTableId, without computing again',
+	async test => {
+		if (serverconfig.features?.disableFileCache) {
+			test.comment('skipped: the file cache is disabled')
+			return test.end()
+		}
+		const request = { genome: 'hg38', dslabel: 'TermdbTest', snvindelOptions: { consequences: ['M'] } }
+		const cacheId = generateHash(grin2KeyInputs(request as unknown as GRIN2Request))
+		// a reduced run (lesion cap lowered for low memory) has a table of its own and no cached statistics; a later run of
+		// the same request wrote the table named by the cache id
+		const runId = `${cacheId}-${'1'.repeat(16)}`
+		const paths = [grin2FullTablePath(runId), grin2FullTablePath(cacheId)]
+		await fs.promises.mkdir(path.dirname(paths[0]), { recursive: true })
+		await fs.promises.writeFile(paths[0], 'gene\tq\nKRAS\t0.01\n')
+		await fs.promises.writeFile(paths[1], 'gene\tq\nKRAS\t0.5\n')
+
+		const { counter, send } = exportHandler()
+		try {
+			let sent = await send({ ...request, fullTableId: runId })
+			test.equal(sent?.fullTableTsv, 'gene\tq\nKRAS\t0.01\n', "the reduced run's own table, not the later run's")
+			sent = await send({ ...request, fullTableId: cacheId })
+			test.equal(sent?.fullTableTsv, 'gene\tq\nKRAS\t0.5\n', 'the table named by the cache id')
+
+			await fs.promises.rm(paths[0])
+			sent = await send({ ...request, fullTableId: runId })
+			test.match(
+				sent?.error,
+				/no longer kept/,
+				"a reduced run's table that is gone is an error, not another run's table"
+			)
+
+			sent = await send({ ...request, fullTableId: `${'0'.repeat(32)}-${'1'.repeat(16)}` })
+			test.match(sent?.error, /does not match the request/, 'an id of another request is refused')
+			sent = await send(request)
+			test.match(sent?.error, /does not match the request/, 'an export without an id is refused')
+			sent = await send({ ...request, fullTableId: `${cacheId}-../x` })
+			test.match(sent?.error, /invalid table id/, 'an id that is not a table id is refused')
+			test.equal(counter.computed, 0, 'no sample data was read to compute again')
+		} finally {
+			for (const p of paths) await fs.promises.rm(p, { force: true })
+		}
+		test.end()
+	}
+)

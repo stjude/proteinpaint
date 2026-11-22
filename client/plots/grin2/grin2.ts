@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
+import type { GRIN2Dom, GRIN2Opts, GRIN2RequestData } from './GRIN2Types'
 import { GRIN2Model } from './model/GRIN2Model'
 import { GRIN2ViewModel } from './viewModel/GRIN2ViewModel'
 import { GRIN2ResultsView } from './view/GRIN2ResultsView'
@@ -125,6 +125,17 @@ class GRIN2 extends PlotBase implements RxComponent {
 		}
 	}
 
+	/** TSV text of the table of every gene of the run that requestData made, which fullTableId names */
+	private async fetchFullTable(requestData: GRIN2RequestData, fullTableId: string): Promise<string> {
+		const response = await this.model.fetchGrin2Data(
+			{ ...requestData, exportFullTable: true, fullTableId },
+			this.api!.getAbortSignal()
+		)
+		if (response.status === 'error' || typeof response.fullTableTsv != 'string')
+			throw new Error(response.error || 'The server returned no table')
+		return response.fullTableTsv
+	}
+
 	private async handleRun() {
 		if (!this.controlsView) return
 		const runFilterSignature = this.cohortFilterSignature
@@ -159,6 +170,10 @@ class GRIN2 extends PlotBase implements RxComponent {
 			if (runFilterSignature !== this.cohortFilterSignature) return
 
 			const vm = new GRIN2ViewModel(response, manhattan, dtUsage)
+			// the table of every gene is exported with the request that made these results and the id of their run's
+			// table, so the download matches what is shown; no id means the server cannot export it (no file cache)
+			const { fullTableId } = response
+			this.resultsView.onDownloadAll = fullTableId ? () => this.fetchFullTable(requestData, fullTableId) : undefined
 			this.resultsView.render(vm.viewData)
 			this.hasResults = true
 			this.inputPanelCollapsed = true
@@ -194,6 +209,12 @@ class GRIN2 extends PlotBase implements RxComponent {
 			filter: this.state.termfilter?.filter ?? null,
 			filter0: this.state.termfilter?.filter0 ?? null
 		})
+	}
+
+	/** Called by ComponentApi.destroy() when the plot closes, before it removes the plot's DOM: the table's popups
+	 * live in <body>, outside that DOM */
+	destroy() {
+		this.resultsView?.clear()
 	}
 
 	private clearResultsAndShowInputs() {
