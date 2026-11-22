@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- GRIN2: the grin2 binary also writes the table of every gene beside the cached result; cached GRIN2 results recompute once
+
+Features:
+- GRIN2: the download icon of the top-genes table opens a menu with a second line, "Download all N genes in output (TSV)", that downloads every gene of the analysis with the same columns as the table
+- GRIN2: the top-genes table is now a TableBase (GRIN2TopGenesTable), so every column can be filtered as well as sorted, e.g. ">=10" in a subject count; its download no longer has an empty first column and follows the filters
+
 
 ## 2.230.0
 
