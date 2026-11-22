@@ -302,8 +302,10 @@ function renderRows(body: any, r: Outliers, kind: SampleOutliersKind) {
 			tr.append('td').style('padding', '1px 8px 1px 0').text(row.name)
 			tr.append('td').style('padding', '1px 8px 1px 0').style('text-align', 'right').text(row.value.toFixed(2))
 			tr.append('td').style('padding', '1px 8px 1px 0').style('text-align', 'right').text(row.z.toFixed(2))
-			if (row.box) {
-				renderBox(tr.append('td'), row, r, kind, bw, 14, domain)
+			if (hasBox) {
+				const cell = tr.append('td')
+				if (row.box) renderBox(cell, row, r, kind, bw, 14, domain)
+				else cell.style('color', AXIS_COLOR).text('Distribution unavailable')
 				continue
 			}
 			const bar = tr
