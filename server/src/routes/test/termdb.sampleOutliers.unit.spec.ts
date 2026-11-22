@@ -4,7 +4,9 @@ import { getRows, validRequest } from '../termdb.sampleOutliers.ts'
 /**
  * Tests
  *  - getRows(): ssGSEA z-scores, the sample left out of a group it is in
+ *  - getRows(): ssGSEA boxplot values of the group
  *  - getRows(): gene expression on the log2(value+1) scale, minValue and the least sd
+ *  - getRows(): gene expression boxplot values, back in the file's unit
  *  - validRequest()
  */
 
@@ -66,6 +68,33 @@ tape('getRows(): ssGSEA', function (test) {
 	test.end()
 })
 
+tape('getRows(): ssGSEA box', function (test) {
+	const data = { items: ['A', 'B'], value: [10, 3] }
+	const stats = {
+		...getStats([
+			[1, 2, 3, 4, 5, 10],
+			[1, 2, 3, 4, 5]
+		]),
+		// B has too few values for a box
+		box: {
+			min: [1, null],
+			w1: [1, null],
+			p25: [2, null],
+			p50: [4, null],
+			p75: [5, null],
+			w2: [5, null],
+			max: [10, null]
+		}
+	}
+	const rows = getRows(data, stats, 'ssGSEA', {}, true)
+	test.deepEqual(
+		rows.map(r => r.box),
+		[{ min: 1, w1: 1, p25: 2, p50: 4, p75: 5, w2: 5, max: 10 }, undefined],
+		'Should give each row the boxplot values of the group, and none to a row without them.'
+	)
+	test.end()
+})
+
 tape('getRows(): gene expression', function (test) {
 	const log = (v: number) => Math.log2(v + 1)
 	// FPKM: the sample has 15 of G1 and 2 of G2, the other three samples have none; G3 has no value in the sample
@@ -86,6 +115,34 @@ tape('getRows(): gene expression', function (test) {
 		rows2.map(r => r.name),
 		['G1', 'G2'],
 		'Should rank a gene at or above the minValue of the dataset.'
+	)
+	test.end()
+})
+
+tape('getRows(): gene expression box', function (test) {
+	const log = (v: number) => Math.log2(v + 1)
+	// FPKM of G1 in the group, on the log2(value+1) scale as python/src/sampleOutliers.py gives the box; G2 has a
+	// value but no box, as a cached float32 box holds NaN for a missing value
+	const fpkm = [0, 3, 7, 15, 31, 63]
+	const data = { items: ['G1', 'G2'], value: [log(63), log(63)] }
+	const f32 = (a: number[]) => Float32Array.from(a)
+	const stats = {
+		...getStats([fpkm.map(log), fpkm.map(log)]),
+		box: {
+			min: f32([log(0), NaN]),
+			w1: f32([log(0), NaN]),
+			p25: f32([log(3), NaN]),
+			p50: f32([log(15), NaN]),
+			p75: f32([log(31), NaN]),
+			w2: f32([log(63), NaN]),
+			max: f32([log(63), NaN])
+		}
+	}
+	const rows = getRows(data, stats, 'geneExpression', {}, true)
+	test.deepEqual(
+		rows.map(r => r.box),
+		[{ min: 0, w1: 0, p25: 3, p50: 15, p75: 31, w2: 63, max: 63 }, undefined],
+		'Should give the box in the file unit, as the value, and none to a row whose box is NaN.'
 	)
 	test.end()
 })

@@ -9,6 +9,7 @@ import { validGenomeDs } from '#routes/common.ts'
 import type {
 	RouteApi,
 	RoutePayload,
+	SampleOutlierBox,
 	SampleOutlierRow,
 	SampleOutliersKind,
 	SampleOutliersReference,
@@ -26,7 +27,13 @@ import type {
  group of the samples passing a filter the user built. The sample is left out of a group it is in: its z-score is
  against the others. Expression values are on the log2(value+1) scale for the z-score, with a least sd per gene.
 
- The count, mean and sd of each row over a group cost one pass over the file (python/src/sampleOutliers.py);
+ Each row also has the group's boxplot values, so that the sample's value can be shown against the group's
+ distribution and not only as a z-score. The box is of all samples of the group, the sample too when it is a
+ member: unlike the mean and sd, the quartiles of the others cannot be had from the group's. Expression boxes are
+ computed on the log2(value+1) scale, as the z-score, and given back in the file's unit: the quartiles and range
+ are the same either way, while the whiskers are within 1.5 IQR on the log scale.
+
+ The count, mean, sd and box of each row over a group cost one pass over the file (python/src/sampleOutliers.py);
  they are kept in memory per dataset, data kind and group, so a later sample of the same group only reads its
  own column.
 */
@@ -121,7 +128,14 @@ function init({ genomes }) {
 	}
 }
 
-type Stats = { n: number[]; mean: (number | null)[]; sd: (number | null)[] }
+type Stats = {
+	n: number[]
+	mean: (number | null)[]
+	sd: (number | null)[]
+	/** each boxplot value of every row, null or NaN for a row of too few values; kept as float32 once cached, as
+	they are only shown, and a whole-transcriptome group has some 60k rows of them */
+	box?: { [K in keyof SampleOutlierBox]: ArrayLike<number | null> }
+}
 type FileData = { items: string[]; value: (number | null)[]; group?: Stats }
 
 /** per ds and kind: the statistics by group key, as promises so that concurrent requests of the same group
@@ -206,14 +220,15 @@ async function getSampleOutliers(q: any, ds: any, genome: any): Promise<TermdbSa
 		sample: q.sample,
 		items,
 		log2: q.kind == 'geneExpression',
-		group: cached ? undefined : members.map(id => tdbq.id2sampleName(id))
+		group: cached ? undefined : members.map(id => tdbq.id2sampleName(id)),
+		box: true
 	}
 	const file: Promise<FileData> = run_python('sampleOutliers.py', JSON.stringify(input)).then(out => {
 		const data = JSON.parse(out as string)
 		if (data.status == 'error') throw data.message
 		return data
 	})
-	let stats: Promise<Stats> = cached || file.then(d => d.group!)
+	let stats: Promise<Stats> = cached || file.then(d => compactBox(d.group!))
 	if (cache && !cached) {
 		const kept = stats
 		cache.set(groupKey, kept)
@@ -294,7 +309,8 @@ function getGeneSets(collection: string, genome: any, req: any): string[] {
 }
 
 /** each row with a z-score of the sample against its reference group, the sample left out of the group when it
- * is a member (always, for all samples and its own term value; maybe, for a custom group) */
+ * is a member (always, for all samples and its own term value; maybe, for a custom group), and the group's box
+ * when there is one */
 export function getRows(
 	data: FileData,
 	s: Stats,
@@ -322,7 +338,34 @@ export function getRows(
 			if (Math.max(value, 2 ** m - 1) < minExp) continue
 			sd1 = Math.max(sd1, MIN_EXPRESSION_SD)
 		} else if (sd1 < MIN_SD) continue
-		rows.push({ name, value: Math.round(value * 1000) / 1000, z: Math.round(((x - m) / sd1) * 100) / 100 })
+		const row: SampleOutlierRow = {
+			name,
+			value: Math.round(value * 1000) / 1000,
+			z: Math.round(((x - m) / sd1) * 100) / 100
+		}
+		const box = s.box && getBox(s.box, i, kind)
+		if (box) row.box = box
+		rows.push(row)
 	}
 	return rows
+}
+
+/** the boxplot values of row i, when it has them, on the scale of the row's value: expression back from
+ * log2(value+1) to the file's unit */
+function getBox(b: NonNullable<Stats['box']>, i: number, kind: SampleOutliersKind): SampleOutlierBox | undefined {
+	const box: any = {}
+	for (const k of Object.keys(b)) {
+		const v = b[k][i]
+		if (v == null || !Number.isFinite(v)) return
+		box[k] = kind == 'geneExpression' ? Math.round((2 ** v - 1) * 1000) / 1000 : Math.round(v * 100000) / 100000
+	}
+	return box
+}
+
+/** the group statistics with the box as float32, NaN for a missing value */
+function compactBox(s: Stats): Stats {
+	if (!s.box) return s
+	const box: any = {}
+	for (const [k, values] of Object.entries(s.box)) box[k] = Float32Array.from(values, v => v ?? NaN)
+	return { ...s, box }
 }

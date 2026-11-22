@@ -45,6 +45,23 @@ export type SampleOutlierRow = {
 	/** (value - mean) / sd of the reference group, with expression values on the log2(value+1) scale and the sd of
 	a gene at least 0.25 */
 	z: number
+	/** the reference group's boxplot values, on the scale of .value (expression in the file's unit, its whiskers
+	within 1.5 IQR on the log2(value+1) scale), to show the sample's value against the group's distribution; absent
+	for a group of fewer than 5 values. Unlike the z-score, the box is of all samples of the group, the sample too
+	when it is a member */
+	box?: SampleOutlierBox
+}
+
+/** boxplot values of a row over the reference group, as boxplot_getvalue() of shared/utils computes them: the
+quartiles, the whiskers at the farthest values within 1.5 IQR of the box, and the least and greatest values */
+export type SampleOutlierBox = {
+	min: number
+	w1: number
+	p25: number
+	p50: number
+	p75: number
+	w2: number
+	max: number
 }
 
 type ValidResponse = {
