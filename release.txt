@@ -1,1 +1,4 @@
-
+Features:
+- The methylation track shows each sample's isoform share of the gene (its top 5 isoforms and the rest) next to its expression
+- The methylation track's statistics are two rows: mean β of each group with the gap between them shaded by direction, and the correlation with the gene's expression, within the groups when there are groups (each group's ρ pooled), faded where not significant
+- The methylation track draws the DMRs of a two-group scan at their genomic length in a row under the heatmap, colored by direction, and cuts long column labels to fit with the whole label on hover

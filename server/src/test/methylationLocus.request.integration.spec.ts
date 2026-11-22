@@ -96,6 +96,19 @@ tape('an isoform other than the default', async test => {
 	test.end()
 })
 
+// the test isoform file has one TP53 transcript, ENST00000269305
+tape('the isoforms of the gene that have isoform expression', async test => {
+	test.timeoutAfter(30000)
+	const isoform = 'ENST00000269305'
+	const res = await request(test, 'admin', { gene: 'TP53' })
+	test.deepEqual(res?.expressedIsoforms, [isoform], 'should list the isoforms that have isoform expression')
+	test.ok(
+		res?.samples?.length && res.samples.every(s => s.isoformValues?.length == 1),
+		'should give each sample a value per expressed isoform'
+	)
+	test.end()
+})
+
 tape('groups defined by a filter on a patient-level term', async test => {
 	// sex annotates patients, while the methylation and expression are on their samples
 	test.timeoutAfter(30000)

@@ -3,7 +3,8 @@ import type {
 	RouteApi,
 	MethylationLocusRequest,
 	MethylationLocusResponse,
-	MethylationLocusBin
+	MethylationLocusBin,
+	MethylationLocusSample
 } from '#types'
 import { getData } from '#src/termdb.matrix.js'
 import { authApi } from '#src/auth.js'
@@ -12,6 +13,7 @@ import { resolveMethylationMatrix } from '#src/utils/methylationMatrix.ts'
 import { resolveGroups, buildGroupValues, samplesOfRequest } from '#src/utils/sampleGroups.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { chiSquareLogSf, logBH } from '#src/utils/pValues.ts'
 import { getStdDev } from './termdb.descrstats.ts'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
 import { genomes } from '#src/initGenomesDs.js'
@@ -21,7 +23,9 @@ import { genomes } from '#src/initGenomesDs.js'
 The locus is the requested isoform (default: the gene's default isoform) with FLANK bp on each side, cut into NBINS runs of equal CpG
 count (query_beta_values.py, bins mode). A bin value is pooled methylated reads over pooled reads for
 the sample, so a deeply covered CpG weighs more than a thin one. Each bin is then correlated with
-expression across samples (Spearman, rust corr, BH-adjusted across bins).
+expression across samples (Spearman, rust corr, BH-adjusted across bins). With groups, each group's rho is also
+pooled into one rho within the groups (poolWithinGroups). On a dataset with isoform expression, each sample also has
+the expression of each of the gene's isoforms, for the makeup of the gene's expression by isoform.
 
 Samples come from getData() with the request's filter, as for termdb/matrix, then are limited to the
 ones eligible for CpG methylation. The response names samples, so it requires canDisplaySampleIds(). */
@@ -93,7 +97,7 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 	if (!Number.isInteger(nbins) || nbins < 1 || nbins > MAX_BINS) throw new Error('invalid nbins')
 
 	const sample2group = await getSampleGroups(q, ds, m.eligible)
-	const samples: { name: string; value?: number; group?: string }[] = []
+	const samples: MethylationLocusSample[] = []
 	// the sample types chosen in the genome browser, when the dataset has sample types
 	if (q.sampleTypes != null && !Array.isArray(q.sampleTypes)) throw new Error('sampleTypes must be an array')
 	const types = ds.sampleId2Type?.size && q.sampleTypes?.length ? new Set(q.sampleTypes.map(Number)) : undefined
@@ -105,27 +109,46 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		if (sample2group && group === undefined) return
 		samples.push({ name, ...(value === undefined ? {} : { value }), ...(group === undefined ? {} : { group }) })
 	}
+	const expressed = q.gene ? expressedIsoforms(ds, models, gm.chr) : undefined
 	if (q.gene) {
 		const exprTw = {
 			$id: 'expression',
 			term: { type: 'geneExpression', gene: q.gene, name: q.gene },
 			q: { mode: 'continuous' }
 		}
+		// each isoform's expression in each sample, read with the gene's: the makeup of the gene's expression
+		const isoformTerms = (expressed || []).map(g => ({
+			$id: g.isoform,
+			term: { type: 'isoformExpression', isoform: g.isoform, name: g.isoform },
+			q: { mode: 'continuous' }
+		}))
 		// true: map parent annotations to child samples, as the differential analyses do (resolveDaContext)
 		const data = await getData(
 			{
 				filter: q.filter,
 				filter0: q.filter0,
-				terms: [exprTw],
+				terms: [exprTw, ...isoformTerms],
 				__protected__: q.__protected__
 			},
 			ds,
 			true
 		)
 		if (data.error) throw new Error(data.error)
+		const isoformValues = new Map<string, number[]>()
 		for (const [sid, d] of Object.entries(data.samples as Record<string, any>)) {
 			const value = d[exprTw.$id]?.value
-			if (Number.isFinite(value)) add(ds.cohort.termdb.q.id2sampleName(Number(sid)), value)
+			if (!Number.isFinite(value)) continue
+			const name = ds.cohort.termdb.q.id2sampleName(Number(sid))
+			add(name, value)
+			if (isoformTerms.length)
+				isoformValues.set(
+					name,
+					isoformTerms.map(t => round3(Number(d[t.$id]?.value) || 0))
+				)
+		}
+		for (const s of samples) {
+			const v = isoformValues.get(s.name)
+			if (v) s.isoformValues = v
 		}
 		samples.sort((a, b) => a.value! - b.value!)
 	} else {
@@ -177,6 +200,7 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 			b.byGroup.push({ group, ...(byBin[i] || {}) })
 		})
 	}
+	if (groups.length) poolWithinGroups(bins)
 
 	// the gene models as the genome's gene db stores them
 	return {
@@ -184,10 +208,25 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		isoforms: models,
 		region,
 		unit,
+		...(expressed?.length ? { expressedIsoforms: expressed.map(g => g.isoform) } : {}),
 		samples,
 		...groupsOf(q),
 		bins
 	}
+}
+
+const round3 = (v: number) => Math.round(v * 1000) / 1000
+
+/* The gene's isoforms that the dataset's isoform expression file has, on the chromosome of the locus: a gene db
+lists an isoform once per place it maps to. undefined without isoform expression. */
+const isoformSets = new WeakMap<any, Set<string>>()
+function expressedIsoforms(ds: any, models: any[], chr: string): any[] | undefined {
+	const items = ds.queries?.isoformExpression?.availableItems
+	if (!Array.isArray(items)) return
+	let set = isoformSets.get(ds)
+	if (!set) isoformSets.set(ds, (set = new Set(items)))
+	const seen = new Set<string>()
+	return models.filter(g => g.chr == chr && set!.has(g.isoform) && !seen.has(g.isoform) && seen.add(g.isoform))
 }
 
 // the requested groups, in request order; each has samples, see above
@@ -212,7 +251,7 @@ async function correlateBins(
 	bins: MethylationLocusBin[],
 	samples: { value: number; group?: string }[],
 	pick: (s: { value: number; group?: string }) => boolean
-): Promise<({ rho: number; q: number } | undefined)[]> {
+): Promise<({ rho: number; q: number; n: number } | undefined)[]> {
 	const terms: { id: string; v1: number[]; v2: number[] }[] = []
 	bins.forEach((b, i) => {
 		const v1: number[] = [],
@@ -224,14 +263,44 @@ async function correlateBins(
 		})
 		if (v1.length >= minArrayLength && getStdDev(v1) > 0 && getStdDev(v2) > 0) terms.push({ id: String(i), v1, v2 })
 	})
-	const result: ({ rho: number; q: number } | undefined)[] = bins.map(() => undefined)
+	const result: ({ rho: number; q: number; n: number } | undefined)[] = bins.map(() => undefined)
+	const nOf = new Map(terms.map(t => [t.id, t.v1.length]))
 	if (!terms.length) return result
 	const out = JSON.parse(await run_rust('corr', JSON.stringify({ method: 'spearman', terms })))
 	// corr gives null where R gives NA; the checks above should prevent it, and such a bin gets no rho
 	for (const t of out)
 		if (t.correlation !== null && t.adjusted_p_value !== null)
-			result[Number(t.id)] = { rho: t.correlation, q: t.adjusted_p_value }
+			result[Number(t.id)] = { rho: t.correlation, q: t.adjusted_p_value, n: nOf.get(t.id)! }
 	return result
+}
+
+/* One rho per bin within the groups, pooled: does methylation move with expression from patient to patient inside a
+group? Across all samples, a difference between the groups in both gives a strong rho by itself. Each group's Spearman
+rho goes to Fisher's z, weighted by its n - 3 (the inverse of z's variance, inflated 1.06 times for Spearman, Fieller et
+al. 1957), and the pooled z is tested against 0, with BH across the bins. Sets rhoWithin and qWithin on the bins with a
+rho in some group. */
+export function poolWithinGroups(bins: MethylationLocusBin[]) {
+	const pooled: { b: MethylationLocusBin; rho: number; logP: number }[] = []
+	for (const b of bins) {
+		let zw = 0,
+			w = 0
+		for (const g of b.byGroup || []) {
+			if (g.rho === undefined || !g.n || g.n <= 3) continue
+			// clamped, so that a rho of exactly ±1 in a small group stays finite
+			const r = Math.max(-0.999999, Math.min(0.999999, g.rho))
+			zw += (g.n - 3) * Math.atanh(r)
+			w += g.n - 3
+		}
+		if (!w) continue
+		const z = zw / w
+		const stat = z * Math.sqrt(w / 1.06)
+		pooled.push({ b, rho: Math.tanh(z), logP: chiSquareLogSf(stat * stat, 1) })
+	}
+	const logQ = logBH(pooled.map(x => x.logP))
+	pooled.forEach((x, i) => {
+		x.b.rhoWithin = x.rho
+		x.b.qWithin = Math.exp(logQ[i])
+	})
 }
 
 // group names in the order of the request's groups: the first is the reference of a two-group difference

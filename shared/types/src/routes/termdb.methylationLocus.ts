@@ -35,7 +35,19 @@ export type MethylationLocusBin = {
 	/** BH-adjusted p across the bins with a rho */
 	q?: number
 	/** rho and q within each group, in the order of response.groups; present when groups were requested */
-	byGroup?: { group: string; rho?: number; q?: number }[]
+	byGroup?: { group: string; rho?: number; q?: number; n?: number }[]
+	/** with groups: rho within the groups, pooled (Fisher's z weighted by n - 3), and its BH q across the bins */
+	rhoWithin?: number
+	qWithin?: number
+}
+
+/** A sample of the locus */
+export type MethylationLocusSample = {
+	name: string
+	value?: number
+	group?: string
+	/** expression of each of expressedIsoforms, in its order */
+	isoformValues?: number[]
 }
 
 /** an isoform as the genome's gene db stores it; each feature is a list of [start, stop] */
@@ -65,8 +77,10 @@ export type MethylationLocusResponse =
 			region: { chr: string; start: number; stop: number }
 			/** unit of samples[].value, e.g. TPM */
 			unit?: string
+			/** the gene's isoforms that have isoform expression, in the order of samples[].isoformValues */
+			expressedIsoforms?: string[]
 			/** ascending by the gene's expression (value) when a gene was requested */
-			samples: { name: string; value?: number; group?: string }[]
+			samples: MethylationLocusSample[]
 			/** the requested groups that have samples here, in request order; with two, the difference is the second minus the first */
 			groups?: string[]
 			bins: MethylationLocusBin[]
