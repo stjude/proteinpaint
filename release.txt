@@ -1,2 +1,1 @@
-Fixes:
-- Barchart: hiding an overlay value from the bar click menu no longer shows an error, including for a term collection overlay
+
