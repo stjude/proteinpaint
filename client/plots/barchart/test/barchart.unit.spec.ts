@@ -155,3 +155,18 @@ tape('hideCategory() should key q.hiddenValues by value key', function (test) {
 
 	test.end()
 })
+
+tape('setExclude() should handle terms without a values dictionary', function (test) {
+	test.timeoutAfter(100)
+
+	const testBarchart = new Barchart({}, {} as any) as any
+	testBarchart.settings = { exclude: {}, cols: [], rows: [] }
+	// a termCollection overlay has bin labels as hiddenValues keys but no term.values
+	const term = { term: { type: 'categorical', values: {} }, q: {} }
+	const term2 = { term: { type: 'termCollection' }, q: { hiddenValues: { '>0.8': 1 } } }
+	testBarchart.setExclude(term, term2)
+	test.deepEqual(testBarchart.settings.exclude.rows, ['>0.8'], 'Should exclude the hidden overlay bin label')
+	testBarchart.setExclude({ term: { type: 'termCollection' }, q: { hiddenValues: { '<0.8': 1 } } }, null)
+	test.deepEqual(testBarchart.settings.exclude.cols, ['<0.8'], 'Should exclude the hidden term1 bin label')
+	test.end()
+})

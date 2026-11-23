@@ -63,6 +63,7 @@ click non-group bar to add filter
 click custom subcondition group bar to add filter SKIPPED NO LONGER SUPPORTED
 click custom categorical group bar to add filter
 click bar to add as group
+click overlay bar segment to hide the overlay value
 numeric exclude range
 numeric filter - only special value
 custom vocab: categorical terms with numeric filter
@@ -1949,6 +1950,63 @@ tape('click bar to add as group', async function (test) {
 		})
 	}
 	test.end()
+})
+
+tape.only('click overlay bar segment to hide the overlay value', function (test) {
+	test.timeoutAfter(8000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'diaggrp' },
+					term2: { id: 'sex' }
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		const bar = barchart.Inner
+		const term2$id = bar.config.term2.$id
+		const barDiv = bar.dom.barDiv.node()
+		await detectOne({ elem: barDiv, selector: '.pp-bars-svg' })
+
+		const rect = barDiv.querySelector('.bars-cell rect')
+		const { dataId } = rect.__data__
+		rect.dispatchEvent(new Event('click', { bubbles: true }))
+		await detectLst({ elem: bar.app.tip.d.node(), selector: '.sja_menuoption', count: 1, matchAs: '>=' })
+		const hideOpt = bar.app.tip.d
+			.selectAll('.sja_menuoption')
+			.filter(d => d?.label?.startsWith('Hide') && !d.testId)
+			.node()
+		test.ok(hideOpt, 'should show a menu option to hide the clicked overlay value')
+		if (!hideOpt) return test.end()
+
+		const visible = await new Promise(resolve => {
+			barchart.on('postRender.test', () => {
+				barchart.on('postRender.test', null)
+				resolve(Array.from(barDiv.querySelectorAll('.bars-cell rect')).map((r: any) => r.__data__.dataId))
+			})
+			hideOpt.dispatchEvent(new Event('click', { bubbles: true }))
+		})
+
+		const term2 = bar.config.term2
+		test.equal(term2.$id, term2$id, 'should keep term2.$id after hiding an overlay value')
+		test.ok(term2.q.hiddenValues?.[dataId], 'should add the clicked overlay value to term2.q.hiddenValues')
+		test.false(visible.includes(dataId), 'should not render bar segments for the hidden overlay value')
+		const errorbar = bar.app.Inner.dom.holder.select('.sja_errorbar').node()
+		test.notOk(errorbar?.innerText, 'should not show an error after hiding an overlay value')
+		if (test['_ok']) bar.app.destroy()
+		test.end()
+	}
 })
 
 /* bar_by_children handling has been inactivated

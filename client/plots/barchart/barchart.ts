@@ -609,7 +609,8 @@ export class Barchart extends PlotBase implements RxComponent {
 	}
 
 	setExclude(term, term2) {
-		// a non-numeric term.id is used directly as seriesId or dataId
+		// a non-numeric term.id is used directly as seriesId or dataId;
+		// term.values may be undefined, such as for a termCollection, so optional-chain it
 		this.settings.exclude.cols = Object.keys(term.q?.hiddenValues || {})
 			.filter(id => term.q.hiddenValues[id])
 			.map(id => {
@@ -617,9 +618,7 @@ export class Barchart extends PlotBase implements RxComponent {
 					? id
 					: this.settings.cols?.includes(id)
 					? id
-					: term.term.values[id]?.label
-					? term.term.values[id].label
-					: id
+					: term.term.values?.[id]?.label || id
 			})
 
 		this.settings.exclude.rows = !term2?.q?.hiddenValues
@@ -631,9 +630,7 @@ export class Barchart extends PlotBase implements RxComponent {
 							? id
 							: this.settings.rows?.includes(id)
 							? id
-							: term2.term.values[id]?.label
-							? term2.term.values[id].label
-							: id
+							: term2.term.values?.[id]?.label || id
 					)
 	}
 
