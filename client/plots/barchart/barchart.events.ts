@@ -463,6 +463,8 @@ function handle_click(event, self, chart) {
 						id: self.id,
 						config: {
 							term2: {
+								$id: term2.$id,
+								id: term2.id,
 								isAtomic: true,
 								term: term2.term,
 								q: getUpdatedQfromClick({ id: data.dataId, type: 'row' }, term2, true)
