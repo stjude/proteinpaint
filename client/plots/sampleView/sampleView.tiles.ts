@@ -1,6 +1,6 @@
 import { Menu } from '#dom'
 import { getOutlierTool } from './sampleView.outliers.ts'
-import { getBrainImagingSampleSet } from './getBrainImagingSampleSet.ts'
+import { getBrainImagingSampleSet } from '../getBrainImagingSampleSet.ts'
 import { dofetch3 } from '#common/dofetch'
 import {
 	renderDiscoFace,
@@ -75,7 +75,7 @@ export function getSampleTools(termdbConfig: any): SampleTool[] {
 			title: 'Disco plot',
 			scope: 'sample',
 			load: async ([sample], ctx) => {
-				const { getSingleSampleMutation } = await import('./plot.disco.js')
+				const { getSingleSampleMutation } = await import('../plot.disco.js')
 				try {
 					const data = await getSingleSampleMutation(
 						ctx.termdbConfig,
@@ -92,7 +92,7 @@ export function getSampleTools(termdbConfig: any): SampleTool[] {
 			},
 			renderFace: (face, data, [sample], ctx) => renderDiscoFace(face, data, toDiscoSample(sample), ctx),
 			renderExpanded: async (holder, data, [sample], ctx) => {
-				const { renderDisco } = await import('./plot.disco.js')
+				const { renderDisco } = await import('../plot.disco.js')
 				const app = await renderDisco(
 					ctx.termdbConfig,
 					ctx.vocab.dslabel,
@@ -122,7 +122,7 @@ export function getSampleTools(termdbConfig: any): SampleTool[] {
 			title: (k.match(/[A-Z][a-z]+|[0-9]+/g) || [k]).join(' '),
 			scope: 'sample',
 			load: async ([sample], ctx) => {
-				const { getSingleSampleGenomeQuantification } = await import('./plot.ssgq.js')
+				const { getSingleSampleGenomeQuantification } = await import('../plot.ssgq.js')
 				try {
 					return await getSingleSampleGenomeQuantification(
 						ctx.termdbConfig,
@@ -139,7 +139,7 @@ export function getSampleTools(termdbConfig: any): SampleTool[] {
 			},
 			renderFace: (face, data) => renderSsgqFace(face, data),
 			renderExpanded: async (holder, data, [sample], ctx) => {
-				const { renderSingleSampleGenomeQuantification } = await import('./plot.ssgq.js')
+				const { renderSingleSampleGenomeQuantification } = await import('../plot.ssgq.js')
 				await renderSingleSampleGenomeQuantification(
 					ctx.termdbConfig,
 					ctx.vocab.dslabel,
@@ -166,7 +166,7 @@ export function getSampleTools(termdbConfig: any): SampleTool[] {
 					const available = await getBrainImagingSampleSet(ctx.vocab.genome, ctx.vocab.dslabel, refKey)
 					if (!available.has(sample.sampleName)) return null
 					// the face is one axial slice; expanding draws the full plot with all three views
-					const { getDefaultSlices } = await import('./brainImaging.ts')
+					const { getDefaultSlices } = await import('../brainImaging.ts')
 					const slice = getDefaultSlices(q.NIdata.references[refKey]).t
 					const data = await dofetch3('termdb/brainImaging', {
 						body: {
@@ -184,7 +184,7 @@ export function getSampleTools(termdbConfig: any): SampleTool[] {
 				},
 				renderFace: (face, data) => renderBrainImagingFace(face, data),
 				renderExpanded: async (holder, _data, [sample], ctx) => {
-					const brainImaging = await import('./plot.brainImaging.js')
+					const brainImaging = await import('../plot.brainImaging.js')
 					await brainImaging.default(
 						ctx.termdbConfig,
 						ctx.vocab.dslabel,
@@ -203,7 +203,7 @@ export function getSampleTools(termdbConfig: any): SampleTool[] {
 			title: 'Swimmer plot',
 			scope: 'patient',
 			load: async (samples, ctx) => {
-				const { fetchSwimmerLanes } = await import('./swimmer.ts')
+				const { fetchSwimmerLanes } = await import('../swimmer.ts')
 				// no user filter: the samples are already chosen; the route still applies access control
 				const result = await fetchSwimmerLanes({
 					genome: ctx.vocab.genome,
@@ -216,7 +216,7 @@ export function getSampleTools(termdbConfig: any): SampleTool[] {
 			},
 			renderFace: (face, data, _samples, ctx, active) => renderSwimmerFace(face, data, ctx, active.sampleName),
 			renderExpanded: async (holder, data, _samples, ctx, active) => {
-				const { SwimmerRenderer, getDefaultSwimmerSettings } = await import('./swimmer.ts')
+				const { SwimmerRenderer, getDefaultSwimmerSettings } = await import('../swimmer.ts')
 				const div = holder.append('div').attr('data-testid', 'sjpp-sampleview-swimmer')
 				const renderer = new SwimmerRenderer(ctx.app, {
 					plotDiv: div.append('div').style('padding', '10px'),
@@ -509,7 +509,7 @@ function scatterSamples(result: any): any[] {
  * Given the holder of an expanded tile, the chart is sized to about fit it: its width less the tools, axes and
  * a typical legend. A wider legend or the opened settings make the tile scroll sideways */
 async function getScatterChildConfig(plot: any, holder?: any) {
-	const { getScatterPlotConfig } = await import('./scatter/scatter.ts')
+	const { getScatterPlotConfig } = await import('../scatter/scatter.ts')
 	const config: any = { ...getScatterPlotConfig(plot), hidePlotFilter: true }
 	const width = holder?.node().clientWidth
 	if (width) {

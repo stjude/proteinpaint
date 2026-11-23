@@ -25,6 +25,10 @@
 	"termdb/regression": [
 		"minSampleSize"
 	],
+	"termdb/relatedSamples": [
+		"termdb",
+		"samples"
+	],
 	"termdb/sampleOutliers": [
 		"termdb",
 		"samples"

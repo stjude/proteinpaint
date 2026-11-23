@@ -1,11 +1,11 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.js'
 import { select } from 'd3-selection'
-import { DEFAULT_SAMPLE_TYPE, isNumericTerm, ROOT_SAMPLE_TYPE, getDateStrFromNumber } from '#shared/terms.js'
-import { sayerror } from '#dom'
+import { isNumericTerm, getDateStrFromNumber } from '#shared/terms.js'
 import { importPlot } from '#plots/importPlot.js'
-import { makeTileGrid, makeTileCard, makeAsyncCard, tileExpandState } from './tileCard.ts'
+import { makeTileGrid, makeTileCard, makeAsyncCard, tileExpandState } from '../tileCard.ts'
 import { getSampleTools, type Sample, type SampleTool, type ToolContext } from './sampleView.tiles.ts'
+import { showSamplePicker } from './samplePicker.ts'
 
 /*********************************************************************
  * sampleView
@@ -17,6 +17,10 @@ import { getSampleTools, type Sample, type SampleTool, type ToolContext } from '
  * samples (or the samples passed in config.samples); a switcher picks
  * the sample whose tiles are shown, while patient-level tiles (swimmer)
  * and the expanded dictionary cover all shown samples.
+ *
+ * The sample is chosen before the plot is opened, e.g. in the menu of the
+ * Sample View chart button, and is named in the sandbox header. A plot
+ * without a sample shows the sample picker.
  *********************************************************************/
 
 const root_ID = 'root'
@@ -37,6 +41,10 @@ type Drawing = {
 	faces: Map<string, { div: Element; done: Promise<void> }>
 }
 
+/** the samples related to a sample (e.g. its patient's samples), and their root sample (e.g. the patient);
+ * see TermdbRelatedSamplesResponse */
+type RelatedSamples = { samples: Sample[]; root?: Sample }
+
 class SampleView extends PlotBase implements RxComponent {
 	static type = 'sampleView'
 
@@ -45,21 +53,24 @@ class SampleView extends PlotBase implements RxComponent {
 	dom!: {
 		header: any
 		holder: any
-		sampleDiv: any
+		/** the button to download the data of the shown samples */
+		controlsDiv: any
+		downloadbt: any
+		messageDiv: any
 		switcherDiv: any
 		loadingDiv: any
 		plotsDiv: any
-		downloadbt?: any
-		messageDiv?: any
 	}
 	vocabApi: any
-	samplesData!: any
-	sample!: Sample
 	config!: any
 	termsById!: Record<string, any>
 	sampleDataByTermId!: Record<string, any>
 	orderedVisibleTerms!: any[]
 	tools!: SampleTool[]
+	/** the shown samples: config.samples, else the samples related to the chosen sample */
+	samples!: Sample[]
+	/** the samples related to the first shown sample, whose root sample (e.g. the patient) fills in the dictionary */
+	related?: RelatedSamples
 	/** the sample whose tiles are shown */
 	activeSample!: Sample
 	/** the samples compared in the expanded dictionary */
@@ -87,7 +98,20 @@ class SampleView extends PlotBase implements RxComponent {
 		opts.holder.style('position', 'relative')
 		const div = opts.holder.append('div').style('padding', '10px 20px')
 		const headerDiv = div.append('div')
-		const sampleDiv = headerDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const controlsDiv = headerDiv
+			.append('div')
+			.style('display', 'none')
+			.style('vertical-align', 'top')
+			.style('margin-bottom', '5px')
+		const downloadbt = controlsDiv
+			.append('button')
+			.text('Download')
+			.on('click', () => this.downloadData())
+		const messageDiv = controlsDiv
+			.append('div')
+			.style('display', 'none')
+			.style('vertical-align', 'top')
+			.html('&nbsp;&nbsp;Downloading data ...')
 		const switcherDiv = headerDiv
 			.append('div')
 			.attr('data-testid', 'sjpp-sampleview-switcher')
@@ -101,72 +125,29 @@ class SampleView extends PlotBase implements RxComponent {
 		const loadingDiv = opts.holder.append('div').attr('class', 'sjpp-loading-overlay').style('display', 'none')
 		loadingDiv.append('div').attr('class', 'sjpp-spinner')
 
-		this.dom = { header: opts.header, holder: opts.holder, sampleDiv, switcherDiv, loadingDiv, plotsDiv }
+		this.dom = {
+			header: opts.header,
+			holder: opts.holder,
+			controlsDiv,
+			downloadbt,
+			messageDiv,
+			switcherDiv,
+			loadingDiv,
+			plotsDiv
+		}
 	}
 
 	async init(appState) {
 		this.termsByCohort = {}
 		this.tools = getSampleTools(appState.termdbConfig)
-		await this.setSampleSelect(appState)
-	}
-
-	async setSampleSelect(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
-		if (this.dom.header) this.dom.header.html(`Sample View`)
-		// samples passed by the opening plot (e.g. a lasso selection) are chosen with the switcher only
-		if (config.samples?.length > 1) return
-
-		const sampleDiv = this.dom.sampleDiv
-		this.samplesData = await this.vocabApi.getSamplesByName({
-			filter: appState.termfilter?.filter
-		})
-		if (Object.keys(this.samplesData).length == 0) throw 'No accessible samples found'
-		const callback = sampleName => {
-			if (this.samplesData[sampleName]) {
-				const samples = getSamplesRelated(this.samplesData, sampleName, null, undefined)
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples, activeSample: sampleName } })
-				this.mayUpdateChildHighlight(samples, sampleName)
-				this.dom.downloadbt.property('disabled', false)
-			} else if (sampleName != '') {
-				this.dom.downloadbt.property('disabled', true)
-				const errorDiv = sampleDiv.append('div')
-				sayerror(errorDiv, `Invalid sample ID: ${sampleName}. Please check the sample ID.`)
-				setTimeout(() => {
-					errorDiv.remove()
-				}, 6000)
-			}
-		}
-		const hasSampleAncestry = appState.termdbConfig.hasSampleAncestry
-		const sampleName = searchSampleInput(sampleDiv, this.samplesData, hasSampleAncestry, callback, undefined)
-		this.sample = config.sample || { sampleId: this.samplesData[sampleName!].id, sampleName: sampleName! }
-		// When the plot is opened for an already-chosen sample (config.sample, e.g. from the omnisearch
-		// or a scatter point click), show that name in the search box. Its data is rendered either way,
-		// but an empty box reads as "type a sample name to see details".
-		if (config.sample?.sampleName) sampleDiv.select('input').property('value', config.sample.sampleName)
-
-		this.dom.downloadbt = sampleDiv
-			.insert('button')
-			.style('margin-left', '10px')
-			.style('vertical-align', 'top')
-			.text('Download')
-			.on('click', () => {
-				this.downloadData()
-			})
-		this.dom.messageDiv = sampleDiv
-			.insert('div')
-			.style('display', 'none')
-			.style('vertical-align', 'top')
-			.html('&nbsp;&nbsp;Downloading data ...')
 	}
 
 	getState(appState) {
 		const config = appState.plots?.find(p => p.id === this.id)
-		const samples = config.samples || getSamplesRelated(this.samplesData, this.sample.sampleName, null, undefined)
 		const state: {
 			config: any
 			termfilter: any
 			activeCohort: any
-			samples: Sample[]
 			hasVerifiedToken: any
 			tokenVerificationPayload: any
 			termdbConfig: any
@@ -179,7 +160,6 @@ class SampleView extends PlotBase implements RxComponent {
 			// TODO: use state.config drectly, instead of having to extract
 			// selected config.key-values into the component state
 			activeCohort: config.activeCohort,
-			samples,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationPayload: this.app.vocabApi.tokenVerificationPayload,
 			termdbConfig: appState.termdbConfig,
@@ -198,25 +178,35 @@ class SampleView extends PlotBase implements RxComponent {
 	}
 
 	async main() {
+		this.renderHeader()
 		if (this.mayRequireToken()) return
 		this.config = structuredClone(this.state.config)
-		const samples = this.state.samples
-		// the drawings are of these samples, the filter and the cohort
-		const samplesKey = JSON.stringify([
-			samples.map(s => s.sampleName),
-			this.state.termfilter?.filter,
-			this.state.activeCohort
-		])
-		if (samplesKey !== this.samplesKey) {
-			this.clearDrawings()
-			this.samplesKey = samplesKey
+		if (!this.config.samples?.length && !this.config.sample) {
+			this.renderSamplePrompt()
+			return
 		}
-		const name = this.config.activeSample || this.config.sample?.sampleName
-		this.activeSample = samples.find(s => s.sampleName == name) || samples[0]
-		this.dictSamples = samples.length <= samplesLimit ? samples : this.activeSample ? [this.activeSample] : []
-
+		this.dom.controlsDiv.style('display', 'inline-block')
+		// enabled once the shown samples are known, and only when there are any
+		this.dom.downloadbt.property('disabled', true)
 		this.dom.loadingDiv.style('display', '')
 		try {
+			await this.setSamples()
+			const samples = this.samples
+			this.dom.downloadbt.property('disabled', !samples.length)
+			// the drawings are of these samples, the filter and the cohort
+			const samplesKey = JSON.stringify([
+				samples.map(s => s.sampleName),
+				this.state.termfilter?.filter,
+				this.state.activeCohort
+			])
+			if (samplesKey !== this.samplesKey) {
+				this.clearDrawings()
+				this.samplesKey = samplesKey
+			}
+			const name = this.config.activeSample || this.config.sample?.sampleName
+			this.activeSample = samples.find(s => s.sampleName == name) || samples[0]
+			this.dictSamples = samples.length <= samplesLimit ? samples : this.activeSample ? [this.activeSample] : []
+
 			this.termsById = this.getTermsById(this.state)
 			this.sampleDataByTermId = {}
 			const root = this.termsById[root_ID]
@@ -236,7 +226,7 @@ class SampleView extends PlotBase implements RxComponent {
 		const grid = makeTileGrid(this.dom.plotsDiv).attr('data-testid', 'sjpp-sampleview-tiles')
 		this.renderDictionaryTile(grid)
 		for (const tool of this.tools) {
-			const toolSamples = tool.scope == 'patient' ? samples : [this.activeSample]
+			const toolSamples = tool.scope == 'patient' ? this.samples : [this.activeSample]
 			const d = this.getDrawing(tool, toolSamples)
 			const expand = tileExpandState(this, tool.key)
 			const card = makeAsyncCard(grid, {
@@ -256,16 +246,80 @@ class SampleView extends PlotBase implements RxComponent {
 		this.parkDetachedChildren()
 	}
 
+	/** the chosen sample, or the number of samples passed in, in the sandbox header */
+	renderHeader() {
+		if (!this.dom.header) return
+		const config = this.state.config
+		const passed: Sample[] | undefined = config.samples?.length ? config.samples : undefined
+		const name = passed
+			? passed.length == 1
+				? passed[0].sampleName
+				: `${passed.length} samples`
+			: config.sample?.sampleName
+		this.dom.header.text(name ? `Sample View: ${name}` : 'Sample View')
+	}
+
+	/** a plot without a sample, e.g. of a session saved before choosing one: the sample picker */
+	renderSamplePrompt() {
+		this.dom.controlsDiv.style('display', 'none')
+		this.dom.switcherDiv.selectAll('*').remove()
+		this.dom.plotsDiv.node().replaceChildren()
+		this.dom.plotsDiv.append('div').style('color', '#6b7280').text('Choose a sample to view its data.')
+		showSamplePicker({
+			holder: this.dom.plotsDiv,
+			vocabApi: this.vocabApi,
+			filter: this.state.termfilter?.filter,
+			hasSampleAncestry: this.state.termdbConfig.hasSampleAncestry,
+			// the shown samples are then the samples related to config.sample
+			onSelect: sample =>
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { sample, samples: null, activeSample: sample.sampleName }
+				})
+		})
+	}
+
+	/** the shown samples: those passed in config.samples, else the samples related to the chosen sample. The samples
+	 * related to the first shown sample also give its root sample (e.g. its patient), see getPatient() */
+	async setSamples() {
+		const passed: Sample[] | undefined = this.config.samples?.length ? this.config.samples : undefined
+		const sample = passed?.[0] || this.config.sample
+		this.related = undefined
+		if (sample) {
+			try {
+				this.related = await this.getRelatedSamples(sample)
+			} catch (e) {
+				// a newer update stops this render
+				if (!passed || this.app.isAbortError(e)) throw e
+				// passed samples are shown without the values of their root sample
+				console.warn('sampleView: cannot get the related samples', e)
+			}
+		}
+		this.samples = passed || this.related?.samples || []
+	}
+
+	/** the samples related to a sample, of the samples passing the filter. Not cached here: dofetch3() reuses a
+	 * response, but not for a request of an aborted update */
+	async getRelatedSamples(sample: Sample): Promise<RelatedSamples> {
+		const r = await this.vocabApi.getRelatedSamples({
+			sampleId: sample.sampleId,
+			filter: this.state.termfilter?.filter
+		})
+		if ('error' in r) throw r.error
+		return r
+	}
+
 	/** buttons, or a dropdown for many samples, to choose the sample whose tiles are shown */
 	renderSwitcher() {
 		const div = this.dom.switcherDiv
 		div.selectAll('*').remove()
-		const samples = this.state.samples
+		const samples = this.samples
 		if (samples.length < 2) return
 		const choose = (sampleName: string) => {
 			if (sampleName == this.activeSample.sampleName) return
 			this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeSample: sampleName } })
-			this.mayUpdateChildHighlight(this.state.samples, sampleName)
+			this.mayUpdateChildHighlight(this.samples, sampleName)
 		}
 		if (samples.length > switcherButtonsLimit) {
 			div.append('label').style('margin-right', '5px').text(`Sample (${samples.length}):`)
@@ -656,21 +710,22 @@ class SampleView extends PlotBase implements RxComponent {
 		}
 	}
 
-	/** the root sample above a sample, e.g. its patient, from the sample search list */
+	/** the root sample above a sample, e.g. its patient, when the sample is related to the first shown sample */
 	getPatient(sample: Sample): Sample | undefined {
-		let s = this.samplesData?.[sample.sampleName]
-		while (s?.ancestor_name && this.samplesData[s.ancestor_name]) s = this.samplesData[s.ancestor_name]
-		if (!s || s.name == sample.sampleName) return
-		return { sampleId: s.id, sampleName: s.name }
+		const root = this.related?.root
+		if (!root || root.sampleId == sample.sampleId) return
+		if (!this.related!.samples.some(s => s.sampleId == sample.sampleId)) return
+		return root
 	}
 
 	async downloadData() {
+		if (!this.samples?.length) return
 		this.dom.messageDiv.style('display', 'block')
 		this.dom.downloadbt.style('display', 'none')
 		const filename = `samples.tsv`
 		const sampleData = {}
 		let lines = 'Sample'
-		for (const sample of this.state.samples) {
+		for (const sample of this.samples) {
 			sampleData[sample.sampleId] = await this.vocabApi.getSingleSampleData({
 				sampleId: sample.sampleId,
 				/** term_ids is required for getSingleSampleData but not
@@ -682,7 +737,7 @@ class SampleView extends PlotBase implements RxComponent {
 		}
 		lines += '\n'
 
-		const sampleId = this.state.samples[0].sampleId
+		const sampleId = this.samples[0].sampleId
 		for (const termId in sampleData[sampleId]) {
 			const term = sampleData[sampleId][termId].term
 			lines += `${term.name}`
@@ -732,7 +787,7 @@ class SampleView extends PlotBase implements RxComponent {
 
 	/** the term tree with the values of the compared samples side by side */
 	renderSampleDictionary(holder) {
-		if (this.dictSamples.length < this.state.samples.length)
+		if (this.dictSamples.length < this.samples.length)
 			holder
 				.append('div')
 				.style('font-size', '.85em')
@@ -917,209 +972,17 @@ export async function getPlotConfig(opts: any) {
 	return copyMerge(config, opts)
 }
 
-export function searchSampleInput(
-	holder: any,
-	samplesData: any,
-	hasSampleAncestry: any,
-	callback: (name: string) => void,
-	keyUpCallback?: (str: string) => void
-) {
-	const limit = 100
-	const allSamples: string[] = []
-	for (const sample in samplesData) {
-		const sample_type = samplesData[sample].sample_type
-		if (
-			sample_type == ROOT_SAMPLE_TYPE ||
-			sample_type == null ||
-			(!hasSampleAncestry && sample_type == DEFAULT_SAMPLE_TYPE)
-		)
-			//If the dataset has no ancestors, all the samples should be root'
-			allSamples.push(sample)
-	}
-	const isBigDataset = allSamples.length > 10000
-
-	if (allSamples.length == 0)
-		//Happens if it requires sign in first
-		return
-
-	// === Precompute Hierarchy labels once ===
-	const { childrenByParent, rootFor } = buildHierarchy(samplesData)
-	const sampleName = allSamples[0]
-	const input = holder
-		.append('input')
-		.attr('list', 'sampleDatalist')
-		.property('autocomplete', 'off')
-		.attr('placeholder', sampleName)
-		.style('width', '250px')
-
-	holder.style('opacity', '0.8')
-	const datalist = holder.append('datalist').attr('id', 'sampleDatalist')
-	addOptions(allSamples)
-	input.on('keyup', () => {
-		datalist.selectAll('*').remove()
-		const str = input.node().value.toLowerCase()
-		if (keyUpCallback) keyUpCallback(str)
-		const options: string[] = []
-		for (const sample of allSamples) {
-			if (sample.toLowerCase().startsWith(str)) options.push(sample)
-			if (options.length == limit && allSamples.length > 10000) break
+/** the menu of the Sample View chart button: the sample picker, to open the sample view of the chosen sample */
+export function makeChartBtnMenu(holder, chartsInstance) {
+	const app = chartsInstance.app
+	showSamplePicker({
+		holder,
+		vocabApi: app.vocabApi,
+		filter: chartsInstance.state.termfilter?.filter,
+		hasSampleAncestry: chartsInstance.state.termdbConfig?.hasSampleAncestry,
+		onSelect: sample => {
+			chartsInstance.dom.tip.hide()
+			app.dispatch({ type: 'plot_create', config: { chartType: 'sampleView', sample } })
 		}
-		for (const sample of allSamples) {
-			if (sample.toLowerCase().includes(str) && !options.includes(sample)) options.push(sample)
-			if (options.length == limit && allSamples.length > 10000) break
-		}
-		if (options.length > 1 || (options.length == 1 && input.node().value != options[0])) addOptions(options)
 	})
-	input.on('change', () => {
-		const sampleName = input.node().value
-		callback(sampleName)
-	})
-	function addOptions(options) {
-		datalist
-			.selectAll('option')
-			.data(options.filter((s, i) => i < limit))
-			.enter()
-			.append('option')
-			.attr('value', d => d)
-			.attr(
-				'label',
-				(d, i) =>
-					getLabel(d, childrenByParent, rootFor) +
-					(i + 1 == limit
-						? isBigDataset
-							? ` Showing first ${i + 1} hits`
-							: ` Showing ${i + 1} of ${options.length} hits`
-						: i + 1 === options.length && i > 0
-						? `  (Found ${options.length} hits)`
-						: '')
-			)
-	}
-
-	function getLabel(sampleName, childrenByParent, rootFor) {
-		const rootName = rootFor.get(sampleName) || sampleName
-		if (!childrenByParent.has(rootName)) return sampleName
-
-		const rootChildren = childrenByParent.get(rootName) || []
-		if (rootChildren.length === 0) return sampleName
-
-		const parts: string[] = []
-		for (const child of rootChildren) {
-			const chain: string[] = [child]
-			let cur = child
-			let kids = childrenByParent.get(cur) || []
-			while (kids.length > 0) {
-				chain.push(kids[0])
-				cur = kids[0]
-				kids = childrenByParent.get(cur) || []
-			}
-			parts.push(chain.length > 1 ? chain.join(' > ') : child)
-		}
-		return parts.join(', ')
-	}
-	return sampleName
-}
-
-function buildHierarchy(samplesData: any) {
-	const childrenByParent = new Map<string, string[]>()
-	const rootFor = new Map<string, string>()
-
-	// Build children map + find roots
-	for (const s of Object.values(samplesData) as any[]) {
-		const childName: string = s.name
-		const parentName: string = s.ancestor_name
-		if (parentName) {
-			if (!childrenByParent.has(parentName)) {
-				childrenByParent.set(parentName, [])
-			}
-			childrenByParent.get(parentName)!.push(childName)
-		}
-
-		// find root for this sample
-		let root: string = childName
-		let curr: any = s
-		while (curr?.ancestor_name) {
-			root = curr.ancestor_name
-			curr = samplesData[root]
-		}
-		rootFor.set(childName, root)
-	}
-
-	// Sort every children list once
-	for (const list of childrenByParent.values()) {
-		list.sort((a, b) => {
-			const na = Number(a)
-			const nb = Number(b)
-			return !isNaN(na) && !isNaN(nb) ? na - nb : a.localeCompare(b)
-		})
-	}
-	return { childrenByParent, rootFor }
-}
-
-//Get samples related through parent
-export function getSamplesRelated(
-	samplesData: any,
-	sampleName: string,
-	childrenByParent: Map<string, any> | null = null,
-	rootFor?: Map<string, string>
-) {
-	if (!samplesData[sampleName]) return []
-
-	// Fast path: use precomputed data when available
-	let rootName
-	if (rootFor && childrenByParent) {
-		rootName = rootFor.get(sampleName)
-	} else {
-		// Fallback: compute root on the fly if precomputed data is not available (only when called from getState() or elsewhere)
-		rootName = sampleName
-		let current = samplesData[sampleName]
-		while (current?.ancestor_name) {
-			rootName = current.ancestor_name
-			current = samplesData[rootName]
-		}
-	}
-
-	const root = samplesData[rootName]
-	if (!root) return []
-
-	// Use precomputed children map if available, otherwise build it (slow path)
-	let kidsMap = childrenByParent
-	if (!kidsMap) {
-		kidsMap = new Map()
-		for (const s of Object.values(samplesData) as any[]) {
-			if (s.ancestor_name) {
-				if (!kidsMap.has(s.ancestor_name)) kidsMap.set(s.ancestor_name, [])
-				kidsMap.get(s.ancestor_name)!.push(s)
-			}
-		}
-
-		// Sort children
-		for (const list of kidsMap.values()) {
-			list.sort((a, b) => {
-				const na = Number(a.name)
-				const nb = Number(b.name)
-				if (!isNaN(na) && !isNaN(nb)) return na - nb
-				return a.name.localeCompare(b.name)
-			})
-		}
-	}
-
-	// Collect in pre-order
-	const samples: { sampleId: any; sampleName: string }[] = []
-	const hasChildren = (kidsMap!.get(rootName!) || []).length > 0
-
-	// Include root only if it has no descendants or isn't just a grouping node
-	if (root.sample_type !== ROOT_SAMPLE_TYPE || !hasChildren) {
-		samples.push({ sampleId: root.id, sampleName: root.name })
-	}
-
-	function traverse(parentName: string) {
-		const kids = kidsMap!.get(parentName) || []
-		for (const kid of kids) {
-			samples.push({ sampleId: kid.id, sampleName: kid.name })
-			traverse(kid.name)
-		}
-	}
-
-	traverse(rootName!)
-	return samples
 }

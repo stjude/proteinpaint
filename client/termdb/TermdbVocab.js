@@ -1207,6 +1207,20 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
+	/** the samples related to a sample (e.g. its patient's samples) and their root sample, of the samples passing
+	 * opts.filter; see TermdbRelatedSamplesResponse */
+	async getRelatedSamples(opts) {
+		const headers = await this.mayGetAuthHeaders('termdb')
+		const body = {
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			sampleId: opts.sampleId,
+			embedder: window.location.hostname
+		}
+		if (opts.filter) body.filter = getNormalRoot(opts.filter)
+		return await this.dofetch3('termdb/relatedSamples', { headers, body }, this.opts.fetchOpts)
+	}
+
 	async getProfileFacilities() {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples

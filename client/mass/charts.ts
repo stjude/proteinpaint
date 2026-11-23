@@ -259,11 +259,8 @@ function getChartTypeList(self, state) {
 		},
 		{
 			label: 'Sample View',
-			clickTo: self.prepPlot,
 			chartType: 'sampleView',
-			config: {
-				chartType: 'sampleView'
-			}
+			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			label: 'Whole Slide Images',
