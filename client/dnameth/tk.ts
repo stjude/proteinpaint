@@ -1,20 +1,26 @@
 import { dofetch3 } from '#common/dofetch'
 import { Menu, table2col, addGeneSearchbox } from '#dom'
-import { interpolateRdBu } from 'd3-scale-chromatic'
+import { interpolateRdBu, schemeTableau10 } from 'd3-scale-chromatic'
 import { legend_newrow } from '#src/block.legend'
 import { makeDNAMethRegionTerm } from '#tw/dnaMethylation'
-import { renderLocusHeatmap, initLocusHeatmapRows, type LocusHeatmapStat } from '../src/block.locusHeatmap'
+import {
+	renderLocusHeatmap,
+	initLocusHeatmapRows,
+	type LocusHeatmapStat,
+	type LocusHeatmapAnnotation
+} from '../src/block.locusHeatmap'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
-import type { MethylationLocusBin, MethylationLocusResponse } from '#types'
+import type { MethylationLocusBin, MethylationLocusResponse, MethylationLocusSample } from '#types'
 
 /* Block track of per-sample CpG methylation in the view range: samples are rows, CpG bins are columns.
 
 tk.dslabel   required
-tk.gene      optional; with it, each bin is correlated with the gene's expression (rho and -log10 q rows),
-             expression is a column of bars, and samples can be sorted by it
+tk.gene      optional; with it, each bin is correlated with the gene's expression (the rho row, within groups),
+             expression is a column of bars, and samples can be sorted by it. On a dataset with isoform expression,
+             the makeup of the gene's expression by isoform is a column of bars in parts
 tk.groupTw   optional samplelst tw: a column of group colors, mean beta per group, and with two groups their difference
 tk.dmrFile   optional, with two groups: the bedj file, in the server's cache, of the DMRs that a genome-wide scan of
-             those groups called (DmrScanSummary.bedjFile). A row marks the bins inside a DMR.
+             those groups called (DmrScanSummary.bedjFile). A row under the lines draws each DMR at its genomic extent.
 tk.sortBy    'expression' | 'group' | 'beta' (mean beta in view); default is the first one available
 tk.minColWidth   px, default 8: the view is cut into as many bins of equal CpG count as fit at this width, so the
              bins shrink on zooming in, down to one CpG per column
@@ -34,6 +40,9 @@ const groupColors = ['#1b9e77', '#d95f02', '#7570b3', '#e7298a']
 // the usual methylation colors: blue unmethylated, white, red methylated
 const betaColor = (b: number) => interpolateRdBu(1 - b)
 const missingColor = '#bbb'
+// the isoforms shown apart in the makeup of the gene's expression; the rest are one gray part
+const maxIsoformParts = 5
+const otherIsoformColor = '#ccc'
 
 export async function loadTk(tk: any, block: any) {
 	block.tkcloakon(tk)
@@ -206,73 +215,85 @@ function render(tk: any, block: any): number {
 		idx.sort((a, b) => mean[a] - mean[b])
 	}
 
+	/* Mean β of each group, the gap between two groups shaded by direction as on the volcano and the DMR row: where
+	the groups differ. Then ρ of methylation with the gene's expression, faded where q ≥ 0.05; with groups, within
+	them, pooled (rhoWithin): across all samples a difference between the groups in both gives a strong ρ by itself
+	(e.g. NSD2 across t(4;14)), while within them ρ says whether methylation moves with expression from patient to
+	patient. */
 	const stats: LocusHeatmapStat[] = []
-	if (hasGene) {
-		// to the largest |rho| in view, pooled or within a group, in steps of 0.25, so that a locus of weak correlations still shows them
-		const rhos = bins.flatMap(b => [b.rho, ...(b.byGroup || []).map(g => g.rho)])
-		const top = Math.max(0.25, Math.ceil(Math.max(...rhos.map(r => Math.abs(r ?? 0))) * 4) / 4)
-		stats.push({
-			label: `ρ with ${unit}`,
-			domain: [-top, top],
-			// one neutral color, so that blue and red mean beta only; faded when not significant
-			bars: bins.map(b => (b.rho === undefined ? null : { v: b.rho, color: '#333', opacity: b.q! < 0.05 ? 0.85 : 0.3 }))
-		})
-		/* rho within each group, in a row of its own under the bars and on their scale: dots near 0 under a long
-		bar mean the bar comes from the difference between the groups */
-		if (groups.length)
-			stats.push({
-				label: 'ρ within a group',
-				domain: [-top, top],
-				dots: bins.flatMap((b, col) =>
-					(b.byGroup || []).flatMap(g =>
-						g.rho === undefined ? [] : [{ col, v: g.rho, color: groupColor(g.group), filled: g.q! < 0.05 }]
-					)
-				)
-			})
-	}
-	if (hasGene) {
-		// R reports a p-value below its floor as 0
-		const v = bins.map(b => (b.q === undefined ? null : -Math.log10(Math.max(b.q, 1e-16))))
-		stats.push({
-			label: '-log10(q) of ρ',
-			domain: [0, Math.max(2, Math.ceil(Math.max(...v.map(x => x ?? 0))))],
-			bars: v.map(x => (x === null ? null : { v: x, color: '#555' }))
-		})
-	}
+	const means = series.map(sr => bins.map(b => seriesMean(b, sr)))
 	stats.push({
 		label: 'Mean β',
 		domain: [0, 1],
-		lines: series.map(s => ({ color: s.color, values: bins.map(b => seriesMean(b, s)) }))
+		lines: series.map((sr, k) => ({ color: sr.color, values: means[k] })),
+		...(twoGroups ? { fill: { values: [means[0], means[1]], colors: [HYPO_COLOR, HYPER_COLOR] } } : {})
 	})
-	if (twoGroups)
+	if (hasGene) {
+		const within = groups.length > 0
+		const r = bins.map(b => (within ? { rho: b.rhoWithin, q: b.qWithin } : { rho: b.rho, q: b.q }))
+		// to the largest |rho| in view in steps of 0.25, so that a locus of weak correlations still shows them
+		const top = Math.max(0.25, Math.ceil(Math.max(...r.map(x => Math.abs(x.rho ?? 0))) * 4) / 4)
 		stats.push({
-			label: 'Δβ',
-			domain: [-0.5, 0.5],
-			bars: bins.map(b => {
-				const d = diff(b, series)
-				return d === null ? null : { v: d, color: betaColor(d > 0 ? 0.85 : 0.15) }
-			})
+			label: within ? `ρ with ${unit}, within groups` : `ρ with ${unit}`,
+			domain: [-top, top],
+			// one neutral color, so that color means methylation only
+			bars: r.map(x => (x.rho === undefined ? null : { v: x.rho, color: '#333', opacity: x.q! < 0.05 ? 0.85 : 0.3 }))
 		})
+	}
 	// the DMR that each bin is in: of several, the one with the largest difference
 	const dmrs: Dmr[] = twoGroups ? tk.dmrs || [] : []
 	const dmrOf = bins.map(
 		b =>
 			dmrs.filter(d => d.start <= b.stop && d.stop >= b.start).sort((x, y) => Math.abs(y.delta) - Math.abs(x.delta))[0]
 	)
-	if (tk.dmrs && twoGroups)
-		stats.push({
-			label: 'DMR Δβ',
-			domain: [-0.5, 0.5],
-			bars: dmrOf.map(d => (d ? { v: d.delta, color: d.hyper ? HYPER_COLOR : HYPO_COLOR } : null))
-		})
+	/* The DMRs themselves: each at its genomic extent under the lines, as a bed track draws an item, colored by
+	direction. Clipped to the view; a DMR shorter than 2 px still shows. */
+	const viewDmrs = dmrs.filter(d => d.stop >= region.start && d.start <= region.stop)
+	/* px of a position; one at or past an end of the view is that end's edge, on the side that the view's orientation
+	puts it, as seekcoord() can find no x at the view's bounds */
+	const reverse = !!block.rglst[block.startidx].reverse
+	const xAt = (pos: number) => {
+		if (pos <= region.start) return reverse ? block.width : 0
+		if (pos >= region.stop) return reverse ? 0 : block.width
+		return block.seekcoord(region.chr, pos)[0]?.x
+	}
+	const intervals =
+		tk.dmrs && twoGroups
+			? {
+					label: 'DMRs',
+					items: viewDmrs.map(d => ({
+						x0: xAt(d.start) ?? 0,
+						x1: xAt(d.stop) ?? 0,
+						color: d.hyper ? HYPER_COLOR : HYPO_COLOR
+					})),
+					onHover: (event: any, i: number) => {
+						const d = viewDmrs[i]
+						tk.tip.clear()
+						const table = table2col({ holder: tk.tip.d })
+						table.addRow('DMR', `${region.chr}:${d.start}-${d.stop}`)
+						table.addRow('Direction', d.hyper ? `hyper in ${groups[1]}` : `hypo in ${groups[1]}`)
+						table.addRow('Mean Δβ', round(d.delta))
+						table.addRow('CpGs', d.nCpg)
+						table.addRow('Length', `${(d.stop - d.start + 1).toLocaleString()} bp`)
+						tk.tip.show(event.clientX, event.clientY)
+					},
+					onOut: () => tk.tip.hide()
+			  }
+			: undefined
 
-	const annotations: { label: string; colors: string[]; widths?: number[] }[] = []
+	const annotations: LocusHeatmapAnnotation[] = []
 	if (hasGene) {
 		// log2(value+1), so that the many low values are not flattened to zero
 		const logv = idx.map(j => Math.log2(samples[j].value! + 1))
 		const maxv = Math.max(...logv) || 1
 		annotations.push({ label: exprLabel, colors: idx.map(() => '#555'), widths: logv.map(v => v / maxv) })
 	}
+	const isoforms = isoformParts(data)
+	if (isoforms)
+		annotations.push({
+			label: 'Isoform share',
+			parts: idx.map(j => isoforms.shares[j].map((width, k) => ({ width, color: isoforms.colors[k] })))
+		})
 	if (groups.length)
 		annotations.push({
 			label: 'Group',
@@ -280,7 +301,8 @@ function render(tk: any, block: any): number {
 		})
 
 	const nCpg = bins.reduce((n, b) => n + b.nCpg, 0)
-	const canViolin = hasGene && tk.massApp
+	// off until the plot that a click on a bin opens works again; was hasGene && tk.massApp
+	const canViolin = false
 	const height = renderLocusHeatmap(tk, block, {
 		rows: idx.map(j => samples[j].name),
 		cols: bins.map(b => ({
@@ -296,6 +318,7 @@ function render(tk: any, block: any): number {
 				: [],
 		stats,
 		annotations,
+		intervals,
 		note: [
 			`${samples.length} samples`,
 			nCpg == bins.length ? `${nCpg} CpGs` : `${bins.length} bins of ~${Math.round(nCpg / bins.length)} CpGs`
@@ -319,11 +342,18 @@ function render(tk: any, block: any): number {
 				table.addRow('Sample', s.name)
 				if (hasGene) table.addRow(exprLabel, round(s.value!))
 				if (s.group !== undefined) table.addRow('Group', s.group)
+				if (isoforms)
+					isoforms.labels.forEach((label, k) => {
+						const share = isoforms.shares[idx[row]][k]
+						if (share) table.addRow(label, `${Math.round(share * 100)}% of the isoforms' ${isoforms.unit}`)
+					})
 			}
 			table.addRow(b.nCpg == 1 ? 'CpG' : 'Bin', `${region.chr}:${b.start}${b.nCpg == 1 ? '' : '-' + b.stop}`)
 			if (b.nCpg > 1) table.addRow('CpGs', b.nCpg)
 			if (row >= 0) table.addRow('β', b.beta[idx[row]] === null ? 'too few reads' : round(b.beta[idx[row]]!))
-			if (hasGene) table.addRow('Spearman ρ', rhoText(b))
+			if (hasGene && b.rhoWithin !== undefined)
+				table.addRow('Spearman ρ, within groups', rhoText({ rho: b.rhoWithin, q: b.qWithin }))
+			if (hasGene) table.addRow(groups.length ? 'Spearman ρ, all samples' : 'Spearman ρ', rhoText(b))
 			for (const g of b.byGroup || []) table.addRow(`ρ in ${g.group}`, rhoText(g))
 			for (const sr of series) {
 				const m = seriesMean(b, sr)
@@ -349,8 +379,48 @@ function render(tk: any, block: any): number {
 			launchViolin(tk, region.chr, bins[col])
 		}
 	})
-	renderLegend(tk, data, series)
+	renderLegend(tk, data, series, isoforms)
 	return height
+}
+
+/* The makeup of the gene's expression by isoform: per sample, the share of the summed expression of the gene's
+isoforms that each of the most expressed ones has, and the rest as one last part. undefined without isoform
+expression, or with one isoform. A sample whose isoforms add up to nothing, or that misses the value of one, has no
+parts: its makeup is not known. */
+export function isoformParts(data: {
+	expressedIsoforms?: string[]
+	samples: Pick<MethylationLocusSample, 'isoformValues'>[]
+	isoformUnit?: string
+}): { labels: string[]; colors: string[]; shares: number[][]; unit: string } | undefined {
+	const ids = data.expressedIsoforms || []
+	// a sample with a value for every isoform: one whose makeup is known
+	const complete = (v?: (number | null)[]): v is number[] => !!v && v.length == ids.length && v.every(x => x !== null)
+	if (ids.length < 2 || !data.samples.some(s => complete(s.isoformValues))) return
+	// the most expressed over the samples whose makeup is known
+	const total = ids.map((_, k) =>
+		data.samples.reduce((sum, s) => sum + (complete(s.isoformValues) ? s.isoformValues[k] : 0), 0)
+	)
+	const top = ids
+		.map((_, k) => k)
+		.sort((a, b) => total[b] - total[a])
+		.slice(0, maxIsoformParts)
+		.filter(k => total[k] > 0)
+	if (!top.length) return
+	const hasOther = ids.length > top.length
+	return {
+		labels: [...top.map(k => ids[k]), ...(hasOther ? [`${ids.length - top.length} other isoforms`] : [])],
+		colors: [...top.map((_, i) => schemeTableau10[i]), ...(hasOther ? [otherIsoformColor] : [])],
+		shares: data.samples.map(s => {
+			const v = s.isoformValues
+			if (!complete(v)) return []
+			const sum = v.reduce((a, b) => a + b, 0)
+			if (!sum) return []
+			const mine = top.map(k => v[k] / sum)
+			return hasOther ? [...mine, Math.max(0, 1 - mine.reduce((a, b) => a + b, 0))] : mine
+		}),
+		// the isoforms' own unit, which a dataset sets apart from the gene's
+		unit: data.isoformUnit || 'expression'
+	}
 }
 
 /* the lines of the mean beta row: the groups when there are any, else thirds of the samples by expression,
@@ -390,7 +460,7 @@ function diff(bin: MethylationLocusBin, series: Series[]): number | null {
 	return a === null || b === null ? null : b - a
 }
 
-function renderLegend(tk: any, data: LocusData, series: Series[]) {
+function renderLegend(tk: any, data: LocusData, series: Series[], isoforms?: ReturnType<typeof isoformParts>) {
 	if (!tk.legendTd) return
 	tk.legendTd.selectAll('*').remove()
 	const div = tk.legendTd.append('div').style('font-size', '.8em').style('padding', '5px')
@@ -403,15 +473,30 @@ function renderLegend(tk: any, data: LocusData, series: Series[]) {
 	item(`width:80px;height:12px;background:linear-gradient(to right,${stops})`, 'β 0 to 1')
 	item(`width:12px;height:12px;background:${missingColor}`, 'too few reads')
 	for (const s of series) item(`width:16px;height:2px;background:${s.color}`, `mean β, ${s.label}`)
-	if (data.groups?.length == 2) item('', `Δβ = ${data.groups[1]} minus ${data.groups[0]}`)
+	if (data.groups?.length == 2) {
+		item(`width:12px;height:12px;background:${HYPER_COLOR};opacity:.35`, `${data.groups[1]} higher`)
+		item(`width:12px;height:12px;background:${HYPO_COLOR};opacity:.35`, `${data.groups[1]} lower`)
+	}
 	if (tk.dmrs && data.groups?.length == 2) {
-		item(`width:12px;height:12px;background:${HYPER_COLOR}`, 'bin in a hypermethylated DMR of the scan')
-		item(`width:12px;height:12px;background:${HYPO_COLOR}`, 'in a hypomethylated DMR')
+		item(`width:16px;height:8px;background:${HYPER_COLOR}`, 'hypermethylated DMR of the scan, at its length')
+		item(`width:16px;height:8px;background:${HYPO_COLOR}`, 'hypomethylated DMR')
 	}
 	if (data.gene) item('width:12px;height:12px;background:#333;opacity:.3', 'ρ faded if q ≥ 0.05')
 	if (data.gene) item('width:16px;height:6px;background:#555', `log2(${data.unit}+1)`)
 	if (data.gene && data.groups?.length)
-		item('width:7px;height:7px;background:#555;border-radius:50%', 'ρ within a group (faded if q ≥ 0.05)')
+		item('', "ρ within groups: each group's ρ, pooled, so that a difference between the groups does not make one")
+	if (isoforms) {
+		const starts = new Map((data.isoforms || []).map(g => [g.isoform, g.strand == '-' ? g.stop : g.start]))
+		item('', `share of the ${isoforms.unit} of the isoforms of ${tk.gene}:`)
+		isoforms.labels.forEach((label, k) => {
+			const start = starts.get(label)
+			item(
+				`width:12px;height:12px;background:${isoforms.colors[k]}`,
+				// with its start, as isoforms that start apart can differ in the methylation there
+				`${label}${start === undefined ? '' : ` (start ${data.region.chr}:${start + 1})`}`
+			)
+		})
+	}
 }
 
 /* the gene's expression split by this bin's methylation, in the summary violin */
