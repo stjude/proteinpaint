@@ -14,6 +14,10 @@ Features:
 - The methylation track's statistics are two rows: mean β of each group with the gap between them shaded by direction, and the correlation with the gene's expression, within the groups when there are groups (each group's ρ pooled), faded where not significant
 - The methylation track draws the DMRs of a two-group scan at their genomic length in a row under the heatmap, colored by direction, and cuts long column labels to fit with the whole label on hover
 
+Fixes:
+- GRIN2: the top-genes table no longer shows a "GRIN2 top genes" label wherever the mouse hovers over it
+- GRIN2: the top-genes table's "Restore row order" button is now "Reset table"; it appears when the table is sorted or filtered and clears both
+
 
 ## 2.230.0
 
