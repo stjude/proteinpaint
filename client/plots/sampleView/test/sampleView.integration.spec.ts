@@ -10,6 +10,7 @@ import { makeChartBtnMenu } from '../sampleView.ts'
     - Multiple samples
     - Single .sample{}
     - Related samples
+    - Sample not passing the filter
     - Whole slide images
  */
 
@@ -99,6 +100,7 @@ tape('No sample', function (test) {
 		)
 		test.equal(sv.dom.header.text(), 'Sample View: 2646_patient', 'Should name the chosen sample in the header.')
 		test.equal(sv.dom.controlsDiv.style('display'), 'inline-block', 'Should show the download button.')
+		test.equal(sv.dom.downloadbt.property('disabled'), false, 'Should enable the download button.')
 		// TermdbTest enables disco and the methylation array plot
 		const tiles = sv.dom.plotsDiv.select('[data-testid="sjpp-sampleview-tiles"]')
 		for (const key of ['dictionary', 'disco', 'ssgq:MethylationArray']) {
@@ -405,15 +407,17 @@ tape('Related samples', function (test) {
 		}
 	})
 
-	function runTests(sampleView) {
+	async function runTests(sampleView) {
 		sampleView.on('postRender.test', null)
 		const sv = sampleView.Inner
-
-		test.deepEqual(
+		const switcherNames = () =>
 			sv.dom.switcherDiv
 				.selectAll('button')
 				.nodes()
-				.map(n => n.textContent),
+				.map(n => n.textContent)
+
+		test.deepEqual(
+			switcherNames(),
 			['2660', '4000'],
 			'Should show a switcher button per sample of the patient, without the patient.'
 		)
@@ -424,6 +428,71 @@ tape('Related samples', function (test) {
 			'Should fill in the sex of sample 2660 from its patient.'
 		)
 
+		// a newer update while the related samples of another sample are requested: the newer render requests them
+		// again, as the request of the older one is aborted. The first request is held until the newer update starts
+		const fetch0 = window.fetch
+		let release
+		const held = new Promise(resolve => (release = resolve))
+		let requested
+		const isRequested = new Promise(resolve => (requested = resolve))
+		window.fetch = async (url, init) => {
+			if (requested && String(url).includes('relatedSamples')) {
+				requested()
+				requested = null
+				await held
+			}
+			return fetch0(url, init)
+		}
+		try {
+			const older = sv.app.dispatch({
+				type: 'plot_edit',
+				id: sv.id,
+				config: { sample: { sampleId: 44, sampleName: '2688' }, activeSample: '2688' }
+			})
+			await isRequested
+			const newer = sv.app.dispatch({ type: 'plot_edit', id: sv.id, config: { expandedTermIds: ['root'] } })
+			release()
+			await Promise.all([older, newer])
+		} finally {
+			window.fetch = fetch0
+		}
+		test.equal(sv.activeSample?.sampleName, '2688', 'Should show the tiles of the sample of the aborted update.')
+		test.deepEqual(switcherNames(), ['2688', '4002'], 'Should show the samples related to 2688.')
+
+		if (test['_ok']) sv.app.destroy()
+		test.end()
+	}
+})
+
+tape('Sample not passing the filter', function (test) {
+	test.timeoutAfter(10000)
+
+	// sample 1 is not in the default TermdbTest cohort
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'sampleView',
+					sample: { sampleId: 1, sampleName: '1' }
+				}
+			]
+		},
+		sampleView: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(sampleView) {
+		sampleView.on('postRender.test', null)
+		const sv = sampleView.Inner
+		test.equal(
+			sv.dom.plotsDiv.text(),
+			'No accessible data for this sample.',
+			'Should say that the sample has no accessible data.'
+		)
+		test.equal(sv.dom.downloadbt.property('disabled'), true, 'Should disable the download button.')
 		if (test['_ok']) sv.app.destroy()
 		test.end()
 	}

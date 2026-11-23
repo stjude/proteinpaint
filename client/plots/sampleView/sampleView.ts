@@ -71,8 +71,6 @@ class SampleView extends PlotBase implements RxComponent {
 	samples!: Sample[]
 	/** the samples related to the first shown sample, whose root sample (e.g. the patient) fills in the dictionary */
 	related?: RelatedSamples
-	/** by sample id and filter */
-	relatedSamples = new Map<string, Promise<RelatedSamples>>()
 	/** the sample whose tiles are shown */
 	activeSample!: Sample
 	/** the samples compared in the expanded dictionary */
@@ -188,10 +186,13 @@ class SampleView extends PlotBase implements RxComponent {
 			return
 		}
 		this.dom.controlsDiv.style('display', 'inline-block')
+		// enabled once the shown samples are known, and only when there are any
+		this.dom.downloadbt.property('disabled', true)
 		this.dom.loadingDiv.style('display', '')
 		try {
 			await this.setSamples()
 			const samples = this.samples
+			this.dom.downloadbt.property('disabled', !samples.length)
 			// the drawings are of these samples, the filter and the cohort
 			const samplesKey = JSON.stringify([
 				samples.map(s => s.sampleName),
@@ -289,7 +290,8 @@ class SampleView extends PlotBase implements RxComponent {
 			try {
 				this.related = await this.getRelatedSamples(sample)
 			} catch (e) {
-				if (!passed) throw e
+				// a newer update stops this render
+				if (!passed || this.app.isAbortError(e)) throw e
 				// passed samples are shown without the values of their root sample
 				console.warn('sampleView: cannot get the related samples', e)
 			}
@@ -297,22 +299,15 @@ class SampleView extends PlotBase implements RxComponent {
 		this.samples = passed || this.related?.samples || []
 	}
 
-	/** the samples related to a sample, of the samples passing the filter */
-	getRelatedSamples(sample: Sample): Promise<RelatedSamples> {
-		const filter = this.state.termfilter?.filter
-		const key = JSON.stringify([sample.sampleId, filter])
-		const cached = this.relatedSamples.get(key)
-		if (cached) return cached
-		const related: Promise<RelatedSamples> = this.vocabApi
-			.getRelatedSamples({ sampleId: sample.sampleId, filter })
-			.then(r => {
-				if ('error' in r) throw r.error
-				return r
-			})
-		this.relatedSamples.set(key, related)
-		// a failed request is made again on the next render
-		related.catch(() => this.relatedSamples.delete(key))
-		return related
+	/** the samples related to a sample, of the samples passing the filter. Not cached here: dofetch3() reuses a
+	 * response, but not for a request of an aborted update */
+	async getRelatedSamples(sample: Sample): Promise<RelatedSamples> {
+		const r = await this.vocabApi.getRelatedSamples({
+			sampleId: sample.sampleId,
+			filter: this.state.termfilter?.filter
+		})
+		if ('error' in r) throw r.error
+		return r
 	}
 
 	/** buttons, or a dropdown for many samples, to choose the sample whose tiles are shown */
@@ -724,6 +719,7 @@ class SampleView extends PlotBase implements RxComponent {
 	}
 
 	async downloadData() {
+		if (!this.samples?.length) return
 		this.dom.messageDiv.style('display', 'block')
 		this.dom.downloadbt.style('display', 'none')
 		const filename = `samples.tsv`
