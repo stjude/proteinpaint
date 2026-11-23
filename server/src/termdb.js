@@ -4,7 +4,6 @@ import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { authApi } from './auth.js'
 import { searchSNP } from '#routes/snp.ts'
 import { parseJsonParam } from '#routes/common.ts'
-import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
 import { uiLabel } from '#shared'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
@@ -58,7 +57,6 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'singleSampleData') return get_singleSampleData(q, req, res, ds, tdb)
 			if (q.for == 'getProfileFacilities') return get_ProfileFacilities(q, req, res, ds, tdb)
 			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
-			if (q.for == 'getSamplesByName') return get_AllSamplesByName(q, req, res, ds)
 			if (q.for == 'getDefaultBins') return trigger_getDefaultBins(q, ds, res)
 
 			throw "termdb: doesn't know what to do"
@@ -328,35 +326,4 @@ async function get_AllSamples(q, req, res, ds) {
 	let result = []
 	if (canDisplay) result = Object.fromEntries(ds.sampleId2Name)
 	res.send(result)
-}
-
-export async function get_AllSamplesByName(q, req, res, ds) {
-	// return {}, k: sample name, v: id
-	if (!authApi.canDisplaySampleIds(req, ds)) return res.send({})
-
-	try {
-		const sampleName2Id = new Map()
-		if (q.filter) {
-			q.ds = ds
-			const filteredSamples = ds.cohort.termdb.hasSampleAncestry
-				? await get_samples_ancestry(q.filter, q.ds, true)
-				: await get_samples(q, q.ds, true)
-			for (const sample of filteredSamples) {
-				const name = ds.sampleId2Name.get(sample.id)
-				const sample_type = ds.sampleId2Type.get(sample.id)
-				sampleName2Id.set(name, {
-					id: sample.id,
-					name,
-					ancestor_id: sample.ancestor_id,
-					ancestor_name: ds.sampleId2Name.get(sample.ancestor_id),
-					sample_type
-				})
-			}
-		} else {
-			for (const [key, value] of ds.sampleName2Id) sampleName2Id.set(key, { id: value })
-		}
-		res.send(Object.fromEntries(sampleName2Id))
-	} catch (e) {
-		res.send({ error: e.message || e })
-	}
 }

@@ -1,6 +1,7 @@
 import type { GeneMatch, GeneDataTypeAvailability, OmnisearchResult, OmnisearchResultKey, SampleMatch } from '#types'
 import { filterTerms } from '#src/termdb.server.init.ts'
-import { copy_term, get_AllSamplesByName } from '#src/termdb.js'
+import { copy_term } from '#src/termdb.js'
+import { getSamplesByName } from '#routes/termdb.getSamplesByName.ts'
 import { sampleHasPlainSlides } from '../routes/termdb.wsiBySample.ts'
 import { authApi } from '#src/auth.js'
 import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
@@ -233,13 +234,13 @@ export function userCanAccessDsData(req: any, auth: any = authApi): boolean {
 	return hasRealAuth || fromAuthorizedDemoReferer
 }
 
-/** Match the prompt against sample names. get_AllSamplesByName() is the single source of truth for both
+/** Match the prompt against sample names. getSamplesByName() is the single source of truth for both
  * the name->id map and the "can this dataset display sample ids" check: it sends {} when
  * authApi.canDisplaySampleIds() is false, so a disallowed dataset yields no samples here. It is a
  * response-sending route handler, hence the capturing res stub. Returns [] on error / no match. */
 async function searchSamples(req: any, ds: any, prompt: string): Promise<{ matches: SampleMatch[]; total: number }> {
 	// authApi is only assigned once app.ts calls getAuthApi(); when it is not set (e.g. a unit test calling
-	// runOmnisearch directly, no server app), skip sample search rather than let get_AllSamplesByName crash
+	// runOmnisearch directly, no server app), skip sample search rather than let getSamplesByName crash
 	// on authApi.canDisplaySampleIds. Fail closed: no auth layer -> no sample ids.
 	if (!authApi) return { matches: [], total: 0 }
 
@@ -253,7 +254,7 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 
 	let sampleName2Id: any = {}
 	const q2: any = access.restrictFilter ? { filter: access.restrictFilter } : {}
-	await get_AllSamplesByName(q2, req, { send: (data: any) => (sampleName2Id = data) }, ds)
+	await getSamplesByName(q2, req, { send: (data: any) => (sampleName2Id = data) }, ds)
 	if (!sampleName2Id || sampleName2Id.error) return { matches: [], total: 0 }
 	const singleCellSamples = await getSingleCellSamples(ds, {
 		filter: access.restrictFilter

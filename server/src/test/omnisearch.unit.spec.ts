@@ -184,7 +184,7 @@ function makeSampleDs(displaySampleIds: boolean | ((clientAuthResult: any) => bo
 			}
 		},
 		queries: {},
-		// get_AllSamplesByName's no-filter branch reads this Map (name -> id)
+		// getSamplesByName's no-filter branch reads this Map (name -> id)
 		sampleName2Id: new Map([
 			['2646', 41],
 			['3416', 96]
