@@ -250,6 +250,7 @@ export async function init(
 				}, ${meta.levels} levels`
 			)
 		const resultsDiv = holder.append('div') // analysis panels under the map (lasso enrichment)
+		const nicheDeDiv = holder.append('div') // niche-DE control + result; its own div so the lasso panels' clearing leaves it alone
 
 		// Legends are position:fixed and placed from the map's live viewport
 		// rectangle, so they are confined to the map's on-screen area no matter
@@ -424,6 +425,7 @@ export async function init(
 			}
 		}
 		await loadGlobalTypes()
+		if (opts.spatialData) await renderNicheDE(nicheDeDiv, opts.spatialData, sq)
 
 		// per-gene count maps, fetched ONCE for the whole sample (this route
 		// isn't bbox-scoped: one int per expressing cell is far lighter than a
@@ -1367,6 +1369,53 @@ export function cellsInLasso(
 		if (pointInRing(sx / c.ring.length, sy / c.ring.length, ring)) hits.push(c) // centroid inside = selected
 	}
 	return hits
+}
+
+/** Niche-DE panel: the sample's PRECOMPUTED niche-DE results (wsitiles/nichede; python/src/nichede_precompute.py makes
+ them offline). Pick a cell type to list the genes it expresses differently depending on its neighbours' cell types.
+ Shows nothing when the sample has no results. */
+async function renderNicheDE(div: any, file: string, sq: string) {
+	div.selectAll('*').remove()
+	const r = await dofetch3(`wsitiles/nichede?${sq}&file=${encodeURIComponent(file)}`).catch(() => null)
+	if (!r || r.error || !r.results) return // not precomputed for this sample
+	div.attr('data-testid', 'sjpp-wsi-nichede').style('margin', '8px').style('font', '12px system-ui')
+	div.append('span').style('font-weight', 'bold').text('Niche-DE: ')
+	div.append('span').text('genes in cell type ')
+	const sel = div.append('select').attr('data-testid', 'sjpp-wsi-nichede-type')
+	for (const t of [...r.types].sort()) sel.append('option').attr('value', t).text(t)
+	const out = div.append('div')
+	const show = () => {
+		out.selectAll('*').remove()
+		const index = sel.property('value')
+		renderNicheDEResult(out, { index, rows: r.results[index] || [], cells: r.cells })
+	}
+	sel.on('change', show)
+	show()
+}
+
+/** gene table of a wsitiles/nichede result, most significant first */
+function renderNicheDEResult(div: any, r: { index: string; rows: any[]; cells: number }) {
+	div
+		.append('div')
+		.style('margin', '4px 0')
+		.text(
+			`${r.index}: ${r.rows.length} gene/niche pairs (BH-adjusted p < 0.05) over ${r.cells} cells. "up"/"down" = higher/lower in ` +
+				`${r.index} cells next to that cell type. Neighbouring cells' own transcripts can leak into a cell through ` +
+				`segmentation, so treat genes that mark the niche cell type itself with caution.`
+		)
+	if (!r.rows.length) return
+	renderTable({
+		columns: [{ label: 'Niche cell type' }, { label: 'Gene' }, { label: 'Direction' }, { label: 'Adj. p-value' }],
+		rows: r.rows.map(x => [
+			{ value: x.niche },
+			{ value: x.gene },
+			{ value: x.direction },
+			{ value: x.pvalue.toExponential(2) }
+		]),
+		div: div.append('div').attr('data-testid', 'sjpp-wsi-nichede-table'),
+		showLines: true,
+		maxHeight: '40vh'
+	})
 }
 
 /** Fill and show the lasso menu at viewport (x, y): a per-type count summary

@@ -47,7 +47,7 @@ export const payload: RoutePayload = {
 }
 
 // one endpoint, `action` selects meta/tile/boundaries/annotations/genecounts/
-// genenames/nhood/similar/cellcount/overlaytile; z/x/y only for tile/overlaytile
+// genenames/nhood/nichede/similar/cellcount/overlaytile; z/x/y only for tile/overlaytile
 export const api: RouteApi = {
 	endpoint: `wsitiles/:action/:z?/:x?/:y?`,
 	methods: { get: payload, post: payload }
@@ -408,6 +408,35 @@ function init({ genomes }) {
 				}
 				const out = await run_python('wsi_tile.py', JSON.stringify(job))
 				res.status(200).json(JSON.parse(out)) // relay python's JSON verbatim
+				return
+			}
+
+			if (req.params.action == 'nichede') {
+				// niche-DE results of the sample's h5ad, PRECOMPUTED offline by
+				// python/src/nichede_precompute.py into <h5ad stem>_niche_de.json
+				// beside it (one fit covers every cell type; minutes of compute,
+				// so never run per request). ?file= is the .h5ad, slide-folder
+				// scoped like nhood. Answers that json verbatim ({types, results})
+				// or {error} when the sample has none (the viewer then hides the panel)
+				const file = String(q.file || '')
+				if (!file.toLowerCase().endsWith('.h5ad')) {
+					res.status(400).send({ status: 'error', error: 'nichede file must be a .h5ad' })
+					return
+				}
+				const full = path.resolve(serverconfig.tpmasterdir, file)
+				if (!full.startsWith(companionBase + path.sep)) {
+					res.status(400).send({ status: 'error', error: 'nichede path escapes the slide folder' })
+					return
+				}
+				const json = full.slice(0, -'.h5ad'.length) + '_niche_de.json'
+				if (!(await exists(json))) {
+					res.status(200).json({ error: 'no precomputed niche-DE for this sample' })
+					return
+				}
+				res
+					.status(200)
+					.type('json')
+					.send(await readFile(json))
 				return
 			}
 

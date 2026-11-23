@@ -970,6 +970,91 @@ def similar_regions(h5ad, types, type_counts, count, zscore=None, k=6, perms=100
     }
 
 
+def _spatial_rows_dense(f, rows):
+    """(len(rows) x genes) float64 counts of the given obs rows of an open
+    .h5ad's X (CSR or dense; CSC is column-major so row slicing is rejected)."""
+    import h5py
+    X = f["X"]
+    enc = str(X.attrs.get("encoding-type", ""))
+    if isinstance(X, h5py.Dataset):
+        return X[:][rows].astype(np.float64)  # ponytail: reads all of a dense X; panels are small
+    if enc != "csr_matrix":
+        raise ValueError(f"unsupported X encoding '{enc}' for pseudobulk (need csr_matrix or dense)")
+    indptr, indices, data = X["indptr"][:], X["indices"][:], X["data"][:]
+    out = np.zeros((len(rows), int(_h5ad_index(f, "var").size)))
+    for n, r in enumerate(rows):
+        s, e = indptr[r], indptr[r + 1]
+        out[n, indices[s:e]] = data[s:e]
+    return out
+
+
+# Xenium QC probes: not genes, must not enter a differential-expression test
+XENIUM_CONTROL_PREFIXES = ("NegControl", "BLANK", "antisense", "UnassignedCodeword", "Intergenic")
+
+NICHE_MIN_CELLS = 50          # a cell type with fewer cells is left out of the niche model
+NICHE_LARGE_SCALE = 20000     # above this many cells the effective niche is computed in batches
+
+
+def niche_de_all(h5ad, sigma=(100, 200), alpha=0.05, log=None):
+    """Niche-DE (Mason et al., Genome Biol 2024; pynichede) of EVERY index cell
+    type of a single-cell-resolution .h5ad: which genes does a cell type express
+    differently depending on the cell-type composition of its neighbourhood?
+    No regions: every annotated cell is used, its niche being the
+    kernel-weighted composition of the cells around it (obsm/spatial, rescaled
+    by pynichede so the mean nearest-neighbour spacing is 100; `sigma` are
+    kernel bandwidths in those units). One fit covers all (index, niche) pairs,
+    so this is meant to run offline once per sample (see nichede_precompute.py).
+    Returns {"sigma", "alpha", "cells", "types", "results": {index_type:
+    [{niche, gene, direction, pvalue}]}}; pvalue is the BH-adjusted
+    interaction-level p-value, direction 'up'/'down' = higher/lower next to
+    that niche type. Errors come back as {"error"}."""
+    import h5py
+    import pandas as pd
+    from pynichede import NicheDE, create_library_matrix, get_niche_DE_genes
+    say = log or (lambda m: None)
+    with h5py.File(h5ad, "r") as f:
+        ids = _h5ad_index(f, "obs")
+        types = _h5ad_cell_types(f)
+        xy = f["obsm/spatial"][:]
+        genes = _h5ad_index(f, "var")
+        keep_rows = np.nonzero(types != "")[0]                  # annotated cells only
+        counts = _spatial_rows_dense(f, keep_rows)
+    keep_genes = np.array([not g.startswith(XENIUM_CONTROL_PREFIXES) for g in genes.tolist()])
+    counts, genes = counts[:, keep_genes], genes[keep_genes]
+    ids, types, xy = ids[keep_rows], types[keep_rows], xy[keep_rows]
+    names, n = np.unique(types, return_counts=True)
+    names = names[n >= NICHE_MIN_CELLS].tolist()                # cell types the model can estimate
+    if len(names) < 2:
+        return {"error": f"niche-DE needs at least 2 cell types with {NICHE_MIN_CELLS}+ annotated cells"}
+    use = np.isin(types, names)
+    counts, ids, types, xy = counts[use], ids[use], types[use], xy[use]
+    say(f"{len(ids)} cells, {len(genes)} genes, {len(names)} types")
+    cdf = pd.DataFrame(counts, index=ids, columns=genes)
+    lib = create_library_matrix(cdf, pd.DataFrame({"id": ids, "type": types}), random_state=0)
+    cell_types = list(lib.index)
+    # single-cell resolution: each cell is exactly one type
+    deconv = pd.DataFrame({t: (types == t).astype(float) for t in cell_types}, index=ids)
+    obj = NicheDE.from_matrices(cdf, pd.DataFrame(xy, index=ids), lib, deconv, sigma=tuple(sigma), random_state=0)
+    del cdf, counts
+    say("effective niche")
+    obj.effective_niche(cutoff=0.05, large_scale=len(ids) > NICHE_LARGE_SCALE)
+    say("regression")
+    obj.run(num_cores=min(4, os.cpu_count() or 1), verbose=False)
+    results = {}
+    for index in cell_types:
+        rows = []
+        for niche in cell_types:
+            if niche == index:
+                continue
+            for positive in (True, False):
+                r = get_niche_DE_genes(obj.obj, "I", index=index, niche=niche, positive=positive, alpha=alpha)
+                for g, pv in zip(r["Genes"], r["Pvalues.Interaction"]):
+                    rows.append({"niche": niche, "gene": g, "direction": "up" if positive else "down", "pvalue": float(pv)})
+        rows.sort(key=lambda r: r["pvalue"])
+        results[index] = rows
+    return {"sigma": list(sigma), "alpha": alpha, "cells": int(len(ids)), "types": cell_types, "results": results}
+
+
 def _selftest_similar_regions_topk():
     """similar_regions()'s bounded top-top_k heap must shortlist the same
     top-k cheap SCORES a naive collect-everything-then-sort approach would --

@@ -16,6 +16,8 @@ openslide-python==1.4.6
 pandas==2.2.3
 pillow==13.0.0
 psutil==7.2.1
+# nichede_precompute.py / wsi_tile.niche_de_all (offline niche-DE of Xenium samples; imported lazily)
+pynichede==0.1.0
 scikit-learn==1.7.2
 # wsi_tile.py nhood: KD-tree kNN over cell centroids (already a statsmodels dependency)
 scipy==1.16.3
