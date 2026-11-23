@@ -10,6 +10,9 @@ General:
 Features:
 - GRIN2: the download icon of the top-genes table opens a menu with a second line, "Download all N genes in output (TSV)", that downloads every gene of the analysis with the same columns as the table
 - GRIN2: the top-genes table is now a TableBase (GRIN2TopGenesTable), so every column can be filtered as well as sorted, e.g. ">=10" in a subject count; its download no longer has an empty first column and follows the filters
+- The methylation track shows each sample's isoform share of the gene (its top 5 isoforms and the rest) next to its expression
+- The methylation track's statistics are two rows: mean β of each group with the gap between them shaded by direction, and the correlation with the gene's expression, within the groups when there are groups (each group's ρ pooled), faded where not significant
+- The methylation track draws the DMRs of a two-group scan at their genomic length in a row under the heatmap, colored by direction, and cuts long column labels to fit with the whole label on hover
 
 
 ## 2.230.0
