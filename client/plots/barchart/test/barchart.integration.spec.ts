@@ -1952,7 +1952,7 @@ tape('click bar to add as group', async function (test) {
 	test.end()
 })
 
-tape.only('click overlay bar segment to hide the overlay value', function (test) {
+tape('click overlay bar segment to hide the overlay value', function (test) {
 	test.timeoutAfter(8000)
 
 	runpp({
@@ -1990,7 +1990,7 @@ tape.only('click overlay bar segment to hide the overlay value', function (test)
 		test.ok(hideOpt, 'should show a menu option to hide the clicked overlay value')
 		if (!hideOpt) return test.end()
 
-		const visible = await new Promise(resolve => {
+		const visible = await new Promise<string[]>(resolve => {
 			barchart.on('postRender.test', () => {
 				barchart.on('postRender.test', null)
 				resolve(Array.from(barDiv.querySelectorAll('.bars-cell rect')).map((r: any) => r.__data__.dataId))
