@@ -22,6 +22,7 @@ import * as tkbampile from '#src/routes/tkbampile.ts'
 import * as tkbigwig from '#src/routes/tkbigwig.ts'
 import * as vcfheader from '#src/routes/vcfheader.ts'
 import * as bcfheader from '#src/routes/bcfheader.ts'
+import * as getSamplesByName from '#src/routes/termdb.getSamplesByName.ts'
 
 /*
 Tests:
@@ -57,7 +58,11 @@ const routeByFeature = {
 	disableFeature_tkbampile: { routes: [tkbampile], mounted: ['get /tkbampile'] },
 	disableFeature_tkbigwig: { routes: [tkbigwig], mounted: ['post /tkbigwig'] },
 	disableFeature_vcfheader: { routes: [vcfheader], mounted: ['get /vcfheader'] },
-	disableFeature_bcfheader: { routes: [bcfheader], mounted: ['get /bcfheader'] }
+	disableFeature_bcfheader: { routes: [bcfheader], mounted: ['get /bcfheader'] },
+	disableFeature_getSamplesByName: {
+		routes: [getSamplesByName],
+		mounted: ['get /termdb/getSamplesByName', 'post /termdb/getSamplesByName']
+	}
 }
 
 // returns the route methods that augen sets up from the given routes with the given serverconfig.features

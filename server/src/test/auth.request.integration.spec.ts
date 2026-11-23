@@ -147,6 +147,8 @@ function runScenario(sc: Scenario) {
 				const res = await get(server, '/termdb', query)
 				test.equal(res.status, 401, `should respond with 401 for ${label}`)
 			}
+			const byName = await get(server, '/termdb/getSamplesByName', base)
+			test.equal(byName.status, 401, `should respond with 401 for termdb/getSamplesByName`)
 			const chat = await post(server, '/termdb/chat', omnisearchBody(embedder))
 			test.equal(chat.status, 401, `should respond with 401 for omnisearch`)
 			test.end()
@@ -159,8 +161,8 @@ function runScenario(sc: Scenario) {
 		const forArray = await get(server, '/termdb', reqs['for[]=getAllSamples'])
 		test.equal(forArray.body.error, 'invalid q.for', `should reject an array q.for`)
 
-		const byName = await get(server, '/termdb', reqs.getSamplesByName)
-		test.deepEqual(sampleKeys(byName.body), [], `should not return a sample name map for for=getSamplesByName`)
+		const byName = await get(server, '/termdb/getSamplesByName', base)
+		test.deepEqual(sampleKeys(byName.body), [], `should not return a sample name map for termdb/getSamplesByName`)
 
 		const list = await get(server, '/termdb', reqs.getsamplelist)
 		test.ok(Array.isArray(list.body) && list.body.length, `should still return the sample list for getsamplelist=1`)
@@ -261,8 +263,8 @@ function runScenario(sc: Scenario) {
 		const allSamples = await get(server, '/termdb', reqs.getAllSamples, headers)
 		test.ok(sampleKeys(allSamples.body).length, `should return sample names for for=getAllSamples`)
 
-		const byName = await get(server, '/termdb', reqs.getSamplesByName, headers)
-		test.ok(sampleKeys(byName.body).length, `should return a sample name map for for=getSamplesByName`)
+		const byName = await get(server, '/termdb/getSamplesByName', base, headers)
+		test.ok(sampleKeys(byName.body).length, `should return a sample name map for termdb/getSamplesByName`)
 
 		const list = await get(server, '/termdb', reqs.getsamplelist, headers)
 		test.ok(list.body.length && list.body.every(s => 'name' in s), `should include sample names in getsamplelist=1`)
@@ -325,7 +327,6 @@ function sampleRequests(base: string) {
 	return {
 		getAllSamples: `${base}&for=getAllSamples`,
 		'for[]=getAllSamples': `${base}&for[]=getAllSamples`,
-		getSamplesByName: `${base}&for=getSamplesByName`,
 		getsamplelist: `${base}&getsamplelist=1`,
 		getsamples: `${base}&getsamples=1`,
 		convertSampleId: `${base}&for=convertSampleId&inputs[]=2646`,

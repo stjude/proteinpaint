@@ -12,6 +12,9 @@
 	"termdb/cuminc": [
 		"minSampleSize"
 	],
+	"termdb/getSamplesByName": [
+		"samples"
+	],
 	"termdb/matrix": [
 		"termdb",
 		"samples",

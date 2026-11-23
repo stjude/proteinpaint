@@ -14,7 +14,7 @@ import type {
 /*
  termdb/relatedSamples — the samples related to a sample, for the sample view: the samples under its root sample
  (e.g. a patient's primary, PDX and CSF samples), and the root sample. Only the samples passing q.filter are
- included, as the sample list of termdb getSamplesByName gives them, so that both list the same samples.
+ included, as the sample list of termdb/getSamplesByName gives them, so that both list the same samples.
 */
 
 export const payload: RoutePayload = {

@@ -1197,13 +1197,12 @@ export class TermdbVocab extends Vocab {
 		// dofetch* mayAdjustRequest() will automatically
 		// convert to GET query params or POST body, as needed
 		const body = {
-			for: 'getSamplesByName',
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			embedder: window.location.hostname
 		}
 		if (opts?.filter) body.filter = getNormalRoot(opts.filter)
-		const data = await this.dofetch3('termdb', { headers, body })
+		const data = await this.dofetch3('termdb/getSamplesByName', { headers, body })
 		return data
 	}
 
