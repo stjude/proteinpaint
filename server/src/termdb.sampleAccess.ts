@@ -11,7 +11,8 @@ terms combined are allowed too, since combining the terms can only add to the co
 
 need='count': assess() gets {count}, the number of samples with data for a term, and no db query is made
 need='names': assess() gets {names}, the distinct names of the samples with data for a term, which are
-	- the values of termId for these samples, when termId is given
+	- the values of termId for these samples, when termId is given; termId may be a list of terms,
+	  such as one site term per subcohort, and then the values of all of them are combined
 	- otherwise the sample names in the sampleidmap table
 */
 
@@ -43,10 +44,14 @@ export function validateCheckAccessToSampleData(ds) {
 			throw `termdb.checkAccessToSampleData.need='names' without termId requires the sampleidmap table`
 		return
 	}
-	if (typeof check.termId != 'string' || !check.termId)
-		throw 'termdb.checkAccessToSampleData.termId is not a non-empty string'
-	const row = db.connection.prepare(sql`SELECT 1 FROM anno_categorical WHERE term_id=${check.termId} LIMIT 1`).get()
-	if (!row) throw `termdb.checkAccessToSampleData.termId='${check.termId}' has no categorical values in the db`
+	const termIds = Array.isArray(check.termId) ? check.termId : [check.termId]
+	if (!termIds.length) throw 'termdb.checkAccessToSampleData.termId is an empty list'
+	for (const termId of termIds) {
+		if (typeof termId != 'string' || !termId)
+			throw 'termdb.checkAccessToSampleData.termId is not a non-empty string or a list of them'
+		const row = db.connection.prepare(sql`SELECT 1 FROM anno_categorical WHERE term_id=${termId} LIMIT 1`).get()
+		if (!row) throw `termdb.checkAccessToSampleData.termId='${termId}' has no categorical values in the db`
+	}
 }
 
 /* throws {message, code:'ERR_MIN_SIZE'} for the first term that assess() does not allow */
@@ -93,14 +98,15 @@ so that a request does not need to bind its sample ids, which may be more than s
 */
 const cache = new WeakMap<object, Map<string, Map<string, string[]>>>()
 
-function getId2Names(ds, termId?: string) {
+function getId2Names(ds, termId?: string | string[]) {
 	const cn = ds.cohort.db.connection
 	if (!cache.has(cn)) cache.set(cn, new Map())
 	const byTermId = cache.get(cn)!
-	const key = termId || ''
+	const termIds = termId === undefined ? [] : Array.isArray(termId) ? termId : [termId]
+	const key = JSON.stringify(termIds)
 	if (!byTermId.has(key)) {
-		const rows = termId
-			? cn.prepare(sql`SELECT sample, value FROM anno_categorical WHERE term_id=${termId}`).all()
+		const rows = termIds.length
+			? cn.prepare(sql`SELECT sample, value FROM anno_categorical WHERE term_id IN (${sql.list(termIds)})`).all()
 			: cn.prepare(sql`SELECT id AS sample, name AS value FROM sampleidmap`).all()
 		const id2names = new Map<string, string[]>()
 		for (const r of rows) {

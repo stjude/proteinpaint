@@ -2,9 +2,11 @@ import tape from 'tape'
 import { mayCheckSampleAccess, validateCheckAccessToSampleData } from '../termdb.sampleAccess.ts'
 
 /*
-patients 1-6, with one site each in the fake SITEC term, and a sample name each in the fake sampleidmap
+patients 1-6, with one site each in the fake SITEC term, and a sample name each in the fake sampleidmap;
+patients 7-9 are in another subcohort, with their site in the fake SITED term instead
 */
 const patient2site = { 1: 'A', 2: 'A', 3: 'B', 4: 'B', 5: 'B', 6: 'C' }
+const term2patient2site = { SITEC: patient2site, SITED: { 7: 'A', 8: 'D', 9: 'D' } }
 
 function getDs(check, opts: { tables?: string[]; termValues?: boolean } = {}) {
 	const prepared: string[] = []
@@ -15,8 +17,9 @@ function getDs(check, opts: { tables?: string[]; termValues?: boolean } = {}) {
 				all() {
 					if (f.text.includes('sampleidmap'))
 						return Object.keys(patient2site).map(id => ({ sample: Number(id), value: `sample${id}` }))
-					if (f.values[0] != 'SITEC') return []
-					return Object.entries(patient2site).map(([id, site]) => ({ sample: Number(id), value: site }))
+					return f.values.flatMap(termId =>
+						Object.entries(term2patient2site[termId] || {}).map(([id, site]) => ({ sample: Number(id), value: site }))
+					)
 				},
 				get() {
 					return opts.termValues === false ? undefined : { 1: 1 }
@@ -127,6 +130,36 @@ tape("mayCheckSampleAccess(): need='names' with termId", t => {
 	t.end()
 })
 
+tape("mayCheckSampleAccess(): need='names' with a list of termIds", t => {
+	const calls: any[] = []
+	const { ds, prepared } = getDs({
+		need: 'names',
+		termId: ['SITEC', 'SITED'],
+		assess: (q, data) => {
+			calls.push(data)
+			return siteAssess(q, data)
+		}
+	})
+
+	mayCheckSampleAccess(publicQ, ds, [{ sampleIds: [3, 8] }, { sampleIds: [1, 7, 9] }])
+	t.deepEqual(
+		calls,
+		[{ names: ['B', 'D'] }, { names: ['A', 'D'] }],
+		'should call assess() with the distinct values of all termIds combined'
+	)
+	{
+		// 2 samples of site D, such as 2 assessments of one hospital, count as 1 site
+		const e = getErr(() => mayCheckSampleAccess(publicQ, ds, [{ sampleIds: [8, 9] }]))
+		t.equal(e?.message, 'Only one hospital was found', 'should reject 2 samples of 1 site for public')
+	}
+	t.doesNotThrow(
+		() => mayCheckSampleAccess(userQ, ds, [{ sampleIds: [1, 2, 7] }]),
+		"should allow samples of the user's own site from either termId"
+	)
+	t.equal(prepared.length, 1, 'should query the values of all termIds once, and reuse them for later requests')
+	t.end()
+})
+
 tape("mayCheckSampleAccess(): need='names' without termId", t => {
 	const calls: any[] = []
 	const { ds } = getDs({
@@ -160,7 +193,8 @@ tape('validateCheckAccessToSampleData()', t => {
 	for (const [check, opts] of [
 		[{ need: 'count', assess }, {}],
 		[{ need: 'names', assess }, {}],
-		[{ need: 'names', termId: 'SITEC', assess }, {}]
+		[{ need: 'names', termId: 'SITEC', assess }, {}],
+		[{ need: 'names', termId: ['SITEC', 'SITED'], assess }, {}]
 	] as [any, any][]) {
 		t.doesNotThrow(
 			() => validateCheckAccessToSampleData(getDs(check, opts).ds),
@@ -176,7 +210,10 @@ tape('validateCheckAccessToSampleData()', t => {
 		[{ need: 'count', termId: 'SITEC', assess }, {}, "termId with need='count'"],
 		[{ need: 'names', assess }, { tables: [] }, "need='names' without a sampleidmap table"],
 		[{ need: 'names', termId: '', assess }, {}, 'an empty termId'],
-		[{ need: 'names', termId: 'SITEC', assess }, { termValues: false }, 'a termId without values']
+		[{ need: 'names', termId: 'SITEC', assess }, { termValues: false }, 'a termId without values'],
+		[{ need: 'names', termId: [], assess }, {}, 'an empty termId list'],
+		[{ need: 'names', termId: ['SITEC', ''], assess }, {}, 'an empty termId in a list'],
+		[{ need: 'names', termId: ['SITEC', 'SITED'], assess }, { termValues: false }, 'a list termId without values']
 	] as [any, any, string][]) {
 		t.throws(() => validateCheckAccessToSampleData(getDs(check, opts).ds), `should reject ${msg}`)
 	}
