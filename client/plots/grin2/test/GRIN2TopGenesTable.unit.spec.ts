@@ -7,6 +7,8 @@ import type { TableBaseColumn, TableBaseRow } from '#dom'
 Tests:
 	Renders the table, its header, a row per gene and the circles column
 	Sorting shows the restore button, and restoring puts the rows back in the order the server sent
+	Restoring after a sort and a filter clears both and keeps the selection
+	Filtering without a sort shows the Reset table button, which clears the filter and hides
 	Filtering a column keeps only the matching genes
 	Matrix and Lollipop buttons follow the selection
 	Download icon without more lines downloads the table at once, without the circles column
@@ -116,7 +118,10 @@ tape('Renders the table, its header, a row per gene and the circles column', tes
 	const holder = getHolder()
 	makeTable(holder)
 
-	test.ok(holder.node().querySelector('table[data-testid="sjpp-grin2-top-genes-table"]'), 'table has the test id')
+	const tableNode = holder.node().querySelector('table[data-testid="sjpp-grin2-top-genes-table"]') as HTMLTableElement
+	test.ok(tableNode, 'table has the test id')
+	test.equal(tableNode.caption?.textContent, 'GRIN2 top genes', 'the table is named by its caption')
+	test.notOk(tableNode.hasAttribute('aria-label'), 'no aria-label, which style.css would show as a hover tooltip')
 	const labels = [...holder.node().querySelectorAll('thead th .sjpp-table-header-label')].map((s: any) => s.textContent)
 	test.deepEqual(
 		labels,
@@ -162,6 +167,43 @@ tape('Sorting shows the restore button, and restoring puts the rows back in the 
 	test.end()
 })
 
+tape('Restoring after a sort and a filter clears both and keeps the selection', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const table = makeTable(holder)
+
+	table.setSelectedIndexes([1])
+	table.sortByColumn(qCol, true)
+	table.setColumnFilter(geneCol, 'ras')
+	test.deepEqual(geneOrder(holder), ['KRAS', 'NRAS'], 'rows are sorted and filtered')
+
+	restoreButton(holder).click()
+	test.deepEqual(geneOrder(holder), ['NRAS', 'KRAS', 'CDKN2A'], 'every row is back, in the order of the server')
+	test.deepEqual(table.getSelectedIndexes(), [1], 'the selection stays')
+
+	holder.remove()
+	test.end()
+})
+
+tape('Filtering without a sort shows the Reset table button, which clears the filter and hides', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const table = makeTable(holder)
+
+	table.setColumnFilter(geneCol, 'ras')
+	test.notEqual(restoreButton(holder).style.display, 'none', 'button is shown after a filter alone')
+	test.equal(restoreButton(holder).textContent, 'Reset table', 'button is labeled Reset table')
+	table.render()
+	test.notEqual(restoreButton(holder).style.display, 'none', 'a new render keeps showing it while the filter holds')
+
+	restoreButton(holder).click()
+	test.deepEqual(geneOrder(holder), ['NRAS', 'KRAS', 'CDKN2A'], 'every row is back')
+	test.equal(restoreButton(holder).style.display, 'none', 'button is hidden again')
+
+	holder.remove()
+	test.end()
+})
+
 tape('Filtering a column keeps only the matching genes', test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
@@ -185,7 +227,7 @@ tape('Matrix and Lollipop buttons follow the selection', test => {
 	test.deepEqual(actionButtons(holder), ['Matrix (0 genes selected)', 'Lollipop'], 'buttons before a selection')
 	const buttons = holder.node().querySelectorAll('.sjpp-table-buttons button')
 	test.ok(
-		[...buttons].filter((b: any) => b.textContent != 'Restore row order').every((b: any) => b.disabled),
+		[...buttons].filter((b: any) => b.textContent != 'Reset table').every((b: any) => b.disabled),
 		'disabled'
 	)
 

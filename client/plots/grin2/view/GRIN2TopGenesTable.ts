@@ -32,12 +32,12 @@ const RESIZABLE_FROM_ROWS = 15
 
 /**
  * The top-genes table of a GRIN2 analysis, as a TableBase: a column of lesion-type circles, a sortable and
- * filterable column for each statistic, Matrix and Lollipop buttons for the selected genes, a button that restores
- * the order the server sent, and a download icon whose menu can offer more than this table.
+ * filterable column for each statistic, Matrix and Lollipop buttons for the selected genes, a button that clears
+ * the sort and filters, and a download icon whose menu can offer more than this table.
  *
  * Behavior TableBase does not have is added here, as its README asks, by overriding its extension points:
- * render() and remove() for the download icon, createFooter() and applyViewChange() for the restore button,
- * createWrapper() for resizing.
+ * render() and remove() for the download icon, createFooter() and applyViewChange() for the reset button,
+ * createWrapper() for resizing, createTable() for the table's name.
  */
 export class GRIN2TopGenesTable extends TableBase {
 	private downloadTitle: string
@@ -45,7 +45,7 @@ export class GRIN2TopGenesTable extends TableBase {
 	private moreDownloads: DownloadLine[]
 	private downloadDiv?: any
 	private downloadMenu?: any
-	private restoreButton?: any
+	private resetButton?: any
 
 	constructor(opts: GRIN2TopGenesTableOpts) {
 		super({
@@ -53,7 +53,6 @@ export class GRIN2TopGenesTable extends TableBase {
 			// every statistic can be sorted, so every one can be filtered too, e.g. ">=10" in a subject count
 			columns: opts.columns.map(column => ({ ...column, filterable: column.sortable })),
 			rows: opts.rows,
-			ariaLabel: 'GRIN2 top genes',
 			dataTestId: 'sjpp-grin2-top-genes-table',
 			styles: { maxWidth: '100%', maxHeight: '400px', header: HEADER_STYLE, buttonsAlign: 'left' },
 			// the buttons make the rows selectable
@@ -142,31 +141,57 @@ export class GRIN2TopGenesTable extends TableBase {
 		this.downloadMenu.showunder(this.downloadDiv.node())
 	}
 
-	/* ---- restore row order ---- */
+	/* ---- reset table ---- */
 
-	/** The restore button goes first in the bar of buttons, hidden until the table is sorted (render() keeps a sort) */
+	/** The reset button goes first in the bar of buttons, hidden until the table is sorted or filtered (render() keeps
+	 * both) */
 	protected createFooter(): void {
 		super.createFooter()
-		this.restoreButton = this.footer
+		this.resetButton = this.footer
 			.select('.sjpp-table-buttons')
 			.insert('button', ':first-child')
 			.attr('type', 'button')
 			.attr('data-testid', 'sjpp-table-restore-button')
-			.style('display', this.sortState ? null : 'none')
-			.text('Restore row order')
-			.on('click', () => this.restoreRowOrder())
+			.style('display', this.resetButtonDisplay())
+			.text('Reset table')
+			.on('click', () => this.resetTable())
 	}
 
-	/** Back to the order the server sent. Filters stay, and so does the selection. */
-	restoreRowOrder(): this {
+	/** Back to the rows and the order the server sent: clears the sort and the filters. The selection stays. */
+	resetTable(): this {
 		this.sortState = undefined
-		this.applyViewChange(() => 'Restored the row order')
+		this.filters.clear()
+		// text still waiting to be applied would bring a filter back
+		this.typedFilter.clear()
+		this.applyViewChange(() => 'Reset the table: cleared the sort and the filters')
 		return this
 	}
 
 	protected applyViewChange(message: () => string): void {
 		super.applyViewChange(message)
-		this.restoreButton?.style('display', this.sortState ? null : 'none')
+		this.resetButton?.style('display', this.resetButtonDisplay())
+	}
+
+	private resetButtonDisplay() {
+		return this.sortState || this.filters.size ? null : 'none'
+	}
+
+	/* ---- accessible name ---- */
+
+	/** Named by a visually hidden caption, not the ariaLabel option: style.css shows any aria-label as a hover tooltip,
+	 * which on a table appears wherever the mouse is over it. */
+	protected createTable() {
+		const table = super.createTable()
+		table
+			.append('caption')
+			.text('GRIN2 top genes')
+			.style('position', 'absolute')
+			.style('width', '1px')
+			.style('height', '1px')
+			.style('overflow', 'hidden')
+			.style('clip', 'rect(0 0 0 0)')
+			.style('white-space', 'nowrap')
+		return table
 	}
 
 	/* ---- resize ---- */
