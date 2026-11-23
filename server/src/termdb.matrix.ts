@@ -867,45 +867,74 @@ export function resolveSampleMapping(q, ds) {
 function inferSampleMapping(q, sampleTypesLst: TwSampleTypes[], ds): void {
 	const types = [...new Set(sampleTypesLst.flatMap(st => st.sampleTypes || []))]
 	const childTypes = [...new Set(sampleTypesLst.flatMap(st => st.childSampleTypes || []))]
-	if (sampleTypesAreAligned(sampleTypesLst)) {
+	if (sampleTypesAreAligned(sampleTypesLst, ds)) {
 		// sample types are aligned, no need for mapping
 		if (!q.sampleTypes) q.sampleTypes = types
-	} else {
-		// sample types are not aligned, need mapping
-		const sampleTypes = ds.cohort.termdb.sampleTypes
-		const parentIds = new Set(types.map(type => sampleTypes[type].parent_id))
-		const [parent] = parentIds
-		if (parentIds.size === 1 && Number.isInteger(parent)) {
-			// sample types share a common parent
-			// map child samples to parent samples
-			q.sampleMapping = 'childrenToParent'
-			q.sampleTypes = [parent]
-		} else {
-			// sample types do not share a common parent
-			// determine if they are in parent-child relationship
-			const parentTypes = new Set(types.map(type => sampleTypes[type].parent_id).filter(Number.isInteger))
-			if (types.some(type => parentTypes.has(type))) {
-				// sample types are in parent-child relationship
-				// map parent samples to child samples
-				q.sampleMapping = 'parentToChildren'
-				q.sampleTypes = childTypes.length ? childTypes : types.filter(type => !parentTypes.has(type))
-			} else {
-				throw 'unable to infer sample mapping'
-			}
-		}
+		return
 	}
+	const sampleTypes = ds.cohort.termdb.sampleTypes
+	const parentTypes = new Set(types.map(type => sampleTypes[type].parent_id).filter(Number.isInteger))
+	if (types.some(type => parentTypes.has(type))) {
+		// sample types are in parent-child relationship
+		// map parent samples to child samples
+		q.sampleMapping = 'parentToChildren'
+		q.sampleTypes = childTypes.length ? childTypes : types.filter(type => !parentTypes.has(type))
+		return
+	}
+	const [first, ...rest] = sampleTypesLst
+	const intersection = [...new Set(first.sampleTypes || [])].filter(type =>
+		rest.every(st => (st.sampleTypes || []).includes(type))
+	)
+	if (intersection.length) {
+		// sample types intersect across terms/filters
+		// query the intersecting sample types
+		q.sampleTypes = intersection
+		return
+	}
+	if (parentTypes.size === 1) {
+		// sample types share a common parent
+		// map child samples to parent samples
+		q.sampleMapping = 'childrenToParent'
+		q.sampleTypes = [...parentTypes]
+		return
+	}
+	throw new Error('unable to infer sample mapping')
 }
 
-// determine whether sample types are aligned
-// i.e. single sample type or all sample types match
-function sampleTypesAreAligned(sampleTypesLst: TwSampleTypes[]): boolean {
-	if (sampleTypesLst.length < 2) return true
+// sample type sets are aligned when they match and they contain
+// a single sample type or sample types that share a parent
+function sampleTypesAreAligned(sampleTypesLst: TwSampleTypes[], ds): boolean {
+	if (!sampleTypesLst.length) return false
 	const [first, ...rest] = sampleTypesLst
 	const firstTypes = [...new Set(first.sampleTypes || [])]
-	return rest.every(st => {
+	const setsMatch = rest.every(st => {
 		const types = [...new Set(st.sampleTypes || [])]
 		return types.length === firstTypes.length && types.every(type => firstTypes.includes(type))
 	})
+	if (!setsMatch) {
+		// sample type sets do not match, e.g. [1] [2] OR [2] [2] [3]
+		// sets are not aligned
+		return false
+	}
+	// sample type sets match
+	if (firstTypes.length === 1) {
+		// single common sample type, e.g. [2] [2] [2]
+		// sets are aligned
+		return true
+	}
+	// sample type sets match, but contain mixed sample types
+	// e.g. [1,2] [1,2] [1,2]
+	const sampleTypes = ds.cohort.termdb.sampleTypes
+	const parentIds = new Set(firstTypes.map(type => sampleTypes[type].parent_id))
+	if (parentIds.size === 1) {
+		// mixed sample types share same parent, so
+		// they are aligned
+		return true
+	} else {
+		// mixed sample types do not share same parent, so
+		// they need mapping
+		return false
+	}
 }
 
 function validateSampleMapping(q, ds) {
@@ -1063,7 +1092,8 @@ function getSampleTypesLst(q, ds): TwSampleTypes[] {
 		if (!Array.isArray(st.sampleTypes) || !st.sampleTypes.length) throw new Error('sampleTypes is empty')
 		st.sampleTypes.forEach(sampleType => getSampleTypeId(sampleType, ds))
 		if (st.childSampleTypes) {
-			if (!Array.isArray(st.childSampleTypes)) throw new Error('childSampleTypes is not array')
+			if (!Array.isArray(st.childSampleTypes) || !st.childSampleTypes.length)
+				throw new Error('childSampleTypes is empty')
 			st.childSampleTypes.forEach(sampleType => getSampleTypeId(sampleType, ds))
 		}
 	}

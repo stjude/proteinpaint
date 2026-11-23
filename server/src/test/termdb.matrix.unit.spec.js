@@ -333,14 +333,23 @@ tape('resolveSampleMapping: compares type sets across terms, filter, and filter0
 		lst: sets.map(sampleTypes => ({ type: 'tvs', tvs: tw(sampleTypes) }))
 	})
 	const cases = [
-		['one mixed-level term', { terms: [tw([1, 2])] }, undefined, [1, 2]],
-		['identical mixed-level terms', { terms: [tw([1, 2]), tw([2, 1, 2])] }, undefined, [1, 2]],
+		['matching single-type root sets are aligned', { terms: [tw([1]), tw([1, 1])], sampleTypes: [2] }, undefined, [2]],
+		['one mixed-level term', { terms: [tw([1, 2])] }, 'parentToChildren', [2]],
+		['identical mixed-level terms', { terms: [tw([1, 2]), tw([2, 1, 2])] }, 'parentToChildren', [2]],
 		['identical sibling terms', { terms: [tw([2, 3]), tw([3, 2])] }, undefined, [2, 3]],
+		[
+			'identical sibling sets with a common parent are aligned',
+			{ terms: [tw([2, 3]), tw([3, 2])], sampleTypes: [1] },
+			undefined,
+			[1]
+		],
+		['identical sets without a common parent', { terms: [tw([2, 4]), tw([4, 2])] }, undefined, [2, 4]],
+		['intersecting sets without a common parent', { terms: [tw([2, 4]), tw([2, 3])] }, undefined, [2]],
 		[
 			'matching mixed-level filters without terms',
 			{ filter: filter([1, 2]), filter0: [{ sampleTypes: [2, 1] }] },
-			undefined,
-			[1, 2]
+			'parentToChildren',
+			[2]
 		],
 		[
 			'matching terms and both filters',
@@ -363,7 +372,7 @@ tape('resolveSampleMapping: compares type sets across terms, filter, and filter0
 			'childrenToParent',
 			[1]
 		],
-		['different multi-type sibling sets', { terms: [tw([2, 3]), tw([2])] }, 'childrenToParent', [1]],
+		['different multi-type sibling sets', { terms: [tw([2, 3]), tw([2])] }, undefined, [2]],
 		[
 			'different multi-type sets containing parent and child',
 			{ terms: [tw([1, 2]), tw([2, 3])] },
