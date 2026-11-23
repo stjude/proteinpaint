@@ -291,15 +291,18 @@ export class profileForms extends profilePlot {
 		const scColor = this.impressionScColor || '#888'
 		const data = this.data
 
-		// Resolve each performance-zone color from this module's colorMap gradient (config gives the
-		// shade key, not a literal color): Weak=SOMETIMES (lightest) … Strong=ALMOST ALWAYS (darkest).
-		// Falls back to the base module color if a shade is absent for the module.
+		/*
+		Resolve each performance-zone color, first from this module's impression palette
+		(impression.zoneColors[module][zone label]). A module without a palette falls back to its
+		Likert colorMap shade named by the zone's `shade` key, then to the base module color.
+		*/
+		const modulePalette = texts.zoneColors?.[this.module] || {}
 		const moduleShades = this.state.termdbConfig?.colorMap?.[this.module] || {}
 		const zones = texts.zones.map((z: any) => ({
 			label: z.label,
 			min: z.min,
 			max: z.max,
-			color: moduleShades[z.shade] || scColor
+			color: modulePalette[z.label] || moduleShades[z.shade] || scColor
 		}))
 
 		// Bind tooltip text + optional hover descriptor as the element's datum. The shared
