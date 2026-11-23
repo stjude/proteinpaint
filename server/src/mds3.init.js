@@ -1953,7 +1953,6 @@ export async function validate_query_ssGSEA(ds, genome) {
 		mayLog('ssGSEA h5 file', Date.now() - time1)
 
 		const limitSamples = await mayLimitSamples(param, null, ds)
-		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of param.terms) {
 			const result = results.query_output[tw.term.id]?.samples
 			if (!result) {
@@ -1980,8 +1979,6 @@ export async function validate_query_ssGSEA(ds, genome) {
 			}
 			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 		}
-		if (term2sample2value.size == 0) throw 'No data available for the input.'
-
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }
@@ -2161,7 +2158,6 @@ export async function validate_query_dnaMethylation(ds, genome) {
 
 		const sampleNames = q.samples.map(sid => ds.cohort.termdb.q.id2sampleName(sid))
 		const limitSamples = await mayLimitSamples(param, null, ds)
-		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of dnaMethylTws) {
 			if (!sampleNames.length) continue
 
@@ -2221,9 +2217,6 @@ export async function validate_query_dnaMethylation(ds, genome) {
 			}
 			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 		}
-
-		if (!sampleNames.length) return { term2sample2value, byTermId, bySampleId }
-		if (term2sample2value.size == 0) throw 'No data available for the input'
 
 		return { term2sample2value, byTermId, bySampleId }
 	}
@@ -2482,7 +2475,6 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 		const term2sample2value = new Map() // k: metabolite name, v: { sampleId : value }
 		const byTermId = {}
 		const limitSamples = await mayLimitSamples(param, null, ds)
-		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of param.terms) {
 			if (!tw) continue
 
@@ -2513,8 +2505,6 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 			}
 			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 		}
-		if (term2sample2value.size == 0)
-			throw 'no data available for the input ' + param.terms?.map(tw => tw.term.name).join(', ')
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }

@@ -190,7 +190,6 @@ export async function validatePseudobulk(ds: any) {
 			? geneNames.map(gene => ({ gene, id: gene, tw: param.terms[0] }))
 			: param.terms.filter(tw => tw.term.gene).map(tw => ({ gene: tw.term.gene, id: tw.$id, tw }))
 		const limitSamples = await mayLimitSamples(param, null, ds)
-		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const { gene, id, tw } of requestedGenes) {
 			// Get this gene's data from the batch response
 			const geneResult = genesData[gene]
@@ -225,10 +224,6 @@ export async function validatePseudobulk(ds: any) {
 			}
 			if (Object.keys(filteredValues).length) term2sample2value.set(id, filteredValues)
 		}
-		if (term2sample2value.size == 0) {
-			throw 'No data available for the input ' + geneNames.join(', ')
-		}
-
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }

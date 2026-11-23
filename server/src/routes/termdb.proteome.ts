@@ -431,8 +431,7 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 	const controlSampleIds = new Set<string>()
 	const bySampleId = Object.create(null)
 
-	const limitSamples = await mayLimitSamples(param, null, ds)
-	if (limitSamples?.size == 0) return { term2sample2value, byTermId: {}, controlSampleIds, bySampleId }
+	const allowedSampleIds = await mayLimitSamples(param, null, ds)
 	for (const tw of param.terms) {
 		if (!tw) continue
 
@@ -466,16 +465,14 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 		)
 		const filteredValues = Object.create(null)
 		for (const [sid, sampleValue] of Object.entries(mappedValues)) {
-			if (limitSamples && !limitSamples.has(Number(sid))) continue
+			if (allowedSampleIds && !allowedSampleIds.has(Number(sid))) continue
 			filteredValues[sid] = sampleValue.value
 			if (sampleValue.isControl) controlSampleIds.add(sid)
 		}
 		if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 	}
 
-	if (term2sample2value.size == 0) {
-		throw `No data available for: ${param.terms?.map(t => t.term.name).join(', ')}`
-	}
+	if (term2sample2value.size == 0) return { term2sample2value, byTermId: {}, controlSampleIds, bySampleId }
 
 	// Build bySampleId from the samples we actually have data for
 	for (const s2v of term2sample2value.values()) {

@@ -401,7 +401,6 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		const genesData = geneData.query_output || {}
 		if (!genesData) throw 'No expression data returned from HDF5 query'
 		const limitSamples = await mayLimitSamples(param, null, ds)
-		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of param.terms) {
 			if (!tw.term.gene) continue
 
@@ -442,10 +441,6 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 				if (ref) bySampleId[sid] = ref
 			}
 			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
-		}
-
-		if (term2sample2value.size == 0) {
-			throw 'No data available for the input ' + param.terms?.map(tw => tw.term.gene).join(', ')
 		}
 
 		return { term2sample2value, byTermId, bySampleId }
@@ -530,7 +525,6 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 		const isoformsData = isoformData.query_output || {}
 		if (!isoformsData) throw 'No expression data returned from HDF5 query'
 		const limitSamples = await mayLimitSamples(param, null, ds)
-		if (limitSamples?.size == 0) return { term2sample2value, byTermId, bySampleId }
 		for (const tw of param.terms) {
 			if (!tw.term.isoform) continue
 
@@ -562,10 +556,6 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 			}
 			if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 		}
-		if (term2sample2value.size == 0) {
-			throw 'No data available for the input ' + param.terms?.map(tw => tw.term.isoform).join(', ')
-		}
-
 		return { term2sample2value, byTermId, bySampleId }
 	}
 }

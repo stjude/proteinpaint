@@ -23,10 +23,10 @@ function makeDs(down) {
 		CREATE TABLE sampleidmap (id INTEGER, name TEXT, sample_type INTEGER);
 		CREATE TABLE sample_ancestry (sample_id INTEGER, ancestor_id INTEGER);
 		CREATE TABLE anno_categorical (sample INTEGER, term_id TEXT, value TEXT);
-		INSERT INTO sampleidmap VALUES (10,'p1',1),(11,'p2',1),(20,'c1',2),(40,'c2',2),(50,'c3',2),(30,'s',3);
+		INSERT INTO sampleidmap VALUES (10,'p1',1),(11,'p2',1),(20,'c1',2),(40,'c2',2),(50,'c3',2),(30,'s',3),(60,'outside',2);
 		INSERT INTO sample_ancestry VALUES (20,10),(50,10),(40,11),(30,10);
 		INSERT INTO anno_categorical VALUES (10,'status','keep'),(11,'status','drop'),
-			(20,'status','keep'),(50,'status','drop'),(40,'status','drop');
+			(20,'status','keep'),(50,'status','drop'),(40,'status','drop'),(60,'status','outside');
 	`)
 	const name2id = new Map()
 	const id2name = new Map()
@@ -39,7 +39,8 @@ function makeDs(down) {
 			[20, 2],
 			[40, 2],
 			[50, 2],
-			[30, 3]
+			[30, 3],
+			[60, 2]
 		]),
 		cohort: {
 			db: { connection },
@@ -136,6 +137,19 @@ for (const type of [
 							'assay'
 						)
 					}
+					db.prepare('INSERT INTO proteome_abundance VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(
+						'human',
+						'control',
+						'Q',
+						'Q',
+						'',
+						'',
+						'G',
+						'source-b',
+						7,
+						'',
+						'assay'
+					)
 					db.close()
 					ds.queries.proteome = {
 						dbfile: file,
@@ -240,7 +254,13 @@ for (const type of [
 						down ? ['40'] : type === 'proteomeAbundance' ? [] : ['11'],
 						'control sample IDs use the same target space as values'
 					)
-				const aligned = await getter({ ...param, sampleMapping: undefined, sampleTypes: [down ? 1 : 2] })
+				const alignedParam = {
+					...param,
+					sampleMapping: undefined,
+					sampleTypes: [down ? 1 : 2],
+					skipSampleFiltering: false
+				}
+				const aligned = await getter(alignedParam)
 				for (const values of aligned.term2sample2value.values()) {
 					t.deepEqual(
 						Object.keys(values).sort(),
@@ -267,21 +287,23 @@ for (const type of [
 					filterLookups++
 					return value
 				}
-				const filtered = await getter({ ...param, filter, filter0: {} })
+				const filterParam = param
+				const filtered = await getter({ ...filterParam, filter, filter0: {} })
 				t.equal(filterLookups, 1, 'getter resolves the request sample filter once')
+				const filteredSampleId = down ? 20 : 10
 				for (const [id, values] of filtered.term2sample2value) {
-					t.deepEqual(Object.keys(values), [down ? '20' : '10'], 'filter selects mapped targets, not source IDs')
+					t.deepEqual(Object.keys(values), [String(filteredSampleId)], 'filter retains the matching assay sample')
 					t.equal(
-						values[down ? 20 : 10],
-						mapped.term2sample2value.get(id)[down ? 20 : 10],
-						'mapping and filtering preserve the value'
+						values[filteredSampleId],
+						mapped.term2sample2value.get(id)[filteredSampleId],
+						'filtering preserves the selected sample value'
 					)
 				}
 				t.ok(filtered.term2sample2value.size, 'target filter does not discard source data prematurely')
 				if (filtered.bySampleId)
 					t.deepEqual(
 						Object.keys(filtered.bySampleId),
-						[down ? '20' : '10'],
+						[String(filteredSampleId)],
 						'references describe retained target samples'
 					)
 				if (filtered.controlSampleIds)
@@ -293,7 +315,7 @@ for (const type of [
 						'pseudobulk gene payload keys are preserved'
 					)
 				const excludedRequest = {
-					...param,
+					...filterParam,
 					filter: {
 						...filter,
 						lst: [{ type: 'tvs', tvs: { ...filter.lst[0].tvs, values: [{ key: 'absent' }] } }]
@@ -306,12 +328,56 @@ for (const type of [
 				if (excluded.bySampleId)
 					t.equal(Object.keys(excluded.bySampleId).length, 0, 'excluded targets leave no references')
 				if (excluded.controlSampleIds) t.equal(excluded.controlSampleIds.size, 0, 'no controls are returned')
+				if (type !== 'junction' && !down) {
+					const outsideFilter = {
+						...filter,
+						lst: [{ ...filter.lst[0], tvs: { ...filter.lst[0].tvs, values: [{ key: 'outside' }] } }]
+					}
+					const outside = await getter({ ...alignedParam, sampleTypes: [2], filter: outsideFilter })
+					t.equal(outside.term2sample2value.size, 0, 'a filter matching no assay samples returns empty data')
+				}
+				if (['dnaMethylation', 'metaboliteIntensity'].includes(type) && !down) {
+					const otherType = { ...tw, $id: 'second-value', term: { ...tw.term, sampleTypes: [3] } }
+					for (const terms of [
+						[tw, otherType],
+						[otherType, tw]
+					]) {
+						const before = filterLookups
+						const partial = await getter({ ...alignedParam, terms, filter, filter0: {} })
+						t.equal(filterLookups - before, 1, 'multiple terms resolve the filter once')
+						t.deepEqual([...partial.term2sample2value.keys()], ['value'], 'retains a matching term in either order')
+					}
+				}
+				if (type === 'proteomeAbundance' && !down) {
+					const termWithoutMatchingSamples = {
+						...tw,
+						$id: 'second-value',
+						term: { ...tw.term, name: 'G: Q' }
+					}
+					for (const terms of [
+						[tw, termWithoutMatchingSamples],
+						[termWithoutMatchingSamples, tw]
+					]) {
+						const before = filterLookups
+						const perTermFiltered = await getter({ ...alignedParam, terms, filter, filter0: {} })
+						t.equal(filterLookups - before, 1, 'multiple terms resolve the filter once')
+						t.deepEqual([...perTermFiltered.term2sample2value.keys()], ['value'], 'retains only matching terms')
+						t.equal(perTermFiltered.controlSampleIds.size, 0, 'filtered controls from another term are not returned')
+					}
+					const missing = await getter({
+						...alignedParam,
+						terms: [{ ...tw, term: { ...tw.term, name: 'G: missing' } }]
+					})
+					t.equal(missing.term2sample2value.size, 0, 'missing identifier returns an empty result')
+				}
 				if (type === 'metaboliteIntensity') {
-					const missing = { ...param, terms: [{ ...tw, term: { ...term, name: 'missing' } }] }
-					await getter(missing).then(
-						() => t.fail('missing input data should throw without a filter'),
-						error => t.ok(/no data available/i.test(String(error)), 'missing input data still raises an error')
-					)
+					const missing = {
+						...alignedParam,
+						terms: [{ ...tw, term: { ...term, name: 'missing' } }],
+						filter
+					}
+					const missingResult = await getter(missing)
+					t.equal(missingResult.term2sample2value.size, 0, 'missing input returns an empty result')
 				}
 			} finally {
 				ds.queries.proteome?.db?.close()

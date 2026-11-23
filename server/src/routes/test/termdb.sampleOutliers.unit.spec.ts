@@ -144,6 +144,7 @@ tape('getRows(): gene expression box', function (test) {
 		[{ min: 0, w1: 0, p25: 3, p50: 15, p75: 31, w2: 63, max: 63 }, undefined],
 		'Should give the box in the file unit, as the value, and none to a row whose box is NaN.'
 	)
+	test.end()
 })
 tape('getValue(): falls back to the nearest ancestor with a value', function (test) {
 	const tdbq = {
