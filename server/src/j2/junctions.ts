@@ -2,6 +2,7 @@ import type { RouteApi, RoutePayload, TermdbJunctionsRequest, TermdbJunctionsRes
 import { genomes } from '#src/initGenomesDs.js'
 import { authApi } from '#src/auth.js'
 import { resolveSampleMapping } from '#src/termdb.matrix.js'
+import { groupOrder, getSampleGroups } from '#src/utils/sampleGroups.ts'
 
 /*
 list junctions from a locus
@@ -48,7 +49,8 @@ export function init({ genomes }) {
 			// sampleMapping=parentToChildren to allow parent-level term data to be mapped
 			// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
 			resolveSampleMapping(Object.assign(q, { sampleMapping: 'parentToChildren' }), ds)
-			const result = await ds.queries.junction.listJunctions(q)
+			const groups = q.groupTw ? await junctionGroups(q, ds) : undefined
+			const result = await ds.queries.junction.listJunctions(q, undefined, groups)
 			// the matrix has a row per sample: only for a user who may see sample names
 			if (result.matrix && !authApi.canDisplaySampleIds(req, ds)) delete result.matrix
 			res.send(result satisfies TermdbJunctionsResponse)
@@ -57,4 +59,23 @@ export function init({ genomes }) {
 			if (e.stack) console.log(e.stack)
 		}
 	}
+}
+
+/* the group of each sample of the junction file, by its id there, for the two groups of q.groupTw, the first the
+reference; resolved as the methylation locus view resolves its groups */
+async function junctionGroups(q: TermdbJunctionsRequest, ds: any) {
+	const names = groupOrder(q)
+	if (names?.length != 2) throw new Error('groupTw must have two groups')
+	const samples: { name: string | number }[] = ds.queries.junction.samples
+	const nameOf = (id: string | number) => String(ds.cohort?.termdb?.q?.id2sampleName?.(id) ?? id)
+	const byName = (await getSampleGroups(q, ds, new Set(samples.map(s => nameOf(s.name)))))!
+	const groupOf = new Map<string | number, string>()
+	for (const s of samples) {
+		const g = byName.get(nameOf(s.name))
+		if (g) groupOf.set(s.name, g)
+	}
+	const r = q.groupRegion
+	if (r && (typeof r.chr != 'string' || !Number.isInteger(r.start) || !Number.isInteger(r.stop) || r.start > r.stop))
+		throw new Error('groupRegion must be {chr, start, stop}')
+	return { groupOf, names: names as [string, string], ...(r ? { region: r } : {}) }
 }

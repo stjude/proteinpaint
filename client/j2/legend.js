@@ -47,7 +47,7 @@ function create_type(tk, block) {
 		.attr('data-testid', 'sjpp-j2-legend-row-type')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
-		.text(tk.deltaPsiGroups ? 'PSI' : 'Type')
+		.text(tk.deltaPsiGroups ? tk.deltaPsiGroups.label || 'PSI' : 'Type')
 
 	tk.legend.type.holder = tk.legend.type.row.append('td')
 }
@@ -157,7 +157,11 @@ function update_deltaPsi(tk) {
 	const categories = [
 		{ key: 'case', label: `${_case.name} > ${control.name}`, color: _case.color },
 		{ key: 'control', label: `${control.name} > ${_case.name}`, color: control.color },
-		{ key: undefined, label: 'Equal or missing', color: '#858585' }
+		{
+			key: undefined,
+			label: tk.deltaPsiGroups.noneLabel || 'Equal or missing',
+			color: tk.deltaPsiGroups.noneColor || '#858585'
+		}
 	]
 	for (const c of categories) {
 		const count = tk.data.filter(j => j.higherPsiIn == c.key).length

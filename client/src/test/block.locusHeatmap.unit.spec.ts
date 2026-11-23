@@ -8,6 +8,7 @@ import { renderLocusHeatmap, locusHeatmapHeight, fitLabel, type LocusHeatmapData
  *   - draws intervals at their genomic extent under the lines
  *   - draws an annotation column of parts, and widens the block's right side for it
  *   - draws model rows under the lines, clipped to the view, with what goes with each on the right
+ *   - draws a model row with coding parts as a gene model: exons at UTR height, coding at full height, strand chevrons
  *   - fitLabel cuts a label to its room
  */
 
@@ -279,7 +280,8 @@ tape('renderLocusHeatmap: model rows', t => {
 	const exons = linkage.g
 		.selectAll('rect')
 		.nodes()
-		.filter((r: any) => r.getAttribute('height') == '8')
+		// not the transparent rect of a row for the pointer, of a row as tall as an exon in the second block
+		.filter((r: any) => r.getAttribute('height') == '10' && r.getAttribute('fill') != 'transparent')
 		.map((r: any) => [Number(r.getAttribute('x')), Number(r.getAttribute('width')), r.getAttribute('fill')])
 	t.deepEqual(
 		exons,
@@ -294,6 +296,65 @@ tape('renderLocusHeatmap: model rows', t => {
 	t.equal(heatmap.rightG.selectAll('rect.right').size(), 2, 'in the right side')
 	t.equal(block.rightheadw, 210, "the block's right side is widened to hold it")
 	t.equal(widened, 1, 'and the block laid out again')
+	t.end()
+})
+
+tape('renderLocusHeatmap: a model row with coding parts and strand, as a gene model', t => {
+	const tk = getTk()
+	const block = { width: 300, tkleftlabel_xshift: -10, rightheadw: 0, blocksetw: () => {} }
+	renderLocusHeatmap(tk, block, {
+		rows: ['s1'],
+		cols: [{ x: 10, values: [0] }],
+		color: () => 'red',
+		missingColor: 'gray',
+		models: [
+			{
+				label: 'Isoforms',
+				rowHeight: 20,
+				rows: [
+					{
+						label: 'a',
+						color: 'blue',
+						line: [10, 250],
+						exons: [
+							[10, 40],
+							[200, 250]
+						],
+						coding: [
+							[30, 40],
+							[200, 230]
+						],
+						strand: '+'
+					}
+				]
+			}
+		]
+	})
+	const rects = tk.rows.linkage.g
+		.selectAll('rect')
+		.nodes()
+		.filter((r: any) => r.getAttribute('fill') == 'blue')
+		.map((r: any) => [Number(r.getAttribute('x')), Number(r.getAttribute('width')), Number(r.getAttribute('height'))])
+	t.deepEqual(
+		rects,
+		[
+			[10, 30, 6],
+			[200, 50, 6],
+			[30, 10, 10],
+			[200, 30, 10]
+		],
+		'the exons at the height of an UTR, the coding parts over them at full height'
+	)
+	const paths = tk.rows.linkage.g.selectAll('path').nodes() as SVGPathElement[]
+	const intron = paths.find(p => p.getAttribute('stroke') == 'blue')!
+	t.ok(intron, 'chevrons along the intron, in the row color')
+	const xs = [...intron.getAttribute('d')!.matchAll(/M([\d.]+)/g)].map(m => Number(m[1]))
+	t.ok(xs.length > 1 && xs.every(x => x > 40 && x < 200), 'between the exons')
+	t.ok(/M[\d.]+,[\d.]+L/.test(intron.getAttribute('d')!), 'and drawn')
+	t.ok(
+		paths.some(p => p.getAttribute('stroke') == 'white'),
+		'and white chevrons on a coding part wide enough for them'
+	)
 	t.end()
 })
 

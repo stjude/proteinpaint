@@ -1,15 +1,15 @@
 import tape from 'tape'
-import { isoformParts, isoformUsage, rankSumP, junctionUsage, junctionStarts, annotationOf } from '../tk'
+import { isoformParts, isoformUsage, annotationOf, dmrColor } from '../tk'
+import { rankSumP } from '#shared/rankSum.js'
 
 /**
  * Tests
  *   - rankSumP matches R's wilcox.test(exact = FALSE), with and without ties
  *   - isoformUsage: each group's mean shares, and a BH-adjusted test per isoform with two groups
- *   - junctionUsage: per sample a first junction's reads over the body junction's, none under 10 body reads, the
- *     median reads per group, and a test per isoform with two groups
- *   - junctionStarts: each distinct first junction but the body one, with enough reads, in genomic order, tested
  *   - annotationOf: a category's color and order, a sample without a value
  *   - isoformParts: the most expressed isoforms apart, the rest as one part, no parts for a sample without expression
+ *   - isoformParts with two groups: the isoforms by p of their share, q over all tested, none for a share near 0
+ *   - dmrColor: light at the smallest |Δβ| to dark at the largest, blue for hypo, orange for hyper
  */
 
 tape('\n', test => {
@@ -101,103 +101,6 @@ tape('isoformUsage', test => {
 	test.end()
 })
 
-tape('junctionUsage', test => {
-	// keys: 0 the body junction, 1 the first junction of 'a'; 'b' has none
-	const sample = (group: string, first: number, body: number) => ({ name: '', group, junctionReads: [body, first] })
-	const data = {
-		expressedIsoforms: ['a', 'b'],
-		junctions: {
-			keys: [
-				[100, 200],
-				[10, 50]
-			] as [number, number][],
-			first: [1, null],
-			reference: 0
-		},
-		samples: [
-			sample('r', 30, 100),
-			sample('r', 25, 100),
-			sample('r', 35, 100),
-			sample('r', 9, 9),
-			sample('t', 20, 2000),
-			sample('t', 25, 2500),
-			sample('t', 10, 1000)
-		]
-	}
-	const u = junctionUsage(data, ['a', 'b'], ['r', 't'])!
-	test.deepEqual(u.junction, [[10, 50], null], 'should give each isoform its first junction, or none')
-	test.deepEqual(
-		u.ratio[0].map(v => (v === null ? null : Math.round(v * 100))),
-		[30, 25, 35, null, 1, 1, 1],
-		'should give a sample the ratio of the two, and none with fewer than 10 reads of the body junction'
-	)
-	test.ok(
-		u.ratio[1].every(v => v === null),
-		'and an isoform without a first junction none'
-	)
-	test.deepEqual(
-		u.reads[0],
-		[
-			{ first: 30, reference: 100 },
-			{ first: 20, reference: 2000 }
-		],
-		'should give the median reads of each junction per group, which show what a ratio does not'
-	)
-	test.ok(u.q![0]! < 0.1 && u.q![1] === null, 'should test an isoform with a first junction only')
-	test.equal(junctionUsage({ ...data, junctions: undefined }, ['a'], ['r', 't']), undefined, 'none without junctions')
-	test.end()
-})
-
-tape('junctionStarts', test => {
-	// keys: 0 body, 1 a start used by isoforms a and b, 2 a start of c with few reads, 3 a start of d upstream of 1
-	const s = (group: string, r: number[]) => ({ name: '', group, junctionReads: r })
-	const data = {
-		expressedIsoforms: ['a', 'b', 'c', 'd', 'e'],
-		junctions: {
-			keys: [
-				[500, 600],
-				[200, 300],
-				[700, 800],
-				[50, 100]
-			] as [number, number][],
-			first: [1, 1, 2, 3, 0],
-			reference: 0
-		},
-		samples: [
-			s('r', [100, 80, 1, 2]),
-			s('r', [100, 90, 2, 3]),
-			s('r', [100, 85, 1, 1]),
-			s('t', [2000, 60, 1, 1500]),
-			s('t', [1800, 70, 2, 1400]),
-			s('t', [2200, 65, 1, 1600])
-		]
-	}
-	const st = junctionStarts(data, ['r', 't'])
-	test.deepEqual(
-		st.map(x => x.key),
-		[
-			[50, 100],
-			[200, 300]
-		],
-		'should list each start but the body junction, with enough reads in some group, in genomic order'
-	)
-	test.deepEqual(st[1].isoforms, ['a', 'b'], 'with the isoforms that start there')
-	test.deepEqual(
-		st[1].reads,
-		[
-			{ start: 85, reference: 100 },
-			{ start: 65, reference: 2000 }
-		],
-		'and the median reads of it and of the body junction per group'
-	)
-	test.ok(
-		st.every(x => x.q !== null && x.q < 0.2),
-		'and a q per start with two groups'
-	)
-	test.deepEqual(junctionStarts({ ...data, junctions: undefined }, ['r', 't']), [], 'none without junctions')
-	test.end()
-})
-
 tape('annotationOf', test => {
 	const tk = {
 		annotationTw: {
@@ -222,5 +125,45 @@ tape('annotationOf', test => {
 	test.equal(a.text(samples[2]), 'no value', 'and say a sample has none')
 	test.deepEqual(a.column(samples).colors, [a.legend[1][1], 'red', '#fff'], 'a column of the colors, white for none')
 	test.equal(annotationOf({}, { samples }), undefined, 'none without an annotation')
+	test.end()
+})
+
+tape('isoformParts with two groups', test => {
+	/* every sample sums to 100, so a value is its share: a, the most expressed, has the same share in both groups; b
+	rises and c falls between them; g is near 0 in both and differs, so it is not tested */
+	const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g']
+	const ref = (j: number) => ({ group: 'ref', isoformValues: [50, 10 + j / 10, 15 - j / 10, 10, 10, 4.99, 0.01] })
+	const t414 = (j: number) => ({ group: 't414', isoformValues: [50, 20 + j / 10, 5 - j / 10, 10, 10, 4.8, 0.2] })
+	const samples = [1, 2, 3, 4, 5, 6].flatMap(j => [ref(j), t414(j)])
+	const parts = isoformParts({ expressedIsoforms: ids, samples, groups: ['ref', 't414'] })!
+	// f, which shifts by a little but the same in every sample, ties more and so has the smallest p of all
+	test.deepEqual(parts.ids.slice(0, 3), ['f', 'b', 'c'], 'should put the isoforms whose share differs first, by p')
+	test.notEqual(parts.ids[0], 'a', 'and not the most expressed isoform when its share does not differ')
+	test.ok(!parts.ids.includes('g'), 'should not pick an isoform whose share is near 0 in both groups')
+	test.equal(parts.q!.length, parts.labels.length, 'should give a q per part')
+	test.equal(parts.q![parts.q!.length - 1], null, 'and none for the other isoforms')
+	test.equal(parts.q![parts.ids.indexOf('a')], null, 'nor for one with no difference to test')
+	test.ok(parts.q![0]! < 0.05, 'should find the shift of b')
+	const byExpr = isoformParts({ expressedIsoforms: ids, samples })!
+	test.equal(byExpr.ids[0], 'a', 'without groups, should pick by expression')
+	test.equal(byExpr.q, undefined, 'and test nothing')
+	test.end()
+})
+
+tape('dmrColor', test => {
+	const c = dmrColor(0.1, 0.3)
+	const light = (x: string) =>
+		x
+			.match(/\d+/g)!
+			.map(Number)
+			.reduce((a, b) => a + b, 0)
+	test.ok(light(c(-0.1)) > light(c(-0.3)), 'should be lighter at the smallest |Δβ| than at the largest')
+	test.ok(light(c(0.1)) > light(c(0.3)), 'on both sides')
+	const [r, , b] = c(-0.3).match(/\d+/g)!.map(Number)
+	test.ok(b > r, 'should be blue for hypo')
+	const [r2, , b2] = c(0.3).match(/\d+/g)!.map(Number)
+	test.ok(r2 > b2, 'and orange for hyper')
+	test.equal(c(-0.9), c(-0.3), 'with the end color past the largest')
+	test.equal(dmrColor(0.2, 0.2)(-0.2), c(-0.3), 'and the darkest for a single size')
 	test.end()
 })

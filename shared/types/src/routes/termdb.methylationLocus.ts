@@ -50,8 +50,6 @@ export type MethylationLocusSample = {
 	group?: string
 	/** expression of each of expressedIsoforms, in its order; null for an isoform the sample has no value of */
 	isoformValues?: (number | null)[]
-	/** read count of each of response.junctions.keys, in its order */
-	junctionReads?: number[]
 	/** the sample's value of request.annotationTw: a category key, or a number */
 	annotation?: string | number
 }
@@ -87,10 +85,6 @@ export type MethylationLocusResponse =
 			expressedIsoforms?: string[]
 			/** unit of samples[].isoformValues, the dataset's isoform expression unit, e.g. TPM */
 			isoformUnit?: string
-			/** junctions of the expressed isoforms, from the dataset's junction file: keys as the file has them,
-			[start, stop]; first[i] the index in keys of expressedIsoforms[i]'s first junction (at its 5' end), null for
-			none with reads; keys[reference] a body junction most isoforms have, that first junctions are read against */
-			junctions?: { keys: [number, number][]; first: (number | null)[]; reference: number }
 			/** ascending by the gene's expression (value) when a gene was requested */
 			samples: MethylationLocusSample[]
 			/** the requested groups that have samples here, in request order; with two, the difference is the second minus the first */

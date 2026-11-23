@@ -10,10 +10,9 @@ import { getData } from '#src/termdb.matrix.js'
 import { authApi } from '#src/auth.js'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 import { resolveMethylationMatrix } from '#src/utils/methylationMatrix.ts'
-import { resolveGroups, buildGroupValues, samplesOfRequest } from '#src/utils/sampleGroups.ts'
+import { samplesOfRequest, groupOrder, getSampleGroups } from '#src/utils/sampleGroups.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { readTabixLines } from '#src/utils.js'
 import { chiSquareLogSf, logBH } from '#src/utils/pValues.ts'
 import { getStdDev } from './termdb.descrstats.ts'
 import { hasDnaMethylationDs } from './termdb.diffMeth.ts'
@@ -111,7 +110,6 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		samples.push({ name, ...(value === undefined ? {} : { value }), ...(group === undefined ? {} : { group }) })
 	}
 	let expressed: string[] | undefined
-	let junctions: { keys: [number, number][]; first: (number | null)[]; reference: number } | undefined
 	if (q.gene) {
 		const exprTw = {
 			$id: 'expression',
@@ -143,18 +141,6 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		if (isoforms) {
 			expressed = isoforms.ids
 			for (const s of samples) s.isoformValues = isoforms.values(name2id.get(s.name)!)
-			// the junction reads of the isoforms: evidence of their starts that does not depend on assigning reads to
-			// transcripts that share most of their exons
-			const j = await getJunctionReads(
-				ds,
-				models,
-				expressed,
-				samples.map(s => name2id.get(s.name)!)
-			)
-			if (j) {
-				junctions = j.junctions
-				samples.forEach((s, i) => (s.junctionReads = j.reads[i]))
-			}
 		}
 		samples.sort((a, b) => a.value! - b.value!)
 	} else {
@@ -217,7 +203,6 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		...(expressed?.length
 			? { expressedIsoforms: expressed, isoformUnit: ds.queries.isoformExpression.unit || 'expression' }
 			: {}),
-		...(junctions ? { junctions } : {}),
 		samples,
 		...groupsOf(q),
 		bins
@@ -247,88 +232,6 @@ async function annotateSamples(
 		const a = byId[name2id.get(s.name)!]?.annotation
 		const v = a?.key ?? a?.value
 		if (v !== undefined && v !== null) s.annotation = v
-	}
-}
-
-/* The junction keys of a gene model, as a junction file has them: from the end of an exon to the start of the next,
-with the file's start one base before the model's intron start (570 of 572 NSD2 model introns of MMRF match so) */
-export function junctionKeysOf(model: { exon: [number, number][] }): [number, number][] {
-	const ex = [...model.exon].sort((a, b) => a[0] - b[0])
-	return ex.slice(1).map((e, i) => [ex[i][1] - 1, e[0]])
-}
-
-/* Of the junctions with reads, each isoform's first one, at its start (the 5' end, by strand), and the reference: the
-junction in the most isoforms, then with the most reads, a body junction nearly every transcript of the gene has. A
-first junction's reads over the reference's are the share of the gene's transcripts that start where the isoform
-starts. keys[reference] is the reference; first[i] the index in keys of isoform i's first junction, null for none
-with reads. undefined when the isoforms have no junction with reads. */
-export function pickJunctions(
-	models: { strand: string; exon: [number, number][] }[],
-	totals: Map<string, number>
-): { keys: [number, number][]; first: (number | null)[]; reference: number } | undefined {
-	const key = (j: [number, number]) => `${j[0]}.${j[1]}`
-	const ofModel = models.map(m => junctionKeysOf(m).filter(j => totals.has(key(j))))
-	const inModels = new Map<string, number>()
-	for (const l of ofModel) for (const j of l) inModels.set(key(j), (inModels.get(key(j)) || 0) + 1)
-	if (!inModels.size) return
-	const ref = [...inModels.keys()].sort(
-		(a, b) => inModels.get(b)! - inModels.get(a)! || totals.get(b)! - totals.get(a)!
-	)[0]
-	const keys: [number, number][] = [ref.split('.').map(Number) as [number, number]]
-	const first = ofModel.map((l, i) => {
-		const j = models[i].strand == '-' ? l[l.length - 1] : l[0]
-		if (!j) return null
-		let k = keys.findIndex(x => key(x) == key(j))
-		if (k == -1) k = keys.push(j) - 1
-		return k
-	})
-	return { keys, first, reference: 0 }
-}
-
-/* The reads of pickJunctions() per sample (sampleIds, as getData() gives them), from the dataset's junction file; the
-first value of a cell is its read count, as server/src/j2/validate.ts reads it. undefined without a junction file. */
-async function getJunctionReads(
-	ds: any,
-	allModels: any[],
-	ids: string[],
-	sampleIds: string[]
-): Promise<{ junctions: NonNullable<ReturnType<typeof pickJunctions>>; reads: number[][] } | undefined> {
-	const jq = ds.queries?.junction
-	if (!jq?.file || !Array.isArray(jq.samples)) return
-	const models = ids.map(id => allModels.find(m => m.isoform == id)).filter(Boolean)
-	if (!models.length) return
-	const strand = models[0].strand
-	const wanted = new Set(models.flatMap(m => junctionKeysOf(m).map(j => `${j[0]}.${j[1]}`)))
-	// the file column of each sample: jq.samples[i].name is the sample id of column i + 5
-	const colOf = new Map<string, number>(jq.samples.map((s: any, i: number) => [String(s.name), i + 5]))
-	const cols = sampleIds.map(id => colOf.get(String(id)))
-	const byKey = new Map<string, number[]>()
-	const chr = models[0].chr
-	await readTabixLines({
-		file: jq.file,
-		regions: [
-			{
-				chr: jq.nochr ? chr.replace('chr', '') : chr,
-				start: Math.min(...models.map(m => m.start)),
-				stop: Math.max(...models.map(m => m.stop))
-			}
-		],
-		callback: (line: string) => {
-			const l = line.split('\t')
-			const k = `${l[1]}.${l[2]}`
-			if (l[3] != strand || !wanted.has(k)) return
-			byKey.set(
-				k,
-				cols.map(c => (c === undefined ? 0 : Number(l[c]?.split(';')[0]) || 0))
-			)
-		}
-	})
-	const totals = new Map([...byKey].map(([k, v]) => [k, v.reduce((a, b) => a + b, 0)]))
-	const junctions = pickJunctions(models, totals)
-	if (!junctions) return
-	return {
-		junctions,
-		reads: sampleIds.map((_, i) => junctions.keys.map(j => byKey.get(`${j[0]}.${j[1]}`)![i]))
 	}
 }
 
@@ -451,27 +354,4 @@ export function poolWithinGroups(bins: MethylationLocusBin[]) {
 		x.b.rhoWithin = x.rho
 		x.b.qWithin = Math.exp(logQ[i])
 	})
-}
-
-// group names in the order of the request's groups: the first is the reference of a two-group difference
-function groupOrder(q: MethylationLocusRequest): string[] | undefined {
-	const groups = (q.groupTw as any)?.q?.groups
-	return Array.isArray(groups) ? groups.filter(g => g.in !== false).map(g => g.name) : undefined
-}
-
-/* Each sample's group, resolved as the two-group analyses resolve their groups: a group defined by
-a filter is listed (resolveGroups), and on a dataset with sample ancestry a patient in a group stands
-for its samples (buildGroupValues). Reading the samplelst term through getData() instead labels only
-the ids the groups list, so groups of patients would label no sample. */
-async function getSampleGroups(q: MethylationLocusRequest, ds: any, eligible: Set<string>) {
-	const groups = (q.groupTw as any)?.q?.groups
-	// undefined: no groups asked for. An empty map: groups asked for, with no sample that has methylation
-	if (!Array.isArray(groups)) return
-	const sample2group = new Map<string, string>()
-	for (const g of await resolveGroups(groups, q, ds)) {
-		if (g.in === false || !Array.isArray(g.values)) continue
-		const { names } = await buildGroupValues(g.values, eligible, ds, null, null, null, null, q.__protected__)
-		for (const n of names) if (!sample2group.has(n)) sample2group.set(n, g.name)
-	}
-	return sample2group
 }

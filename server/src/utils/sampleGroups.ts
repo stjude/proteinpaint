@@ -345,3 +345,32 @@ export function canonicalizeSamplelst(s: any): any {
 		}))
 	}
 }
+
+/* For a request with groupTw, a samplelst tw of groups, e.g. the methylation locus view and the j2 track: */
+
+// group names in the order of the request's groups: the first is the reference of a two-group difference
+export function groupOrder(q: { groupTw?: any }): string[] | undefined {
+	const groups = (q.groupTw as any)?.q?.groups
+	return Array.isArray(groups) ? groups.filter(g => g.in !== false).map(g => g.name) : undefined
+}
+
+/* Each sample's group, resolved as the two-group analyses resolve their groups: a group defined by
+a filter is listed (resolveGroups), and on a dataset with sample ancestry a patient in a group stands
+for its samples (buildGroupValues). Reading the samplelst term through getData() instead labels only
+the ids the groups list, so groups of patients would label no sample. */
+export async function getSampleGroups(
+	q: { groupTw?: any; __protected__?: any; [k: string]: any },
+	ds: any,
+	eligible: Set<string>
+) {
+	const groups = (q.groupTw as any)?.q?.groups
+	// undefined: no groups asked for. An empty map: groups asked for, with no sample that has methylation
+	if (!Array.isArray(groups)) return
+	const sample2group = new Map<string, string>()
+	for (const g of await resolveGroups(groups, q, ds)) {
+		if (g.in === false || !Array.isArray(g.values)) continue
+		const { names } = await buildGroupValues(g.values, eligible, ds, null, null, null, null, q.__protected__)
+		for (const n of names) if (!sample2group.has(n)) sample2group.set(n, g.name)
+	}
+	return sample2group
+}

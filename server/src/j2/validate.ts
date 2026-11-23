@@ -8,6 +8,7 @@ import type { Junction, TermdbJunctionsRequest } from '#types'
 import { mayMapNonDictionaryData } from '../termdb.matrix.js'
 import { getH5samples } from '../utils/h5samples.ts'
 import { setQuerySampleTypes } from '#shared/terms.js'
+import { rankSumP, bh } from '#shared/rankSum.js'
 
 // most junctions that listJunctions() returns read counts by sample for
 const maxMatrixTop = 100
@@ -41,10 +42,14 @@ export async function validate_query_junction(ds: any, genome: any) {
 	called by routes used for j2 tk
 	keepLst:
 		if provided, only return data on specified junctions
+	groups:
+		with the request's groupTw, each sample's group by sample id of the file, and the two groups in order, the first
+		the reference: each junction gets a test between them, see testJunctionGroups(); not with keepLst
 	*/
 	q.listJunctions = async (
 		param: TermdbJunctionsRequest,
-		keepLst?: { start: number; stop: number; strand: string }[]
+		keepLst?: { start: number; stop: number; strand: string }[],
+		groups?: JunctionGroups
 	) => {
 		if (param.readcountCutoff !== undefined && (!Number.isInteger(param.readcountCutoff) || param.readcountCutoff < 0))
 			throw new Error('readcountCutoff must be a non-negative integer')
@@ -56,7 +61,9 @@ export async function validate_query_junction(ds: any, genome: any) {
 			if (!hiddenTypes.size) throw new Error('param.hiddenTypes invalid')
 		}
 
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		let limitSamples = await mayLimitSamples(param, q.samples, ds)
+		// with groups, the samples of the groups only: the track's counts and medians are then of the samples compared
+		if (groups) limitSamples = new Set([...groups.groupOf.keys()].filter(id => !limitSamples || limitSamples.has(id)))
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
 			return { junctions: [], maxReadCount: 0 }
@@ -91,6 +98,11 @@ export async function validate_query_junction(ds: any, genome: any) {
 			throw new Error(`matrixTop must be an integer from 1 to ${maxMatrixTop}`)
 		// with matrixTop, the [column, read count] pairs of the junctions found in the most samples so far
 		const rcByJunction = new Map<Junction, [number, number][]>()
+		/* with groups: per junction, its gene and the read count of each sample of a group, and per gene and sample the
+		reads of all of the gene's junctions (in groups.region, else in view), whether shown or not and below
+		readcountCutoff too, as the denominator of the sample's shares of the gene's junctions */
+		const groupReads = new Map<Junction, { gene: string; reads: Map<string | number, number> }>()
+		const geneTotal = new Map<string, Map<string | number, number>>()
 		for (const r of param.rglst || []) {
 			await utils.readTabixLines({
 				file: q.file,
@@ -128,6 +140,8 @@ export async function validate_query_junction(ds: any, genome: any) {
 						return
 					}
 
+					const reads = groups && readGroupedSamples(l)
+
 					let info
 					try {
 						info = JSON.parse(l[4])
@@ -135,6 +149,9 @@ export async function validate_query_junction(ds: any, genome: any) {
 						console.log(`invalid json for a junction: ${r.chr}:${start}-${stop}`)
 						return
 					}
+					const gene = reads ? junctionGene(info) : undefined
+					// the totals are of the view's junctions, unless of a region of their own, read below
+					if (reads && gene && !groups!.region) addTotals(gene, reads)
 					// found before computeTypes(), which may remove hidden events and so shift the values of samples
 					const irIdx = info?.events?.findIndex((e: any) => e.type == JT_ir) ?? -1
 					const types = computeTypes(info, hiddenTypes)
@@ -192,6 +209,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 						}
 					}
 					junctions.push(j)
+					if (reads && gene) groupReads.set(j, { gene, reads })
 					if (param.matrixTop) {
 						rcByJunction.set(j, pairs)
 						// no more than the matrix can hold: the junction in the fewest samples goes, of a tie the later one
@@ -205,8 +223,28 @@ export async function validate_query_junction(ds: any, genome: any) {
 				}
 			})
 		}
+		if (groups?.region && !keepLst?.length) {
+			// every junction with both ends in the region
+			const g = groups.region
+			await utils.readTabixLines({
+				file: q.file,
+				regions: [{ chr: q.nochr ? g.chr.replace('chr', '') : g.chr, start: g.start, stop: g.stop }],
+				callback: (line: string) => {
+					const l = line.split('\t')
+					if (Number(l[1]) < g.start || Number(l[2]) > g.stop) return
+					let gene
+					try {
+						gene = junctionGene(JSON.parse(l[4]))
+					} catch (_) {
+						return
+					}
+					if (gene) addTotals(gene, readGroupedSamples(l))
+				}
+			})
+		}
+		const tested = groups && !keepLst?.length ? testJunctionGroups(junctions, groupReads, geneTotal, groups) : {}
 		// no matrix with keepLst: its junctions carry sn2rc instead, and have no sampleCount to rank by
-		if (!param.matrixTop || keepLst?.length) return { junctions, maxReadCount, totalCount }
+		if (!param.matrixTop || keepLst?.length) return { junctions, maxReadCount, totalCount, ...tested }
 
 		// the columns of the samples that the request covers
 		const columns: number[] = []
@@ -226,7 +264,26 @@ export async function validate_query_junction(ds: any, genome: any) {
 				return { chr: j.chr, start: j.start, stop: j.stop, strand: j.strand, readcounts }
 			})
 		}
-		return { junctions, maxReadCount, totalCount, matrix }
+		return { junctions, maxReadCount, totalCount, matrix, ...tested }
+
+		function addTotals(gene: string, reads: Map<string | number, number>) {
+			if (!geneTotal.has(gene)) geneTotal.set(gene, new Map())
+			const t = geneTotal.get(gene)!
+			for (const [id, rc] of reads) t.set(id, (t.get(id) || 0) + rc)
+		}
+		// the read counts of a line of the file of the samples in a group that the request covers, all of them
+		function readGroupedSamples(l: string[]): Map<string | number, number> {
+			const reads = new Map<string | number, number>()
+			for (let i = 5; i < l.length; i++) {
+				if (!l[i]) continue
+				const id = q.samples[i - 5]?.name
+				if (!groups!.groupOf.has(id) || (limitSamples && !limitSamples.has(id))) continue
+				const rc = Number(l[i].split(';')[0])
+				if (!Number.isInteger(rc) || rc <= 0) continue
+				reads.set(id, rc)
+			}
+			return reads
+		}
 	}
 	/*
 	called by getData() and return sample level numeric values in required format
@@ -363,6 +420,89 @@ function getIRslot(infoStr: string): number | undefined {
 	}
 	const irIdx = info?.events?.findIndex?.((e: any) => e.type == JT_ir) ?? -1
 	return irIdx == -1 ? undefined : irIdx + 1
+}
+
+export type JunctionGroups = {
+	/** each sample's group, by its id in the file */
+	groupOf: Map<string | number, string>
+	/** the two groups, the first the reference */
+	names: [string, string]
+	/** the region of a sample's total junction reads; absent, the view */
+	region?: { chr: string; start: number; stop: number }
+}
+
+/* the least mean share of its gene's junction reads, in either group, of a junction that testJunctionGroups() tests: a
+junction of a few reads in some samples of one group gets a tiny p from how often it is there. ponytail: a fixed share;
+a minimum sample count if this drops junctions that matter */
+export const minJunctionShare = 0.001
+/* the fewest samples of the two groups with reads of a junction that testJunctionGroups() tests: of a junction in one
+sample and none of the rest, the rank-sum test's tie correction leaves so little variance that the one sample gives a
+small p */
+export const minJunctionSamples = 5
+
+/* The gene of a junction, whose junctions' reads are the denominator of its share: the gene that both of its ends are
+annotated to (in an exon or an intron of it), the first by name of several; else the one gene of its only annotated
+end. undefined for a junction joining two genes, e.g. a fusion, or of no gene: those are not tested. */
+export function junctionGene(info: any): string | undefined {
+	const genes = (keys: string[]) =>
+		new Set<string>(keys.flatMap(k => (info?.[k] || []).map((e: any) => e.gene)).filter(Boolean))
+	const left = genes(['exonleft', 'exonleftin', 'intronleft']),
+		right = genes(['exonright', 'exonrightin', 'intronright'])
+	const both = [...left].filter(g => right.has(g)).sort()
+	if (both.length) return both[0]
+	if (!left.size && right.size == 1) return [...right][0]
+	if (!right.size && left.size == 1) return [...left][0]
+}
+
+/* Per junction of a gene, a Wilcoxon rank-sum test between two groups of samples of its share of each sample's reads of
+the gene's junctions (in groups.region, else in view), 0 for a sample without it, and BH q over the junctions tested:
+those with a mean share of at least minJunctionShare in a group and in at least minJunctionSamples samples; each group's
+mean share. The share of the gene and not
+the read count, as a sample's reads of every junction of a gene rise with its expression and the sequencing depth: a
+group that makes more of the gene, e.g. t(4;14) of NSD2, would otherwise have more of every junction; and of the gene
+and not of the locus, as then the junctions of a neighbouring gene would lose share as the gene gains. A sample with no
+reads of the gene's junctions is left out of its tests. Sets p, q, groupShares and gene of each junction tested; returns
+the groups with their numbers of samples with junction reads. */
+export function testJunctionGroups(
+	junctions: Junction[],
+	groupReads: Map<Junction, { gene: string; reads: Map<string | number, number> }>,
+	geneTotal: Map<string, Map<string | number, number>>,
+	groups: JunctionGroups
+): { groups: { name: string; n: number }[] } {
+	const withReads = new Set([...geneTotal.values()].flatMap(t => [...t.keys()]))
+	const out = {
+		groups: groups.names.map(name => ({ name, n: [...withReads].filter(id => groups.groupOf.get(id) == name).length }))
+	}
+	const tested = junctions.filter(j => groupReads.has(j) && geneTotal.has(groupReads.get(j)!.gene))
+	const shares = tested.map(j => {
+		const { gene, reads } = groupReads.get(j)!
+		const total = geneTotal.get(gene)!
+		return groups.names.map(g =>
+			[...total.keys()].filter(id => groups.groupOf.get(id) == g).map(id => (reads.get(id) || 0) / total.get(id)!)
+		)
+	})
+	const means = shares.map(([a, b]) => (a.length && b.length ? ([mean(a), mean(b)] as [number, number]) : null))
+	const p = shares.map(([a, b], i) =>
+		!means[i] ||
+		Math.max(...means[i]!) < minJunctionShare ||
+		[...a, ...b].filter(v => v > 0).length < minJunctionSamples
+			? null
+			: rankSumP(a, b)
+	)
+	const q = bh(p)
+	tested.forEach((j, i) => {
+		if (!means[i]) return
+		j.gene = groupReads.get(j)!.gene
+		j.groupShares = means[i]!
+		if (p[i] === null) return
+		j.p = p[i]!
+		j.q = q[i]!
+	})
+	return out
+}
+
+function mean(values: number[]): number {
+	return values.reduce((a, b) => a + b, 0) / values.length
 }
 
 function median(values: number[]): number {

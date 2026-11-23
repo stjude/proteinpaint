@@ -173,6 +173,15 @@ export class View {
 				hiddentypes: this.state.config.junction.hiddentypes,
 				readcountCutoff: this.state.config.junction.readcountCutoff,
 				sampleHeatmap: this.state.config.junction.sampleHeatmap,
+				// px of the y axis, e.g. shorter for a figure; absent, the track's default
+				...(this.state.config.junction.axisheight ? { axisheight: this.state.config.junction.axisheight } : {}),
+				/* two groups to test each junction between: its own, else those of the methylation track, e.g. of the DMR scan
+				that opened the locus, so that both tracks compare the same groups */
+				groupTw:
+					this.state.config.junction.groupTw ||
+					this.state.config.tracks?.find(t => t.type == 'dnameth' && t.groupTw?.q?.groups?.length == 2)?.groupTw,
+				// the locus the browser was opened on, as the region of the tested shares, so they stay as the view moves
+				groupRegion: locusOf(this.state.config.geneSearchResult),
 				// keeps the heatmap choice of the track's menu in the state
 				callbackOnRender: () => this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 			}
@@ -507,4 +516,12 @@ export function getGbSampleTypes(config: any, termdbConfig: any): number[] | und
 	const values = getSampleTypeSelectValues(query, chosen) as { [term: string]: string }
 	const shown = getSampleTypesOfTermValues(query.sampleTypesByTerms, values)
 	return getChosenSampleTypes(query, shown)
+}
+
+/* the coordinates of a gene search result, which a launcher such as the volcano or the methylation track sets; undefined
+for a result of a gene symbol only */
+function locusOf(r: any): { chr: string; start: number; stop: number } | undefined {
+	return r && typeof r.chr == 'string' && Number.isInteger(r.start) && Number.isInteger(r.stop)
+		? { chr: r.chr, start: r.start, stop: r.stop }
+		: undefined
 }

@@ -43,14 +43,24 @@ export type LocusHeatmapAnnotation = {
 }
 
 /** a block of rows, a model each at its genomic extent like the block's gene track, e.g. the isoforms of a gene: a line
- * from line[0] to line[1] and a box per exon, px in the block view. right() draws what goes with row i in the block's
- * right side, in g at the top of the row; rightWidth is its width there */
+ * from line[0] to line[1] and a box per exon, px in the block view. With coding, as sketchGene() of client/dom/sketchGm.ts
+ * draws a gene model: the exons at the height of an UTR and the coding parts at full height (none, as of a noncoding
+ * transcript: every exon as an UTR); with strand, as it reads on screen, chevrons along the introns and, in white, the
+ * coding parts. right() draws what goes with row i in the block's right side, in g at the top of the row; rightWidth is
+ * its width there */
 export type LocusHeatmapModels = {
 	label: string
 	/** px above the first row, for its label and what right() draws there, e.g. a title and an axis; default 18 */
 	headerHeight?: number
 	rowHeight: number
-	rows: { label: string; color: string; line: [number, number]; exons: [number, number][] }[]
+	rows: {
+		label: string
+		color: string
+		line: [number, number]
+		exons: [number, number][]
+		coding?: [number, number][]
+		strand?: '+' | '-'
+	}[]
 	right?: (g: any, i: number) => void
 	rightWidth?: number
 	onHover?: (event: any, i: number) => void
@@ -82,7 +92,8 @@ export type LocusHeatmapData = {
 	 * block view, at least 2 px wide), e.g. the DMRs of a scan at their full length */
 	intervals?: {
 		label: string
-		items: { x0: number; x1: number; color: string }[]
+		/** stroke, optional: an outline, e.g. a category of the item apart from what its fill shows */
+		items: { x0: number; x1: number; color: string; stroke?: string }[]
 		onHover?: (event: any, i: number) => void
 		onOut?: () => void
 	}
@@ -103,8 +114,9 @@ const annW = 12, // width of an annotation column of colors
 	intervalHeight = 10,
 	intervalGap = 6,
 	modelGap = 18, // above the model rows, for their label
+	modelH = 10, // px of a coding exon of a model row, see LocusHeatmapModels
 	// the longest a column's label is drawn, in px; longer ones are cut with an ellipsis
-	MAX_LABEL = 110
+	MAX_LABEL = 140
 
 /** tk.rows.statistics, heatmap and linkage, in tk.glider, tk.gleft and tk.gright; other rows of tk.rows are kept */
 export function initLocusHeatmapRows(tk: any) {
@@ -364,6 +376,8 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 				.attr('width', w)
 				.attr('height', intervalHeight)
 				.attr('fill', it.color)
+				.attr('stroke', it.stroke || null)
+				.attr('stroke-width', it.stroke ? 1 : null)
 				.style('cursor', iv.onHover ? 'default' : null)
 				.on('mouseover', (event: any) => iv.onHover?.(event, i))
 				.on('mouseout', () => iv.onOut?.())
@@ -397,16 +411,36 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 					.attr('y1', cy)
 					.attr('y2', cy)
 					.attr('stroke', r.color)
-			for (const e of r.exons) {
+			// full height, or an UTR's, a fifth of it less above and below, as sketchGene()
+			const box = (e: [number, number], h: number) => {
 				const c = clip(e[0], e[1])
 				if (c)
 					row
 						.append('rect')
 						.attr('x', c[0])
-						.attr('y', cy - 4)
+						.attr('y', cy - h / 2)
 						.attr('width', c[1])
-						.attr('height', 8)
+						.attr('height', h)
 						.attr('fill', r.color)
+				return c
+			}
+			for (const e of r.exons) box(e, r.coding ? modelH - 2 * Math.ceil(modelH / 5) : modelH)
+			const coding = (r.coding || []).map(e => box(e, modelH)).filter(c => c) as number[][]
+			if (r.strand) {
+				// the introns: the line between the exons, left to right on screen
+				const ex = r.exons
+					.map(e => clip(e[0], e[1]))
+					.filter(c => c)
+					.sort((a, b) => a![0] - b![0]) as number[][]
+				const introns = ex.slice(1).map((e, k) => [ex[k][0] + ex[k][1], e[0]])
+				chevrons(row, introns, cy, r.strand, r.color)
+				chevrons(
+					row,
+					coding.map(c => [c[0], c[0] + c[1]]),
+					cy,
+					r.strand,
+					'white'
+				)
 			}
 			leftLabel(cy, r.label, 10)
 			if (m.right) m.right(heatmap.rightG.append('g').attr('transform', `translate(0,${y})`), i)
@@ -427,6 +461,28 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 	heatmap.leftWidth = heatmap.leftG.node().getBBox().width
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth || 0, heatmap.leftWidth)
 	return locusHeatmapHeight(tk)
+}
+
+/* chevrons pointing the way of strand ('+' rightward) along each span [x0, x1] that has room, centered on y, as
+sketchGene() draws a gene model's strand */
+function chevrons(g: any, spans: number[][], y: number, strand: '+' | '-', color: string) {
+	const h = modelH - 4,
+		w = h / 2,
+		gap = h / 2,
+		pad = 2
+	let d = ''
+	for (const [x0, x1] of spans) {
+		const len = x1 - x0
+		const n = Math.floor((len - pad * 2) / (w + gap))
+		if (n < 1) continue
+		let x = x0 + (len - n * (w + gap) + gap) / 2
+		for (let i = 0; i < n; i++, x += w + gap)
+			d +=
+				strand == '+'
+					? `M${x},${y - h / 2}L${x + w},${y}L${x},${y + h / 2}`
+					: `M${x + w},${y - h / 2}L${x},${y}L${x + w},${y + h / 2}`
+	}
+	if (d) g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1)
 }
 
 /** sets an svg text to label, cut with an ellipsis until it is at most px long as drawn */

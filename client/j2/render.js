@@ -370,15 +370,16 @@ jug2.filter(function(d){return d.rimwidth>0})
 		set_all(tk)
 		renderHeatmap(tk, block)
 		tk.rows.jug.axis.selectAll('.sjpp-j2-ytitle').remove()
-		const yTitle = getYAxisTitle(tk.rows.jug.yAxisKey)
-		// left of the axis, as the tick labels are on the right; the axis is at the bottom of the section with tk.pointDown
-		const axisMiddle = tk.pointDown ? tk.rows.jug.height - tk.rows.jug.axisheight / 2 : tk.rows.jug.axisheight / 2
+		const yTitle = getYAxisTitle(tk.rows.jug.yAxisKey, tk)
+		/* left of the axis, as the tick labels are on the right, reading up from its bottom: centered, a title would
+		reach the track's left labels at its top, of a short axis. The axis is at the bottom of the section with tk.pointDown */
+		const axisBottom = tk.pointDown ? tk.rows.jug.height : tk.rows.jug.axisheight
 		if (yTitle)
 			tk.rows.jug.axis
 				.append('text')
 				.attr('class', 'sjpp-j2-ytitle')
-				.attr('text-anchor', 'middle')
-				.attr('transform', `translate(-8, ${axisMiddle}) rotate(-90)`)
+				.attr('text-anchor', 'start')
+				.attr('transform', `translate(-8, ${axisBottom}) rotate(-90)`)
 				.text(yTitle)
 		const tickCount = tk.rows.jug.yAxisKey ? Math.floor(tk.rows.jug.axisheight / 20) : 0
 		const yAxis = axisRight()
@@ -614,6 +615,8 @@ for custom junctions, the first that every junction has of -log10 p, |ΔPSI| and
 otherwise none and all are at the bottom
 */
 function getYAxisKey(data, tk) {
+	// junctions tested between two groups, see setGroupTest() in tk.js
+	if (data.groups) return 'absDeltaPsi'
 	if (!tk.custom_data) return 'medianReadCount'
 	if (data.junctions.every(j => Number.isFinite(j.negLog10p))) return 'negLog10p'
 	if (data.junctions.every(j => Number.isFinite(j.absDeltaPsi))) return 'absDeltaPsi'
@@ -621,7 +624,9 @@ function getYAxisKey(data, tk) {
 }
 
 /* title of the y axis, to tell significance from effect size as junctions look the same with either; none for read count */
-function getYAxisTitle(yAxisKey) {
+function getYAxisTitle(yAxisKey, tk) {
+	// junctions tested between groups: the difference of the groups' shares of the junction's gene, see setGroupTest()
+	if (yAxisKey == 'absDeltaPsi' && tk.groupTw && !tk.custom_data) return '|Δ share|, points'
 	if (yAxisKey == 'negLog10p') return '-log10(p)'
 	if (yAxisKey == 'absDeltaPsi') return '|ΔPSI|'
 }
@@ -650,7 +655,7 @@ function setColor(tk) {
 		if (j.higherPsiIn) {
 			j.color = tk.deltaPsiGroups[j.higherPsiIn].color
 		} else if (tk.deltaPsiGroups || (tk.custom_data && !j.types.length)) {
-			j.color = '#858585'
+			j.color = tk.deltaPsiGroups?.noneColor || '#858585'
 		} else {
 			j.color = JTypes[j.types[0]]?.color
 			if (j.color == undefined) throw new Error('unknown j.type')
@@ -951,11 +956,23 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 	}
 	// optional fields of a custom junction
 	if (Number.isFinite(j.p)) table.addRow('p-value', roundValueAuto(j.p))
-	if ('psi_control' in j || 'psi_case' in j) {
-		const psi = v => (v == null ? 'NA' : roundValueAuto(v))
-		table.addRow(`PSI, ${tk.deltaPsiGroups?.control.name || 'control'}`, psi(j.psi_control))
-		table.addRow(`PSI, ${tk.deltaPsiGroups?.case.name || 'case'}`, psi(j.psi_case))
-		if (j.psi_control != null && j.psi_case != null) table.addRow('ΔPSI', roundValueAuto(j.psi_case - j.psi_control))
+	if (Number.isFinite(j.q)) table.addRow('q-value', roundValueAuto(j.q))
+	// PSI, or with junctions tested between groups, each group's mean share of the junction reads of its gene, which
+	// a junction has whether or not the difference is significant
+	const [psiControl, psiCase] = j.groupShares || [j.psi_control, j.psi_case]
+	if (j.groupShares || 'psi_control' in j || 'psi_case' in j) {
+		// the shares of a gene's junction reads as percentages, PSI as it is
+		const psi = v => (v == null ? 'NA' : j.groupShares ? `${roundValueAuto(v * 100)}%` : roundValueAuto(v))
+		const label = j.gene ? `Share of ${j.gene} junction reads` : tk.deltaPsiGroups?.label || 'PSI'
+		table.addRow(`${label}, ${tk.deltaPsiGroups?.control.name || 'control'}`, psi(psiControl))
+		table.addRow(`${label}, ${tk.deltaPsiGroups?.case.name || 'case'}`, psi(psiCase))
+		if (psiControl != null && psiCase != null)
+			table.addRow(
+				j.groupShares ? 'Difference' : 'ΔPSI',
+				j.groupShares
+					? `${roundValueAuto((psiCase - psiControl) * 100)} percentage points`
+					: roundValueAuto(psiCase - psiControl)
+			)
 	}
 	let samplesCell // shows the buttons of the term of the read count of each sample, when there are samples
 	if (Number.isFinite(j.medianReadCount)) {
@@ -1058,7 +1075,11 @@ function addTermButtons(holder, tk, term, testidPrefix) {
 				config: {
 					chartType: 'summary',
 					// read for the sample types the track shows, chosen in the genome browser's sample type row
-					term: { term: tk.sampleTypes ? withSampleTypes(term, tk) : term, q: { mode: 'continuous' } }
+					term: { term: tk.sampleTypes ? withSampleTypes(term, tk) : term, q: { mode: 'continuous' } },
+					/* with the groups the junctions are tested between, the junction's read count per group: the raw reads,
+					beside the share of the junction reads that the track tests, e.g. a start whose reads do not change while
+					the rest of the gene's rise */
+					...(tk.groupTw ? { term2: structuredClone(tk.groupTw) } : {})
 				}
 			})
 		})

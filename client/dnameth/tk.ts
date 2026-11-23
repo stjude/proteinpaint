@@ -11,8 +11,11 @@ import {
 	type LocusHeatmapModels
 } from '../src/block.locusHeatmap'
 import { HYPER_COLOR, HYPO_COLOR } from '#shared/dmrColors.js'
+import { rankSumP, bh } from '#shared/rankSum.js'
 import { drawShareViolins, sharesOf, qText } from './usagePlot'
 import { scaleLinear } from 'd3-scale'
+import { interpolateLab } from 'd3-interpolate'
+import { rgb } from 'd3-color'
 import { axisTop } from 'd3-axis'
 import type { MethylationLocusBin, MethylationLocusResponse, MethylationLocusSample } from '#types'
 
@@ -27,7 +30,7 @@ tk.dmrFile   optional, with two groups: the bedj file, in the server's cache, of
              those groups called (DmrScanSummary.bedjFile). A row under the lines draws each DMR at its genomic extent.
 tk.sortBy    'expression' | 'group' | 'beta' (mean beta in view) | 'share:<isoform>' (its share of the isoforms'
              expression, high to low, within each group when there are groups); default is the first one available
-tk.violinHeight  px of a group's violin in the isoform and junction-start rows, default 14 (less for a figure)
+tk.violinHeight  px of a group's violin in the isoform rows, default 14 (less for a figure)
 tk.minColWidth   px, default 8: the view is cut into as many bins of equal CpG count as fit at this width, so the
              bins shrink on zooming in, down to one CpG per column
 tk.filter, tk.filter0
@@ -54,6 +57,8 @@ const annotationColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
 /* a sample whose isoforms sum to less (in their unit, e.g. TPM) has no makeup: near 0, a read or two decides a share,
 e.g. FGFR3 outside t(4;14), whose shares then look like a strong difference in usage */
 const minIsoformTotal = 1
+// the smallest mean share in a group of an isoform that the two-group test picks by p, see twoGroupShareTest()
+const minRankedShare = 0.01
 
 export async function loadTk(tk: any, block: any) {
 	block.tkcloakon(tk)
@@ -302,7 +307,7 @@ function render(tk: any, block: any): number {
 	const annotation = annotationOf(tk, data)
 	const isoforms = isoformParts(data)
 	// each group's isoform makeup, and with two groups a test of each isoform's share between them
-	const usage = isoforms ? isoformUsage(isoforms.shares, samples, groups) : undefined
+	const usage = isoforms ? isoformUsage(isoforms.shares, samples, groups, isoforms.q) : undefined
 
 	// rows are samples[] in the order of idx; everything else stays in the order of samples[]
 	tk.sortOptions = [
@@ -371,6 +376,10 @@ function render(tk: any, block: any): number {
 	/* The DMRs themselves: each at its genomic extent under the lines, as a bed track draws an item, colored by
 	direction. Clipped to the view; a DMR shorter than 2 px still shows. */
 	const viewDmrs = dmrs.filter(d => d.stop >= region.start && d.start <= region.stop)
+	// the fill of a DMR is its mean Δβ on a scale from the smallest to the largest in view, which the legend shows
+	const sizes = viewDmrs.map(d => Math.abs(d.delta))
+	tk.dmrDeltaRange = sizes.length ? [Math.min(...sizes), Math.max(...sizes)] : [0, 0.1]
+	const dmrFill = dmrColor(tk.dmrDeltaRange[0], tk.dmrDeltaRange[1])
 	/* px of a position; one at or past an end of the view is that end's edge, on the side that the view's orientation
 	puts it, as seekcoord() can find no x at the view's bounds */
 	const reverse = !!block.rglst[block.startidx].reverse
@@ -386,7 +395,8 @@ function render(tk: any, block: any): number {
 					items: viewDmrs.map(d => ({
 						x0: xAt(d.start) ?? 0,
 						x1: xAt(d.stop) ?? 0,
-						color: d.hyper ? HYPER_COLOR : HYPO_COLOR
+						color: dmrFill(d.delta),
+						stroke: d.hyper ? HYPER_COLOR : HYPO_COLOR
 					})),
 					onHover: (event: any, i: number) => {
 						const d = viewDmrs[i]
@@ -406,12 +416,7 @@ function render(tk: any, block: any): number {
 	/* The isoforms of the share column, each at its genomic extent like the gene track draws it, in its color, with the
 	share of the isoform per group on the right as in the usage plot: which isoform it is, where it starts, and how
 	the groups use it, on one line. With groups only. */
-	const models = [
-		...(isoforms && usage ? [isoformRows(data, isoforms, usage, groupColor, xAt, tk)] : []),
-		/* every start of the gene's transcripts that its junctions show, not only those of the isoforms above, which are
-		the most expressed by isoform expression: a start used by few annotated isoforms can be the one that differs */
-		...(groups.length ? [junctionRows(data, groups, groupColor, xAt, tk)].filter(m => m.rows.length) : [])
-	]
+	const models = isoforms && usage ? [isoformRows(data, isoforms, usage, groupColor, xAt, tk, reverse)] : []
 
 	const annotations: LocusHeatmapAnnotation[] = []
 	if (hasGene) {
@@ -518,14 +523,28 @@ function render(tk: any, block: any): number {
 }
 
 /* The makeup of the gene's expression by isoform: per sample, the share of the summed expression of the gene's
-isoforms that each of the most expressed ones has, and the rest as one last part. undefined without isoform
+isoforms that each of the isoforms shown apart has, and the rest as one last part. undefined without isoform
 expression, or with one isoform. A sample whose isoforms add up to less than minIsoformTotal, or that misses the value
-of one, has no parts: its makeup is not known. */
+of one, has no parts: its makeup is not known.
+Which isoforms are shown apart: with two groups, those whose share differs the most between them, by the Wilcoxon p
+of every isoform with a mean share of at least minRankedShare in a group, and q is BH over all of those tested, so
+that picking the smallest p does not shrink q; else, and to break ties of p, the most expressed. */
 export function isoformParts(data: {
 	expressedIsoforms?: string[]
-	samples: Pick<MethylationLocusSample, 'isoformValues'>[]
+	samples: (Pick<MethylationLocusSample, 'isoformValues'> & { group?: string })[]
+	groups?: string[]
 	isoformUnit?: string
-}): { ids: string[]; labels: string[]; colors: string[]; shares: number[][]; unit: string } | undefined {
+}):
+	| {
+			ids: string[]
+			labels: string[]
+			colors: string[]
+			shares: number[][]
+			unit: string
+			/** with two groups, per part the BH q of its share between them; null for the other isoforms */
+			q?: (number | null)[]
+	  }
+	| undefined {
 	const ids = data.expressedIsoforms || []
 	// a sample with a value for every isoform: one whose makeup is known
 	const complete = (v?: (number | null)[]): v is number[] =>
@@ -538,11 +557,13 @@ export function isoformParts(data: {
 	const total = ids.map((_, k) =>
 		data.samples.reduce((sum, s) => sum + (complete(s.isoformValues) ? s.isoformValues[k] : 0), 0)
 	)
+	const byTotal = (a: number, b: number) => total[b] - total[a]
+	const test = twoGroupShareTest(data, ids, complete)
 	const top = ids
 		.map((_, k) => k)
-		.sort((a, b) => total[b] - total[a])
-		.slice(0, maxIsoformParts)
 		.filter(k => total[k] > 0)
+		.sort(test ? (a, b) => (test.p[a] ?? 2) - (test.p[b] ?? 2) || byTotal(a, b) : byTotal)
+		.slice(0, maxIsoformParts)
 	if (!top.length) return
 	const hasOther = ids.length > top.length
 	return {
@@ -550,6 +571,7 @@ export function isoformParts(data: {
 		ids: top.map(k => ids[k]),
 		labels: [...top.map(k => ids[k]), ...(hasOther ? [`${ids.length - top.length} other isoforms`] : [])],
 		colors: [...top.map((_, i) => schemeTableau10[i]), ...(hasOther ? [otherIsoformColor] : [])],
+		...(test ? { q: [...top.map(k => test.q[k]), ...(hasOther ? [null] : [])] } : {}),
 		shares: data.samples.map(s => {
 			const v = s.isoformValues
 			if (!complete(v)) return []
@@ -562,14 +584,46 @@ export function isoformParts(data: {
 	}
 }
 
+/* with two groups, per isoform the Wilcoxon p of its share of the gene between them and the BH q over the isoforms
+tested: those with a mean share of at least minRankedShare in a group, as a share near 0 in both can differ by p and
+not by anything that shows; null for the others. undefined without two groups */
+function twoGroupShareTest(
+	data: { samples: { isoformValues?: (number | null)[]; group?: string }[]; groups?: string[] },
+	ids: string[],
+	complete: (v?: (number | null)[]) => v is number[]
+): { p: (number | null)[]; q: (number | null)[] } | undefined {
+	if (data.groups?.length != 2) return
+	const shares = data.groups.map(g =>
+		data.samples.flatMap(s => {
+			const v = s.isoformValues
+			if (s.group !== g || !complete(v)) return []
+			const sum = v.reduce((a, b) => a + b, 0)
+			return [v.map(x => x / sum)]
+		})
+	)
+	if (shares.some(s => !s.length)) return
+	const mean = (s: number[][], k: number) => s.reduce((a, x) => a + x[k], 0) / s.length
+	const p = ids.map((_, k) =>
+		Math.max(mean(shares[0], k), mean(shares[1], k)) < minRankedShare
+			? null
+			: rankSumP(
+					shares[0].map(x => x[k]),
+					shares[1].map(x => x[k])
+			  )
+	)
+	return { p, q: bh(p) }
+}
+
 /* Each group's isoform makeup: per part of isoformParts(), the mean share over the group's samples with a makeup. With
 two groups, each part's shares in the two are compared by a Wilcoxon rank-sum test (normal approximation with tie and
 continuity correction), BH-adjusted across the parts: differential usage, apart from how much of the gene each group
-makes. undefined without groups. */
+makes. q, when given, is used instead: isoformParts() tests every isoform when it picks them by p. undefined without
+groups. */
 export function isoformUsage(
 	shares: number[][],
 	samples: { group?: string }[],
-	groups: string[]
+	groups: string[],
+	q?: (number | null)[]
 ): { groups: { name: string; n: number; mean: number[] }[]; q?: (number | null)[] } | undefined {
 	if (!groups.length) return
 	const nParts = Math.max(0, ...shares.map(s => s.length))
@@ -584,7 +638,8 @@ export function isoformUsage(
 			)
 		}))
 	}
-	if (groups.length == 2) {
+	if (groups.length == 2 && q) out.q = q
+	else if (groups.length == 2) {
 		const p = Array.from({ length: nParts }, (_, k) =>
 			rankSumP(
 				of[0].map(s => s[k]),
@@ -596,66 +651,18 @@ export function isoformUsage(
 	return out
 }
 
-/* two-sided p of a Wilcoxon rank-sum test of a against b, normal approximation with tie and continuity correction;
-null with an empty group or no variation */
-export function rankSumP(a: number[], b: number[]): number | null {
-	const n1 = a.length,
-		n2 = b.length,
-		n = n1 + n2
-	if (!n1 || !n2) return null
-	const all = [...a.map(v => ({ v, g: 0 })), ...b.map(v => ({ v, g: 1 }))].sort((x, y) => x.v - y.v)
-	// mid ranks of ties, and the tie term of the variance
-	let r1 = 0,
-		ties = 0
-	for (let i = 0; i < n; ) {
-		let j = i
-		while (j + 1 < n && all[j + 1].v == all[i].v) j++
-		const rank = (i + j + 2) / 2,
-			t = j - i + 1
-		for (let k = i; k <= j; k++) if (all[k].g == 0) r1 += rank
-		ties += t * t * t - t
-		i = j + 1
+/* the fill of a DMR by its mean Δβ: the direction's color (HYPO_COLOR below 0, HYPER_COLOR above), light at the smallest
+|Δβ| in view (min) and dark at the largest (max), so that the whole ramp is used by the DMRs shown, which all pass the
+scan's cutoff and so would otherwise all be dark; past them, the end colors */
+export function dmrColor(min: number, max: number): (delta: number) => string {
+	// from a light tint of the direction color to a darker shade of it, in Lab, so that lightness alone shows size
+	const ramp = (c: string) => interpolateLab(interpolateLab('#fff', c)(0.25), rgb(c).darker(0.8).formatHex())
+	const hypo = ramp(HYPO_COLOR),
+		hyper = ramp(HYPER_COLOR)
+	return delta => {
+		const t = max > min ? Math.min(1, Math.max(0, (Math.abs(delta) - min) / (max - min))) : 1
+		return (delta < 0 ? hypo : hyper)(t)
 	}
-	const u = r1 - (n1 * (n1 + 1)) / 2
-	const sd = Math.sqrt(((n1 * n2) / 12) * (n + 1 - ties / (n * (n - 1))))
-	if (!(sd > 0)) return null
-	const z = Math.max(0, Math.abs(u - (n1 * n2) / 2) - 0.5) / sd
-	return Math.min(1, 2 * normalUpper(z))
-}
-
-// P(Z > z) for a standard normal: erfc by W. J. Cody's rational approximation as in Numerical Recipes (erfcc), error < 1.2e-7
-function normalUpper(z: number): number {
-	const x = z / Math.SQRT2
-	const t = 1 / (1 + 0.5 * x)
-	const r =
-		t *
-		Math.exp(
-			-x * x -
-				1.26551223 +
-				t *
-					(1.00002368 +
-						t *
-							(0.37409196 +
-								t *
-									(0.09678418 +
-										t *
-											(-0.18628806 +
-												t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277))))))))
-		)
-	return r / 2
-}
-
-// Benjamini-Hochberg over the p-values that are not null
-function bh(p: (number | null)[]): (number | null)[] {
-	const idx = p.map((v, i) => i).filter(i => p[i] !== null)
-	idx.sort((a, b) => p[b]! - p[a]!)
-	const q: (number | null)[] = p.map(() => null)
-	let running = 1
-	idx.forEach((i, r) => {
-		running = Math.min(running, (p[i]! * idx.length) / (idx.length - r))
-		q[i] = running
-	})
-	return q
 }
 
 /* the lines of the mean beta row: the groups when there are any, else thirds of the samples by expression,
@@ -720,8 +727,16 @@ function renderLegend(
 		item(`width:12px;height:12px;background:${HYPO_COLOR};opacity:.35`, `${data.groups[1]} lower`)
 	}
 	if (tk.dmrs && data.groups?.length == 2) {
-		item(`width:16px;height:8px;background:${HYPER_COLOR}`, 'hypermethylated DMR of the scan, at its length')
-		item(`width:16px;height:8px;background:${HYPO_COLOR}`, 'hypomethylated DMR')
+		// the same colors as the DMR row, sampled from its scale, a ramp per direction
+		const [lo, hi] = tk.dmrDeltaRange || [0, 0.1],
+			fill = dmrColor(lo, hi)
+		const stops = (sign: number) => [0, 0.25, 0.5, 0.75, 1].map(t => fill(sign * (lo + t * (hi - lo)))).join(',')
+		item(
+			'',
+			`DMR of the scan at its length, |mean Δβ| ${round(lo)} to ${round(hi)} (${data.groups[1]} − ${data.groups[0]}):`
+		)
+		item(`width:60px;height:8px;background:linear-gradient(to right,${stops(-1)})`, 'hypomethylated')
+		item(`width:60px;height:8px;background:linear-gradient(to right,${stops(1)})`, 'hypermethylated')
 	}
 	if (data.gene) item('width:12px;height:12px;background:#333;opacity:.3', 'ρ faded if q ≥ 0.05')
 	if (data.gene) item('width:16px;height:6px;background:#555', `log2(${data.unit}+1)`)
@@ -729,7 +744,12 @@ function renderLegend(
 		item('', "ρ within groups: each group's ρ, pooled, so that a difference between the groups does not make one")
 	if (isoforms) {
 		const starts = new Map((data.isoforms || []).map(g => [g.isoform, g.strand == '-' ? g.stop : g.start]))
-		item('', `share of the ${isoforms.unit} of the isoforms of ${tk.gene}:`)
+		item(
+			'',
+			`share of the ${isoforms.unit} of the isoforms of ${tk.gene}` +
+				// how the isoforms shown apart were picked, as with two groups it is not by expression
+				(isoforms.q ? ', the isoforms whose share differs the most between the groups (Wilcoxon p):' : ':')
+		)
 		isoforms.labels.forEach((label, k) => {
 			const start = starts.get(label)
 			item(
@@ -767,221 +787,19 @@ function renderLegend(
 	}
 }
 
-/* Junction evidence of the isoforms' starts: per sample, the reads of an isoform's first junction (at its 5' end) over
-those of a body junction most of the gene's transcripts have (response.junctions), the share of the gene's transcripts
-that start where the isoform starts; it does not depend on assigning reads to transcripts that share most of their
-exons, as isoform expression does. A sample with fewer than minReferenceReads reads of the body junction has none.
-With two groups, each isoform's ratios are compared by rank-sum, BH across the isoforms with a first junction. */
-const minReferenceReads = 10
-export function junctionUsage(
-	data: Pick<LocusData, 'samples' | 'junctions' | 'expressedIsoforms'>,
-	ids: string[],
-	groups: string[]
-):
-	| {
-			/** per isoform of ids: its first junction, null for none */
-			junction: ([number, number] | null)[]
-			/** per isoform, per sample of data.samples: the ratio, null for none */
-			ratio: (number | null)[][]
-			/** per isoform, per group: the median reads of the first junction and of the body junction */
-			reads: { first: number; reference: number }[][]
-			q?: (number | null)[]
-	  }
-	| undefined {
-	const J = data.junctions
-	if (!J || !data.samples.some(s => s.junctionReads)) return
-	const all = data.expressedIsoforms || []
-	const median = (v: number[]) => {
-		const s = [...v].sort((a, b) => a - b)
-		return s.length ? s[Math.floor(s.length / 2)] : 0
-	}
-	const firstOf = ids.map(id => J.first[all.indexOf(id)] ?? null)
-	const ratio = firstOf.map(f => (f === null ? data.samples.map(() => null) : junctionRatios(data, f)))
-	const reads = firstOf.map(f =>
-		groups.map(g => {
-			const of = data.samples.filter(s => s.group === g && s.junctionReads)
-			return {
-				first: f === null ? 0 : median(of.map(s => s.junctionReads![f])),
-				reference: median(of.map(s => s.junctionReads![J.reference]))
-			}
-		})
-	)
-	const out: ReturnType<typeof junctionUsage> = {
-		junction: firstOf.map(f => (f === null ? null : J.keys[f])),
-		ratio,
-		reads
-	}
-	if (groups.length == 2) {
-		const of = (k: number, g: string) =>
-			ratio[k].filter((v, j) => v !== null && data.samples[j].group === g) as number[]
-		out.q = bh(firstOf.map((f, k) => (f === null ? null : rankSumP(of(k, groups[0]), of(k, groups[1])))))
-	}
-	return out
-}
-
-/** per sample, the reads of junction keys[k] over the body junction's; null with fewer than minReferenceReads of it */
-export function junctionRatios(data: Pick<LocusData, 'samples' | 'junctions'>, k: number): (number | null)[] {
-	const ref = data.junctions!.reference
-	return data.samples.map(s => {
-		const r = s.junctionReads
-		if (!r || r[ref] < minReferenceReads) return null
-		return r[k] / r[ref]
-	})
-}
-
-/* The starts of the gene's transcripts that its junctions show: each distinct first junction of an expressed isoform
-but the body junction, with a median of at least minStartReads reads in some group, in genomic order; per start its
-isoforms, ratios (junctionRatios), median reads per group of it and of the body junction, and with two groups the
-rank-sum q of the ratios, BH across the starts. */
-const minStartReads = 5
-export function junctionStarts(data: Pick<LocusData, 'samples' | 'junctions' | 'expressedIsoforms'>, groups: string[]) {
-	const J = data.junctions
-	if (!J || !data.samples.some(s => s.junctionReads)) return []
-	const ids = data.expressedIsoforms || []
-	const median = (v: number[]) => {
-		const s = [...v].sort((a, b) => a - b)
-		return s.length ? s[Math.floor(s.length / 2)] : 0
-	}
-	const byKey = new Map<number, string[]>()
-	J.first.forEach((f, i) => {
-		if (f === null || f === J.reference) return
-		if (!byKey.has(f)) byKey.set(f, [])
-		byKey.get(f)!.push(ids[i])
-	})
-	const starts = [...byKey]
-		.map(([k, isoforms]) => ({
-			key: J.keys[k],
-			isoforms,
-			ratio: junctionRatios(data, k),
-			reads: groups.map(g => {
-				const of = data.samples.filter(s => s.group === g && s.junctionReads)
-				return {
-					start: median(of.map(s => s.junctionReads![k])),
-					reference: median(of.map(s => s.junctionReads![J.reference]))
-				}
-			}),
-			q: null as number | null
-		}))
-		.filter(st => st.reads.some(r => r.start >= minStartReads))
-		.sort((a, b) => a.key[0] - b.key[0])
-	if (groups.length == 2) {
-		const of = (st: (typeof starts)[0], g: string) =>
-			st.ratio.filter((v, j) => v !== null && data.samples[j].group === g) as number[]
-		const q = bh(starts.map(st => rankSumP(of(st, groups[0]), of(st, groups[1]))))
-		starts.forEach((st, i) => (st.q = q[i]))
-	}
-	return starts
-}
-
-/* The rows of junctionStarts(): each junction at its genomic extent, from its donor to its acceptor, and on the right
-a violin per group of its ratio to the body junction, and its q */
-function junctionRows(
-	data: LocusData,
-	groups: string[],
-	groupColor: (g: string) => string,
-	xAt: (pos: number) => number | undefined,
-	tk: any
-): LocusHeatmapModels {
-	const violinH = tk.violinHeight || 14,
-		colW = 130
-	const starts = junctionStarts(data, groups)
-	const groupOf = data.samples.map(s => s.group)
-	const p95 = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length * 0.95)] ?? 0
-	const top = Math.max(
-		1,
-		Math.ceil(Math.max(0, ...starts.map(st => p95(st.ratio.filter(v => v !== null) as number[]))) * 2) / 2
-	)
-	const x = scaleLinear().domain([0, top]).range([0, colW]).clamp(true)
-	const px = (pos: number) => xAt(pos) ?? 0
-	const ref = data.junctions?.keys[data.junctions.reference]
-	return {
-		label: 'Transcript starts (junctions)',
-		headerHeight: 32,
-		rowHeight: groups.length * (violinH + 2) + 6,
-		rightWidth: colW + 62,
-		rows: starts.map(st => ({
-			label: `${st.key[0].toLocaleString()}-${st.key[1].toLocaleString()}`,
-			color: '#555',
-			line: [px(st.key[0]), px(st.key[1])],
-			// the two ends, the donor and the acceptor
-			exons: [
-				[px(st.key[0]) - 1, px(st.key[0]) + 1],
-				[px(st.key[1]) - 1, px(st.key[1]) + 1]
-			]
-		})),
-		right: (rg, i) => {
-			const st = starts[i]
-			if (i == 0) {
-				rg.append('text')
-					.attr('y', -20)
-					.attr('font-size', 10)
-					.attr('font-weight', 'bold')
-					.text('Junction ÷ body junction')
-				axisstyle({
-					axis: rg
-						.append('g')
-						.attr('transform', 'translate(0,-2)')
-						.call(
-							axisTop(x)
-								.tickValues([0, top / 2, top])
-								.tickFormat((v: any) => String(v))
-								.tickSize(3)
-						),
-					color: '#555',
-					fontsize: 9
-				})
-			}
-			drawShareViolins(rg.append('g').attr('transform', 'translate(0,3)'), {
-				groups: groups.map(g => ({
-					color: groupColor(g),
-					values: st.ratio.filter((v, j) => v !== null && groupOf[j] === g) as number[]
-				})),
-				x,
-				h: violinH
-			})
-			if (st.q !== null)
-				rg.append('text')
-					.attr('x', colW + 6)
-					.attr('y', 3 + (groups.length * (violinH + 2)) / 2)
-					.attr('dominant-baseline', 'central')
-					.attr('font-size', 10)
-					.attr('font-weight', st.q < 0.05 ? 'bold' : 'normal')
-					.text(`q ${qText(st.q)}`)
-		},
-		onHover: (event, i) => {
-			const st = starts[i]
-			tk.tip.clear()
-			const table = table2col({ holder: tk.tip.d })
-			table.addRow('Junction', `${data.region.chr}:${st.key[0]}-${st.key[1]}`)
-			table.addRow(
-				'First junction of',
-				st.isoforms.length > 3
-					? `${st.isoforms.slice(0, 3).join(', ')} and ${st.isoforms.length - 3} more`
-					: st.isoforms.join(', ')
-			)
-			groups.forEach((g, gi) => {
-				const r = st.reads[gi]
-				table.addRow(`Median reads, ${g}`, `${r.start} this junction, ${r.reference} body junction`)
-			})
-			if (ref) table.addRow('Body junction', `${data.region.chr}:${ref[0]}-${ref[1]}`)
-			if (st.q !== null) table.addRow('q', qText(st.q))
-			tk.tip.show(event.clientX, event.clientY)
-		},
-		onOut: () => tk.tip.hide()
-	}
-}
-
 /* The model rows of the isoforms shown apart in the share column: exons and span from the gene models of the response,
 px by xAt(); on the right, per group, a violin of the isoform's share of isoform expression (./usagePlot.ts
-drawShareViolins) and its q, and with junction data a violin of junctionUsage() and its q, each column under its title
-and axis above the first row. */
+drawShareViolins) and its q, under its title and axis above the first row. The junctions of the isoforms' starts are in
+the junction track (client/j2), which tests each junction between the same groups. */
 function isoformRows(
 	data: LocusData,
 	isoforms: NonNullable<ReturnType<typeof isoformParts>>,
 	usage: NonNullable<ReturnType<typeof isoformUsage>>,
 	groupColor: (g: string) => string,
 	xAt: (pos: number) => number | undefined,
-	tk: any
+	tk: any,
+	// the view runs right to left
+	reverse = false
 ): LocusHeatmapModels {
 	const violinH = tk.violinHeight || 14,
 		colW = 130,
@@ -990,19 +808,6 @@ function isoformRows(
 	const groupOf = data.samples.map(s => s.group)
 	// the isoforms with a model: not the gray part of the rest
 	const ks = isoforms.ids.map((_, k) => k).filter(k => byId.has(isoforms.ids[k]))
-	const junctions = junctionUsage(
-		data,
-		isoforms.ids,
-		usage.groups.map(g => g.name)
-	)
-	// the junction ratio from 0 to the largest 95th percentile of the rows, in halves, at least 1
-	const p95 = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length * 0.95)] ?? 0
-	const jMax = junctions
-		? Math.max(
-				1,
-				Math.ceil(Math.max(...ks.map(k => p95(junctions.ratio[k].filter(v => v !== null) as number[]))) * 2) / 2
-		  )
-		: 1
 	const columns = [
 		{
 			title: `Share of isoform ${isoforms.unit}`,
@@ -1011,20 +816,7 @@ function isoformRows(
 			format: (v: number) => `${v * 100}%`,
 			values: (k: number, g: string) => sharesOf({ parts: isoforms, groupOf }, g, k),
 			q: (k: number) => usage.q?.[k]
-		},
-		...(junctions
-			? [
-					{
-						title: 'First junction ÷ body junction',
-						x: scaleLinear().domain([0, jMax]).range([0, colW]).clamp(true),
-						ticks: [0, jMax / 2, jMax],
-						format: (v: number) => String(v),
-						values: (k: number, g: string) =>
-							junctions.ratio[k].filter((v, j) => v !== null && groupOf[j] === g) as number[],
-						q: (k: number) => junctions.q?.[k]
-					}
-			  ]
-			: [])
+		}
 	]
 	const px = (pos: number) => xAt(pos) ?? 0
 	return {
@@ -1038,7 +830,11 @@ function isoformRows(
 				label: isoforms.ids[k],
 				color: isoforms.colors[k],
 				line: [px(g.start), px(g.stop)],
-				exons: (g.exon || []).map(([a, b]) => [px(a), px(b)])
+				exons: (g.exon || []).map(([a, b]) => [px(a), px(b)]),
+				// as the gene track draws it: a noncoding transcript has no coding parts, and every exon is drawn as an UTR
+				coding: (g.coding || []).map(([a, b]) => [px(a), px(b)]),
+				// as it reads on screen, which a reversed view turns
+				strand: ((g.strand == '-') != reverse ? '-' : '+') as '+' | '-'
 			}
 		}),
 		right: (rg, i) => {
@@ -1089,21 +885,6 @@ function isoformRows(
 				table.addRow(`Mean share, ${gr.name}`, `${Math.round(gr.mean[k] * 100)}% of ${gr.n} samples`)
 			const q = usage.q?.[k]
 			if (q !== undefined && q !== null) table.addRow('q, share', qText(q))
-			const j = junctions?.junction[k]
-			if (junctions && j) {
-				table.addRow('First junction', `${data.region.chr}:${j[0]}-${j[1]}`)
-				const ref = data.junctions!.keys[data.junctions!.reference]
-				usage.groups.forEach((gr, gi) => {
-					const r = junctions.reads[k][gi]
-					// the reads themselves: a ratio can fall because the body junction rises, as with an added transcript
-					table.addRow(
-						`Median reads, ${gr.name}`,
-						`${r.first} first junction, ${r.reference} body junction (${data.region.chr}:${ref[0]}-${ref[1]})`
-					)
-				})
-				const jq = junctions.q?.[k]
-				if (jq !== undefined && jq !== null) table.addRow('q, junction', qText(jq))
-			}
 			tk.tip.show(event.clientX, event.clientY)
 		},
 		onOut: () => tk.tip.hide()
