@@ -1,12 +1,15 @@
-import * as helpers from '../../test/front.helpers.js'
+import * as helpers from '../../../test/front.helpers.js'
 import tape from 'tape'
-import { detectOne, detectLst, detectZero, detectGte } from '../../test/test.helpers.js'
+import { detectOne, detectLst, detectZero, detectGte } from '../../../test/test.helpers.js'
+import { Menu } from '#dom'
+import { makeChartBtnMenu } from '../sampleView.ts'
 
 /**
  Tests:
-    - No .samples[]
+    - No sample
     - Multiple samples
     - Single .sample{}
+    - Related samples
     - Whole slide images
  */
 
@@ -23,6 +26,18 @@ const runpp = helpers.getRunPp('mass', {
 	debug: 1
 })
 
+/** search for a sample in the sample picker under elem and click its option */
+async function pickSample(elem: Element, sampleName: string) {
+	const input = (await detectOne({ elem, selector: '[data-testid="sjpp-samplepicker"] input:not([disabled])' })) as any
+	input.value = sampleName
+	input.dispatchEvent(new Event('input'))
+	const option = [...elem.querySelectorAll('[data-testid="sjpp-samplepicker-option"]')].find(
+		n => n.firstChild?.textContent == sampleName
+	) as HTMLElement
+	if (!option) throw `no sample picker option for ${sampleName}`
+	option.click()
+}
+
 /**************
  test sections
 ***************/
@@ -32,9 +47,14 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('No .samples[]', function (test) {
-	test.timeoutAfter(3000)
+tape('No sample', function (test) {
+	test.timeoutAfter(10000)
 
+	// a plot without a sample, e.g. of a session saved before choosing one
+	let tested = false
+	// the sample view opened from the chart button menu, on its first render
+	let resolveCreated
+	const createdRendered = new Promise<any>(resolve => (resolveCreated = resolve))
 	runpp({
 		state: {
 			plots: [
@@ -45,20 +65,40 @@ tape('No .samples[]', function (test) {
 		},
 		sampleView: {
 			callbacks: {
-				'postRender.test': runTests
+				'postRender.test': sampleView => {
+					if (tested) return resolveCreated(sampleView)
+					tested = true
+					runTests(sampleView)
+				}
 			}
 		}
 	})
 
-	function runTests(sampleView) {
+	async function runTests(sampleView) {
+		sampleView.on('postRender.test', null)
 		const sv = sampleView.Inner
 
-		const findDownloadButton = sv.dom.downloadbt.node()
-		test.true(
-			findDownloadButton.disabled == false && findDownloadButton.type == 'submit',
-			`Should render download button.`
-		)
+		test.equal(sv.dom.header.text(), 'Sample View', 'Should not name a sample in the header.')
+		test.equal(sv.dom.controlsDiv.style('display'), 'none', 'Should hide the download button.')
+		test.equal(sv.dom.plotsDiv.selectAll('[data-testid="sjpp-sampleview-tiles"]').size(), 0, 'Should render no tiles.')
+		const options = await detectGte({
+			elem: sv.dom.plotsDiv.node(),
+			selector: '[data-testid="sjpp-samplepicker-option"]',
+			count: 1
+		})
+		test.equal(options.length, 10, 'Should list the first 10 samples in the sample picker.')
 
+		const rendered = new Promise(resolve => sampleView.on('postRender.test', resolve))
+		await pickSample(sv.dom.plotsDiv.node(), '2646_patient')
+		await rendered
+		sampleView.on('postRender.test', null)
+		test.deepEqual(
+			sv.state.config.sample,
+			{ sampleId: 129, sampleName: '2646_patient' },
+			'Should set config.sample to the chosen sample.'
+		)
+		test.equal(sv.dom.header.text(), 'Sample View: 2646_patient', 'Should name the chosen sample in the header.')
+		test.equal(sv.dom.controlsDiv.style('display'), 'inline-block', 'Should show the download button.')
 		// TermdbTest enables disco and the methylation array plot
 		const tiles = sv.dom.plotsDiv.select('[data-testid="sjpp-sampleview-tiles"]')
 		for (const key of ['dictionary', 'disco', 'ssgq:MethylationArray']) {
@@ -68,6 +108,20 @@ tape('No .samples[]', function (test) {
 				`Should render the ${key} tile.`
 			)
 		}
+
+		// the menu of the Sample View chart button opens a new sample view of the chosen sample
+		const tip = new Menu({ padding: '0px' })
+		tip.show(0, 0)
+		makeChartBtnMenu(tip.d, { app: sv.app, state: sv.app.getState(), dom: { tip } })
+		await pickSample(tip.dnode as Element, '2660_patient')
+		const created = await createdRendered
+		created.on('postRender.test', null)
+		test.deepEqual(
+			created.Inner.state.config.sample,
+			{ sampleId: 130, sampleName: '2660_patient' },
+			'Should open a sample view of the sample chosen in the chart button menu.'
+		)
+		tip.destroy()
 
 		if (test['_ok']) sv.app.destroy()
 		test.end()
@@ -237,8 +291,7 @@ tape('Single .sample{}', function (test) {
 	test.timeoutAfter(20000)
 
 	// A single pre-chosen sample, as dispatched by the mass omnisearch's "Sample View" button and by a
-	// scatter point click. Its data renders without any typing; the search box shows the sample name so
-	// it does not read as "type a sample name to see details".
+	// scatter point click. Its data renders on opening, and the header names it.
 	const sample = { sampleId: 41, sampleName: '2646' }
 
 	runpp({
@@ -262,8 +315,7 @@ tape('Single .sample{}', function (test) {
 		sampleView.on('postRender.test', null)
 		const sv = sampleView.Inner
 
-		const input = sv.dom.sampleDiv.select('input').node()
-		test.equal(input?.value, sample.sampleName, `Should prefill the search box with ${sample.sampleName}.`)
+		test.equal(sv.dom.header.text(), `Sample View: ${sample.sampleName}`, 'Should name the sample in the header.')
 
 		test.equal(sv.activeSample?.sampleName, sample.sampleName, `Should show the tiles of ${sample.sampleName}.`)
 
@@ -324,7 +376,53 @@ tape('Single .sample{}', function (test) {
 			selector: '[data-testid="sjpp-sampleview-dictionary"]'
 		})
 		const findSample = [...table.querySelectorAll('th')].some(n => n.textContent === sample.sampleName)
-		test.ok(findSample, `Should render ${sample.sampleName} data without typing in the search box.`)
+		test.ok(findSample, `Should render ${sample.sampleName} data on opening.`)
+
+		if (test['_ok']) sv.app.destroy()
+		test.end()
+	}
+})
+
+tape('Related samples', function (test) {
+	test.timeoutAfter(10000)
+
+	// in the default TermdbTest cohort, sample 2660 is a sample of 2660_patient, with sample 4000; the patient has a
+	// sex value and sample 2660 has none
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'sampleView',
+					sample: { sampleId: 42, sampleName: '2660' },
+					expandedTermIds: ['root', 'Demographic Variables']
+				}
+			]
+		},
+		sampleView: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(sampleView) {
+		sampleView.on('postRender.test', null)
+		const sv = sampleView.Inner
+
+		test.deepEqual(
+			sv.dom.switcherDiv
+				.selectAll('button')
+				.nodes()
+				.map(n => n.textContent),
+			['2660', '4000'],
+			'Should show a switcher button per sample of the patient, without the patient.'
+		)
+		test.equal(sv.activeSample?.sampleName, '2660', 'Should show the tiles of the chosen sample.')
+		test.equal(
+			sv.sampleDataByTermId[42]?.sex?.fromSample,
+			'2660_patient',
+			'Should fill in the sex of sample 2660 from its patient.'
+		)
 
 		if (test['_ok']) sv.app.destroy()
 		test.end()

@@ -46,7 +46,7 @@ function fitSvg(svg: any, parts: Element[], width = FACE_W) {
 
 /** the full disco plot cropped to its chromosome ring, without the gene labels and legend around it */
 export async function renderDiscoFace(face: any, data: any, sample: any, ctx: ToolContext) {
-	const { renderDisco } = await import('./plot.disco.js')
+	const { renderDisco } = await import('../plot.disco.js')
 	// the full plot is laid out out of sight, to measure its ring
 	const work = face.append('div').style('visibility', 'hidden')
 	const app = await renderDisco(ctx.termdbConfig, ctx.vocab.dslabel, sample, data, work, ctx.genome)
@@ -73,7 +73,7 @@ export async function renderSwimmerFace(
 	ctx: ToolContext,
 	highlightSample: string
 ) {
-	const { SwimmerRenderer, getDefaultSwimmerSettings } = await import('./swimmer.ts')
+	const { SwimmerRenderer, getDefaultSwimmerSettings } = await import('../swimmer.ts')
 	const plotDiv = face.append('div')
 	const renderer = new SwimmerRenderer(ctx.app, {
 		plotDiv,

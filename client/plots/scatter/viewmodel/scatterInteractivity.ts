@@ -2,7 +2,7 @@ import { joinToFilterUiRoot } from '#filter'
 import { getFilter } from '../../../mass/groups.js'
 import { Menu, newSandboxDiv } from '#dom'
 import { getId } from '#mass/nav'
-import { searchSampleInput } from '../../sampleView.js'
+import { searchSampleInput } from '../../sampleView/samplePicker.ts'
 import type { Scatter } from '../scatter'
 import { select } from 'd3-selection'
 

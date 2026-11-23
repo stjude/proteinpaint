@@ -18,7 +18,7 @@ import type {
 	SwimmerResponse,
 	SwimmerTimeReference
 } from '#types'
-import { getTermValue } from './sampleView.ts'
+import { getTermValue } from './sampleView/sampleView.ts'
 import { getT0T2defaultQ } from './summaryQ.ts'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 
