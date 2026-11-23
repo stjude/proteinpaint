@@ -12,6 +12,7 @@ import { get_ds_tdb } from '#src/termdb.js'
 import { get_samples, mayResolveSampleMapping } from '#src/termdb.sql.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import serverconfig from '#src/serverconfig.js'
+import { ROOT_SAMPLE_TYPE } from '#shared/terms.js'
 
 /*
 termdb/getSamplesByName: the samples of a dataset by sample name, for the sample search of the scatter plot
@@ -60,7 +61,6 @@ export async function getSamplesByName(q: any, req: any, res: any, ds: any): Pro
 	if (!authApi.canDisplaySampleIds(req, ds)) return res.send({})
 
 	try {
-		const sampleName2Id = new Map<string, SampleByName>()
 		let samples
 		if (ds.cohort?.db) {
 			samples = await get_samples(q, ds, true)
@@ -73,21 +73,50 @@ export async function getSamplesByName(q: any, req: any, res: any, ds: any): Pro
 				samples.push({ id, name })
 			}
 		}
-		for (const sample of samples) {
-			const refs = ds.cohort.termdb.q?.id2sampleRefs?.(sample.id)
-			const ancestor_id = refs?.ancestors?.[0]?.ancestor_id
-			const name = sample.name ?? ds.sampleId2Name?.get?.(sample.id)
-			sampleName2Id.set(name, {
-				id: sample.id,
-				name,
-				ancestor_id,
-				ancestor_name: ds.sampleId2Name?.get?.(ancestor_id),
-				sample_type: ds.sampleId2Type?.get?.(sample.id)
-			})
+
+		const sampleName2Id = new Map<string, SampleByName>()
+		if (ds.cohort?.termdb?.hasSampleAncestry) {
+			// ds has sample ancestry
+			addRootSamples(samples, ds)
+			for (const sample of samples) {
+				const name = sample.name ?? ds.sampleId2Name?.get?.(sample.id)
+				const refs = ds.cohort.termdb.q?.id2sampleRefs?.(sample.id)
+				const ancestor_id = refs?.ancestors?.[0]?.ancestor_id
+				sampleName2Id.set(name, {
+					id: sample.id,
+					name,
+					ancestor_id,
+					ancestor_name: ds.sampleId2Name?.get?.(ancestor_id),
+					sample_type: ds.sampleId2Type?.get?.(sample.id)
+				})
+			}
+		} else {
+			// no sample ancestry
+			for (const sample of samples) {
+				const name = sample.name ?? ds.sampleId2Name?.get?.(sample.id)
+				sampleName2Id.set(name, { id: sample.id, name })
+			}
 		}
+
 		const result: SamplesByName = Object.fromEntries(sampleName2Id)
 		res.send(result)
 	} catch (e: any) {
 		res.send({ error: e.message || e })
+	}
+}
+
+function addRootSamples(samples: any[], ds: any): void {
+	if (!ds.cohort?.termdb?.hasSampleAncestry) return
+	const ids = new Set(samples.map(sample => sample.id))
+	for (const sample of [...samples]) {
+		const ancestors = ds.cohort.termdb.q?.id2sampleRefs?.(sample.id)?.ancestors
+		if (!ancestors) continue
+		for (const ancestor of ancestors) {
+			const id = ancestor.ancestor_id
+			const sampleType = ds.sampleId2Type?.get?.(id) ?? ancestor.sample_type
+			if (sampleType !== ROOT_SAMPLE_TYPE || ids.has(id)) continue
+			ids.add(id)
+			samples.push({ id, name: ds.sampleId2Name?.get?.(id) })
+		}
 	}
 }

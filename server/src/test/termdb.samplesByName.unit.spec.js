@@ -73,6 +73,8 @@ tape('getSamplesByName(): applies limits to db-less samples', async t => {
 		cohort: {
 			termdb: {
 				displaySampleIds: true,
+				hasSampleAncestry: true,
+				sampleTypes: [null, { id: 1 }, { id: 2 }],
 				filterSamples: async () => new Set([20]),
 				q: {
 					id2sampleRefs: id => ({
@@ -96,13 +98,43 @@ tape('getSamplesByName(): applies limits to db-less samples', async t => {
 	}
 	let result
 
-	await getSamplesByName({ filter: { lst: [{ type: 'tvs' }] } }, {}, { send: data => (result = data) }, ds)
+	await getSamplesByName(
+		{ filter: { lst: [{ type: 'tvs' }] }, sampleMapping: 'parentToChildren', sampleTypes: [2] },
+		{},
+		{ send: data => (result = data) },
+		ds
+	)
 
-	t.deepEqual(Object.keys(result), ['included'], 'should return only samples permitted by mayLimitSamples()')
+	t.deepEqual(Object.keys(result), ['included', 'parent'], 'should include permitted samples and their root')
 	t.deepEqual(
 		result.included,
 		{ id: 20, name: 'included', ancestor_id: 10, ancestor_name: 'parent', sample_type: 2 },
 		'should preserve sample identity and ancestry metadata'
 	)
+	t.deepEqual(
+		result.parent,
+		{ id: 10, name: 'parent', ancestor_id: undefined, ancestor_name: undefined, sample_type: 1 },
+		'should include the root family entry'
+	)
+	t.end()
+})
+
+tape('getSamplesByName(): returns basic entries without sample ancestry', async t => {
+	await ensureOpenAuth()
+	const ds = {
+		cohort: {
+			termdb: {
+				displaySampleIds: true,
+				filterSamples: async () => new Set([20])
+			}
+		},
+		sampleName2Id: new Map([['included', 20]]),
+		sampleId2Name: new Map([[20, 'included']])
+	}
+	let result
+
+	await getSamplesByName({ filter: { lst: [{ type: 'tvs' }] } }, {}, { send: data => (result = data) }, ds)
+
+	t.deepEqual(result, { included: { id: 20, name: 'included' } }, 'should return only sample identity')
 	t.end()
 })
