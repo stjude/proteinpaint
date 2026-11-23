@@ -9,7 +9,8 @@ import type {
 import { authApi } from '#src/auth.js'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 import { get_ds_tdb } from '#src/termdb.js'
-import { get_samples, get_samples_ancestry } from '#src/termdb.sql.js'
+import { get_samples, mayResolveSampleMapping } from '#src/termdb.sql.js'
+import { mayLimitSamples } from '#src/mds3.filter.js'
 import serverconfig from '#src/serverconfig.js'
 
 /*
@@ -60,23 +61,29 @@ export async function getSamplesByName(q: any, req: any, res: any, ds: any): Pro
 
 	try {
 		const sampleName2Id = new Map<string, SampleByName>()
-		if (q.filter) {
-			q.ds = ds
-			const filteredSamples = ds.cohort.termdb.hasSampleAncestry
-				? await get_samples_ancestry(q.filter, q.ds, true)
-				: await get_samples(q, q.ds, true)
-			for (const sample of filteredSamples) {
-				const name = ds.sampleId2Name.get(sample.id)
-				sampleName2Id.set(name, {
-					id: sample.id,
-					name,
-					ancestor_id: sample.ancestor_id,
-					ancestor_name: ds.sampleId2Name.get(sample.ancestor_id),
-					sample_type: ds.sampleId2Type.get(sample.id)
-				})
-			}
+		let samples
+		if (ds.cohort?.db) {
+			samples = await get_samples(q, ds, true)
 		} else {
-			for (const [name, id] of ds.sampleName2Id) sampleName2Id.set(name, { id })
+			mayResolveSampleMapping(q, ds)
+			const limitSamples = await mayLimitSamples(q, null, ds)
+			samples = []
+			for (const [name, id] of ds.sampleName2Id) {
+				if (limitSamples && !limitSamples.has(id)) continue
+				samples.push({ id, name })
+			}
+		}
+		for (const sample of samples) {
+			const refs = ds.cohort.termdb.q?.id2sampleRefs?.(sample.id)
+			const ancestor_id = refs?.ancestors?.[0]?.ancestor_id
+			const name = sample.name ?? ds.sampleId2Name?.get?.(sample.id)
+			sampleName2Id.set(name, {
+				id: sample.id,
+				name,
+				ancestor_id,
+				ancestor_name: ds.sampleId2Name?.get?.(ancestor_id),
+				sample_type: ds.sampleId2Type?.get?.(sample.id)
+			})
 		}
 		const result: SamplesByName = Object.fromEntries(sampleName2Id)
 		res.send(result)

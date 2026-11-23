@@ -2,7 +2,7 @@ import tape from 'tape'
 import Database from 'better-sqlite3'
 import { getAuthApi, authApi } from '../auth.js'
 import { guardDb } from '../sql.ts'
-import { get_AllSamplesByName } from '../termdb.js'
+import { getSamplesByName } from '../routes/termdb.getSamplesByName.ts'
 
 async function ensureOpenAuth() {
 	if (authApi) return
@@ -10,7 +10,7 @@ async function ensureOpenAuth() {
 	await getAuthApi(app, {}, {}, true)
 }
 
-tape('get_AllSamplesByName(): includes ancestry without a filter', async t => {
+tape('getSamplesByName(): includes ancestry without a filter', async t => {
 	await ensureOpenAuth()
 	const parentId = 10
 	const sampleId = 20
@@ -39,7 +39,7 @@ tape('get_AllSamplesByName(): includes ancestry without a filter', async t => {
 	let result
 
 	try {
-		await get_AllSamplesByName({}, {}, { send: data => (result = data) }, ds)
+		await getSamplesByName({}, {}, { send: data => (result = data) }, ds)
 
 		t.deepEqual(
 			result,
@@ -64,5 +64,45 @@ tape('get_AllSamplesByName(): includes ancestry without a filter', async t => {
 	} finally {
 		connection.close()
 	}
+	t.end()
+})
+
+tape('getSamplesByName(): applies limits to db-less samples', async t => {
+	await ensureOpenAuth()
+	const ds = {
+		cohort: {
+			termdb: {
+				displaySampleIds: true,
+				filterSamples: async () => new Set([20]),
+				q: {
+					id2sampleRefs: id => ({
+						ancestors: id === 20 ? [{ ancestor_id: 10 }] : []
+					})
+				}
+			}
+		},
+		sampleName2Id: new Map([
+			['parent', 10],
+			['included', 20]
+		]),
+		sampleId2Name: new Map([
+			[10, 'parent'],
+			[20, 'included']
+		]),
+		sampleId2Type: new Map([
+			[10, 1],
+			[20, 2]
+		])
+	}
+	let result
+
+	await getSamplesByName({ filter: { lst: [{ type: 'tvs' }] } }, {}, { send: data => (result = data) }, ds)
+
+	t.deepEqual(Object.keys(result), ['included'], 'should return only samples permitted by mayLimitSamples()')
+	t.deepEqual(
+		result.included,
+		{ id: 20, name: 'included', ancestor_id: 10, ancestor_name: 'parent', sample_type: 2 },
+		'should preserve sample identity and ancestry metadata'
+	)
 	t.end()
 })

@@ -16,10 +16,12 @@ export type TermdbGetSamplesByNameRequest = {
 export type SampleByName = {
 	/** termdb sample id */
 	id: number
-	/** the fields below are only given when the request has a filter */
+	/** sample name */
 	name?: string
+	/** nearest ancestor, when the sample has one */
 	ancestor_id?: number | null
 	ancestor_name?: string
+	/** sample type, when available */
 	sample_type?: number | null
 }
 

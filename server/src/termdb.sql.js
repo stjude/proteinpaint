@@ -16,7 +16,7 @@ import { parseJsonParam } from './routes/common.ts'
 
 /* getData() normally resolves sample mapping before building filters. SQL callers
 that do not go through getData() still need this resolution for datasets with sample ancestry. */
-function mayResolveSampleMapping(q, ds) {
+export function mayResolveSampleMapping(q, ds) {
 	if (ds.cohort?.termdb?.hasSampleAncestry && q.sampleMapping === undefined) {
 		resolveSampleMapping(q, ds)
 	}
