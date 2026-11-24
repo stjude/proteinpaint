@@ -1,6 +1,6 @@
 import { authApi } from '#src/auth.js'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
-import { get_samples } from '#src/termdb.sql.js'
+import { getSamplesByName } from '#routes/termdb.getSamplesByName.ts'
 import { ROOT_SAMPLE_TYPE } from '#shared/terms.js'
 import { validGenomeDs } from '#routes/common.ts'
 import type {
@@ -58,10 +58,10 @@ function init({ genomes }) {
 }
 
 async function getRelatedSamples(q: TermdbRelatedSamplesRequest, ds: any): Promise<TermdbRelatedSamplesResponse> {
-	const samples = await get_samples(q, ds)
-	const rows: SampleRow[] = samples.map(({ id }) => ({
+	const samples = await getSamplesByName(q, ds)
+	const rows: SampleRow[] = Object.values(samples).map(({ id, ancestor_id }) => ({
 		id,
-		ancestor_id: ds.cohort.termdb.q?.id2sampleRefs?.(id)?.ancestors?.[0]?.ancestor_id
+		ancestor_id
 	}))
 	const tdbq = ds.cohort.termdb.q
 	return relateSamples(

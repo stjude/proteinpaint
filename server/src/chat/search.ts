@@ -234,14 +234,9 @@ export function userCanAccessDsData(req: any, auth: any = authApi): boolean {
 	return hasRealAuth || fromAuthorizedDemoReferer
 }
 
-/** Match the prompt against sample names. getSamplesByName() is the single source of truth for both
- * the name->id map and the "can this dataset display sample ids" check: it sends {} when
- * authApi.canDisplaySampleIds() is false, so a disallowed dataset yields no samples here. It is a
- * response-sending route handler, hence the capturing res stub. Returns [] on error / no match. */
+/** Match the prompt against sample names using the name->id map from getSamplesByName(). */
 async function searchSamples(req: any, ds: any, prompt: string): Promise<{ matches: SampleMatch[]; total: number }> {
-	// authApi is only assigned once app.ts calls getAuthApi(); when it is not set (e.g. a unit test calling
-	// runOmnisearch directly, no server app), skip sample search rather than let getSamplesByName crash
-	// on authApi.canDisplaySampleIds. Fail closed: no auth layer -> no sample ids.
+	// Fail closed if auth has not been initialized.
 	if (!authApi) return { matches: [], total: 0 }
 
 	// Gate + per-role restriction. `restrictFilter` is set only for a role-restricted dataset's non-admin
@@ -252,10 +247,8 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 	const access = resolveSampleAccess(ds, req)
 	if (!access.allowed) return { matches: [], total: 0 }
 
-	let sampleName2Id: any = {}
 	const q2: any = access.restrictFilter ? { filter: access.restrictFilter } : {}
-	await getSamplesByName(q2, req, { send: (data: any) => (sampleName2Id = data) }, ds)
-	if (!sampleName2Id || sampleName2Id.error) return { matches: [], total: 0 }
+	const sampleName2Id = await getSamplesByName(q2, ds)
 	const singleCellSamples = await getSingleCellSamples(ds, {
 		filter: access.restrictFilter
 	})

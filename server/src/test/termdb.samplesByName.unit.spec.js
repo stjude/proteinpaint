@@ -2,7 +2,7 @@ import tape from 'tape'
 import Database from 'better-sqlite3'
 import { getAuthApi, authApi } from '../auth.js'
 import { guardDb } from '../sql.ts'
-import { getSamplesByName } from '../routes/termdb.getSamplesByName.ts'
+import { addParentSamples, getSamplesByName } from '../routes/termdb.getSamplesByName.ts'
 
 async function ensureOpenAuth() {
 	if (authApi) return
@@ -39,7 +39,7 @@ tape('getSamplesByName(): includes ancestry without a filter', async t => {
 	let result
 
 	try {
-		await getSamplesByName({}, {}, { send: data => (result = data) }, ds)
+		result = await getSamplesByName({}, ds)
 
 		t.deepEqual(
 			result,
@@ -98,10 +98,8 @@ tape('getSamplesByName(): applies limits to db-less samples', async t => {
 	}
 	let result
 
-	await getSamplesByName(
+	result = await getSamplesByName(
 		{ filter: { lst: [{ type: 'tvs' }] }, sampleMapping: 'parentToChildren', sampleTypes: [2] },
-		{},
-		{ send: data => (result = data) },
 		ds
 	)
 
@@ -115,6 +113,52 @@ tape('getSamplesByName(): applies limits to db-less samples', async t => {
 		result.parent,
 		{ id: 10, name: 'parent', ancestor_id: undefined, ancestor_name: undefined, sample_type: 1 },
 		'should include the root family entry'
+	)
+	t.end()
+})
+
+tape('addParentSamples(): includes all unique ancestors', t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				hasSampleAncestry: true,
+				q: {
+					id2sampleRefs: id => ({
+						ancestors:
+							id === 20
+								? [{ ancestor_id: 10 }, { ancestor_id: 30 }]
+								: id === 10
+								? [{ ancestor_id: 5 }]
+								: id === 30
+								? [{ ancestor_id: 5 }]
+								: []
+					})
+				}
+			}
+		},
+		sampleId2Name: new Map([
+			[5, 'grandparent'],
+			[10, 'parent'],
+			[20, 'child'],
+			[30, 'sibling']
+		])
+	}
+	const samples = [
+		{ id: 20, name: 'child' },
+		{ id: 30, name: 'sibling' }
+	]
+
+	addParentSamples(samples, ds)
+
+	t.deepEqual(
+		samples,
+		[
+			{ id: 20, name: 'child' },
+			{ id: 30, name: 'sibling' },
+			{ id: 10, name: 'parent' },
+			{ id: 5, name: 'grandparent' }
+		],
+		'should add each ancestor once, including transitive ancestors'
 	)
 	t.end()
 })
@@ -133,8 +177,28 @@ tape('getSamplesByName(): returns basic entries without sample ancestry', async 
 	}
 	let result
 
-	await getSamplesByName({ filter: { lst: [{ type: 'tvs' }] } }, {}, { send: data => (result = data) }, ds)
+	result = await getSamplesByName({ filter: { lst: [{ type: 'tvs' }] } }, ds)
 
 	t.deepEqual(result, { included: { id: 20, name: 'included' } }, 'should return only sample identity')
+	t.end()
+})
+
+tape('getSamplesByName(): propagates errors', async t => {
+	const ds = {
+		cohort: {
+			termdb: {
+				filterSamples: async () => {
+					throw 'sample lookup failed'
+				}
+			}
+		},
+		sampleName2Id: new Map()
+	}
+	try {
+		await getSamplesByName({ filter: { lst: [{ type: 'tvs' }] } }, ds)
+		t.fail('should propagate the lookup error')
+	} catch (error) {
+		t.equal(error, 'sample lookup failed', 'should propagate the lookup error')
+	}
 	t.end()
 })

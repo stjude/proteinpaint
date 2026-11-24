@@ -152,3 +152,27 @@ tape('termdb/relatedSamples: derives ancestry from the termdb sample list', asyn
 	}
 	test.end()
 })
+
+tape('termdb/relatedSamples: returns sample lookup errors', async test => {
+	await ensureOpenAuth()
+	const ds = {
+		cohort: {
+			termdb: {
+				displaySampleIds: true,
+				filterSamples: async () => {
+					throw 'sample lookup failed'
+				}
+			}
+		},
+		sampleName2Id: new Map()
+	}
+	if (!payload.init) throw new Error('relatedSamples route is not initialized')
+	const handler = payload.init({ app: {}, genome: {}, genomes: { hg38: { datasets: { ds } } } })
+	let result
+	await handler(
+		{ query: { genome: 'hg38', dslabel: 'ds', sampleId: 20, filter: { lst: [{ type: 'tvs' }] } } },
+		{ send: data => (result = data) }
+	)
+	test.deepEqual(result, { status: 400, error: 'sample lookup failed' }, 'should return the lookup error')
+	test.end()
+})
