@@ -27,6 +27,7 @@ npm run build
 cd ../..
 
 PPDIR=$PWD
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
 for WS in ${WORKSPACES}; do
   PRIVATE=$(node -p "require('./$WS/package.json').private")
   if [ "$PRIVATE" = true ]; then
@@ -48,11 +49,15 @@ for WS in ${WORKSPACES}; do
     cd $WS
     echo "publishing $WS-$CURRENTVER"
     # npm 11 requires a tag for pre-release version, default to latest regardless of type of release,
-    # except for a prerelease with a commit hash identifier, as created from a non-master branch,
-    # so that it does not become the version that is installed by default
+    # except for these versions, so that they do not become the version that is installed by default:
+    # - a prerelease with a commit hash identifier, as created from a non-master branch, uses the next tag
+    # - a patch from a release-* branch uses the branch name as tag, such as release-2.224,
+    #   since master may have already published a higher version under the latest tag
     NPMTAG=latest
     if [[ "$CURRENTVER" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9a-f]{7,}\. ]]; then
       NPMTAG=next
+    elif [[ "$BRANCH" == "release-"* ]]; then
+      NPMTAG=$BRANCH
     fi
     npm publish --provenance --access public --tag $NPMTAG
     cd $PPDIR
