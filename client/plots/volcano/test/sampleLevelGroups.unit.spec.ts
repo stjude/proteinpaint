@@ -12,11 +12,11 @@ tape('\n', test => {
 })
 
 tape('sampleLevelGroups()', test => {
-	const filterGroup = { name: 'a', in: true, filter: { type: 'tvslst', in: true, join: '', lst: [] } }
+	const filterGroup: any = { name: 'a', in: true, filter: { type: 'tvslst', in: true, join: '', lst: [] } }
 	const listGroup = { name: 'b', in: true, values: [{ sampleId: 1 }] }
 	const [a, b] = sampleLevelGroups([filterGroup, listGroup], { hasSampleAncestry: true })
-	test.equal(a.mapParent2Children, true, 'a filter group asks for the samples of its patients')
-	test.equal(filterGroup['mapParent2Children'], undefined, 'the given group is not modified')
+	test.equal(a.sampleMapping, 'parentToChildren', 'a filter group asks for the samples of its patients')
+	test.equal(filterGroup.sampleMapping, undefined, 'the given group is not modified')
 	test.equal(b, listGroup, 'a group that lists its samples is left as it is')
 	const same = [filterGroup]
 	test.equal(sampleLevelGroups(same, {}), same, 'nothing changes on a dataset without sample ancestry')
@@ -37,8 +37,8 @@ tape('isoform volcano row actions plot the samples of filter groups', async test
 	const [violin] = isoformExpressionHandler.getRowActions!({ gene_name: 'ENST00000256078.10', gene: 'KRAS' }, ctx)
 	await violin.onClick()
 	test.deepEqual(
-		launched.term2.q.groups.map((g: any) => g.mapParent2Children),
-		[true, true],
+		launched.term2.q.groups.map((g: any) => g.sampleMapping),
+		['parentToChildren', 'parentToChildren'],
 		"each filter group asks for its patients' samples"
 	)
 	test.equal(launched.filter, plotFilter, "the volcano's plot-local filter goes to the plot")
