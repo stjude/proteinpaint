@@ -107,7 +107,7 @@ export class ComponentApi {
 		// lessen confusing behavior
 		if (self.state && !self.hasStatePreMain) {
 			delete self.state
-			console.warn(
+			console.debug(
 				`${self.type}: rx deleted this.state after init()` +
 					`to avoid confusing behavior, such as the component not rendering initially ` +
 					`because this.state would not have changed between init() and the first time ` +
@@ -255,13 +255,13 @@ export class ComponentApi {
 			if (opts.abortCtrl && abortControllers.has(opts.abortCtrl)) abortControllers.delete(opts.abortCtrl)
 			if (this.#latestActionSequenceId !== actionSequenceId) {
 				// another state change has been dispatched between the start and completion of the server request
-				console.warn('aborted state update, the returned data corresponds to a stale action.sequenceId')
+				console.debug('aborted state update, the returned data corresponds to a stale action.sequenceId')
 				if (opts.abortCtrl) opts.abortCtrl.abort()
 				return [result, true]
 			}
 			return [result]
 		} catch (e) {
-			if (typeof e == 'string' && e.includes('sequenceId')) console.warn(e)
+			if (typeof e == 'string' && e.includes('sequenceId')) console.debug(e)
 			throw e
 		}
 	}
@@ -276,7 +276,7 @@ export class ComponentApi {
 	}
 
 	triggerAbort(reason = '') {
-		if (reason) console.info(`triggerAbort()`, reason)
+		if (reason) console.debug(`triggerAbort()`, reason)
 		if (this.#abortController) {
 			this.#abortController.abort('stale sequenceId')
 		}
@@ -286,7 +286,7 @@ export class ComponentApi {
 				this.#abortControllers.delete(c)
 			} catch (e) {
 				// ok to
-				console.warn('unable to cancel fetch: ', e)
+				console.debug('unable to cancel fetch: ', e)
 				this.#abortControllers.delete(c)
 			}
 		}
