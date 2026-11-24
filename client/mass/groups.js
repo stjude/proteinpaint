@@ -599,15 +599,27 @@ export function getDiffAnalyses(self) {
 	return lst
 }
 
+/* Opens tip, emptied, under the anchor, for a panel whose content arrives later, and returns whether the panel still
+owns tip: false once tip is emptied for another panel or submenu (also another element class of this one), hidden,
+or the anchor removed, e.g. by a new sunburst selection. A late response is then dropped, not drawn over the newer
+content or in a closed menu. */
+function openPanel(tip, anchor) {
+	tip.clear().showunderoffset(anchor)
+	const owner = tip.d.append('div')
+	return () => owner.node().isConnected && anchor.isConnected && tip.d.style('display') != 'none'
+}
+
 async function showExpressionPreAnalysis(self, samplelstTW, termType, anchor) {
 	const tip = self.tip2
-	tip.clear().showunderoffset(anchor)
+	const owns = openPanel(tip, anchor)
 	const loading = tip.d.append('div').text('Loading ...')
 	try {
 		const preAnalysisData = await getGeneExpressionPreAnalysis(self.app, samplelstTW, self.state.termfilter, termType)
+		if (!owns()) return
 		loading.remove()
 		renderPreAnalysisData({ preAnalysisData, samplelstTW, groups: samplelstTW.q.groups, tip, termType, self })
 	} catch (e) {
+		if (!owns()) return
 		loading.remove()
 		sayerror(tip.d.append('div'), e)
 	}
@@ -629,6 +641,9 @@ async function showMethylationPreAnalysis(self, samplelstTW, anchor) {
 	its own eligible samples, so the panel is fetched for the class it opens on and again
 	for a class picked in it. A dataset without a class list sends none, as before. */
 	const showPanel = async (elementType, refocus) => {
+		// a class picked again before the response of an earlier one arrives owns the panel instead
+		const owns = openPanel(tip, anchor)
+		const loading = tip.d.append('div').text('Loading ...')
 		const body = {
 			genome: self.app.vocabApi.vocab.genome,
 			dslabel: self.app.vocabApi.vocab.dslabel,
@@ -638,12 +653,20 @@ async function showMethylationPreAnalysis(self, samplelstTW, anchor) {
 			...(elementType ? { element_type: elementType } : {}),
 			preAnalysis: true
 		}
-		const preAnalysisData = await dofetch3('termdb/diffMeth', { body })
-
-		tip.clear().showunderoffset(anchor)
+		let preAnalysisData
+		try {
+			preAnalysisData = await dofetch3('termdb/diffMeth', { body })
+		} catch (e) {
+			if (!owns()) return
+			loading.remove()
+			sayerror(tip.d.append('div'), e)
+			return
+		}
+		if (!owns()) return
+		loading.remove()
 		if (!preAnalysisData?.data) {
 			sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
-			throw new Error('no data returned from pre-analysis request')
+			return
 		}
 
 		// shared with differential expression; termType selects the label and drops the
@@ -676,6 +699,9 @@ async function showSplicingPreAnalysis(self, samplelstTW, anchor) {
 		}
 	}
 
+	const tip = self.tip2
+	const owns = openPanel(tip, anchor)
+	const loading = tip.d.append('div').text('Loading ...')
 	// get actual numbers of samples with splicing data
 	const body = {
 		genome: self.app.vocabApi.vocab.genome,
@@ -685,13 +711,20 @@ async function showSplicingPreAnalysis(self, samplelstTW, anchor) {
 		filter0: self.state.termfilter.filter0,
 		preAnalysis: true
 	}
-	const preAnalysisData = await dofetch3('termdb/diffSplice', { body })
-
-	const tip = self.tip2
-	tip.clear().showunderoffset(anchor)
+	let preAnalysisData
+	try {
+		preAnalysisData = await dofetch3('termdb/diffSplice', { body })
+	} catch (e) {
+		if (!owns()) return
+		loading.remove()
+		sayerror(tip.d.append('div'), e)
+		return
+	}
+	if (!owns()) return
+	loading.remove()
 	if (!preAnalysisData?.data) {
 		sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
-		throw new Error('no data returned from pre-analysis request')
+		return
 	}
 
 	/* Shared with differential expression and methylation; termType selects the label

@@ -213,6 +213,38 @@ tape('a variable made from groups is defined by their filters', test => {
 			test.equal(surv?.term2?.term?.type, 'samplelst', 'should divide the survival plot by the groups')
 			groups.tip.hide()
 
+			// a pre-analysis panel whose menu was closed before its counts arrived is not drawn, nor its menu opened again
+			groups.showGroupsMenu({ target: document.body }, tw, () => {})
+			const methRow = await detectOne({
+				elem: groups.tip.d.node(),
+				selector: '[data-testid="sjpp-group-data-dnaMethylation"][role="button"]'
+			})
+			const fetch = window.fetch
+			const requests = []
+			window.fetch = function (...args) {
+				const request = fetch.apply(this, args)
+				if (String(args[0]).includes('termdb/diffMeth')) requests.push(request)
+				return request
+			}
+			try {
+				methRow.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+				groups.tip.hide()
+				groups.tip2.hide()
+				// the request is sent once its cache key is computed
+				for (let i = 0; i < 200 && !requests.length; i++) await sleep(25)
+				test.equal(requests.length, 1, 'should request the counts of the panel')
+				await requests[0]
+				// the response is read and handled once it arrives, which takes no more time on a slower server
+				await sleep(100)
+			} finally {
+				window.fetch = fetch
+			}
+			test.equal(groups.tip2.d.style('display'), 'none', 'should not open the closed menu again for a late response')
+			test.notOk(
+				groups.tip2.d.node().querySelector('[data-testid="sjpp-da-run-btn"]'),
+				'should not draw the panel of a late response'
+			)
+
 			// a group without samples has no data: an analysis of both groups is not offered, and a kind of data that
 			// no group has is not listed
 			const none = { name: 'none', filter: tvslst('sex', 'no such value') }
