@@ -76,7 +76,7 @@ export function getEstimateMsg(arg: EstimateMsgArg): string {
 	/** part 1: outcome variable **/
 	let msg
 	if (regtype == 'linear') {
-		msg = tw2 ? getInteractionMsg() : `Mean ${styleVariable(outcomeTw)} is`
+		msg = tw2 ? getInteractionMsg() : `Mean ${styleOutcome()} is`
 		if (isIntercept) {
 			// report the signed estimate, as the intercept can be negative
 			const baselines = getBaselines(independentTws)
@@ -127,7 +127,7 @@ export function getEstimateMsg(arg: EstimateMsgArg): string {
 		])}`
 	} else if (tw.q.mode == 'continuous') {
 		// continuous variable
-		msg += `for every ${oneUnitOf(tw)} increase of ${styleVariable(tw)}`
+		msg += `for every ${increaseOf(tw)}`
 		if (interactionsBaselines.length) msg += ` when ${joinVariables(interactionsBaselines)}`
 	} else if (tw.q.geneticModel === 0) {
 		// genetic variable, additive model
@@ -188,15 +188,41 @@ export function getEstimateMsg(arg: EstimateMsgArg): string {
 	/** helper functions **/
 	/* a numeric term with valueConversion{} is analyzed by its converted unit
 	(see makeRinput() in server/src/routes/termdb.regression.ts), so the estimate is per that
-	unit, e.g. per year rather than per day. the two below name the unit of such a variable,
-	and fall back to the generic "unit" wording for terms without a declared unit */
+	unit, e.g. per year rather than per day. a continuous variable is also analyzed by the values
+	that server getData() scales or transforms by its q: per N units for q.scale=N, and
+	log10(value+1) for q.transform='log10p1' (see shared/utils/src/continuousTransform.ts).
+	the helpers below name the unit of such a variable, and fall back to the generic "unit"
+	wording for terms without a declared unit */
 	function oneUnitOf(tw) {
 		const u = tw?.term?.valueConversion?.toUnit
+		const n = scaleOf(tw)
+		if (n != 1) return `${n} ${u || 'unit'}`
 		return u ? `1 ${u}` : 'one unit'
 	}
 	function unitsOf(tw) {
 		const u = tw?.term?.valueConversion?.toUnit
-		return u ? `${u}s` : 'units'
+		const units = u ? `${u}s` : 'units'
+		const n = scaleOf(tw)
+		// the estimate is in units of N, e.g. "2 × 10 units" is 20 units
+		return n != 1 ? `× ${n} ${units}` : units
+	}
+	// a unit of log10(x+1) is a tenfold increase of x+1
+	function increaseOf(tw) {
+		if (isLog10p1(tw)) return `tenfold increase of (${styleVariable(tw)} + 1)`
+		return `${oneUnitOf(tw)} increase of ${styleVariable(tw)}`
+	}
+	// the estimate of a linear regression is of the mean of the analyzed values of the outcome
+	function styleOutcome() {
+		return isLog10p1(outcomeTw) ? `log10(${styleVariable(outcomeTw)} + 1)` : styleVariable(outcomeTw)
+	}
+	function isLog10p1(tw) {
+		return tw?.q?.mode == 'continuous' && tw.q.transform == 'log10p1'
+	}
+	// a transform takes the place of q.scale, as the termsetting menu sets only one of them
+	function scaleOf(tw) {
+		if (tw?.q?.mode != 'continuous' || tw.q.transform) return 1
+		const n = Number(tw.q.scale)
+		return Number.isFinite(n) && n > 0 ? n : 1
 	}
 
 	// describe an odds/hazard ratio, which is 1 when there is no association
@@ -224,7 +250,7 @@ export function getEstimateMsg(arg: EstimateMsgArg): string {
 	function getInteractionMsg() {
 		let msg =
 			regtype == 'linear'
-				? `The difference in mean ${styleVariable(outcomeTw)}`
+				? `The difference in mean ${styleOutcome()}`
 				: regtype == 'logistic'
 				? `The difference in odds of ${styleVariable(outcomeTw, outcomeTw.nonRefGrp)}`
 				: `The difference in hazard (instantaneous rate) of ${styleVariable(outcomeTw, outcomeTw.eventLabel)}`
@@ -234,7 +260,7 @@ export function getEstimateMsg(arg: EstimateMsgArg): string {
 			msg += ` between ${styleVariable(tw2, category2)} and ${styleVariable(tw2, refGrp2)} is`
 		} else if (tw2.q.mode == 'continuous') {
 			// continuous variable
-			msg += ` for every ${oneUnitOf(tw2)} increase of ${styleVariable(tw2)} is`
+			msg += ` for every ${increaseOf(tw2)} is`
 		} else if (tw2.q.geneticModel === 0) {
 			// genetic variable, additive model
 			msg += ` for every additional ${tw2.effectAllele} allele of ${styleVariable(tw2)} is`

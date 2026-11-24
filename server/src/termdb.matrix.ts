@@ -31,6 +31,7 @@ import {
 import type { SampleMapping } from '#types'
 import { annotateSingleCellTerm, hydrateMetaResultCellRows } from './singleCell/matrixData.ts'
 import { get_bin_label, compute_bins, assignBinColors } from '#shared/termdb.bins.js'
+import { getContinuousValueTransform } from '#shared/continuousTransform.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from './routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
@@ -1722,21 +1723,10 @@ export function transformContinuousValues(data, terms) {
 			if (d.value === '' || typeof d.value == 'object') continue
 			const raw = Number(d.value)
 			if (!Number.isFinite(raw)) continue
-			const v = transform(raw)
+			const v = transform.forward(raw)
 			if (Number.isFinite(v)) sample[tw.$id] = { ...d, key: v, value: v }
 			else delete sample[tw.$id] // no transformed value, such as the log of a value <= -1
 		}
-	}
-}
-
-function getContinuousValueTransform(q): ((v: number) => number) | undefined {
-	if (q?.mode != 'continuous') return
-	if (q.transform == 'log10p1') return v => Math.log10(v + 1)
-	if (q.transform) throw `unknown tw.q.transform='${q.transform}'`
-	const scale = Number(q.scale)
-	if (q.scale && scale != 1) {
-		if (!Number.isFinite(scale)) throw `invalid tw.q.scale='${q.scale}'`
-		return v => v / scale
 	}
 }
 

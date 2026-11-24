@@ -3,7 +3,14 @@ import { TermTypes, type TermWrapper, type NumericBin } from '#types'
 import type { AnnotatedSampleData, AnnotatedSampleEntry } from '../../types/termdb'
 import type { TableColumn, TableRow } from '#dom'
 import { getGroupFilterEntry } from '../../mass/groups.js'
-import { isNumericTerm, roundValueAuto, isStrictNumeric, isFractionTw, getFractionTvsTerm } from '#shared'
+import {
+	isNumericTerm,
+	roundValueAuto,
+	isStrictNumeric,
+	isFractionTw,
+	getFractionTvsTerm,
+	getStoredValueRange
+} from '#shared'
 import { filterJoin } from '#filter'
 import { addGvRowVals, addGvCols } from '#plots/barchart/barchart.events.js'
 import { defaultUiLabels } from '#plots/PlotBase.ts'
@@ -215,15 +222,18 @@ export class ListSamples {
 
 		if (!overlayOrChartBin && this.useRange) {
 			/** May need to limit the range (e.g. violin brush) or add
-			 * a range when no bins exist for the query to succeed. */
+			 * a range when no bins exist for the query to succeed.
+			 * The range is of the plotted values, which server getData() scaled
+			 * or transformed by tw.q, while the filter tests the stored values. */
+			const { start, stop } = getStoredValueRange(tw.q, this.start as number, this.end as number)
 			if (tvs.ranges.length > 0 && tvs.ranges[0]?.start !== undefined) {
-				tvs.ranges[0].start = this.start
-				tvs.ranges[0].stop = this.end
+				tvs.ranges[0].start = start
+				tvs.ranges[0].stop = stop
 			} else {
 				tvs.ranges = [
 					{
-						start: this.start,
-						stop: this.end,
+						start,
+						stop,
 						startinclusive: true,
 						stopinclusive: true,
 						startunbounded: false,
