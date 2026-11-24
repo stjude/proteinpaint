@@ -1,4 +1,5 @@
-import { sayerror } from '#dom'
+// the leaf module, since the #dom barrel imports termdb/app.ts, which extends AppBase
+import { sayerror } from '#dom/sayerror'
 
 export class AppBase {
 	//type: string
