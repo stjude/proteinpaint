@@ -18,6 +18,16 @@ one of the branch patterns that the `release` environment allows, and check skip
 The run then creates a draft prerelease, but still pushes a version commit and tag to that branch,
 publishes the changed public packages under the npm `next` tag, and pushes the Docker images.
 
+## Client unit tests
+The unit tests of the `client` workspace run in a browser, with `./test.sh "<file glob>"` from the
+client dir, such as `./test.sh "rx*.spec.*"`. Write them for that environment:
+- Use the real DOM and browser APIs, instead of stubs or mocks of `document`, `window` and similar
+  objects, and without branches for running in node.
+- Append a test's holder div to `document.body`, so that what the test renders is visible when
+  troubleshooting a failure, and remove it at the end of the test only when the test passed, such as
+  with `if (test._ok) holder.remove()`.
+- Do not leave `tape.only()` in a committed test, since it skips the other tests in the file.
+
 ## Commit messages
 Do not add a Co-Authored-By line, or other attribution line, to a commit message. The commit-msg hook
 removes any co-author line, so you don't need to remove one yourself.
