@@ -1,4 +1,5 @@
 import { getAppInit } from '#rx'
+import { AppBase } from '#plots/AppBase.ts'
 import { mainBtnInit } from './mainBtn'
 import { appDrawerStoreInit } from './store'
 
@@ -19,10 +20,11 @@ TODOs:
 Questions: 
 */
 
-class AppDrawerApp {
+class AppDrawerApp extends AppBase {
 	static type = 'app'
 
 	constructor(opts) {
+		super(opts)
 		this.type = AppDrawerApp.type
 
 		const drawerDiv = opts.drawerRow

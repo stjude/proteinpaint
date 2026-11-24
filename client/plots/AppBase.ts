@@ -1,3 +1,5 @@
+import { sayerror } from '#dom'
+
 export class AppBase {
 	//type: string
 	//id: string
@@ -34,5 +36,14 @@ export class AppBase {
 			delete o.app
 		}
 		return o
+	}
+
+	/** a default for an app class that does not define its own: shows the error in the app's error div, or else in
+	opts.holder, and logs the stack only for debugging */
+	printError(e) {
+		const dom = (this as any).dom
+		const holder = dom?.errdiv || dom?.errorDiv || this.opts.holder
+		sayerror(holder, 'Error: ' + (e?.message || e?.error || e))
+		if (e?.stack) console.debug(e.stack)
 	}
 }

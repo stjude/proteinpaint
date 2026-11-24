@@ -79,6 +79,12 @@ export class AppApi {
 		if (!self.id) self.id = opts.id || self.opts?.id
 		if (!self.type) self.type = __Class__.type
 		self.api = this
+		// every app should have a printError(), such as the default of AppBase in client/plots, so that an error is
+		// shown to the user instead of silently dropped
+		if (!self.printError) {
+			showMissingPrintError(opts.holder)
+			self.printError = e => console.error(e)
+		}
 
 		this.#App = self
 		this.id = self.id
@@ -157,9 +163,7 @@ export class AppApi {
 			}
 			if (self.wasDestroyed) return
 			if (self.bus && this.#latestActionSequenceId == action?.sequenceId) self.bus.emit('error')
-			if (self.printError) self.printError(e)
-			// without printError(), the console is the only place that shows the error
-			else console.error(e)
+			self.printError!(e)
 		}
 		// do not emit a postRender event if the action has become stale
 		if (self.bus && this.#latestActionSequenceId == action?.sequenceId) self.bus.emit('postRender')
@@ -325,7 +329,17 @@ export class AppApi {
 	}
 
 	printError(e) {
-		if (this.#App.printError) this.#App.printError(e)
-		else alert(e)
+		this.#App.printError!(e)
 	}
+}
+
+/** a message for the app developer, styled like the sayerror() bar in client/dom, without importing it into rx */
+function showMissingPrintError(holder) {
+	const elem = holder?.node ? holder.node() : holder
+	if (typeof document == 'undefined' || typeof elem?.appendChild != 'function') return
+	const div = document.createElement('div')
+	div.className = 'sja_errorbar'
+	div.style.borderRadius = '5px'
+	div.textContent = 'this.#App.printError is missing'
+	elem.appendChild(div)
 }
