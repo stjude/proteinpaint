@@ -18,6 +18,7 @@ Fixes:
 - GRIN2: the top-genes table no longer shows a "GRIN2 top genes" label wherever the mouse hovers over it
 - GRIN2: the top-genes table's "Restore row order" button is now "Reset table"; it appears when the table is sorted or filtered and clears both
 - Barchart: hiding an overlay value from the bar click menu no longer shows an error, including for a term collection overlay
+- do not call renderGSEA() when the subtab is hidden
 
 
 ## 2.230.0
