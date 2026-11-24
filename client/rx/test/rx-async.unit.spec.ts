@@ -67,6 +67,31 @@ tape('getAppInit -  async, closured and classed', async function (test) {
 	test.end()
 })
 
+tape('a missing app printError()', async function (test) {
+	const holder = document.createElement('div')
+	document.body.appendChild(holder)
+	const app = await appInit({ debug: 1, state: {}, holder })
+	const bars = holder.querySelectorAll('.sja_errorbar')
+	test.equal(bars.length, 1, 'should show a message in opts.holder')
+	test.equal(bars[0]?.textContent, 'this.#App.printError is missing', 'should tell the app developer what is missing')
+	test.equal(
+		typeof app.Inner?.printError,
+		'function',
+		'should still set a printError() when the app class does not define one'
+	)
+	const logged: any[] = []
+	const consoleError = console.error
+	console.error = (...args) => logged.push(args)
+	try {
+		app.printError('test error')
+	} finally {
+		console.error = consoleError
+	}
+	test.deepEqual(logged, [['test error']], 'should log the error with console.error()')
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
 tape('detectStale()', async function (test) {
 	const opts = {
 		debug: 1,
