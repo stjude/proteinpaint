@@ -7,13 +7,12 @@ import {
 	getGroupFilterOfConditions,
 	getSamplelstTWFromFilters,
 	isGroupsDisabled,
-	getGeneExpressionPreAnalysis,
-	renderPreAnalysisData
+	closeGroupMenus,
+	maxGroupsPerVariable
 } from '#mass/groups'
-import { availabilitySections, fetchDataAvailability, type AvailabilityRow } from '#mass/groupDataAvailability'
-import { TermTypes } from '#types'
-import { getActiveCohortStr, getCurrentCohortChartTypes } from '#mass/charts'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
+import { renderGroupMenu, type GroupMenuHost } from '#mass/groupMenu'
+import { getCurrentCohortChartTypes } from '#mass/charts'
+import { getColors } from '#shared/common.js'
 import type { Filter, SunburstRequest, SunburstResponse } from '#types'
 import {
 	SunburstRenderer,
@@ -26,6 +25,7 @@ import {
 	LINK,
 	RULE,
 	SELECT_STROKE,
+	RIGHT_W,
 	icon,
 	type Card,
 	type HNode
@@ -34,19 +34,15 @@ import { buildTermTree, selectionFilter, selectionName, type TermSunNode } from 
 
 /*
 The term-based sunburst without its rx plot component: fetches the counts of the given rings, draws them,
-and keeps the wedge selection, one sample group. Below the selected wedges, "Show available data" lists how
-many of the selected samples have each kind of data of the dataset (termdb/dataAvailability); a kind with a
-plot of its own opens that plot of the selected samples, which have the selection as the plot's filter.
-When enabled for the active cohort, GRIN2 is offered for a selection with SNV/indel, CNV or SV/fusion
-data, alongside the mutation rows that open the genome browser.
-Summarize opens a dictionary popover beside its button to plot a term with the selection as its filter.
-Gene Expression row likewise opens its gene-selection form beside the row, creating only the chosen plot.
-Exactly two selected wedges can open the shared differential expression panel when supported and both
-have RNA-seq counts; the first-selected wedge is the control and the second is the case.
-Survival plots split two or more selected wedges into separate curves using a samplelst term, as custom variables do.
-The selection can also become one sample group in the GROUPS tab. Used by the sunburst
-plot (sunburst.ts), which fills the Rings box with term pills, and by the About tab (about.ts), which
-lists the dataset's default rings.
+and keeps the wedge selection. With two or more selected wedges, a toggle chooses how they are used:
+- Explore together: the selected wedges are one sample group
+- Compare: the wedges are in groups, a wedge in a group of its own at first; a wedge moves to another group
+  or a new one from its group badge, or by dragging it there, so that one group may have several wedges
+Below the selected wedges, "Show available data" draws the shared menu of sample groups (#mass/groupMenu)
+for the one group or the compared groups: its analyses, and how many of the samples have each kind of data
+of the dataset, whose rows open a plot of the data. The one group can become a group in the GROUPS tab, and
+the compared groups a custom variable. Used by the sunburst plot (sunburst.ts), which fills the Rings box
+with term pills, and by the About tab (about.ts), which lists the dataset's default rings.
 
 Click a wedge to zoom into it; a wedge without rings beneath it, a shift-click, or SELECT above the
 chart (for the wedge at the centre) selects it. Selecting a wedge drops its selected descendants, which
@@ -96,7 +92,8 @@ export class SunburstChart {
 		noteDiv: any
 		/** the rings, left of the chart; filled by the caller (ringRow) */
 		rings: Card
-		/** the selected wedges, with the create-group action */
+		/** the selected wedges: the explore or compare toggle, the wedges or their groups, the available data, and
+		 *  the create-group or create-variable action */
 		sel: Card
 		/** selects the wedge at the centre, in the toolbar above the chart */
 		selectFocus: any
@@ -106,7 +103,7 @@ export class SunburstChart {
 	groupFilter?: Filter
 	/** selected wedges by node id, in selection order */
 	selected: Map<string, HNode> = new Map()
-	/** note shown in the selection card after a group is created */
+	/** note shown in the selection card after a group or a variable is created */
 	createdNote = ''
 	/** the counted unit, from the server */
 	unit = { one: 'sample', many: 'samples' }
@@ -115,14 +112,34 @@ export class SunburstChart {
 	beforeLaunch?: () => Promise<any> | void
 	/** whether the available data of the selection is shown; a change of the selection hides it */
 	dataShown = false
-	/** number of the latest renderData(), so that the response of an earlier one is dropped */
-	dataId = 0
-	dataMenu?: Menu
-	dataPicker?: { destroy: () => void }
+	/** explore: the selected wedges are one group; compare: the groups of groupOf are compared */
+	mode: 'explore' | 'compare' = 'explore'
+	/** the group of each selected wedge, by node id; a newly selected wedge has a group of its own */
+	groupOf: Map<string, number> = new Map()
+	/** key of the next new group; groups are ordered by their keys, the order they were made in */
+	nextGroup = 0
+	/** the host of the shared menu of the groups */
+	host: GroupMenuHost
+	/** the menu that moves a wedge to another group */
+	moveMenu: Menu
+	/** id of the wedge that is dragged to another group */
+	dragId?: string
 
 	constructor(opts: SunburstChartOpts) {
 		this.app = opts.app
 		this.beforeLaunch = opts.beforeLaunch
+		const getApp = () => this.app
+		this.host = {
+			// the app may be replaced, e.g. by a test
+			get app() {
+				return getApp()
+			},
+			state: { termfilter: {}, currentCohortChartTypes: [] },
+			tip2: new Menu({ padding: '0px', testid: 'sjpp-sunburst-data-menu' }),
+			tip3: new Menu({ padding: '0px' }),
+			launch: config => this.launchPlot(config)
+		}
+		this.moveMenu = new Menu({ padding: '0px', testid: 'sjpp-sunburst-move-menu' })
 		const holder = opts.holder
 		const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 		const loadingDiv = holder.append('div').style('display', 'none').style('padding', '24px').text('Loading ...')
@@ -184,7 +201,7 @@ export class SunburstChart {
 		if (!this.twLst.length) {
 			// an earlier update may still be loading; its response is dropped
 			this.dom.loadingDiv.style('display', 'none')
-			this.selected.clear()
+			this.clearSelection()
 			this.renderer.setTree({ name: this.renderer.opts.rootName, children: [] })
 			this.dom.noteDiv.text(emptyNote)
 			return true
@@ -228,6 +245,7 @@ export class SunburstChart {
 		// wedges still exist
 		const byId = new Map(this.renderer.root.descendants().map((d: HNode) => [d.data.id, d]))
 		this.selected = new Map(selectedIds.filter(id => byId.has(id)).map(id => [id, byId.get(id)]))
+		for (const id of this.groupOf.keys()) if (!this.selected.has(id)) this.groupOf.delete(id)
 		this.renderer.refresh()
 		const focus = focusId && byId.get(focusId)
 		if (focus?.children) this.renderer.zoomTo(focus)
@@ -336,14 +354,25 @@ export class SunburstChart {
 		if (!d.depth) return
 		const id = d.data.id
 		this.createdNote = ''
-		if (this.selected.has(id)) this.selected.delete(id)
+		if (this.selected.has(id)) this.unselect(id)
 		else {
 			if (this.selectedAncestor(d)) return // already in the selection; the tooltip says so
 			// a selected wedge contains its descendants, so drop any that were selected
-			for (const [k, n] of this.selected) if (n.ancestors().includes(d)) this.selected.delete(k)
+			for (const [k, n] of this.selected) if (n.ancestors().includes(d)) this.unselect(k)
 			this.selected.set(id, d)
+			this.groupOf.set(id, this.nextGroup++)
 		}
 		this.refreshSelection()
+	}
+
+	unselect(id: string) {
+		this.selected.delete(id)
+		this.groupOf.delete(id)
+	}
+
+	clearSelection() {
+		this.selected.clear()
+		this.groupOf.clear()
 	}
 
 	refreshSelection() {
@@ -356,14 +385,7 @@ export class SunburstChart {
 
 	/** wedge paths from the first ring, in selection order */
 	selectedPaths(): TermSunNode[][] {
-		return [...this.selected.values()].map(
-			(d: HNode) =>
-				d
-					.ancestors()
-					.reverse()
-					.slice(1)
-					.map((a: HNode) => a.data) as TermSunNode[]
-		)
+		return [...this.selected.values()].map(pathOf)
 	}
 
 	selectedCount(): number {
@@ -410,10 +432,13 @@ export class SunburstChart {
 		else note(d.children ? 'click to zoom in · shift-click to select' : 'click to select', LINK)
 	}
 
-	/** the selected-wedges card: one line per wedge with its path and count, and the create-group
-	 *  action as the footer */
+	/** the selected-wedges card: with two or more wedges, the toggle between exploring them as one group and
+	 *  comparing their groups; one line per wedge with its path and count, under its group when compared; the
+	 *  available data of the group or groups; and the create-group or create-variable action as the footer */
 	renderSidebar() {
 		this.closeDataPicker()
+		// the column is widened only to fit the counts of the shown data
+		if (!this.dataShown) this.setRightWidth(RIGHT_W)
 		const sel = this.dom.sel
 		const { title, headRight, body } = sel
 		headRight.selectAll('*').remove()
@@ -430,14 +455,16 @@ export class SunburstChart {
 				.style('cursor', 'pointer')
 				.text('Clear')
 				.on('click', () => {
-					this.selected.clear()
+					this.clearSelection()
 					this.refreshSelection()
 				})
 		}
-		const list = body
-			.append('div')
-			.style('max-height', `${SIZE - 200}px`)
-			.style('overflow-y', 'auto')
+		if (n > 1) this.renderModeToggle(body)
+		const grouped = n > 1 && this.mode == 'compare'
+		const list = body.append('div').attr('data-testid', 'sjpp-sunburst-wedges')
+		/* a long list of wedges scrolls; the compared groups do not, so that every group and the target for a
+		new group stay in view as drop targets, with the actions below them */
+		if (!grouped) list.style('max-height', `${SIZE - 200}px`).style('overflow-y', 'auto')
 		if (!n) {
 			list
 				.append('div')
@@ -446,76 +473,266 @@ export class SunburstChart {
 				.style('padding', '4px 0')
 				.text('Shift-click a wedge, click an outermost one, or zoom into one and click SELECT above the chart.')
 		}
-		for (const [id, d] of this.selected) {
-			const path = d
-				.ancestors()
-				.reverse()
-				.slice(1)
-				.map((a: HNode) => a.data.name)
-			const row = list
-				.append('div')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('gap', '8px')
-				.style('padding', '3px 6px')
-				.style('margin', '2px 0')
-				.style('border-radius', '6px')
-				.on('mouseenter', (event: any) => {
-					select(event.currentTarget).style('background', '#f3f4f6').select('.sjpp-sunburst-remove').style('opacity', 1)
-				})
-				.on('mouseleave', (event: any) => {
-					select(event.currentTarget)
-						.style('background', 'transparent')
-						.select('.sjpp-sunburst-remove')
-						.style('opacity', 0)
-				})
-			badge(row, d.data.name, this.renderer.color(d), 24)
-			const text = row.append('div').style('flex', '1 1 auto').style('min-width', '0').style('line-height', '1.2')
-			text
-				.append('div')
-				.style('font-size', '0.9em')
-				.style('color', TEXT_DARK)
-				.style('overflow', 'hidden')
-				.style('text-overflow', 'ellipsis')
-				.style('white-space', 'nowrap')
-				.attr('title', path.join(' › '))
-				.text(path.join(' › '))
-			text
-				.append('div')
-				.style('font-size', '0.7em')
-				.style('color', '#6b7280')
-				.text(this.renderer.unitText(d.value || 0))
-			row
-				.append('span')
-				.attr('class', 'sjpp-sunburst-remove')
-				.style('opacity', 0)
-				.style('cursor', 'pointer')
-				.style('color', '#9ca3af')
-				.style('font-size', '0.85em')
-				.attr('title', 'Remove')
-				.text('✕')
-				.on('click', () => {
-					this.selected.delete(id)
-					this.refreshSelection()
-				})
-		}
+		if (grouped) this.renderGroups(list)
+		else for (const [id, d] of this.selected) this.wedgeRow(list, id, d)
 
 		const count = this.selectedCount()
 		if (n) void this.renderData(body, count)
-		// the groups tab cannot be used to see or use a created group
-		const canCreateGroup = n > 0 && !isGroupsDisabled(this.app.vocabApi.termdbConfig)
-		if (!canCreateGroup && !this.createdNote) return
+		this.renderFooter(body, count)
+	}
 
+	/** Explore together | Compare */
+	renderModeToggle(holder: any) {
+		const wrap = holder
+			.append('div')
+			.attr('data-testid', 'sjpp-sunburst-mode')
+			.attr('role', 'radiogroup')
+			.attr('aria-label', 'Use the selected wedges')
+			.style('display', 'flex')
+			.style('margin', '0 0 8px 0')
+			.style('border', `1px solid ${RULE}`)
+			.style('border-radius', '999px')
+			.style('overflow', 'hidden')
+		const modes: [SunburstChart['mode'], string, string][] = [
+			['explore', 'Explore together', 'Use the selected wedges as one group'],
+			['compare', 'Compare', 'Compare groups of the selected wedges']
+		]
+		for (const [mode, label, tip] of modes) {
+			const on = this.mode == mode
+			wrap
+				.append('button')
+				.attr('data-testid', `sjpp-sunburst-mode-${mode}`)
+				.attr('role', 'radio')
+				.attr('aria-checked', String(on))
+				.attr('title', tip)
+				.style('flex', '1 1 0')
+				.style('border', 'none')
+				.style('padding', '4px 8px')
+				.style('font-size', '12px')
+				.style('cursor', 'pointer')
+				.style('background', on ? SELECT_STROKE : 'white')
+				.style('color', on ? '#fff' : TEXT_DARK)
+				.text(label)
+				.on('click', () => this.setMode(mode))
+		}
+	}
+
+	setMode(mode: SunburstChart['mode']) {
+		if (mode == this.mode) return
+		this.mode = mode
+		this.createdNote = ''
+		this.renderSidebar()
+	}
+
+	/** a section per compared group with its wedges, each a drop target for a wedge, then the target for a new
+	 *  group when a group has more than one wedge */
+	renderGroups(list: any) {
+		const groups = this.compareGroups()
+		for (const g of groups) {
+			const section = list
+				.append('div')
+				.attr('data-testid', `sjpp-sunburst-group-${g.letter}`)
+				.style('margin', '4px 0 6px 0')
+				.style('padding', '2px 0 2px 6px')
+				.style('border-left', `3px solid ${g.color}`)
+				.style('border-radius', '4px')
+			this.dropTarget(section, g.key)
+			const head = section
+				.append('div')
+				.style('display', 'flex')
+				.style('justify-content', 'space-between')
+				.style('gap', '8px')
+				.style('font-size', '0.8em')
+				.style('color', TEXT_MUTED)
+			head.append('span').style('font-weight', 600).style('color', g.color).text(`Group ${g.letter}`)
+			head.append('span').text(this.renderer.unitText(g.sampleCount))
+			for (const d of g.nodes) this.wedgeRow(section, d.data.id, d, g)
+		}
+		// a lone wedge is already a group of its own, so the target for a new group is only for a wedge of a larger group
+		if (groups.some(g => g.nodes.length > 1)) {
+			const zone = list
+				.append('div')
+				.attr('data-testid', 'sjpp-sunburst-new-group')
+				.style('margin', '4px 0')
+				.style('padding', '6px')
+				.style('border', `1px dashed ${RULE}`)
+				.style('border-radius', '6px')
+				.style('font-size', '0.75em')
+				.style('text-align', 'center')
+				.style('color', TEXT_MUTED)
+				.text('Drag a wedge here for a new group')
+			this.dropTarget(zone)
+		}
+		if (groups.length < 2)
+			list
+				.append('div')
+				.attr('data-testid', 'sjpp-sunburst-one-group')
+				.style('font-size', '0.8em')
+				.style('color', TEXT_MUTED)
+				.text('Put the wedges in at least two groups to compare them.')
+	}
+
+	/** a line of a selected wedge: its badge, path and count, and the remove button; when compared, first the
+	 *  badge of its group, which moves it to another group, and it can be dragged to another group */
+	wedgeRow(list: any, id: string, d: HNode, group?: CompareGroup) {
+		const path = d
+			.ancestors()
+			.reverse()
+			.slice(1)
+			.map((a: HNode) => a.data.name)
+		const row = list
+			.append('div')
+			.attr('class', 'sjpp-sunburst-selected-wedge')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '8px')
+			.style('padding', '3px 6px')
+			.style('margin', '2px 0')
+			.style('border-radius', '6px')
+			.on('mouseenter', (event: any) => {
+				select(event.currentTarget).style('background', '#f3f4f6').select('.sjpp-sunburst-remove').style('opacity', 1)
+			})
+			.on('mouseleave', (event: any) => {
+				select(event.currentTarget)
+					.style('background', 'transparent')
+					.select('.sjpp-sunburst-remove')
+					.style('opacity', 0)
+			})
+		if (group) {
+			row
+				.attr('draggable', 'true')
+				.style('cursor', 'grab')
+				.on('dragstart', (event: DragEvent) => {
+					this.dragId = id
+					if (event.dataTransfer) {
+						event.dataTransfer.effectAllowed = 'move'
+						event.dataTransfer.setData('text/plain', d.data.name)
+						setRowDragImage(event, event.currentTarget as HTMLElement)
+					}
+				})
+				.on('dragend', () => (this.dragId = undefined))
+			row
+				.append('button')
+				.attr('class', 'sjpp-sunburst-move')
+				.attr('title', `Group ${group.letter}; click to move to another group`)
+				.attr('aria-label', `${d.data.name} is in group ${group.letter}; move to another group`)
+				.style('flex', '0 0 auto')
+				.style('width', '20px')
+				.style('height', '20px')
+				.style('padding', '0')
+				.style('border', 'none')
+				.style('border-radius', '50%')
+				.style('background', group.color)
+				.style('color', '#fff')
+				.style('font-size', '11px')
+				.style('font-weight', 'bold')
+				.style('cursor', 'pointer')
+				.text(group.letter)
+				.on('click', (event: MouseEvent) => this.showMoveMenu(event.currentTarget as HTMLElement, id))
+		}
+		badge(row, d.data.name, this.renderer.color(d), 24)
+		const text = row.append('div').style('flex', '1 1 auto').style('min-width', '0').style('line-height', '1.2')
+		text
+			.append('div')
+			.style('font-size', '0.9em')
+			.style('color', TEXT_DARK)
+			.style('overflow', 'hidden')
+			.style('text-overflow', 'ellipsis')
+			.style('white-space', 'nowrap')
+			.attr('title', path.join(' › '))
+			.text(path.join(' › '))
+		text
+			.append('div')
+			.style('font-size', '0.7em')
+			.style('color', '#6b7280')
+			.text(this.renderer.unitText(d.value || 0))
+		row
+			.append('span')
+			.attr('class', 'sjpp-sunburst-remove')
+			.style('opacity', 0)
+			.style('cursor', 'pointer')
+			.style('color', '#9ca3af')
+			.style('font-size', '0.85em')
+			.attr('title', 'Remove')
+			.text('✕')
+			.on('click', () => {
+				this.unselect(id)
+				this.refreshSelection()
+			})
+	}
+
+	/** the groups that a wedge can move to: each other group, and a new one unless the wedge is alone in its group */
+	showMoveMenu(anchor: HTMLElement, id: string) {
+		const menu = this.moveMenu
+		menu.clear().showunder(anchor)
+		const from = this.groupOf.get(id)
+		const groups = this.compareGroups()
+		const option = (text: string, key?: number) =>
+			menu.d
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.attr('role', 'button')
+				.attr('tabindex', 0)
+				.text(text)
+				.on('click', () => this.moveToGroup(id, key))
+		for (const g of groups) if (g.key != from) option(`Move to group ${g.letter}: ${g.title}`, g.key)
+		if (groups.find(g => g.key == from)!.nodes.length > 1) option('Move to a new group')
+	}
+
+	/** move a wedge to the group of `key`, or to a new group */
+	moveToGroup(id: string, key?: number) {
+		this.moveMenu.hide()
+		if (!this.selected.has(id)) return
+		this.groupOf.set(id, key ?? this.nextGroup++)
+		this.createdNote = ''
+		this.renderSidebar()
+	}
+
+	/** the element takes a dragged wedge into the group of `key`, or a new group */
+	dropTarget(el: any, key?: number) {
+		el.on('dragover', (event: DragEvent) => {
+			if (!this.dragId) return
+			event.preventDefault()
+			el.style('background', '#eef2ff')
+		})
+			.on('dragleave', (event: DragEvent) => {
+				// leaving for a child of the element is not leaving it
+				if (!el.node().contains(event.relatedTarget)) el.style('background', null)
+			})
+			.on('drop', (event: DragEvent) => {
+				event.preventDefault()
+				event.stopPropagation()
+				el.style('background', null)
+				const id = this.dragId
+				this.dragId = undefined
+				if (id && (key === undefined || this.groupOf.get(id) != key)) this.moveToGroup(id, key)
+			})
+	}
+
+	/** Create group of the explored wedges, or Create variable of the compared groups */
+	renderFooter(body: any, count: number) {
+		const n = this.selected.size
+		// the groups tab cannot be used to see or use a created group or variable
+		const canCreate = n > 0 && !isGroupsDisabled(this.app.vocabApi.termdbConfig)
+		if (!canCreate && !this.createdNote) return
 		const footer = body
 			.append('div')
 			.style('margin-top', '10px')
 			.style('padding-top', '10px')
 			.style('border-top', `1px solid ${RULE}`)
-		if (canCreateGroup) {
-			pill(footer, { button: true })
-				.attr('data-testid', 'sjpp-sunburst-create-group')
-				.text(`Create group of ${this.renderer.unitText(count)}`)
-				.on('click', () => this.createGroup())
+		if (canCreate) {
+			if (this.effectiveMode() == 'compare') {
+				const k = this.compareGroups().length
+				pill(footer, { button: true })
+					.attr('data-testid', 'sjpp-sunburst-create-variable')
+					.text(`Create variable with ${k} groups`)
+					.on('click', () => this.createVariable())
+			} else {
+				pill(footer, { button: true })
+					.attr('data-testid', 'sjpp-sunburst-create-group')
+					.text(`Create group of ${this.renderer.unitText(count)}`)
+					.on('click', () => this.createGroup())
+			}
 		}
 		if (this.createdNote) {
 			footer
@@ -527,8 +744,8 @@ export class SunburstChart {
 		}
 	}
 
-	/** "Show available data", then how many of the selected samples have each kind of data of the dataset;
-	 *  a kind with a plot of the selected samples opens it */
+	/** "Show available data", then the shared menu of the one group or the compared groups: its analyses, and how
+	 *  many of the samples have each kind of data, whose rows open a plot of the data */
 	async renderData(body: any, count: number) {
 		const div = body
 			.append('div')
@@ -547,7 +764,7 @@ export class SunburstChart {
 				})
 			return
 		}
-		const id = ++this.dataId
+		const mode = this.effectiveMode()
 		const head = div
 			.append('div')
 			.style('display', 'flex')
@@ -562,7 +779,11 @@ export class SunburstChart {
 			.style('font-size', '0.95em')
 			.style('font-weight', 600)
 			.style('color', TEXT_DARK)
-			.text(capitalizeFirstLetter(this.renderer.unitText(count)))
+			.text(
+				mode == 'compare'
+					? `Compare ${this.compareGroups().length} groups`
+					: capitalizeFirstLetter(this.renderer.unitText(count))
+			)
 		// back to the button
 		head
 			.append('button')
@@ -577,285 +798,120 @@ export class SunburstChart {
 			.style('cursor', 'pointer')
 			.text('Hide ▴')
 			.on('click', () => this.hideData())
-		this.dataRow(
-			div.append('div').style('font-size', '0.85em'),
-			{ kind: 'data', key: 'summarize', label: 'Summarize', counts: [] },
-			false,
-			undefined,
-			anchor => this.showDataPicker(anchor)
-		)
-		const list = div.append('div').text('Loading ...').style('font-size', '0.85em').style('color', TEXT_MUTED)
+		const holder = div.append('div').attr('data-testid', 'sjpp-sunburst-group-menu').style('font-size', '0.95em')
 		try {
-			const appState = this.app.getState()
-			const termfilter = appState.termfilter || {}
-			const filter = filterJoin([this.plotFilter(), termfilter.filter].filter(f => f?.lst?.length))
-			const chartTypes = getCurrentCohortChartTypes(appState)
-			const queries = this.app.vocabApi.termdbConfig?.queries || {}
-			const canCompare = this.selected.size == 2 && chartTypes.includes('DA') && queries.rnaseqGeneCount
-			const comparison = canCompare ? this.comparisonGroups() : []
-			const groups = [
-				{ name: 'selection', filter },
-				...comparison.map(g => ({
-					...g,
-					filter: filterJoin([g.filter, termfilter.filter].filter(f => f?.lst?.length))
-				}))
-			]
-			const res = await fetchDataAvailability(
-				this.app.vocabApi,
-				groups,
-				termfilter.filter0,
-				getActiveCohortStr(appState)
-			)
-			if (id != this.dataId) return
-			list.text('').style('color', null)
-			const comparisonCounts = res.groups.slice(1)
-			if (
-				canCompare &&
-				comparisonCounts.length == 2 &&
-				comparisonCounts.every(g => (g.data.rnaseqGeneCount || 0) > 0)
-			) {
-				const tw = getSamplelstTWFromFilters(groups.slice(1))
-				this.dataRow(
-					list,
-					{ kind: 'data', key: 'differentialExpression', label: 'Differential Gene Expression Analysis', counts: [] },
-					false,
-					undefined,
-					anchor => this.showDataPicker(anchor, 'differentialExpression', tw)
-				)
-			}
-			const sections = availabilitySections({ ...res, groups: res.groups.slice(0, 1) }, ['rnaseqGeneCount'])
-			if (!sections.length) {
-				if (list.selectAll('*').empty()) list.style('color', TEXT_MUTED).text(`No data for these ${this.unit.many}`)
-				return
-			}
-			for (const section of sections) {
-				if (section.title) {
-					list
-						.append('div')
-						.attr('data-testid', `sjpp-sunburst-section-${section.key}`)
-						.style('margin', '8px 0 2px 0')
-						.style('padding', '0 6px')
-						.style('font-size', '10px')
-						.style('font-weight', 600)
-						.style('letter-spacing', '.06em')
-						.style('text-transform', 'uppercase')
-						.style('color', TEXT_MUTED)
-						.text(section.title)
-				}
-				for (const row of section.rows) {
-					const launch = this.dataPlot(row)
-					this.dataRow(
-						list,
-						row,
-						!!section.title,
-						launch,
-						row.kind == 'data' && row.key == 'geneExpression'
-							? anchor => this.showDataPicker(anchor, 'geneExpression')
-							: undefined
-					)
-				}
-				if (
-					section.key == 'mutations' &&
-					chartTypes.includes('grin2') &&
-					section.rows.some(row => {
-						const dt = Number(row.key.split('.')[0])
-						if (dt == dtsnvindel) return !!queries.snvindel
-						if (dt == dtcnv) return !!(queries.cnv || queries.singleSampleMutation?.cnvTypes?.length)
-						return (dt == dtfusionrna || dt == dtsv) && queries.svfusion?.dtLst?.includes(dt)
-					})
-				) {
-					pill(list, { button: true })
-						.attr('data-testid', 'sjpp-sunburst-grin2')
-						.style('font-family', 'inherit')
-						.style('font-weight', 'normal')
-						.style('width', 'auto')
-						.style('padding', '2px 8px')
-						.style('margin', '4px 6px 4px 16px')
-						.text('Run GRIN2')
-						.on('click', () => this.launchPlot({ chartType: 'grin2', filter: this.plotFilter() }))
-				}
-			}
+			this.refreshHost()
+			const groups = this.compareGroups()
+			const drawn =
+				mode == 'explore'
+					? renderGroupMenu({ holder, host: this.host, mode, filter: this.plotFilter() })
+					: renderGroupMenu({
+							holder,
+							host: this.host,
+							mode,
+							samplelstTW: this.compareTW(),
+							labels: Object.fromEntries(groups.map(g => [g.name, g.letter]))
+					  })
+			// the options are drawn at once; in the narrow card, at the size of the count rows
+			holder.select('[data-testid=sjpp-group-menu-options]').style('font-size', '0.85em')
+			await drawn
+			this.fitCounts(holder)
 		} catch (e: any) {
-			if (id != this.dataId) return
-			list.attr('class', 'sja_errorbar').text(e?.message || String(e))
+			holder
+				.append('div')
+				.attr('class', 'sja_errorbar')
+				.text(e?.message || String(e))
 		}
 	}
 
-	/** Separate groups in selection order; for differential analysis, first control, then case. */
-	comparisonGroups() {
-		const termfilter = this.app.getState().termfilter || {}
-		const nodes = [...this.selected.values()]
-		return this.selectedPaths().map((path, i) => ({
-			name: `${i + 1}: ${selectionName([path])}`,
-			filter: filterJoin([selectionFilter([path], this.twLst), this.groupFilter].filter(f => f?.lst?.length)),
-			filter0: termfilter.filter0,
-			sampleCount: nodes[i].value || 0,
-			color: this.renderer.color(nodes[i])
-		}))
+	/** widen the column of the card to fit the counts table, whose columns of compared groups may be wider than
+	 *  the column; narrow it back, down to its default width, when the table needs less */
+	fitCounts(holder: any) {
+		const table = holder.select('[data-testid=sjpp-group-data-availability] table').node()
+		if (!table) return
+		const box = table.parentElement as HTMLElement
+		const style = getComputedStyle(box)
+		const room = box.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+		const right = this.renderer.dom.right.node() as HTMLElement
+		const over = Math.ceil(table.getBoundingClientRect().width - room)
+		this.setRightWidth(Math.max(RIGHT_W, right.getBoundingClientRect().width + over))
 	}
 
-	async showDataPicker(
-		anchor: HTMLElement,
-		kind: 'summary' | 'geneExpression' | 'differentialExpression' = 'summary',
-		samplelstTW?: ReturnType<typeof getSamplelstTWFromFilters>
-	) {
-		this.closeDataPicker()
-		const menu = new Menu({
-			padding: '8px',
-			testid:
-				kind == 'geneExpression'
-					? 'sjpp-sunburst-expression-menu'
-					: kind == 'differentialExpression'
-					? 'sjpp-sunburst-differential-menu'
-					: 'sjpp-sunburst-summary-menu'
-		})
-		this.dataMenu = menu
-		const position = () => {
-			if (!menu.dnode) throw new Error('Missing data picker menu element')
-			const rect = anchor.getBoundingClientRect()
-			const width = menu.dnode.getBoundingClientRect().width
-			const x = rect.right + 5 + width <= window.innerWidth ? rect.right + 5 : Math.max(0, rect.left - width - 5)
-			menu.showunder(anchor, { offsetX: x - rect.left, offsetY: -rect.height - 5 })
-		}
-		const loading = menu.d.append('div').text('Loading ...')
-		position()
-		try {
-			const state = this.app.getState()
-			const filter = this.plotFilter()
-			if (kind == 'differentialExpression') {
-				if (!samplelstTW) throw new Error('Missing differential analysis groups')
-				const preAnalysisData = await getGeneExpressionPreAnalysis(this.app, samplelstTW, state.termfilter)
-				if (this.dataMenu != menu) return
-				renderPreAnalysisData({
-					preAnalysisData,
-					samplelstTW,
-					groups: samplelstTW.q.groups,
-					tip: menu,
-					self: { app: this.app, state: { termfilter: state.termfilter } },
-					onLaunch: async config => {
-						this.closeDataPicker()
-						await this.launchPlot(config)
-					}
-				})
-			} else if (kind == 'geneExpression') {
-				const { geneExpInputInit } = await import('#plots/GeneExpInput.ts')
-				if (this.dataMenu != menu) return
-				const picker = await geneExpInputInit({
-					app: this.app,
-					holder: menu.d.append('div'),
-					header: menu.d.insert('div', ':first-child'),
-					config: { termType: TermTypes.GENE_EXPRESSION, spawnConfig: { filter } },
-					onSubmit: async config => {
-						this.closeDataPicker()
-						await this.launchPlot(config)
-					}
-				})
-				if (this.dataMenu != menu) {
-					picker.destroy()
-					return
-				}
-				this.dataPicker = picker
-				await picker.update({ appState: state })
-			} else {
-				const { appInit } = await import('#termdb/app')
-				if (this.dataMenu != menu) return
-				const tree = await appInit({
-					vocabApi: this.app.vocabApi,
-					holder: menu.d.append('div'),
-					state: {
-						vocab: state.vocab,
-						activeCohort: state.activeCohort,
-						termfilter: {
-							...state.termfilter,
-							filter: filterJoin([filter, state.termfilter?.filter].filter(f => f?.lst?.length))
-						},
-						customTerms: state.customTerms,
-						tree: { usecase: { target: 'dictionary' } }
-					},
-					tree: {
-						click_term: selected => {
-							const term = selected.term || selected
-							this.closeDataPicker()
-							void this.launchPlot(
-								term.type == 'survival'
-									? this.survivalConfig(selected.term ? selected : { term })
-									: { chartType: 'summary', term: selected.term ? selected : { term }, filter }
-							)
-						}
-					}
-				})
-				if (this.dataMenu != menu) {
-					tree.destroy()
-					return
-				}
-				this.dataPicker = tree
-			}
-			if (this.dataMenu != menu) return
-			loading.remove()
-			if (menu.d.style('display') != 'none') position()
-		} catch (e: any) {
-			if (this.dataMenu != menu) return
-			loading.attr('class', 'sja_errorbar').text(e?.message || String(e))
+	setRightWidth(width: number) {
+		this.renderer.dom.right.style('flex-basis', `${width}px`)
+	}
+
+	/** the app state that the shared menu of the groups reads */
+	refreshHost() {
+		const state = this.app.getState()
+		this.host.state = {
+			termfilter: state.termfilter || {},
+			currentCohortChartTypes: getCurrentCohortChartTypes(state),
+			matrixplots: this.app.vocabApi.termdbConfig?.matrixplots
 		}
 	}
 
 	closeDataPicker() {
-		this.dataPicker?.destroy()
-		this.dataPicker = undefined
-		this.dataMenu?.destroy()
-		this.dataMenu = undefined
+		closeGroupMenus(this.host)
+		this.moveMenu?.hide()
 	}
 
 	hideData() {
 		this.dataShown = false
-		// a response still on its way is not drawn
-		this.dataId++
 		this.renderSidebar()
 	}
 
-	/** a line of the available data: the kind of data and its count (omitted for empty counts), which opens `launch`, a plot_create config,
-	 *  when given; a row of a section is indented under the section's title */
-	dataRow(
-		list: any,
-		row: AvailabilityRow,
-		inSection: boolean,
-		launch?: any,
-		onActivate?: (anchor: HTMLElement) => void
-	) {
-		const n = row.counts.length ? row.counts[0] || 0 : undefined
-		const clickable = !!launch || !!onActivate
-		const div = list
-			.append('div')
-			.attr('data-testid', `sjpp-sunburst-data-${row.kind == 'data' ? '' : row.kind + '-'}${row.key}`)
-			.style('display', 'flex')
-			.style('justify-content', 'space-between')
-			.style('gap', '8px')
-			.style('padding', `3px 6px 3px ${inSection ? 16 : 6}px`)
-			.style('margin', '1px 0')
-			.style('border-radius', '6px')
-			.style('color', TEXT_DARK)
-		div.append('span').text(row.label)
-		div
-			.append('span')
-			.style('white-space', 'nowrap')
-			.style('color', clickable ? LINK : null)
-			.text(`${n === undefined ? '' : n.toLocaleString()}${row.unit ? ' ' + row.unit : ''}${clickable ? ' ›' : ''}`)
-		if (!clickable) return
-		const activate = (anchor: HTMLElement) => (onActivate ? onActivate(anchor) : this.launchPlot(launch))
-		div
-			.attr('role', 'button')
-			.attr('tabindex', 0)
-			.attr('title', `Open the ${row.label} of these ${this.unit.many}`)
-			.style('cursor', 'pointer')
-			.on('mouseenter', (event: any) => select(event.currentTarget).style('background', '#f3f4f6'))
-			.on('mouseleave', (event: any) => select(event.currentTarget).style('background', 'transparent'))
-			.on('click', (event: MouseEvent) => activate(event.currentTarget as HTMLElement))
-			.on('keydown', (event: KeyboardEvent) => {
-				if (event.key == 'Enter' || event.key == ' ') {
-					event.preventDefault()
-					activate(event.currentTarget as HTMLElement)
-				}
-			})
+	/** compare when chosen and the wedges are in two or more groups; else the wedges are one group */
+	effectiveMode(): SunburstChart['mode'] {
+		return this.mode == 'compare' && this.selected.size > 1 && this.compareGroups().length > 1 ? 'compare' : 'explore'
+	}
+
+	/** the compared groups, in the order they were made: the wedges of each, in selection order, with the
+	 *  filter of the wedges and the plot's own filter */
+	compareGroups(): CompareGroup[] {
+		const byKey = new Map<number, HNode[]>()
+		for (const [id, d] of this.selected) {
+			const key = this.groupOf.get(id)!
+			if (!byKey.has(key)) byKey.set(key, [])
+			byKey.get(key)!.push(d)
+		}
+		const keys = [...byKey.keys()].sort((a, b) => a - b)
+		const colors = getColors(Math.max(keys.length, 3))
+		return keys.map((key, i) => {
+			const nodes = byKey.get(key)!
+			const paths = nodes.map(pathOf)
+			const letter = groupLetter(i)
+			const title = selectionName(paths)
+			return {
+				key,
+				letter,
+				title,
+				name: `${letter}: ${title}`,
+				nodes,
+				filter: filterJoin(
+					[selectionFilter(paths, this.twLst), this.groupFilter].filter(f => f?.lst?.length)
+				) as Filter,
+				sampleCount: nodes.reduce((n, d) => n + (d.value || 0), 0),
+				color: colors(String(i))
+			}
+		})
+	}
+
+	/** the compared groups as a samplelst tw, each with the global filter, as the server resolves a group by its
+	 *  own filter alone; first the control, then the case of a differential analysis */
+	compareTW() {
+		const termfilter = this.app.getState().termfilter || {}
+		const groups = this.compareGroups()
+		return getSamplelstTWFromFilters(
+			groups.map(g => ({
+				name: g.name,
+				color: g.color,
+				sampleCount: g.sampleCount,
+				filter: filterJoin([g.filter, termfilter.filter].filter(f => f?.lst?.length)),
+				filter0: termfilter.filter0
+			})),
+			groups.map(g => g.title).join(' vs ')
+		)
 	}
 
 	/** the filter of the selected samples: the selection with the plot's own filter. A plot that is given it as
@@ -863,40 +919,6 @@ export class SunburstChart {
 	plotFilter(): Filter {
 		const filters = [selectionFilter(this.selectedPaths(), this.twLst), this.groupFilter]
 		return filterJoin(filters.filter(f => f?.lst?.length)) as Filter
-	}
-
-	survivalConfig(term: any) {
-		return {
-			chartType: 'survival',
-			term,
-			filter: this.plotFilter(),
-			...(this.selected.size > 1 ? { term2: getSamplelstTWFromFilters(this.comparisonGroups()) } : {})
-		}
-	}
-
-	/** the plot of the selected samples for a row of the available data, as a plot_create config; undefined
-	 *  when the row has no plot of its own */
-	dataPlot(row: AvailabilityRow): any {
-		const filter = this.plotFilter()
-		const q = this.app.vocabApi.termdbConfig?.queries || {}
-		// the mutations of the selected samples, in the genome browser after a gene is entered
-		if (row.kind == 'assay')
-			return q.snvindel || q.svfusion || q.cnv
-				? {
-						chartType: 'genomeBrowser',
-						filter,
-						/* the mutation track shown, which the genome browser hides by default when the dataset also has
-						trackLst. The query is copied as the browser's config replaces it, not merged */
-						...(q.snvindel ? { snvindel: { ...structuredClone(q.snvindel), shown: true } } : {})
-				  }
-				: undefined
-		if (row.kind == 'survival') return this.survivalConfig({ id: row.key })
-		// the term search, whose DNA methylation tab lists methylation terms; a term opens its summary with the filter
-		if (row.key == 'dnaMethylation') return { chartType: 'dictionary', spawnConfig: { filter } }
-		// the table of the imaging samples that pass the filter, to render on a brain template
-		if (row.key == 'NIdata') return { chartType: 'brainImaging', filter }
-		// the lanes of the patients of the selected samples
-		if (row.key == 'longitudinal') return { chartType: 'swimmer', filter }
 	}
 
 	async launchPlot(config: any) {
@@ -918,8 +940,28 @@ export class SunburstChart {
 			const groups = this.app.getState().groups || []
 			const filter = getGroupFilterOfConditions([this.groupFilter, selectionFilter(paths, this.twLst)])
 			addNewGroup(this.app, filter, groups, name)
-			this.selected.clear()
+			this.clearSelection()
 			this.createdNote = `Group "${name}" added; find it in the GROUPS tab.`
+			this.refreshSelection()
+		} catch (e: any) {
+			this.dom.errdiv.style('display', '').text(e?.message || String(e))
+		}
+	}
+
+	/** a custom variable of the compared groups, listed in the GROUPS tab and usable in any chart */
+	async createVariable() {
+		try {
+			const k = this.compareGroups().length
+			if (k > maxGroupsPerVariable) throw `A variable can be made from up to ${maxGroupsPerVariable} groups`
+			const tw = this.compareTW()
+			// a variable of the same groups again gets its own name, as addNewGroup() names a group
+			const taken = new Set((this.app.getState().customTerms || []).map((t: any) => t.name))
+			let name = tw.term.name
+			for (let i = 1; taken.has(name); i++) name = `${tw.term.name} ${i}`
+			tw.term.name = name
+			await this.app.vocabApi.addCustomTerm({ name, tw })
+			this.clearSelection()
+			this.createdNote = `Variable "${name}" added; find it in the GROUPS tab.`
 			this.refreshSelection()
 		} catch (e: any) {
 			this.dom.errdiv.style('display', '').text(e?.message || String(e))
@@ -928,8 +970,59 @@ export class SunburstChart {
 
 	destroy() {
 		this.closeDataPicker()
+		this.host.tip2.destroy()
+		this.host.tip3.destroy()
+		this.moveMenu.destroy()
 		this.renderer?.destroy()
 	}
+}
+
+/** a group of wedges that is compared */
+type CompareGroup = {
+	/** groupOf key */
+	key: number
+	/** A, B, ... in the order of the groups */
+	letter: string
+	/** the wedge path, or the wedge names */
+	title: string
+	/** the letter and the title, unique among the groups */
+	name: string
+	nodes: HNode[]
+	filter: Filter
+	sampleCount: number
+	color: string
+}
+
+/** the wedge path from the first ring */
+function pathOf(d: HNode): TermSunNode[] {
+	return d
+		.ancestors()
+		.reverse()
+		.slice(1)
+		.map((a: HNode) => a.data) as TermSunNode[]
+}
+
+/** the image under the mouse while a wedge row is dragged: a copy of the row alone. The browser's default image is
+ *  of the row's area of the card, which can show the elements below the row too. The copy is drawn out of view,
+ *  and removed once the browser has taken the image from it */
+function setRowDragImage(event: DragEvent, row: HTMLElement) {
+	const box = row.getBoundingClientRect()
+	const copy = row.cloneNode(true) as HTMLElement
+	copy.style.position = 'fixed'
+	copy.style.top = '-1000px'
+	copy.style.left = '0'
+	copy.style.width = `${box.width}px`
+	copy.style.boxSizing = 'border-box'
+	copy.style.background = '#f3f4f6'
+	copy.style.pointerEvents = 'none'
+	document.body.appendChild(copy)
+	event.dataTransfer!.setDragImage(copy, event.clientX - box.left, event.clientY - box.top)
+	setTimeout(() => copy.remove(), 0)
+}
+
+/** A to Z, then A2 to Z2, ... */
+function groupLetter(i: number): string {
+	return String.fromCharCode(65 + (i % 26)) + (i >= 26 ? String(Math.floor(i / 26) + 1) : '')
 }
 
 /** why a sample is not in a ring: "no X value", or "no or a hidden X value" when the ring hides some

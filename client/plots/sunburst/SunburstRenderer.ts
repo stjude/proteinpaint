@@ -28,6 +28,8 @@ wedges are created once per setTree() and only their attributes change afterward
 const RINGS = 2
 const R0 = 74 // centre radius
 const RING_W = 74
+/** px width of the column right of the chart, which a caller may widen to fit its content */
+export const RIGHT_W = 300
 const RADIUS = R0 + RINGS * RING_W
 export const SIZE = RADIUS * 2 + 12
 const DURATION = 750 // ms, zoom transition
@@ -195,7 +197,7 @@ export class SunburstRenderer {
 			})
 		const right = layout
 			.append('div')
-			.style('flex', '0 0 300px')
+			.style('flex', `0 0 ${RIGHT_W}px`)
 			.style('min-width', '0')
 			.style('display', 'flex')
 			.style('flex-direction', 'column')

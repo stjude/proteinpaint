@@ -3,10 +3,10 @@ import type { DataAvailabilityGroup, DataAvailabilityResponse, DataAvailabilityT
 
 /*
 The samples with data of sample groups, from termdb/dataAvailability, in sections (availabilitySections()):
-the kinds of data, the assays of mutation data and the survival terms. For the menu of a custom variable
-(groups.js): a table of how many samples of each group have each kind of data, whose rows may open a plot
-of the groups, and the menu options of an analysis of that data removed where the groups lack it. The
-sunburst lists the same sections for its one selected group.
+the kinds of data, the assays of mutation data and the survival terms. For the shared menu of sample groups
+(groupMenu.ts), used by a custom variable and by the sunburst: a table of how many samples of each group have
+each kind of data, whose rows may open a plot of the groups, and the menu options of an analysis of that data
+removed where the groups lack it.
 */
 
 /** the menu options of an analysis of a kind of data, by data-testid: `every` for an analysis that compares
@@ -15,8 +15,9 @@ const optionsByDataType: { [dataType in DataAvailabilityType]?: { testid: string
 	geneExpression: [{ testid: 'sjpp-hiercluster-option', need: 'some' }],
 	rnaseqGeneCount: [{ testid: 'sjpp-da-option', need: 'every' }],
 	isoformExpressionCount: [{ testid: 'sjpp-da-isoform-option', need: 'every' }],
-	/* none for dnaMethylation: its count is of the default matrix, while the DM pre-analysis picker offers classes
-	with other eligible samples, so it decides */
+	/* its count is of the samples with methylation data of any element class, so 0 means none in every class that
+	differential methylation offers */
+	dnaMethylation: [{ testid: 'sjpp-da-dnaMeth-option', need: 'every' }],
 	junction: [{ testid: 'sjpp-da-splicing-option', need: 'every' }],
 	NIdata: [{ testid: 'sjpp-brain-imaging-option', need: 'some' }]
 }
@@ -35,7 +36,7 @@ export type AvailabilityRow = {
 }
 
 /** rows of a kind of data, under a title unless they are the kinds of data at the top */
-type AvailabilitySection = { key: string; title?: string; rows: AvailabilityRow[] }
+export type AvailabilitySection = { key: string; title?: string; rows: AvailabilityRow[] }
 
 /** the rows of the counts, in sections: the kinds of data, the assays of mutation data, then the survival
  *  terms. A row is left out when no group has a sample with the data, and a section without rows */
@@ -82,9 +83,23 @@ export function availabilitySections(
 	return sections.filter(s => s.rows.length)
 }
 
-/** what a row of the counts table does when clicked; the option that it stands in for is removed from the
- *  menu then */
-type RowAction = { run: (anchor: HTMLElement) => void; replaces?: string }
+/** what a row of the counts table does when clicked, if anything; the option that it stands in for is removed
+ *  from the menu, also when the row cannot be clicked */
+export type RowAction = {
+	run?: (anchor: HTMLElement) => void
+	replaces?: string
+	/** the tooltip of the row: what it opens, or why it cannot be clicked */
+	title?: string
+}
+
+/** a line at the end of a section that is not a count: an action of the section's data, e.g. Run GRIN2 under the
+ *  mutations, with its label and run(); or a note, drawn by render() in the line */
+export type SectionAction = {
+	testid: string
+	label?: string
+	run?: (anchor: HTMLElement) => void
+	render?: (cell: any) => void
+}
 
 type DataAvailabilityArg = {
 	/** the table is drawn here, replacing its content */
@@ -95,11 +110,17 @@ type DataAvailabilityArg = {
 	groups: DataAvailabilityGroup[]
 	/** colors of the groups, by name, for the column headers */
 	colors?: { [name: string]: string | undefined }
+	/** labels of the column headers, by group name; the group name by default */
+	labels?: { [name: string]: string | undefined }
 	filter0?: any
 	/** the active cohort string, whose survival terms are counted */
 	cohort?: string
+	/** kinds of data that are not listed */
+	exclude?: DataAvailabilityType[]
 	/** the action of a row, if any */
 	rowAction?: (row: AvailabilityRow) => RowAction | undefined
+	/** the action lines at the end of a section, if any */
+	sectionActions?: (section: AvailabilitySection) => SectionAction[]
 }
 
 /** draw the counts of the groups' samples with data, for the kinds of data that a group has, and remove the
@@ -134,14 +155,16 @@ export async function renderDataAvailability(arg: DataAvailabilityArg): Promise<
 			if (!ok) menuDiv.select(`[data-testid="${o.testid}"]`).remove()
 		}
 	}
-	// the note of which group is the case of a differential analysis, once no such analysis is offered
-	const analyses = ['sjpp-da-option', 'sjpp-da-dnaMeth-option', 'sjpp-da-splicing-option']
-	if (menuDiv.select(analyses.map(id => `[data-testid="${id}"]`).join(',')).empty())
-		menuDiv.select('[data-testid="sjpp-da-note"]').remove()
-
-	const sections = availabilitySections(res)
-	if (!sections.length) return
-	const table = holder.append('table').style('border-collapse', 'collapse').style('font-size', '.85em')
+	const sections = availabilitySections(res, arg.exclude)
+	if (!sections.length) {
+		removeUnusedDiffAnalysisNote(menuDiv)
+		return
+	}
+	const table = holder
+		.append('table')
+		.style('width', '100%')
+		.style('border-collapse', 'collapse')
+		.style('font-size', '.85em')
 	const cell = (tr: any) => tr.append('td').style('padding', '2px 6px')
 	if (res.groups.length > 1) {
 		const tr = table.append('tr')
@@ -164,7 +187,7 @@ export async function renderDataAvailability(arg: DataAvailabilityArg): Promise<
 					.style('height', '9px')
 					.style('margin-right', '4px')
 					.style('background-color', color)
-			td.append('span').text(g.name)
+			td.append('span').text(arg.labels?.[g.name] || g.name)
 		}
 	}
 	for (const section of sections) {
@@ -180,11 +203,12 @@ export async function renderDataAvailability(arg: DataAvailabilityArg): Promise<
 				.style('opacity', 0.6)
 				.text(section.title)
 		}
+		const indent = section.title ? '16px' : '6px'
 		for (const row of section.rows) {
 			const tr = table.append('tr').attr('data-testid', `sjpp-group-${row.kind}-${row.key}`)
 			const label = cell(tr)
 				.style('white-space', 'nowrap')
-				.style('padding-left', section.title ? '16px' : '6px')
+				.style('padding-left', indent)
 				.text(row.label + (row.unit ? ` (${row.unit})` : ''))
 			for (const n of row.counts) {
 				cell(tr)
@@ -195,21 +219,52 @@ export async function renderDataAvailability(arg: DataAvailabilityArg): Promise<
 			const action = arg.rowAction?.(row)
 			if (!action) continue
 			if (action.replaces) menuDiv.select(`[data-testid="${action.replaces}"]`).remove()
+			if (!action.run) {
+				if (action.title) tr.attr('title', action.title)
+				continue
+			}
 			label.append('span').style('margin-left', '6px').text('›')
-			tr.attr('class', 'sja_menuoption')
-				.attr('title', `Open the ${row.label} of the groups`)
-				.attr('role', 'button')
-				.attr('tabindex', 0)
-				.style('cursor', 'pointer')
-				.on('click', (event: any) => action.run(event.currentTarget))
-				.on('keydown', (event: KeyboardEvent) => {
-					if (event.key == 'Enter' || event.key == ' ') {
-						event.preventDefault()
-						action.run(event.currentTarget as HTMLElement)
-					}
-				})
+			makeClickable(tr, action.title || `Open the ${row.label} of the groups`, action.run)
+		}
+		// the rows may have replaced the options of the differential analyses, which then need no note above
+		removeUnusedDiffAnalysisNote(menuDiv)
+		for (const a of arg.sectionActions?.(section) || []) {
+			const tr = table.append('tr').attr('data-testid', a.testid)
+			const td = cell(tr)
+				.attr('colspan', res.groups.length + 1)
+				.style('padding-left', indent)
+			// a note draws itself; an action is its label
+			if (a.render) a.render(td)
+			else td.text(a.label || '')
+			if (!a.run) continue
+			td.append('span').style('margin-left', '6px').text('›')
+			makeClickable(tr, a.label || '', a.run)
 		}
 	}
+}
+
+/** the note of which group is the case of a differential analysis, removed once no such analysis is offered in
+ *  the menu: where the groups lack the data, or where a row of the counts opens the analysis */
+function removeUnusedDiffAnalysisNote(menuDiv: any) {
+	const analyses = ['sjpp-da-option', 'sjpp-da-isoform-option', 'sjpp-da-dnaMeth-option', 'sjpp-da-splicing-option']
+	if (menuDiv.select(analyses.map(id => `[data-testid="${id}"]`).join(',')).empty())
+		menuDiv.select('[data-testid="sjpp-da-note"]').remove()
+}
+
+/** a row that runs `run` on a click or on Enter or Space */
+function makeClickable(tr: any, title: string, run: (anchor: HTMLElement) => void) {
+	tr.attr('class', 'sja_menuoption')
+		.attr('title', title)
+		.attr('role', 'button')
+		.attr('tabindex', 0)
+		.style('cursor', 'pointer')
+		.on('click', (event: any) => run(event.currentTarget))
+		.on('keydown', (event: KeyboardEvent) => {
+			if (event.key == 'Enter' || event.key == ' ') {
+				event.preventDefault()
+				run(event.currentTarget as HTMLElement)
+			}
+		})
 }
 
 /** cohort: the active cohort string (getActiveCohortStr()), whose survival terms are counted */
