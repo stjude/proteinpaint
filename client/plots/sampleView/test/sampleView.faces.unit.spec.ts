@@ -1,12 +1,14 @@
 import tape from 'tape'
 import { select } from 'd3-selection'
-import { renderSwimmerFace, renderSsgqFace, renderScatterFace } from '../sampleView.faces.ts'
+import { renderSwimmerFace, renderSsgqFace, renderScatterFace, zoomRange } from '../sampleView.faces.ts'
 
 /**
  Tests:
 	- swimmer face is the full swimmer cropped to its lanes
 	- ssgq face is only the server image
 	- scatter face draws the dots in the plot colors
+	- scatter face zooms into the highlighted samples and rings them
+	- zoomRange spans the highlighted dots, at least a part of the plot, inside the plot
  */
 
 const swimmer = {
@@ -93,5 +95,33 @@ tape('scatter face draws the dots in the plot colors', function (test) {
 	test.equal(dots.length, 2, 'Should draw every dot.')
 	test.equal(dots[0].getAttribute('fill'), 'red', 'Should color a dot by its category.')
 	face.remove()
+	test.end()
+})
+
+tape('scatter face zooms into the highlighted samples and rings them', function (test) {
+	const face = getFace()
+	const samples = [{ sample: 'far', x: 100, y: 100, category: 'A' }]
+	for (let i = 0; i <= 10; i++) samples.push({ sample: 'n' + i, x: i, y: i, category: 'A' })
+	renderScatterFace(face, { Default: { colorLegend: [['A', { color: 'red' }]], samples } }, ['n4', 'n5'], 'n5')
+	const rings = face.selectAll('[data-testid="sjpp-sampleview-scatter-highlight"]').nodes() as Element[]
+	test.equal(rings.length, 2, 'Should ring each highlighted sample.')
+	test.equal(rings[1].getAttribute('stroke-width'), '2', 'Should draw the emphasized ring last and thicker.')
+	const dots = face.select('g').selectAll('circle').nodes() as Element[]
+	test.ok(dots.length < samples.length, 'Should leave out the dots far from the highlighted samples.')
+	const cx = rings.map(r => Number(r.getAttribute('cx')))
+	// one unit is about 2px over the full range of 100, and about 20px over the zoomed range of 10
+	test.ok(cx[1] - cx[0] > 10, 'Should spread the highlighted samples apart by zooming in.')
+	face.remove()
+	test.end()
+})
+
+tape('zoomRange spans the highlighted dots, at least a part of the plot, inside the plot', function (test) {
+	test.deepEqual(zoomRange([0, 100], undefined), [0, 100], 'Should show the full range without highlighted dots.')
+	test.deepEqual(zoomRange([0, 100], [50, 50]), [45, 55], 'Should show a lone dot with its neighborhood.')
+	test.deepEqual(zoomRange([0, 100], [0, 0]), [0, 10], 'Should keep a region at the edge inside the plot.')
+	const [a, b] = zoomRange([0, 100], [40, 80])
+	test.ok(a < 40 && b > 80 && b - a < 100, 'Should pad the range of several dots.')
+	test.deepEqual(zoomRange([0, 100], [0, 100]), [0, 100], 'Should not go past the full range.')
+	test.deepEqual(zoomRange([5, 5], [5, 5]), [4.5, 5.5], 'Should give a single-valued axis some width.')
 	test.end()
 })
