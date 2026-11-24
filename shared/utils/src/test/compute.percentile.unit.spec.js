@@ -28,3 +28,21 @@ tape('computePercentile() uses pre-sorted values when sorted=true', test => {
 	test.deepEqual(values, [1, 2, 3, 4], 'should leave pre-sorted values unchanged')
 	test.end()
 })
+
+tape('computePercentile() returns the first value for percentiles below the first rank', test => {
+	const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+	test.equal(computePercentile(values, 1, true), 1, 'should return the smallest value for the 1st percentile')
+	test.equal(computePercentile(values, 5, true), 1, 'should return the smallest value for the 5th percentile')
+	test.equal(computePercentile(values, 0, true), 1, 'should return the smallest value for the 0th percentile')
+	test.equal(computePercentile([...values].reverse(), 1), 1, 'should also work when the values need sorting')
+	test.end()
+})
+
+tape('computePercentile() returns the last value for the 100th percentile', test => {
+	const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+	test.equal(computePercentile(values, 100, true), 10, 'should return the largest value for the 100th percentile')
+	test.equal(computePercentile([1, 2, 3, 4], 100, true), 4, 'should not average past the end of the array')
+	test.end()
+})
