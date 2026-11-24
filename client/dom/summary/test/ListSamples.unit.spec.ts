@@ -15,6 +15,7 @@ Tests:
 	- getTvsLstEntry() handles missing term wrapper
 	- createTvsValues() returns correct values array for numeric term
 	- createTvsRanges() creates correct range for useRange=true
+	- createTvsRanges() converts a range of scaled or transformed values to stored values
 	- createTvsRanges() returns empty array for continuous term without bins
 	- createTvsRanges() handles bins
 	- createTvsRanges() handles uncomputable values
@@ -282,6 +283,38 @@ tape('createTvsRanges() creates correct range for useRange=true', test => {
 	test.equal(mockTvs.ranges[0].stop, 20, 'Should set stop value correctly')
 	test.equal(mockTvs.ranges[0].startinclusive, true, 'Should include start boundary')
 	test.equal(mockTvs.ranges[0].stopinclusive, true, 'Should include stop boundary')
+
+	test.end()
+})
+
+tape('createTvsRanges() converts a range of scaled or transformed values to stored values', test => {
+	test.timeoutAfter(100)
+
+	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
+	const getRange = (q: any) => {
+		const term: any = { ...mockConfig1.term, q: { ...mockConfig1.term.q, ...q } }
+		const listSamples = new ListSamples({
+			app: {} as AppApi,
+			termfilter: { filter: 'test' },
+			term,
+			term2: mockConfig1.term2 as any,
+			plot: mockPlot1 as any,
+			start: 1,
+			end: 2
+		})
+		const mockTvs: any = { ranges: [] }
+		listSamples.createTvsRanges(mockTvs, 1, '')
+		return mockTvs.ranges[0]
+	}
+	const isAround = (range, start, stop) =>
+		range.start <= start && range.start > start - 1e-6 && range.stop >= stop && range.stop < stop + 1e-6
+
+	const logged = getRange({ transform: 'log10p1' })
+	test.ok(isAround(logged, 9, 99), `should convert log10(x+1) values of 1 to 2 to x of 9 to 99`)
+	const scaled = getRange({ scale: 10 })
+	test.ok(isAround(scaled, 10, 20), `should convert values of 1 to 2 per 10 to 10 to 20`)
+	const raw = getRange({})
+	test.deepEqual([raw.start, raw.stop], [1, 2], `should keep the range of the stored values`)
 
 	test.end()
 })

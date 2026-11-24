@@ -198,7 +198,13 @@ export type ContinuousNumericQ = MinBaseQ & {
 	// making type optional here makes NumericQ operations/conditions
 	// work consistently within the TermWrapper union type
 	type?: undefined
+	/** divide every computable value by this number, such as 10 to read a regression estimate per 10 units.
+	 * applied by server getData(), so a route analyzes and plots the scaled values */
 	scale?: number
+	/** replace every computable value, applied by server getData() like .scale. 'log10p1' is log10(value+1),
+	 * where the +1 keeps a value of 0 in the analysis, and a value of -1 or less, which has no log, is dropped.
+	 * the termsetting "Scale values" menu sets at most one of .scale and .transform */
+	transform?: 'log10p1'
 }
 
 export type SplineNumericQ = MinBaseQ & {

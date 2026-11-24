@@ -7,6 +7,11 @@ Tests:
 	getEstimateMsg() - linear, negative estimate
 	getEstimateMsg() - linear, estimate of 0
 	getEstimateMsg() - linear, continuous variable with valueConversion
+	getEstimateMsg() - linear, continuous variable with q.scale
+	getEstimateMsg() - linear, continuous variable with q.transform='log10p1'
+	getEstimateMsg() - linear, outcome with q.scale
+	getEstimateMsg() - linear, outcome with q.transform='log10p1'
+	getEstimateMsg() - linear, interaction with a continuous variable with q.transform='log10p1'
 	getEstimateMsg() - linear, intercept keeps the sign of the estimate
 	getEstimateMsg() - linear, intercept with a spline covariate
 	getEstimateMsg() - logistic, estimate above 1
@@ -32,6 +37,7 @@ function text(msg: string) {
 		.replace(/<[^>]+>/g, ' ')
 		.replace(/\s+/g, ' ')
 		.replace(/ ([.,])/g, '$1')
+		.replace(/\( /g, '(')
 		.trim()
 }
 
@@ -139,6 +145,80 @@ tape('getEstimateMsg() - linear, continuous variable with valueConversion', test
 		text(msg),
 		'Mean Height is 2 units higher for every 1 year increase of Dose.',
 		'should name the converted unit of the variable'
+	)
+})
+
+tape('getEstimateMsg() - linear, continuous variable with q.scale', test => {
+	test.plan(2)
+	const age = continuousTw('age', 'Age')
+	age.q.scale = 10
+	const msg = getEstimateMsg(getArg({ tw: age, categoryKey: undefined, independentTws: [age] }))
+	test.equal(
+		text(msg),
+		'Mean Height is 2 units higher for every 10 unit increase of Age.',
+		'should state the estimate per N units of the variable'
+	)
+	const dose = continuousTw('dose', 'Dose', { fromUnit: 'day', toUnit: 'year' })
+	dose.q.scale = 10
+	const msg2 = getEstimateMsg(getArg({ tw: dose, categoryKey: undefined, independentTws: [dose] }))
+	test.equal(
+		text(msg2),
+		'Mean Height is 2 units higher for every 10 year increase of Dose.',
+		'should state the estimate per N converted units of the variable'
+	)
+})
+
+tape("getEstimateMsg() - linear, continuous variable with q.transform='log10p1'", test => {
+	test.plan(1)
+	const age = continuousTw('age', 'Age')
+	age.q.transform = 'log10p1'
+	const msg = getEstimateMsg(getArg({ tw: age, categoryKey: undefined, independentTws: [age] }))
+	test.equal(
+		text(msg),
+		'Mean Height is 2 units higher for every tenfold increase of (Age + 1).',
+		'should state the estimate per tenfold increase of the variable + 1, as a unit of log10(x+1)'
+	)
+})
+
+tape('getEstimateMsg() - linear, outcome with q.scale', test => {
+	test.plan(2)
+	const outcomeTw = structuredClone(linearOutcome) as any
+	outcomeTw.q.scale = 10
+	test.equal(
+		text(getEstimateMsg(getArg({ outcomeTw }))),
+		'Mean Height is 2 × 10 units higher in Sex Male compared to Sex Female.',
+		'should state the estimate in units of N'
+	)
+	test.equal(
+		text(getEstimateMsg(getArg({ est: -3.5, outcomeTw, tw: undefined, categoryKey: undefined, isIntercept: true }))),
+		'Mean Height is -3.5 × 10 units when Sex Female.',
+		'should state the intercept in units of N'
+	)
+})
+
+tape("getEstimateMsg() - linear, outcome with q.transform='log10p1'", test => {
+	test.plan(1)
+	const outcomeTw = structuredClone(linearOutcome) as any
+	outcomeTw.q.transform = 'log10p1'
+	test.equal(
+		text(getEstimateMsg(getArg({ outcomeTw }))),
+		'Mean log10(Height + 1) is 2 units higher in Sex Male compared to Sex Female.',
+		'should name the transformed outcome, whose mean is estimated'
+	)
+})
+
+tape("getEstimateMsg() - linear, interaction with a continuous variable with q.transform='log10p1'", test => {
+	test.plan(1)
+	const sex: any = categoricalTw('sex', 'Sex')
+	const age = continuousTw('age', 'Age')
+	age.q.transform = 'log10p1'
+	sex.interactions = ['age']
+	age.interactions = ['sex']
+	const msg = getEstimateMsg(getArg({ tw: sex, tw2: age, independentTws: [sex, age] }))
+	test.equal(
+		text(msg),
+		'The difference in mean Height for every tenfold increase of (Age + 1) is 2 units higher in Sex Male compared to Sex Female.',
+		'should state the interaction per tenfold increase of the variable + 1'
 	)
 })
 

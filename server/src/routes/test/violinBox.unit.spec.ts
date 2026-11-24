@@ -8,7 +8,6 @@ import {
 	buildBins,
 	computeSampleType,
 	sortObj,
-	setScaleData,
 	setViolinResponse,
 	setPlotData,
 	setIndividualBoxPlotStats,
@@ -44,7 +43,6 @@ import { defaultMaxPairwiseTestGroups, pairwiseTestGroupsLimit } from '#shared/p
  *  - buildBins()
  *  - sortPlot2Values()
  *  - sortObj()
- *  - setScaleData()
  *  - setViolinResponse()
  *  - setPlotData()
  *  - setIndividualBoxPlotStats()
@@ -490,53 +488,6 @@ tape('sortObj: handles empty object', function (test) {
 tape('sortObj: handles single entry', function (test) {
 	const result = sortObj({ only: 42 })
 	test.deepEqual(result, { only: 42 }, 'Should return same single-entry object')
-	test.end()
-})
-
-/**************
- setScaleData
-***************/
-
-tape('setScaleData: divides values by scale factor', function (test) {
-	const q = { scale: 2 } as any
-	const tw = { $id: 'tw1', term: { values: {} } } as any
-	const data = {
-		samples: {
-			s1: { tw1: { key: 10, value: 10 } },
-			s2: { tw1: { key: 20, value: 20 } }
-		}
-	} as any
-
-	setScaleData(q, data, tw)
-	test.equal(data.samples.s1.tw1.value, 5, 'First sample value should be 10/2=5')
-	test.equal(data.samples.s1.tw1.key, 5, 'First sample key should be 10/2=5')
-	test.equal(data.samples.s2.tw1.value, 10, 'Second sample value should be 20/2=10')
-	test.end()
-})
-
-tape('setScaleData: skips uncomputable values', function (test) {
-	const q = { scale: 2 } as any
-	const tw = { $id: 'tw1', term: { values: { 99: { uncomputable: true } } } } as any
-	const data = {
-		samples: {
-			s1: { tw1: { key: 10, value: 10 } },
-			s2: { tw1: { key: 99, value: 99 } }
-		}
-	} as any
-
-	setScaleData(q, data, tw)
-	test.equal(data.samples.s1.tw1.value, 5, 'Computable value should be scaled')
-	test.equal(data.samples.s2.tw1.value, 99, 'Uncomputable value should remain unchanged')
-	test.end()
-})
-
-tape('setScaleData: no-ops when scale is not set', function (test) {
-	const q = {} as any
-	const tw = { $id: 'tw1', term: { values: {} } } as any
-	const data = { samples: { s1: { tw1: { key: 10, value: 10 } } } } as any
-
-	setScaleData(q, data, tw)
-	test.equal(data.samples.s1.tw1.value, 10, 'Value should remain unchanged')
 	test.end()
 })
 

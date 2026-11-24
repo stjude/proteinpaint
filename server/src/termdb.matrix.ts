@@ -31,6 +31,7 @@ import {
 import type { SampleMapping } from '#types'
 import { annotateSingleCellTerm, hydrateMetaResultCellRows } from './singleCell/matrixData.ts'
 import { get_bin_label, compute_bins, assignBinColors } from '#shared/termdb.bins.js'
+import { getContinuousValueTransform } from '#shared/continuousTransform.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from './routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
@@ -146,6 +147,7 @@ export async function getData(q, ds): Promise<any> {
 		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
 		resolveTermCollectionFractions(data, originalTerms)
+		transformContinuousValues(data, originalTerms)
 		dropRowsWithoutAnnotation(data)
 
 		mayCheckAccessToSampleData(data, ds, q)
@@ -1696,6 +1698,35 @@ export function dropRowsWithoutAnnotation(data) {
 		if (Object.values(sample).some(isAnnotation)) continue
 		delete data.samples[sid]
 		if (data.refs?.bySampleId) delete data.refs.bySampleId[sid]
+	}
+}
+
+/*
+apply the "Scale values" option of a continuous numeric tw, from the termsetting edit menu, so that every
+route that gets the term's data from getData() analyzes and plots the scaled values:
+- tw.q.scale=N divides a value by N
+- tw.q.transform='log10p1' replaces a value with log10(value+1). a value of -1 or less has no log, and its
+  annotation is removed as if the sample had no value for the term
+
+an uncomputable value, such as -9999 coding a missing measurement, is a category and not a quantity, so it
+is kept as is. an annotation is replaced with a new object instead of edited in place, since a ds-supplied
+getter may return annotation objects that it also caches
+*/
+export function transformContinuousValues(data, terms) {
+	for (const tw of terms) {
+		const transform = getContinuousValueTransform(tw.q)
+		if (!transform) continue
+		for (const sample of Object.values(data.samples || {}) as any[]) {
+			const d = sample[tw.$id]
+			if (!d || tw.term?.values?.[d.value]?.uncomputable) continue
+			// a data source may give a numeric string, but not '' or an object (or null), which Number() would coerce to 0
+			if (d.value === '' || typeof d.value == 'object') continue
+			const raw = Number(d.value)
+			if (!Number.isFinite(raw)) continue
+			const v = transform.forward(raw)
+			if (Number.isFinite(v)) sample[tw.$id] = { ...d, key: v, value: v }
+			else delete sample[tw.$id] // no transformed value, such as the log of a value <= -1
+		}
 	}
 }
 

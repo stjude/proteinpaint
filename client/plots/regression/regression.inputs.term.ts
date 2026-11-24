@@ -313,6 +313,7 @@ export class InputTerm {
 					this.termStatus.allowToSelectRefGrp = true
 				}
 				if (tw.q.scale && tw.q.scale != 1) this.termStatus.topInfoStatus.push(`Scale: Per ${tw.q.scale}`)
+				if (tw.q.transform == 'log10p1') this.termStatus.topInfoStatus.push('Transform: log10(X+1)')
 				if (tw.q.mode == 'discrete') {
 					this.termStatus.topInfoStatus.push(`Discrete variable with ${this.termStatus?.sampleCounts?.length} bins`)
 				}

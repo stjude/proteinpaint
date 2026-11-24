@@ -16,6 +16,7 @@ import {
 	resolveSampleMapping,
 	shouldMapParent2Children,
 	dropRowsWithoutAnnotation,
+	transformContinuousValues,
 	shouldMapChildren2Parent,
 	mayMapNonDictionaryData
 } from '../termdb.matrix.js'
@@ -2333,6 +2334,87 @@ tape('dropRowsWithoutAnnotation()', t => {
 	dropRowsWithoutAnnotation(data)
 	t.deepEqual(Object.keys(data.samples), ['1'], 'should keep only the row with an annotation')
 	t.deepEqual(Object.keys(data.refs.bySampleId), ['1'], 'should remove the refs of the removed rows')
+	t.end()
+})
+
+tape('transformContinuousValues()', t => {
+	const term = { type: 'float', values: { '-9999': { label: 'missing', uncomputable: true } } }
+	{
+		const cached = { key: 100, value: 100 }
+		const data = { samples: { 1: { sample: 1, a: cached }, 2: { sample: 2, a: { key: -9999, value: -9999 } } } }
+		transformContinuousValues(data, [{ $id: 'a', term, q: { mode: 'continuous', scale: 10 } }])
+		t.deepEqual(data.samples[1].a, { key: 10, value: 10 }, 'q.scale should divide the key and value')
+		t.deepEqual(cached, { key: 100, value: 100 }, 'should replace an annotation object instead of editing it')
+		t.deepEqual(data.samples[2].a, { key: -9999, value: -9999 }, 'should not scale an uncomputable value')
+	}
+	{
+		const data = {
+			samples: {
+				1: { sample: 1, a: { key: 99, value: 99 } },
+				2: { sample: 2, a: { key: 0, value: 0 } },
+				3: { sample: 3, a: { key: '9', value: '9' } },
+				4: { sample: 4, a: { key: -1, value: -1 } },
+				5: { sample: 5, a: { key: -5, value: -5 } },
+				6: { sample: 6, a: { key: -9999, value: -9999 } },
+				7: { sample: 7, a: { key: '', value: '' } }
+			}
+		}
+		transformContinuousValues(data, [{ $id: 'a', term, q: { mode: 'continuous', transform: 'log10p1' } }])
+		const values = Object.fromEntries(Object.entries(data.samples).map(([k, s]) => [k, s.a?.value]))
+		t.deepEqual(
+			values,
+			{ 1: 2, 2: 0, 3: 1, 4: undefined, 5: undefined, 6: -9999, 7: '' },
+			"q.transform='log10p1' should give log10(value+1), and remove a value <= -1 that has no log"
+		)
+		t.equal(data.samples[1].a.key, 2, 'should transform the key as well')
+	}
+	{
+		const data = { samples: { 1: { sample: 1, a: { key: 100, value: 100 } } } }
+		transformContinuousValues(data, [
+			{ $id: 'a', term, q: { mode: 'discrete', scale: 10, transform: 'log10p1' } },
+			{ $id: 'a', term, q: { mode: 'continuous', scale: 1 } },
+			{ $id: 'a', term, q: { mode: 'continuous' } }
+		])
+		t.deepEqual(data.samples[1].a, { key: 100, value: 100 }, 'should not change a value without a continuous transform')
+	}
+	{
+		const data = { samples: { 1: { sample: 1, a: { key: 1, value: 1 } } } }
+		t.throws(
+			() => transformContinuousValues(data, [{ $id: 'a', term, q: { mode: 'continuous', transform: 'xyz' } }]),
+			/unknown tw.q.transform/,
+			'should throw on an unknown transform'
+		)
+	}
+	t.end()
+})
+
+tape('getData: a continuous numeric tw gets the values scaled or transformed by its q', async t => {
+	await ensureOpenAuth()
+	const tdb = await init('termdb.test.ts')
+	server_init_db_queries(tdb.ds)
+	const tw = q => ({
+		$id: 'agedx',
+		term: structuredClone(tdb.ds.cohort.termdb.q.termjsonByOneid('agedx')),
+		q: { mode: 'continuous', ...q }
+	})
+	const raw = await getData({ terms: [tw()] }, tdb.ds)
+	const scaled = await getData({ terms: [tw({ scale: 10 })] }, tdb.ds)
+	const logged = await getData({ terms: [tw({ transform: 'log10p1' })] }, tdb.ds)
+	t.notOk(raw.error || scaled.error || logged.error, 'no error')
+	const sids = Object.keys(raw.samples)
+	t.ok(sids.length > 0, 'should return samples')
+	t.deepEqual(Object.keys(scaled.samples), sids, 'should return the same samples when scaled')
+	// the test db has an agedx value below -1, which has no log
+	const hasLog = sids.filter(sid => raw.samples[sid].agedx.value > -1)
+	t.ok(hasLog.length < sids.length, 'the test data should have a value <= -1')
+	t.deepEqual(Object.keys(logged.samples), hasLog, 'should drop the samples with a value <= -1 when transformed')
+	const close = (a, b) => Math.abs(a - b) < 1e-9
+	const wrong = sids.filter(sid => {
+		const v = Number(raw.samples[sid].agedx.value)
+		if (!close(scaled.samples[sid].agedx.value, v / 10)) return true
+		return hasLog.includes(sid) && !close(logged.samples[sid].agedx.value, Math.log10(v + 1))
+	})
+	t.deepEqual(wrong, [], 'every value should be divided by q.scale, or be log10(value+1) for q.transform')
 	t.end()
 })
 
