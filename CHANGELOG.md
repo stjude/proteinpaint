@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- Selecting a cluster in the differentially expressed genes dropdown of the single-cell plot no longer shows an error when the GSEA tab is hidden
+
+
 ## 2.224.4
 
 Fixes:
