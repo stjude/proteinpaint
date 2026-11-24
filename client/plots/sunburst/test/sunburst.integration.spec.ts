@@ -16,7 +16,9 @@ Tests:
 	- Offer GRIN2 for selected samples with mutation data
 	- Summarize a dictionary term in the selected group
 	- Compare exactly two selected wedges with differential gene expression
-	- Split survival curves by selected wedge
+	- Split survival curves by compared group
+	- Explore or compare the selected wedges, and regroup them
+	- Widen the card to fit the counts of many compared groups
 */
 
 /*************************
@@ -100,7 +102,8 @@ tape('Compare exactly two selected wedges with differential gene expression', te
 		const inner = sunburst.Inner
 		const chart = inner.chart
 		const holder = inner.opts.holder.append('div')
-		const row = () => holder.select('[data-testid=sjpp-sunburst-data-differentialExpression]')
+		// the RNA-seq counts row, when it opens the differential expression of the groups
+		const row = () => holder.select('[data-testid=sjpp-group-data-rnaseqGeneCount][role=button]')
 		const stub = stubApp(chart, ['DA'])
 		const { termdbConfig, cohort } = stub
 		let beforeLaunch = false
@@ -116,21 +119,25 @@ tape('Compare exactly two selected wedges with differential gene expression', te
 		try {
 			const all = getWedge(sunburst, ALL).__data__
 			const hodgkin = getWedge(sunburst, 'Hodgkin lymphoma').__data__
+			chart.mode = 'compare'
 			chart.toggle(all)
 			await render()
 			test.ok(row().empty(), 'Should not offer a comparison for one wedge')
 			chart.toggle(hodgkin)
+			chart.mode = 'explore'
 			await render()
-			test.equal(
-				row().select('span').text(),
-				'Differential Gene Expression Analysis',
-				'Should offer differential expression for two wedges with RNA-seq counts'
+			test.ok(row().empty(), 'Should not offer a comparison when two wedges are explored together')
+			chart.mode = 'compare'
+			await render()
+			test.ok(
+				row().attr('title').startsWith('Differential Gene Expression Analysis'),
+				'Should offer differential expression for two compared wedges with RNA-seq counts'
 			)
-			const expected = chart.comparisonGroups()
+			const expected = chart.compareGroups()
 			test.ok(expected[0].name.includes(ALL), 'Should use the first-selected wedge as control')
 			test.ok(expected[1].name.includes('Hodgkin lymphoma'), 'Should use the second-selected wedge as case')
 			row().node().click()
-			const menu = await waitFor(() => chart.dataMenu?.dnode)
+			const menu = chart.host.tip2.dnode
 			const run = await waitFor(() => menu.querySelector('[data-testid=sjpp-da-run-btn]'), 10000)
 			test.ok(
 				menu.textContent.includes('CONTROL') && menu.textContent.includes('CASE'),
@@ -158,15 +165,12 @@ tape('Compare exactly two selected wedges with differential gene expression', te
 				stub.launched.config.samplelst.groups.every(g => g.sampleCount > 0),
 				'Should pass RNA-seq sample counts to the analysis'
 			)
-			test.notOk(
-				document.querySelector('[data-testid=sjpp-sunburst-differential-menu]'),
-				'Should close the panel after launching'
-			)
+			test.equal(chart.host.tip2.d.style('display'), 'none', 'Should close the panel after launching')
 
 			chart.groupFilter = expected[0].filter
 			await render()
 			test.ok(row().empty(), 'Should not offer a comparison when one wedge has no eligible RNA-seq samples')
-			const filtered = chart.comparisonGroups()
+			const filtered = chart.compareGroups()
 			test.equal(filtered[1].filter.join, 'and', 'Should join each wedge filter with the plot filter')
 			test.deepEqual(
 				filtered[1].filter.lst[1],
@@ -190,7 +194,7 @@ tape('Compare exactly two selected wedges with differential gene expression', te
 			chart.toggle(third)
 			chart.toggle(all)
 			chart.toggle(all)
-			const reordered = chart.comparisonGroups()
+			const reordered = chart.compareGroups()
 			test.ok(reordered[0].name.includes('Hodgkin lymphoma'), 'Should update control when selection order changes')
 		} catch (e) {
 			test.fail(String(e))
@@ -203,7 +207,7 @@ tape('Compare exactly two selected wedges with differential gene expression', te
 	}
 })
 
-tape('Split survival curves by selected wedge', test => {
+tape('Split survival curves by compared group', test => {
 	test.timeoutAfter(20000)
 	runpp({
 		state: { plots: [{ chartType: 'sunburst', twLst: [{ id: 'diaggrp' }] }] },
@@ -223,43 +227,54 @@ tape('Split survival curves by selected wedge', test => {
 			lst: [{ type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical', name: 'Sex' }, values: [{ key: '1' }] } }]
 		}
 		chart.groupFilter = localFilter
+		chart.mode = 'compare'
 		try {
-			const nodes = [getWedge(sunburst, ALL).__data__, getWedge(sunburst, 'Hodgkin lymphoma').__data__]
-			nodes.push(chart.renderer.root.children.find(d => !nodes.includes(d)))
+			// the largest wedges, which have survival data under the plot filter
+			const nodes = [...chart.renderer.root.children].sort((a, b) => b.value - a.value).slice(0, 3)
+			let compared = 0
 			for (const [i, node] of nodes.entries()) {
 				chart.toggle(node)
 				chart.dataShown = true
 				holder.selectAll('*').remove()
 				await chart.renderData(holder, chart.selectedCount())
 				test.ok(holder.select('.sja_errorbar').empty(), 'Should load survival availability')
-				const row = holder.select('[data-testid=sjpp-sunburst-data-survival-os]').node()
+				const row = holder.select('[data-testid=sjpp-group-survival-os]').node()
 				test.ok(row, `Should offer survival for ${i + 1} selected wedges`)
+				// a comparison needs survival data in two or more groups
+				const withData = [...row.querySelectorAll('td')].slice(1).filter((td: any) => Number(td.textContent) > 0)
+				if (i > 0 && withData.length < 2) {
+					test.notOk(row.getAttribute('role'), 'Should not open survival with data in one group only')
+					continue
+				}
 				stub.launched = undefined
 				row.click()
 				const launched = (await waitFor(() => stub.launched)).config
 				test.equal(launched.chartType, 'survival', 'Should launch one survival plot')
 				test.equal(launched.term.id, 'os', 'Should use the clicked survival term')
-				test.deepEqual(launched.filter, chart.plotFilter(), 'Should restrict the plot to the selected union')
 				if (i == 0) {
+					test.deepEqual(launched.filter, chart.plotFilter(), 'Should restrict the plot to the one wedge')
 					test.notOk(launched.term2, 'Should preserve a single curve for one wedge')
 					continue
 				}
+				compared++
 				test.equal(launched.term2.term.type, 'samplelst', 'Should group curves using the custom-variable mechanism')
-				const groups = chart.comparisonGroups()
-				test.equal(launched.term2.q.groups.length, i + 1, 'Should create one curve group per wedge')
+				const groups = chart.compareGroups()
+				const globalFilter = chart.app.getState().termfilter.filter
+				test.equal(launched.term2.q.groups.length, i + 1, 'Should create one curve group per compared group')
 				test.deepEqual(
 					launched.term2.q.groups.map(g => ({ name: g.name, filter: g.filter })),
-					groups.map(g => ({ name: g.name, filter: g.filter })),
-					'Should preserve wedge order and each wedge filter with the local plot filter'
+					groups.map(g => ({ name: g.name, filter: filterJoin([g.filter, globalFilter]) })),
+					'Should preserve group order and each group filter with the plot and global filters'
 				)
 				for (const group of groups) {
 					test.equal(
 						launched.term2.term.values[group.name].color,
 						group.color,
-						'Should retain the wedge color for its survival curve'
+						'Should retain the group color for its survival curve'
 					)
 				}
 			}
+			test.ok(compared > 0, 'Should split survival curves by the compared groups')
 		} catch (e) {
 			test.fail(String(e))
 		} finally {
@@ -268,6 +283,191 @@ tape('Split survival curves by selected wedge', test => {
 			inner.app.destroy()
 			test.end()
 		}
+	}
+})
+
+tape('Explore or compare the selected wedges, and regroup them', test => {
+	test.timeoutAfter(20000)
+	runpp({
+		state: { plots: [{ chartType: 'sunburst', twLst: [{ id: 'diaggrp' }] }] },
+		sunburst: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(sunburst) {
+		sunburst.on('postRender.test', null)
+		const inner = sunburst.Inner
+		const chart = inner.chart
+		const card = chart.dom.sel.body
+		const sel = (testid: string) => card.select(`[data-testid=${testid}]`)
+		const groupNames = () => chart.compareGroups().map(g => g.nodes.map(d => d.data.name))
+		// the image under the mouse of the latest drag
+		let dragImage: any
+		const drag = (from: any, to: any) => {
+			const dataTransfer = new DataTransfer()
+			dataTransfer.setDragImage = (el: Element) =>
+				(dragImage = { el, text: el.textContent, inDocument: el.isConnected })
+			from.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer }))
+			to.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer }))
+			to.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }))
+			from.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer }))
+		}
+		const wedgeRow = (name: string) =>
+			card
+				.selectAll('.sjpp-sunburst-selected-wedge')
+				.nodes()
+				.find((n: any) => n.textContent.includes(name))
+		try {
+			const [all, hodgkin] = [ALL, 'Hodgkin lymphoma'].map(name => getWedge(sunburst, name).__data__)
+			const third = chart.renderer.root.children.find(d => d != all && d != hodgkin)
+			chart.toggle(all)
+			test.ok(sel('sjpp-sunburst-mode').empty(), 'Should not offer the toggle for one wedge')
+			chart.toggle(hodgkin)
+			test.ok(sel('sjpp-sunburst-mode').node(), 'Should offer the toggle for two wedges')
+			test.equal(sel('sjpp-sunburst-mode-explore').attr('aria-checked'), 'true', 'Should explore by default')
+			test.ok(sel('sjpp-sunburst-create-group').node(), 'Should create one group when exploring')
+
+			sel('sjpp-sunburst-mode-compare').node().click()
+			test.equal(chart.mode, 'compare', 'Should switch to compare')
+			test.ok(sel('sjpp-sunburst-new-group').empty(), 'Should not offer a new group while each group has one wedge')
+			test.deepEqual(groupNames(), [[ALL], ['Hodgkin lymphoma']], 'Should put each wedge in a group of its own')
+			test.ok(sel('sjpp-sunburst-group-A').node() && sel('sjpp-sunburst-group-B').node(), 'Should list two groups')
+			test.equal(
+				sel('sjpp-sunburst-create-variable').text(),
+				'Create variable with 2 groups',
+				'Should offer a variable of the compared groups'
+			)
+
+			// the group badge moves a wedge to another group
+			;(wedgeRow('Hodgkin lymphoma') as any).querySelector('.sjpp-sunburst-move').click()
+			const moveMenu = chart.moveMenu.dnode
+			const options = [...moveMenu.querySelectorAll('.sja_menuoption')].map((n: any) => n.textContent)
+			test.deepEqual(
+				options,
+				[`Move to group A: ${ALL}`],
+				'Should offer the other group, not a new one for a lone wedge'
+			)
+			;(moveMenu.querySelector('.sja_menuoption') as any).click()
+			test.deepEqual(groupNames(), [[ALL, 'Hodgkin lymphoma']], 'Should move the wedge to the chosen group')
+			test.ok(sel('sjpp-sunburst-new-group').node(), 'Should offer a new group for a wedge of a larger group')
+			test.ok(sel('sjpp-sunburst-one-group').node(), 'Should ask for two groups to compare')
+			test.equal(chart.effectiveMode(), 'explore', 'Should use one group as explored')
+			test.ok(sel('sjpp-sunburst-create-group').node(), 'Should create one group while only one group exists')
+
+			// a wedge dragged to the new-group target is in a new group
+			const hodgkinText = (wedgeRow('Hodgkin lymphoma') as any).textContent
+			drag(wedgeRow('Hodgkin lymphoma'), sel('sjpp-sunburst-new-group').node())
+			test.equal(dragImage?.text, hodgkinText, 'Should drag an image of the wedge row alone')
+			test.ok(
+				dragImage.inDocument && !card.node().contains(dragImage.el),
+				'Should draw the image from a copy of the row'
+			)
+			test.ok(
+				await waitFor(() => !dragImage.el.isConnected).catch(() => false),
+				'Should remove the copy of the row after the drag starts'
+			)
+			test.deepEqual(groupNames(), [[ALL], ['Hodgkin lymphoma']], 'Should drag the wedge to a new group')
+			test.ok(sel('sjpp-sunburst-new-group').empty(), 'Should hide the new-group target once each group has one wedge')
+
+			// a third wedge, dragged to group A: two wedges compared with one
+			chart.toggle(third)
+			test.equal(chart.compareGroups().length, 3, 'Should put a new wedge in a group of its own')
+			test.equal(
+				getComputedStyle(sel('sjpp-sunburst-wedges').node()).maxHeight,
+				'none',
+				'Should not hide compared groups in a scrolled list'
+			)
+			drag(wedgeRow(third.data.name), sel('sjpp-sunburst-group-A').node())
+			test.deepEqual(groupNames(), [[ALL, third.data.name], ['Hodgkin lymphoma']], 'Should drag a wedge into a group')
+			test.ok(
+				sel('sjpp-sunburst-new-group').node().getBoundingClientRect().bottom <=
+					sel('sjpp-sunburst-show-data').node().getBoundingClientRect().top,
+				'Should keep the new-group target above the actions below the groups'
+			)
+			const [a, b] = chart.compareGroups()
+			test.equal(a.filter.join, 'or', 'Should join the wedges of a group by "or"')
+			test.equal(a.sampleCount, all.value + third.value, 'Should count the samples of the wedges of a group')
+			test.equal(b.name, 'B: Hodgkin lymphoma', 'Should name a group by its letter and wedges')
+
+			// the shared menu of the compared groups, with a count column per group
+			chart.dataShown = true
+			const holder = inner.opts.holder.append('div')
+			await chart.renderData(holder, chart.selectedCount())
+			test.equal(
+				holder.select('[data-testid=sjpp-sunburst-data-title]').text(),
+				'Compare 2 groups',
+				'Should title the menu'
+			)
+			const header = holder.select('[data-testid=sjpp-group-data-availability] tr').text()
+			test.ok(header.includes('A') && header.includes('B'), 'Should label the count columns by group letter')
+			const expRow = holder.select('[data-testid=sjpp-group-data-geneExpression]').node()
+			test.equal(expRow?.querySelectorAll('td').length, 3, 'Should count each group')
+			holder.remove()
+
+			// the compared groups become a custom variable
+			sel('sjpp-sunburst-create-variable').node().click()
+			const custom = await waitFor(() => inner.app.getState().customTerms?.[0])
+			test.equal(custom.name, `${ALL} or ${third.data.name} vs Hodgkin lymphoma`, 'Should name the variable')
+			test.deepEqual(
+				custom.tw.q.groups.map(g => g.name),
+				[a.name, b.name],
+				'Should make the variable of the compared groups'
+			)
+			test.ok(
+				custom.tw.q.groups.every(g => g.filter && g.sampleCount > 0),
+				'Should define each group of the variable by its filter'
+			)
+			test.equal(chart.selected.size, 0, 'Should clear the selection once the variable is created')
+			test.ok(card.text().includes('added; find it in the GROUPS tab'), 'Should confirm the created variable')
+
+			// the same groups again make a second variable, under a name of its own
+			for (const d of [all, third, hodgkin]) chart.toggle(d)
+			chart.moveToGroup(third.data.id, chart.groupOf.get(all.data.id))
+			sel('sjpp-sunburst-create-variable').node().click()
+			const again = await waitFor(() => inner.app.getState().customTerms?.[1])
+			test.equal(again.name, `${custom.name} 1`, 'Should not give a second variable the name of the first')
+			test.equal(again.tw.term.name, again.name, 'Should name the term of the variable the same')
+		} catch (e) {
+			test.fail(String(e))
+		}
+		if (test['_ok']) inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Widen the card to fit the counts of many compared groups', test => {
+	test.timeoutAfter(20000)
+	runpp({
+		state: { plots: [{ chartType: 'sunburst', twLst: [{ id: 'diaggrp' }] }] },
+		sunburst: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(sunburst) {
+		sunburst.on('postRender.test', null)
+		const inner = sunburst.Inner
+		const chart = inner.chart
+		const card = chart.dom.sel
+		const width = () => card.box.node().getBoundingClientRect().width
+		try {
+			chart.mode = 'compare'
+			for (const d of chart.renderer.root.children) chart.toggle(d)
+			const defaultWidth = width()
+			card.body.select('[data-testid=sjpp-sunburst-show-data]').node().click()
+			const table = await waitFor(
+				() => card.body.select('[data-testid=sjpp-group-data-availability] table').node(),
+				10000
+			)
+			await waitFor(() => width() > defaultWidth)
+			test.ok(
+				table.getBoundingClientRect().right <= card.box.node().getBoundingClientRect().right,
+				`Should widen the card to contain the counts of ${chart.compareGroups().length} groups`
+			)
+			card.body.select('[data-testid=sjpp-sunburst-hide-data]').node().click()
+			test.equal(width(), defaultWidth, 'Should narrow the card back once the data is hidden')
+		} catch (e) {
+			test.fail(String(e))
+		}
+		if (test['_ok']) inner.app.destroy()
+		test.end()
 	}
 })
 
@@ -290,7 +490,7 @@ tape('Offer GRIN2 for selected samples with mutation data', test => {
 			beforeLaunch = true
 		}
 		const holder = inner.opts.holder.append('div')
-		const button = () => holder.select('[data-testid=sjpp-sunburst-grin2]')
+		const button = () => holder.select('[data-testid=sjpp-grin2-option]')
 		async function render() {
 			holder.selectAll('*').remove()
 			await chart.renderData(holder, chart.selectedCount())
@@ -309,7 +509,7 @@ tape('Offer GRIN2 for selected samples with mutation data', test => {
 			]) {
 				termdbConfig.queries = queries
 				await render()
-				test.equal(button().text(), 'Run GRIN2', `Should offer GRIN2 with ${Object.keys(queries)[0]} data`)
+				test.ok(button().text().startsWith('Run GRIN2'), `Should offer GRIN2 with ${Object.keys(queries)[0]} data`)
 			}
 			button().node().click()
 			await waitFor(() => stub.launched)
@@ -635,18 +835,13 @@ tape('Summarize a dictionary term in the selected group', test => {
 					getWedge(sunburst, ALL).dispatchEvent(new MouseEvent('click', { bubbles: true }))
 					const card = inner.chart.dom.sel.body
 					test.ok(
-						card.select('[data-testid=sjpp-sunburst-data-summarize]').empty(),
+						card.select('[data-testid=sjpp-summarize-option]').empty(),
 						'Should hide Summarize until Show available data is clicked'
 					)
 					card.select('[data-testid=sjpp-sunburst-show-data]').node().click()
 					expectedFilter = inner.chart.plotFilter()
-					const summarize = card.select('[data-testid=sjpp-sunburst-data-summarize]')
-					test.equal(summarize.select('span').text(), 'Summarize', 'Should label the summary row')
-					test.equal(
-						summarize.node().lastChild.textContent,
-						' ›',
-						'Should show only the navigation arrow without a sample count in the summary row'
-					)
+					const summarize = card.select('[data-testid=sjpp-summarize-option]')
+					test.equal(summarize.text(), 'Summarize›', 'Should label the summary option, with a submenu arrow')
 					summarize.node().click()
 					await selectTerm()
 				}
@@ -663,9 +858,10 @@ tape('Summarize a dictionary term in the selected group', test => {
 						!inner.app.getState().plots.some(p => p.chartType == 'dictionary'),
 						'Should not create a dictionary plot'
 					)
-					test.notOk(
-						document.querySelector('[data-testid=sjpp-sunburst-summary-menu]'),
-						'Should remove the dictionary popover after selecting a term'
+					test.equal(
+						inner.chart.host.tip2.d.style('display'),
+						'none',
+						'Should hide the dictionary popover after selecting a term'
 					)
 					inner.app.destroy()
 					test.end()
@@ -676,7 +872,7 @@ tape('Summarize a dictionary term in the selected group', test => {
 
 	async function selectTerm() {
 		try {
-			const holder = await waitFor(() => inner.chart.dataMenu?.dnode)
+			const holder = inner.chart.host.tip2.dnode
 			test.equal(inner.app.getState().plots.length, 1, 'Should open the picker without creating another plot')
 			const demographic = await waitFor(() =>
 				[...holder.querySelectorAll('.termbtn')].find((n: any) => n.__data__?.name == 'Demographic Variables')
@@ -719,30 +915,27 @@ tape('Show the available data of a selection', test => {
 		)
 
 		showBtn.node().click()
-		const expRow = await waitFor(
-			() => section().select('[data-testid=sjpp-sunburst-data-geneExpression]').node(),
-			10000
-		)
+		const expRow = await waitFor(() => section().select('[data-testid=sjpp-group-data-geneExpression]').node(), 10000)
 		test.equal(
 			section().select('[data-testid=sjpp-sunburst-data-title]').text(),
 			'36 samples',
 			'Should name the number of selected samples'
 		)
-		const count = (row: any) => Number(row.lastChild.textContent.replace(/[^0-9]/g, ''))
+		const count = (row: any) => Number(row.querySelectorAll('td')[1].textContent.replace(/[^0-9]/g, ''))
 		test.ok(count(expRow) > 0 && count(expRow) <= 36, 'Should count the selected samples with gene expression data')
-		const methRow = section().select('[data-testid=sjpp-sunburst-data-dnaMethylation]').node()
+		const methRow = section().select('[data-testid=sjpp-group-data-dnaMethylation]').node()
 		test.ok(methRow && count(methRow) > 0, 'Should count the selected samples with DNA methylation data')
 		test.ok(
-			section().select('[data-testid=sjpp-sunburst-data-rnaseqGeneCount]').empty(),
+			section().select('[data-testid=sjpp-group-data-rnaseqGeneCount]').empty(),
 			'Should not list the counts of differential expression, which compares groups'
 		)
 
 		// gene selection stays in a popover until a gene is chosen
 		const plots = inner.app.getState().plots.length
 		expRow.click()
-		const expressionMenu = await waitFor(() => inner.chart.dataMenu?.dnode)
+		const expressionMenu = inner.chart.host.tip2.dnode
 		await waitFor(() => expressionMenu.querySelector('.sja_genesearchinput'))
-		const searchMenus = [...inner.chart.dataPicker.Inner.geneSearchMenus]
+		const searchMenus = [...(await waitFor(() => inner.chart.host.picker)).Inner.geneSearchMenus]
 		test.equal(searchMenus[0].d.node().parent_menu, expressionMenu, 'Should associate suggestions with the picker')
 		test.equal(inner.app.getState().plots.length, plots, 'Should not create a plot for gene selection')
 		test.equal(
@@ -765,10 +958,10 @@ tape('Show the available data of a selection', test => {
 		)
 
 		// a mutation row counts the assayed samples and opens the genome browser of the selected samples
-		const assayRows = section().selectAll('[data-testid^=sjpp-sunburst-data-assay-]').nodes()
+		const assayRows = section().selectAll('[data-testid^=sjpp-group-assay-]').nodes()
 		test.deepEqual(
 			assayRows.map((n: any) => n.getAttribute('data-testid')),
-			['1.germline', '1.somatic', '2', '4'].map(k => `sjpp-sunburst-data-assay-${k}`),
+			['1.germline', '1.somatic', '2', '4'].map(k => `sjpp-group-assay-${k}`),
 			'Should list the assayed samples for each kind of mutation data'
 		)
 		const assayed = assayRows.find((n: any) => count(n) > 0) as any
@@ -779,7 +972,7 @@ tape('Show the available data of a selection', test => {
 		test.equal(gb.snvindel?.shown, true, 'Should show the mutation track')
 
 		// a survival row counts the samples with a value for the term and opens its survival curve
-		const osRow = section().select('[data-testid=sjpp-sunburst-data-survival-os]').node()
+		const osRow = section().select('[data-testid=sjpp-group-survival-os]').node()
 		test.ok(osRow && count(osRow) > 0 && count(osRow) <= 36, 'Should count the selected samples with overall survival')
 		osRow.click()
 		const surv = await waitFor(() => inner.app.getState().plots.find(p => p.chartType == 'survival'))
@@ -788,9 +981,9 @@ tape('Show the available data of a selection', test => {
 
 		// Hide goes back to the button, which shows the data again
 		section().select('[data-testid=sjpp-sunburst-hide-data]').node().click()
-		test.ok(section().select('[data-testid^=sjpp-sunburst-data-]').empty(), 'Should hide the data')
+		test.ok(section().select('[data-testid^=sjpp-group-]').empty(), 'Should hide the data')
 		section().select('[data-testid=sjpp-sunburst-show-data]').node().click()
-		await waitFor(() => section().select('[data-testid=sjpp-sunburst-data-geneExpression]').node(), 10000)
+		await waitFor(() => section().select('[data-testid=sjpp-group-data-geneExpression]').node(), 10000)
 		test.pass('Should show the data again from the button')
 
 		// a change of the selection hides the data

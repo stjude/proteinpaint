@@ -134,10 +134,7 @@ tape('Launch a plot of a selection in the plots tab', test => {
 		const chart = sunburst.chart
 		chart.toggle(chart.renderer.root.children[0])
 		chart.dom.sel.body.select('[data-testid=sjpp-sunburst-show-data]').node().click()
-		const row = await waitFor(
-			() => chart.dom.sel.body.select('[data-testid=sjpp-sunburst-data-survival-os]').node(),
-			10000
-		)
+		const row = await waitFor(() => chart.dom.sel.body.select('[data-testid=sjpp-group-survival-os]').node(), 10000)
 		test.equal(app.getState().nav.activeTab, 0, 'Should start on the About tab')
 		row.click()
 		await waitFor(() => app.getState().plots.length)
