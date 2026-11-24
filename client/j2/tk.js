@@ -15,6 +15,9 @@ export type Tk = {
 	data?: Junction[]
 	/ from the server, of the junctions in the file in view including those filtered out; absent for custom junctions
 	totalJunctionCount?: number
+	/ junctions point down, with the feet at the top and the discs at the bottom, e.g. for the lower of two sample
+	/ groups; the heatmap columns are then not linked to the discs. see jugDirection() in render.js
+	pointDown?: boolean
 }
 export type Junction = {
 	chr: string

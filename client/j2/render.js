@@ -168,39 +168,43 @@ export function renderTk(data, tk, block) {
 	// all vertical heights set
 	tk.rows.jug.height = tk.rows.jug.axisheight + tk.rows.jug.neckheight + tk.rows.jug.legheight
 
-	// svg
-	mg.attr('transform', `translate(0,${tk.rows.jug.height})`)
+	// svg, its origin at the feet of the junctions: at the bottom of the section, or at its top with tk.pointDown
+	mg.attr('transform', `translate(0,${tk.pointDown ? 0 : tk.rows.jug.height})`)
 
 	{
-		// top line
-		const topy = -tk.rows.jug.legheight - tk.rows.jug.neckheight - tk.rows.jug.axisheight
+		const dir = jugDirection(tk)
+		// px from the feet to the start of the axis, next to the necks, and to its end
+		const axisStart = tk.rows.jug.legheight + tk.rows.jug.neckheight
+		const axisEnd = axisStart + tk.rows.jug.axisheight
+		// line at the end of the axis
 		mg.append('line')
 			.attr('x1', 0)
-			.attr('y1', topy)
-			.attr('y2', topy)
+			.attr('y1', dir * axisEnd)
+			.attr('y2', dir * axisEnd)
 			.attr('x2', viewpxwidth)
 			.attr('stroke', '#858585')
 			.attr('stroke-opacity', 0.2)
 			.attr('shape-rendering', 'crispEdges')
-		// bottom line
+		// line at the start of the axis
 		mg.append('line')
 			.attr('x1', 0)
-			.attr('y1', topy + tk.rows.jug.axisheight)
-			.attr('y2', topy + tk.rows.jug.axisheight)
+			.attr('y1', dir * axisStart)
+			.attr('y2', dir * axisStart)
 			.attr('x2', viewpxwidth)
 			.attr('stroke', '#858585')
 			.attr('stroke-opacity', 0.2)
 			.attr('shape-rendering', 'crispEdges')
 		const [minv, maxv] = tk.rows.jug.yscale.domain()
-		// from the first power of 10 above the bottom of the axis, as one below it would be drawn under the axis
+		// from the first power of 10 above the start of the axis, as one below it would be drawn past the start
 		let v = 10
 		while (v <= minv) v *= 10
 		while (tk.rows.jug.yAxisKey == 'medianReadCount' && v <= maxv) {
-			// order of magnitude line
+			// order of magnitude line, yscale is the px from the end of the axis
+			const y = dir * (axisEnd - tk.rows.jug.yscale(v))
 			mg.append('line')
 				.attr('x1', 0)
-				.attr('y1', topy + tk.rows.jug.yscale(v))
-				.attr('y2', topy + tk.rows.jug.yscale(v))
+				.attr('y1', y)
+				.attr('y2', y)
 				.attr('x2', viewpxwidth)
 				.attr('stroke', '#858585')
 				.attr('stroke-opacity', 0.2)
@@ -227,7 +231,7 @@ export function renderTk(data, tk, block) {
 		.append('line')
 		.attr('stroke', d => d.color)
 		.attr('x1', d => set_leg_x1(d))
-		.attr('y2', -tk.rows.jug.legheight)
+		.attr('y2', jugDirection(tk) * tk.rows.jug.legheight)
 		.attr('stroke-opacity', lineopacity)
 		.attr('class', 'sja_jug_leg1')
 		.each(function (d) {
@@ -239,7 +243,7 @@ export function renderTk(data, tk, block) {
 		.append('line')
 		.attr('stroke', d => d.color)
 		.attr('x2', d => set_leg_x2(d))
-		.attr('y1', -tk.rows.jug.legheight)
+		.attr('y1', jugDirection(tk) * tk.rows.jug.legheight)
 		.attr('stroke-opacity', lineopacity)
 		.attr('class', 'sja_jug_leg2')
 		.each(function (d) {
@@ -254,16 +258,17 @@ export function renderTk(data, tk, block) {
 
 	// stem - jug2
 	// stem may transit to reflect change in yscale / read count
+	// from the disc toward the feet, opposite to jugDirection()
 	jug2
 		.append('line')
 		.attr('stroke', d => d.color)
 		.attr('class', 'sja_jug_stem')
 		.attr('stroke-dasharray', '2,2')
 		.attr('shape-rendering', 'crispEdges')
-		.attr('y1', d => d.radius)
+		.attr('y1', d => -jugDirection(tk) * d.radius)
 		.attr('y2', d => {
 			// use previous value
-			return tk.rows.jug.neckheight + d.axisy
+			return -jugDirection(tk) * (tk.rows.jug.neckheight + d.axisy)
 		})
 		.attr('stroke-opacity', lineopacity)
 		.each(function (d) {
@@ -366,17 +371,18 @@ jug2.filter(function(d){return d.rimwidth>0})
 		renderHeatmap(tk, block)
 		tk.rows.jug.axis.selectAll('.sjpp-j2-ytitle').remove()
 		const yTitle = getYAxisTitle(tk.rows.jug.yAxisKey)
-		// left of the axis, as the tick labels are on the right
+		// left of the axis, as the tick labels are on the right; the axis is at the bottom of the section with tk.pointDown
+		const axisMiddle = tk.pointDown ? tk.rows.jug.height - tk.rows.jug.axisheight / 2 : tk.rows.jug.axisheight / 2
 		if (yTitle)
 			tk.rows.jug.axis
 				.append('text')
 				.attr('class', 'sjpp-j2-ytitle')
 				.attr('text-anchor', 'middle')
-				.attr('transform', `translate(-8, ${tk.rows.jug.axisheight / 2}) rotate(-90)`)
+				.attr('transform', `translate(-8, ${axisMiddle}) rotate(-90)`)
 				.text(yTitle)
 		const tickCount = tk.rows.jug.yAxisKey ? Math.floor(tk.rows.jug.axisheight / 20) : 0
 		const yAxis = axisRight()
-			.scale(tk.rows.jug.yscale)
+			.scale(sectionYscale(tk))
 			.ticks(tickCount, tk.rows.jug.yAxisKey == 'medianReadCount' ? '.0f' : undefined)
 		/* read counts are integers: of a small range, the ticks are not, and the '.0f' labels would repeat,
 		e.g. 1, 1.5, 2 as 1, 2, 2. the format is kept for the log scale to leave out labels of crowded ticks */
@@ -391,8 +397,10 @@ jug2.filter(function(d){return d.rimwidth>0})
 }
 
 /* With tk.sampleHeatmap, a heatmap above the junctions: samples are rows, and the columns are the junctions in view
-that are found in the most samples (tk.heatmapTop of them, by the server), each linked to its disc. A cell is the
-read count of the junction in the sample, on a log scale from white (none) to dark blue (the highest shown).
+that are found in the most samples (tk.heatmapTop of them, by the server), each linked to its disc. With tk.pointDown,
+there are no links, as one would cross the feet to the disc at the bottom; hovering still highlights the column and
+the disc of each other. A cell is the read count of the junction in the sample, on a log scale from white (none) to
+dark blue (the highest shown).
 The junctions, their axis and left labels move down by its height, which tk._finish() adds to the track's. The read
 counts are tk.rows.heatmap.data, kept for redraws without a request. */
 export function renderHeatmap(tk, block) {
@@ -420,12 +428,15 @@ export function renderHeatmap(tk, block) {
 	const coord = j => `${j.chr}:${j.start + 1}-${j.stop + 1} ${j.strand}`
 	const h = renderLocusHeatmap(tk, block, {
 		rows: idx.map(i => String(matrix.samples?.[i] ?? '')),
-		cols: cols.map(c => ({
-			x: c.j.x,
-			// to the top of the disc: its center is at the y of its value on the axis
-			dy: jug.axisheight - c.j.axisy - c.j.radius,
-			values: idx.map(i => Math.log(c.readcounts[i] + 1) / Math.log(max + 1))
-		})),
+		cols: cols.map(c => {
+			const col = { values: idx.map(i => Math.log(c.readcounts[i] + 1) / Math.log(max + 1)) }
+			if (!tk.pointDown) {
+				// the link, to the top of the disc: its center is at the y of its value on the axis
+				col.x = c.j.x
+				col.dy = jug.axisheight - c.j.axisy - c.j.radius
+			}
+			return col
+		}),
 		color: v => (v ? interpolateBlues(0.15 + 0.85 * v) : 'white'),
 		missingColor: 'white',
 		note: [`${n} samples`, `${cols.length} most frequent junctions`, `read count 0 to ${max}, log scale`],
@@ -660,7 +671,23 @@ function set_stem_y2(d, tk) {
 	return tk.rows.jug.neckheight + tk.rows.jug.axisheight - tk.rows.jug.yscale(d.medianReadCount)
 }
 function set_jug2(d, tk) {
-	return 'translate(0,-' + (tk.rows.jug.legheight + tk.rows.jug.neckheight + d.axisy) + ')'
+	return `translate(0,${jugDirection(tk) * (tk.rows.jug.legheight + tk.rows.jug.neckheight + d.axisy)})`
+}
+
+/* the y direction from the feet of a junction to its disc: -1 for up, or 1 for down with tk.pointDown, which draws
+the junctions upside down, as a mirror image: the feet at the top, then the legs, the necks, and the axis, which
+increases downward. e.g. for contrasting the junctions of two sample groups, the track of one above the other.
+the layout is the same either way, as j.axisy, in px from the start of the axis, and tk.rows.jug.yscale, in px from
+the end of the axis; only the drawing is flipped */
+function jugDirection(tk) {
+	return tk.pointDown ? 1 : -1
+}
+
+/* tk.rows.jug.yscale for the y in the section of the junctions, from its top, as for the axis and the hover boxplot:
+the same with the axis at the top, and its mirror image with tk.pointDown */
+function sectionYscale(tk) {
+	const { yscale, height } = tk.rows.jug
+	return tk.pointDown ? yscale.copy().range(yscale.range().map(y => height - y)) : yscale
 }
 
 function set_all(tk) {
@@ -669,17 +696,18 @@ function set_all(tk) {
 	tk.data.forEach(j => (j.axisy = mg.axisheight - mg.yscale(yValue(j, tk))))
 
 	const dur = 500
+	const dir = jugDirection(tk)
 	mg.g
 		.selectAll('.sja_jug_leg1')
 		.transition()
 		.duration(dur)
-		.attr('y2', -mg.legheight)
+		.attr('y2', dir * mg.legheight)
 		.attr('x1', d => set_leg_x1(d))
 	mg.g
 		.selectAll('.sja_jug_leg2')
 		.transition()
 		.duration(dur)
-		.attr('y1', -mg.legheight)
+		.attr('y1', dir * mg.legheight)
 		.attr('x2', d => set_leg_x2(d))
 	mg.g
 		.selectAll('.sja_jug_jug2')
@@ -700,7 +728,7 @@ function set_all(tk) {
 		.selectAll('.sja_jug_stem')
 		.transition()
 		.duration(dur)
-		.attr('y2', d => mg.neckheight + d.axisy)
+		.attr('y2', d => -dir * (mg.neckheight + d.axisy))
 }
 
 function doForceLayout(tk, block, viewpxwidth) {
@@ -808,11 +836,13 @@ function mouseoverBoxplot(j, tk) {
 	// mouse over disc show boxplot for read count
 	if (!j.readcountBoxplot) return
 	const color = 'black'
-	const p5 = tk.rows.jug.yscale(j.readcountBoxplot[0])
-	const p25 = tk.rows.jug.yscale(j.readcountBoxplot[1])
-	const p50 = tk.rows.jug.yscale(j.readcountBoxplot[2])
-	const p75 = tk.rows.jug.yscale(j.readcountBoxplot[3])
-	const p95 = tk.rows.jug.yscale(j.readcountBoxplot[4])
+	// p95 is below p5 with tk.pointDown
+	const yscale = sectionYscale(tk)
+	const p5 = yscale(j.readcountBoxplot[0])
+	const p25 = yscale(j.readcountBoxplot[1])
+	const p50 = yscale(j.readcountBoxplot[2])
+	const p75 = yscale(j.readcountBoxplot[3])
+	const p95 = yscale(j.readcountBoxplot[4])
 	const w = 10
 	tk.pica.g.selectAll('*').remove()
 	// tk.pica.g is not in the junctions' g, which renderHeatmap() moves down by the height of the heatmap
@@ -841,14 +871,14 @@ function mouseoverBoxplot(j, tk) {
 		.attr('stroke', color)
 		.attr('shape-rendering', 'crispEdges')
 	g.append('rect')
-		.attr('y', p75 - p50)
+		.attr('y', Math.min(p25, p75) - p50)
 		.attr('width', w)
-		.attr('height', p25 - p75)
+		.attr('height', Math.abs(p25 - p75))
 		.attr('stroke', color)
 		.attr('fill', 'white')
 		.attr('shape-rendering', 'crispEdges')
 	// median
-	if (p25 - p75 > 3) {
+	if (Math.abs(p25 - p75) > 3) {
 		g.append('line').attr('x2', w).attr('stroke', color).attr('shape-rendering', 'crispEdges')
 	}
 }

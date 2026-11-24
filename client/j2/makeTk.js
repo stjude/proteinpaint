@@ -29,6 +29,8 @@ export async function makeTk(tk, block) {
 	} else {
 		tk.yscaleUseLog = true
 	}
+	// junctions point down, with the discs at the bottom, see jugDirection() in render.js
+	if ('pointDown' in tk && typeof tk.pointDown != 'boolean') throw new Error('tk.pointDown not boolean')
 	if (tk.hiddentypes) {
 		// comma joined type strings to be hidden by default. the property will be assessed by legend and removed
 		if (typeof tk.hiddentypes != 'string') throw new Error('tk.hiddentypes not string')
