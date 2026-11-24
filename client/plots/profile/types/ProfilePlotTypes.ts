@@ -31,9 +31,12 @@ export type ImpressionConfig = {
 	/** title of the thermometer's rating axis */
 	ratingAxisLabel: string
 	/** performance-zone bins on the rating axis, shared by the thermometer and the distribution chart */
-	zones: Omit<ImpressionZone, 'color'>[]
-	/** zone background color by module name, then by zone label; every rendered module and zone must have one */
-	zoneColors: { [module: string]: { [zoneLabel: string]: string } }
+	zones: (Omit<ImpressionZone, 'color'> & {
+		/** colorMap key of the module's Likert gradient, the zone color when zoneColors has none */
+		shade?: string
+	})[]
+	/** zone background color by module name, then by zone label; a missing entry falls back to the zone's shade */
+	zoneColors?: { [module: string]: { [zoneLabel: string]: string } }
 	distribution: ResponseDistributionTexts
 	/** series names: sc also labels the single group of a module with no POC responders */
 	legend: { sc: string; poc: string }

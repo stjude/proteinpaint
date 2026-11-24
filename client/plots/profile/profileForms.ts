@@ -292,12 +292,19 @@ export class profileForms extends profilePlot {
 		const scColor = this.impressionScColor || '#888'
 		const data = this.data
 
-		// Each performance-zone color comes from impression.zoneColors[module][zone label].
-		const zones = texts.zones.map(z => {
-			const color = texts.zoneColors[this.module]?.[z.label]
-			if (!color) throw `Missing impression.zoneColors['${this.module}']['${z.label}'] for the plot ${this.type}`
-			return { ...z, color }
-		})
+		/*
+		Resolve each performance-zone color, first from this module's impression palette
+		(impression.zoneColors[module][zone label]). A module without a palette entry falls back to its
+		Likert colorMap shade named by the zone's `shade` key, then to the base module color.
+		*/
+		const modulePalette = texts.zoneColors?.[this.module] || {}
+		const moduleShades = this.state.termdbConfig?.colorMap?.[this.module] || {}
+		const zones = texts.zones.map(z => ({
+			label: z.label,
+			min: z.min,
+			max: z.max,
+			color: modulePalette[z.label] || (z.shade && moduleShades[z.shade]) || scColor
+		}))
 
 		// Bind tooltip text + optional hover descriptor as the element's datum. The shared
 		// profilePlot mousemove→onMouseOver delegation reads __data__ (same pattern as polar2/radar2).
