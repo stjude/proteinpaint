@@ -454,11 +454,7 @@ class ViolinPlot extends PlotBase implements RxComponent {
 			} else {
 				s.lines = []
 			}
-			if (term.q.scale) {
-				// term may be scaled from regression analysis
-				// scale the data on the server-side
-				arg.scale = term.q.scale
-			}
+			// a scaled or transformed term, such as from regression analysis, is scaled by server getData() from term.q
 		} else if (isNumericTermCollection) {
 			// numeric termCollection: server-side expandNumericTermCollection creates a
 			// synthetic overlay from member terms, so don't send term2/term0

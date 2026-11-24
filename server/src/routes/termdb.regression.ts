@@ -173,7 +173,7 @@ every variable is a minimum tw copy, see vocabApi.getTwMinCopy()
 	.type // tw type e.g. 'NumTWCont', NOT the term type; use tw.term.type to branch by term type
 	.term{} // rehydrated
 	.q{}
-		.scale
+		.scale, .transform // of a continuous variable, applied to the values by getData()
 		.computableValuesOnly:true // always added
 	.refGrp
 	.nonRefGrp
@@ -182,7 +182,7 @@ every variable is a minimum tw copy, see vocabApi.getTwMinCopy()
 	.type // same as above, a tw type and not a term type
 	.term{} // rehydrated for dictionary terms
 	.q{}
-		.scale
+		.scale, .transform // of a continuous variable, applied to the values by getData()
 		.computableValuesOnly:true // always added
 		.restrictAncestry{}
 	.refGrp

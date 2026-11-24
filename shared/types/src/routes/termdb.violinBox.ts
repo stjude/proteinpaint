@@ -44,8 +44,6 @@ export type ViolinRequest = CommonProps & {
 	radius: number
 	/** A number representing the right margin */
 	rightMargin?: number
-	/** Term may be scaled from regression analysis */
-	scale?: any
 	/** A number representing the width of the stroke */
 	strokeWidth?: number
 	/** A number representing the width of the SVG box */

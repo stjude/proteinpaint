@@ -366,6 +366,7 @@ export class NumCont extends NumericBase {
 	}
 
 	getStatus() {
+		if (this.q.transform == 'log10p1') return { text: 'log10(X+1)' }
 		return { text: this.q.scale ? `scale=${this.q.scale}` : 'continuous' } // FIXME not effective
 	}
 

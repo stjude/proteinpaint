@@ -91,10 +91,15 @@ export class NumericDensity {
 	async setData() {
 		//if (this.density_data) return this.density_data
 		const self = this.termsetting
+		/* plot the stored values, which bins, knots and cutoffs are set in: server getData() would apply
+		the scaling of a continuous q (see transformContinuousValues()) */
+		const q: any = { ...self.q }
+		delete q.scale
+		delete q.transform
 		const d = await self.vocabApi.getViolinBox(
 			{
 				plotType: 'violin',
-				tw: { type: self.tw.type, term: self.term, q: self.q },
+				tw: { type: self.tw.type, term: self.term, q },
 				svgw: this.plot_size.width,
 				radius: this.plot_size.radius,
 				filter: self.filter

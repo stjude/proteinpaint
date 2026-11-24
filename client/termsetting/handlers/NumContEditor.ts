@@ -54,8 +54,8 @@ export class NumContEditor extends HandlerBase implements Handler {
 					this.q.convert2ZScore = checked
 					if (checked) {
 						// set the Scale values option to "No Scaling"
-						this.dom.scaleSelect.property('value', 1)
-						delete this.q.scale
+						this.dom.scaleSelect.property('value', '1')
+						this.setScale('1')
 					}
 				}
 			})
@@ -65,34 +65,43 @@ export class NumContEditor extends HandlerBase implements Handler {
 		selectDiv.append('div').style('display', 'inline-block').style('padding', '3px 10px').html('Scale values')
 
 		this.dom.scaleSelect = selectDiv.append('select').on('change', (event: any) => {
-			//if (!this.q) throw `Missing .q{} [NumContEditor]`
-			if (event.target.value == '1') delete this.q.scale
-			else {
-				// uncheck the convert to z-score checkbox
-				if (this.dom.convert2ZCheckbox) this.dom.convert2ZCheckbox.property('checked', false)
-				this.q.scale = Number(event.target.value)
-			}
+			this.setScale(event.target.value)
+			// uncheck the convert to z-score checkbox
+			if (event.target.value != '1' && this.dom.convert2ZCheckbox) this.dom.convert2ZCheckbox.property('checked', false)
 		})
+
+		const options = [
+			{ html: 'No Scaling', value: '1' },
+			{ html: 'Per 10', value: '10' },
+			{ html: 'Per 100', value: '100' },
+			{ html: 'Per 1000', value: '1000' }
+		]
+		/* server getData() takes the log of the term's stored value, but a term with valueConversion is shown in
+		its converted unit by multiplying a value, which would turn a log of days into a meaningless number of years */
+		if (!this.tw.term.valueConversion) options.push({ html: 'log10(X+1)', value: 'log10p1' })
+		const selected = this.q.transform || String(this.q.scale || 1)
 
 		this.dom.scaleSelect
 			.selectAll('option')
-			.data([
-				{ html: 'No Scaling', value: 1 },
-				{ html: 'Per 10', value: 10 },
-				{ html: 'Per 100', value: 100 },
-				{ html: 'Per 1000', value: 1000 }
-			])
+			.data(options)
 			.enter()
 			.append('option')
 			.attr('value', d => d.value)
 			.html(d => d.html)
-			.property('selected', d => 'scale' in this.q && d.value == this.q.scale)
+			.property('selected', d => d.value == selected)
+	}
+
+	/* a "Scale values" option is either a divisor in q.scale or a transform in q.transform,
+	so that choosing one removes the other */
+	setScale(value: string) {
+		delete this.q.scale
+		delete this.q.transform
+		if (value == 'log10p1') this.q.transform = value
+		else if (value != '1') this.q.scale = Number(value)
 	}
 
 	getEditedQ() {
-		const scaleValue = this.dom.scaleSelect.property('value')
-		if (scaleValue == '1') delete this.q.scale
-		else this.q.scale = Number(scaleValue)
+		this.setScale(this.dom.scaleSelect.property('value'))
 		if (this.dom.convert2ZCheckbox) this.q.convert2ZScore = this.dom.convert2ZCheckbox.property('checked')
 		return this.q
 	}

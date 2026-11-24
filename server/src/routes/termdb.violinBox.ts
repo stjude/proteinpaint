@@ -191,8 +191,6 @@ async function getViolin(
 		)
 	}
 
-	if (q.scale) setScaleData(q, data, q.tw)
-
 	const valuesObject = divideValues(q, data, sampleType)
 	const result = setViolinResponse(valuesObject, data, q)
 
@@ -206,20 +204,6 @@ async function getViolin(
 	await createCanvasImg(q, result, ds)
 	result['descrStats'] = descrStats
 	return result
-}
-
-/** scale sample data
- * divide keys and values by scaling factor - this is important
- * for regression UI when running association tests. */
-export function setScaleData(q: ViolinRequest, data: ValidGetDataResponse, tw: TermWrapper) {
-	if (!q.scale) return
-	const scale = Number(q.scale)
-	for (const val of Object.values(data.samples)) {
-		if (!tw.$id || !val[tw.$id]) continue
-		if (tw.term.values?.[val[tw.$id]?.value]?.uncomputable) continue
-		val[tw.$id].key = val[tw.$id].key / scale
-		val[tw.$id].value = val[tw.$id].value / scale
-	}
 }
 
 export function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: string) {
