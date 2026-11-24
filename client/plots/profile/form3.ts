@@ -218,53 +218,63 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 	type RenderModule = { name: string; color: string; textColor: string; domains: RenderDomain[] }
 
 	const unresolvedNames: string[] = []
-	const rendered: RenderModule[] = (
-		await Promise.all(
-			modules.map(async mod => {
-				const md = await getModuleData(mod.name)
-				if (!md) {
-					unresolvedNames.push(`module "${mod.name}"`)
-					return { name: mod.name, color: mod.color, textColor: mod.textColor, domains: [] }
-				}
-				const domains = (
-					await Promise.all(
-						mod.domains.map(async d => {
-							const domainId = md.domainIdByName.get(d.domain)
-							// Only hit the DB for domains that declare a forms template; impression-only and
-							// heatmap-only domains need no subtype lookup.
-							const hasFormsTemplate = d.templates.some(t => optionByTemplateKey.has(t.key))
-							if (hasFormsTemplate && !domainId) unresolvedNames.push(`domain "${mod.name} / ${d.domain}"`)
-							const formsKeys = hasFormsTemplate && domainId ? await getDomainFormsKeys(domainId) : new Set<string>()
-							const chips: Chip[] = []
-							for (const { key, meta } of d.templates) {
-								const option = optionByTemplateKey.get(key)
-								if (option) {
-									// forms type (Yes/No, Likert): show only if the domain has this subtype in the DB.
-									if (domainId && formsKeys.has(key))
+	let rendered: RenderModule[]
+	// The caller does not await this menu, so a failed termdb lookup is caught and shown here.
+	try {
+		rendered = (
+			await Promise.all(
+				modules.map(async mod => {
+					const md = await getModuleData(mod.name)
+					if (!md) {
+						unresolvedNames.push(`module "${mod.name}"`)
+						return { name: mod.name, color: mod.color, textColor: mod.textColor, domains: [] }
+					}
+					const domains = (
+						await Promise.all(
+							mod.domains.map(async d => {
+								const domainId = md.domainIdByName.get(d.domain)
+								// NEW (planned) templates have no chart yet, so they are never opened or looked up.
+								const builtTemplates = d.templates.filter(t => t.meta.status !== 'NEW')
+								// Only hit the DB for domains that declare a forms template; impression-only and
+								// heatmap-only domains need no subtype lookup.
+								const hasFormsTemplate = builtTemplates.some(t => optionByTemplateKey.has(t.key))
+								if (hasFormsTemplate && !domainId) unresolvedNames.push(`domain "${mod.name} / ${d.domain}"`)
+								const formsKeys = hasFormsTemplate && domainId ? await getDomainFormsKeys(domainId) : new Set<string>()
+								const chips: Chip[] = []
+								for (const { key, meta } of builtTemplates) {
+									const option = optionByTemplateKey.get(key)
+									if (option) {
+										// forms type (Yes/No, Likert): show only if the domain has this subtype in the DB.
+										if (domainId && formsKeys.has(key))
+											chips.push({
+												label: `${meta.label} · ${CHART_LABELS[meta.chart] || meta.chart}`,
+												title: `Open ${meta.label} for ${d.domain}`,
+												onClick: () => openPlot(domainId, option.name)
+											})
+									} else if (meta.chart === 'thermometer' && md.impressionId) {
+										// impressions: show only where the module has an __Impression domain.
+										const impressionId = md.impressionId
 										chips.push({
 											label: `${meta.label} · ${CHART_LABELS[meta.chart] || meta.chart}`,
-											title: `Open ${meta.label} for ${d.domain}`,
-											onClick: () => openPlot(domainId, option.name)
+											title: `Open ${meta.label} for ${mod.name}`,
+											onClick: () => openPlot(impressionId)
 										})
-								} else if (meta.chart === 'thermometer' && md.impressionId) {
-									// impressions: show only where the module has an __Impression domain.
-									const impressionId = md.impressionId
-									chips.push({
-										label: `${meta.label} · ${CHART_LABELS[meta.chart] || meta.chart}`,
-										title: `Open ${meta.label} for ${mod.name}`,
-										onClick: () => openPlot(impressionId)
-									})
+									}
+									// heatmaps have no data-backed chart → skipped.
 								}
-								// heatmaps and NEW templates have no data-backed chart → skipped.
-							}
-							return { domain: d.domain, chips }
-						})
-					)
-				).filter(d => d.chips.length)
-				return { name: mod.name, color: mod.color, textColor: mod.textColor, domains }
-			})
-		)
-	).filter(mod => mod.domains.length)
+								return { domain: d.domain, chips }
+							})
+						)
+					).filter(d => d.chips.length)
+					return { name: mod.name, color: mod.color, textColor: mod.textColor, domains }
+				})
+			)
+		).filter(mod => mod.domains.length)
+	} catch (e) {
+		loading.remove()
+		console.error(e)
+		return void showMessage(`Templates could not be loaded: ${e instanceof Error ? e.message : e}`, '#c00')
+	}
 
 	loading.remove()
 	/*
@@ -301,11 +311,14 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 
 	const listDiv = container.append('div').style('max-height', '65vh').style('overflow-y', 'auto')
 
+	// A native button, so chips are reachable with Tab and activated with Enter/Space.
 	const makeChip = (parent, chip: Chip) =>
 		parent
-			.append('div')
+			.append('button')
+			.attr('type', 'button')
 			.attr('class', 'sja_filter_tag_btn')
-			.style('display', 'inline-block')
+			.style('border', 'none')
+			.style('font-family', 'inherit')
 			.style('margin', '0 4px 4px 0')
 			.style('padding', '2px 9px')
 			.style('font-size', '.85em')

@@ -2607,7 +2607,7 @@ export type TemplateMeta = {
 	chart: TemplateChart
 	/** true when a single consolidated chart spans all domains/forms referencing this template (e.g. policyEnablers). */
 	aggregate?: true
-	/** planned-but-not-yet-built templates render disabled. */
+	/** planned but not yet built: the template has no chart, so it is not rendered as a link. */
 	status?: 'NEW'
 }
 

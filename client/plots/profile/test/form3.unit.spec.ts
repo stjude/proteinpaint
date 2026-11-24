@@ -144,7 +144,7 @@ function fakeChartsInstance(mapping: TemplateMapping) {
 		}
 	}
 	return {
-		app: { vocabApi, dispatch: () => {} },
+		app: { vocabApi, dispatch: (_action: unknown) => {} },
 		state: { activeCohort: 0, termdbConfig },
 		dom: { tip: { hide: () => {} } }
 	}
@@ -197,6 +197,74 @@ tape('makeChartBtnMenu - warns about mapping names not found in the termdb', asy
 	test.ok(warnings[0]?.includes('domain "National Context / Care Acess"'), 'names the unresolved domain')
 	test.ok(warnings[0]?.includes('module "Ghost Module"'), 'names the unresolved module')
 	test.notOk(warnings[0]?.includes('Pathology'), 'a domain hidden only for lacking data is not reported')
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('makeChartBtnMenu - a failed termdb lookup replaces Loading… with an error message', async test => {
+	const chartsInstance = fakeChartsInstance(validMapping())
+	chartsInstance.app.vocabApi.getTermChildren = async () => {
+		throw new Error('termdb unavailable')
+	}
+	const holder = select('body').append('div')
+	const consoleError = console.error
+	console.error = () => {}
+	try {
+		await makeChartBtnMenu(holder, chartsInstance)
+	} finally {
+		console.error = consoleError
+	}
+	test.notOk(holder.text().includes('Loading'), 'the loading indicator is removed')
+	test.ok(holder.text().includes('Templates could not be loaded: termdb unavailable'), 'the error is shown')
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('makeChartBtnMenu - NEW (planned) templates are never rendered as chart links', async test => {
+	const mapping = validMapping()
+	// yesNo has a matching forms option and impressions a module __Impression domain, so both would
+	// render if built; marked NEW, neither may be opened.
+	mapping.templates.yesNo.status = 'NEW'
+	mapping.templates.impressions.status = 'NEW'
+	const chartsInstance = fakeChartsInstance(mapping)
+	let subtypeLookups = 0
+	chartsInstance.app.vocabApi.getMultivalueTWs = async () => {
+		subtypeLookups++
+		return []
+	}
+	const holder = select('body').append('div')
+	await makeChartBtnMenu(holder, chartsInstance)
+	test.equal(holder.selectAll('.sja_filter_tag_btn').size(), 0, 'no chart link is rendered')
+	test.ok(holder.text().includes('No templates are currently available'), 'the empty message is shown')
+	test.equal(subtypeLookups, 0, 'no subtype lookup for a planned template')
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('makeChartBtnMenu - chips are focusable native buttons that open the chart', async test => {
+	const chartsInstance = fakeChartsInstance(validMapping())
+	const actions: any[] = []
+	chartsInstance.app.dispatch = (action: unknown) => {
+		actions.push(action)
+	}
+	const holder = select('body').append('div')
+	await makeChartBtnMenu(holder, chartsInstance)
+
+	const chips = holder.selectAll('.sja_filter_tag_btn').nodes() as HTMLElement[]
+	test.ok(chips.length > 0, 'chips are rendered')
+	test.ok(
+		chips.every(c => c instanceof HTMLButtonElement && c.type == 'button'),
+		'every chip is a native button, so Tab and Enter/Space work'
+	)
+	const yesNo = chips.find(c => c.textContent?.startsWith('Yes/No'))!
+	yesNo.focus()
+	test.equal(document.activeElement, yesNo, 'a chip can take keyboard focus')
+	yesNo.click()
+	test.deepEqual(
+		actions.map(a => [a.type, a.config.chartType, a.config.tw.term.id, a.config.activeTab]),
+		[['plot_create', 'profileForms', 'NC__Care Access', 'Yes/No Barchart']],
+		'activating a chip opens profileForms on the matching domain and tab'
+	)
 	if ((test as any)._ok) holder.remove()
 	test.end()
 })
