@@ -118,8 +118,8 @@ resolve is skipped; throws when none does, as eligibleMethylationSamples() does.
 export function anyMethylationSamples(ds: any): Set<string> {
 	const dm = ds.queries?.dnaMethylation
 	if (!dm) throw new Error('This dataset does not support DNA methylation region analysis.')
-	const classes = new Set<string | undefined>([undefined, ...Object.keys(dm.elements ?? {})])
-	if (dm.promoter) classes.add('promoter')
+	const classes = new Set<string | undefined>([undefined, ...(dm.scanOnly ? [] : Object.keys(dm.elements ?? {}))])
+	if (!dm.scanOnly && dm.promoter) classes.add('promoter')
 	const samples = new Set<string>()
 	let error: unknown
 	let resolved = false
