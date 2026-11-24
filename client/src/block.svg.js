@@ -1,5 +1,6 @@
 import * as client from './client'
 import * as common from '#shared/common.js'
+import { htmlToSvg } from '../dom/htmlToSvg'
 
 const ypad = 20
 const xpad = 2
@@ -9,7 +10,9 @@ const rowh = 20
 const rowpad = 3
 const fontsize = 16
 
-export default function (block) {
+/* opts.legend: also the block's legend, of HTML on the page, drawn under the tracks as SVG elements (dom/htmlToSvg.ts),
+so that the export has the legends of tracks such as the methylation and junction tracks */
+export default function (block, opts = {}) {
 	for (const tk of block.tklst) {
 		if (tk.config_handle) tk.config_handle.text('')
 		if (tk.label_close) tk.label_close.text('')
@@ -26,6 +29,15 @@ export default function (block) {
 	newheight = oldheight + ypad + Math.max(h1, h2) + ypad
 
 	// TODO add legend from any other tracks
+
+	const oldwidth = block.svg.attr('width')
+	const legend = opts.legend ? legendSvg(block) : null
+	if (legend) {
+		legend.g.setAttribute('transform', `translate(${xpad},${newheight})`)
+		block.svg.node().appendChild(legend.g)
+		newheight += legend.height + ypad
+		if (legend.width + xpad > Number(oldwidth)) block.svg.attr('width', legend.width + xpad)
+	}
 
 	block.svg.attr('height', newheight)
 
@@ -46,8 +58,27 @@ export default function (block) {
 
 	if (g1) g1.remove()
 	if (g2) g2.remove()
+	if (legend) {
+		legend.g.remove()
+		block.svg.attr('width', oldwidth)
+	}
 
 	block.svg.attr('height', oldheight)
+}
+
+/* the block's legend as SVG; a folded legend is shown while it is measured, as its layout is what is drawn */
+function legendSvg(block) {
+	const table = block.legend?.holder?.node()
+	if (!table) return null
+	const folded = table.parentNode
+	const display = folded.style.display
+	folded.style.display = ''
+	try {
+		const legend = htmlToSvg(table)
+		return legend.height ? legend : null
+	} finally {
+		folded.style.display = display
+	}
 }
 
 /* A track image drawn as SVG (a data:image/svg+xml source, e.g. the DMR plot's per-CpG means)
