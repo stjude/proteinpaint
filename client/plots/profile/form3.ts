@@ -24,6 +24,7 @@ Invoked by mass/charts.js loadChartSpecificMenu via the standard chart-specific 
 */
 
 import type { TemplateMapping, TemplateModule, TemplateMeta } from '#types'
+import { getActiveCohortStr } from '#mass/charts'
 
 const EMPTY_MESSAGE = 'No templates are currently available for this cohort.'
 const VALID_CHARTS = new Set(['heatmap', 'stacked_bar', 'thermometer'])
@@ -93,7 +94,7 @@ const CHART_LABELS: { [k: string]: string } = {
 
 export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 	const termdbConfig = chartsInstance.app.vocabApi.termdbConfig
-	const cohortKey = termdbConfig?.selectCohort?.values?.[chartsInstance.state.activeCohort]?.keys?.[0]
+	const cohortKey = getActiveCohortStr(chartsInstance.state)
 	const mapping = termdbConfig?.plotConfigByCohort?.[cohortKey]?.template3
 
 	const showMessage = (text: string, color: string) =>
@@ -116,7 +117,7 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 	// Config-driven bridge: templateKey ↔ profileForms option (tab name + DB subtype). A forms
 	// template is data-backed for a domain when that domain has a child of the option's subtype.
 	const cohortPlots = termdbConfig?.plotConfigByCohort?.[cohortKey] || {}
-	const formsOptions = (cohortPlots.profileForms?.options || cohortPlots.profileForms2?.options || []) as {
+	const formsOptions = (cohortPlots.profileForms?.options || []) as {
 		name: string
 		subtype?: string
 		templateKey?: string
@@ -153,9 +154,9 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 	// Per module: the real domain-name → id map and the "__Impression" domain id (if the module has one).
 	type ModuleData = { domainIdByName: Map<string, string>; impressionId?: string }
 	const moduleDataById = new Map<string, Promise<ModuleData>>()
-	const getModuleData = async (moduleName: string): Promise<ModuleData> => {
+	const getModuleData = async (moduleName: string): Promise<ModuleData | undefined> => {
 		const moduleId = (await getModuleIdMap()).get(moduleName)
-		if (!moduleId) return { domainIdByName: new Map() }
+		if (!moduleId) return
 		let p = moduleDataById.get(moduleId)
 		if (!p) {
 			p = (async () => {
@@ -209,15 +210,22 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 	keep only plot types with real data — forms types present in the DB, and impressions where the
 	module has an "__Impression" domain. Heatmaps and NEW templates are dropped. Empty domains and
 	empty modules are omitted so the view shows only what can actually be opened.
+	Mapping names that do not resolve against the termdb are collected in `unresolvedNames` and
+	reported, so a spelling mismatch is not mistaken for a row hidden because it has no data.
 	*/
 	type Chip = { label: string; title: string; onClick: () => void }
 	type RenderDomain = { domain: string; chips: Chip[] }
 	type RenderModule = { name: string; color: string; textColor: string; domains: RenderDomain[] }
 
+	const unresolvedNames: string[] = []
 	const rendered: RenderModule[] = (
 		await Promise.all(
 			modules.map(async mod => {
 				const md = await getModuleData(mod.name)
+				if (!md) {
+					unresolvedNames.push(`module "${mod.name}"`)
+					return { name: mod.name, color: mod.color, textColor: mod.textColor, domains: [] }
+				}
 				const domains = (
 					await Promise.all(
 						mod.domains.map(async d => {
@@ -225,6 +233,7 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 							// Only hit the DB for domains that declare a forms template; impression-only and
 							// heatmap-only domains need no subtype lookup.
 							const hasFormsTemplate = d.templates.some(t => optionByTemplateKey.has(t.key))
+							if (hasFormsTemplate && !domainId) unresolvedNames.push(`domain "${mod.name} / ${d.domain}"`)
 							const formsKeys = hasFormsTemplate && domainId ? await getDomainFormsKeys(domainId) : new Set<string>()
 							const chips: Chip[] = []
 							for (const { key, meta } of d.templates) {
@@ -258,10 +267,17 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 	).filter(mod => mod.domains.length)
 
 	loading.remove()
+	/*
+	Not an error: a mapping name may be absent from this cohort's termdb on purpose (e.g. terms
+	not yet released), so the view still renders, but the names are listed for the maintainer.
+	*/
+	if (unresolvedNames.length)
+		console.warn(`Templates 3: mapping names not found in the termdb: ${unresolvedNames.join(', ')}`)
 	if (!rendered.length) return void showMessage(EMPTY_MESSAGE, '#777')
 
-	// Search box: filter domain rows by module/domain name as the list scales.
-	const rows: { searchText: string; row: ReturnType<typeof holder.append> }[] = []
+	// Search box: filter domain rows by module/domain name, and hide a module header with no matching rows.
+	type Row = ReturnType<typeof holder.append>
+	const sections: { header: Row; rows: { searchText: string; row: Row }[] }[] = []
 	container
 		.append('input')
 		.attr('type', 'search')
@@ -272,7 +288,15 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 		.style('padding', '4px 8px')
 		.on('input', function (this: HTMLInputElement) {
 			const q = this.value.trim().toLowerCase()
-			for (const { searchText, row } of rows) row.style('display', !q || searchText.includes(q) ? '' : 'none')
+			for (const { header, rows } of sections) {
+				let anyShown = false
+				for (const { searchText, row } of rows) {
+					const shown = !q || searchText.includes(q)
+					row.style('display', shown ? '' : 'none')
+					anyShown ||= shown
+				}
+				header.style('display', anyShown ? '' : 'none')
+			}
 		})
 
 	const listDiv = container.append('div').style('max-height', '65vh').style('overflow-y', 'auto')
@@ -295,7 +319,7 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 
 	for (const mod of rendered) {
 		// Section header: background = module color, title = module.textColor (from the mapping).
-		listDiv
+		const header = listDiv
 			.append('div')
 			.style('margin', '10px 0 4px')
 			.style('padding', '4px 8px')
@@ -304,6 +328,8 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 			.style('color', mod.textColor)
 			.style('font-weight', 'bold')
 			.text(mod.name)
+		const section = { header, rows: [] as { searchText: string; row: Row }[] }
+		sections.push(section)
 
 		for (const d of mod.domains) {
 			const row = listDiv
@@ -313,7 +339,7 @@ export async function makeChartBtnMenu(holder, chartsInstance, _chartType?) {
 				.style('align-items', 'baseline')
 				.style('gap', '6px')
 				.style('padding', '2px 8px 2px 14px')
-			rows.push({ searchText: `${mod.name} ${d.domain}`.toLowerCase(), row })
+			section.rows.push({ searchText: `${mod.name} ${d.domain}`.toLowerCase(), row })
 			row.append('div').style('min-width', '190px').style('font-size', '.9em').text(d.domain)
 			const btns = row.append('div')
 			for (const chip of d.chips) makeChip(btns, chip)
