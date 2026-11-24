@@ -208,7 +208,8 @@ async function showGeneExpression(ctx: Ctx, anchor: HTMLElement) {
 	const holder = tip.d.append('div')
 	/* another submenu, which clears tip2, may open while the picker loads; the picker is then of no submenu, and
 	must not replace the picker of the one that is open */
-	const replaced = () => !holder.node().isConnected
+	const replaced = () =>
+		!holder.node().isConnected || !anchor.isConnected || tip.d.style('display') == 'none'
 	try {
 		const { geneExpInputInit } = await import('#plots/GeneExpInput.ts')
 		if (replaced()) return
