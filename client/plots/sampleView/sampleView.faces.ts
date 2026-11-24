@@ -191,7 +191,7 @@ export function renderScatterFace(face: any, result: any, highlight: string[] = 
 	// dots grow with the zoom, though less, so a dense cloud stays readable
 	const zoom = Math.min(span(xFull) / span(xView), span(yFull) / span(yView)) || 1
 	const growth = Math.min(SCATTER_DOT_MAX_GROWTH, Math.sqrt(zoom))
-	const pad = 6
+	const pad = Math.max(6, Math.ceil(1.3 * growth + 2.5 + 1))
 	const x = scaleLinear()
 		.domain(xView)
 		.range([pad, FACE_W - pad])
