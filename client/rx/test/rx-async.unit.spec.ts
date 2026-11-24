@@ -67,7 +67,7 @@ tape('getAppInit -  async, closured and classed', async function (test) {
 	test.end()
 })
 
-tape.only('a missing app printError()', async function (test) {
+tape('a missing app printError()', async function (test) {
 	const holder = document.createElement('div')
 	document.body.appendChild(holder)
 	const app = await appInit({ debug: 1, state: {}, holder })
