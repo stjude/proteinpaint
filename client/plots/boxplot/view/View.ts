@@ -1,5 +1,5 @@
 import type { BoxPlotSettings } from '../Settings'
-import type { ViewData, FormattedBoxPlotChartsEntry } from '../BoxPlotTypes'
+import type { ViewData } from '../BoxPlotTypes'
 import type { MassAppApi } from '#mass/types/mass'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import { LegendRenderer } from './LegendRender'
@@ -26,8 +26,11 @@ export class View {
 
 		dom.div.style('background-color', viewData.backgroundColor)
 
-		for (const chart of Object.values(viewData.charts) as FormattedBoxPlotChartsEntry[]) {
-			const chartWrapper = dom.charts.append('div').attr('class', 'sjpp-boxplot-chart-wrapper')
+		for (const [Id, chart] of Object.entries(viewData.charts)) {
+			const chartWrapper = dom.charts
+				.append('div')
+				.attr('class', 'sjpp-boxplot-chart-wrapper')
+				.attr('data-testid', 'sjpp-boxplot-chartDiv-' + Id)
 
 			const svg = chartWrapper.append('svg').attr('class', 'sjpp-boxplot-svg')
 

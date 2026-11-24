@@ -44,16 +44,15 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		}
 
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
-		const { controls, errdiv, loadingDiv, mainDiv, renderedData, charts, legendDiv } = this.getStandardDomLayout(
-			holder,
-			opts
-		)
+		const { controls, errdiv, loadingDiv, mainDiv, banner, renderedData, charts, legendDiv } =
+			this.getStandardDomLayout(holder, opts)
 
 		this.dom = {
 			controls: controls as Elem,
 			div: mainDiv,
 			error: errdiv,
 			loading: loadingDiv,
+			banner: banner.attr('data-testid', 'sjpp-boxplot-banner'),
 			renderedData,
 			charts: charts
 				.attr('class', 'sjpp-boxplot-charts')
@@ -148,6 +147,9 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			this.toggleLoadingDiv('block', 'block')
 			const data = await model.getData()
 			if (isErrorResponse(data)) throw new Error(data.error)
+			if (!data.charts || !Object.keys(data.charts).length) {
+				this.dom.banner.html(`<span>No visible box plot data to render</span>`).style('display', 'block')
+			}
 			setDescrStatsByTerm([config.term, config.term2], data.descrStats)
 			config.bins = data.bins
 
@@ -243,8 +245,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 				label: 'Descriptive statistics',
 				testid: 'sjpp-download-descrstats',
 				filename: `${filename}_descriptive_stats`,
-				callback: () =>
-					descrStatsToTSV(statTerms.map(tw => ({ name: tw.term.name, stats: descrStatsByTerm[tw.$id] })))
+				callback: () => descrStatsToTSV(statTerms.map(tw => ({ name: tw.term.name, stats: descrStatsByTerm[tw.$id] })))
 			})
 		}
 

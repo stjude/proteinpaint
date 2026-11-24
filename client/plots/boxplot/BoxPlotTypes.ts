@@ -37,6 +37,8 @@ export type BoxPlotDom = {
 	div: Div
 	/** Error messages */
 	error: Div
+	/** Banner for the plot */
+	banner: Div
 	/** Error messages */
 	loading: Div
 	/** Sandbox header */
