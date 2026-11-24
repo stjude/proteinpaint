@@ -86,6 +86,25 @@ tape('id2sampleRef(): prefers id2sampleRefs, else id2sampleName raw-then-Number,
 	test.end()
 })
 
+tape('getSamples: currentGeneNames retains nonnumeric string sample IDs', async t => {
+	const id = 'case-uuid'
+	const q = {
+		currentGeneNames: ['TP53'],
+		ds: {
+			genomeObj: { chrlookup: {} },
+			mayGetGeneVariantData: async tw => new Map([[tw.$id, { [id]: { key: 'TP53', values: [] } }]])
+		}
+	}
+	const rows = [
+		{ sample: id, key: 'Status', term_id: 'status', value: 'keep' },
+		{ sample: 'case-other', key: 'Status', term_id: 'status', value: 'drop' }
+	]
+	const samples = await getSamples(q, rows, [])
+	t.deepEqual(Object.keys(samples), [id], 'string sample ID matches the gene-variant result')
+	t.equal(samples[id].status.value, 'keep', 'matching sample annotation is retained')
+	t.end()
+})
+
 tape('\n', function (test) {
 	test.comment('-***- modules/termdb.matrix specs -***-')
 	test.end()
@@ -1968,6 +1987,27 @@ tape('getData: samplelst overlay resolves on a dataset without a sqlite db', asy
 	t.equal('outsider' in data.samples, false, 'a listed member outside the authorized scope is not added')
 	t.equal('outsider' in data.refs.bySampleId, false, 'and it cannot be echoed back through bySampleId')
 	t.equal(data.refs.bySampleId.c1.label, 'submitter-c1', 'in-scope samples still resolve their display ref')
+	t.end()
+})
+
+tape('getData: geneVariant sample preserves nonnumeric string ID', async t => {
+	await ensureOpenAuth()
+	const id = 'case-uuid'
+	const ds = makeNoDbDs()
+	ds.mayGetGeneVariantData = async tw => new Map([[tw.$id, { [id]: { key: 'TP53', values: [] } }]])
+	const tw = {
+		$id: 'variant',
+		term: {
+			type: 'geneVariant',
+			name: 'TP53',
+			sampleTypes: [],
+			genes: [{ kind: 'gene', type: 'geneVariant', id: 'TP53', gene: 'TP53', name: 'TP53' }]
+		},
+		q: { type: 'values' }
+	}
+	const data = await getData({ terms: [tw] }, ds)
+	t.notOk(data.error, 'query succeeds')
+	t.equal(data.samples[id].sample, id, 'sample row keeps the original string ID')
 	t.end()
 })
 

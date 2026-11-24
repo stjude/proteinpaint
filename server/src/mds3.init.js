@@ -48,7 +48,7 @@ import { validate_query_singleSampleMutation } from '#routes/termdb.singleSample
 import { validate_query_geneExpression, validateQueryIsoformExpression } from './routes/termdb.cluster.ts'
 import { validateSkipGeneNameValidation } from './geneRefValidation.ts'
 import { validateCheckAccessToSampleData } from './termdb.sampleAccess.ts'
-import { mayLimitSamples, combinePPfilterAndTid2value } from './mds3.filter.js'
+import { mayLimitSamples, combinePPfilterAndTid2value, normalizeSampleId } from './mds3.filter.js'
 import { mayMapNonDictionaryData, id2sampleRef } from './termdb.matrix.ts'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
@@ -1972,7 +1972,8 @@ export async function validate_query_ssGSEA(ds, genome) {
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
-				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				const sampleId = normalizeSampleId(sid)
+				if (limitSamples && !limitSamples.has(sampleId)) continue
 				filteredValues[sid] = value
 				const ref = id2sampleRef(sid, ds)
 				if (ref) bySampleId[sid] = ref
@@ -2210,7 +2211,8 @@ export async function validate_query_dnaMethylation(ds, genome) {
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
-				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				const sampleId = normalizeSampleId(sid)
+				if (limitSamples && !limitSamples.has(sampleId)) continue
 				filteredValues[sid] = value
 				const ref = id2sampleRef(sid, ds)
 				if (ref) bySampleId[sid] = ref
@@ -2400,7 +2402,8 @@ function makeElementMethylationGetter(q, nominated, ds) {
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
-				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				const sampleId = normalizeSampleId(sid)
+				if (limitSamples && !limitSamples.has(sampleId)) continue
 				filteredValues[sid] = value
 				const ref = id2sampleRef(sid, ds)
 				if (ref) bySampleId[sid] = ref
@@ -2498,7 +2501,8 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
-				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				const sampleId = normalizeSampleId(sid)
+				if (limitSamples && !limitSamples.has(sampleId)) continue
 				filteredValues[sid] = value
 				const ref = id2sampleRef(sid, ds)
 				if (ref) bySampleId[sid] = ref
@@ -3425,7 +3429,8 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 		const limitSamples = await mayLimitSamples(q, null, ds)
 		const filteredValues = Object.create(null)
 		for (const [sid, value] of Object.entries(mappedValues)) {
-			if (limitSamples && !limitSamples.has(Number(sid))) continue
+			const sampleId = normalizeSampleId(sid)
+			if (limitSamples && !limitSamples.has(sampleId)) continue
 			filteredValues[sid] = value
 		}
 

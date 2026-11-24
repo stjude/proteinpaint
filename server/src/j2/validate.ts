@@ -2,7 +2,7 @@ import computePercentile from '#shared/compute.percentile.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
 import { JT_na, JT_canonical, JT_ir } from '#shared/common.js'
 import * as utils from '../utils.js'
-import { mayLimitSamples } from '../mds3.filter.js'
+import { mayLimitSamples, normalizeSampleId } from '../mds3.filter.js'
 import { setFile, validateSampleHeader } from '../mds3.init.js'
 import type { Junction, TermdbJunctionsRequest } from '#types'
 import { mayMapNonDictionaryData } from '../termdb.matrix.js'
@@ -343,7 +343,8 @@ export async function getJunctionData(
 		// filter samples
 		const filteredValues = Object.create(null)
 		for (const [sid, value] of Object.entries(mappedValues)) {
-			if (limitSamples && !limitSamples.has(Number(sid))) continue
+			const sampleId = normalizeSampleId(sid)
+			if (limitSamples && !limitSamples.has(sampleId)) continue
 			filteredValues[sid] = value
 		}
 		if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)

@@ -443,6 +443,35 @@ tape('geneVariant mapping: remote numeric IDs and hidden filters keep existing b
 	t.end()
 })
 
+tape('geneVariant mapping: nonnumeric string sample IDs respect sample filters', async t => {
+	const ids = ['case-keep', 'case-drop']
+	const ds = {
+		sampleId2Type: new Map(ids.map(id => [id, 2])),
+		cohort: {
+			termdb: {
+				filterSamples: async () => new Set([ids[0]])
+			}
+		},
+		validate_filter0: value => value,
+		queries: {
+			snvindel: {
+				byisoform: {
+					get: async q => {
+						const limit = await mayLimitSamples(q, null, ds)
+						const record = mutation(1, ids)
+						return [{ ...record, samples: record.samples.filter(s => !limit || limit.has(s.sample_id)) }]
+					}
+				}
+			}
+		}
+	}
+	mayAdd_mayGetGeneVariantData(ds, {})
+	const data = await getSampleValues(ds, makeTw(), { filter0: { cohort: 'hidden' } })
+	t.deepEqual(Object.keys(data), [ids[0]], 'nonnumeric string ID is retained when allowed')
+	t.equal(data[ids[0]].values[0].TumorAC, `${ids[0]},5`, 'retained ID keeps its annotation')
+	t.end()
+})
+
 tape('geneVariant mapping: sample object preserves numeric and numeric-string IDs', async t => {
 	const ids = [1, '7']
 	const ds = {

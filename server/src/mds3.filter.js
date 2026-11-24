@@ -1,5 +1,6 @@
 import { get_samples } from './termdb.sql.js'
 import { filterJoin } from '#shared/filter.js'
+import { isNumeric } from '#shared/helpers.js'
 
 /*
 input:
@@ -73,6 +74,10 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 	}
 
 	return useSet
+}
+
+export function normalizeSampleId(sampleId) {
+	return isNumeric(sampleId) ? Number(sampleId) : sampleId
 }
 
 /*

@@ -41,7 +41,7 @@ import {
 	resolveTermCollectionFractions,
 	resolveTermId
 } from './termdb.termCollection.ts'
-import { mayLimitSamples, combinePPfilterAndTid2value } from './mds3.filter.js'
+import { mayLimitSamples, combinePPfilterAndTid2value, normalizeSampleId } from './mds3.filter.js'
 import { resolveGroups, isFilterGroup, maxFilterGroups } from './utils/sampleGroups.ts'
 
 /* centralized resolution of a sample id -> display refs ({ label, ... }) for refs.bySampleId{}.
@@ -555,7 +555,8 @@ async function setGeneVariantDataForTw(q, tw, samples) {
 	const term2sample2value = await q.ds.mayGetGeneVariantData(tw, q)
 	const sample2value = term2sample2value.get(tw.$id)
 	for (const [sid, value] of Object.entries(sample2value)) {
-		const sampleEntry = getOrCreateSampleEntry(samples, sid, { sample: Number(sid) })
+		const sampleId = normalizeSampleId(sid)
+		const sampleEntry = getOrCreateSampleEntry(samples, sampleId, { sample: sampleId })
 		sampleEntry[tw.$id] = value
 	}
 }
@@ -1277,7 +1278,7 @@ async function mayQueryMutatedSamples(q) {
 			q
 		)
 		for (const sampleId of Object.keys(term2sample2value.get(geneName))) {
-			sampleSet.add(Number(sampleId))
+			sampleSet.add(normalizeSampleId(sampleId))
 		}
 	}
 	return sampleSet

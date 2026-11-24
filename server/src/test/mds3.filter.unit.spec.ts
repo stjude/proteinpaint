@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { tid2value2filter, combinePPfilterAndTid2value, mayLimitSamples } from '../mds3.filter.js'
+import { tid2value2filter, combinePPfilterAndTid2value, mayLimitSamples, normalizeSampleId } from '../mds3.filter.js'
 /*
 test sections:
 tid2value2filter - empty tid2value
@@ -29,6 +29,15 @@ tape('tid2value2filter - empty tid2value', function (test) {
 		f,
 		{ type: 'tvslst', in: true, join: 'and', lst: [] },
 		'should return an empty tvslst when tid2value is empty'
+	)
+	test.end()
+})
+tape('normalizeSampleId: converts numeric strings and preserves other strings', function (test) {
+	test.equal(normalizeSampleId('7'), 7, 'numeric string IDs are converted to numbers')
+	test.equal(normalizeSampleId('case-uuid'), 'case-uuid', 'nonnumeric string IDs stay unchanged')
+	test.ok(
+		new Set(['case-uuid']).has(normalizeSampleId('case-uuid')),
+		'string ID remains comparable to a string-keyed sample filter'
 	)
 	test.end()
 })

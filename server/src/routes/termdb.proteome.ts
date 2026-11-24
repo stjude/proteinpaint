@@ -2,7 +2,7 @@ import path from 'path'
 import type { RoutePayload, RouteApi } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import * as utils from '#src/utils.js'
-import { mayLimitSamples } from '#src/mds3.filter.js'
+import { mayLimitSamples, normalizeSampleId } from '#src/mds3.filter.js'
 import { id2sampleRef, mayMapNonDictionaryData } from '#src/termdb.matrix.ts'
 import serverconfig from '#src/serverconfig.js'
 import { sql } from '#src/sql.ts'
@@ -465,7 +465,8 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 		)
 		const filteredValues = Object.create(null)
 		for (const [sid, sampleValue] of Object.entries(mappedValues)) {
-			if (allowedSampleIds && !allowedSampleIds.has(Number(sid))) continue
+			const sampleId = normalizeSampleId(sid)
+			if (allowedSampleIds && !allowedSampleIds.has(sampleId)) continue
 			filteredValues[sid] = sampleValue.value
 			if (sampleValue.isControl) controlSampleIds.add(sid)
 		}

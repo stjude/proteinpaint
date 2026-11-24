@@ -16,7 +16,7 @@ import type { ReqQueryAddons } from '../../routes/types.ts'
 import * as utils from '#src/utils.js'
 import { getH5samples } from '../utils/h5samples.ts'
 import serverconfig from '#src/serverconfig.js'
-import { mayLimitSamples } from '#src/mds3.filter.js'
+import { mayLimitSamples, normalizeSampleId } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getData, id2sampleRef, resolveSampleMapping, mayMapNonDictionaryData } from '#src/termdb.matrix.js'
 import { termType2label, numericTypes, dictionaryNumericTypes, setQuerySampleTypes } from '#shared/terms.js'
@@ -435,7 +435,8 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 			// filter sample data
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
-				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				const sampleId = normalizeSampleId(sid)
+				if (limitSamples && !limitSamples.has(sampleId)) continue
 				filteredValues[sid] = value
 				const ref = id2sampleRef(sid, ds)
 				if (ref) bySampleId[sid] = ref
@@ -549,7 +550,8 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
-				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				const sampleId = normalizeSampleId(sid)
+				if (limitSamples && !limitSamples.has(sampleId)) continue
 				filteredValues[sid] = value
 				const ref = id2sampleRef(sid, ds)
 				if (ref) bySampleId[sid] = ref

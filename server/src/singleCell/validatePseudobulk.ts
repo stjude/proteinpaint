@@ -7,7 +7,7 @@ import serverconfig from '#src/serverconfig.js'
 import { file_is_readable } from '#src/utils.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { getH5samples } from '../utils/h5samples.ts'
-import { mayLimitSamples } from '#src/mds3.filter.js'
+import { mayLimitSamples, normalizeSampleId } from '#src/mds3.filter.js'
 import { mayMapNonDictionaryData, id2sampleRef } from '#src/termdb.matrix.ts'
 import { validString } from '#src/routes/common.js'
 
@@ -217,7 +217,8 @@ export async function validatePseudobulk(ds: any) {
 			const mappedValues = await mayMapNonDictionaryData(tw, { ...param, ds }, s2v)
 			const filteredValues = Object.create(null)
 			for (const [sid, value] of Object.entries(mappedValues)) {
-				if (limitSamples && !limitSamples.has(Number(sid))) continue
+				const sampleId = normalizeSampleId(sid)
+				if (limitSamples && !limitSamples.has(sampleId)) continue
 				filteredValues[sid] = value
 				const ref = id2sampleRef(sid, ds)
 				if (ref) bySampleId[sid] = ref
