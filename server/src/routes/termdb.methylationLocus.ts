@@ -222,9 +222,14 @@ async function annotateSamples(
 	const tw = { ...(q.annotationTw as any), $id: 'annotation' }
 	if (typeof tw.term?.id != 'string' && typeof tw.term?.type != 'string') throw new Error('invalid annotationTw')
 	const data = await getData(
-		{ filter: q.filter, filter0: q.filter0, terms: [tw], __protected__: q.__protected__ },
-		ds,
-		true
+		{
+			filter: q.filter,
+			filter0: q.filter0,
+			terms: [tw],
+			__protected__: q.__protected__,
+			sampleMapping: 'parentToChildren'
+		},
+		ds
 	)
 	if (data.error) throw new Error(data.error)
 	const byId = data.samples as Record<string, any>

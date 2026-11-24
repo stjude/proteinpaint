@@ -1,6 +1,6 @@
 import computePercentile from '#shared/compute.percentile.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
-import { JT_na, JT_canonical, JT_ir } from '#shared/common.js'
+import { JT_na, JT_canonical, JT_ir, junctionShareMeasure } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples, normalizeSampleId } from '../mds3.filter.js'
 import { setFile, validateSampleHeader } from '../mds3.init.js'
@@ -288,8 +288,34 @@ export async function validate_query_junction(ds: any, genome: any) {
 	/*
 	called by getData() and return sample level numeric values in required format
 	*/
-	q.get = async (param: { terms: any[]; [key: string]: any }) => {
-		return getJunctionData(param, q.listJunctions, ds)
+	q.get = async (param: { terms?: any[]; [key: string]: any }) =>
+		getJunctionData(param, q.listJunctions, ds, q.geneJunctionTotals)
+
+	/* by sample, the reads of all the junctions of a gene with both ends in a region (junctionGene()), of every sample:
+	the denominator of a junction's share of its gene's junction reads, as testJunctionGroups() takes it */
+	q.geneJunctionTotals = async (region: { chr: string; start: number; stop: number }, gene: string) => {
+		const total = new Map<string | number, number>()
+		await utils.readTabixLines({
+			file: q.file,
+			regions: [{ chr: q.nochr ? region.chr.replace('chr', '') : region.chr, start: region.start, stop: region.stop }],
+			callback: (line: string) => {
+				const l = line.split('\t')
+				if (Number(l[1]) < region.start || Number(l[2]) > region.stop) return
+				try {
+					if (junctionGene(JSON.parse(l[4])) != gene) return
+				} catch (_) {
+					return
+				}
+				for (let i = 5; i < l.length; i++) {
+					if (!l[i]) continue
+					const rc = Number(l[i].split(';')[0])
+					if (!Number.isInteger(rc) || rc <= 0) continue
+					const id = q.samples[i - 5]?.name
+					total.set(id, (total.get(id) || 0) + rc)
+				}
+			}
+		})
+		return total
 	}
 
 	/*
@@ -359,7 +385,12 @@ async function validate_junction_cluster(ds: any, junctionQ: any) {
 export async function getJunctionData(
 	param: { terms?: any[]; [key: string]: any },
 	listJunctions: (param: any, keepList: { start: number; stop: number; strand: string }[]) => Promise<any>,
-	ds: any
+	ds: any,
+	/** for a term of measure share: by sample, the reads of all the junctions of a gene in a region */
+	geneJunctionTotals?: (
+		region: { chr: string; start: number; stop: number },
+		gene: string
+	) => Promise<Map<string | number, number>>
 ) {
 	if (!Array.isArray(param?.terms) || !param.terms.length) throw new Error('junction.get(): terms[] is required')
 	const term2sample2value = new Map<string, Record<string, number>>()
@@ -371,13 +402,15 @@ export async function getJunctionData(
 		if (!term.chr || !Number.isInteger(term.start) || !Number.isInteger(term.stop) || !term.strand) {
 			throw new Error('junction.get(): junction term must include chr, integer start/stop, and strand')
 		}
-		if (term.measure != undefined && term.measure != JT_ir) {
+		if (term.measure != undefined && term.measure != JT_ir && term.measure != junctionShareMeasure) {
 			throw new Error(`junction.get(): invalid junction term measure='${term.measure}'`)
 		}
+		if (term.measure == junctionShareMeasure) validateShareTerm(term)
 		const query = {
 			...param,
 			rglst: [{ chr: term.chr, start: term.start, stop: term.stop }],
-			readcountCutoff: tw.q?.readcountCutoff ?? param.readcountCutoff,
+			// a share counts every read, as the group test does
+			readcountCutoff: term.measure == junctionShareMeasure ? 0 : tw.q?.readcountCutoff ?? param.readcountCutoff,
 			skipSampleFiltering: true // defer sample filtering until source samples are mapped (see below)
 		}
 		const keepList = [{ start: term.start, stop: term.stop, strand: term.strand }]
@@ -385,13 +418,20 @@ export async function getJunctionData(
 		const junction = result.junctions.find(
 			(j: Junction) => j.start == term.start && j.stop == term.stop && j.strand == term.strand
 		)
-		/* by sample, the read count of the junction, or for a term of measure IR, the IR ratio. An IR term of a junction
-		with no IR event has no value */
-		const sn2value = term.measure == JT_ir ? junction?.sn2ir : junction?.sn2rc
-		// filter samples by sample type of term
+		/* by sample, the read count of the junction; for a term of measure IR, the IR ratio (an IR term of a junction
+		with no IR event has no value); for a term of measure share, its share of its gene's junction reads */
+		let samples: [string | number, number][]
+		if (term.measure == junctionShareMeasure) {
+			if (!geneJunctionTotals) throw new Error('junction.get(): no junction reads by gene for a term of measure share')
+			const totals = await geneJunctionTotals(term.region, term.gene)
+			samples = Object.entries(junctionShares(junction?.sn2rc || new Map(), totals))
+		} else {
+			samples = [...((term.measure == JT_ir ? junction?.sn2ir : junction?.sn2rc) || [])]
+		}
+		// filter samples by sample type of term; a share's id is an object key, a string
 		const s2v = Object.create(null)
-		for (const [sid, value] of sn2value || []) {
-			if (term.sampleTypes?.length && !term.sampleTypes.includes(ds.sampleId2Type.get(sid))) continue
+		for (const [sid, value] of samples) {
+			if (term.sampleTypes?.length && !term.sampleTypes.includes(ds.sampleId2Type.get(normalizeSampleId(sid)))) continue
 			if (!Number.isFinite(value)) continue
 			s2v[sid] = value
 		}
@@ -407,6 +447,37 @@ export async function getJunctionData(
 		if (Object.keys(filteredValues).length) term2sample2value.set(tw.$id, filteredValues)
 	}
 	return { term2sample2value }
+}
+
+// the largest region whose junction reads are summed for a share
+const maxShareRegion = 10_000_000
+
+/* the share of a junction, in percent, of each sample with reads of its gene: the sample's reads of the junction over
+its reads of all the gene's junctions, 0 for a sample with none of the junction, as testJunctionGroups() takes it; a
+sample without reads of the gene has no share */
+export function junctionShares(
+	sn2rc: Map<string | number, number>,
+	totals: Map<string | number, number>
+): Record<string, number> {
+	const out: Record<string, number> = {}
+	for (const [id, total] of totals) if (total > 0) out[id] = (100 * (sn2rc.get(id) || 0)) / total
+	return out
+}
+
+function validateShareTerm(term: any) {
+	if (typeof term.gene != 'string' || !term.gene) throw new Error('junction.get(): a term of measure share needs .gene')
+	const r = term.region
+	if (
+		r?.chr != term.chr ||
+		!Number.isInteger(r.start) ||
+		!Number.isInteger(r.stop) ||
+		r.start > term.start ||
+		r.stop < term.stop ||
+		r.stop - r.start > maxShareRegion
+	)
+		throw new Error(
+			`junction.get(): a term of measure share needs .region on its chromosome, around it and at most ${maxShareRegion} bp`
+		)
 }
 
 /* the index of the IR ratio in the value string of a sample, when the junction has an IR event, of the junction's
@@ -468,10 +539,12 @@ export function testJunctionGroups(
 	groupReads: Map<Junction, { gene: string; reads: Map<string | number, number> }>,
 	geneTotal: Map<string, Map<string | number, number>>,
 	groups: JunctionGroups
-): { groups: { name: string; n: number }[] } {
+): { groups: { name: string; n: number }[]; groupTest: { minSamples: number; minShare: number } } {
 	const withReads = new Set([...geneTotal.values()].flatMap(t => [...t.keys()]))
 	const out = {
-		groups: groups.names.map(name => ({ name, n: [...withReads].filter(id => groups.groupOf.get(id) == name).length }))
+		groups: groups.names.map(name => ({ name, n: [...withReads].filter(id => groups.groupOf.get(id) == name).length })),
+		// what is not tested, for the track's legend to state
+		groupTest: { minSamples: minJunctionSamples, minShare: minJunctionShare }
 	}
 	const tested = junctions.filter(j => groupReads.has(j) && geneTotal.has(groupReads.get(j)!.gene))
 	const shares = tested.map(j => {

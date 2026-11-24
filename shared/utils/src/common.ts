@@ -1550,6 +1550,8 @@ export const JT_a5ss = 'a5ss'
 export const JT_a3ss = 'a3ss'
 export const JT_mxe = 'mxe' // mutually exclusive exon
 export const JT_ir = 'IR' // intron retention, of the intron between the two ends of the junction
+/** the measure of a junction term whose value is the junction's share of its gene's junction reads (JunctionTerm.measure) */
+export const junctionShareMeasure = 'share'
 /* name: a single word, so that a type label does not wrap
 desc: the definition, shown on clicking the type in the junction track legend */
 export const JTypes = {

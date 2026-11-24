@@ -124,7 +124,11 @@ async function getTkData(tk, block) {
 		data = await dofetch3('termdb/junctions', { body, headers })
 	}
 	if (data.error) throw new Error(data.error)
-	if (data.groups) setGroupTest(data)
+	if (data.groups) {
+		setGroupTest(data)
+		// what was not tested, for the legend to state
+		tk.groupTest = data.groupTest
+	}
 	return data
 }
 

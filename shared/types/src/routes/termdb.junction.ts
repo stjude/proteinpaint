@@ -72,6 +72,9 @@ export type TermdbJunctionsDataResponse = {
 	alert?: string
 	/** with groupTw: each group with its number of samples that have junction reads in view, as tested */
 	groups?: { name: string; n: number }[]
+	/** with groupTw: a junction in fewer than minSamples samples, or with a mean share below minShare (a fraction) in both
+	groups, is not tested */
+	groupTest?: { minSamples: number; minShare: number }
 	/** read counts by sample of the junctions found in the most samples, when matrixTop was requested */
 	matrix?: {
 		/** names of the samples that the request covers; absent when the user may not see sample names */

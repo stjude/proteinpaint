@@ -12,7 +12,8 @@ import {
 	JT_exonaltuse,
 	JT_a5ss,
 	JT_a3ss,
-	JT_ir
+	JT_ir,
+	junctionShareMeasure
 } from '#shared/common.js'
 import { getParameter } from './tk'
 import { dofetch3 } from '#common/dofetch'
@@ -991,7 +992,10 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 	}
 	if (isClickMenu && tk.massApp) {
 		const buttonCell = samplesCell ? samplesCell.append('div') : table.addRow()[1]
-		addTermButtons(buttonCell, tk, makeJunctionTerm(j), 'sjpp-junction')
+		// with the group test, Details also shows the share of the gene's junction reads that was tested
+		const share =
+			tk.groupTw && j.gene && tk.groupRegion ? makeJunctionTerm(j, junctionShareMeasure, tk.groupRegion) : null
+		addTermButtons(buttonCell, tk, makeJunctionTerm(j), 'sjpp-junction', share)
 	}
 	if (j.IR) {
 		// of the samples above, those retaining the intron between the two ends of this junction
@@ -1037,9 +1041,10 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 	}
 }
 
-/* measure: optional, JT_ir for a term of the IR ratio of each sample, see JunctionTerm.measure; absent for its read count.
-The id and name tell the two terms of a junction apart */
-export function makeJunctionTerm(j, measure) {
+/* measure: optional, JT_ir for a term of the IR ratio of each sample, or junctionShareMeasure for its share of the reads of
+its gene's junctions in region (j.gene, as the group test takes it), see JunctionTerm.measure; absent for its read count.
+The id and name tell the terms of a junction apart */
+export function makeJunctionTerm(j, measure, region) {
 	const position = `${j.chr}:${j.start + 1}-${j.stop + 1}`
 	const term = {
 		type: TermTypes.JUNCTION,
@@ -1055,33 +1060,45 @@ export function makeJunctionTerm(j, measure) {
 		term.measure = JT_ir
 		term.id += `:${JT_ir}`
 		term.name += ' IR ratio'
+	} else if (measure == junctionShareMeasure) {
+		if (!j.gene || !region) throw new Error('a junction share term needs the gene and region')
+		term.measure = junctionShareMeasure
+		term.gene = j.gene
+		term.region = { chr: region.chr, start: region.start, stop: region.stop }
+		term.id += `:${junctionShareMeasure}`
+		term.name += `, % of ${j.gene} junction reads`
 	} else if (measure) {
 		throw new Error(`invalid junction term measure='${measure}'`)
 	}
 	return term
 }
 
-/* Details opens a summary plot of the term; Select adds it as a custom term, to be found in the term picker.
-testidPrefix: of the data-testid of the buttons */
-function addTermButtons(holder, tk, term, testidPrefix) {
+/* Details opens a summary plot of the term, and before it one of shareTerm when given; Select adds the term as a custom
+term, to be found in the term picker. testidPrefix: of the data-testid of the buttons */
+function addTermButtons(holder, tk, term, testidPrefix, shareTerm = null) {
 	holder
 		.append('button')
 		.attr('data-testid', `${testidPrefix}-details`)
 		.text('Details')
 		.on('click', async () => {
 			tk.itemtip.hide()
-			await tk.massApp.dispatch({
-				type: 'plot_create',
-				config: {
-					chartType: 'summary',
-					// read for the sample types the track shows, chosen in the genome browser's sample type row
-					term: { term: tk.sampleTypes ? withSampleTypes(term, tk) : term, q: { mode: 'continuous' } },
-					/* with the groups the junctions are tested between, the junction's read count per group: the raw reads,
-					beside the share of the junction reads that the track tests, e.g. a start whose reads do not change while
-					the rest of the gene's rise */
-					...(tk.groupTw ? { term2: structuredClone(tk.groupTw) } : {})
-				}
-			})
+			/* with the groups the junctions are tested between: the junction's read count per group, and over it, as the
+			newest plot shows first, its share of the gene's junction reads, the value the track tests. They can differ, e.g.
+			a start whose reads do not change while the rest of the gene's rise */
+			// beside the share, the read count says what it is
+			const counts = shareTerm ? { ...term, name: `${term.name}, read count` } : term
+			for (const t of [counts, shareTerm]) {
+				if (!t) continue
+				await tk.massApp.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'summary',
+						// read for the sample types the track shows, chosen in the genome browser's sample type row
+						term: { term: tk.sampleTypes ? withSampleTypes(t, tk) : t, q: { mode: 'continuous' } },
+						...(tk.groupTw ? { term2: structuredClone(tk.groupTw) } : {})
+					}
+				})
+			}
 		})
 	holder
 		.append('button')

@@ -379,6 +379,8 @@ function render(tk: any, block: any): number {
 	// the fill of a DMR is its mean Δβ on a scale from the smallest to the largest in view, which the legend shows
 	const sizes = viewDmrs.map(d => Math.abs(d.delta))
 	tk.dmrDeltaRange = sizes.length ? [Math.min(...sizes), Math.max(...sizes)] : [0, 0.1]
+	// the directions of the DMRs in view, so that the legend shows only the ramps that are drawn
+	tk.dmrSigns = [...new Set(viewDmrs.map(d => Math.sign(d.delta)))].filter(s => s)
 	const dmrFill = dmrColor(tk.dmrDeltaRange[0], tk.dmrDeltaRange[1])
 	/* px of a position; one at or past an end of the view is that end's edge, on the side that the view's orientation
 	puts it, as seekcoord() can find no x at the view's bounds */
@@ -731,12 +733,18 @@ function renderLegend(
 		const [lo, hi] = tk.dmrDeltaRange || [0, 0.1],
 			fill = dmrColor(lo, hi)
 		const stops = (sign: number) => [0, 0.25, 0.5, 0.75, 1].map(t => fill(sign * (lo + t * (hi - lo)))).join(',')
-		item(
-			'',
-			`DMR of the scan at its length, |mean Δβ| ${round(lo)} to ${round(hi)} (${data.groups[1]} − ${data.groups[0]}):`
-		)
-		item(`width:60px;height:8px;background:linear-gradient(to right,${stops(-1)})`, 'hypomethylated')
-		item(`width:60px;height:8px;background:linear-gradient(to right,${stops(1)})`, 'hypermethylated')
+		const signs: number[] = tk.dmrSigns || []
+		if (!signs.length) item('', 'no DMR of the scan in view')
+		else
+			item(
+				'',
+				`DMR of the scan at its length, |mean Δβ| ${round(lo)} to ${round(hi)} (${data.groups[1]} − ${data.groups[0]}):`
+			)
+		// only the directions drawn in view
+		if (signs.includes(-1))
+			item(`width:60px;height:8px;background:linear-gradient(to right,${stops(-1)})`, 'hypomethylated')
+		if (signs.includes(1))
+			item(`width:60px;height:8px;background:linear-gradient(to right,${stops(1)})`, 'hypermethylated')
 	}
 	if (data.gene) item('width:12px;height:12px;background:#333;opacity:.3', 'ρ faded if q ≥ 0.05')
 	if (data.gene) item('width:16px;height:6px;background:#555', `log2(${data.unit}+1)`)

@@ -389,6 +389,8 @@ function mayTestGroups(tk) {
 		control,
 		case: _case,
 		label: "Share of gene's junction reads",
+		// the q below which a junction is colored, for the legend
+		q: groupTestQ,
 		noneLabel: `q ≥ ${groupTestQ} or not tested`,
 		// pale, as a group may be gray too, e.g. a reference
 		noneColor: '#e4e4e4'

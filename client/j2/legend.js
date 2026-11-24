@@ -175,4 +175,40 @@ function update_deltaPsi(tk) {
 			testid: 'sjpp-j2-legend-row-type-item'
 		})
 	}
+	if (tk.groupTest) describeGroupTest(tk)
+}
+
+/* how the junctions are tested between the groups (testJunctionGroups() of the server), in plain words, so that the
+track can be read, and explained, from its legend */
+function describeGroupTest(tk) {
+	const { control, case: _case } = tk.deltaPsiGroups
+	const { minSamples, minShare } = tk.groupTest
+	const r = tk.groupRegion
+	const lines = [
+		`How junctions are compared: for each sample, a junction's share is its reads divided by all the junction reads of its gene${
+			r ? ` (${r.chr}:${r.start + 1}-${r.stop})` : ' in view'
+		}. Shares, not read counts, are compared, so that a gene expressed more does not by itself make its junctions differ.`,
+		`The shares of ${_case.name} and ${control.name} are compared with a two-sided Wilcoxon rank-sum test, and q is the Benjamini–Hochberg adjusted p over all the junctions tested.`,
+		`Not tested: a junction in fewer than ${minSamples} samples, with a mean share below ${
+			minShare * 100
+		}% in both groups, or joining two genes or none.`,
+		`Height: the difference of the groups' mean shares, in percentage points. Color: the group with the larger share, where q < ${
+			tk.deltaPsiGroups.q
+		}. Number in a disc: the samples with at least ${tk.readcountCutoff || 1} read${
+			tk.readcountCutoff > 1 ? 's' : ''
+		} of the junction.`,
+		"Click a junction, then Details: the junction's share per sample, the value tested, and its read count per sample."
+	]
+	tk.legend.type.holder
+		.append('div')
+		.attr('data-testid', 'sjpp-j2-legend-group-test')
+		.style('max-width', '700px')
+		.style('margin-top', '5px')
+		.style('font-size', '.8em')
+		.style('opacity', 0.8)
+		.selectAll('div')
+		.data(lines)
+		.enter()
+		.append('div')
+		.text(d => d)
 }
