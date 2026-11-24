@@ -125,10 +125,15 @@ const preid =
 const newVersion = semver.inc(rootPkg.version, verType, preid)
 
 const pkgs = {}
+// package.json paths of excluded workspaces, whose own version is not bumped
+const excludedPkgPaths = []
 const changedFiles = ex(`git diff --name-only ${opts.refCommit} HEAD`).split('\n')
 
 for (const w of rootPkg.workspaces) {
-	if (opts.exclude.find(s => w.includes(s))) continue
+	if (opts.exclude.find(s => w.includes(s))) {
+		excludedPkgPaths.push(...fs.globSync(`${w}/package.json`, { cwd }))
+		continue
+	}
 	const paths = fs.globSync(`${w}/package.json`, { cwd })
 	for (const pkgPath of paths) {
 		const pkgDir = pkgPath.replace('/package.json', '')
@@ -178,6 +183,21 @@ for (const name in pkgs) {
 	if (pkgs[name].hasChanged) {
 		pkgs[name].version = newVersion
 		hasChanges = true
+	}
+}
+
+// An excluded workspace keeps its own version, but its dependency on a bumped workspace must
+// match the bumped version. Otherwise, `npm i --package-lock-only` looks up the old version in
+// the registry, which fails for a private workspace that is never published, such as front.
+if (opts.write) {
+	for (const pkgPath of excludedPkgPaths) {
+		const pkgDir = pkgPath.replace('/package.json', '')
+		const pkg = require(path.join(cwd, pkgPath))
+		for (const key of ['dependencies', 'devDependencies']) {
+			for (const dname in pkg[key]) {
+				if (pkgs[dname]?.hasChanged) ex(`cd ${pkgDir}; npm pkg set ${key}.${dname}=${newVersion}`)
+			}
+		}
 	}
 }
 
