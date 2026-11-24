@@ -57,6 +57,9 @@ const annotationColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
 /* a sample whose isoforms sum to less (in their unit, e.g. TPM) has no makeup: near 0, a read or two decides a share,
 e.g. FGFR3 outside t(4;14), whose shares then look like a strong difference in usage */
 const minIsoformTotal = 1
+/* with groups, the fewest samples with a makeup a group needs for the isoform shares to be shown, as with the junction
+test: e.g. FBN2, under minIsoformTotal in all but 2 of 220 MMRF samples, would compare 2 shares to none */
+const minGroupMakeups = 5
 // the smallest mean share in a group of an isoform that the two-group test picks by p, see twoGroupShareTest()
 const minRankedShare = 0.01
 
@@ -527,7 +530,8 @@ function render(tk: any, block: any): number {
 /* The makeup of the gene's expression by isoform: per sample, the share of the summed expression of the gene's
 isoforms that each of the isoforms shown apart has, and the rest as one last part. undefined without isoform
 expression, or with one isoform. A sample whose isoforms add up to less than minIsoformTotal, or that misses the value
-of one, has no parts: its makeup is not known.
+of one, has no parts: its makeup is not known. undefined too when a group has fewer than minGroupMakeups samples with a
+makeup, as its shares would mean nothing; the legend says so.
 Which isoforms are shown apart: with two groups, those whose share differs the most between them, by the Wilcoxon p
 of every isoform with a mean share of at least minRankedShare in a group, and q is BH over all of those tested, so
 that picking the smallest p does not shrink q; else, and to break ties of p, the most expressed. */
@@ -548,13 +552,9 @@ export function isoformParts(data: {
 	  }
 	| undefined {
 	const ids = data.expressedIsoforms || []
-	// a sample with a value for every isoform: one whose makeup is known
-	const complete = (v?: (number | null)[]): v is number[] =>
-		!!v &&
-		v.length == ids.length &&
-		v.every(x => x !== null) &&
-		(v as number[]).reduce((a, b) => a + b, 0) >= minIsoformTotal
+	const complete = (v?: (number | null)[]): v is number[] => hasMakeup(v, ids.length)
 	if (ids.length < 2 || !data.samples.some(s => complete(s.isoformValues))) return
+	if (groupMakeups(data).some(g => g.n < minGroupMakeups)) return
 	// the most expressed over the samples whose makeup is known
 	const total = ids.map((_, k) =>
 		data.samples.reduce((sum, s) => sum + (complete(s.isoformValues) ? s.isoformValues[k] : 0), 0)
@@ -584,6 +584,29 @@ export function isoformParts(data: {
 		// the isoforms' own unit, which a dataset sets apart from the gene's
 		unit: data.isoformUnit || 'expression'
 	}
+}
+
+// a sample with a value for every isoform, adding up to minIsoformTotal: one whose makeup is known
+function hasMakeup(v: (number | null)[] | undefined, nIsoforms: number): v is number[] {
+	return (
+		!!v &&
+		v.length == nIsoforms &&
+		v.every(x => x !== null) &&
+		(v as number[]).reduce((a, b) => a + b, 0) >= minIsoformTotal
+	)
+}
+
+// per group, the number of its samples with a makeup; none without groups
+export function groupMakeups(data: {
+	expressedIsoforms?: string[]
+	samples: (Pick<MethylationLocusSample, 'isoformValues'> & { group?: string })[]
+	groups?: string[]
+}): { name: string; n: number }[] {
+	const nIsoforms = data.expressedIsoforms?.length || 0
+	return (data.groups || []).map(name => ({
+		name,
+		n: data.samples.filter(s => s.group === name && hasMakeup(s.isoformValues, nIsoforms)).length
+	}))
 }
 
 /* with two groups, per isoform the Wilcoxon p of its share of the gene between them and the BH q over the isoforms
@@ -750,6 +773,16 @@ function renderLegend(
 	if (data.gene) item('width:16px;height:6px;background:#555', `log2(${data.unit}+1)`)
 	if (data.gene && data.groups?.length)
 		item('', "ρ within groups: each group's ρ, pooled, so that a difference between the groups does not make one")
+	if (!isoforms && (data.expressedIsoforms?.length || 0) > 1) {
+		const makeups = groupMakeups(data)
+		if (makeups.some(g => g.n < minGroupMakeups))
+			item(
+				'',
+				`isoform shares not shown: samples whose ${tk.gene} isoforms add up to ${minIsoformTotal} ${
+					data.isoformUnit || 'expression'
+				} or more, ${makeups.map(g => `${g.name} ${g.n}`).join(', ')}, and ${minGroupMakeups} needed in each group`
+			)
+	}
 	if (isoforms) {
 		const starts = new Map((data.isoforms || []).map(g => [g.isoform, g.strand == '-' ? g.stop : g.start]))
 		item(

@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { isoformParts, isoformUsage, annotationOf, dmrColor } from '../tk'
+import { isoformParts, isoformUsage, annotationOf, dmrColor, groupMakeups } from '../tk'
 import { rankSumP } from '#shared/rankSum.js'
 
 /**
@@ -8,7 +8,8 @@ import { rankSumP } from '#shared/rankSum.js'
  *   - isoformUsage: each group's mean shares, and a BH-adjusted test per isoform with two groups
  *   - annotationOf: a category's color and order, a sample without a value
  *   - isoformParts: the most expressed isoforms apart, the rest as one part, no parts for a sample without expression
- *   - isoformParts with two groups: the isoforms by p of their share, q over all tested, none for a share near 0
+ *   - isoformParts with two groups: the isoforms by p of their share, q over all tested, none for a share near 0, none
+ *     when a group has too few samples with a makeup
  *   - dmrColor: light at the smallest |Δβ| to dark at the largest, blue for hypo, orange for hyper
  */
 
@@ -147,6 +148,24 @@ tape('isoformParts with two groups', test => {
 	const byExpr = isoformParts({ expressedIsoforms: ids, samples })!
 	test.equal(byExpr.ids[0], 'a', 'without groups, should pick by expression')
 	test.equal(byExpr.q, undefined, 'and test nothing')
+	// a gene under minIsoformTotal in nearly every sample, e.g. FBN2 in plasma cells: 2 makeups in one group, none in the other
+	const few = [
+		...samples.filter(s => s.group == 't414').slice(0, 2),
+		...samples.map(s => ({ ...s, isoformValues: ids.map(() => 0.1) }))
+	]
+	test.equal(
+		isoformParts({ expressedIsoforms: ids, samples: few, groups: ['ref', 't414'] }),
+		undefined,
+		'should give none when a group has too few samples with a makeup'
+	)
+	test.deepEqual(
+		groupMakeups({ expressedIsoforms: ids, samples: few, groups: ['ref', 't414'] }),
+		[
+			{ name: 'ref', n: 0 },
+			{ name: 't414', n: 2 }
+		],
+		"and count each group's samples with a makeup, for the legend"
+	)
 	test.end()
 })
 
