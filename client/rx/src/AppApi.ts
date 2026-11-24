@@ -152,13 +152,14 @@ export class AppApi {
 		} catch (e: any) {
 			if (this.isAbortError(e) || (e && typeof e == 'object' && e.level === 'warn')) {
 				self.bus.emit('postRender')
-				console.warn(String(e))
+				console.debug(String(e))
 				return
 			}
 			if (self.wasDestroyed) return
 			if (self.bus && this.#latestActionSequenceId == action?.sequenceId) self.bus.emit('error')
 			if (self.printError) self.printError(e)
-			else console.log(e)
+			// without printError(), the console is the only place that shows the error
+			else console.error(e)
 		}
 		// do not emit a postRender event if the action has become stale
 		if (self.bus && this.#latestActionSequenceId == action?.sequenceId) self.bus.emit('postRender')
@@ -238,7 +239,7 @@ export class AppApi {
 	}
 
 	triggerAbort(reason = '', signal?: any) {
-		if (reason) console.info(`triggerAbort()`, reason)
+		if (reason) console.debug(`triggerAbort()`, reason)
 		if (signal) {
 			if (signal.aborted) return
 			if (this.#abortController && signal === this.#abortController?.signal)
