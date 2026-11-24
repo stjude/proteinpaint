@@ -450,7 +450,13 @@ function getScatterTool(plot: any): SampleTool<ScatterTileData> {
 			const names = new Set(samples.map(s => s.sampleName))
 			return scatterSamples(data.result).some(c => names.has(c.sample)) ? data : null
 		},
-		renderFace: (face, data) => renderScatterFace(face, data.result),
+		renderFace: (face, data, samples, ctx, active) =>
+			renderScatterFace(
+				face,
+				data.result,
+				samples.map(s => s.sampleName),
+				active.sampleName
+			),
 		renderExpanded: async (holder, data, samples, ctx, active) =>
 			ctx.mountChildPlot(holder, 'scatter:' + plot.name, {
 				...(await getScatterChildConfig(data.plot, holder)),
@@ -471,7 +477,15 @@ function getBySampleScatterTool(): SampleTool<ScatterTileData> {
 			const plot = ctx.termdbConfig.scatterplots.find(p => p.name == sample.sampleName)
 			return plot ? await loadScatter(plot, ctx) : null
 		},
-		renderFace: (face, data) => renderScatterFace(face, data.result),
+		// the plot's own sample is its cohort dot among the reference cloud
+		renderFace: (face, data) => {
+			const own = scatterSamples(data.result).filter(c => !c.isRef && c.sample)
+			renderScatterFace(
+				face,
+				data.result,
+				own.map(c => c.sample)
+			)
+		},
 		renderExpanded: async (holder, data, [sample], ctx) =>
 			// the plot labels its own sample; as a child plot keyed by the sample, each sample keeps its own
 			ctx.mountChildPlot(

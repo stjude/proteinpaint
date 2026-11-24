@@ -166,34 +166,100 @@ export function renderBrainImagingFace(face: any, data: { url: string; slice: nu
 
 /************ prebuilt scatter ************/
 
-/** the dots of a sampleScatter response in the plot's colors */
-export function renderScatterFace(face: any, result: any) {
+/** smallest zoomed region of a scatter face, as a fraction of the plot's range on each axis: a lone sample is
+ * shown with its neighborhood */
+const SCATTER_ZOOM_MIN = 0.1
+/** room around the highlighted dots in the zoomed region, as a fraction of their range on each axis */
+const SCATTER_ZOOM_PAD = 0.15
+/** most a dot grows on a zoomed face */
+const SCATTER_DOT_MAX_GROWTH = 3
+
+/** the dots of a sampleScatter response in the plot's colors, zoomed into the region of the `highlight`
+ * samples (all of them, e.g. a patient's samples), which are ringed as on the expanded scatter: thicker for
+ * `emphasized`. Without any highlighted dot, the whole plot is shown */
+export function renderScatterFace(face: any, result: any, highlight: string[] = [], emphasized?: string) {
 	const charts: any[] = Object.values(result)
 	const colorOf = new Map<any, string>()
 	for (const chart of charts) for (const [key, item] of chart.colorLegend || []) colorOf.set(key, item.color)
 	const dots: any[] = charts.flatMap(chart => chart.samples || [])
-	const pad = 6
+	const names = new Set(highlight)
+	const marked = dots.filter(c => names.has(c.sample))
+	const xFull = extent(dots.map(c => c.x)) || [0, 1]
+	const yFull = extent(dots.map(c => c.y)) || [0, 1]
+	const xView = zoomRange(xFull, extent(marked.map(c => c.x)))
+	const yView = zoomRange(yFull, extent(marked.map(c => c.y)))
+	// dots grow with the zoom, though less, so a dense cloud stays readable
+	const zoom = Math.min(span(xFull) / span(xView), span(yFull) / span(yView)) || 1
+	const growth = Math.min(SCATTER_DOT_MAX_GROWTH, Math.sqrt(zoom))
+	const pad = Math.max(6, Math.ceil(1.3 * growth + 2.5 + 1))
 	const x = scaleLinear()
-		.domain([Math.min(...dots.map(c => c.x)), Math.max(...dots.map(c => c.x))])
+		.domain(xView)
 		.range([pad, FACE_W - pad])
 	const y = scaleLinear()
-		.domain([Math.min(...dots.map(c => c.y)), Math.max(...dots.map(c => c.y))])
+		.domain(yView)
 		.range([FACE_H - pad, pad])
-	face
+	const svg = face
 		.append('svg')
 		.attr('width', FACE_W)
 		.attr('height', FACE_H)
 		.style('display', 'block')
 		.style('margin-top', '6px')
+		.style('overflow', 'hidden')
+	// dots out of the region are left out; the ones by its edges are cut by the svg
+	const inView = (c: any) =>
+		c.x >= xView[0] - span(xView) / 20 &&
+		c.x <= xView[1] + span(xView) / 20 &&
+		c.y >= yView[0] - span(yView) / 20 &&
+		c.y <= yView[1] + span(yView) / 20
+	const radius = (c: any) => (c.isRef ? 0.9 : 1.3) * growth
+	svg
+		.append('g')
 		.selectAll('circle')
-		.data(dots)
+		.data(dots.filter(inView))
 		.enter()
 		.append('circle')
 		.attr('cx', c => x(c.x))
 		.attr('cy', c => y(c.y))
-		.attr('r', c => (c.isRef ? 0.9 : 1.3))
+		.attr('r', radius)
 		.attr('fill', c => colorOf.get(c.category) || '#9ca3af')
 		.attr('opacity', 0.75)
+	// rings above all the dots, the emphasized one last
+	svg
+		.append('g')
+		.selectAll('circle')
+		.data(marked.sort((a, b) => Number(a.sample == emphasized) - Number(b.sample == emphasized)))
+		.enter()
+		.append('circle')
+		.attr('data-testid', 'sjpp-sampleview-scatter-highlight')
+		.attr('cx', c => x(c.x))
+		.attr('cy', c => y(c.y))
+		.attr('r', c => radius(c) + 2.5)
+		.attr('fill', 'none')
+		.attr('stroke', 'black')
+		.attr('stroke-width', c => (c.sample == emphasized ? 2 : 1.25))
+}
+
+/** [min, max] of values, or undefined for none */
+function extent(values: number[]): [number, number] | undefined {
+	const finite = values.filter(Number.isFinite)
+	return finite.length ? [Math.min(...finite), Math.max(...finite)] : undefined
+}
+
+function span(r: [number, number]) {
+	return r[1] - r[0]
+}
+
+/** the shown range of an axis: the padded range of the highlighted dots, at least SCATTER_ZOOM_MIN of the
+ * full range, moved inside the full range; the full range without highlighted dots or when the region is
+ * as large */
+export function zoomRange(full: [number, number], marked: [number, number] | undefined): [number, number] {
+	const fullSpan = span(full)
+	if (!marked || !(fullSpan > 0)) return fullSpan > 0 ? full : [full[0] - 0.5, full[0] + 0.5]
+	const size = Math.max(span(marked) * (1 + 2 * SCATTER_ZOOM_PAD), fullSpan * SCATTER_ZOOM_MIN)
+	if (size >= fullSpan) return full
+	const center = (marked[0] + marked[1]) / 2
+	const start = Math.min(Math.max(center - size / 2, full[0]), full[1] - size)
+	return [start, start + size]
 }
 
 /************ genome browser track ************/
