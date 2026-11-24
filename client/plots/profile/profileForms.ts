@@ -12,6 +12,7 @@ import { dofetch3 } from '#common/dofetch'
 import { renderImpressionThermometer, IMPRESSION_MAX_SCORE, POC_FILL } from './renderImpressionThermometer.js'
 import { renderResponseDistribution } from './renderResponseDistribution.js'
 import { renderImpressionLegend } from './renderImpressionLegend.js'
+import type { ImpressionConfig } from './types/ProfilePlotTypes'
 
 const YES_NO_TAB = 'Yes/No Barchart'
 const LIKERT_TAB = 'Likert Scale'
@@ -281,7 +282,7 @@ export class profileForms extends profilePlot {
 	private renderImpression() {
 		const holder = this.dom.impressionDiv
 		holder.selectAll('*').remove()
-		const texts = this.config.impression
+		const texts: ImpressionConfig | undefined = this.config.impression
 		// The whole view is driven off this config block (zones, titles, legend, axis labels), so a
 		// dataset missing it fails here with a named cause rather than downstream on a member access.
 		if (!texts) throw `Missing impression config for the plot ${this.type} in this dataset`
@@ -291,15 +292,18 @@ export class profileForms extends profilePlot {
 		const scColor = this.impressionScColor || '#888'
 		const data = this.data
 
-		// Resolve each performance-zone color from this module's colorMap gradient (config gives the
-		// shade key, not a literal color): Weak=SOMETIMES (lightest) … Strong=ALMOST ALWAYS (darkest).
-		// Falls back to the base module color if a shade is absent for the module.
+		/*
+		Resolve each performance-zone color, first from this module's impression palette
+		(impression.zoneColors[module][zone label]). A module without a palette entry falls back to its
+		Likert colorMap shade named by the zone's `shade` key, then to the base module color.
+		*/
+		const modulePalette = texts.zoneColors?.[this.module] || {}
 		const moduleShades = this.state.termdbConfig?.colorMap?.[this.module] || {}
-		const zones = texts.zones.map((z: any) => ({
+		const zones = texts.zones.map(z => ({
 			label: z.label,
 			min: z.min,
 			max: z.max,
-			color: moduleShades[z.shade] || scColor
+			color: modulePalette[z.label] || (z.shade && moduleShades[z.shade]) || scColor
 		}))
 
 		// Bind tooltip text + optional hover descriptor as the element's datum. The shared

@@ -1,14 +1,14 @@
 import tape from 'tape'
 import { select } from 'd3-selection'
 import type { BaseType } from 'd3-selection'
-import { renderImpressionThermometer } from '../renderImpressionThermometer.js'
+import { renderImpressionThermometer, POC_FILL } from '../renderImpressionThermometer.js'
 import type { ImpressionThermometerArgs } from '../renderImpressionThermometer.js'
 
 /*
 Tests for the impression thermometer (one welded glass vessel, two liquid columns, split bulb).
 
   • both medians → one welded vessel outline, the zone bands, both fills, a full split reservoir
-  • zone bands → one discrete band per zone, in the zone colors at the 0.3 opacity the sibling
+  • zone bands → one discrete band per zone, in the zone colors at the full opacity the sibling
     response-distribution chart uses, tiling the vessel with each label centered on its band
   • geometry → the vessel path carries no NaN and welds the bulb in rather than stroking it apart
   • liquid → fills are opaque, and no white surface decoration is drawn over them
@@ -16,6 +16,7 @@ Tests for the impression thermometer (one welded glass vessel, two liquid column
   • hit area → nothing painted over the columns intercepts pointer events
   • SC-only (poc: null) → the SC fill only, one legend row
   • null SC median → the POC fill only
+  • POC fill → the POC grey, whatever zone its median falls in
   • both medians null → the empty vessel still renders
   • two instances in one holder → no defs id collision
   • data-testid → the svg carries the group-derived suffix, for every real responder group label
@@ -43,7 +44,6 @@ const ZONES = [
 	{ label: 'Strong', min: 8, max: 10, color: '#d9ead3' }
 ]
 const SC_COLOR = '#2381c3'
-const POC_GREY = '#9e9e9e'
 
 const attachTip = (sel: any, text: string, hover?: any) => {
 	sel.datum({ tip: text, ...(hover || {}) })
@@ -96,7 +96,7 @@ tape('both medians: welded vessel, zone bands, two liquid columns', function (te
 	test.equal(holder.selectAll('path.sc-fill').size(), 1, 'one SC liquid column')
 	test.equal(holder.select('path.sc-fill').attr('fill'), SC_COLOR, 'the SC column uses the module color')
 	test.equal(holder.selectAll('path.poc-fill').size(), 1, 'one POC liquid column')
-	test.equal(holder.select('path.poc-fill').attr('fill'), POC_GREY, 'the POC column uses the POC grey')
+	test.equal(holder.select('path.poc-fill').attr('fill'), POC_FILL, 'the POC column uses the POC grey')
 
 	test.equal(holder.selectAll('g .tick').size(), 10, 'one tick per rating 1..10')
 
@@ -133,8 +133,8 @@ tape('zone bands match the distribution chart contract and tile the vessel', fun
 		'the bands use exactly the zone colors, with no substitutions'
 	)
 	test.ok(
-		bands.every(b => b.opacity === '0.3'),
-		'every band uses the 0.3 opacity the distribution chart paints its zone bands at'
+		bands.every(b => b.opacity === null),
+		'every band is painted at full opacity, as the distribution chart paints its zone bands'
 	)
 	test.ok(
 		bands.every(b => b.bottom > b.top),
@@ -143,8 +143,8 @@ tape('zone bands match the distribution chart contract and tile the vessel', fun
 
 	/*
 	The bands must tile the vessel: sorted top to bottom each one starts exactly where the previous
-	ended. A gap would show the page background through the glass; an overlap would double the 0.3
-	opacity and darken one zone against the distribution chart's rendering of the same zone.
+	ended. A gap would show the page background through the glass; an overlap would hide part of one
+	zone under its neighbor.
 	*/
 	const sorted = bands.slice().sort((b1, b2) => b1.top - b2.top)
 	for (let i = 1; i < sorted.length; i++) {
@@ -308,7 +308,7 @@ tape('tooltips are bound as datum for the shared mousemove delegation', function
 	*/
 	for (const [name, sel, d, base] of [
 		['SC', 'path.sc-fill', scDatum, SC_COLOR],
-		['POC', 'path.poc-fill', pocDatum, POC_GREY]
+		['POC', 'path.poc-fill', pocDatum, POC_FILL]
 	] as [string, string, any, string][]) {
 		test.equal(d.on.stroke, undefined, `the ${name} hover cue adds no outline`)
 		test.equal(d.off.fill, base, `the ${name} hover cue restores the series color`)
@@ -463,5 +463,15 @@ tape('two responder groups in one holder get distinct testids', function (test) 
 		'the Clinicians thermometer is uniquely addressable'
 	)
 	holder.remove()
+	test.end()
+})
+
+tape('POC fill is the POC grey whatever zone its median falls in', function (test) {
+	for (const median of [3, 5.5, 9.5]) {
+		const holder = select('body').append('div')
+		render(holder, { poc: { median, total: 10 } })
+		test.equal(holder.select('path.poc-fill').attr('fill'), POC_FILL, `a POC median of ${median} is filled grey`)
+		holder.remove()
+	}
 	test.end()
 })
