@@ -1,5 +1,14 @@
 import tape from 'tape'
-import { relateSamples, validRequest, type SampleRow } from '../termdb.relatedSamples.ts'
+import Database from 'better-sqlite3'
+import { getAuthApi, authApi } from '#src/auth.js'
+import { guardDb } from '#src/sql.ts'
+import { payload, relateSamples, validRequest, type SampleRow } from '../termdb.relatedSamples.ts'
+
+async function ensureOpenAuth() {
+	if (authApi) return
+	const app = { doNotFreezeAuthApi: true, get() {}, post() {}, all() {}, use() {} }
+	await getAuthApi(app, {}, {}, true)
+}
 
 /*
 Tests:
@@ -91,5 +100,79 @@ tape('relateSamples(): a dataset without sample ancestry', test => {
 	const r: any = relateSamples([{ id: 2 }, { id: 3 }], 3, getName, () => undefined)
 	test.deepEqual(sampleNames(r), ['9'], 'Should list the sample only')
 	test.deepEqual(r.root, { sampleId: 3, sampleName: '9' }, 'Should give the sample as the root')
+	test.end()
+})
+
+tape('termdb/relatedSamples: derives ancestry from the termdb sample list', async test => {
+	await ensureOpenAuth()
+	const connection = guardDb(new Database(':memory:'), 'off')
+	connection.exec(`
+		CREATE TABLE sampleidmap (id INTEGER, name TEXT);
+		INSERT INTO sampleidmap VALUES (10, 'P1'), (20, '10');
+	`)
+	const sampleNamesById = new Map([
+		[10, 'P1'],
+		[20, '10']
+	])
+	const sampleTypesById = new Map([
+		[10, 1],
+		[20, 2]
+	])
+	const ds = {
+		cohort: {
+			db: { connection },
+			termdb: {
+				displaySampleIds: true,
+				hasSampleAncestry: true,
+				sampleTypes: { 1: { parent_id: null }, 2: { parent_id: 1 } },
+				q: {
+					id2sampleRefs: id => ({
+						ancestors: id === 20 ? [{ ancestor_id: 10 }] : []
+					}),
+					id2sampleName: id => sampleNamesById.get(id),
+					id2sampleType: id => sampleTypesById.get(id)
+				}
+			}
+		},
+		sampleId2Name: sampleNamesById,
+		sampleId2Type: sampleTypesById
+	}
+	if (!payload.init) throw new Error('relatedSamples route is not initialized')
+	const handler = payload.init({ app: {}, genome: {}, genomes: { hg38: { datasets: { ds } } } })
+	let result
+	try {
+		await handler({ query: { genome: 'hg38', dslabel: 'ds', sampleId: 20 } }, { send: data => (result = data) })
+		test.deepEqual(
+			result,
+			{ samples: [{ sampleId: 20, sampleName: '10' }], root: { sampleId: 10, sampleName: 'P1' } },
+			'should return related samples with their ancestry'
+		)
+	} finally {
+		connection.close()
+	}
+	test.end()
+})
+
+tape('termdb/relatedSamples: returns sample lookup errors', async test => {
+	await ensureOpenAuth()
+	const ds = {
+		cohort: {
+			termdb: {
+				displaySampleIds: true,
+				filterSamples: async () => {
+					throw 'sample lookup failed'
+				}
+			}
+		},
+		sampleName2Id: new Map()
+	}
+	if (!payload.init) throw new Error('relatedSamples route is not initialized')
+	const handler = payload.init({ app: {}, genome: {}, genomes: { hg38: { datasets: { ds } } } })
+	let result
+	await handler(
+		{ query: { genome: 'hg38', dslabel: 'ds', sampleId: 20, filter: { lst: [{ type: 'tvs' }] } } },
+		{ send: data => (result = data) }
+	)
+	test.deepEqual(result, { status: 400, error: 'sample lookup failed' }, 'should return the lookup error')
 	test.end()
 })

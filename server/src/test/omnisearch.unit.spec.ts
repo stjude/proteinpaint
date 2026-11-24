@@ -184,7 +184,7 @@ function makeSampleDs(displaySampleIds: boolean | ((clientAuthResult: any) => bo
 			}
 		},
 		queries: {},
-		// getSamplesByName's no-filter branch reads this Map (name -> id)
+		// db-less datasets supply their unfiltered name -> id map
 		sampleName2Id: new Map([
 			['2646', 41],
 			['3416', 96]

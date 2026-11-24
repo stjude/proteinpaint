@@ -390,10 +390,10 @@ export class TermdbVocab extends Vocab {
 	/** opts: 
 		  filterJSON: JSON || string, required
 		  filter0: gdc/mmrf filter0 obj
-		  mapParent2Children: boolean for mapping parent samples to child samples
+		  sampleMapping: optional hierarchy mapping direction; omitted for automatic inference
 		returns sample list in array of [{id, name}....]
 	 */
-	async getFilteredSampleList(filterJSON, filter0, mapParent2Children) {
+	async getFilteredSampleList(filterJSON, filter0, sampleMapping) {
 		// same default as getFilteredSampleCount() below, and for the same reason: without filter0 an
 		// api-backed ds (gdc) enumerates all of GDC instead of the portal cohort. the two must agree,
 		// or a count and the list behind it describe different populations -- which is what sent the
@@ -406,7 +406,7 @@ export class TermdbVocab extends Vocab {
 			getsamplelist: 1,
 			filter: typeof filterJSON == 'string' ? filterJSON : getNormalRoot(filterJSON),
 			filter0,
-			mapParent2Children
+			sampleMapping
 		}
 		const data = await this.dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw `missing data`
@@ -838,7 +838,7 @@ export class TermdbVocab extends Vocab {
 
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
-			if (opts.mapChildren2Root) init.body.mapChildren2Root = true
+			if (opts.sampleMapping) init.body.sampleMapping = opts.sampleMapping
 			if (
 				this.opts.app.vocabApi.termdbConfig?.limitDictTermSamplesToMutated &&
 				copies.find(tw => tw.term.id && (!tw.term?.type || isDictionaryType(tw.term.type))) &&

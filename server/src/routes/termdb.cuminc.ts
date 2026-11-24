@@ -46,10 +46,15 @@ export async function get_cuminc(q: any, ds: any) {
 	if (tw0?.term.type == 'condition') throw 'divideBy term cannot be condition term'
 
 	const data = await getData(
-		{ terms: twLst, filter: q.filter, filter0: q.filter0, __protected__: q.__protected__ },
-		ds,
-		true
-	) // FIXME hardcoded 3rd arg
+		{
+			terms: twLst,
+			filter: q.filter,
+			filter0: q.filter0,
+			__protected__: q.__protected__,
+			sampleMapping: 'parentToChildren'
+		},
+		ds
+	)
 	if (data.error) throw data.error
 
 	const results: any = { data: {} }

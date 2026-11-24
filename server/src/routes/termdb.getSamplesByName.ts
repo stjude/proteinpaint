@@ -9,7 +9,9 @@ import type {
 import { authApi } from '#src/auth.js'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 import { get_ds_tdb } from '#src/termdb.js'
-import { get_samples, get_samples_ancestry } from '#src/termdb.sql.js'
+import { get_samples } from '#src/termdb.sql.js'
+import { resolveSampleMapping } from '#src/termdb.matrix.js'
+import { mayLimitSamples } from '#src/mds3.filter.js'
 import serverconfig from '#src/serverconfig.js'
 
 /*
@@ -44,7 +46,9 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
-			await getSamplesByName(q, req, res, ds)
+			if (!authApi.canDisplaySampleIds(req, ds)) return res.send({})
+			const result = await getSamplesByName(q, ds)
+			res.send(result)
 		} catch (e: any) {
 			if (e?.stack) console.log(e.stack)
 			const result: TermdbGetSamplesByNameResponse = { status: 400, error: e?.message || e }
@@ -53,34 +57,66 @@ function init({ genomes }) {
 	}
 }
 
-/** sends the samples by sample name with res.send(); also called by the omnisearch of termdb/chat,
- *  with a res stub that captures the response */
-export async function getSamplesByName(q: any, req: any, res: any, ds: any): Promise<void> {
-	if (!authApi.canDisplaySampleIds(req, ds)) return res.send({})
-
-	try {
-		const sampleName2Id = new Map<string, SampleByName>()
-		if (q.filter) {
-			q.ds = ds
-			const filteredSamples = ds.cohort.termdb.hasSampleAncestry
-				? await get_samples_ancestry(q.filter, q.ds, true)
-				: await get_samples(q, q.ds, true)
-			for (const sample of filteredSamples) {
-				const name = ds.sampleId2Name.get(sample.id)
-				sampleName2Id.set(name, {
-					id: sample.id,
-					name,
-					ancestor_id: sample.ancestor_id,
-					ancestor_name: ds.sampleId2Name.get(sample.ancestor_id),
-					sample_type: ds.sampleId2Type.get(sample.id)
-				})
-			}
-		} else {
-			for (const [name, id] of ds.sampleName2Id) sampleName2Id.set(name, { id })
+/** returns samples by sample name; also called by relatedSamples and omnisearch */
+export async function getSamplesByName(q: any, ds: any): Promise<SamplesByName> {
+	let samples
+	// map parents to children
+	// if patient-level filter defined, then patients will
+	// be filtered and then mapped to child samples,
+	// parents of these child samples will then be added
+	// by addParentSamples()
+	resolveSampleMapping(Object.assign(q, { sampleMapping: 'parentToChildren' }), ds)
+	if (ds.cohort?.db) {
+		samples = await get_samples(q, ds, true)
+	} else {
+		const limitSamples = await mayLimitSamples(q, null, ds)
+		samples = []
+		for (const [name, id] of ds.sampleName2Id) {
+			if (limitSamples && !limitSamples.has(id)) continue
+			samples.push({ id, name })
 		}
-		const result: SamplesByName = Object.fromEntries(sampleName2Id)
-		res.send(result)
-	} catch (e: any) {
-		res.send({ error: e.message || e })
+	}
+
+	const sampleName2Id = new Map<string, SampleByName>()
+	if (ds.cohort?.termdb?.hasSampleAncestry) {
+		// ds has sample ancestry
+		addParentSamples(samples, ds)
+		for (const sample of samples) {
+			const name = sample.name ?? ds.sampleId2Name?.get?.(sample.id)
+			const refs = ds.cohort.termdb.q?.id2sampleRefs?.(sample.id)
+			// nearest ancestor
+			const ancestor_id = refs?.ancestors?.[0]?.ancestor_id
+			sampleName2Id.set(name, {
+				id: sample.id,
+				name,
+				ancestor_id,
+				ancestor_name: ds.sampleId2Name?.get?.(ancestor_id),
+				sample_type: ds.sampleId2Type?.get?.(sample.id)
+			})
+		}
+	} else {
+		// no sample ancestry
+		for (const sample of samples) {
+			const name = sample.name ?? ds.sampleId2Name?.get?.(sample.id)
+			sampleName2Id.set(name, { id: sample.id, name })
+		}
+	}
+
+	return Object.fromEntries(sampleName2Id)
+}
+
+export function addParentSamples(samples: any[], ds: any): void {
+	if (!ds.cohort?.termdb?.hasSampleAncestry) return
+	const ids = new Set(samples.map(sample => sample.id))
+	for (let i = 0; i < samples.length; i++) {
+		const sample = samples[i]
+		const ancestors = ds.cohort.termdb.q?.id2sampleRefs?.(sample.id)?.ancestors
+		if (!ancestors) continue
+		for (const ancestor of ancestors) {
+			const id = ancestor.ancestor_id
+			if (id == null || ids.has(id)) continue
+			ids.add(id)
+			samples.push({ id, name: ds.sampleId2Name?.get?.(id) })
+		}
 	}
 }

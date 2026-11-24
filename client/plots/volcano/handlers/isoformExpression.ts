@@ -84,5 +84,5 @@ expression: such a group then plotted no value ("no visible violin plot data"). 
 samples on the server; a summary plot does that only for a group that asks for it, so each filter group asks. */
 export function sampleLevelGroups(groups: any[], termdbConfig: any) {
 	if (!termdbConfig?.hasSampleAncestry) return groups
-	return groups.map(g => (g.filter && !Array.isArray(g.values) ? { ...g, mapParent2Children: true } : g))
+	return groups.map(g => (g.filter && !Array.isArray(g.values) ? { ...g, sampleMapping: 'parentToChildren' } : g))
 }

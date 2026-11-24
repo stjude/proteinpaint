@@ -10,24 +10,15 @@ import { isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { authApi } from '#src/auth.js'
 // circular import with termdb.matrix.js (it imports get_samples etc from this file); safe
 // because the binding is only dereferenced at runtime, never during module evaluation
-import { maySetMapParent2Children } from './termdb.matrix.js'
+import { resolveSampleMapping } from './termdb.matrix.js'
 import { sql } from './sql.ts'
 import { parseJsonParam } from './routes/common.ts'
 
-/* a ds with sample ancestry may annotate terms at different levels (e.g. patient vs sample).
-CTEs of parent-level filter terms must be mapped down to leaf-level samples, otherwise
-intersecting them with child-level CTEs (e.g. a ds access-control filter on a sample-level
-term) matches nothing and silently yields an empty result. detect from the filter contents
-when the caller did not set q.mapParent2Children */
-function mayDetectSampleLevels(q, ds) {
-	if (q.mapParent2Children !== undefined) return
-	if (!ds.cohort?.termdb?.hasSampleAncestry) return
-	if (!q.filter?.lst?.length) return
-	try {
-		maySetMapParent2Children(q, ds)
-	} catch (e) {
-		// fall back to no mapping (previous behavior) on filters whose sample types cannot be detected
-		console.warn('mayDetectSampleLevels():', e.message || e)
+/* getData() normally resolves sample mapping before building filters. SQL callers
+that do not go through getData() still need this resolution for datasets with sample ancestry. */
+export function mayResolveSampleMapping(q, ds) {
+	if (ds.cohort?.termdb?.hasSampleAncestry && q.sampleMapping === undefined) {
+		resolveSampleMapping(q, ds)
 	}
 }
 /*
@@ -66,7 +57,10 @@ parent-level filter results down to leaf samples; without this, a filter of only
 parent-level terms would return parent ids that intersect no file name */
 export async function getFilterSampleIdSet(q, ds) {
 	authApi.mayAdjustFilter(q, ds, undefined)
-	if (ds.cohort?.termdb?.hasSampleAncestry) maySetMapParent2Children(q, ds, true)
+	if (ds.cohort?.termdb?.hasSampleAncestry) {
+		q.sampleMapping = 'parentToChildren'
+		resolveSampleMapping(q, ds)
+	}
 	return new Set((await get_samples(q, ds)).map(i => i.id))
 }
 
@@ -99,61 +93,14 @@ export async function get_samples(q, ds, canDisplay = false) {
 	q.__protected__.ignoreTermIds is modified or if routeTwLst can be supplied at this point
 	*/
 
-	mayDetectSampleLevels(q, ds)
-	const filter = await getFilterCTEs(q.filter, ds, q.mapParent2Children, q.sampleTypes) // if q.filter is blank, it returns null
+	mayResolveSampleMapping(q, ds)
+	const filter = await getFilterCTEs(q.filter, ds, q.sampleMapping, q.sampleTypes) // if q.filter is blank, it returns null
 	const query = filter
 		? sql`WITH ${filter.filters} SELECT sample as id, name FROM ${sql.id(
 				filter.CTEname
 		  )} join sampleidmap on sample = sampleidmap.id`
 		: sql`SELECT id, name FROM sampleidmap`
 	const re = ds.cohort.db.connection.prepare(query).all()
-	if (canDisplay) return re
-	for (const item of re) delete item.name
-	return re
-}
-
-export async function get_samples_ancestry(qfilter, ds, canDisplay = false) {
-	/*
-qfilter: the filter already including any access control: adjusted by the app middleware, or computed by the
-caller (e.g. the chat omnisearch)
-return an array of the samples passing the filter, {id, ancestor_id}
-*/
-	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
-	const query = filter
-		? sql`WITH ${filter.filters} SELECT sample as id, sa.ancestor_id FROM ${sql.id(filter.CTEname)}
-			left join sample_ancestry sa on sample = sa.sample_id and sa.distance = 1 union all 
-			select id, null as ancestor_id from sample_ancestry sa join root_samples on sa.ancestor_id = id where sample_id in (select sample from ${sql.id(
-				filter.CTEname
-			)})` //Root samples need to be added
-		: sql`SELECT id, sa.ancestor_id FROM sampleidmap left join sample_ancestry sa on id = sa.sample_id and sa.distance = 1`
-
-	const re = ds.cohort.db.connection.prepare(query).all()
-	if (filter) {
-		/* a filter of parent-level terms, e.g. a patient-level access-control filter, passes only the parent
-		samples above, not their child samples (e.g. a patient's primary, PDX, CSF samples): add the child
-		samples passing the filter mapped from parent to children, as getFilterSampleIdSet() lists them, without
-		its access-control merge since qfilter includes it */
-		const listed = new Set(re.map(i => i.id))
-		const fq = { filter: qfilter }
-		let children = []
-		try {
-			maySetMapParent2Children(fq, ds, true)
-			children = await get_samples(fq, ds)
-		} catch (e) {
-			// as mayDetectSampleLevels(): a filter whose sample types cannot be detected lists the samples above only
-			console.warn('get_samples_ancestry():', e.message || e)
-		}
-		const tdbq = ds.cohort.termdb.q
-		for (const { id } of children) {
-			if (listed.has(id)) continue
-			// only a child of a root sample listed above: with a negated filter (in: false), the mapped filter also
-			// passes samples, e.g. the excluded patients themselves, that the filter as given does not
-			const rootId = tdbq.id2rootSampleId(id)
-			if (rootId == id || !listed.has(rootId)) continue
-			// the nearest ancestor: the ancestors are sorted by distance
-			re.push({ id, ancestor_id: tdbq.id2sampleRefs(id)?.ancestors?.[0]?.ancestor_id })
-		}
-	}
 	if (canDisplay) return re
 	for (const item of re) delete item.name
 	return re
@@ -194,8 +141,8 @@ export async function get_samplecount(q, ds) {
 	}
 
 	const fq = { filter: j }
-	mayDetectSampleLevels(fq, ds)
-	const filter = await getFilterCTEs(j, ds, fq.mapParent2Children, fq.sampleTypes)
+	mayResolveSampleMapping(fq, ds)
+	const filter = await getFilterCTEs(j, ds, fq.sampleMapping, fq.sampleTypes)
 	let statement, row
 	let sample_type
 	//the filters either return a sample type or none as the samples are converted to the common type.
@@ -224,7 +171,7 @@ export async function get_samplecount(q, ds) {
 /* for a ds with a patient-sample hierarchy (ds.cohort.termdb.hasSampleAncestry), describe a set of
 filtered ids at every level of the hierarchy, e.g. "874 patients and 874 primary samples and 8 PDX samples",
 joined like the unfiltered count of getCohortSampleCount() in termdb.server.init.ts.
-filtered ids sit at one level (see maySetMapParent2Children()); counted with them are their
+filtered ids sit at one level (see resolveSampleMapping()); counted with them are their
 ancestors (the patients of matched samples) and their descendants (the samples of matched
 patients), each per sample type, in sample type id order. siblings of a matched sample are not
 counted: a PDX-only filter reports its patients and PDX samples, not the primary samples that did
@@ -343,7 +290,7 @@ index
 filter
 	{} or null
 	returned by getFilterCTEs
-	required when making numeric bins and need to compute percentile for first/last bin
+	scopes min, max and percentiles for data-dependent numeric bins
 
 termWrapper{}
 	.id term.id
@@ -407,8 +354,7 @@ export async function get_term_cte(q, index, filter, termWrapper = null) {
 		CTE = await categoricalSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, groupset)
 	} else if (isNumericTerm(term)) {
 		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
-		// the error is coming from this
-		CTE = await numericSql[mode].getCTE(tablename, term, q.ds, termq, index, filter)
+		CTE = await numericSql[mode].getCTE(tablename, term, q.ds, termq, index, filter, q)
 	} else if (term.type == 'condition') {
 		const mode = termq.mode || 'discrete'
 		CTE = await conditionSql[mode].getCTE(tablename, term, q.ds, termq)
@@ -481,12 +427,12 @@ filter
 
 returns bins{}
 */
-export function get_bins(q, term, ds, index, filter) {
+export function get_bins(q, term, ds, index, filter, mapping) {
 	if (q.mode == 'continuous' || q.mode == 'spline') return
-	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles))
+	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles, mapping))
 }
 
-export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
+export function get_numericMinMaxPct(ds, term, filter, percentiles = [], mapping) {
 	/* 
 	similar arguments to get_numericSummary()
 	but min, max, percentilex are calculated by sqlite db
@@ -531,13 +477,29 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 		cols.push(sql`${tablename}.value AS ${sql.id('p' + n)}`)
 	}
 
+	let sampleFilter = sql``
+	if (filter) {
+		// samples in filter may have been mapped to a target hierarchy
+		// if so, then need to map back to source hierarchy to filter
+		// the sample data
+		const filteredSamples = sql.id(filter.CTEname)
+		sampleFilter = mapping
+			? sql`sample IN (
+				SELECT ${mapping.source}
+				FROM sample_ancestry sa
+				JOIN sampleidmap sm ON ${mapping.target} = sm.id
+				WHERE sm.sample_type IN (${mapping.targetTypes})
+				AND ${mapping.target} IN ${filteredSamples}
+			) AND`
+			: sql`sample IN ${filteredSamples} AND`
+	}
 	const query = sql`WITH
 		${filter ? sql`${filter.filters}, ` : sql``} 
 		vals AS (
 			SELECT value
 			FROM ${sql.id(annoTable)}
 			WHERE
-			${filter ? sql`sample IN ${sql.id(filter.CTEname)} AND ` : sql``}
+			${sampleFilter}
 			term_id=${term.id}
 			${excludevalues.length ? sql`AND value NOT IN (${sql.list(excludevalues.map(Number))})` : sql``}
 			ORDER BY value ASC

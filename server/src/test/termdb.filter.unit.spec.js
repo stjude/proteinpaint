@@ -7,7 +7,10 @@ dt term filter requests read depth only when its tvs carries a maf filter
 invalid filter term
 */
 import tape from 'tape'
+import Database from 'better-sqlite3'
+import { sql, guardDb } from '../sql.ts'
 import { getFilterCTEs } from '../termdb.filter.js'
+import { get_samples } from '../termdb.sql.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
 
@@ -17,6 +20,251 @@ tape('\n', function (test) {
 })
 
 let tdb
+
+tape('non-dictionary numeric filters consume getter-mapped target values', async t => {
+	const connection = guardDb(new Database(':memory:'), 'off')
+	connection.exec(`
+		CREATE TABLE sampleidmap (id INTEGER, sample_type INTEGER);
+		CREATE TABLE sample_ancestry (sample_id INTEGER, ancestor_id INTEGER);
+		INSERT INTO sampleidmap VALUES (10, 1), (20, 2), (30, 3);
+		INSERT INTO sample_ancestry VALUES (20, 10), (30, 10);
+	`)
+	const ds = {
+		queries: {},
+		cohort: {
+			db: { connection },
+			termdb: { sampleTypes: { 1: { parent_id: null }, 2: { parent_id: 1 }, 3: { parent_id: 1 } } }
+		}
+	}
+	try {
+		for (const type of [
+			'geneExpression',
+			'isoformExpression',
+			'metaboliteIntensity',
+			'proteomeAbundance',
+			'ssGSEA',
+			'dnaMethylation',
+			'junction',
+			'pseudobulk'
+		]) {
+			let args
+			const getter = {
+				get: async param => {
+					args = param
+					return { term2sample2value: new Map([['xx', { 10: 6 }]]) }
+				}
+			}
+			if (type === 'proteomeAbundance') ds.queries.proteome = getter
+			else if (type === 'pseudobulk') ds.queries.singleCell = { pseudobulk: getter }
+			else ds.queries[type] = getter
+			const filter = {
+				type: 'tvslst',
+				in: true,
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: { type, sampleTypes: [2] },
+							ranges: [{ start: 5, startinclusive: true, stopunbounded: true }]
+						}
+					}
+				]
+			}
+			const cte = await getFilterCTEs(filter, ds, 'childrenToParent', [1])
+			t.deepEqual(args.sampleTypes, [1], `${type}: getter receives target types`)
+			const rows = connection.prepare(sql`WITH ${cte.filters} SELECT sample FROM ${sql.id(cte.CTEname)}`).all()
+			t.deepEqual(
+				rows.map(row => row.sample),
+				[10],
+				`${type}: filter uses parent target types`
+			)
+		}
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
+tape('filter sample mapping: maps both directions and preserves unmapped samples', async t => {
+	const connection = guardDb(new Database(':memory:'), 'off')
+	connection.exec(`
+		CREATE TABLE sampleidmap (id INTEGER, sample_type INTEGER);
+		CREATE TABLE sample_ancestry (sample_id INTEGER, ancestor_id INTEGER);
+		CREATE TABLE anno_categorical (sample INTEGER, term_id TEXT, value TEXT);
+		INSERT INTO sampleidmap VALUES (10, 1), (20, 2), (30, 3), (40, 2);
+		INSERT INTO sample_ancestry VALUES (20, 10), (30, 10), (40, 10);
+		INSERT INTO anno_categorical VALUES (10, 'parent', 'P'), (20, 'child', 'C'), (40, 'child', 'C');
+	`)
+	const ds = {
+		cohort: {
+			db: { connection },
+			termdb: { sampleTypes: { 1: { parent_id: null }, 2: { parent_id: 1 }, 3: { parent_id: 1 } } }
+		}
+	}
+	try {
+		for (const [id, type, value, mapping, targetTypes, expected] of [
+			['parent', 1, 'P', 'parentToChildren', [2], [20, 40]],
+			['child', 2, 'C', 'childrenToParent', [1], [10]],
+			['child', 2, 'C', undefined, [1], [20, 40]],
+			['child', 2, 'C', 'parentToChildren', [2], [20, 40]],
+			['parent', 1, 'P', 'parentToChildren', [], [10]],
+			['child', 2, 'C', 'childrenToParent', [3], [20, 40]]
+		]) {
+			const filter = {
+				type: 'tvslst',
+				in: true,
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: { id, name: id, type: 'categorical', sampleTypes: [type] },
+							values: [{ key: value }]
+						}
+					}
+				]
+			}
+			const cte = await getFilterCTEs(filter, ds, mapping, targetTypes)
+			const rows = connection
+				.prepare(sql`WITH ${cte.filters} SELECT sample FROM ${sql.id(cte.CTEname)} ORDER BY sample`)
+				.all()
+			t.deepEqual(
+				rows.map(row => row.sample),
+				expected,
+				`${id}: ${mapping} targeting ${targetTypes}`
+			)
+		}
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
+tape('get_samples resolves sample mapping for filter-only SQL callers', async t => {
+	const connection = guardDb(new Database(':memory:'), 'off')
+	connection.exec(`
+		CREATE TABLE sampleidmap (id INTEGER, name TEXT, sample_type INTEGER);
+		CREATE TABLE sample_ancestry (sample_id INTEGER, ancestor_id INTEGER);
+		CREATE TABLE anno_categorical (sample INTEGER, term_id TEXT, value TEXT);
+		INSERT INTO sampleidmap VALUES (10, 'P1', 1), (20, 'S1', 2), (30, 'S2', 2);
+		INSERT INTO sample_ancestry VALUES (20, 10), (30, 10);
+		INSERT INTO anno_categorical VALUES (10, 'parent', 'P'), (20, 'child', 'C');
+	`)
+	const ds = {
+		cohort: {
+			db: { connection },
+			termdb: {
+				hasSampleAncestry: true,
+				sampleTypes: { 1: { parent_id: null }, 2: { parent_id: 1 } }
+			}
+		}
+	}
+	const filter = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: { id: 'parent', name: 'Parent', type: 'categorical', sampleTypes: [1] },
+					values: [{ key: 'P' }]
+				}
+			},
+			{
+				type: 'tvs',
+				tvs: {
+					term: { id: 'child', name: 'Child', type: 'categorical', sampleTypes: [2] },
+					values: [{ key: 'C' }]
+				}
+			}
+		]
+	}
+	const q = { filter }
+	try {
+		const samples = await get_samples(q, ds)
+		t.deepEqual(
+			samples.map(sample => sample.id),
+			[20],
+			'intersects parent and child filters at child level'
+		)
+		t.equal(q.sampleMapping, 'parentToChildren', 'infers parent-to-child mapping')
+		t.deepEqual(q.sampleTypes, [2], 'targets the child sample type')
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
+
+tape('non-dictionary collection filters map source IDs after computing fractions', async t => {
+	const connection = guardDb(new Database(':memory:'), 'off')
+	connection.exec(`
+		CREATE TABLE sampleidmap (id INTEGER, sample_type INTEGER);
+		CREATE TABLE sample_ancestry (sample_id INTEGER, ancestor_id INTEGER);
+		INSERT INTO sampleidmap VALUES (10, 1), (20, 2);
+		INSERT INTO sample_ancestry VALUES (20, 10);
+	`)
+	try {
+		for (const [sampleMapping, sourceType, targetType, sourceId, expectedId] of [
+			['childrenToParent', 2, 1, 20, 10],
+			['parentToChildren', 1, 2, 10, 20]
+		]) {
+			const ds = {
+				cohort: {
+					db: { connection },
+					termdb: { sampleTypes: { 1: { parent_id: null }, 2: { parent_id: 1 } } }
+				},
+				queries: {
+					isoformExpression: {
+						get: async param => {
+							t.equal(param.sampleMapping, undefined, 'member getter receives no mapping direction')
+							t.equal(param.sampleTypes, undefined, 'member getter receives no target types')
+							t.ok(
+								param.terms.every(tw => tw.term.sampleTypes[0] === sourceType),
+								'members retain source types'
+							)
+							return {
+								term2sample2value: new Map(param.terms.map(tw => [tw.$id, { [sourceId]: 5 }]))
+							}
+						}
+					}
+				}
+			}
+			const term = {
+				type: 'termCollection',
+				memberType: 'numeric',
+				sampleTypes: [sourceType],
+				termlst: ['a', 'b'].map(id => ({
+					id,
+					name: id,
+					type: 'isoformExpression',
+					isoform: id,
+					sampleTypes: [sourceType]
+				})),
+				numerators: ['a'],
+				denominators: ['a', 'b']
+			}
+			const cte = await getFilterCTEs(
+				{
+					type: 'tvslst',
+					in: true,
+					lst: [{ type: 'tvs', tvs: { term, ranges: [{ start: 0.4, stop: 0.6 }] } }]
+				},
+				ds,
+				sampleMapping,
+				[targetType]
+			)
+			const rows = connection.prepare(sql`WITH ${cte.filters} SELECT sample FROM ${sql.id(cte.CTEname)}`).all()
+			t.deepEqual(
+				rows.map(row => row.sample),
+				[expectedId],
+				'collection filters map selected source IDs to target samples'
+			)
+		}
+	} finally {
+		connection.close()
+	}
+	t.end()
+})
 
 tape('simple filter', async function (test) {
 	tdb = await init('termdb.test.ts')
@@ -185,7 +433,7 @@ tape('junction numeric filter', async function (test) {
 	test.end()
 })
 
-tape('dnaMethylation numeric filter hands the term and the request sample types to the getter', async function (test) {
+tape('dnaMethylation numeric filter passes target sample types and preserves term source types', async function (test) {
 	const params = []
 	const dnaMethylation = tdb.ds.queries.dnaMethylation
 	tdb.ds.queries.dnaMethylation = {
@@ -203,18 +451,18 @@ tape('dnaMethylation numeric filter hands the term and the request sample types 
 				lst: [{ type: 'tvs', tvs: { term, ranges: [{ start: 0.5, startinclusive: true, stopunbounded: true }] } }]
 			},
 			tdb.ds,
-			true,
+			'parentToChildren',
 			sampleTypes
 		)
 	const region = { type: 'dnaMethylation', chr: 'chr17', start: 100, stop: 200, genomicFeatureType: 'region' }
 
-	// the getter itself limits a term to its own sample types, see getTermSampleLimiter()
+	// The getter selects source samples using the term's own sample types.
 	const term = { ...region, sampleTypes: [3] }
 	const filter = await filterWith(term, [2, 3])
 	test.deepEqual(filter.filters.values, ['2'], 'selects samples whose methylation is in range')
 	test.deepEqual(params[0].terms[0].term, term, 'passes the term with its own sample types')
-	test.deepEqual(params[0].sampleTypes, [2, 3], "passes the request's sample types")
-	test.equal(params[0].mapParent2Children, true, 'passes mapParent2Children')
+	test.deepEqual(params[0].sampleTypes, [2, 3], 'passes the target sample types')
+	test.equal(params[0].sampleMapping, 'parentToChildren', 'passes sampleMapping')
 	tdb.ds.queries.dnaMethylation = dnaMethylation
 	test.end()
 })
@@ -601,9 +849,7 @@ tape('dt term filter requests read depth only when its tvs carries a maf filter'
 	// one sample with one missense mutation at maf 0.3 (30 alt of 100 reads)
 	tdb.ds.mayGetGeneVariantData = async (tw, q) => {
 		requests.push(q.addReadDepth)
-		return new Map([
-			[1, { sample: 1, [tw.$id]: { key: 'TP53', values: [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }] } }]
-		])
+		return new Map([[tw.$id, { 1: { key: 'TP53', values: [{ dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }] } }]])
 	}
 	try {
 		const dtTerm = {
@@ -636,10 +882,10 @@ tape('dt term filter requests read depth only when its tvs carries a maf filter'
 		})
 
 		let result = await getFilterCTEs(getFilter({}), tdb.ds)
-		test.deepEqual(result.filters.values, [1], 'mutant sample passes a plain dt-term filter')
+		test.deepEqual(result.filters.values, ['1'], 'mutant sample passes a plain dt-term filter')
 
 		result = await getFilterCTEs(getFilter({ mafFilter: mafAtLeast(0.1) }), tdb.ds)
-		test.deepEqual(result.filters.values, [1], 'mutant sample at maf 0.3 passes a maf >= 0.1 filter')
+		test.deepEqual(result.filters.values, ['1'], 'mutant sample at maf 0.3 passes a maf >= 0.1 filter')
 
 		result = await getFilterCTEs(getFilter({ mafFilter: mafAtLeast(0.5) }), tdb.ds)
 		test.deepEqual(result.filters.values, [], 'mutant sample at maf 0.3 fails a maf >= 0.5 filter')

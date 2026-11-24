@@ -122,10 +122,10 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 				filter: q.filter,
 				filter0: q.filter0,
 				terms: [exprTw],
-				__protected__: q.__protected__
+				__protected__: q.__protected__,
+				sampleMapping: 'parentToChildren'
 			},
-			ds,
-			true
+			ds
 		)
 		if (data.error) throw new Error(data.error)
 		const name2id = new Map<string, string>()

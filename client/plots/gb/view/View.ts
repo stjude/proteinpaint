@@ -3,12 +3,12 @@ import { filterJoin } from '#filter'
 import {
 	getChosenSampleTypes,
 	getSampleTypeLabel,
-	getChildSampleTypeQuery,
 	mayRenderSampleTypeRow,
 	getTermSampleTypes,
 	getSampleTypeSelectValues,
 	getSampleTypesOfTermValues
 } from '#dom'
+import { getQuerySampleTypesByTerms } from '#shared/terms.js'
 import { TabsRenderer } from './TabsRenderer.ts'
 import { GeneSearchRenderer } from './GeneSearchRenderer.ts'
 import { renderSampleTracksButton } from './facetTrackMenu.ts'
@@ -209,20 +209,16 @@ export class View {
 		return tklst
 	}
 
+	get query() {
+		return getGbSampleTypeQuery(this.opts.vocabApi?.termdbConfig)
+	}
+
 	/* The sample type row of the genome browser, above its tabs and search: the sample types that every track of
 	sample-level data reads (mutation, splice junction, facet tracks), kept as ids in config.sampleTypes, which a
 	launcher such as the junction term picker's genome browser search may also set. A change rebuilds the block, see GB.main() */
 	mayRenderSampleTypes() {
-		/* only with a track that reads samples, or a facet table, whose list of tracks it narrows; otherwise a change
-		would only rebuild the block */
-		const { snvindel, svfusion, junction, trackLst, tracks } = this.state.config
-		const dnameth = tracks?.some(t => t.type == 'dnameth')
-		if (!snvindel?.shown && !svfusion?.shown && !junction?.shown && !trackLst?.facets?.length && !dnameth) {
-			this.dom.sampleTypeDiv.selectAll('*').remove()
-			return
-		}
 		const termdbConfig = this.opts.vocabApi?.termdbConfig
-		const query = getGbSampleTypeQuery(termdbConfig)
+		const query = this.query
 		const chosen = getChosenSampleTypes(query, this.state.config.sampleTypes)
 		const select = mayRenderSampleTypeRow(this.dom.sampleTypeDiv, query, termdbConfig, chosen)
 		if (!select) return
@@ -482,11 +478,19 @@ function furbishViewModeWithSnvindelComputeDetails(self, viewmode) {
 	throw 'unknown type of the only group'
 }
 
-/** the sample types the genome browser offers: the dataset's that have a parent, as its tracks of sample-level data
- * map each case to its samples */
+/** The sample types available across mutation and junction queries, each offered once. */
 export function getGbSampleTypeQuery(termdbConfig: any) {
-	const sampleTypes = Object.keys(termdbConfig?.sampleTypes || {}).map(Number)
-	return getChildSampleTypeQuery({ sampleTypes, sampleTypesByTerms: termdbConfig?.sampleTypesByTerms }, termdbConfig)
+	const sampleTypes = [
+		...new Set<number>(
+			['snvindel', 'cnv', 'svfusion', 'itd', 'junction', 'dnaMethylation'].flatMap(
+				type => termdbConfig?.queries?.[type]?.sampleTypes || []
+			)
+		)
+	]
+	return {
+		sampleTypes,
+		sampleTypesByTerms: getQuerySampleTypesByTerms(termdbConfig?.sampleTypesByTerms, sampleTypes)
+	}
 }
 
 /** the sample types chosen for the genome browser, undefined for none or every one. With sample-types-by-terms

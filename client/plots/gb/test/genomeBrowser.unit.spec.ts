@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { computeBlockModeFlag } from '../GB.ts'
 import { getBlockState, Interactions } from '../interactions/Interactions.ts'
-import { View, getGbSampleTypes } from '../view/View.ts'
+import { View, getGbSampleTypeQuery, getGbSampleTypes } from '../view/View.ts'
 import { TabsRenderer } from '../view/TabsRenderer.ts'
 import { getOtherSampleTracks, renderSampleTracksButton } from '../view/facetTrackMenu.ts'
 import * as d3s from 'd3-selection'
@@ -179,8 +179,48 @@ const sampleTypeConfig = {
 		2: { name: 'Diagnosis', plural_name: 'diagnosis samples', parent_id: 1 },
 		3: { name: 'Relapse', plural_name: 'relapse samples', parent_id: 1 }
 	},
-	queries: {}
+	queries: {
+		snvindel: { sampleTypes: [2] },
+		cnv: { sampleTypes: [3] }
+	}
 }
+
+tape('genome browser sample type query', test => {
+	const termdbConfig = {
+		sampleTypes: { ...sampleTypeConfig.sampleTypes, 4: {}, 5: {}, 6: {}, 7: {}, 8: {} },
+		sampleTypesByTerms: {
+			visit: { Diagnosis: [2, 4, 6], Relapse: [3, 5], Other: [7, 8] }
+		},
+		queries: {
+			snvindel: { sampleTypes: [2, 3] },
+			cnv: { sampleTypes: [3, 4] },
+			svfusion: { sampleTypes: [4, 5] },
+			itd: { sampleTypes: [5, 6] },
+			junction: { sampleTypes: [6, 7] },
+			geneExpression: { sampleTypes: [8] }
+		}
+	}
+	test.deepEqual(
+		getGbSampleTypeQuery(termdbConfig),
+		{
+			sampleTypes: [2, 3, 4, 5, 6, 7],
+			sampleTypesByTerms: { visit: { Diagnosis: [2, 4, 6], Relapse: [3, 5], Other: [7] } }
+		},
+		'offers the union of mutation and junction sample types, without duplicates or unrelated dataset types'
+	)
+	test.deepEqual(
+		getGbSampleTypeQuery({ queries: { itd: { sampleTypes: [6] } } }).sampleTypes,
+		[6],
+		'handles a dataset with only one mutation query'
+	)
+	test.deepEqual(
+		getGbSampleTypeQuery({ queries: { junction: { sampleTypes: [2, 3] } } }).sampleTypes,
+		[2, 3],
+		'handles a dataset with only a junction query'
+	)
+	test.deepEqual(getGbSampleTypeQuery(undefined).sampleTypes, [], 'offers no types without query metadata')
+	test.end()
+})
 
 tape('sample type row of the genome browser', test => {
 	const choices: any[] = []
@@ -197,7 +237,7 @@ tape('sample type row of the genome browser', test => {
 	}
 
 	const first = draw()
-	test.equal(first.boxes.length, 2, 'should draw a checkbox for each sample type with a parent, not for patients')
+	test.equal(first.boxes.length, 2, 'should draw a checkbox for each available sample type')
 	test.deepEqual(
 		first.boxes.map(b => b.checked),
 		[true, true],
@@ -216,14 +256,21 @@ tape('sample type row of the genome browser', test => {
 	test.equal(choices[1], null, 'should dispatch null when every sample type is checked')
 
 	const one = draw(undefined, {
-		sampleTypes: { 1: sampleTypeConfig.sampleTypes[1], 2: sampleTypeConfig.sampleTypes[2] }
+		sampleTypes: sampleTypeConfig.sampleTypes,
+		queries: { cnv: { sampleTypes: [2] } }
 	})
-	test.equal(one.boxes.length, 0, 'should draw no row for a dataset of one sample type with a parent')
+	test.equal(one.boxes.length, 0, 'should draw no row when the queries have only one sample type')
 
-	const noTrack = draw(undefined, sampleTypeConfig, { junction: { shown: false }, snvindel: { shown: false } })
-	test.equal(noTrack.boxes.length, 0, 'should draw no row when no track that reads samples is shown')
+	const junctionOnly = draw(undefined, {
+		sampleTypes: sampleTypeConfig.sampleTypes,
+		queries: { junction: { sampleTypes: [2, 3] } }
+	})
+	test.equal(junctionOnly.boxes.length, 2, 'should render sample type choices for a junction-only dataset')
 
-	if (test['_ok']) for (const d of [first, again, one, noTrack]) d.sampleTypeDiv.remove()
+	const noData = draw(undefined, { sampleTypes: sampleTypeConfig.sampleTypes, queries: {} })
+	test.equal(noData.boxes.length, 0, 'should draw no row without query sample types')
+
+	if (test['_ok']) for (const d of [first, again, one, junctionOnly, noData]) d.sampleTypeDiv.remove()
 	test.end()
 })
 
@@ -345,7 +392,8 @@ tape('sample types the dropdowns of the genome browser show', test => {
 		sampleTypesByTerms: {
 			visit: { Baseline: [2, 3], Relapse: [4, 5] },
 			tissue: { Marrow: [2, 4], Blood: [3, 5] }
-		}
+		},
+		queries: { snvindel: { sampleTypes: [2, 3, 4, 5] } }
 	}
 	const read = (sampleTypes: number[]) => getGbSampleTypes({ sampleTypes }, termdbConfig)
 	test.deepEqual(read([2]), [2], 'should read a choice that the dropdowns show, Baseline and Marrow')

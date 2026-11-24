@@ -1,6 +1,6 @@
 import { authApi } from '#src/auth.js'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
-import { get_samples, get_samples_ancestry } from '#src/termdb.sql.js'
+import { getSamplesByName } from '#routes/termdb.getSamplesByName.ts'
 import { ROOT_SAMPLE_TYPE } from '#shared/terms.js'
 import { validGenomeDs } from '#routes/common.ts'
 import type {
@@ -58,10 +58,11 @@ function init({ genomes }) {
 }
 
 async function getRelatedSamples(q: TermdbRelatedSamplesRequest, ds: any): Promise<TermdbRelatedSamplesResponse> {
-	// the samples passing the filter, which already has any access control from the app middleware
-	const rows: SampleRow[] = ds.cohort?.termdb?.hasSampleAncestry
-		? await get_samples_ancestry(q.filter, ds)
-		: await get_samples(q, ds)
+	const samples = await getSamplesByName(q, ds)
+	const rows: SampleRow[] = Object.values(samples).map(({ id, ancestor_id }) => ({
+		id,
+		ancestor_id
+	}))
 	const tdbq = ds.cohort.termdb.q
 	return relateSamples(
 		rows,

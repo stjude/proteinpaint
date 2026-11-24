@@ -1,6 +1,6 @@
 import { SINGLECELL_GENE_EXPRESSION, SINGLECELL_NUMERIC_VALUE, PROTEOME_ABUNDANCE, PSEUDOBULK } from '#types'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
-import { maySetMapParent2Children } from './termdb.matrix.js'
+import { resolveSampleMapping } from './termdb.matrix.js'
 import { getSingleCellCellValues } from './singleCell/matrixData.ts'
 import { mayLimitSamples } from './mds3.filter.js'
 import { resolveTermId } from './termdb.termCollection.ts'
@@ -15,9 +15,8 @@ export async function trigger_getDefaultBins(q, ds, res) {
 	CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it breaks!
 	*/
 
-	// determine if parent term annotations need to be mapped to child samples (e.g. if
-	// parent term(s) present in filter)
-	maySetMapParent2Children(q, ds)
+	// resolve sample mapping
+	resolveSampleMapping(q, ds)
 
 	const tw = q.tw
 	const lst = []
@@ -97,7 +96,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 				filter: q.filter,
 				filter0: q.filter0,
 				terms: [tw],
-				mapParent2Children: q.mapParent2Children,
+				sampleMapping: q.sampleMapping,
 				sampleTypes: q.sampleTypes,
 				__abortSignal: q.__abortSignal,
 				dataTypeDetails: tw.term.dataTypeDetails

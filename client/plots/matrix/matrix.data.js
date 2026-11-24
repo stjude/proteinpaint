@@ -48,7 +48,14 @@ export function getMatrixRequestOpts(state, config) {
 		termsPerRequest: this.app.vocabApi.termdbConfig.queries?.snvindel?.byisoform?.processTwsInOneQuery ? 1000 : 1
 	}
 
-	if (this.chartType != 'hierCluster' && config.settings.matrix.mapChildren2Root) opts.mapChildren2Root = true
+	if (this.app.vocabApi.termdbConfig.hasSampleAncestry) {
+		opts.sampleMapping = config.settings.matrix.sampleMapping
+		if (opts.sampleMapping == 'childrenToParent' && terms.some(tw => !isDictionaryType(tw.term.type))) {
+			// will support once sample type selection is enabled for
+			// non-dictionary terms in matrix
+			throw new Error('mapping child to parent samples not supported for non-dictionary data')
+		}
+	}
 
 	if (this.chartType == 'hierCluster') {
 		/* quick fix, only needed for gdc
