@@ -288,7 +288,8 @@ class TdbApp extends AppBase implements RxApp {
 
 	printError(e) {
 		sayerror(this.dom.errdiv, 'Error: ' + (e.message || e))
-		if (e.stack) console.log(e.stack)
+		// the error is shown to the user above; the stack is only for debugging
+		if (e.stack) console.debug(e.stack)
 	}
 }
 

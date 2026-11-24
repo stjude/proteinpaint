@@ -215,7 +215,8 @@ class MassApp extends AppBase implements RxApp {
 		const errdiv = e.errdiv || this.dom.errdiv
 		if (errdiv) errdiv.style('display', '').html('').style('background-color', '')
 		sayerror(errdiv || this.opts.holder, 'Error: ' + (e.message || e.error || e))
-		if (e.stack) console.log(e.stack)
+		// the error is shown to the user above; the stack is only for debugging
+		if (e.stack) console.debug(e.stack)
 		this.bus.emit('error')
 		/** .printError() maybe called from any component without a helpful
 		 * message or error object. Include the trace when in debug mode to

@@ -217,7 +217,7 @@ class MassStore extends StoreBase implements RxStore {
 					plot = await _.getPlotConfig(savedPlot, this.app, this.state.activeCohort)
 				} catch (e) {
 					this.app.printError(e)
-					console.error(`getPlotConfig() failed: ${e}`)
+					console.debug(`getPlotConfig() failed: ${e}`)
 				}
 				if (!plot) {
 					invalidPlots.push(i)
