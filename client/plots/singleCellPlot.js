@@ -741,7 +741,8 @@ class singleCellPlot {
 			}
 		]
 		const unavailable = this.state.termdbConfig.unavailable || []
-		if (this.app.opts.genome.termdbs && !['blitzgsea', 'cerno'].every(m => unavailable.includes(m))) {
+		const showGSEA = this.app.opts.genome.termdbs && !['blitzgsea', 'cerno'].every(m => unavailable.includes(m))
+		if (showGSEA) {
 			// assumption is that can run gsea on the differential genes, when the genome-level termdb is available (which is right now geneset dbs)
 			tabs.push({
 				label: 'Gene Set Enrichment Analysis (GSEA)',
@@ -818,7 +819,8 @@ class singleCellPlot {
 			dataTestId: 'sjppoldscDEtable',
 			download: { fileName: downloadFilename }
 		})
-		this.renderGSEA(GSEADiv)
+		// only when the GSEA tab is shown, since its hidden plot would otherwise be built for nothing
+		if (showGSEA) this.renderGSEA(GSEADiv)
 	}
 
 	colorByGeneExp() {

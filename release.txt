@@ -1,1 +1,2 @@
-
+Fixes:
+- do not call renderGSEA() when the subtab is hidden
