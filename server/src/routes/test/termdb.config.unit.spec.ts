@@ -75,9 +75,14 @@ tape('canQueryGeneVariantByCoord()', test => {
 	test.equal(canQueryGeneVariantByCoord(byRange as any), true, 'true when every query takes a region')
 	test.equal(canQueryGeneVariantByCoord({ cnv: {} } as any), true, 'true for cnv alone')
 	test.equal(
-		canQueryGeneVariantByCoord({ snvindel: { byrange: {}, byisoform: {} } } as any),
+		canQueryGeneVariantByCoord({ snvindel: { byisoform: {} } } as any),
 		false,
-		'false for snvindel.byisoform, which is used over byrange and needs a gene'
+		'false for snvindel.byisoform without byrange, as a region has no gene to map to an isoform'
+	)
+	test.equal(
+		canQueryGeneVariantByCoord({ snvindel: { byrange: {}, byisoform: {} } } as any),
+		true,
+		'true for snvindel.byisoform with byrange, which a region is queried by'
 	)
 	test.equal(
 		canQueryGeneVariantByCoord({ snvindel: { byrange: {} }, svfusion: { byname: {} } } as any),

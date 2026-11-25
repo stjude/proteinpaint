@@ -277,13 +277,13 @@ function addMatrixplots(c, ds) {
 /* whether a geneVariant term can be queried by a region rather than a gene: true when each
 query that ds.mayGetGeneVariantData() would run for the term can take a region, see getGeneMlst()
 in mds3.init.js. Not so for
-- snvindel.byisoform, which is used over byrange when present, and maps a gene to its isoform
+- snvindel.byisoform without byrange, as a region has no gene to map to an isoform
 - svfusion.byname without byrange, which matches events by gene name
 - geneCnv.bygene, which is gene-level cnv
 while cnv and itd are always queried by region */
 export function canQueryGeneVariantByCoord(q: Mds3['queries']): boolean {
 	if (!q?.snvindel && !q?.svfusion && !q?.cnv && !q?.itd) return false // no geneVariant data
-	if (q.snvindel && (q.snvindel.byisoform || !q.snvindel.byrange)) return false
+	if (q.snvindel && !q.snvindel.byrange) return false
 	if (q.svfusion && !q.svfusion.byrange) return false
 	if (q.geneCnv) return false
 	return true

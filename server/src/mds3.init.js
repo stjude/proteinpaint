@@ -3909,7 +3909,11 @@ async function getSnvindelByTerm(ds, term, genome, q, opts = {}) {
 		{ skipSampleFiltering: true }
 	)
 
-	if (ds.queries.snvindel.byisoform) {
+	/* byisoform needs an isoform, given or mapped from the gene, so an entry over a region, which
+	has neither, is queried by range instead. Same as the mds3 track, which only uses byisoform
+	when the request has an isoform, see query_snvindel() in mds3.load.js */
+	const isRegion = !term.gene && !term.isoform
+	if (ds.queries.snvindel.byisoform && !isRegion) {
 		await mayMapGeneName2isoform(term, genome)
 		if (!term.isoform) {
 			// isoform missing, could be unknown gene name
@@ -3926,6 +3930,7 @@ async function getSnvindelByTerm(ds, term, genome, q, opts = {}) {
 		arg.rglst = [term]
 		return await ds.queries.snvindel.byrange.get(arg)
 	}
+	if (isRegion) throw 'queries.snvindel.byrange is missing, which a region is queried by'
 	throw 'unknown queries.snvindel method'
 }
 async function getSvfusionByTerm(ds, term, genome, q) {
