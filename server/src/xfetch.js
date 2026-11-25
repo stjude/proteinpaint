@@ -1,6 +1,7 @@
 import serverconfig from './serverconfig.js'
 import ky from 'ky'
 import { isAbortError } from './utils.js'
+import { getHostpathOptions } from './xfetch.hostpath.ts'
 
 // track AbortController instance by filter0 object,
 // to get a signal to cancel active requests after a client
@@ -67,8 +68,8 @@ const unavailableStatus = new Set([429, 500, 502, 503, 504])
 
 /* An external API that is busy, or a connection to it that fails or is cut off, gives an error with a message
 from a native library, such as 'terminated' or 'fetch failed', which is not meaningful to a user. That error is
-logged with its cause and replaced with one that a user can act on, which serverconfig.features.networkErrorMessage
-may set. The replacement keeps the network error code, such as ECONNRESET, that isRecoverableError() checks, and
+logged with its cause and replaced with one that a user can act on, which the networkErrorMessage option of the
+matching hostpath may set, see xfetch.hostpath.ts. The replacement keeps the network error code, such as ECONNRESET, that isRecoverableError() checks, and
 the HTTP response that a caller may check. */
 export function mayReplaceNetworkError(e, url) {
 	if (!isNetworkError(e)) return e
@@ -78,7 +79,7 @@ export function mayReplaceNetworkError(e, url) {
 		`xfetch ${getUrlPath(url)}: ${e.name}${detail}`,
 		e.cause?.code || e.cause?.message || e.response?.status || ''
 	)
-	const err = new Error(getNetworkErrorMessage(), { cause: e })
+	const err = new Error(getNetworkErrorMessage(url), { cause: e })
 	err.name = 'NetworkError'
 	const code = e.code || e.cause?.code
 	if (code) err.code = code
@@ -93,12 +94,11 @@ function isNetworkError(e) {
 	return e instanceof TypeError && (e.message == 'terminated' || e.message == 'fetch failed')
 }
 
-// a dataset-specific message, such as one that names the API, may be set as serverconfig.features.networkErrorMessage
+// a message that names the API may be set as the networkErrorMessage option of a hostpath, see xfetch.hostpath.ts
 const defaultNetworkErrorMessage = 'The server is busy or not responding. Please try again in a few minutes.'
 
-function getNetworkErrorMessage() {
-	const message = serverconfig.features?.networkErrorMessage
-	return typeof message == 'string' && message.trim() ? message : defaultNetworkErrorMessage
+function getNetworkErrorMessage(url) {
+	return getHostpathOptions(url)?.networkErrorMessage || defaultNetworkErrorMessage
 }
 
 // the url without its query string, which may have identifiers that should not be logged

@@ -2,7 +2,7 @@ import tape from 'tape'
 import util from 'node:util'
 import { xfetch, removeCredentials } from '../xfetch.js'
 import { isRecoverableError } from '../utils.js'
-import serverconfig from '../serverconfig.js'
+import { setHostpathOptions, clearHostpathOptions } from '../xfetch.hostpath.ts'
 
 /*
 test sections:
@@ -11,7 +11,7 @@ test sections:
 - xfetch(): a response body that is cut off
 - xfetch(): an HTTP 503 response
 - xfetch(): an aborted request
-- xfetch(): serverconfig.features.networkErrorMessage
+- xfetch(): a registered networkErrorMessage
 - removeCredentials()
 */
 
@@ -126,21 +126,18 @@ tape('xfetch(): an aborted request', async test => {
 	test.end()
 })
 
-tape('xfetch(): serverconfig.features.networkErrorMessage', async test => {
-	if (!serverconfig.features) serverconfig.features = {}
-	const original = serverconfig.features.networkErrorMessage
+tape('xfetch(): a registered networkErrorMessage', async test => {
+	setHostpathOptions(
+		{ 'api.example.com': { networkErrorMessage: 'Data is temporarily unavailable, please retry.' } },
+		'ds1'
+	)
 	const opts = { method: 'POST', body: { size: 1 }, fetch: failedFetch, retry: { limit: 0 } }
-
-	serverconfig.features.networkErrorMessage = 'Data is temporarily unavailable, please retry.'
 	let error = await getError(apiUrl, opts)
-	test.equal(error?.message, 'Data is temporarily unavailable, please retry.', 'should use the configured message')
+	test.equal(error?.message, 'Data is temporarily unavailable, please retry.', 'should use the message of the hostpath')
 
-	serverconfig.features.networkErrorMessage = ' '
-	error = await getError(apiUrl, opts)
-	test.ok(error?.message.startsWith('The server is busy'), 'should use the default message for a blank value')
-
-	if (original === undefined) delete serverconfig.features.networkErrorMessage
-	else serverconfig.features.networkErrorMessage = original
+	error = await getError('https://api.example.org/files', opts)
+	test.ok(error?.message.startsWith('The server is busy'), 'should use the default message for another host')
+	clearHostpathOptions()
 	test.end()
 })
 
