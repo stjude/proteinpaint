@@ -1985,7 +1985,7 @@ tape('click overlay bar segment to hide the overlay value', function (test) {
 		await detectLst({ elem: bar.app.tip.d.node(), selector: '.sja_menuoption', count: 1, matchAs: '>=' })
 		const hideOpt = bar.app.tip.d
 			.selectAll('.sja_menuoption')
-			.filter(d => d?.label?.startsWith('Hide') && !d.testId)
+			.filter(d => d?.label?.startsWith('Hide') && d.testId.startsWith('sjpp-barchart-hide-overlay-'))
 			.node()
 		test.ok(hideOpt, 'should show a menu option to hide the clicked overlay value')
 		if (!hideOpt) return test.end()
