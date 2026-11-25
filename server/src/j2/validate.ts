@@ -102,6 +102,9 @@ export async function validate_query_junction(ds: any, genome: any) {
 		reads of all of the gene's junctions (in groups.region, else in view), whether shown or not and below
 		readcountCutoff too, as the denominator of the sample's shares of the gene's junctions */
 		const groupReads = new Map<Junction, { gene: string; reads: Map<string | number, number> }>()
+		/* with groups.region, the tested junctions are those of the region, all of them, by their position: not the view's,
+		which may cross the region's ends and change as the view moves, and with it BH's q */
+		const regionReads = new Map<Junction, { gene: string; reads: Map<string | number, number> }>()
 		const geneTotal = new Map<string, Map<string | number, number>>()
 		for (const r of param.rglst || []) {
 			await utils.readTabixLines({
@@ -209,7 +212,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 						}
 					}
 					junctions.push(j)
-					if (reads && gene) groupReads.set(j, { gene, reads })
+					if (reads && gene && !groups!.region) groupReads.set(j, { gene, reads })
 					if (param.matrixTop) {
 						rcByJunction.set(j, pairs)
 						// no more than the matrix can hold: the junction in the fewest samples goes, of a tie the later one
@@ -238,11 +241,30 @@ export async function validate_query_junction(ds: any, genome: any) {
 					} catch (_) {
 						return
 					}
-					if (gene) addTotals(gene, readGroupedSamples(l))
+					if (!gene) return
+					const reads = readGroupedSamples(l)
+					addTotals(gene, reads)
+					regionReads.set(
+						{ chr: l[0], start: Number(l[1]), stop: Number(l[2]), strand: l[3], types: [] },
+						{ gene, reads }
+					)
 				}
 			})
 		}
-		const tested = groups && !keepLst?.length ? testJunctionGroups(junctions, groupReads, geneTotal, groups) : {}
+		let tested = {}
+		if (groups && !keepLst?.length) {
+			if (groups.region) {
+				tested = testJunctionGroups([...regionReads.keys()], regionReads, geneTotal, groups)
+				// each visible junction of the region gets its result; one outside it, none
+				const at = (j: Junction) => `${j.start}.${j.stop}.${j.strand}`
+				const result = new Map([...regionReads.keys()].map(j => [at(j), j]))
+				for (const j of junctions) {
+					const r = result.get(at(j))
+					if (!r?.groupShares) continue
+					Object.assign(j, { gene: r.gene, groupShares: r.groupShares }, r.p === undefined ? {} : { p: r.p, q: r.q })
+				}
+			} else tested = testJunctionGroups(junctions, groupReads, geneTotal, groups)
+		}
 		// no matrix with keepLst: its junctions carry sn2rc instead, and have no sampleCount to rank by
 		if (!param.matrixTop || keepLst?.length) return { junctions, maxReadCount, totalCount, ...tested }
 

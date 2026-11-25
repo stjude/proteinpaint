@@ -1,6 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { getNormalRoot } from '#filter'
 import { sanitizeTrackLstConfig } from '../trackLst.ts'
+import { locusOf } from '../view/View.ts'
 
 export class Interactions {
 	app: MassAppApi
@@ -69,6 +70,9 @@ export class Interactions {
 		config.noDefaultMethylationTrack: it does not start on, e.g. in a plot of one sample, as the track needs a cohort */
 		const plot = this.app.getState().plots.find(p => p.id === this.id)
 		const tracks = plot?.tracks || []
+		// a new locus to test the junctions over; navigation (onCoordinateChange) leaves it
+		const groupRegion = locusOf(result)
+		if (groupRegion && plot?.junction) config.junction = { groupRegion }
 		if (
 			this.app.vocabApi.termdbConfig?.queries?.dnaMethylation?.regionAnalysis == 'cpg' &&
 			!plot?.noDefaultMethylationTrack

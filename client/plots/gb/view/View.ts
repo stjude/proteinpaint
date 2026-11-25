@@ -180,8 +180,9 @@ export class View {
 				groupTw:
 					this.state.config.junction.groupTw ||
 					this.state.config.tracks?.find(t => t.type == 'dnameth' && t.groupTw?.q?.groups?.length == 2)?.groupTw,
-				// the locus the browser was opened on, as the region of the tested shares, so they stay as the view moves
-				groupRegion: locusOf(this.state.config.geneSearchResult),
+				/* the locus the browser was opened or last searched on, as the region of the tested shares, so they stay as the
+				view moves: geneSearchResult follows panning and zooming, junction.groupRegion does not */
+				groupRegion: this.state.config.junction.groupRegion || locusOf(this.state.config.geneSearchResult),
 				// keeps the heatmap choice of the track's menu in the state
 				callbackOnRender: () => this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 			}
@@ -520,7 +521,7 @@ export function getGbSampleTypes(config: any, termdbConfig: any): number[] | und
 
 /* the coordinates of a gene search result, which a launcher such as the volcano or the methylation track sets; undefined
 for a result of a gene symbol only */
-function locusOf(r: any): { chr: string; start: number; stop: number } | undefined {
+export function locusOf(r: any): { chr: string; start: number; stop: number } | undefined {
 	return r && typeof r.chr == 'string' && Number.isInteger(r.start) && Number.isInteger(r.stop)
 		? { chr: r.chr, start: r.start, stop: r.stop }
 		: undefined

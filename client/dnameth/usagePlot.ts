@@ -50,7 +50,9 @@ export function drawShareViolins(g: any, o: { groups: { color: string; values: n
 				.attr('fill', gr.color)
 				.attr('fill-opacity', 0.6)
 		)
-		const median = values[Math.floor(values.length / 2)]
+		// values are sorted: the middle one, or the mean of the two middle ones
+		const m = values.length >> 1
+		const median = values.length % 2 ? values[m] : (values[m - 1] + values[m]) / 2
 		row
 			.append('line')
 			.attr('x1', o.x(median))
