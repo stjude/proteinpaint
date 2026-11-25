@@ -29,6 +29,7 @@ Tests:
 	geneVariant term
 	geneVariant term: turning off grouping clears q.dtLst
 	geneVariant term: reuse a remembered setting from the pill menu
+	geneVariant term: a region term is not offered a dt it cannot be queried for
 
  */
 
@@ -1595,6 +1596,52 @@ tape('geneVariant term: reuse a remembered setting from the pill menu', async te
 	test.end()
 })
 
+tape('geneVariant term: a region term is not offered a dt it cannot be queried for', async test => {
+	const opts = await getOpts()
+	const vocabApi = opts.pill.Inner.vocabApi
+	/* gdc-like: cnv is gene-level, so a region cannot be queried for it, see getGvQueryMethods()
+	in the server. A copy, so that the termdbConfig of the other tests is not changed */
+	vocabApi.termdbConfig = structuredClone(vocabApi.termdbConfig)
+	vocabApi.termdbConfig.queries.cnv.methods = ['gene']
+	const tsData = await fillTermWrapper(structuredClone(regionGeneVariantTw), vocabApi)
+	await opts.pill.main(tsData)
+	const pill = opts.holder.select('.ts_pill')
+	await opts.holderLoc.hasText('.ts_summary_btn', 'SNV/indel')
+
+	pill.node().click()
+	const tip = opts.pill.Inner.dom.tip
+	const menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border').nodes()
+	const labels = menuOptions.map(o => o.textContent)
+	test.ok(labels.includes('SNV/indel'), 'Should offer the SNV/indel groupset')
+	test.notOk(labels.includes('CNV'), 'Should not offer the CNV groupset')
+
+	// the dts offered for a new group in the edit menu
+	const editOption = menuOptions.find(o => o.textContent == 'Edit')
+	const [addGroupBtn] = await detectGte({
+		elem: tip.d.node(),
+		selector: '.sja_new_filter_btn',
+		count: 1,
+		async trigger() {
+			editOption.click()
+		}
+	})
+	/* the term tree of the prompt opens in a menu of its own, outside the pill menu, so its labels
+	are looked up in the whole page, and only those shown are read */
+	addGroupBtn.click()
+	let dtNames = []
+	for (let i = 0; i < 100 && !dtNames.length; i++) {
+		await sleep(50)
+		dtNames = [...document.body.querySelectorAll('.termlabel')]
+			.filter(elem => elem.getClientRects().length > 0)
+			.map(elem => elem.textContent)
+	}
+	test.ok(dtNames.includes('SNV/indel'), 'Should offer SNV/indel for a new group')
+	test.notOk(dtNames.includes('CNV'), 'Should not offer CNV for a new group')
+
+	if (test._ok) opts.pill.destroy()
+	test.end()
+})
+
 const geneVariantTw = {
 	isAtomic: true,
 	type: 'GvPredefinedGsTW',
@@ -1602,6 +1649,26 @@ const geneVariantTw = {
 		type: 'geneVariant',
 		name: 'TP53',
 		genes: [{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' }]
+	},
+	q: { type: 'predefined-groupset' }
+}
+
+const regionGeneVariantTw = {
+	isAtomic: true,
+	type: 'GvPredefinedGsTW',
+	term: {
+		type: 'geneVariant',
+		name: 'chr17:7661779-7687538',
+		genes: [
+			{
+				kind: 'coord',
+				chr: 'chr17',
+				start: 7661778,
+				stop: 7687538,
+				name: 'chr17:7661779-7687538',
+				type: 'geneVariant'
+			}
+		]
 	},
 	q: { type: 'predefined-groupset' }
 }

@@ -5,7 +5,6 @@ import {
 	getUserTab,
 	getClientMassNav,
 	addNonDictionaryQueries,
-	canQueryGeneVariantByCoord,
 	init
 } from '../termdb.config.ts'
 import { getAuthApi, authApi } from '../../auth.js'
@@ -70,52 +69,28 @@ tape('addNonDictionaryQueries() - mutation sample types', test => {
 	test.end()
 })
 
-tape('canQueryGeneVariantByCoord()', test => {
-	const byRange = { snvindel: { byrange: {} }, svfusion: { byrange: {} }, cnv: {}, itd: {} }
-	test.equal(canQueryGeneVariantByCoord(byRange as any), true, 'true when every query takes a region')
-	test.equal(canQueryGeneVariantByCoord({ cnv: {} } as any), true, 'true for cnv alone')
-	test.equal(
-		canQueryGeneVariantByCoord({ snvindel: { byisoform: {} } } as any),
-		false,
-		'false for snvindel.byisoform without byrange, as a region has no gene to map to an isoform'
-	)
-	test.equal(
-		canQueryGeneVariantByCoord({ snvindel: { byrange: {}, byisoform: {} } } as any),
-		true,
-		'true for snvindel.byisoform with byrange, which a region is queried by'
-	)
-	test.equal(
-		canQueryGeneVariantByCoord({ snvindel: { byrange: {}, byisoform: { processTwsInOneQuery: true } } } as any),
-		false,
-		'false for a batch snvindel.byisoform getter, which takes every term of a request and need not take a region'
-	)
-	test.equal(
-		canQueryGeneVariantByCoord({ snvindel: { byrange: {} }, svfusion: { byname: {} } } as any),
-		false,
-		'false for svfusion.byname without byrange, which matches by gene name'
-	)
-	test.equal(
-		canQueryGeneVariantByCoord({ ...byRange, svfusion: { byrange: {}, byname: {} } } as any),
-		true,
-		'true for svfusion.byname with byrange'
-	)
-	test.equal(
-		canQueryGeneVariantByCoord({ snvindel: { byrange: {} }, geneCnv: { bygene: {} } } as any),
-		false,
-		'false for gene-level cnv'
-	)
-	test.equal(canQueryGeneVariantByCoord({ geneExpression: {} } as any), false, 'false without geneVariant data')
-	test.equal(canQueryGeneVariantByCoord(undefined), false, 'false without queries')
-
+tape('addNonDictionaryQueries() - geneVariant query methods', test => {
 	{
 		const c: any = {}
-		addNonDictionaryQueries(c, { queries: byRange } as any, { defaultcoord: {} })
-		test.equal(c.queries.geneVariantByCoord, true, 'addNonDictionaryQueries() exposes the flag')
+		const queries = { snvindel: { byrange: {} }, svfusion: { dtLst: [2], byrange: {}, byname: {} }, cnv: {}, itd: {} }
+		addNonDictionaryQueries(c, { queries } as any, { defaultcoord: {} })
+		test.deepEqual(c.queries.snvindel.methods, ['gene', 'coord'], 'exposes the methods of snvindel')
+		test.deepEqual(c.queries.svfusion.methods, ['gene'], 'exposes the methods of svfusion')
+		test.deepEqual(c.queries.cnv.methods, ['gene', 'coord'], 'exposes the methods of cnv')
+		test.deepEqual(c.queries.itd.methods, ['gene', 'coord'], 'exposes the methods of itd')
 	}
 	{
+		// gdc: the cnv{} exposed is segment cnv, while a geneVariant term queries gene-level geneCnv
 		const c: any = {}
-		addNonDictionaryQueries(c, { queries: { snvindel: { byisoform: {} } } } as any, { defaultcoord: {} })
-		test.notOk('geneVariantByCoord' in c.queries, 'addNonDictionaryQueries() omits the flag when false')
+		const queries = { snvindel: { byrange: {} }, cnv: {}, geneCnv: { bygene: {} } }
+		addNonDictionaryQueries(c, { queries } as any, { defaultcoord: {} })
+		test.deepEqual(c.queries.cnv.methods, ['gene'], 'cnv takes the methods of geneCnv, which a term queries')
+	}
+	{
+		// geneCnv alone is not exposed as cnv{}, so there is no cnv{} to carry its methods
+		const c: any = {}
+		addNonDictionaryQueries(c, { queries: { geneCnv: { bygene: {} } } } as any, { defaultcoord: {} })
+		test.notOk('cnv' in c.queries, 'does not add cnv{} for geneCnv alone')
 	}
 	test.end()
 })

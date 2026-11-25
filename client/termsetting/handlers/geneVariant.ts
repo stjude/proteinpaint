@@ -6,7 +6,7 @@ import { vocabInit } from '#termdb/vocabulary'
 import { getDtTermValues } from '#filter/tvs.dt'
 import { getColors } from '#shared/common.js'
 import { getDtsFromGroups, getTermLabelSuffix } from '#shared/terms.js'
-import { fillGroupsetGroups } from '../../tw/geneVariant'
+import { fillGroupsetGroups, canQueryGvTermDt } from '../../tw/geneVariant'
 import { rgb } from 'd3-color'
 
 const colorScale = getColors(5)
@@ -172,8 +172,11 @@ async function makeGroupUI(self: TermSetting, div) {
 	// fill values of child dt terms with mutation classes of gene in dataset.
 	// filled into copies rather than self.term.childTerms[], because each of those
 	// is shared by reference with the tvs of every groupset, and the mname tally
-	// requested here would then be serialized once per tvs into the saved term
-	const dtTerms = structuredClone(self.term.childTerms)
+	// requested here would then be serialized once per tvs into the saved term.
+	// a region term is not offered a dt it cannot be queried for, see canQueryGvTermDt().
+	// left out of these copies only, as term.childTerms[] is what the index of a
+	// predefined groupset points into
+	const dtTerms = structuredClone(self.term.childTerms).filter(t => canQueryGvTermDt(self.term, t.dt, self.vocabApi))
 	for (const dtTerm of dtTerms) {
 		await getDtTermValues(dtTerm, self.filter, self.vocabApi, { withMnames: true })
 	}

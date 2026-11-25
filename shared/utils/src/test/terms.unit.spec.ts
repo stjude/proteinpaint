@@ -1,9 +1,11 @@
 import tape from 'tape'
 import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV, TermTypes } from '#types'
-import { dtTerms } from '../common.js'
+import { dtTerms, dtsnvindel, dtcnv, dtfusionrna, dtsv, dtitd } from '../common.js'
 import {
+	canQueryDtByRegion,
 	dtTermTypes,
 	equals,
+	getDtQueryKey,
 	getGvGeneKey,
 	getGvQCacheKey,
 	getGvQueryKey,
@@ -32,6 +34,8 @@ trimGvQForCache()
 query entry wire format: round trip
 query entry wire format: values without an entry
 matchesGvQueryEntry()
+getDtQueryKey()
+canQueryDtByRegion()
 */
 
 // a filled-in geneVariant tw, reduced to the properties the trim reads
@@ -810,5 +814,26 @@ tape('setQuerySampleTypes()', t => {
 	setQuerySampleTypes(q2, [1, 2], {})
 	t.deepEqual(q2.sampleTypes, [], 'Should offer no sample types for a dataset without sample types')
 	t.equal(q2.sampleTypesByTerms, undefined, 'Should have no sample types by terms without a termdb')
+	t.end()
+})
+
+tape('getDtQueryKey()', t => {
+	t.equal(getDtQueryKey(dtsnvindel), 'snvindel', 'snvindel is queried by snvindel')
+	t.equal(getDtQueryKey(dtcnv), 'cnv', 'cnv is queried by cnv')
+	t.equal(getDtQueryKey(dtfusionrna), 'svfusion', 'fusion is queried by svfusion')
+	t.equal(getDtQueryKey(dtsv), 'svfusion', 'sv is queried by svfusion')
+	t.equal(getDtQueryKey(dtitd), 'itd', 'itd is queried by itd')
+	t.equal(getDtQueryKey(-1), undefined, 'an unknown dt has no query')
+	t.end()
+})
+
+tape('canQueryDtByRegion()', t => {
+	// gdc-like termdbConfig.queries{}: snvindel takes a region, while gene-level cnv does not
+	const queries = { snvindel: { methods: ['gene', 'coord'] }, cnv: { methods: ['gene'] }, svfusion: {} }
+	t.equal(canQueryDtByRegion(queries, dtsnvindel), true, 'a query listing coord takes a region')
+	t.equal(canQueryDtByRegion(queries, dtcnv), false, 'a query listing only gene takes no region')
+	t.equal(canQueryDtByRegion(queries, dtsv), false, 'a query listing no methods takes no region')
+	t.equal(canQueryDtByRegion(queries, dtitd), false, 'a dt without a query takes no region')
+	t.equal(canQueryDtByRegion(undefined, dtsnvindel), false, 'tolerates missing queries')
 	t.end()
 })

@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { SearchHandler } from '../geneVariant.ts'
-import { dtcnv, dtsnvindel } from '#shared/common.js'
+import { dtcnv, dtsnvindel, dtfusionrna } from '#shared/common.js'
 import { hg38 } from '../../../test/testdata/genomes'
 import { sleep } from '../../../test/test.helpers.js'
 import { vocabInit } from '../../vocabulary'
@@ -12,6 +12,8 @@ Tests:
     Single gene input
     Coordinate input
     Coordinate input is not offered where the dataset cannot query a region
+    Coordinate input follows the mutation type
+    Matrix coordinate input needs every dt to take a region
     Change mutation type
     Gene set input
 	Gene set input - custom name
@@ -39,6 +41,30 @@ const vocabApi: any = await getVocabApi()
 function getHolder() {
 	const holder = d3s.select('body').append('div')
 	return holder
+}
+
+/* a vocabApi whose termdbConfig.queries[].methods[] are replaced, by query, with those given.
+A copy, as the termdbConfig is shared with the other tests */
+function getVocabApiByMethods(methodsByQuery: { [query: string]: string[] }) {
+	const termdbConfig = structuredClone(vocabApi.termdbConfig)
+	for (const [query, methods] of Object.entries(methodsByQuery)) termdbConfig.queries[query].methods = methods
+	return Object.assign(Object.create(vocabApi), { termdbConfig })
+}
+
+/* the placeholder of the gene search input and the label of the single gene input type, which
+both say whether a region is taken */
+function getSingleInputState(holder) {
+	const geneSearchInput: any = holder
+		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
+		.select('input[type="search"]')
+		.node()
+	const label = holder
+		.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
+		.selectAll('label')
+		.filter((d: any) => d.value == 'single')
+		.text()
+		.trim() // past the &nbsp; that make_radios() puts before a label
+	return { placeholder: geneSearchInput?.placeholder, label }
 }
 
 async function initializeSearchHandler(opts) {
@@ -201,23 +227,74 @@ tape('Coordinate input', async test => {
 
 tape('Coordinate input is not offered where the dataset cannot query a region', async test => {
 	const holder = getHolder()
-	// a copy, as the termdbConfig is shared with the other tests
-	const termdbConfig = structuredClone(vocabApi.termdbConfig)
-	delete termdbConfig.queries.geneVariantByCoord
-	await initializeSearchHandler({ holder, vocabApi: Object.assign(Object.create(vocabApi), { termdbConfig }) })
-	const geneSearchInput: any = holder
-		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
-		.select('input[type="search"]')
-		.node()
-	test.equal(geneSearchInput.placeholder, 'Gene', 'should only offer to search a gene')
-	const singleGeneLabel = holder
-		.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
-		.selectAll('label')
-		.filter((d: any) => d.value == 'single')
-		.text()
-		.trim() // past the &nbsp; that make_radios() puts before a label
-	test.equal(singleGeneLabel, 'Single Gene', 'should only name a gene in the single gene input type')
+	// snvindel, the mutation type selected first, takes no region
+	await initializeSearchHandler({ holder, vocabApi: getVocabApiByMethods({ snvindel: ['gene'] }) })
+	const { placeholder, label } = getSingleInputState(holder)
+	test.equal(placeholder, 'Gene', 'should only offer to search a gene')
+	test.equal(label, 'Single Gene', 'should only name a gene in the single gene input type')
 	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Coordinate input follows the mutation type', async test => {
+	const holder = getHolder()
+	/* gdc-like: snvindel takes a region, while cnv is gene-level, see getGvQueryMethods() in the
+	server. svfusion takes no region either, like a dataset with svfusion.byname */
+	const handler = await initializeSearchHandler({
+		holder,
+		vocabApi: getVocabApiByMethods({ cnv: ['gene'], svfusion: ['gene'] })
+	})
+	const mutationTypeRadios = holder
+		.select('[data-testid="sjpp-genevariant-mutationTypeRadios"]')
+		.selectAll('input[type="radio"]')
+		.nodes() as HTMLInputElement[]
+	// make_radios() disables the radios until its callback resolves, so each click waits for that
+	const clickMutationType = async dt => {
+		mutationTypeRadios[handler.mutationTypeTerms.findIndex((t: any) => t.dt == dt)].click()
+		await sleep(0)
+	}
+	const regionState = { placeholder: 'Gene, position', label: 'Single gene or region' }
+	const geneState = { placeholder: 'Gene', label: 'Single Gene' }
+	test.deepEqual(getSingleInputState(holder), regionState, 'SNV/indel should take a region')
+
+	await clickMutationType(dtcnv)
+	test.deepEqual(getSingleInputState(holder), geneState, 'CNV should only take a gene')
+
+	await clickMutationType(dtsnvindel)
+	test.deepEqual(getSingleInputState(holder), regionState, 'SNV/indel should take a region again')
+
+	// with the gene set input shown, the single gene input type is relabeled, and the gene set
+	// input is kept rather than replaced by a gene search box
+	const genesetRadio: any = holder.select('[data-testid="sjpp-genevarianttermdbhandler-geneset"]').node()
+	genesetRadio.click()
+	await sleep(0)
+	await clickMutationType(dtfusionrna)
+	test.equal(getSingleInputState(holder).label, 'Single Gene', 'Fusion should only name a gene')
+	test.equal(
+		holder.select('[data-testid="sjpp-genevariant-geneSearchDiv"]').select('.sja_genesetinput').size(),
+		1,
+		'should keep the gene set input'
+	)
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Matrix coordinate input needs every dt to take a region', async test => {
+	const cases: [{ [query: string]: string[] }, string, string][] = [
+		[{}, 'Gene, position', 'should take a region where every dt does'],
+		[{ cnv: ['gene'] }, 'Gene', 'should only take a gene where any dt does']
+	]
+	for (const [methodsByQuery, placeholder, message] of cases) {
+		const holder = getHolder()
+		await initializeSearchHandler({
+			holder,
+			vocabApi: getVocabApiByMethods(methodsByQuery),
+			usecase: { target: 'matrix' }
+		})
+		const geneSearchInput: any = holder.select('input[type="search"]').node()
+		test.equal(geneSearchInput.placeholder, placeholder, message)
+		if (test['_ok']) holder.remove()
+	}
 	test.end()
 })
 
