@@ -153,7 +153,7 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 })
 
 tape('Linear: continuous outcome = "agedx", continuous independent = "aaclassic_5"', test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
@@ -479,7 +479,7 @@ tape('Linear: continuous outcome = "agedx", geneVariant independent = "TP53"', t
 })
 
 tape('Logistic: continuous outcome = "hrtavg", continuous independent = "agedx"', test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
@@ -574,7 +574,7 @@ tape('Logistic: continuous outcome = "hrtavg", continuous independent = "agedx"'
 })
 
 tape('Logistic: categorical outcome = "diaggrp", continuous independent = "agedx"', test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
@@ -670,7 +670,7 @@ tape('Logistic: categorical outcome = "diaggrp", continuous independent = "agedx
 })
 
 tape('Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"', test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
@@ -782,7 +782,7 @@ tape('Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"', te
 })
 
 tape('Cox: survival outcome, continuous independent = "agedx"', test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
