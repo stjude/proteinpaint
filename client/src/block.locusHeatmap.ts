@@ -442,7 +442,12 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 					'white'
 				)
 			}
+			/* selectable, to copy e.g. a transcript id: a mousedown that reaches the block's svg or the track's drag handler
+			(tk.gleft) has its default prevented, which stops a text selection from starting */
 			leftLabel(cy, r.label, 10)
+				.style('user-select', 'text')
+				.style('cursor', 'text')
+				.on('mousedown', (event: MouseEvent) => event.stopPropagation())
 			if (m.right) m.right(heatmap.rightG.append('g').attr('transform', `translate(0,${y})`), i)
 			// the row as a whole for the pointer, over the gaps between exons too
 			row
