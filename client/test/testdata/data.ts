@@ -291,7 +291,8 @@ export function getFilter_genemutationset(isnot = false) {
 										{ kind: 'gene', id: 'AKT1', gene: 'AKT1', name: 'AKT1', type: 'geneVariant' },
 										{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant' },
 										{ kind: 'gene', id: 'BCR', gene: 'BCR', name: 'BCR', type: 'geneVariant' }
-									]
+									],
+									sampleTypeLabel: ''
 								}
 							},
 							values: [
