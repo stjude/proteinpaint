@@ -10,7 +10,7 @@ input: a string e.g. "PAX5,NM_016734,201,JAK2,NM_004972,812"
 output: object representing this fusion
 */
 
-import * as coord from './coord'
+import { invalidcoord } from '#shared/common.js'
 
 export async function parseFusion({ line, genome, positionType }) {
 	const l = line.split(',')
@@ -39,7 +39,7 @@ export async function parseFusion({ line, genome, positionType }) {
 		position1 = Number.parseInt(t[1])
 		if (Number.isNaN(position1)) throw 'invalid N-term genomic position'
 		position1--
-		const e1 = coord.invalidcoord(genome, chr1, position1, position1)
+		const e1 = invalidcoord(genome, chr1, position1, position1)
 		if (e1) throw 'N-term genomic position error: ' + e1
 		t = l[5].trim().split(':')
 		if (t.length != 2) throw 'C-term genomic position format is not chr:position'
@@ -47,7 +47,7 @@ export async function parseFusion({ line, genome, positionType }) {
 		position2 = Number.parseInt(t[1])
 		if (Number.isNaN(position2)) throw ': invalid C-term genomic position'
 		position2--
-		const e2 = coord.invalidcoord(block.genome, chr2, position2, position2)
+		const e2 = invalidcoord(block.genome, chr2, position2, position2)
 		if (e2) throw 'C-term genomic position error: ' + e2
 	} else {
 		throw 'unknown positionType'

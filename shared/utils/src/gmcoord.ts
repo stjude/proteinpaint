@@ -1,122 +1,40 @@
-/*******************************
+/* convert a position between the genomic, RNA and protein coordinates of a gene model (gm),
+such as one from server/src/bedj.parseBed.js. These gm fields are used:
+- strand: '+' or '-'
+- start, stop: 0-based genomic range of the isoform
+- exon: list of [start, stop] genomic ranges, from 5' to 3'
+- rnalen: bp length of the exons
+- for a coding isoform only: coding, utr5, utr3 as lists like exon, and codingstart, codingstop, cdslen
+*/
 
-				!!!
-       THIS SCRIPT IS NO LONGER MAINTAINED
-				!!!
-
-invalidcoord() and string2pos() has been copied to share/utils/src/common.js
-
-they will be deleted from this script
-
-client script should switch import to `import { invalidcoord, string2pos } from '#shared/common.js'`
-
-*******************************/
-export function invalidcoord(thisgenome, chrom, start, stop) {
-	if (!thisgenome) return 'no genome'
-	if (!chrom) return 'no chr name'
-	const chr = thisgenome.chrlookup[chrom.toUpperCase()]
-	if (!chr) return 'Invalid chromosome name: ' + chr
-	if (!Number.isInteger(start)) return 'Non-numerical position: ' + start
-	if (start < 0 || start >= chr.len) return 'Position out of range: ' + start
-	if (!Number.isInteger(stop)) return 'Non-numerical position: ' + stop
-	if (stop < 0 || stop > chr.len) return 'Position out of range: ' + stop
-	if (start > stop) return 'Start position is greater than stop'
-	return false
+/* where a genomic position falls on a gene model, as returned by genomic2gm() */
+export type GenomicPositionOnGm = {
+	/** bp distance to the 5' end of the isoform, when the position is upstream of it */
+	atupstream?: { off: number }
+	/** bp distance to the 3' end of the isoform, when the position is downstream of it */
+	atdownstream?: { off: number }
+	/** 1-based number of the exon the position is in, or of the exon right after its intron */
+	atexon?: number
+	/** 1-based number of the intron the position is in */
+	atintron?: number
+	/** the position on the RNA; ends in .5 when the position is in an intron */
+	rnapos?: number
+	/** the 1-based position on the protein, or 0 when upstream of the coding region, for a coding isoform */
+	aapos?: number
+	/** the bp length of the 5' UTR, and the bp distance into it, when the position is in it */
+	atutr5?: { total: number; off: number }
+	/** the bp length of the 3' UTR, and the bp distance into it, when the position is in it */
+	atutr3?: { total: number; off: number }
 }
 
-export function string2pos(s, genome, donotextend) {
-	s = s.replace(/,/g, '')
-	const chr = genome.chrlookup[s.toUpperCase()]
-	if (chr) {
-		// chr name only, to middle
-		return {
-			chr: chr.name,
-			chrlen: chr.len,
-			start: Math.max(0, Math.ceil(chr.len / 2) - 10000),
-			stop: Math.min(chr.len, Math.ceil(chr.len / 2) + 10000)
-		}
-	}
-	{
-		// special handling for snv4
-		const tmp = s.split('.')
-		if (tmp.length >= 2) {
-			const chr = genome.chrlookup[tmp[0].toUpperCase()]
-			const pos = Number.parseInt(tmp[1])
-			const e = invalidcoord(genome, tmp[0], pos, pos + 1)
-			if (!e) {
-				// valid snv4
-				const bpspan = 400
-				return {
-					chr: chr.name,
-					chrlen: chr.len,
-					start: Math.max(0, pos - Math.ceil(bpspan / 2)),
-					stop: Math.min(chr.len, pos + Math.ceil(bpspan / 2)),
-					actualposition: { position: pos, len: 1 }
-				}
-			}
-		}
-	}
-	const tmp = s.split(/[-:\s]+/)
-	if (tmp.length == 2) {
-		// must be chr - pos
-		const pos = Number.parseInt(tmp[1])
-		const e = invalidcoord(genome, tmp[0], pos, pos + 1)
-		if (e) {
-			return null
-		}
-		const chr = genome.chrlookup[tmp[0].toUpperCase()]
-		const bpspan = 400
-		return {
-			chr: chr.name,
-			chrlen: chr.len,
-			start: Math.max(0, pos - Math.ceil(bpspan / 2)),
-			stop: Math.min(chr.len, pos + Math.ceil(bpspan / 2)),
-			actualposition: { position: pos, len: 1 }
-		}
-	}
-	if (tmp.length == 3) {
-		// must be chr - start - stop
-		let start = Number.parseInt(tmp[1]),
-			stop = Number.parseInt(tmp[2])
-		const e = invalidcoord(genome, tmp[0], start, stop)
-		if (e) {
-			return null
-		}
-		const actualposition = { position: start, len: stop - start }
-		const chr = genome.chrlookup[tmp[0].toUpperCase()]
-
-		if (!donotextend) {
-			const minspan = 400
-			if (stop - start < minspan) {
-				let center = Math.ceil((start + stop) / 2)
-				if (center + minspan / 2 >= chr.len) {
-					center = chr.len - Math.ceil(minspan / 2)
-				}
-				start = Math.max(0, center - Math.ceil(minspan / 2))
-				stop = start + minspan
-			}
-		}
-
-		return {
-			chr: chr.name,
-			chrlen: chr.len,
-			start,
-			stop,
-			actualposition
-		}
-	}
-	return null
-}
-
-export function genomic2gm(pos, gm, tempoff = 0) {
+export function genomic2gm(pos: number, gm: any, tempoff = 0): GenomicPositionOnGm {
 	/*
 	pos: 0-based
 	tempoff is a quick fix in order to move the imprecise 'intronic' breakpoints of cicero into exon
 	should not be used in any other case
 	*/
-	//if (tempoff) console.log(pos, gm)
 	const rev = gm.strand == '-'
-	const cd = {}
+	const cd: GenomicPositionOnGm = {}
 	if (pos < gm.start) {
 		if (rev) {
 			cd.atdownstream = { off: gm.start - pos }
@@ -282,7 +200,7 @@ export function genomic2gm(pos, gm, tempoff = 0) {
 	return cd
 }
 
-export function aa2gmcoord(aa, gm) {
+export function aa2gmcoord(aa: number, gm: any): number | null {
 	// same as rna2gmcoord
 	if (!Number.isInteger(aa)) return null
 	if (!gm.coding) return null
@@ -301,7 +219,7 @@ export function aa2gmcoord(aa, gm) {
 	return gm.codingstart
 }
 
-export function rna2gmcoord(pos, gm) {
+export function rna2gmcoord(pos: number, gm: any): number | null {
 	// it should only be used for case where only rnapos is given, no gm pos
 	// unreliable to convert genomic pos to rna pos, then convert back to genomic pos
 	if (!Number.isFinite(pos)) return null

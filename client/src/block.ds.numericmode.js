@@ -6,7 +6,7 @@ import { rgb as d3rgb } from 'd3-color'
 import { select as d3select } from 'd3-selection'
 import { itemtable, query_vcfcohorttrack } from './block.ds.itemtable'
 import * as client from './client'
-import * as coord from './coord'
+import { genomic2gm, rna2gmcoord } from '#shared/gmcoord.js'
 import * as common from '#shared/common.js'
 import may_sunburst from './block.sunburst'
 import {
@@ -114,7 +114,7 @@ export function rendernumerictk(tk, block, originhidden) {
 					if (Number.isFinite(m.aapos)) aapos = m.aapos
 				}
 				if (aapos == undefined) {
-					aapos = coord.genomic2gm(mlst[0].pos, block.usegm).aapos
+					aapos = genomic2gm(mlst[0].pos, block.usegm).aapos
 				}
 				if (aapos == undefined) {
 					console.error('data item cannot map to aaposition')
@@ -301,7 +301,7 @@ function numeric_make(tk, block) {
 			let pxspan = null
 			if (block.usegm) {
 				const rnapos = g.mlst[0].rnapos // rnapos should always be available!
-				const genomicpos = coord.rna2gmcoord(rnapos + rnaspan, block.usegm)
+				const genomicpos = rna2gmcoord(rnapos + rnaspan, block.usegm)
 				const hits = block.seekcoord(block.usegm.chr, genomicpos)
 				if (hits.length > 0) {
 					pxspan = hits[0].x - d.x

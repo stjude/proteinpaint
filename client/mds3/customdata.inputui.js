@@ -1,7 +1,7 @@
 import { mclasscolor2table } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import * as common from '#shared/common.js'
-import * as coord from '#src/coord'
+import { aa2gmcoord, genomic2gm, rna2gmcoord } from '#shared/gmcoord.js'
 
 /*
 ui only works for gm mode
@@ -210,12 +210,12 @@ export function parsePositionFromGm(selecti, str, gm) {
 	const value = parseInputPosition(str, gm.chr)
 	if (!Number.isInteger(value)) throw 'position is not integer'
 	if (selecti == 0) {
-		const p = coord.aa2gmcoord(value, gm)
+		const p = aa2gmcoord(value, gm)
 		if (p == null) throw 'cannot convert codon to genomic position'
 		return [gm.chr, p]
 	}
 	if (selecti == 1) {
-		const p = coord.rna2gmcoord(value, gm)
+		const p = rna2gmcoord(value, gm)
 		if (p == null) throw 'cannot convert RNA position to genomic position'
 		return [gm.chr, p]
 	}
@@ -389,9 +389,9 @@ function customdataui_itd(block, x, y) {
 						bad.push(line + ': genomic stop position is not integer')
 						continue
 					}
-					let t = coord.genomic2gm(pos1, block.usegm)
+					let t = genomic2gm(pos1, block.usegm)
 					const rnapos1 = Math.ceil(t.rnapos)
-					t = coord.genomic2gm(pos2, block.usegm)
+					t = genomic2gm(pos2, block.usegm)
 					const rnapos2 = Math.ceil(t.rnapos)
 					m.rnaposition = Math.min(rnapos1, rnapos2)
 					m.rnaduplength = Math.abs(rnapos1 - rnapos2)
@@ -507,9 +507,9 @@ function customdataui_del(block, x, y) {
 						bad.push(line + ': genomic stop position is not integer')
 						continue
 					}
-					let t = coord.genomic2gm(pos1, block.usegm)
+					let t = genomic2gm(pos1, block.usegm)
 					const rnapos1 = Math.ceil(t.rnapos)
-					t = coord.genomic2gm(pos2, block.usegm)
+					t = genomic2gm(pos2, block.usegm)
 					const rnapos2 = Math.ceil(t.rnapos)
 					m.rnaposition = Math.min(rnapos1, rnapos2)
 					m.rnadellength = Math.abs(rnapos1 - rnapos2)

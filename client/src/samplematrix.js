@@ -1,5 +1,5 @@
 import * as client from './client'
-import { string2pos, invalidcoord } from './coord'
+import { string2pos, invalidcoord } from '#shared/common.js'
 import * as common from '#shared/common.js'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'

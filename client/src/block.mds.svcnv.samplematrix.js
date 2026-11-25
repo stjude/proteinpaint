@@ -1,7 +1,7 @@
 import * as common from '#shared/common.js'
 import * as client from './client'
 import { escapeHtml } from '#dom'
-import { string2pos, invalidcoord } from './coord'
+import { string2pos, invalidcoord } from '#shared/common.js'
 import { getsjcharts } from './getsjcharts'
 
 /*

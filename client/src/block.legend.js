@@ -1,7 +1,6 @@
 import * as common from '#shared/common.js'
 import * as client from './client'
 import { dstkrender } from './block.ds'
-import * as coord from './coord'
 
 /*
 

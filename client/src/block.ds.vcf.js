@@ -1,6 +1,6 @@
 import * as client from './client'
 import * as vcf from '#shared/vcf.js'
-import * as coord from './coord'
+import { genomic2gm } from '#shared/gmcoord.js'
 import * as common from '#shared/common.js'
 import { load2tk } from './block.ds'
 
@@ -120,7 +120,7 @@ export function data2tk(data, tk, block) {
 			}
 
 			if (block.usegm) {
-				const t = coord.genomic2gm(m.pos, block.usegm)
+				const t = genomic2gm(m.pos, block.usegm)
 				m.rnapos = t.rnapos
 				m.aapos = t.aapos
 			}
@@ -142,7 +142,7 @@ export function data2tk(data, tk, block) {
 					}
 					m2.pos++
 					if(block.usegm) {
-						const t=coord.genomic2gm(m2.pos,block.usegm)
+						const t=genomic2gm(m2.pos,block.usegm)
 						m2.rnapos=t.rnapos
 						m2.aapos=t.aapos
 					}

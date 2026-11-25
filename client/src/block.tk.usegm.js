@@ -4,7 +4,7 @@ import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { format as d3format } from 'd3-format'
 import { select as d3select } from 'd3-selection'
-import * as coord from './coord'
+import { genomic2gm, rna2gmcoord } from '#shared/gmcoord.js'
 import { legend_newrow } from './block.legend'
 import { basecompliment, default_text_color } from '#shared/common.js'
 import { rgb } from 'd3-color'
@@ -873,7 +873,7 @@ function coord2legend(tk, event, r, start, stop, gm, block, h) {
 		pos = start + Math.floor(x / block.exonsf)
 	}
 
-	const p = coord.genomic2gm(pos, gm)
+	const p = genomic2gm(pos, gm)
 	if (p.atexon) table.addRow('Exon', p.atexon)
 
 	if (p.atutr5) table.addRow("5' UTR", p.atutr5.off + ' bp')
@@ -1212,16 +1212,16 @@ function customdomainmakeui(block, tk, proteinDomainUI) {
 						stop = b
 						break
 					case 1:
-						let x = coord.rna2gmcoord(a, block.usegm)
+						let x = rna2gmcoord(a, block.usegm)
 						if (x == null) return err('cannot map RNA position ' + a + ' to gene model')
-						start = coord.genomic2gm(x, block.usegm).aapos
-						x = coord.rna2gmcoord(b, block.usegm)
+						start = genomic2gm(x, block.usegm).aapos
+						x = rna2gmcoord(b, block.usegm)
 						if (x == null) return err('cannot map RNA position ' + b + ' to gene model')
-						stop = coord.genomic2gm(x, block.usegm).aapos
+						stop = genomic2gm(x, block.usegm).aapos
 						break
 					default:
-						const a1 = coord.genomic2gm(a, block.usegm).aapos
-						const a2 = coord.genomic2gm(b, block.usegm).aapos
+						const a1 = genomic2gm(a, block.usegm).aapos
+						const a2 = genomic2gm(b, block.usegm).aapos
 						start = Math.min(a1, a2)
 						stop = Math.max(a1, a2)
 				}
