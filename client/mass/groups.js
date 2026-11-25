@@ -10,17 +10,17 @@ import {
 } from '#filter/filter'
 import { appInit } from '#termdb/app'
 import { fillTermWrapper, get$id } from '#termsetting'
-import { getCurrentCohortChartTypes, getActiveCohortStr } from './charts'
+import { getCurrentCohortChartTypes } from './charts'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
-import { isNumericTerm, termType2label } from '#shared/terms.js'
+import { termType2label } from '#shared/terms.js'
 import { uiLabel } from '#shared'
 import { TermTypes, DMR_SCAN_ELEMENT_TYPE } from '#types'
 import { dofetch3 } from '#common/dofetch'
 import { getBrainImagingSampleSet } from '#plots/getBrainImagingSampleSet.ts'
 import { findVolcanoHandler } from '../plots/volcano/handlers/index.ts'
 import { getGEunit } from '#tw/geneExpression'
-import { renderDataAvailability } from './groupDataAvailability.ts'
+import { renderGroupMenu } from './groupMenu.ts'
 
 /*
 this
@@ -241,7 +241,8 @@ class MassGroups {
 			if (Number.isFinite(n)) c2.text(`${n.toLocaleString()} ${sampleLabel}`)
 		}
 
-		renderGroupActions(this, menuDiv, samplelstTW, id)
+		// the analyses of the groups and how many of their samples have each kind of data
+		renderGroupMenu({ holder: menuDiv.append('div'), host: this, mode: 'compare', samplelstTW, insertBefore: id })
 
 		//show option to delete custom variable
 		menuDiv
@@ -258,69 +259,21 @@ class MassGroups {
 
 export const groupsInit = getCompInit(MassGroups)
 
-/* The options of the menu of a custom variable, given as its samplelst tw: the counts of the groups' samples
-with each kind of data of the dataset, whose rows may open a plot of the groups, then the analyses and plots
-of the groups, of which those that need data that the groups lack are removed once the counts arrive.
+/* Creates a plot from the menu of sample groups (groupMenu.ts). The host of the menu may have its own launch(),
+e.g. the sunburst of the About tab, which shows the plots tab first; else the plot is created in the app.
+self{}: the host of the menu, see GroupMenuHost in groupMenu.ts */
+export function launchPlot(self, config) {
+	if (self.launch) return self.launch(config)
+	return self.app.dispatch({ type: 'plot_create', config })
+}
 
-self{} is the caller, as the options use it:
-	app: the mass app, whose dispatch() creates the plots
-	state: {termfilter, currentCohortChartTypes, matrixplots}
-	tip, tip2, tip3: Menu instances: the menu (hidden when a plot is created), its submenu with tip.d as the
-		parent_menu, and the gene search tooltip
-	newId(): an id for a new plot
-id: the id of the plot that a new plot is inserted before, if any
-Returns a promise that resolves when the counts are drawn. */
-function renderGroupActions(self, menuDiv, samplelstTW, id) {
-	const availabilityDiv = menuDiv.append('div')
-	if (self.state.currentCohortChartTypes.includes('DA') && samplelstTW.q.groups.length == 2)
-		addDiffAnalysisPlotMenuItem(menuDiv, self, samplelstTW)
-	addSummarizeOptions(menuDiv, self, samplelstTW, id)
-	mayAddHierClusterPlotMenuItem('geneExpression', menuDiv, 'Gene expression', self.tip2, samplelstTW, id, self, true)
-	mayAddMatrixMenuItems(menuDiv, 'Matrix', self.tip2, samplelstTW, id, self, self.state, true, () => self.newId)
-	mayAddSamplescatterOption(menuDiv, self, samplelstTW)
-	mayAddGenomebrowserOption(menuDiv, self, samplelstTW)
-	mayAddBrainImagingOption(menuDiv, self, samplelstTW)
-	const chartTypes = self.state.currentCohortChartTypes
-	return renderDataAvailability({
-		holder: availabilityDiv,
-		menuDiv,
-		vocabApi: self.app.vocabApi,
-		groups: getAvailabilityGroups(samplelstTW, self.state.termfilter),
-		colors: Object.fromEntries(Object.entries(samplelstTW.term.values).map(([k, v]) => [k, v.color])),
-		filter0: self.state.termfilter?.filter0,
-		cohort: getActiveCohortStr(self.app.getState()),
-		// a row of the table may open a plot of the groups, which then replaces the menu option for that plot
-		rowAction: row => {
-			if (row.kind == 'survival' && chartTypes.includes('survival'))
-				return {
-					replaces: 'sjpp-survival-option',
-					run: () => {
-						self.tip.hide()
-						self.tip2.hide()
-						openPlot('survival', { id: row.key }, samplelstTW, self.app, id, () => self.newId)
-					}
-				}
-			if (row.kind == 'assay' && canCompareMutations(self, samplelstTW))
-				return { replaces: 'sjpp-genome-browser-option', run: () => compareMutations(self, samplelstTW) }
-			// the lanes of the groups' patients, in a section per group
-			if (row.kind == 'data' && row.key == 'longitudinal' && chartTypes.includes('swimmer'))
-				return {
-					run: () => {
-						self.tip.hide()
-						self.tip2.hide()
-						self.app.dispatch({
-							type: 'plot_create',
-							config: { chartType: 'swimmer', term0: structuredClone(samplelstTW) }
-						})
-					}
-				}
-			if (row.kind == 'data' && row.key == 'NIdata')
-				return {
-					replaces: 'sjpp-brain-imaging-option',
-					run: anchor => showBrainImagingMenu(self, samplelstTW, anchor)
-				}
-		}
-	})
+/* hides the menus of the host of the menu of sample groups, and destroys a picker that is drawn in them */
+export function closeGroupMenus(self) {
+	self.picker?.destroy()
+	self.picker = undefined
+	self.tip?.hide()
+	self.tip2?.hide()
+	self.tip3?.hide()
 }
 
 /* The groups of a samplelst tw as termdb/dataAvailability takes them: a group defined by a filter, or one
@@ -347,42 +300,15 @@ function isFilterGroup(group) {
 	return !!group.filter && !Array.isArray(group.values)
 }
 
-function addSummarizeOptions(menuDiv, self, samplelstTW, id) {
-	const d = menuDiv
-		.append('div')
-		.attr('class', 'sja_menuoption sja_sharp_border')
-		.attr('data-testid', 'sjpp-summarize-option')
-		.text('Summarize')
-	d.on('click', async () => {
-		showTree(
-			d,
-			term => {
-				// a samplelst custom variable is given as its tw
-				const tw = term.term ? term : { term }
-				if (isNumericTerm(tw.term)) tw.q = { mode: 'continuous' }
-				openSummaryPlot(tw, samplelstTW, self.app, id, () => self.newId)
-			},
-			self.app,
-			self.tip2
-		)
-	})
-	d.insert('div').html('›').style('float', 'right')
-
-	if (self.state.currentCohortChartTypes.includes('survival'))
-		addPlotMenuItem('survival', menuDiv, 'Compare survival', self.tip2, samplelstTW, id, self, true)
-	if (self.state.currentCohortChartTypes.includes('cuminc'))
-		addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', self.tip2, samplelstTW, id, self, true)
-}
-
 // whether the mutations of the groups can be compared in the genome browser
-function canCompareMutations(self, samplelstTW) {
+export function canCompareMutations(self, samplelstTW) {
 	if (!self.state.currentCohortChartTypes.includes('genomeBrowser')) return false
 	if (!self.app.vocabApi.termdbConfig.queries?.snvindel) return false // for now only allow for snvindel
 	if (self.app.vocabApi.termdbConfig.queries.snvindel.details) return false // allows to disable this option for sjlife
 	return samplelstTW.q.groups.length == 2 // hardcoded to only support 2 groups
 }
 
-function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
+export function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 	if (!canCompareMutations(self, samplelstTW)) return
 	menuDiv
 		.append('div')
@@ -393,23 +319,18 @@ function mayAddGenomebrowserOption(menuDiv, self, samplelstTW) {
 }
 
 // the genome browser with a mutation track of each of the two groups
-function compareMutations(self, samplelstTW) {
-	self.tip.hide()
-	self.tip2.hide()
-	self.tip3.hide()
+export function compareMutations(self, samplelstTW) {
+	closeGroupMenus(self)
 	const [f1, f2] = makeFiltersFromTwoSampleGroups(samplelstTW)
 	const config = {
 		chartType: 'genomeBrowser',
 		snvindel: { shown: true, filter: f1 }, // code filter in 1st tk
 		subMds3Tks: [{ filterObj: f2 }] // code filter in 2nd tk
 	}
-	self.app.dispatch({
-		type: 'plot_create',
-		config
-	})
+	launchPlot(self, config)
 }
 
-function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
+export function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
 	// offered when the ds has neuroimaging data (e.g. tumor masks on a brain template)
 	const NIdata = self.app.vocabApi.termdbConfig?.queries?.NIdata
 	if (!NIdata) return
@@ -423,7 +344,7 @@ function mayAddBrainImagingOption(menuDiv, self, samplelstTW) {
 }
 
 // the brain templates, each with the number of the groups' samples with an image on it, under the anchor
-async function showBrainImagingMenu(self, samplelstTW, anchor) {
+export async function showBrainImagingMenu(self, samplelstTW, anchor) {
 	const NIdata = self.app.vocabApi.termdbConfig?.queries?.NIdata
 	const tip = self.tip2
 	tip.clear().showunderoffset(anchor)
@@ -507,22 +428,18 @@ async function showBrainImagingMenu(self, samplelstTW, anchor) {
 		// panel is populated; otherwise only the variable's own samples
 		const names = hasComplement ? [...available] : groupNames
 		row.attr('class', 'sja_menuoption sja_sharp_border').on('click', async () => {
-			self.tip.hide()
-			tip.hide()
+			closeGroupMenus(self)
 			// use the custom variable as the divide-by term, so each group
 			// renders as its own panel on the shared template
 			const divideByTW = structuredClone(samplelstTW)
 			await fillTermWrapper(divideByTW, self.app.vocabApi)
 			// default slice positions are resolved by getPlotConfig()
 			// from the template's dataset-configured parameters
-			self.app.dispatch({
-				type: 'plot_create',
-				config: {
-					chartType: 'brainImaging',
-					queryKey: refKey,
-					selectedSampleFileNames: names.map(name => name + '.nii'),
-					divideByTW
-				}
+			launchPlot(self, {
+				chartType: 'brainImaging',
+				queryKey: refKey,
+				selectedSampleFileNames: names.map(name => name + '.nii'),
+				divideByTW
 			})
 		})
 	}
@@ -559,7 +476,7 @@ function makeFiltersFromTwoSampleGroups(tw) {
 	})
 }
 
-function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
+export function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
 	// this is only for pre-made scatterplots
 	if (!self.app.vocabApi.termdbConfig.scatterplots) return
 	for (const plot of self.app.vocabApi.termdbConfig.scatterplots) {
@@ -587,162 +504,21 @@ function mayAddSamplescatterOption(menuDiv, self, samplelstTW) {
 					config.colorTW = structuredClone(samplelstTW)
 
 					if (plot.settings) config.settings = structuredClone(plot.settings) //if the plot specifies settings
-					self.app.dispatch({
-						type: 'plot_create',
-						config: config
-					})
-					self.tip.hide()
+					closeGroupMenus(self)
+					launchPlot(self, config)
 				})
 	}
 }
 
-function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
+export function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 	// DA app can be applied to multiple datatypes. show options based on availability for each datatype
-	/* differential expression of genes and of isoforms: the same analysis, on the gene counts or the transcript
-	counts of the dataset. The term type of the run selects the counts */
-	for (const { query, termType, testid } of [
-		{ query: 'rnaseqGeneCount', termType: TermTypes.GENE_EXPRESSION, testid: 'sjpp-da-option' },
-		{ query: 'isoformExpressionCount', termType: TermTypes.ISOFORM_EXPRESSION, testid: 'sjpp-da-isoform-option' }
-	]) {
-		if (!self.app.vocabApi.termdbConfig.queries?.[query]) continue
+	for (const a of getDiffAnalyses(self)) {
 		const itemDiv = div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.attr('data-testid', testid)
-			.text(`Differential ${termType2label(termType)} Analysis`)
-			.on('click', async () => {
-				const tip = self.tip2
-				tip.clear().showunderoffset(itemDiv.node())
-				const loading = tip.d.append('div').text('Loading ...')
-				try {
-					const preAnalysisData = await getGeneExpressionPreAnalysis(
-						self.app,
-						samplelstTW,
-						self.state.termfilter,
-						termType
-					)
-					loading.remove()
-					renderPreAnalysisData({ preAnalysisData, samplelstTW, groups: samplelstTW.q.groups, tip, termType, self })
-				} catch (e) {
-					loading.remove()
-					sayerror(tip.d.append('div'), e)
-				}
-			})
-	}
-
-	/* Show the DM option when the dataset has EITHER the legacy promoter matrix or any
-	element class. termdb.config.ts backfills .promoter from an elements.promoter entry,
-	so this is belt-and-braces for a dataset that offers only non-promoter classes --
-	without the elementTypes check such a dataset would have differential methylation
-	fully configured server-side and no way to reach it. */
-	const dmQuery = self.app.vocabApi.termdbConfig.queries?.dnaMethylation
-	if (dmQuery?.promoter || dmQuery?.elementTypes?.length) {
-		const itemDiv = div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.attr('data-testid', 'sjpp-da-dnaMeth-option')
-			.text(`Differential ${termType2label(TermTypes.DNA_METHYLATION)} Analysis`)
-			.on('click', async () => {
-				const groups = []
-				for (const group of samplelstTW.q.groups) {
-					if (groupHasSamples(group)) {
-						groups.push(group)
-					} else {
-						throw 'group does not contain samples for differential analysis'
-					}
-				}
-
-				const tip = self.tip2
-				/* The numbers of samples with methylation data, for one element class: each matrix has
-				its own eligible samples, so the panel is fetched for the class it opens on and again
-				for a class picked in it. A dataset without a class list sends none, as before. */
-				const showPanel = async (elementType, refocus) => {
-					const body = {
-						genome: self.app.vocabApi.vocab.genome,
-						dslabel: self.app.vocabApi.vocab.dslabel,
-						samplelst: { groups },
-						filter: self.state.termfilter.filter,
-						filter0: self.state.termfilter.filter0,
-						...(elementType ? { element_type: elementType } : {}),
-						preAnalysis: true
-					}
-					const preAnalysisData = await dofetch3('termdb/diffMeth', { body })
-
-					tip.clear().showunderoffset(itemDiv.node())
-					if (!preAnalysisData?.data) {
-						sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
-						throw new Error('no data returned from pre-analysis request')
-					}
-
-					// shared with differential expression; termType selects the label and drops the
-					// method radios, which do not apply to methylation
-					renderPreAnalysisData({
-						preAnalysisData,
-						samplelstTW,
-						groups,
-						tip,
-						termType: TermTypes.DNA_METHYLATION,
-						self,
-						elementType,
-						onElementType: v => showPanel(v, true)
-					})
-					// the panel was drawn again under a keyboard user's hands
-					if (refocus) tip.d.select('[data-testid="sjpp-da-element-select"]').node()?.focus()
-				}
-				// the class the volcano would open on, where the dataset lists it
-				const startClass = dmQuery.defaultElementType || 'promoter'
-				await showPanel(dmQuery.elementTypes?.some(e => e.key == startClass) ? startClass : undefined)
-			})
-	}
-
-	// differential splicing; no method radio yet, only edgeR is wired (leafcutter to be added)
-	if (self.app.vocabApi.termdbConfig.queries?.junction?.cluster) {
-		const itemDiv = div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.attr('data-testid', 'sjpp-da-splicing-option')
-			.text(`Differential ${termType2label(TermTypes.JUNCTION)} Analysis`)
-			.on('click', async () => {
-				const groups = []
-				for (const group of samplelstTW.q.groups) {
-					if (groupHasSamples(group)) {
-						groups.push(group)
-					} else {
-						throw 'group does not contain samples for differential analysis'
-					}
-				}
-
-				// get actual numbers of samples with splicing data
-				const body = {
-					genome: self.app.vocabApi.vocab.genome,
-					dslabel: self.app.vocabApi.vocab.dslabel,
-					samplelst: { groups },
-					filter: self.state.termfilter.filter,
-					filter0: self.state.termfilter.filter0,
-					preAnalysis: true
-				}
-				const preAnalysisData = await dofetch3('termdb/diffSplice', { body })
-
-				const tip = self.tip2
-				if (!preAnalysisData?.data) {
-					tip.clear().showunderoffset(itemDiv.node())
-					sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
-					throw new Error('no data returned from pre-analysis request')
-				}
-
-				tip.clear().showunderoffset(itemDiv.node())
-				/* Shared with differential expression and methylation; termType selects the label
-				and the method radios. The per-group cap is enforced server-side and arrives
-				as preAnalysisData.alert, which hides the Run button. */
-				renderPreAnalysisData({
-					preAnalysisData,
-					samplelstTW,
-					groups,
-					tip,
-					termType: TermTypes.JUNCTION,
-					self
-				})
-			})
+			.attr('data-testid', a.testid)
+			.text(a.label)
+			.on('click', () => a.show(self, samplelstTW, itemDiv.node()))
 	}
 
 	if (self.app.vocabApi.termdbConfig.allowedTermTypes?.includes(TermTypes.METABOLITE_INTENSITY)) {
@@ -753,20 +529,215 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 		div.append('div').text('DA should support whole proteome abundance')
 	}
 	// small text to explain which is case/control. always show this for all DA
-	const noteDiv = div
-		.append('div')
-		.attr('data-testid', 'sjpp-da-note')
-		.style('font-size', '0.8em')
-		.style('opacity', 0.8)
-		.style('padding', '3px 3px 3px 10px')
+	addDiffAnalysisNote(
+		div
+			.append('div')
+			.attr('data-testid', 'sjpp-da-note')
+			.style('font-size', '0.8em')
+			.style('opacity', 0.8)
+			.style('padding', '3px 3px 3px 10px'),
+		samplelstTW
+	)
+}
+
+/* which of the two groups is the case of a differential analysis, and which the control */
+export function addDiffAnalysisNote(holder, samplelstTW) {
 	for (const [role, i] of [
 		['CASE', 1],
 		['CONTROL', 0]
 	]) {
-		noteDiv.append('span').style('font-size', '.8em').style('font-weight', 'bold').text(role)
+		holder.append('span').style('font-size', '.8em').style('font-weight', 'bold').text(role)
 		// group name is set as text, see addGroupCountRow()
-		noteDiv.append('span').style('margin', '0 10px 0 4px').text(samplelstTW.q.groups[i].name)
+		holder.append('span').style('margin', '0 10px 0 4px').text(samplelstTW.q.groups[i].name)
 	}
+}
+
+/* The differential analyses of two groups that the dataset supports, each with:
+dataType: the kind of data of the counts table of the groups (termdb/dataAvailability) that it analyzes
+testid: the data-testid of its menu option
+label
+show(self, samplelstTW, anchor): opens its pre-analysis panel, the samples with data and the run button, in self.tip2
+	under the anchor */
+export function getDiffAnalyses(self) {
+	const queries = self.app.vocabApi.termdbConfig.queries || {}
+	const lst = []
+	/* differential expression of genes and of isoforms: the same analysis, on the gene counts or the transcript
+	counts of the dataset. The term type of the run selects the counts */
+	for (const { query, termType, testid } of [
+		{ query: 'rnaseqGeneCount', termType: TermTypes.GENE_EXPRESSION, testid: 'sjpp-da-option' },
+		{ query: 'isoformExpressionCount', termType: TermTypes.ISOFORM_EXPRESSION, testid: 'sjpp-da-isoform-option' }
+	]) {
+		if (!queries[query]) continue
+		lst.push({
+			dataType: query,
+			testid,
+			label: `Differential ${termType2label(termType)} Analysis`,
+			show: (self, samplelstTW, anchor) => showExpressionPreAnalysis(self, samplelstTW, termType, anchor)
+		})
+	}
+	/* Show the DM option when the dataset has EITHER the legacy promoter matrix or any
+	element class. termdb.config.ts backfills .promoter from an elements.promoter entry,
+	so this is belt-and-braces for a dataset that offers only non-promoter classes --
+	without the elementTypes check such a dataset would have differential methylation
+	fully configured server-side and no way to reach it. */
+	const dmQuery = queries.dnaMethylation
+	if (dmQuery?.promoter || dmQuery?.elementTypes?.length)
+		lst.push({
+			dataType: 'dnaMethylation',
+			testid: 'sjpp-da-dnaMeth-option',
+			label: `Differential ${termType2label(TermTypes.DNA_METHYLATION)} Analysis`,
+			show: showMethylationPreAnalysis
+		})
+	// differential splicing; no method radio yet, only edgeR is wired (leafcutter to be added)
+	if (queries.junction?.cluster)
+		lst.push({
+			dataType: 'junction',
+			testid: 'sjpp-da-splicing-option',
+			label: `Differential ${termType2label(TermTypes.JUNCTION)} Analysis`,
+			show: showSplicingPreAnalysis
+		})
+	return lst
+}
+
+/* Opens tip, emptied, under the anchor, for a panel whose content arrives later, and returns whether the panel still
+owns tip: false once tip is emptied for another panel or submenu (also another element class of this one), hidden,
+or the anchor removed, e.g. by a new sunburst selection. A late response is then dropped, not drawn over the newer
+content or in a closed menu. */
+function openPanel(tip, anchor) {
+	tip.clear().showunderoffset(anchor)
+	const owner = tip.d.append('div')
+	return () => owner.node().isConnected && anchor.isConnected && tip.d.style('display') != 'none'
+}
+
+async function showExpressionPreAnalysis(self, samplelstTW, termType, anchor) {
+	const tip = self.tip2
+	const owns = openPanel(tip, anchor)
+	const loading = tip.d.append('div').text('Loading ...')
+	try {
+		const preAnalysisData = await getGeneExpressionPreAnalysis(self.app, samplelstTW, self.state.termfilter, termType)
+		if (!owns()) return
+		loading.remove()
+		renderPreAnalysisData({ preAnalysisData, samplelstTW, groups: samplelstTW.q.groups, tip, termType, self })
+	} catch (e) {
+		if (!owns()) return
+		loading.remove()
+		sayerror(tip.d.append('div'), e)
+	}
+}
+
+async function showMethylationPreAnalysis(self, samplelstTW, anchor) {
+	const dmQuery = self.app.vocabApi.termdbConfig.queries.dnaMethylation
+	const groups = []
+	for (const group of samplelstTW.q.groups) {
+		if (groupHasSamples(group)) {
+			groups.push(group)
+		} else {
+			throw 'group does not contain samples for differential analysis'
+		}
+	}
+
+	const tip = self.tip2
+	/* The numbers of samples with methylation data, for one element class: each matrix has
+	its own eligible samples, so the panel is fetched for the class it opens on and again
+	for a class picked in it. A dataset without a class list sends none, as before. */
+	const showPanel = async (elementType, refocus) => {
+		// a class picked again before the response of an earlier one arrives owns the panel instead
+		const owns = openPanel(tip, anchor)
+		const loading = tip.d.append('div').text('Loading ...')
+		const body = {
+			genome: self.app.vocabApi.vocab.genome,
+			dslabel: self.app.vocabApi.vocab.dslabel,
+			samplelst: { groups },
+			filter: self.state.termfilter.filter,
+			filter0: self.state.termfilter.filter0,
+			...(elementType ? { element_type: elementType } : {}),
+			preAnalysis: true
+		}
+		let preAnalysisData
+		try {
+			preAnalysisData = await dofetch3('termdb/diffMeth', { body })
+		} catch (e) {
+			if (!owns()) return
+			loading.remove()
+			sayerror(tip.d.append('div'), e)
+			return
+		}
+		if (!owns()) return
+		loading.remove()
+		if (!preAnalysisData?.data) {
+			sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
+			return
+		}
+
+		// shared with differential expression; termType selects the label and drops the
+		// method radios, which do not apply to methylation
+		renderPreAnalysisData({
+			preAnalysisData,
+			samplelstTW,
+			groups,
+			tip,
+			termType: TermTypes.DNA_METHYLATION,
+			self,
+			elementType,
+			onElementType: v => showPanel(v, true)
+		})
+		// the panel was drawn again under a keyboard user's hands
+		if (refocus) tip.d.select('[data-testid="sjpp-da-element-select"]').node()?.focus()
+	}
+	// the class the volcano would open on, where the dataset lists it
+	const startClass = dmQuery.defaultElementType || 'promoter'
+	await showPanel(dmQuery.elementTypes?.some(e => e.key == startClass) ? startClass : undefined)
+}
+
+async function showSplicingPreAnalysis(self, samplelstTW, anchor) {
+	const groups = []
+	for (const group of samplelstTW.q.groups) {
+		if (groupHasSamples(group)) {
+			groups.push(group)
+		} else {
+			throw 'group does not contain samples for differential analysis'
+		}
+	}
+
+	const tip = self.tip2
+	const owns = openPanel(tip, anchor)
+	const loading = tip.d.append('div').text('Loading ...')
+	// get actual numbers of samples with splicing data
+	const body = {
+		genome: self.app.vocabApi.vocab.genome,
+		dslabel: self.app.vocabApi.vocab.dslabel,
+		samplelst: { groups },
+		filter: self.state.termfilter.filter,
+		filter0: self.state.termfilter.filter0,
+		preAnalysis: true
+	}
+	let preAnalysisData
+	try {
+		preAnalysisData = await dofetch3('termdb/diffSplice', { body })
+	} catch (e) {
+		if (!owns()) return
+		loading.remove()
+		sayerror(tip.d.append('div'), e)
+		return
+	}
+	if (!owns()) return
+	loading.remove()
+	if (!preAnalysisData?.data) {
+		sayerror(tip.d.append('div'), 'Error retrieving pre-analysis data')
+		return
+	}
+
+	/* Shared with differential expression and methylation; termType selects the label
+	and the method radios. The per-group cap is enforced server-side and arrives
+	as preAnalysisData.alert, which hides the Run button. */
+	renderPreAnalysisData({
+		preAnalysisData,
+		samplelstTW,
+		groups,
+		tip,
+		termType: TermTypes.JUNCTION,
+		self
+	})
 }
 
 /* one row of a case/control table, showing a group's color, name, and number of samples with data
@@ -886,8 +857,8 @@ arg.termType selects the assay; it defaults to gene expression so existing calle
 unchanged. Only two things actually differ between the two: the label on the counts header,
 and the analysis-method radios, which exist for expression alone (diffMeth.R is the only
 methylation engine, so there is nothing to choose). Everything else -- the counts table, the
-sample-size cap, the alert, and the plot_create dispatch -- is shared.
-arg.onLaunch optionally handles creating the plot for an embedded group picker. */
+sample-size cap, the alert, and the plot_create dispatch -- is shared. The plot is created with
+launchPlot(), so a host of the menu of sample groups that has its own launch() creates it. */
 export function renderPreAnalysisData(arg) {
 	const { preAnalysisData, samplelstTW, groups, holder, tip, self } = arg
 	const termType = arg.termType || TermTypes.GENE_EXPRESSION
@@ -1081,14 +1052,7 @@ export function renderPreAnalysisData(arg) {
 				}
 				if (tip) tip.hide()
 				if (self.tip) self.tip.hide()
-				if (arg.onLaunch) {
-					await arg.onLaunch(config)
-					return
-				}
-				self.app.dispatch({
-					type: 'plot_create',
-					config
-				})
+				launchPlot(self, config)
 			})
 	}
 }
@@ -1332,35 +1296,30 @@ export function rebaseGroupFilter(s) {
 }
 
 export async function openPlot(chartType, term, term2, app, id, newId) {
-	let config = {
-		chartType,
-		term,
-		term2
-	}
+	await app.dispatch({ type: 'plot_create', config: plotConfig(chartType, term, term2, id, newId) })
+}
+
+/* the config of a plot of a term divided by a second term, such as a samplelst tw; inserted before the plot `id`
+when given */
+export function plotConfig(chartType, term, term2, id, newId) {
+	const config = { chartType, term, term2 }
 	if (id) config.insertBefore = id
 	if (newId) config.id = newId()
-	await app.dispatch({
-		type: 'plot_create',
-		config
-	})
+	return config
 }
 
 export async function openSummaryPlot(tw, samplelstTW, app, id, newId) {
-	const config = {
-		chartType: 'summary',
-		childType: tw.q?.mode == 'continuous' ? 'violin' : 'barchart',
-		term: tw,
-		term2: samplelstTW
-	}
-	if (id) config.insertBefore = id
-	if (newId) config.id = newId()
-	await app.dispatch({
-		type: 'plot_create',
-		config
-	})
+	await app.dispatch({ type: 'plot_create', config: summaryConfig(tw, samplelstTW, id, newId) })
 }
 
-async function showTree(
+/* the config of the summary of a term divided by the groups of a samplelst tw */
+export function summaryConfig(tw, samplelstTW, id, newId) {
+	const config = plotConfig('summary', tw, samplelstTW, id, newId)
+	config.childType = tw.q?.mode == 'continuous' ? 'violin' : 'barchart'
+	return config
+}
+
+export async function showTree(
 	div,
 	callback,
 	app,
@@ -1383,7 +1342,7 @@ async function showTree(
 		}
 	})
 }
-function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
+export function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
 	const d = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
@@ -1395,7 +1354,7 @@ function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, ope
 			showTree(
 				d,
 				term => {
-					openPlot(chartType, term, samplelstTW, parent.app, id, openOnTop ? () => parent.newId : null)
+					launchPlot(parent, plotConfig(chartType, term, samplelstTW, id, openOnTop ? () => parent.newId : null))
 				},
 				parent.app,
 				tip,
@@ -1405,91 +1364,74 @@ function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, ope
 	d.insert('div').html('›').style('float', 'right')
 }
 
-function mayAddHierClusterPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
+export function mayAddHierClusterPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
 	if (!parent.state.currentCohortChartTypes.includes('geneExpression')) return
 	const itemDiv = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		.attr('data-testid', `sjpp-hiercluster-option`)
 		.text(text)
-		.on('click', () => {
-			tip.clear().showunderoffset(itemDiv.node())
-
-			new GeneSetEditUI({
-				holder: tip.d,
-				genome: parent.app.opts.genome,
-				geneList: [],
-				vocabApi: parent.app.vocabApi,
-				mode: TermTypes.GENE_EXPRESSION,
-				callback: async ({ geneList, groupName }) => {
-					const group = { name: groupName, lst: [], type: 'hierCluster' }
-					const lst = group.lst.filter(tw => tw.term.type != 'geneExpression')
-
-					const tws = await Promise.all(
-						geneList.map(async d => {
-							const gene = d.symbol || d.gene
-							const unit = getGEunit(parent.app.vocabApi)
-							const name = `${gene} ${unit}`
-							const term = { gene, name, type: 'geneExpression' }
-							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
-							if (!tw) {
-								tw = { term, q: {} }
-							}
-							return tw
-						})
-					)
-
-					// close geneset edit ui after clicking submit
-					tip.hide()
-					if (tip.dnode.parent_menu) tip.dnode.parent_menu.style.display = 'none'
-
-					if (tws.length == 1) {
-						const tw = tws[0]
-						parent.app.dispatch({
-							type: 'plot_create',
-							config: {
-								chartType: 'summary',
-								term: tw,
-								term2: samplelstTW
-							}
-						})
-						return
-					}
-
-					if (tws.length == 2) {
-						const tw = tws[0]
-						const tw2 = tws[1]
-						parent.app.dispatch({
-							type: 'plot_create',
-							config: {
-								chartType: 'summary',
-								term: tw,
-								term2: tw2,
-								colorTW: samplelstTW
-							}
-						})
-						return
-					}
-
-					group.lst = [...lst, ...tws]
-
-					parent.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: 'hierCluster',
-							termgroups: [group],
-							dataType: TermTypes.GENE_EXPRESSION,
-							divideBy: samplelstTW,
-							settings: { hierCluster: { yDendrogramHeight: 0, clusterSamples: false } }
-						}
-					})
-				}
-			})
-		})
+		.on('click', () => showHierClusterMenu(parent, samplelstTW, itemDiv.node(), tip))
 	itemDiv.insert('div').html('›').style('float', 'right')
 }
 
-function mayAddMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, openOnTop = false, newId) {
+/* the gene search under the anchor, whose genes are plotted by the groups of the samplelst tw: one gene in a
+summary, two in a scatter colored by the groups, more in a hierCluster divided by the groups
+parent: the host of the menu of sample groups (groupMenu.ts) */
+export function showHierClusterMenu(parent, samplelstTW, anchor, tip = parent.tip2) {
+	tip.clear().showunderoffset(anchor)
+
+	new GeneSetEditUI({
+		holder: tip.d,
+		genome: parent.app.opts.genome,
+		geneList: [],
+		vocabApi: parent.app.vocabApi,
+		mode: TermTypes.GENE_EXPRESSION,
+		callback: async ({ geneList, groupName }) => {
+			const group = { name: groupName, lst: [], type: 'hierCluster' }
+			const lst = group.lst.filter(tw => tw.term.type != 'geneExpression')
+
+			const tws = await Promise.all(
+				geneList.map(async d => {
+					const gene = d.symbol || d.gene
+					const unit = getGEunit(parent.app.vocabApi)
+					const name = `${gene} ${unit}`
+					const term = { gene, name, type: 'geneExpression' }
+					let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
+					if (!tw) {
+						tw = { term, q: {} }
+					}
+					return tw
+				})
+			)
+
+			// close geneset edit ui after clicking submit
+			closeGroupMenus(parent)
+
+			if (tws.length == 1) {
+				launchPlot(parent, { chartType: 'summary', term: tws[0], term2: samplelstTW })
+				return
+			}
+
+			if (tws.length == 2) {
+				launchPlot(parent, { chartType: 'summary', term: tws[0], term2: tws[1], colorTW: samplelstTW })
+				return
+			}
+
+			group.lst = [...lst, ...tws]
+
+			launchPlot(parent, {
+				chartType: 'hierCluster',
+				termgroups: [group],
+				dataType: TermTypes.GENE_EXPRESSION,
+				divideBy: samplelstTW,
+				settings: { hierCluster: { yDendrogramHeight: 0, clusterSamples: false } }
+			})
+		}
+	})
+}
+
+export function mayAddMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, openOnTop = false, newId) {
 	if (!state.currentCohortChartTypes.includes('matrix')) return
 	const preBuiltMatrix = state.matrixplots
 	const hasSnvIndel = parent.app.vocabApi.termdbConfig?.queries?.snvindel
@@ -1520,12 +1462,8 @@ function mayAddMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, o
 							config.insertBefore = id
 							config.settings.matrix.colw = 0
 							if (newId) config.id = newId()
-							parent.app.dispatch({
-								type: 'plot_create',
-								config
-							})
-							tip.hide()
-							tip.dnode.parent_menu.style.display = 'none'
+							closeGroupMenus(parent)
+							launchPlot(parent, config)
 						})
 				}
 			}
@@ -1540,8 +1478,7 @@ function mayAddMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, o
 					mode: TermTypes.GENE_VARIANT,
 					vocabApi: parent.app.vocabApi,
 					callback: async ({ geneList, groupName }) => {
-						tip.hide()
-						tip.dnode.parent_menu.style.display = 'none'
+						closeGroupMenus(parent)
 						const group = { name: groupName, lst: [] }
 						const lst = group.lst.filter(tw => tw.term.type != 'geneVariant')
 
@@ -1563,14 +1500,11 @@ function mayAddMatrixMenuItems(div, text, tip, samplelstTW, id, parent, state, o
 							})
 						)
 						group.lst = [...lst, ...tws]
-						parent.app.dispatch({
-							type: 'plot_create',
-							config: {
-								chartType: 'matrix',
-								termgroups: [group],
-								dataType: TermTypes.GENE_VARIANT,
-								divideBy: samplelstTW
-							}
+						launchPlot(parent, {
+							chartType: 'matrix',
+							termgroups: [group],
+							dataType: TermTypes.GENE_VARIANT,
+							divideBy: samplelstTW
 						})
 					}
 				})

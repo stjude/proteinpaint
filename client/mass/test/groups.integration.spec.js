@@ -170,9 +170,25 @@ tape('a variable made from groups is defined by their filters', test => {
 				[...row.querySelectorAll('td')].slice(1).every(td => Number(td.textContent) > 0),
 				'should show the samples of each group with gene expression data in the menu of the variable'
 			)
+			// a differential analysis is opened from the row of its data, under the count of each group
+			const countsRow = menu.querySelector('[data-testid="sjpp-group-data-rnaseqGeneCount"]')
+			test.equal(
+				countsRow?.getAttribute('role'),
+				'button',
+				'should offer differential expression of two groups with data from their RNA-seq counts row'
+			)
 			test.ok(
-				menu.querySelector('[data-testid="sjpp-da-option"]'),
-				'should offer differential expression of two groups with data'
+				countsRow.getAttribute('title').startsWith('Differential Gene Expression Analysis'),
+				'should say what the row opens'
+			)
+			test.notOk(
+				menu.querySelector('[data-testid="sjpp-group-menu-options"] [data-testid="sjpp-da-option"]'),
+				'should not also offer differential expression above the counts'
+			)
+			test.ok(
+				menu.querySelector('[data-testid="sjpp-group-data-availability"] [data-testid="sjpp-da-note"]') &&
+					!menu.querySelector('[data-testid="sjpp-group-menu-options"] [data-testid="sjpp-da-note"]'),
+				'should show which group is the case under the counts, not above them'
 			)
 			// survival and mutations are sections of the table, whose rows open their plots of the groups
 			test.ok(menu.querySelector('[data-testid="sjpp-group-section-survival"]'), 'should list survival as a section')
@@ -197,6 +213,38 @@ tape('a variable made from groups is defined by their filters', test => {
 			test.equal(surv?.term2?.term?.type, 'samplelst', 'should divide the survival plot by the groups')
 			groups.tip.hide()
 
+			// a pre-analysis panel whose menu was closed before its counts arrived is not drawn, nor its menu opened again
+			groups.showGroupsMenu({ target: document.body }, tw, () => {})
+			const methRow = await detectOne({
+				elem: groups.tip.d.node(),
+				selector: '[data-testid="sjpp-group-data-dnaMethylation"][role="button"]'
+			})
+			const fetch = window.fetch
+			const requests = []
+			window.fetch = function (...args) {
+				const request = fetch.apply(this, args)
+				if (String(args[0]).includes('termdb/diffMeth')) requests.push(request)
+				return request
+			}
+			try {
+				methRow.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+				groups.tip.hide()
+				groups.tip2.hide()
+				// the request is sent once its cache key is computed
+				for (let i = 0; i < 200 && !requests.length; i++) await sleep(25)
+				test.equal(requests.length, 1, 'should request the counts of the panel')
+				await requests[0]
+				// the response is read and handled once it arrives, which takes no more time on a slower server
+				await sleep(100)
+			} finally {
+				window.fetch = fetch
+			}
+			test.equal(groups.tip2.d.style('display'), 'none', 'should not open the closed menu again for a late response')
+			test.notOk(
+				groups.tip2.d.node().querySelector('[data-testid="sjpp-da-run-btn"]'),
+				'should not draw the panel of a late response'
+			)
+
 			// a group without samples has no data: an analysis of both groups is not offered, and a kind of data that
 			// no group has is not listed
 			const none = { name: 'none', filter: tvslst('sex', 'no such value') }
@@ -211,13 +259,37 @@ tape('a variable made from groups is defined by their filters', test => {
 				menu2.querySelector('[data-testid="sjpp-da-option"]'),
 				'should not offer differential expression when a group has no samples with data'
 			)
-			// each element class of methylation has its own samples, so differential methylation is kept, with its note
-			test.ok(
-				menu2.querySelector('[data-testid="sjpp-da-dnaMeth-option"]'),
-				'should keep differential methylation, which may have samples in another element class'
+			test.notOk(
+				menu2.querySelector('[data-testid="sjpp-group-data-rnaseqGeneCount"]')?.getAttribute('role'),
+				'should not open differential expression from its row when one group has data'
 			)
-			test.ok(menu2.querySelector('[data-testid="sjpp-da-note"]'), 'should keep the case/control note with it')
+			// methylation is counted in any element class, so a group without samples has none, as for other data
+			test.notOk(
+				menu2.querySelector('[data-testid="sjpp-group-data-dnaMethylation"]')?.getAttribute('role'),
+				'should not open differential methylation from its row when one group has methylation data'
+			)
+			test.notOk(
+				menu2.querySelector('[data-testid="sjpp-da-dnaMeth-option"]'),
+				'should not offer differential methylation above the counts when a group has no methylation data'
+			)
+			test.notOk(
+				menu2.querySelector('[data-testid="sjpp-da-note"]'),
+				'should drop the case/control note with no analysis'
+			)
 			test.ok(menu2.querySelector('[data-testid="sjpp-summarize-option"]'), 'should still offer a summary')
+			// a row whose data only one group has is listed, but there is nothing to compare, so it opens no plot
+			const osRow = menu2.querySelector('[data-testid="sjpp-group-survival-os"]')
+			test.ok(osRow, 'should list a kind of data that one group has')
+			test.notOk(osRow.getAttribute('role'), 'should not open a plot from a row whose data only one group has')
+			test.equal(
+				osRow.getAttribute('title'),
+				'Only one group has this data, so there is nothing to compare it with',
+				'should say why the row cannot be clicked'
+			)
+			test.notOk(
+				menu2.querySelector('[data-testid="sjpp-survival-option"]'),
+				'should not offer to compare survival when only one group has survival data'
+			)
 			groups.tip.hide()
 
 			// the server takes the variable, and gives every group its samples

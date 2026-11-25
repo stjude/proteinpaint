@@ -109,6 +109,32 @@ export function eligibleMethylationSamples(ds: any, elementType: string | undefi
 	return eligible
 }
 
+/* The samples with methylation data of any element class: the union of eligibleMethylationSamples() of the
+default class and each configured class, as the differential methylation pre-analysis counts each class it
+offers. The de novo scan is not listed: eligibleMethylationSamples() gives it the samples of the default class,
+which are already counted. For a count of the samples that have any methylation data, where a count of the
+default class alone would say 0 for a group whose samples are in another class only. A class that does not
+resolve is skipped; throws when none does, as eligibleMethylationSamples() does. */
+export function anyMethylationSamples(ds: any): Set<string> {
+	const dm = ds.queries?.dnaMethylation
+	if (!dm) throw new Error('This dataset does not support DNA methylation region analysis.')
+	const classes = new Set<string | undefined>([undefined, ...(dm.scanOnly ? [] : Object.keys(dm.elements ?? {}))])
+	if (!dm.scanOnly && dm.promoter) classes.add('promoter')
+	const samples = new Set<string>()
+	let error: unknown
+	let resolved = false
+	for (const elementType of classes) {
+		try {
+			for (const name of eligibleMethylationSamples(ds, elementType)) samples.add(name)
+			resolved = true
+		} catch (e) {
+			error = e
+		}
+	}
+	if (!resolved) throw error
+	return samples
+}
+
 export function resolveMethylationMatrix(ds: any, chr: string, elementType: string | undefined): ResolvedMatrix {
 	const dm = ds.queries?.dnaMethylation
 	if (!dm) throw new Error('This dataset does not support DNA methylation region analysis.')

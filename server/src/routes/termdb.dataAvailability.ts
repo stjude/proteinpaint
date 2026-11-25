@@ -18,7 +18,7 @@ import {
 	samplelstFilter
 } from '#src/utils/sampleGroups.ts'
 import { filterTerms } from '#src/termdb.server.init.ts'
-import { eligibleMethylationSamples } from '#src/utils/methylationMatrix.ts'
+import { anyMethylationSamples } from '#src/utils/methylationMatrix.ts'
 import { getImagingSampleNames } from '#src/brainImaging/brainImagingSamples.ts'
 import { getSwimmerLanes } from './termdb.swimmer.ts'
 import { mayLog } from '#src/helpers.ts'
@@ -34,11 +34,13 @@ samples of expression plots), the rnaseq counts of differential expression, DNA 
 junctions and brain imaging. A group is defined by a filter, as the groups of a custom variable and a
 sunburst selection are, or lists its samples. A sample counts for a kind of data when the plot or analysis
 of that data would use it, i.e. it is in the data's samples, and the request may read it; for rnaseq
-counts, methylation and splicing these are the counts that the pre-analysis of their differential
-analysis gives for two groups. Also counted: the patients of a group with longitudinal data (the lanes
-of the swimmer plot of its samples), and the samples of a group that were assayed for each kind of mutation
-data (ds.assayAvailability), which may be child samples of the group's samples, and, for each survival term of
-the request's cohort, the patients or samples of a group with a value for it.
+counts and splicing these are the counts that the pre-analysis of their differential analysis gives for
+two groups. Methylation counts the samples with data of any element class, each of which the pre-analysis
+of differential methylation counts on its own, so that 0 means no methylation data at all. Also counted:
+the patients of a group with longitudinal data (the lanes of the swimmer plot of its samples), and the
+samples of a group that were assayed for each kind of mutation data (ds.assayAvailability), which may be
+child samples of the group's samples, and, for each survival term of the request's cohort, the patients or
+samples of a group with a value for it.
 
 Only counts are returned. A kind of data, or a survival term, that the dataset does not have or that the
 request may not read is left out of every group.
@@ -299,7 +301,7 @@ async function getEligibleSampleSets(
 		// allSampleSet may be a getter on api-backed datasets, so it is read here
 		['rnaseqGeneCount', () => ds.queries?.rnaseqGeneCount?.allSampleSet],
 		['isoformExpressionCount', () => ds.queries?.isoformExpressionCount?.allSampleSet],
-		['dnaMethylation', () => (ds.queries?.dnaMethylation ? eligibleMethylationSamples(ds, undefined) : undefined)],
+		['dnaMethylation', () => (ds.queries?.dnaMethylation ? anyMethylationSamples(ds) : undefined)],
 		['junction', () => ds.queries?.junction?.cluster?.allSampleSet],
 		['NIdata', () => getImagingSamples(q, ds)]
 	]

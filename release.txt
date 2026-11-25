@@ -1,1 +1,6 @@
+Features:
+- Sunburst: selected wedges can be explored together or compared as groups of one or more wedges, regrouped by dragging, and saved as a custom variable, 
+- Sunburst and custome variable share the same menu of available data and analyses
 
+Fixes:
+- Custom variable menu: a row of the available data that only one group has data for no longer opens a plot; the samples with DNA methylation data of each group are counted in every element class, not only in the default one, so a group whose samples have methylation data in another class no longer shows 0; Differential DNA Methylation Analysis" is offered only when both groups have samples with methylation data
