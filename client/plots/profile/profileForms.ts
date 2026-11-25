@@ -23,6 +23,41 @@ const LIKERT_TAB = 'Likert Scale'
 // tabs flow is skipped and a dedicated thermometer is rendered instead.
 const IMPRESSION_SUFFIX = '__Impression'
 
+/* the SC term paired with a POC term has the POC term id without the POC prefix */
+export function getSCTermId(pocTermId: string) {
+	return pocTermId.replace(/^POC/, '')
+}
+
+/* POC score terms of a plot tab are multivalue; SC terms may carry the same subtype */
+export function isPOCScoreTerm(tw: any, subtype: string) {
+	return tw.term.type == 'multivalue' && tw.term.subtype == subtype
+}
+
+/*
+The Yes/No items of a tab, in display order: each POC term with its SC twin when the db has one
+(a POC-only item has none), then the SC-only items.
+*/
+export function getYesNoItems(
+	pocTWs: any[],
+	scTWsById: { [id: string]: any },
+	scOnlyTWs: any[]
+): { tw?: any; scTW?: any }[] {
+	return [...pocTWs.map(tw => ({ tw, scTW: scTWsById[getSCTermId(tw.term.id)] })), ...scOnlyTWs.map(scTW => ({ scTW }))]
+}
+
+/*
+SC answers keyed by category label, to match the POC bar. A SC term may store raw codes ("1", "0")
+or labels ("Yes"), depending on its matrix column.
+*/
+export function getSCPercentsByLabel(scPercents: { [key: string]: number }, scTW: any) {
+	const byLabel: { [label: string]: number } = {}
+	for (const [k, v] of Object.entries(scPercents)) {
+		const label = scTW.term.values?.[k]?.label || k
+		byLabel[label] = (byLabel[label] || 0) + v
+	}
+	return byLabel
+}
+
 export class profileForms extends profilePlot {
 	static type = 'profileForms' as const
 	id: any
@@ -42,6 +77,8 @@ export class profileForms extends profilePlot {
 	legendG: any
 	//for each plot tab, a dict of sc term wrappers
 	id2SCTW: { [key: string]: { [key: string]: any } }
+	//for each plot tab, the sc term wrappers that have no POC twin, shown as SC-only items
+	scOnlyTWs: { [key: string]: any[] } = {}
 
 	// Impression-domain mode (set in init() when config.tw.term.id ends with '__Impression')
 	isImpressionDomain!: boolean
@@ -104,9 +141,18 @@ export class profileForms extends profilePlot {
 			}
 		} else {
 			this.twLst = await this.vocabApi!.getMultivalueTWs({ parent_id: parentId })
+			const pocIds = new Set(this.twLst.map(tw => tw.term.id))
+			// SC terms of this domain, used for SC-only items: a SC term marked with a plot subtype and no POC twin
+			const cohortValuelst = appState.termdbConfig?.selectCohort
+				? appState.termdbConfig.selectCohort.values[appState.activeCohort]?.keys
+				: null
+			const children: any[] = (await this.vocabApi!.getTermChildren({ id: parentId }, cohortValuelst))?.lst || []
 			for (const plot of config.options) {
-				const tws = this.twLst.filter(tw => tw.term.subtype == plot.subtype)
-				if (!tws.length) continue //no terms for this plot
+				const tws = this.twLst.filter(tw => isPOCScoreTerm(tw, plot.subtype))
+				const scOnlyTerms = plot.hasSC
+					? children.filter(t => t.type != 'multivalue' && t.subtype == plot.subtype && !pocIds.has('POC' + t.id))
+					: []
+				if (!tws.length && !scOnlyTerms.length) continue //no terms for this plot
 				const tab: any = {
 					label: plot.name,
 					callback: () => {
@@ -117,13 +163,16 @@ export class profileForms extends profilePlot {
 				if (plot.name == config.activeTab) tab.active = true
 				if (plot.hasSC) {
 					this.id2SCTW[plot.name] = {}
-					for (const tw of this.twLst) {
-						if (tw.term.subtype != plot.subtype) continue
-						const scTermId = tw.term.id.replace(/^POC/, '')
+					// a POC-only item has no SC twin in the db, so only existing twins are loaded
+					const twinIds = tws.map(tw => getSCTermId(tw.term.id))
+					const twins = twinIds.length ? await this.vocabApi!.getTerms(twinIds) : {}
+					const scTermIds = [...twinIds.filter(id => twins[id]), ...scOnlyTerms.map(t => t.id)]
+					for (const scTermId of scTermIds) {
 						const scTW: any = { id: scTermId }
 						await fillTermWrapper(scTW, this.app.vocabApi)
 						this.id2SCTW[plot.name][scTermId] = scTW
 					}
+					this.scOnlyTWs[plot.name] = scOnlyTerms.map(t => this.id2SCTW[plot.name][t.id])
 					this.twLst.push(...Object.values(this.id2SCTW[plot.name]))
 				}
 				this.tabs.push(tab)
@@ -211,7 +260,7 @@ export class profileForms extends profilePlot {
 			if (this.tabs.length == 0) return // no plots to show
 			const activeTab = this.state.config.activeTab || this.tabs[0].label
 			this.activePlot = this.state.config.options.find(p => p.name == activeTab)
-			this.scoreTerms = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
+			this.scoreTerms = this.twLst.filter(tw => isPOCScoreTerm(tw, this.activePlot.subtype))
 			if (this.activePlot.hasSC) {
 				this.scScoreTerms = Object.values(this.id2SCTW[this.activePlot.name])
 			}
@@ -563,15 +612,20 @@ export class profileForms extends profilePlot {
 
 	renderYesNo() {
 		const step = 30
-		const height = this.scoreTerms.length * step
+		const items = getYesNoItems(
+			this.scoreTerms,
+			this.id2SCTW[this.activePlot.name] || {},
+			this.scOnlyTWs[this.activePlot.name] || []
+		)
+		const height = items.length * step
 		this.dom.svg.attr('height', height * 3 + 200) //space for the sc, for the poc and between items
 
 		// First pass: render labels to measure max width
 		const labelPadding = 50
 		const tempG = this.dom.svg.append('g').style('visibility', 'hidden')
 		let maxLabelWidth = 0
-		for (const tw of this.scoreTerms) {
-			const text = getText(tw.term.name)
+		for (const item of items) {
+			const text = getText((item.tw || item.scTW).term.name)
 			const tempText = tempG.append('text').style('font-size', '0.8em').text(text)
 			const w = (tempText.node() as SVGTextElement).getBBox().width
 			if (w > maxLabelWidth) maxLabelWidth = w
@@ -590,22 +644,14 @@ export class profileForms extends profilePlot {
 
 		let y = 0
 		let showSCBar = false
-		for (const tw of this.scoreTerms) {
-			const percents: { [key: string]: number } = this.getPercentageDict(tw)
-			const scTermId = tw.term.id.replace(/^POC/, '')
-			const scTW = this.id2SCTW[this.activePlot.name][scTermId]
-			const scPercents: { [key: string]: number } = this.getPercentageDict(scTW)
-			// SC term stores raw categorical codes as keys (e.g. "1", "2").
-			// POC bar uses text labels as keys (e.g. "Yes", "No").
-			// Map SC codes to labels so scPercentKeys matches the POC bar's key format.
-			const scPercentKeys = Object.keys(scPercents)
-				.filter(k => scPercents[k] > 0)
-				.map(k => scTW.term.values?.[k]?.label || k)
+		for (const { tw, scTW } of items) {
+			const term = (tw || scTW).term
+			// SC answers keyed by label, the same keys as the POC bar; none for a POC-only item
+			const scPercents = scTW ? getSCPercentsByLabel(this.getPercentageDict(scTW), scTW) : {}
 			const scTotal = Object.values(scPercents).reduce((a, b) => a + b, 0)
-			showSCBar = scTotal > 1
-			this.renderYesNoBar(percents, y, step, scTotal == 1 ? scPercentKeys : [])
-			if (showSCBar) {
-				y += step + 10
+			if (!tw) {
+				// SC-only item: the SC answers are its only bar
+				showSCBar = false
 				this.renderYesNoBar(scPercents, y, step, [])
 				this.dom.mainG
 					.append('text')
@@ -613,46 +659,60 @@ export class profileForms extends profilePlot {
 					.style('font-size', '0.7em')
 					.attr('x', this.settings.svgw + 8)
 					.attr('y', y + step * 0.6)
-			}
+			} else {
+				const scPercentKeys = Object.keys(scPercents).filter(k => scPercents[k] > 0)
+				showSCBar = scTotal > 1
+				this.renderYesNoBar(this.getPercentageDict(tw), y, step, scTotal == 1 ? scPercentKeys : [])
+				if (showSCBar) {
+					y += step + 10
+					this.renderYesNoBar(scPercents, y, step, [])
+					this.dom.mainG
+						.append('text')
+						.text('SC')
+						.style('font-size', '0.7em')
+						.attr('x', this.settings.svgw + 8)
+						.attr('y', y + step * 0.6)
+				}
 
-			this.dom.mainG
-				.append('text')
-				.text('POC')
-				.style('font-size', '0.7em')
-				.attr('x', this.settings.svgw + 8)
-				.attr('y', showSCBar ? y - step + 0.35 * step : y + step * 0.6)
+				this.dom.mainG
+					.append('text')
+					.text('POC')
+					.style('font-size', '0.7em')
+					.attr('x', this.settings.svgw + 8)
+					.attr('y', showSCBar ? y - step + 0.35 * step : y + step * 0.6)
+			}
 			this.dom.mainG
 				.append('text')
 				.attr('x', -this.shift)
 				.attr('y', showSCBar ? y : y + step / 2)
-				.text(getText(tw.term.name))
+				.text(getText(term.name))
 				.attr('font-size', '0.8em')
-				.on('mouseenter', event => this.showText(event, tw.term.name))
+				.on('mouseenter', event => this.showText(event, term.name))
 				.on('mouseleave', () => this.tip.hide())
 
 			y += step + 40
 		}
 		this.renderLines(y - 20) //last padding not needed
 
-		if (showSCBar) this.dom.legendG.attr('transform', `translate(${550}, ${30 + this.settings.svgh})`)
-		else this.dom.legendG.attr('transform', `translate(${550}, ${this.settings.svgh * 0.8})`)
+		// below the last item; a fixed offset overlaps the items of a tab with many of them
+		this.dom.legendG.attr('transform', `translate(${550}, ${this.shiftTop + y})`)
 
 		let x = 0
 		for (const category of this.activePlot.categories) {
 			x += this.drawLegendRect(x, 0, category.name, this.dom.legendG, true)
 		}
-		let text = this.dom.legendG
-			.append('text')
-			.attr('x', x + 80)
-			.attr('y', 18)
-		text.append('tspan').style('font-weight', 'bold').text('SC:')
-		text.append('tspan').text('Site Coordinator')
-		text = this.dom.legendG
-			.append('text')
-			.attr('x', x + 250)
-			.attr('y', 18)
-		text.append('tspan').style('font-weight', 'bold').text('POC:')
-		text.append('tspan').text('Point of Care Staff')
+		// list only the responders shown: a POC-only or SC-only tab has one of the two
+		const keys: [string, string][] = []
+		if (items.some(item => item.scTW)) keys.push(['SC:', 'Site Coordinator'])
+		if (items.some(item => item.tw)) keys.push(['POC:', 'Point of Care Staff'])
+		keys.forEach(([abbr, name], i) => {
+			const text = this.dom.legendG
+				.append('text')
+				.attr('x', x + 80 + i * 170)
+				.attr('y', 18)
+			text.append('tspan').style('font-weight', 'bold').text(abbr)
+			text.append('tspan').text(name)
+		})
 	}
 
 	onMouseOver(event) {

@@ -2231,8 +2231,9 @@ export type CheckAccessToSampleData =
 			/** assess() gets the distinct names of the samples with data for a term */
 			need: 'names'
 			/** when given, the names are the values of this categorical term for these samples, such as the site
-			 * of each patient; otherwise the names are the sample names from the sampleidmap table */
-			termId?: string
+			 * of each patient; otherwise the names are the sample names from the sampleidmap table.
+			 * A list of terms, such as one site term per subcohort, combines the values of all of them */
+			termId?: string | string[]
 			assess: (
 				/** req.query as processed through app middleware (pre-parsed, may have req.body props, __protected__, etc) */
 				q: any,
