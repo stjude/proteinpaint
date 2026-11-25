@@ -149,6 +149,8 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			if (isErrorResponse(data)) throw new Error(data.error)
 			if (!data.charts || !Object.keys(data.charts).length) {
 				this.dom.banner.html(`<span>No visible box plot data to render</span>`).style('display', 'block')
+			} else {
+				this.dom.banner.style('display', 'none').html('')
 			}
 			setDescrStatsByTerm([config.term, config.term2], data.descrStats)
 			config.bins = data.bins
