@@ -3062,11 +3062,36 @@ export type isSupportedChartCallbacks = {
 	[chartType: string]: boolean | ((f: any) => boolean | undefined)
 }
 
+/** the ky retry options of the requests to a url substring, see server/src/xfetch.hostpath.ts;
+ * the functions are called by ky, see the ky retry option documentation */
+export type FetchRetry = {
+	/** the maximum number of retries */
+	limit?: number
+	/** the request methods to retry; ky retries only the idempotent ones by default */
+	methods?: string[]
+	/** the response statuses to retry */
+	statusCodes?: number[]
+	/** the longest wait, in ms, for a Retry-After or similar response header */
+	maxRetryAfter?: number
+	/** the longest delay, in ms */
+	backoffLimit?: number
+	/** the delay, in ms, before a retry, given the attempt count from 1 */
+	delay?: (attemptCount: number) => number
+	/** adjusts a delay, such as randomly, so that parallel requests do not all retry at once */
+	jitter?: boolean | ((delay: number) => number)
+	/** whether to retry after an error, which may override the other options */
+	shouldRetry?: (state: { error: Error; retryCount: number }) => boolean | undefined | Promise<boolean | undefined>
+	/** other ky retry options */
+	[option: string]: any
+}
+
 /** the xfetch() options of the requests to a url substring, see server/src/xfetch.hostpath.ts */
 export type FetchHostpathOptions = {
 	/** the message of an error when the API is busy or not responding, such as one that names the API,
 	 * instead of the default message */
 	networkErrorMessage?: string
+	/** the ky retry option, instead of the ky defaults */
+	retry?: FetchRetry
 }
 
 /** url substring, such as a host or a host and path -> xfetch() options */

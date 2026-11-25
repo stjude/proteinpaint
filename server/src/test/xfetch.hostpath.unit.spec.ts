@@ -1,9 +1,10 @@
 import tape from 'tape'
-import { setHostpathOptions, getHostpathOptions, clearHostpathOptions } from '#src/xfetch.hostpath.ts'
+import { setHostpathOptions, getHostpathOptions, getRetry, clearHostpathOptions } from '#src/xfetch.hostpath.ts'
 
 /*
 test sections:
 - getHostpathOptions()
+- getRetry()
 - setHostpathOptions(): hostpath order
 - setHostpathOptions(): owners
 - setHostpathOptions(): invalid options
@@ -23,6 +24,33 @@ tape('getHostpathOptions()', test => {
 		'should match a url that has the hostpath'
 	)
 	test.equal(getHostpathOptions('https://api.example.org/files'), undefined, 'should not match another host')
+	clearHostpathOptions()
+	test.end()
+})
+
+tape('getRetry()', test => {
+	clearHostpathOptions()
+	const delay = (n: number) => 1000 * 2 ** (n - 1)
+	const retry = { limit: 2, methods: ['GET', 'POST'], delay }
+	setHostpathOptions({ 'example.com': { retry } }, 'ds1')
+
+	const r1 = getRetry('https://api.example.com/items')
+	test.deepEqual(r1?.methods, ['get', 'post'], 'should lowercase the registered methods')
+	test.deepEqual(retry.methods, ['GET', 'POST'], 'should not change the methods of the dataset option')
+	test.equal(r1?.delay, delay, 'should use a registered function as given')
+	test.equal(getRetry('https://api.example.org/files'), undefined, 'should not have a retry option for another host')
+
+	const r2 = getRetry('https://api.example.com/cases')
+	test.notEqual(r2, r1, 'should return a copy of the retry option for each request')
+	r2!.methods = ['get']
+	test.deepEqual(
+		getRetry('https://api.example.com/files')?.methods,
+		['get', 'post'],
+		'should not change the retry option of a later request when a copy is changed'
+	)
+
+	setHostpathOptions({ 'example.com': { networkErrorMessage: 'Example is busy.' } }, 'ds1')
+	test.equal(getRetry('https://api.example.com/items'), undefined, 'should not have a retry option without one')
 	clearHostpathOptions()
 	test.end()
 })
@@ -81,7 +109,9 @@ tape('setHostpathOptions(): invalid options', test => {
 		[{ '': {} }, 'an empty hostpath'],
 		[{ 'example.com': 3 }, 'options that are not an object'],
 		[{ 'example.com': { networkErrorMessage: ' ' } }, 'a blank networkErrorMessage'],
-		[{ 'example.com': { networkErrorMessage: 3 } }, 'a networkErrorMessage that is not a string']
+		[{ 'example.com': { networkErrorMessage: 3 } }, 'a networkErrorMessage that is not a string'],
+		[{ 'example.com': { retry: 3 } }, 'a retry option that is not an object'],
+		[{ 'example.com': { retry: { methods: 'post' } } }, 'retry methods that are not an array']
 	] as [any, string][]) {
 		test.throws(() => setHostpathOptions(byHostpath, 'ds1'), `should throw for ${label}`)
 	}
