@@ -1,6 +1,6 @@
 import tape from 'tape'
 import util from 'node:util'
-import { xfetch, removeCredentials } from '../xfetch.js'
+import { xfetch, abortCtrlBy, removeCredentials, getRetryDelay } from '../xfetch.js'
 import { isRecoverableError } from '../utils.js'
 import { setHostpathOptions, clearHostpathOptions } from '../xfetch.hostpath.ts'
 
@@ -12,6 +12,14 @@ test sections:
 - xfetch(): an HTTP 503 response
 - xfetch(): an aborted request
 - xfetch(): a registered networkErrorMessage
+- xfetch(): a retry of a failed connection
+- xfetch(): a retry of a response body that is cut off
+- xfetch(): a shouldRetry() option and a response body that is cut off
+- xfetch(): a shouldRetry() that aborts the request and then fails
+- xfetch(): a retry delay() that throws for a response body that is cut off
+- xfetch(): an abort while waiting to retry a response body that is cut off
+- xfetch(): a registered retry option
+- getRetryDelay()
 - removeCredentials()
 */
 
@@ -138,6 +146,206 @@ tape('xfetch(): a registered networkErrorMessage', async test => {
 	error = await getError('https://api.example.org/files', opts)
 	test.ok(error?.message.startsWith('The server is busy'), 'should use the default message for another host')
 	clearHostpathOptions()
+	test.end()
+})
+
+// a retry option without a backoff delay, so that the tests do not wait
+const postRetry = { limit: 1, methods: ['post'], backoffLimit: 1 }
+
+tape('xfetch(): a retry of a failed connection', async test => {
+	let calls = 0
+	const fetch = async () => {
+		calls++
+		return failedFetch()
+	}
+	const error = await getError(apiUrl, { method: 'POST', body: { size: 1 }, fetch, retry: postRetry })
+	test.equal(calls, 2, 'should retry a POST request when the retry option allows it')
+	test.equal(error?.name, 'NetworkError', 'should replace the native error after the retry')
+	test.end()
+})
+
+tape('xfetch(): a retry of a response body that is cut off', async test => {
+	const fetch1 = getCutOffFetch(1)
+	const payload = await xfetch(apiUrl, { method: 'POST', body: { size: 1 }, fetch: fetch1, retry: postRetry })
+	test.deepEqual(payload, { ok: 1 }, 'should retry once and return the payload')
+	test.equal(fetch1.calls, 2, 'should request again after the body is cut off')
+
+	const fetch2 = getCutOffFetch(Infinity)
+	await getError(apiUrl, { method: 'POST', body: { size: 1 }, fetch: fetch2, retry: { limit: 0 } })
+	test.equal(fetch2.calls, 1, 'should not retry when the retry option does not allow it')
+
+	// another host has no retry option, so the ky defaults apply: a GET is retried with ky's default limit
+	const fetch3 = getCutOffFetch(1)
+	const payload3 = await xfetch('https://api.example.org/files', { fetch: fetch3 })
+	test.deepEqual(payload3, { ok: 1 }, 'should retry a GET request without a retry option, as ky does')
+	test.equal(fetch3.calls, 2, 'should request again with the default retry limit')
+
+	const fetch4 = getCutOffFetch(1)
+	await getError('https://api.example.org/files', { method: 'POST', body: { size: 1 }, fetch: fetch4 })
+	test.equal(fetch4.calls, 1, 'should not retry a POST request without a retry option, as ky does')
+	test.end()
+})
+
+tape('xfetch(): a shouldRetry() option and a response body that is cut off', async test => {
+	const calls = []
+	const shouldRetry = state => {
+		calls.push(state)
+		return false
+	}
+	const fetch = getCutOffFetch(1)
+	const error = await getError(apiUrl, { fetch, retry: { limit: 1, shouldRetry } })
+	test.equal(fetch.calls, 1, 'should not request again when shouldRetry() returns false')
+	test.equal(error?.name, 'NetworkError', 'should replace the cut-off body error')
+	test.equal(calls[0]?.error?.message, 'terminated', 'should give shouldRetry() the cut-off body error')
+	test.equal(calls[0]?.retryCount, 1, 'should give shouldRetry() the retry count')
+
+	const fetch2 = getCutOffFetch(1)
+	const payload = await xfetch(apiUrl, {
+		fetch: fetch2,
+		retry: { limit: 1, backoffLimit: 1, shouldRetry: () => undefined }
+	})
+	test.deepEqual(payload, { ok: 1 }, 'should retry when shouldRetry() returns undefined')
+	test.equal(fetch2.calls, 2, 'should request again when shouldRetry() returns undefined')
+
+	const fetch3 = getCutOffFetch(1)
+	const thrown = new Error('shouldRetry failed')
+	const error3 = await getError(apiUrl, {
+		fetch: fetch3,
+		retry: {
+			limit: 1,
+			shouldRetry: () => {
+				throw thrown
+			}
+		}
+	})
+	test.equal(error3, thrown, 'should throw the error of shouldRetry(), as ky does')
+	test.equal(fetch3.calls, 1, 'should not request again when shouldRetry() throws')
+
+	// an abort while an async shouldRetry() is pending
+	const ctrl = new AbortController()
+	const fetch4 = getCutOffFetch(1)
+	const start = Date.now()
+	const shouldRetryAfterAbort = async () => {
+		ctrl.abort()
+		return true
+	}
+	const error4 = await getError(apiUrl, {
+		fetch: fetch4,
+		signal: ctrl.signal,
+		retry: { limit: 1, delay: () => 5000, shouldRetry: shouldRetryAfterAbort }
+	})
+	test.equal(error4?.name, 'AbortError', 'should throw the abort error after an abort during shouldRetry()')
+	test.ok(Date.now() - start < 1000, 'should not wait to retry after an abort during shouldRetry()')
+	test.equal(fetch4.calls, 1, 'should not request again after an abort during shouldRetry()')
+
+	// an abort while shouldRetry() never settles
+	const ctrl5 = new AbortController()
+	const fetch5 = getCutOffFetch(1)
+	const start5 = Date.now()
+	setTimeout(() => ctrl5.abort(), 50)
+	const error5 = await getError(apiUrl, {
+		fetch: fetch5,
+		signal: ctrl5.signal,
+		retry: { limit: 1, shouldRetry: () => new Promise(() => {}) }
+	})
+	test.equal(error5?.name, 'AbortError', 'should throw the abort error when shouldRetry() is pending')
+	test.ok(Date.now() - start5 < 1000, 'should not wait for a pending shouldRetry() after an abort')
+	test.equal(fetch5.calls, 1, 'should not request again after an abort while shouldRetry() is pending')
+	test.end()
+})
+
+tape('xfetch(): a shouldRetry() that aborts the request and then fails', async test => {
+	const unhandled = []
+	const onUnhandled = reason => unhandled.push(reason)
+	process.on('unhandledRejection', onUnhandled)
+
+	for (const [label, getShouldRetry] of [
+		[
+			'throws',
+			ctrl => () => {
+				ctrl.abort()
+				throw new Error('shouldRetry failed')
+			}
+		],
+		[
+			'rejects',
+			ctrl => () => {
+				ctrl.abort()
+				return Promise.reject(new Error('shouldRetry failed'))
+			}
+		]
+	]) {
+		const ctrl = new AbortController()
+		const fetch = getCutOffFetch(1)
+		const error = await getError(apiUrl, {
+			fetch,
+			signal: ctrl.signal,
+			retry: { limit: 1, shouldRetry: getShouldRetry(ctrl) }
+		})
+		test.equal(error?.name, 'AbortError', `should throw the abort error when shouldRetry() aborts and ${label}`)
+		test.equal(fetch.calls, 1, `should not request again when shouldRetry() aborts and ${label}`)
+	}
+	// an unhandled rejection is reported after the microtasks of the rejected promise
+	await new Promise(resolve => setTimeout(resolve, 20))
+	process.off('unhandledRejection', onUnhandled)
+	test.deepEqual(unhandled, [], 'should not leave an unhandled rejection from shouldRetry()')
+	test.end()
+})
+
+tape('xfetch(): a retry delay() that throws for a response body that is cut off', async test => {
+	// the request is one of a set that shares an abort controller, see abortCtrlBy.signal
+	const ctrl = new AbortController()
+	abortCtrlBy.signal.set(ctrl.signal, ctrl)
+	const thrown = new Error('delay failed')
+	const fetch = getCutOffFetch(1)
+	const error = await getError(apiUrl, {
+		fetch,
+		signal: ctrl.signal,
+		retry: {
+			limit: 1,
+			delay: () => {
+				throw thrown
+			}
+		}
+	})
+	test.equal(error, thrown, 'should throw the error of delay()')
+	test.equal(fetch.calls, 1, 'should not request again when delay() throws')
+	test.ok(ctrl.signal.aborted, 'should abort the other requests that share the signal')
+	test.end()
+})
+
+tape('xfetch(): an abort while waiting to retry a response body that is cut off', async test => {
+	const ctrl = new AbortController()
+	const fetch = getCutOffFetch(1)
+	const retry = { limit: 1, delay: () => 5000 }
+	const start = Date.now()
+	setTimeout(() => ctrl.abort(), 50)
+	const error = await getError(apiUrl, { fetch, retry, signal: ctrl.signal })
+	test.equal(error?.name, 'AbortError', 'should throw the abort error')
+	test.ok(Date.now() - start < 1000, 'should stop waiting when the request is aborted')
+	test.equal(fetch.calls, 1, 'should not request again after an abort')
+	test.end()
+})
+
+tape('xfetch(): a registered retry option', async test => {
+	setHostpathOptions({ 'api.example.com': { retry: { limit: 1, methods: ['POST'], backoffLimit: 1 } } }, 'test-ds')
+	const fetch = getCutOffFetch(1)
+	const payload = await xfetch(apiUrl, { method: 'POST', body: { size: 1 }, fetch })
+	test.deepEqual(payload, { ok: 1 }, 'should retry a POST request when the registered option allows it')
+	test.equal(fetch.calls, 2, 'should request again with the registered option')
+
+	const fetch2 = getCutOffFetch(1)
+	await getError('https://api.example.org/files', { method: 'POST', body: { size: 1 }, fetch: fetch2 })
+	test.equal(fetch2.calls, 1, 'should not use the registered option for another host')
+	clearHostpathOptions()
+	test.end()
+})
+
+tape('getRetryDelay()', test => {
+	test.equal(getRetryDelay(undefined, 1), 300, 'should use the ky default delay without a retry option')
+	test.equal(getRetryDelay(2, 2), 600, 'should use the ky default delay with a numeric retry option')
+	test.equal(getRetryDelay({ backoffLimit: 1 }, 1), 1, 'should limit the delay to backoffLimit')
+	test.equal(getRetryDelay({ delay: () => 50, jitter: () => -1 }, 1), 50, 'should ignore an invalid jitter result')
 	test.end()
 })
 
