@@ -34,7 +34,8 @@ import {
 	getOriginLabel,
 	getTermLabelSuffix,
 	hasLegacyGroupsetOrigins,
-	migrateLegacyGroupsetOrigins
+	migrateLegacyGroupsetOrigins,
+	canQueryDtByRegion
 } from '#shared/terms.js'
 import { validateVariantFilter } from '#shared/geneVariantFilter.js'
 import { rgb } from 'd3-color'
@@ -516,6 +517,24 @@ function getGroupsetDts(groupset: GvGroupset): any[] {
 	// a groupset that declares neither must already be built, see GvGroupset
 	if (!groupset.groups) throw 'groupset has neither dt(s) nor groups[]'
 	return getDtsFromGroups(groupset.groups)
+}
+
+/* whether a term is over a region, an entry of term.genes[] that is a coordinate rather than a
+gene. Such an entry is the term's only one, see selectGene() in client/termdb/handlers/geneVariant.ts */
+export function isGvRegionTerm(term: any): boolean {
+	return !!term?.genes?.some(g => g.kind == 'coord')
+}
+
+/* whether the term can be queried for a dt: a region is not queried for a dt whose query takes
+no region, see getGvQueryMethods() in server/src/mds3.gvQueryMethods.ts, so such a dt is not
+offered for a region term */
+export function canQueryGvTermDt(term: any, dt: number, vocabApi: { termdbConfig?: any }): boolean {
+	return !isGvRegionTerm(term) || canQueryDtByRegion(vocabApi.termdbConfig?.queries, dt)
+}
+
+/* whether the term can be queried for every dt of a predefined groupset, see canQueryGvTermDt() */
+export function canQueryGvGroupset(term: any, groupset: GvGroupset, vocabApi: { termdbConfig?: any }): boolean {
+	return getGroupsetDts(groupset).every(dt => canQueryGvTermDt(term, dt, vocabApi))
 }
 
 /* build the groups[] of one groupset, in place. requires querying the mutation classes

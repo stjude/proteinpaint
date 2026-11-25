@@ -8,6 +8,7 @@ import { makeCanvas, canvasToURL } from './canvas.ts'
 import { maxPixelRatio } from './bw.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { toBreakpointPos, isSelfBreakpointInRange, isPartnerBreakpointInRange } from './svfusion.breakpoint.ts'
+import { getGvQueryMethods } from './mds3.gvQueryMethods.ts'
 import { validate_query_svfusionEventImages } from '#routes/termdb.mds3.eventImage.ts'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
@@ -61,6 +62,7 @@ import {
 	dtTermTypes,
 	getGvQueryRegion,
 	getGvQueryKey,
+	getDtQueryKey,
 	matchesGvQueryEntry,
 	setQuerySampleTypes
 } from '#shared/terms.js'
@@ -3226,6 +3228,8 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		// collect dts to query
 		const dts = getDtsToQuery(tw, ds)
+		// kinds of term.genes[] entry, gene or region, that each query of those dts takes
+		const gvQueryMethods = getGvQueryMethods(ds.queries)
 
 		// retrieve mutation data for each gene
 		// query genes concurrently to speed up geneset query
@@ -3250,18 +3254,24 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 		async function getGeneMlst(gene) {
 			if (!gene.gene && !(gene.chr && Number.isInteger(gene.start) && Number.isInteger(gene.stop)))
 				throw 'no gene or position specified'
+			/* a region has no gene symbol, so a dt whose query takes no region is skipped for it.
+			Queried, it would find no data, and mayAddDataAvailability() would then mark every
+			sample assayed for the dt as wildtype. See getGvQueryMethods(). A region that none of
+			the dts can be queried by says so, rather than returning nothing */
+			const geneDts = gene.gene ? dts : dts.filter(dt => gvQueryMethods[getDtQueryKey(dt)]?.includes('coord'))
+			if (dts.length && !geneDts.length) throw `${dts.map(dt => dt2label[dt]).join(', ')} cannot be queried by a region`
 			const mlst = []
-			if (ds.queries.snvindel && dts.includes(dtsnvindel)) {
+			if (ds.queries.snvindel && geneDts.includes(dtsnvindel)) {
 				const snvIndelMlst = await getSnvindelByTerm(ds, gene, genome, q, { addReadDepth })
 				mlst.push(...snvIndelMlst)
 			}
-			if (ds.queries.svfusion && (dts.includes(dtfusionrna) || dts.includes(dtsv))) {
+			if (ds.queries.svfusion && (geneDts.includes(dtfusionrna) || geneDts.includes(dtsv))) {
 				// important to query getSvfusionByTerm() once and not multiple times
 				// for each svfusion dt, otherwise mutations will get duplicated for samples
 				const svFusionMlst = await getSvfusionByTerm(ds, gene, genome, q)
 				mlst.push(...svFusionMlst)
 			}
-			if ((ds.queries.geneCnv || ds.queries.cnv) && dts.includes(dtcnv)) {
+			if ((ds.queries.geneCnv || ds.queries.cnv) && geneDts.includes(dtcnv)) {
 				/******************
 					 tricky!!
 				*******************
@@ -3278,7 +3288,7 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 					: await getCnvByTw(ds, { term: gene, q: tw.q }, genome, q)
 				mlst.push(...cnvMlst)
 			}
-			if (ds.queries.itd && dts.includes(dtitd)) {
+			if (ds.queries.itd && geneDts.includes(dtitd)) {
 				const itdMlst = await getItdByTerm(ds, gene, genome, q)
 				mlst.push(...itdMlst)
 			}
@@ -3384,7 +3394,7 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 			if (!q.disableAssayAvailability) {
 				// add data availability for each dt
-				for (const dt of dts) {
+				for (const dt of geneDts) {
 					mayAddDataAvailability(sample2mlst, dt, ds, gene, tw)
 				}
 			}
@@ -3950,7 +3960,8 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 	}
 	/* byname matches events by the gene name of the entry, which an entry over a region has none
 	of, so a region is queried by range alone. Its events have no breakpoint positions to place in
-	the region either, see svfusionByNameGetter_file() */
+	the region either, see svfusionByNameGetter_file(), so getGeneMlst() does not query a region
+	here at all when byname is present, see getGvQueryMethods() */
 	const isRegion = !term.gene
 	if (ds.queries.svfusion.byrange && ds.queries.svfusion.byname && !isRegion) {
 		await mayMapGeneName2coord(term, genome)

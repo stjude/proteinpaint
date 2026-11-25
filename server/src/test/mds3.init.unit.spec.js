@@ -3275,14 +3275,15 @@ test('mayGetGeneVariantData: a region is queried by snvindel.byrange over byisof
 		await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
 		t.fail('should throw for a region without byrange')
 	} catch (e) {
-		t.equal(e, 'queries.snvindel.byrange is missing, which a region is queried by', 'throws for a region')
+		t.equal(e, 'SNV/indel cannot be queried by a region', 'throws for a region')
 	}
 })
 
-/* byname matches events by the gene name of the entry, which a region has none of, so a region
-is queried by range alone, as in the mds3 track, see query_svfusion() in mds3.load.js */
-test('mayGetGeneVariantData: a region is queried by svfusion.byrange alone', async t => {
-	t.plan(5)
+/* a region is queried by svfusion.byrange alone, as in the mds3 track, see query_svfusion() in
+mds3.load.js. Not at all when byname is present: byname matches events by the gene name of the
+entry, which a region has none of, so a region would miss its events, see getGvQueryMethods() */
+test('mayGetGeneVariantData: a region is queried by svfusion.byrange, only without byname', async t => {
+	t.plan(7)
 	const calls = [] // getter of every call
 	const fusion = [
 		{
@@ -3300,8 +3301,7 @@ test('mayGetGeneVariantData: a region is queried by svfusion.byrange alone', asy
 		queries: {
 			svfusion: {
 				dtLst: [2],
-				byrange: { get: async () => (calls.push('byrange'), fusion) },
-				byname: { get: async () => (calls.push('byname'), []) }
+				byrange: { get: async () => (calls.push('byrange'), fusion) }
 			}
 		}
 	}
@@ -3312,24 +3312,98 @@ test('mayGetGeneVariantData: a region is queried by svfusion.byrange alone', asy
 	const region = { kind: 'coord', id: name, name, type: 'geneVariant', ...coord }
 	const regionTerm = { type: 'geneVariant', name, genes: [region], groupsetting: { disabled: false } }
 	const results = await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
-	t.deepEqual(calls, ['byrange'], 'a region is not queried by name')
+	t.deepEqual(calls, ['byrange'], 'a region is queried by range')
 	t.equal(results.get('r')['case-1'].values[0].mname, 'BCR::ABL1', 'the event of the region is returned')
 
+	// with byname too, a region cannot be queried, and says so rather than returning what byrange finds
+	ds.queries.svfusion.byname = { get: async () => (calls.push('byname'), []) }
 	calls.length = 0
+	try {
+		await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
+		t.fail('should throw for a region with byname')
+	} catch (e) {
+		t.equal(e, 'Fusion RNA cannot be queried by a region', 'throws for a region with byname')
+		t.deepEqual(calls, [], 'does not query a region with byname')
+	}
+
 	const gene = { kind: 'gene', id: 'BCR', gene: 'BCR', name: 'BCR', type: 'geneVariant', ...coord }
 	const geneTerm = { type: 'geneVariant', name: 'BCR', genes: [gene], groupsetting: { disabled: false } }
 	await ds.mayGetGeneVariantData({ $id: 'g', term: geneTerm, q: { type: 'values' } }, {})
-	t.deepEqual(calls, ['byrange', 'byname'], 'a gene is still queried both by range and by name')
+	t.deepEqual(calls, ['byrange', 'byname'], 'a gene is queried both by range and by name')
 
-	// a ds offering only byname cannot query a region, and says so rather than returning nothing
+	// a ds offering only byname cannot query a region either
 	delete ds.queries.svfusion.byrange
 	calls.length = 0
 	try {
 		await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
 		t.fail('should throw for a region without byrange')
 	} catch (e) {
-		t.equal(e, 'queries.svfusion.byrange is missing, which a region is queried by', 'throws for a region')
+		t.equal(e, 'Fusion RNA cannot be queried by a region', 'throws for a region without byrange')
 		t.deepEqual(calls, [], 'does not query by name')
+	}
+})
+
+/* a gdc-like ds (ppgdc/active/dataset/gdc/index.ts) queries cnv of a geneVariant term by gene-level
+geneCnv, which takes no region. A region skips cnv, rather than querying it and then marking every
+sample assayed for cnv as wildtype, while the other dts are still queried */
+test('mayGetGeneVariantData: a region skips a dt whose query takes no region', async t => {
+	t.plan(6)
+	const calls = [] // getter of every call
+	const ds = {
+		genomename: 'hg38',
+		cohort: { termdb: {} },
+		assayAvailability: {
+			byDt: {
+				4: { yesSamples: new Set(['case-1', 'case-2']), noSamples: new Set() }
+			}
+		},
+		queries: {
+			snvindel: {
+				byrange: {
+					get: async () => (
+						calls.push('snvindel'),
+						[{ dt: 1, class: 'M', mname: 'R132H', pos: 208248388, samples: [{ sample_id: 'case-1' }] }]
+					)
+				}
+			},
+			cnv: { get: async () => (calls.push('cnv'), { cnvs: [] }) },
+			geneCnv: {
+				bygene: {
+					get: async () => (calls.push('geneCnv'), [{ dt: 4, class: 'CNV_amp', samples: [{ sample_id: 'case-2' }] }])
+				}
+			}
+		}
+	}
+	mayAdd_mayGetGeneVariantData(ds, null) // genome is not consulted: both entries carry coordinates
+
+	const coord = { chr: 'chr2', start: 208236000, stop: 208267000 }
+	const name = 'chr2:208236001-208267000'
+	const region = { kind: 'coord', id: name, name, type: 'geneVariant', ...coord }
+	const regionTerm = { type: 'geneVariant', name, genes: [region], groupsetting: { disabled: false } }
+	const results = await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
+	const data = results.get('r')
+	t.deepEqual(calls, ['snvindel'], 'a region is queried by snvindel alone')
+	t.deepEqual(
+		data['case-1'].values.map(v => v.dt),
+		[1],
+		'the variant of the region is returned, without a cnv status'
+	)
+	t.notOk(data['case-2'], 'a sample assayed for cnv is not marked wildtype for the region')
+
+	calls.length = 0
+	const gene = { kind: 'gene', id: 'IDH1', gene: 'IDH1', name: 'IDH1', type: 'geneVariant', ...coord }
+	const geneTerm = { type: 'geneVariant', name: 'IDH1', genes: [gene], groupsetting: { disabled: false } }
+	const geneResults = await ds.mayGetGeneVariantData({ $id: 'g', term: geneTerm, q: { type: 'values' } }, {})
+	t.deepEqual(calls, ['snvindel', 'geneCnv'], 'a gene is queried by snvindel and geneCnv')
+	t.equal(geneResults.get('g')['case-2'].values[0].class, 'CNV_amp', 'the gene-level cnv of the gene is returned')
+
+	// a region over cnv alone has nothing to be queried by
+	calls.length = 0
+	try {
+		await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values', dtLst: [4] } }, {})
+		t.fail('should throw for a region over cnv alone')
+	} catch (e) {
+		t.equal(e, 'CNV cannot be queried by a region', 'throws for a region over cnv alone')
 	}
 })
 

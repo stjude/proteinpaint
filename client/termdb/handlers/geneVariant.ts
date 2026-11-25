@@ -12,7 +12,7 @@ import {
 	getSelectedCheckboxValues
 } from '#dom'
 import type { VocabApi, DtAssayAvailabilityTerm } from '#types'
-import { getQuerySampleTypesByTerms, getOriginLabel } from '#shared/terms.js'
+import { getQuerySampleTypesByTerms, getOriginLabel, canQueryDtByRegion } from '#shared/terms.js'
 import { dtTerms, dtcnv, dtsnvindel, morigin } from '#shared/common.js'
 import { isEligibleForAllelicGroupset } from '../../tw/geneVariant'
 import { mayShowRememberedGvQ } from './rememberedGvQ.ts'
@@ -47,6 +47,8 @@ export class SearchHandler {
 	q: any // tw.q
 	callback: any
 	maxNumGenes: any
+	/** whether the single gene input was last built to take a region too, see searchGene() */
+	searchAllowsCoord?: boolean
 
 	async init(opts: Opts) {
 		this.opts = opts
@@ -131,6 +133,7 @@ export class SearchHandler {
 					}),
 					callback: v => {
 						this.toggleGeneSetRadioDisplay(v)
+						this.mayUpdateCoordSearch()
 						this.updateOriginSelect()
 						/* any remembered settings still waiting for a choice were offered against the
 						mutation type selected when the gene was picked -- both their order and their
@@ -151,7 +154,7 @@ export class SearchHandler {
 					styles: { display: 'inline-block' },
 					options: [
 						{
-							label: this.allowCoord() ? 'Single gene or region' : 'Single Gene',
+							label: this.getSingleInputLabel(),
 							value: 'single',
 							checked: true,
 							testid: 'sjpp-genevarianttermdbhandler-singlegene'
@@ -341,6 +344,7 @@ export class SearchHandler {
 		const searchDiv = this.dom.searchDiv
 		searchDiv.selectAll('*').remove()
 		searchDiv.style('margin', '10px 0px')
+		this.searchAllowsCoord = this.allowCoord()
 		const geneSearch: any = addGeneSearchbox({
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
@@ -348,18 +352,54 @@ export class SearchHandler {
 			/* a gene resolves to its symbol alone, not to its coordinates, which the server maps to
 			the gene's isoform when querying it */
 			searchOnly: 'gene',
-			allowCoord: this.allowCoord(),
+			allowCoord: this.searchAllowsCoord,
 			callback: async () => await this.selectGene(geneSearch)
 		})
 		this.dom.searchbox = geneSearch.searchbox
 		searchDiv.select('.sja_genesearchinput').style('margin', '0px')
 	}
 
-	/** whether the single gene input also accepts a coordinate, which is only where every query
-	 * of a geneVariant term can take a region, see canQueryGeneVariantByCoord() in
-	 * server/src/routes/termdb.config.ts */
+	/** whether the single gene input also accepts a coordinate, which is only where each dt that
+	 * the term is queried for can be queried by a region, see getGvQueryMethods() in
+	 * server/src/mds3.gvQueryMethods.ts */
 	allowCoord(): boolean {
-		return !!this.opts.app.vocabApi.termdbConfig?.queries?.geneVariantByCoord
+		const dts = this.getQueryDts()
+		const queries = this.opts.app.vocabApi.termdbConfig?.queries
+		return dts.length > 0 && dts.every(dt => canQueryDtByRegion(queries, dt))
+	}
+
+	/** the dts that the term is queried for: those of the selected mutation type, or, for the
+	 * matrix, which shows no mutation type radios and queries a term for every dt, all of the
+	 * dataset's */
+	getQueryDts(): number[] {
+		if (this.opts.usecase?.target == 'matrix') {
+			// getChildTerms() requires the queries, which a dataset without geneVariant data lacks
+			if (!this.opts.app.vocabApi.termdbConfig?.queries) return []
+			const term: any = {}
+			getChildTerms(term, this.opts.app.vocabApi)
+			return term.childTerms.map(t => t.dt)
+		}
+		const mutationType = this.getSelectedMutationType()
+		if (!mutationType) return []
+		// bi/mono-allelic spans two dts, see init()
+		return mutationType.dts || [mutationType.dt]
+	}
+
+	getSingleInputLabel(): string {
+		return this.allowCoord() ? 'Single gene or region' : 'Single Gene'
+	}
+
+	/** the single gene input takes a region for some mutation types and not others, see
+	 * allowCoord(), so it is relabeled for the selected one, and rebuilt when it is the input
+	 * shown. The rebuilt box is empty, which loses no choice, as picking a gene is what submits */
+	mayUpdateCoordSearch() {
+		const label = this.getSingleInputLabel()
+		this.inputTypeRadio.labels
+			.filter(d => d.value == 'single')
+			.select('span')
+			.html('&nbsp;' + label)
+		const single = this.inputTypeRadio.inputs.filter(d => d.value == 'single').property('checked')
+		if (single && this.allowCoord() != this.searchAllowsCoord) this.searchGene()
 	}
 
 	/** focus on the search box of the current gene input (single gene or gene set) */

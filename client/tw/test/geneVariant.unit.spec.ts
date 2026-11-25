@@ -1,11 +1,22 @@
 import tape from 'tape'
-import { getGvQLabel, isCustomizedGvQ } from '../geneVariant.ts'
+import { getGvQLabel, isCustomizedGvQ, isGvRegionTerm, canQueryGvTermDt, canQueryGvGroupset } from '../geneVariant.ts'
+import { dtsnvindel, dtcnv } from '#shared/common.js'
 
 /* test sections
 
 isCustomizedGvQ()
 getGvQLabel()
+isGvRegionTerm()
+canQueryGvTermDt()
+canQueryGvGroupset()
 */
+
+const geneTerm = { type: 'geneVariant', genes: [{ kind: 'gene', gene: 'TP53' }] }
+const regionTerm = { type: 'geneVariant', genes: [{ kind: 'coord', chr: 'chr17', start: 7661778, stop: 7687538 }] }
+// gdc-like: snvindel takes a region, while gene-level cnv does not, see getGvQueryMethods() in the server
+const gdcLikeVocabApi = {
+	termdbConfig: { queries: { snvindel: { methods: ['gene', 'coord'] }, cnv: { methods: ['gene'] } } }
+}
 
 function getCustomGsQ(...groupNames: string[]) {
 	return {
@@ -64,5 +75,31 @@ tape('getGvQLabel()', t => {
 		'falls back when the term carries no groupset listing, e.g. before it is filled'
 	)
 	t.equal(getGvQLabel(term, { type: 'values' }), 'any variant class', 'names a plain values q')
+	t.end()
+})
+
+tape('isGvRegionTerm()', t => {
+	t.equal(isGvRegionTerm(regionTerm), true, 'a term over a coordinate is a region term')
+	t.equal(isGvRegionTerm(geneTerm), false, 'a term over a gene is not')
+	t.equal(isGvRegionTerm({ type: 'geneVariant' }), false, 'tolerates a term without genes[]')
+	t.end()
+})
+
+tape('canQueryGvTermDt()', t => {
+	t.equal(canQueryGvTermDt(regionTerm, dtsnvindel, gdcLikeVocabApi), true, 'a region by a query that takes one')
+	t.equal(canQueryGvTermDt(regionTerm, dtcnv, gdcLikeVocabApi), false, 'not a region by a query that takes none')
+	t.equal(canQueryGvTermDt(geneTerm, dtcnv, gdcLikeVocabApi), true, 'a gene by any query')
+	t.end()
+})
+
+tape('canQueryGvGroupset()', t => {
+	t.equal(canQueryGvGroupset(regionTerm, { dt: dtsnvindel } as any, gdcLikeVocabApi), true, 'a region, one dt')
+	t.equal(canQueryGvGroupset(regionTerm, { dt: dtcnv } as any, gdcLikeVocabApi), false, 'not a region, one dt')
+	t.equal(
+		canQueryGvGroupset(regionTerm, { dts: [dtsnvindel, dtcnv] } as any, gdcLikeVocabApi),
+		false,
+		'not a region when any dt of the groupset cannot take one, as for bi/mono-allelic'
+	)
+	t.equal(canQueryGvGroupset(geneTerm, { dt: dtcnv } as any, gdcLikeVocabApi), true, 'a gene, any groupset')
 	t.end()
 })

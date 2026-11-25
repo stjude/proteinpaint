@@ -421,6 +421,20 @@ export function trimGvQForCache(q: any) {
 	return copy
 }
 
+/* the query that holds the data of a dt of a geneVariant term, as keyed in ds.queries{} and
+termdbConfig.queries{}, e.g. 'svfusion' for both sv and fusion. See dtTerms in common.ts */
+export function getDtQueryKey(dt: number): string | undefined {
+	return dtTerms.find((t: any) => t.dt == dt)?.query
+}
+
+/* whether a geneVariant term can query a dt by a region, an entry of term.genes[] that is a
+coordinate rather than a gene. queries{} is termdbConfig.queries{}, whose .methods[] list the
+kinds of entry each query takes, see getGvQueryMethods() in server/src/mds3.gvQueryMethods.ts */
+export function canQueryDtByRegion(queries: any, dt: number): boolean {
+	const query = getDtQueryKey(dt)
+	return !!query && !!queries?.[query]?.methods?.includes('coord')
+}
+
 /*
 A geneVariant term is queried per entry of term.genes[], and every value it yields records
 which entry it came from. That record used to be a single .gene holding the entry's NAME,

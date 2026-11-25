@@ -7,6 +7,7 @@ import { copyMerge, deepEqual, sleep } from '#rx'
 import { trimGvQForCache } from '#shared/terms.js'
 import { select } from 'd3-selection'
 import { TwRouter, QualitativeBase, NumericBase, routedTermTypes } from '#tw'
+import { canQueryGvGroupset } from '../tw/geneVariant'
 
 export const termsettingInit = opts => {
 	// TODO: may convert to async-await as needed to initialize,
@@ -248,6 +249,9 @@ export class TermSettingApi {
 			const groupsets = self.term.groupsetting?.lst
 			if (!groupsets || !groupsets.length) throw 'predefined groupsets not found'
 			for (const [i, groupset] of groupsets.entries()) {
+				// a region term cannot be queried for every dt, see canQueryGvGroupset(). skipped
+				// rather than removed, so that i stays the index of the groupset
+				if (!canQueryGvGroupset(self.term, groupset, self.vocabApi)) continue
 				options.push({
 					label: groupset.name,
 					callback: async () => {
