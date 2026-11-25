@@ -10,6 +10,7 @@ import { sleep, detectOne, detectGte, detectLst } from '../../test/test.helpers.
 	search by p53 should find TP53
 	searchOnly=gene
 	searchOnly=gene with "p53" returns {geneSymbol:"TP53"}
+	searchOnly=gene and allowCoord resolves a gene or the coordinate as typed
 	searchOnly=genes with "p53" returns {geneSymbol:"TP53"}
 	searchOnly=genes with "kras tp53" returns {genes:[...]} with both KRAS and TP53
 	searchOnly=genes with geneList validates against the list, not the genome db
@@ -323,6 +324,64 @@ tape('searchOnly=gene with "p53" returns {geneSymbol:"TP53"}', async test => {
 
 	if (test['_ok']) {
 		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('searchOnly=gene and allowCoord resolves a gene or the coordinate as typed', async test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	const tips: any[] = []
+
+	/** type the input into a new search box and press Enter, then wait for the outcome */
+	async function search(input: string) {
+		const tip = new Menu({ padding: '' })
+		tips.push(tip)
+		const result: any = await getSearchBox(holder, { tip, searchOnly: 'gene', allowCoord: true })
+		const searchInput = result.searchbox.node() as HTMLInputElement
+		searchInput.value = input
+		searchInput.dispatchEvent(
+			new KeyboardEvent('keyup', { code: 'Enter', key: 'Enter', keyCode: 13, view: window, bubbles: true })
+		)
+		// Enter looks the input up as a gene before anything else, which takes a request
+		for (let i = 0; i < 100 && !result.fromWhat; i++) await sleep(50)
+		return { result, searchInput }
+	}
+
+	{
+		const { result } = await search('p53')
+		test.equal(result.geneSymbol, 'TP53', 'should resolve a gene alias to its symbol')
+		test.notOk(result.chr, 'should not map the gene to coordinates')
+	}
+	{
+		const { result, searchInput } = await search('chr17:7,661,779-7,687,538')
+		test.deepEqual(
+			{ chr: result.chr, start: result.start, stop: result.stop },
+			{ chr: 'chr17', start: 7661779, stop: 7687538 },
+			'should resolve a range as typed'
+		)
+		test.notOk(result.geneSymbol, 'should not resolve a range to a gene')
+		test.equal(result.fromWhat, 'Valid coordinate', 'should report a valid coordinate')
+		test.equal(searchInput.value, 'chr17:7661779-7687538', 'should show the coordinate in the input')
+	}
+	{
+		const { result, searchInput } = await search('chr17:7675088')
+		test.deepEqual(
+			{ chr: result.chr, start: result.start, stop: result.stop },
+			{ chr: 'chr17', start: 7675088, stop: 7675088 },
+			'should resolve a single position without widening it'
+		)
+		test.equal(searchInput.value, 'chr17:7675088-7675088', 'should show the single position as a range')
+	}
+	{
+		const { result } = await search('chr17')
+		test.equal(result.fromWhat, 'No match', 'should not accept a bare chromosome name')
+		test.notOk(result.chr, 'should not resolve a bare chromosome name to a region')
+	}
+
+	if (test['_ok']) {
+		for (const tip of tips) tip.dnode?.remove()
 		holder.remove()
 	}
 	test.end()

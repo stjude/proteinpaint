@@ -151,7 +151,7 @@ export class SearchHandler {
 					styles: { display: 'inline-block' },
 					options: [
 						{
-							label: 'Single Gene',
+							label: this.allowCoord() ? 'Single gene or region' : 'Single Gene',
 							value: 'single',
 							checked: true,
 							testid: 'sjpp-genevarianttermdbhandler-singlegene'
@@ -345,16 +345,21 @@ export class SearchHandler {
 			tip: new Menu({ padding: '0px' }),
 			genome: this.opts.genomeObj,
 			row: searchDiv,
-			/* only allowing gene search for now because:
-			- coordinate search is not yet supported for gdc
-			- for other datasets, even though coordinate search is supported, it is not compatible with input type radios (single gene vs. geneset) because a coordinate may include one or more genes.
-			TODO: fully support coordinate search
-			*/
+			/* a gene resolves to its symbol alone, not to its coordinates, which the server maps to
+			the gene's isoform when querying it */
 			searchOnly: 'gene',
+			allowCoord: this.allowCoord(),
 			callback: async () => await this.selectGene(geneSearch)
 		})
 		this.dom.searchbox = geneSearch.searchbox
 		searchDiv.select('.sja_genesearchinput').style('margin', '0px')
+	}
+
+	/** whether the single gene input also accepts a coordinate, which is only where every query
+	 * of a geneVariant term can take a region, see canQueryGeneVariantByCoord() in
+	 * server/src/routes/termdb.config.ts */
+	allowCoord(): boolean {
+		return !!this.opts.app.vocabApi.termdbConfig?.queries?.geneVariantByCoord
 	}
 
 	/** focus on the search box of the current gene input (single gene or gene set) */
@@ -395,9 +400,12 @@ export class SearchHandler {
 				],
 				type: 'geneVariant'
 			})
-		} else if (geneSearch.chr && geneSearch.start && geneSearch.stop) {
-			const { chr, start, stop } = geneSearch
-			// name should be 1-based coordinate
+		} else if (geneSearch.chr && Number.isInteger(geneSearch.start) && Number.isInteger(geneSearch.stop)) {
+			const { chr } = geneSearch
+			// typed 1-based and inclusive, see string2exactCoord() in client/dom/genesearch.ts
+			const start = geneSearch.start - 1
+			const stop = geneSearch.stop
+			// name should be 1-based coordinate, which is the coordinate as typed
 			const name = `${chr}:${start + 1}-${stop}`
 			Object.assign(this.term, {
 				id: name,

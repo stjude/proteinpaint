@@ -8,6 +8,7 @@ import type { ClientGenome } from '../types/clientGenome'
 exports:
 
 addGeneSearchbox()
+string2exactCoord()
 string2variant()
 
 typical usage:
@@ -59,6 +60,11 @@ type GeneSearchBoxArg = {
         support gene, region, snp (if available), variant (if allowed). resolves to region
 	*/
 	searchOnly?: 'gene' | 'snp' | 'genes'
+	/** only with searchOnly='gene': an input that matches no gene may instead be a coordinate,
+	chr:start-stop or chr:pos, resolving to {chr, start, stop} with no geneSymbol, see
+	string2exactCoord(). A matched gene still resolves to {geneSymbol} alone, unlike a missing
+	searchOnly, which maps it to coordinates */
+	allowCoord?: boolean
 	/** If true, user must click on search box and enter instead of automatically 
     focusing on search box. Use to render d3 animations smoothly. */
 	focusOff?: boolean
@@ -183,6 +189,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			if (arg.searchOnly == 'gene' || arg.searchOnly == 'genes')
 				throw 'when allowVariant is true, searchOnly cannot be gene/genes'
 		}
+		if (arg.allowCoord && arg.searchOnly != 'gene') throw 'allowCoord requires searchOnly=gene'
 	} catch (e) {
 		row.append('span').text(e)
 		return result
@@ -193,6 +200,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 	if ('placeholder' in arg) {
 		placeholder = arg.placeholder!
+	} else if (arg?.searchOnly == 'gene' && arg.allowCoord) {
+		placeholder = 'Gene, position'
 	} else if (arg?.searchOnly == 'gene') {
 		placeholder = 'Gene'
 		width = 100 // use shorter width for inputting only one gene name
@@ -300,7 +309,19 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 					}
 				}
 				if (arg?.searchOnly == 'gene') {
-					getResult(null, 'Gene not found')
+					if (arg.allowCoord) {
+						const coord = string2exactCoord(v, arg.genome)
+						if (coord) {
+							getResult(coord, 'Valid coordinate')
+							// same as a matched gene above
+							tip.hide()
+							input.blur()
+							debouncer.clear()
+							searchbox.property('disabled', false)
+							return
+						}
+					}
+					getResult(null, arg.allowCoord ? 'No match' : 'Gene not found')
 					searchbox.property('disabled', false)
 					return
 				}
@@ -488,7 +509,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			if (variant) return
 		}
 
-		if (arg.genome.hasSNP) {
+		// a gene-only search cannot resolve to a snp on Enter, so offering one would mislead
+		if (arg.genome.hasSNP && arg.searchOnly != 'gene' && arg.searchOnly != 'genes') {
 			// has snp; test if input is dbsnp id
 			const dbsnp = await dofetch3('snp', { body: { byName: true, genome: arg.genome.name, lst: [v] } }) // FIXME expensive! only search when searchOnly=snp
 			if (dbsnp.error) throw dbsnp.error
@@ -714,6 +736,24 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	}
 
 	return result
+}
+
+/* the coordinate typed for allowCoord, chr:start-stop or chr:pos, as {chr, start, stop} that
+are 1-based and inclusive as typed, so chr:pos gives start = stop = pos. Commas in a position
+are ignored. Returns undefined for anything else, including a bare chromosome name.
+
+Not string2pos(), which is for the genome browser: it widens a single position to 400bp, and
+maps a bare chromosome name to its middle, neither of which is the region typed. */
+export function string2exactCoord(v: string, genome: ClientGenome) {
+	const [chrName, ...positions] = v
+		.replace(/,/g, '')
+		.trim()
+		.split(/[-:\s]+/)
+	if (positions.length != 1 && positions.length != 2) return
+	if (!positions.every(p => /^\d+$/.test(p))) return
+	const [start, stop = start] = positions.map(Number)
+	if (start < 1 || invalidcoord(genome, chrName, start, stop)) return
+	return { chr: genome.chrlookup[chrName.toUpperCase()].name, start, stop }
 }
 
 export async function string2variant(v: string, genome: ClientGenome) {

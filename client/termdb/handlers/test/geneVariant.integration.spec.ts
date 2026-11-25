@@ -10,6 +10,8 @@ import { vocabInit } from '../../vocabulary'
 Tests:
 	Search handler layout
     Single gene input
+    Coordinate input
+    Coordinate input is not offered where the dataset cannot query a region
     Change mutation type
     Gene set input
 	Gene set input - custom name
@@ -149,6 +151,72 @@ tape('Single gene input', async test => {
 		{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53', type: 'geneVariant' },
 		'term.genes[0] should have expected structure'
 	)
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Coordinate input', async test => {
+	let tw
+	const callback = _tw => {
+		tw = _tw
+	}
+	const holder = getHolder()
+	await initializeSearchHandler({ holder, callback })
+	const geneSearchInput: any = holder
+		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
+		.select('input[type="search"]')
+		.node()
+	test.equal(geneSearchInput.placeholder, 'Gene, position', 'should offer to search a gene or a position')
+	const singleGeneLabel = holder
+		.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
+		.selectAll('label')
+		.filter((d: any) => d.value == 'single')
+		.text()
+		.trim() // past the &nbsp; that make_radios() puts before a label
+	test.equal(singleGeneLabel, 'Single gene or region', 'should name a region in the single gene input type')
+	geneSearchInput.value = 'chr17:7661779-7687538'
+	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
+	// Enter looks the input up as a gene before trying it as a coordinate, which takes a request
+	for (let i = 0; i < 100 && !tw; i++) await sleep(50)
+	test.equal(tw?.term.type, 'geneVariant', 'term.type should be geneVariant')
+	test.equal(tw?.term.name, 'chr17:7661779-7687538', 'term.name should be the coordinate as typed')
+	test.deepEqual(
+		tw?.term.genes,
+		[
+			{
+				kind: 'coord',
+				chr: 'chr17',
+				start: 7661778,
+				stop: 7687538,
+				name: 'chr17:7661779-7687538',
+				type: 'geneVariant'
+			}
+		],
+		'term.genes[] should have the region, with a 0-based start'
+	)
+	test.equal(tw?.q.type, 'predefined-groupset', 'q.type should be predefined-groupset')
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Coordinate input is not offered where the dataset cannot query a region', async test => {
+	const holder = getHolder()
+	// a copy, as the termdbConfig is shared with the other tests
+	const termdbConfig = structuredClone(vocabApi.termdbConfig)
+	delete termdbConfig.queries.geneVariantByCoord
+	await initializeSearchHandler({ holder, vocabApi: Object.assign(Object.create(vocabApi), { termdbConfig }) })
+	const geneSearchInput: any = holder
+		.select('[data-testid="sjpp-genevariant-geneSearchDiv"]')
+		.select('input[type="search"]')
+		.node()
+	test.equal(geneSearchInput.placeholder, 'Gene', 'should only offer to search a gene')
+	const singleGeneLabel = holder
+		.select('[data-testid="sjpp-genevariant-genesetTypeRadios"]')
+		.selectAll('label')
+		.filter((d: any) => d.value == 'single')
+		.text()
+		.trim() // past the &nbsp; that make_radios() puts before a label
+	test.equal(singleGeneLabel, 'Single Gene', 'should only name a gene in the single gene input type')
 	if (test['_ok']) holder.remove()
 	test.end()
 })

@@ -3322,6 +3322,13 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 					is absent for a queried region, which has none; .region carries the query
 					either way. See getGvQueryRegion() in shared/utils/src/terms.ts */
 					if (gene.gene) m2.gene = gene.gene
+					else if (m.gene) {
+						/* a region names no gene, so the gene that the variant is annotated to, e.g.
+						by the csq that vcfcopymclass() picks, is the one to show for it. Kept apart
+						from .gene, which names the query entry. Not added for a gene entry, where it
+						would mostly repeat .gene in every value of a request */
+						m2.annotatedGene = m.gene
+					}
 					const queryRegion = getGvQueryRegion(gene)
 					if (queryRegion) m2.region = queryRegion
 					if (m.start) m2.start = m.start

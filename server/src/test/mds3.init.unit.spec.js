@@ -3183,6 +3183,52 @@ test('mayGetGeneVariantData: requests read depth from the snvindel getter only w
 	t.equal(calls.at(-1), true, 'q.addReadDepth requests read depth without a groupset')
 })
 
+/* a region names no gene, so its values carry the gene that each variant is annotated to apart
+from .gene, which names the query entry and is absent for a region */
+test('mayGetGeneVariantData: values of a region carry the annotated gene of the variant', async t => {
+	t.plan(5)
+	const ds = {
+		genomename: 'hg38',
+		cohort: { termdb: {} },
+		queries: {
+			snvindel: {
+				byrange: {
+					// like a bcf getter, where the csq picked for the variant names its gene
+					get: async () => [
+						{
+							dt: 1,
+							class: 'M',
+							mname: 'A59T',
+							gene: 'KRAS',
+							isoform: 'NM_001369786',
+							pos: 25227348,
+							samples: [{ sample_id: 'case-1' }]
+						}
+					]
+				}
+			}
+		}
+	}
+	mayAdd_mayGetGeneVariantData(ds, null) // genome is not consulted: both entries carry coordinates
+
+	const coord = { chr: 'chr12', start: 25205245, stop: 25250936 }
+	const name = 'chr12:25205246-25250936'
+	const region = { kind: 'coord', id: name, name, type: 'geneVariant', ...coord }
+	const regionTerm = { type: 'geneVariant', name, genes: [region], groupsetting: { disabled: false } }
+	let results = await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
+	let value = results.get('r')['case-1'].values[0]
+	t.equal(value.annotatedGene, 'KRAS', 'a value of a region carries the annotated gene')
+	t.notOk('gene' in value, 'a value of a region has no query entry gene')
+	t.deepEqual(value.region, coord, 'a value of a region carries the region')
+
+	const gene = { kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant', ...coord }
+	const geneTerm = { type: 'geneVariant', name: 'KRAS', genes: [gene], groupsetting: { disabled: false } }
+	results = await ds.mayGetGeneVariantData({ $id: 'g', term: geneTerm, q: { type: 'values' } }, {})
+	value = results.get('g')['case-1'].values[0]
+	t.equal(value.gene, 'KRAS', 'a value of a gene names the query entry gene')
+	t.notOk('annotatedGene' in value, 'a value of a gene does not repeat it as the annotated gene')
+})
+
 test('mayGetGeneVariantData: ungrouped term returns every origin', async t => {
 	t.plan(3)
 	const ds = {
