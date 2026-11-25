@@ -1,9 +1,1 @@
-Features:
-- Methylation track: with two groups, the isoforms shown are those whose share of the gene differs the most between the groups, each with a Wilcoxon q (BH across the isoforms), and each has a gene-model row with a violin of its share per group
-- Methylation track: a variable chosen in the track's menu annotates the samples as a column beside the heatmap and can sort them
-- Methylation track: DMRs are shaded by the size of their Δβ, and the legend shows only the directions of the DMRs in view
-- Methylation track: a group with fewer than 5 samples whose isoforms reach 1 TPM shows no isoform shares, and the legend says why; a sample under 1 TPM is a pale row of the share column
-- Methylation track: an isoform's name can be selected and copied
-- Splice junction track: with two groups, its own or those of the methylation track, each junction's share of its gene's junction reads is compared by a Wilcoxon test, BH-adjusted over the junctions of the locus the browser was opened on, and the legend explains the test in plain language
-- Splice junction track: Details of a tested junction opens a violin of its share of the gene's junction reads beside the one of its read count
-- Genome browser: "Export SVG with legend" in the More menu draws the block's legend under the tracks as SVG text and shapes
+
