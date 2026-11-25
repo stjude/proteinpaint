@@ -3322,6 +3322,13 @@ export function mayAdd_mayGetGeneVariantData(ds, genome) {
 					is absent for a queried region, which has none; .region carries the query
 					either way. See getGvQueryRegion() in shared/utils/src/terms.ts */
 					if (gene.gene) m2.gene = gene.gene
+					else if (m.gene) {
+						/* a region names no gene, so the gene that the variant is annotated to, e.g.
+						by the csq that vcfcopymclass() picks, is the one to show for it. Kept apart
+						from .gene, which names the query entry. Not added for a gene entry, where it
+						would mostly repeat .gene in every value of a request */
+						m2.annotatedGene = m.gene
+					}
 					const queryRegion = getGvQueryRegion(gene)
 					if (queryRegion) m2.region = queryRegion
 					if (m.start) m2.start = m.start
@@ -3902,7 +3909,11 @@ async function getSnvindelByTerm(ds, term, genome, q, opts = {}) {
 		{ skipSampleFiltering: true }
 	)
 
-	if (ds.queries.snvindel.byisoform) {
+	/* byisoform needs an isoform, given or mapped from the gene, so an entry over a region, which
+	has neither, is queried by range instead. Same as the mds3 track, which only uses byisoform
+	when the request has an isoform, see query_snvindel() in mds3.load.js */
+	const isRegion = !term.gene && !term.isoform
+	if (ds.queries.snvindel.byisoform && !isRegion) {
 		await mayMapGeneName2isoform(term, genome)
 		if (!term.isoform) {
 			// isoform missing, could be unknown gene name
@@ -3919,6 +3930,7 @@ async function getSnvindelByTerm(ds, term, genome, q, opts = {}) {
 		arg.rglst = [term]
 		return await ds.queries.snvindel.byrange.get(arg)
 	}
+	if (isRegion) throw 'queries.snvindel.byrange is missing, which a region is queried by'
 	throw 'unknown queries.snvindel method'
 }
 async function getSvfusionByTerm(ds, term, genome, q) {
@@ -3936,7 +3948,11 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid
 	}
-	if (ds.queries.svfusion.byrange && ds.queries.svfusion.byname) {
+	/* byname matches events by the gene name of the entry, which an entry over a region has none
+	of, so a region is queried by range alone. Its events have no breakpoint positions to place in
+	the region either, see svfusionByNameGetter_file() */
+	const isRegion = !term.gene
+	if (ds.queries.svfusion.byrange && ds.queries.svfusion.byname && !isRegion) {
 		await mayMapGeneName2coord(term, genome)
 		// tw.term.chr/start/stop are set
 		arg.rglst = [term]
@@ -3951,6 +3967,7 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		arg.rglst = [term]
 		return await ds.queries.svfusion.byrange.get(arg)
 	}
+	if (isRegion) throw 'queries.svfusion.byrange is missing, which a region is queried by'
 	if (ds.queries.svfusion.byname) {
 		// tw.term.chr/start/stop are set
 		arg.rglst = [term]

@@ -274,6 +274,25 @@ function addMatrixplots(c, ds) {
 	})
 }
 
+/* whether a geneVariant term can be queried by a region rather than a gene: true when each
+query that ds.mayGetGeneVariantData() would run for the term can take a region, see getGeneMlst()
+in mds3.init.js. Not so for
+- snvindel.byisoform without byrange, as a region has no gene to map to an isoform
+- snvindel.byisoform.processTwsInOneQuery, a getter that takes every geneVariant term of a request
+  at once, bypassing the queries above, see getData() in termdb.matrix.ts. It is not required to
+  take a region
+- svfusion.byname without byrange, which matches events by gene name
+- geneCnv.bygene, which is gene-level cnv
+while cnv and itd are always queried by region */
+export function canQueryGeneVariantByCoord(q: Mds3['queries']): boolean {
+	if (!q?.snvindel && !q?.svfusion && !q?.cnv && !q?.itd) return false // no geneVariant data
+	if (q.snvindel && !q.snvindel.byrange) return false
+	if (q.snvindel?.byisoform?.processTwsInOneQuery) return false
+	if (q.svfusion && !q.svfusion.byrange) return false
+	if (q.geneCnv) return false
+	return true
+}
+
 /**
  * Adds non-dictionary methods, properties, etc. to the termdbConfig.queries{} object.
  * @param c Config object sent to the client with only relevant info for the client.
@@ -348,6 +367,9 @@ export function addNonDictionaryQueries(c, ds: Mds3, genome): void {
 		// if it won't work, change to q2.geneCnv{} instead
 		//if (!q2.cnv) q2.cnv = {} // do not expose geneCnv to client, this causes blank cnv legend to show for gdc mds3 tk
 	}
+	// lets the geneVariant term search box accept a coordinate besides a gene, see searchGene() in
+	// client/termdb/handlers/geneVariant.ts
+	if (canQueryGeneVariantByCoord(q)) q2.geneVariantByCoord = true
 
 	if (q.topMutatedGenes) q2.topMutatedGenes = q.topMutatedGenes
 	if (q.topVariablyExpressedGenes) q2.topVariablyExpressedGenes = q.topVariablyExpressedGenes

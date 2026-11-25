@@ -1518,6 +1518,29 @@ export function string2pos(s, genome, donotextend) {
 	return null
 }
 
+/* the coordinate typed for the allowCoord option of addGeneSearchbox() in client/dom/genesearch.ts,
+chr:start-stop or chr:pos, as {chr, start, stop} that are 1-based and inclusive as typed, so
+chr:pos gives start = stop = pos. Whitespace may stand in for the colon or the dash, and commas
+in a position are ignored. Returns undefined for anything else, including a bare chromosome
+name, or a position with a sign or a doubled dash.
+
+Not string2pos() above, which is for the genome browser: it widens a single position to 400bp, and
+maps a bare chromosome name to its middle, neither of which is the region typed. */
+export function string2exactCoord(v: string, genome: { chrlookup: { [name: string]: { name: string; len: number } } }) {
+	/* matched whole, so that a stray character fails the input rather than being skipped. The
+	chromosome name is lazy, so that one with a colon of its own still leaves the last one as
+	the separator */
+	const match = /^(\S+?)(?:\s*:\s*|\s+)(\d+)(?:(?:\s*-\s*|\s+)(\d+))?$/.exec(v.replace(/,/g, '').trim())
+	if (!match) return
+	const [, chrName, startStr, stopStr] = match
+	const start = Number(startStr)
+	const stop = stopStr === undefined ? start : Number(stopStr)
+	// invalidcoord() takes a 0-based start, so the start typed is moved back by one, which leaves a
+	// start just past the stop to be rejected here
+	if (start < 1 || start > stop || invalidcoord(genome, chrName, start - 1, stop)) return
+	return { chr: genome.chrlookup[chrName.toUpperCase()].name, start, stop }
+}
+
 /////////////// splice junction event types
 export const JT_na = 'na'
 export const JT_canonical = 'canonical'

@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getDtTermValues, handler } from '../tvs.dt.js'
+import { getDtTermValues, handler, getSelfBreakpointGene } from '../tvs.dt.js'
 import { FrontendVocab } from '#termdb/FrontendVocab'
 import { mclass } from '#shared/common.js'
 
@@ -18,6 +18,7 @@ test sections:
 	- getDtTermValues: frontend vocab without a matching term
 	- get_pill_label: mname values
 	- get_pill_label: maf filter tag
+	- getSelfBreakpointGene: only a term of a single gene has one
 */
 
 tape('\n', test => {
@@ -421,5 +422,20 @@ tape('get_pill_label: maf filter tag', test => {
 		tvs.mafFilter = mafFilter([mafTvs])
 		test.equal(handler.get_pill_label(tvs).grade_type, '', 'should not tag a not-tested tvs')
 	}
+	test.end()
+})
+
+tape('getSelfBreakpointGene: only a term of a single gene has one', test => {
+	const kras = { kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS' }
+	test.equal(getSelfBreakpointGene({ genes: [kras] }), 'KRAS', 'should be the gene of a single gene term')
+	test.equal(
+		getSelfBreakpointGene({ genes: [kras, { kind: 'gene', id: 'NRAS', gene: 'NRAS', name: 'NRAS' }] }),
+		undefined,
+		'should be none for a gene set'
+	)
+	const name = 'chr12:25205246-25250936'
+	const region = { kind: 'coord', id: name, name, chr: 'chr12', start: 25205245, stop: 25250936 }
+	test.equal(getSelfBreakpointGene({ genes: [region] }), undefined, 'should be none for a region')
+	test.equal(getSelfBreakpointGene(undefined), undefined, 'should be none without a parent term')
 	test.end()
 })

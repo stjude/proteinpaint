@@ -3183,6 +3183,156 @@ test('mayGetGeneVariantData: requests read depth from the snvindel getter only w
 	t.equal(calls.at(-1), true, 'q.addReadDepth requests read depth without a groupset')
 })
 
+/* a region names no gene, so its values carry the gene that each variant is annotated to apart
+from .gene, which names the query entry and is absent for a region */
+test('mayGetGeneVariantData: values of a region carry the annotated gene of the variant', async t => {
+	t.plan(5)
+	const ds = {
+		genomename: 'hg38',
+		cohort: { termdb: {} },
+		queries: {
+			snvindel: {
+				byrange: {
+					// like a bcf getter, where the csq picked for the variant names its gene
+					get: async () => [
+						{
+							dt: 1,
+							class: 'M',
+							mname: 'A59T',
+							gene: 'KRAS',
+							isoform: 'NM_001369786',
+							pos: 25227348,
+							samples: [{ sample_id: 'case-1' }]
+						}
+					]
+				}
+			}
+		}
+	}
+	mayAdd_mayGetGeneVariantData(ds, null) // genome is not consulted: both entries carry coordinates
+
+	const coord = { chr: 'chr12', start: 25205245, stop: 25250936 }
+	const name = 'chr12:25205246-25250936'
+	const region = { kind: 'coord', id: name, name, type: 'geneVariant', ...coord }
+	const regionTerm = { type: 'geneVariant', name, genes: [region], groupsetting: { disabled: false } }
+	let results = await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
+	let value = results.get('r')['case-1'].values[0]
+	t.equal(value.annotatedGene, 'KRAS', 'a value of a region carries the annotated gene')
+	t.notOk('gene' in value, 'a value of a region has no query entry gene')
+	t.deepEqual(value.region, coord, 'a value of a region carries the region')
+
+	const gene = { kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS', type: 'geneVariant', ...coord }
+	const geneTerm = { type: 'geneVariant', name: 'KRAS', genes: [gene], groupsetting: { disabled: false } }
+	results = await ds.mayGetGeneVariantData({ $id: 'g', term: geneTerm, q: { type: 'values' } }, {})
+	value = results.get('g')['case-1'].values[0]
+	t.equal(value.gene, 'KRAS', 'a value of a gene names the query entry gene')
+	t.notOk('annotatedGene' in value, 'a value of a gene does not repeat it as the annotated gene')
+})
+
+/* byisoform needs an isoform, which a region has none of, so a region is queried by range even
+where byisoform is offered, as gdc does (ppgdc/active/dataset/gdc/index.ts) */
+test('mayGetGeneVariantData: a region is queried by snvindel.byrange over byisoform', async t => {
+	t.plan(6)
+	const calls = [] // [method, arg] of every getter call
+	const mutation = arg => [
+		{ dt: 1, class: 'M', mname: 'R132H', isoform: arg.isoform, pos: 208248388, samples: [{ sample_id: 'case-1' }] }
+	]
+	const ds = {
+		genomename: 'hg38',
+		cohort: { termdb: {} },
+		queries: {
+			snvindel: {
+				byisoform: { get: async arg => (calls.push(['byisoform', arg]), mutation(arg)) },
+				byrange: { get: async arg => (calls.push(['byrange', arg]), mutation(arg)) }
+			}
+		}
+	}
+	mayAdd_mayGetGeneVariantData(ds, null) // genome is not consulted: both entries carry what they are queried by
+
+	const name = 'chr2:208248128-208248783'
+	const coord = { chr: 'chr2', start: 208248127, stop: 208248783 }
+	const region = { kind: 'coord', id: name, name, type: 'geneVariant', ...coord }
+	const regionTerm = { type: 'geneVariant', name, genes: [region], groupsetting: { disabled: false } }
+	const results = await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
+	const [method, arg] = calls.at(-1)
+	t.equal(method, 'byrange', 'a region is queried by range')
+	t.deepEqual(
+		{ chr: arg.rglst[0].chr, start: arg.rglst[0].start, stop: arg.rglst[0].stop },
+		coord,
+		'the range is the region'
+	)
+	t.notOk(arg.isoform, 'no isoform limits the query to one transcript')
+	t.equal(results.get('r')['case-1'].values[0].mname, 'R132H', 'the variant of the region is returned')
+
+	const gene = { kind: 'gene', id: 'IDH1', gene: 'IDH1', name: 'IDH1', type: 'geneVariant', isoform: 'ENST00000345146' }
+	const geneTerm = { type: 'geneVariant', name: 'IDH1', genes: [gene], groupsetting: { disabled: false } }
+	await ds.mayGetGeneVariantData({ $id: 'g', term: geneTerm, q: { type: 'values' } }, {})
+	t.equal(calls.at(-1)[0], 'byisoform', 'a gene is still queried by its isoform')
+
+	// a ds offering only byisoform cannot query a region, and says so rather than returning nothing
+	delete ds.queries.snvindel.byrange
+	try {
+		await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
+		t.fail('should throw for a region without byrange')
+	} catch (e) {
+		t.equal(e, 'queries.snvindel.byrange is missing, which a region is queried by', 'throws for a region')
+	}
+})
+
+/* byname matches events by the gene name of the entry, which a region has none of, so a region
+is queried by range alone, as in the mds3 track, see query_svfusion() in mds3.load.js */
+test('mayGetGeneVariantData: a region is queried by svfusion.byrange alone', async t => {
+	t.plan(5)
+	const calls = [] // getter of every call
+	const fusion = [
+		{
+			dt: 2,
+			class: 'Fuserna',
+			mname: 'BCR::ABL1',
+			pairlst: [{ a: { name: 'BCR' }, b: { name: 'ABL1' } }],
+			pairlstIdx: 0,
+			samples: [{ sample_id: 'case-1' }]
+		}
+	]
+	const ds = {
+		genomename: 'hg38',
+		cohort: { termdb: {} },
+		queries: {
+			svfusion: {
+				dtLst: [2],
+				byrange: { get: async () => (calls.push('byrange'), fusion) },
+				byname: { get: async () => (calls.push('byname'), []) }
+			}
+		}
+	}
+	mayAdd_mayGetGeneVariantData(ds, null) // genome is not consulted: both entries carry coordinates
+
+	const coord = { chr: 'chr22', start: 23180000, stop: 23320000 }
+	const name = 'chr22:23180001-23320000'
+	const region = { kind: 'coord', id: name, name, type: 'geneVariant', ...coord }
+	const regionTerm = { type: 'geneVariant', name, genes: [region], groupsetting: { disabled: false } }
+	const results = await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
+	t.deepEqual(calls, ['byrange'], 'a region is not queried by name')
+	t.equal(results.get('r')['case-1'].values[0].mname, 'BCR::ABL1', 'the event of the region is returned')
+
+	calls.length = 0
+	const gene = { kind: 'gene', id: 'BCR', gene: 'BCR', name: 'BCR', type: 'geneVariant', ...coord }
+	const geneTerm = { type: 'geneVariant', name: 'BCR', genes: [gene], groupsetting: { disabled: false } }
+	await ds.mayGetGeneVariantData({ $id: 'g', term: geneTerm, q: { type: 'values' } }, {})
+	t.deepEqual(calls, ['byrange', 'byname'], 'a gene is still queried both by range and by name')
+
+	// a ds offering only byname cannot query a region, and says so rather than returning nothing
+	delete ds.queries.svfusion.byrange
+	calls.length = 0
+	try {
+		await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
+		t.fail('should throw for a region without byrange')
+	} catch (e) {
+		t.equal(e, 'queries.svfusion.byrange is missing, which a region is queried by', 'throws for a region')
+		t.deepEqual(calls, [], 'does not query by name')
+	}
+})
+
 test('mayGetGeneVariantData: ungrouped term returns every origin', async t => {
 	t.plan(3)
 	const ds = {

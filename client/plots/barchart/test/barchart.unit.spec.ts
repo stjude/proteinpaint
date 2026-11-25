@@ -2,12 +2,15 @@ import tape from 'tape'
 // import * as d3s from 'd3-selection'
 // import * as helpers from '../../test/front.helpers.js'
 import { Barchart } from '#plots/barchart/barchart.ts'
-import { hideCategory } from '#plots/barchart/barchart.events.ts'
+import { hideCategory, addGvRowVals, addGvCols } from '#plots/barchart/barchart.events.ts'
 // import { detectGte } from '../../test/test.helpers.js'
 
 /* 
 Tests:
     - Default barchart component
+    - addGvRowVals() lists the mutations of a term over a region, with the gene of each
+    - addGvCols() names the columns of a region or a gene set Gene and Mutation
+    - addGvRowVals() lists the mutations of each gene of a gene set
 */
 
 /*************************
@@ -168,5 +171,96 @@ tape('setExclude() should handle terms without a values dictionary', function (t
 	test.deepEqual(testBarchart.settings.exclude.rows, ['>0.8'], 'Should exclude the hidden overlay bin label')
 	testBarchart.setExclude({ term: { type: 'termCollection' }, q: { hiddenValues: { '<0.8': 1 } } }, null)
 	test.deepEqual(testBarchart.settings.exclude.cols, ['<0.8'], 'Should exclude the hidden term1 bin label')
+	test.end()
+})
+
+tape('addGvRowVals() lists the mutations of a term over a region, with the gene of each', function (test) {
+	// as restored from a server response: a value found through a region records it, with no
+	// gene of a query entry, and the gene that the variant is annotated to when there is one
+	const region = { chr: 'chr12', start: 25205245, stop: 25250936 }
+	const name = 'chr12:25205246-25250936'
+	const tw = { $id: 'gv', term: { genes: [{ kind: 'coord', ...region, id: name, name }] } }
+	const sample = {
+		gv: {
+			values: [
+				{ dt: 1, class: 'M', mname: 'A59T', region, annotatedGene: 'KRAS' },
+				{ dt: 1, class: 'M', mname: 'chr12:25210000:A>G', region }
+			]
+		}
+	}
+	const row: any[] = []
+	addGvRowVals(sample, tw, row, undefined)
+	test.equal(row.length, 2, 'Should add a gene column and a mutation column')
+	test.equal(row[0].html, 'KRAS<br>', 'Should list the annotated gene of each mutation, blank when it has none')
+	const mutations = row[1].html.split('<br>')
+	test.ok(mutations[0].includes('A59T'), 'Should list the mutation on the line of its gene')
+	test.ok(mutations[1].includes('chr12:25210000:A&gt;G'), 'Should list a mutation with no annotated gene')
+	test.end()
+})
+
+tape('addGvCols() names the columns of a region or a gene set Gene and Mutation', function (test) {
+	const geneAndMutation = [{ label: 'Gene' }, { label: 'Mutation' }]
+	const cols = tw => {
+		const columns: any[] = []
+		addGvCols(tw, columns)
+		return columns
+	}
+
+	const region = { kind: 'coord', chr: 'chr12', start: 25205245, stop: 25250936 }
+	test.deepEqual(cols({ term: { name: 'chr12:25205246-25250936', genes: [region] } }), geneAndMutation, 'for a region')
+
+	const genes = [
+		{ kind: 'gene', gene: 'TP53', name: 'TP53' },
+		{ kind: 'gene', gene: 'KRAS', name: 'KRAS' }
+	]
+	// the bi/mono-allelic groupset spans two dts, so it has .dts rather than a .dt to name it by
+	const groupsetting = {
+		lst: [
+			{ name: 'SNV/indel', dt: 1 },
+			{ name: 'Bi/mono-allelic', dts: [1, 4] }
+		]
+	}
+	const geneSet = q => ({ term: { name: 'my set', genes, groupsetting }, q })
+	for (const [q, which] of [
+		[{ type: 'predefined-groupset', predefined_groupset_idx: 0 }, 'of a single dt'],
+		[{ type: 'predefined-groupset', predefined_groupset_idx: 1 }, 'of two dts'],
+		[{ type: 'custom-groupset', customset: { groups: [] } }, 'that is custom']
+	] as const) {
+		test.deepEqual(cols(geneSet(q)), geneAndMutation, `for a gene set with a groupset ${which}`)
+	}
+
+	test.deepEqual(
+		cols({ term: { name: 'KRAS', genes: [{ kind: 'gene', gene: 'KRAS', name: 'KRAS' }] } }),
+		[{ label: 'KRAS' }],
+		'for a single gene, a mutation column named by the gene'
+	)
+	test.end()
+})
+
+tape('addGvRowVals() lists the mutations of each gene of a gene set', function (test) {
+	const tw = {
+		$id: 'gv',
+		term: {
+			genes: [
+				{ kind: 'gene', id: 'TP53', gene: 'TP53', name: 'TP53' },
+				{ kind: 'gene', id: 'KRAS', gene: 'KRAS', name: 'KRAS' }
+			]
+		}
+	}
+	const sample = {
+		gv: {
+			values: [
+				// a gene's value may also record the region the gene was mapped to
+				{ dt: 1, class: 'M', mname: 'G12D', gene: 'KRAS', region: { chr: 'chr12', start: 1, stop: 2 } },
+				{ dt: 1, class: 'M', mname: 'R175H', gene: 'TP53' }
+			]
+		}
+	}
+	const row: any[] = []
+	addGvRowVals(sample, tw, row, undefined)
+	test.equal(row[0].html, 'TP53<br>KRAS', 'Should add a gene column in the order of term.genes[]')
+	const mutations = row[1].html.split('<br>')
+	test.ok(mutations[0].includes('R175H'), 'Should list the TP53 mutation in the TP53 row')
+	test.ok(mutations[1].includes('G12D'), 'Should list the KRAS mutation in the KRAS row')
 	test.end()
 })

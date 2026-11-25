@@ -5,6 +5,7 @@ import {
 	getUserTab,
 	getClientMassNav,
 	addNonDictionaryQueries,
+	canQueryGeneVariantByCoord,
 	init
 } from '../termdb.config.ts'
 import { getAuthApi, authApi } from '../../auth.js'
@@ -66,6 +67,56 @@ tape('addNonDictionaryQueries() - mutation sample types', test => {
 	test.equal(c.queries.snvindel.allowSNPs, true, 'preserves SNV/indel settings')
 	test.equal(c.queries.cnv.type, 'copyNumber', 'preserves CNV settings')
 	test.deepEqual(c.queries.svfusion.dtLst, [2, 5], 'preserves SV/fusion settings')
+	test.end()
+})
+
+tape('canQueryGeneVariantByCoord()', test => {
+	const byRange = { snvindel: { byrange: {} }, svfusion: { byrange: {} }, cnv: {}, itd: {} }
+	test.equal(canQueryGeneVariantByCoord(byRange as any), true, 'true when every query takes a region')
+	test.equal(canQueryGeneVariantByCoord({ cnv: {} } as any), true, 'true for cnv alone')
+	test.equal(
+		canQueryGeneVariantByCoord({ snvindel: { byisoform: {} } } as any),
+		false,
+		'false for snvindel.byisoform without byrange, as a region has no gene to map to an isoform'
+	)
+	test.equal(
+		canQueryGeneVariantByCoord({ snvindel: { byrange: {}, byisoform: {} } } as any),
+		true,
+		'true for snvindel.byisoform with byrange, which a region is queried by'
+	)
+	test.equal(
+		canQueryGeneVariantByCoord({ snvindel: { byrange: {}, byisoform: { processTwsInOneQuery: true } } } as any),
+		false,
+		'false for a batch snvindel.byisoform getter, which takes every term of a request and need not take a region'
+	)
+	test.equal(
+		canQueryGeneVariantByCoord({ snvindel: { byrange: {} }, svfusion: { byname: {} } } as any),
+		false,
+		'false for svfusion.byname without byrange, which matches by gene name'
+	)
+	test.equal(
+		canQueryGeneVariantByCoord({ ...byRange, svfusion: { byrange: {}, byname: {} } } as any),
+		true,
+		'true for svfusion.byname with byrange'
+	)
+	test.equal(
+		canQueryGeneVariantByCoord({ snvindel: { byrange: {} }, geneCnv: { bygene: {} } } as any),
+		false,
+		'false for gene-level cnv'
+	)
+	test.equal(canQueryGeneVariantByCoord({ geneExpression: {} } as any), false, 'false without geneVariant data')
+	test.equal(canQueryGeneVariantByCoord(undefined), false, 'false without queries')
+
+	{
+		const c: any = {}
+		addNonDictionaryQueries(c, { queries: byRange } as any, { defaultcoord: {} })
+		test.equal(c.queries.geneVariantByCoord, true, 'addNonDictionaryQueries() exposes the flag')
+	}
+	{
+		const c: any = {}
+		addNonDictionaryQueries(c, { queries: { snvindel: { byisoform: {} } } } as any, { defaultcoord: {} })
+		test.notOk('geneVariantByCoord' in c.queries, 'addNonDictionaryQueries() omits the flag when false')
+	}
 	test.end()
 })
 

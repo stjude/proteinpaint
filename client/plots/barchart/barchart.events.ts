@@ -1,6 +1,6 @@
 import { Menu, renderTable, type TableRow, getChartTitle, escapeHtml } from '#dom'
 // import { dofetch3 } from '#common/dofetch'
-import { mclass, dt2label } from '#shared/common.js'
+import { mclass } from '#shared/common.js'
 // import { /*newpane,*/ export_data } from '#src/client'
 import {
 	filterJoin,
@@ -12,7 +12,7 @@ import {
 import { rgb } from 'd3-color'
 import { create } from 'd3-selection'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { isNumericTw } from '#shared/terms.js'
+import { isNumericTw, getGvQueryKey, getGvQueryRegion } from '#shared/terms.js'
 import { isFractionTw, getFractionTvsTerm } from '#shared/termCollection.js'
 import { negateTermLabel } from './barchart'
 import {
@@ -964,7 +964,11 @@ export function addGvRowVals(sample, tw, row, termdbmclass) {
 	const gene2mlst = new Map()
 	// map each gene to its mutations
 	for (const gene of tw.term.genes) {
-		const mlst_gene = mlst.filter(m => m.gene == gene.id)
+		/* a value records the entry it was found through by its .gene, or by its .region for an
+		entry over a region, which has no gene. Keyed the same way on both sides, as the server
+		does in addDataAvailability() in server/src/mds3.init.js */
+		const key = getGvQueryKey({ gene: gene.gene, region: getGvQueryRegion(gene) })
+		const mlst_gene = mlst.filter(m => getGvQueryKey(m) == key)
 		gene2mlst.set(gene.name, mlst_gene)
 	}
 	if (!gene2mlst.size) throw 'gene2mlst is empty'
@@ -972,6 +976,8 @@ export function addGvRowVals(sample, tw, row, termdbmclass) {
 		// single gene, add its mutations to mutation column
 		const entry = gene2mlst.entries().next().value
 		const mlst = entry![1]
+		// one line per mutation, in step with the mutation column
+		if (isSingleRegionTerm(tw)) row.push({ html: mlst.map(m => escapeHtml(m.annotatedGene || '')).join('<br>') })
 		const htmls = mlst2htmls(mlst, termdbmclass)
 		row.push({ html: htmls.join('<br>') })
 	} else {
@@ -986,6 +992,14 @@ export function addGvRowVals(sample, tw, row, termdbmclass) {
 		row.push({ html: genes.join('<br>') })
 		row.push({ html: htmls.join('<br>') })
 	}
+}
+
+/* a term over a single region names no gene, while its variants may be on any gene in the
+region, so the table gives a column to the gene that each is annotated to, see annotatedGene in
+mayGetGeneVariantData() in server/src/mds3.init.js. Read by both addGvCols() and addGvRowVals(),
+so that the cells of a row stay in step with the columns */
+function isSingleRegionTerm(tw) {
+	return tw.term.genes.length == 1 && tw.term.genes[0].kind == 'coord'
 }
 
 function mlst2htmls(mlst, termdbmclass) {
@@ -1013,19 +1027,13 @@ function mlst2htmls(mlst, termdbmclass) {
 
 // add geneVariant columns
 export function addGvCols(tw, columns) {
-	if (tw.term.genes.length == 1) {
+	if (tw.term.genes.length == 1 && !isSingleRegionTerm(tw)) {
+		// a single gene, which names the column of its mutations
 		columns.push({ label: tw.term.name })
-	} else {
-		columns.push({ label: 'Gene' })
-		if (tw.q.type == 'predefined-groupset') {
-			const groupset = tw.term.groupsetting.lst[tw.q.predefined_groupset_idx]
-			columns.push({ label: dt2label[groupset.dt] })
-		} else if (tw.q.type == 'custom-groupset') {
-			columns.push({ label: 'Genotype' })
-		} else {
-			throw 'unexpected tw.q.type'
-		}
+		return
 	}
+	// a gene set or a region, whose mutations are each listed beside their gene, see addGvRowVals()
+	columns.push({ label: 'Gene' }, { label: 'Mutation' })
 }
 
 async function menuoption_add_filter(self, tvslst, arg) {

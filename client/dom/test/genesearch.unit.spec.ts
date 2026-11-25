@@ -6,6 +6,8 @@ import { Menu } from '../menu'
 
 /* Tests
     - Default gene search box
+    - Gene search box that allows a coordinate
+    - allowCoord requires searchOnly=gene
     - string2variant() - simple variant and HGVS snv and insertion variants
 */
 
@@ -53,6 +55,32 @@ tape('Default gene search box', async test => {
 	test.ok(searchInput.tagName == 'INPUT', 'Should create an input element')
 	test.equal(searchInput.placeholder, 'Gene, position', 'Should display the default placeholder text')
 
+	if (test['_ok']) {
+		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('Gene search box that allows a coordinate', test => {
+	const holder = getHolder()
+	const tip = new Menu({ padding: '' })
+	getSearchBox(holder, { tip, searchOnly: 'gene', allowCoord: true })
+	const searchInput = holder.select('input').node() as HTMLInputElement
+	test.equal(searchInput.placeholder, 'Gene, position', 'Should name both a gene and a position in the placeholder')
+	if (test['_ok']) {
+		if (tip.dnode) tip.dnode.remove()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape('allowCoord requires searchOnly=gene', test => {
+	const holder = getHolder()
+	const tip = new Menu({ padding: '' })
+	getSearchBox(holder, { tip, allowCoord: true })
+	test.equal(holder.selectAll('input').size(), 0, 'Should not create an input')
+	test.equal(holder.text(), 'allowCoord requires searchOnly=gene', 'Should show the reason')
 	if (test['_ok']) {
 		if (tip.dnode) tip.dnode.remove()
 		holder.remove()

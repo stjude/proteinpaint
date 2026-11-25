@@ -1,7 +1,7 @@
 import { keyupEnter, gmlst2loci } from '#src/client'
 import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
-import { invalidcoord, string2pos } from '#src/coord'
+import { invalidcoord, string2pos, string2exactCoord } from '#shared/common.js'
 import type { ClientGenome } from '../types/clientGenome'
 
 /*
@@ -59,6 +59,11 @@ type GeneSearchBoxArg = {
         support gene, region, snp (if available), variant (if allowed). resolves to region
 	*/
 	searchOnly?: 'gene' | 'snp' | 'genes'
+	/** only with searchOnly='gene': an input that matches no gene may instead be a coordinate,
+	chr:start-stop or chr:pos, resolving to {chr, start, stop} with no geneSymbol, see
+	string2exactCoord() in shared/utils/src/common.ts. A matched gene still resolves to
+	{geneSymbol} alone, unlike a missing searchOnly, which maps it to coordinates */
+	allowCoord?: boolean
 	/** If true, user must click on search box and enter instead of automatically 
     focusing on search box. Use to render d3 animations smoothly. */
 	focusOff?: boolean
@@ -183,6 +188,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			if (arg.searchOnly == 'gene' || arg.searchOnly == 'genes')
 				throw 'when allowVariant is true, searchOnly cannot be gene/genes'
 		}
+		if (arg.allowCoord && arg.searchOnly != 'gene') throw 'allowCoord requires searchOnly=gene'
 	} catch (e) {
 		row.append('span').text(e)
 		return result
@@ -193,6 +199,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 
 	if ('placeholder' in arg) {
 		placeholder = arg.placeholder!
+	} else if (arg?.searchOnly == 'gene' && arg.allowCoord) {
+		placeholder = 'Gene, position'
 	} else if (arg?.searchOnly == 'gene') {
 		placeholder = 'Gene'
 		width = 100 // use shorter width for inputting only one gene name
@@ -300,7 +308,19 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 					}
 				}
 				if (arg?.searchOnly == 'gene') {
-					getResult(null, 'Gene not found')
+					if (arg.allowCoord) {
+						const coord = string2exactCoord(v, arg.genome)
+						if (coord) {
+							getResult(coord, 'Valid coordinate')
+							// same as a matched gene above
+							tip.hide()
+							input.blur()
+							debouncer.clear()
+							searchbox.property('disabled', false)
+							return
+						}
+					}
+					getResult(null, arg.allowCoord ? 'No match' : 'Gene not found')
 					searchbox.property('disabled', false)
 					return
 				}
@@ -337,7 +357,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				}
 
 				// try to parse as coord
-				const pos = string2pos(v, arg.genome)
+				const pos = string2pos(v, arg.genome, false)
 				if (pos) {
 					getResult(pos, 'Valid coordinate')
 					searchbox.property('disabled', false)
@@ -488,7 +508,8 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 			if (variant) return
 		}
 
-		if (arg.genome.hasSNP) {
+		// a gene-only search cannot resolve to a snp on Enter, so offering one would mislead
+		if (arg.genome.hasSNP && arg.searchOnly != 'gene' && arg.searchOnly != 'genes') {
 			// has snp; test if input is dbsnp id
 			const dbsnp = await dofetch3('snp', { body: { byName: true, genome: arg.genome.name, lst: [v] } }) // FIXME expensive! only search when searchOnly=snp
 			if (dbsnp.error) throw dbsnp.error
