@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { computeTypes, getJunctionData, removeIRtype, validate_query_junction } from '../validate.js'
+import { computeTypes, getJunctionData, removeIRtype, validate_query_junction, maxJunctionRegion } from '../validate.js'
 
 tape('\n', test => {
 	test.comment('-***- junction/validate specs -***-')
@@ -322,6 +322,31 @@ tape('listJunctions: passes sampleMapping with filter and filterObj', async test
 	test.deepEqual(seen[1].filter, sex, 'filters samples by filterObj')
 	test.equal((byFilterObj.byStart.get(1000) as any).sampleCount, 2, 'keeps the samples that filterObj passes')
 	test.deepEqual(byFilterObj, byFilter, 'lists the same junctions as by filter')
+	test.end()
+})
+
+tape('listJunctions: reads regions of at most maxJunctionRegion in total', async test => {
+	const q = await getJunctionQuery()
+	const { totalCount } = await listJunctions(q, { rglst: [{ chr: 'chr17', start: 0, stop: maxJunctionRegion }] })
+	test.equal(totalCount, 4, 'reads a region of maxJunctionRegion')
+	const half = maxJunctionRegion / 2
+	for (const [rglst, what] of [
+		[[{ chr: 'chr17', start: 0, stop: maxJunctionRegion + 1 }], 'a region over maxJunctionRegion'],
+		[
+			[
+				{ chr: 'chr17', start: 0, stop: half },
+				{ chr: 'chr17', start: maxJunctionRegion, stop: maxJunctionRegion + half + 1 }
+			],
+			'regions over maxJunctionRegion in total'
+		]
+	] as [any[], string][]) {
+		try {
+			await q.listJunctions({ rglst })
+			test.fail(`should throw for ${what}`)
+		} catch (e: any) {
+			test.equal(e.message, `Zoom in to under ${maxJunctionRegion / 1e6} Mb to show junctions`, `throws for ${what}`)
+		}
+	}
 	test.end()
 })
 

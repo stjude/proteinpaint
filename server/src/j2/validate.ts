@@ -12,6 +12,9 @@ import { rankSumP, bh } from '#shared/rankSum.js'
 
 // most junctions that listJunctions() returns read counts by sample for
 const maxMatrixTop = 100
+/* the widest region, in bp, whose junctions a request reads from the file: the total of rglst[] of listJunctions(), the
+group region of its group test, and the region of a term of measure share */
+export const maxJunctionRegion = 10_000_000
 
 export async function validate_query_junction(ds: any, genome: any) {
 	const tmp = ds.queries?.junction // fixme: tmp-to-q avoids tsc err
@@ -54,6 +57,8 @@ export async function validate_query_junction(ds: any, genome: any) {
 		if (param.readcountCutoff !== undefined && (!Number.isInteger(param.readcountCutoff) || param.readcountCutoff < 0))
 			throw new Error('readcountCutoff must be a non-negative integer')
 		utils.validateRglst(param, genome)
+		if (param.rglst.reduce((sum: number, r: any) => sum + r.stop - r.start, 0) > maxJunctionRegion)
+			throw new Error(`Zoom in to under ${maxJunctionRegion / 1e6} Mb to show junctions`)
 		let hiddenTypes
 		if (param.hiddenTypes) {
 			if (typeof param.hiddenTypes != 'string') throw new Error('param.hiddenTypes not string')
@@ -471,9 +476,6 @@ export async function getJunctionData(
 	return { term2sample2value }
 }
 
-// the largest region whose junction reads are summed for a share
-const maxShareRegion = 10_000_000
-
 /* the share of a junction, in percent, of each sample with reads of its gene: the sample's reads of the junction over
 its reads of all the gene's junctions, 0 for a sample with none of the junction, as testJunctionGroups() takes it; a
 sample without reads of the gene has no share */
@@ -495,10 +497,10 @@ function validateShareTerm(term: any) {
 		!Number.isInteger(r.stop) ||
 		r.start > term.start ||
 		r.stop < term.stop ||
-		r.stop - r.start > maxShareRegion
+		r.stop - r.start > maxJunctionRegion
 	)
 		throw new Error(
-			`junction.get(): a term of measure share needs .region on its chromosome, around it and at most ${maxShareRegion} bp`
+			`junction.get(): a term of measure share needs .region on its chromosome, around it and at most ${maxJunctionRegion} bp`
 		)
 }
 
