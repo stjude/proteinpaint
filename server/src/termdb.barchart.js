@@ -214,14 +214,8 @@ export async function barchart_data(q, ds, tdb) {
 										// it via the 'key2' in item guard above
 										if (!map.get(2))
 											item.key2 = item.val2 = visibleKeys.length > 1 ? 'In multiple categories' : 'In one category'
-									} else {
-										/* deduplication is a membership-multivalue-only feature. every row
-										still needs dedupkey1: the partjson template builds dedupedSerieses
-										unconditionally, and mirroring key1 keeps it identical to serieses so
-										the Deduplicate toggle stays hidden and a stray q.deduplicate cannot
-										select an empty series set. */
-										item.dedupkey1 = value.values?.map(v => v.key) || [value.key]
 									}
+									// any other term1 gets dedupkey1 from key1 in prep(), see there
 								}
 							}
 						}
@@ -532,6 +526,14 @@ function getPj(q, data, ds, twByIndex) {
 					// in order for the input data shape to match the $key1[] template,
 					// and in case the row key is not already an array
 					if (d.key == 'key1' && !Array.isArray(row[d.key])) row[d.key] = [row[d.key]]
+					/* deduplication is a membership-multivalue-only feature, and the rows of that term1
+					(and of an exploded termCollection) set their own dedupkey1. every other row still
+					needs one: the template builds dedupedSerieses unconditionally, and mirroring key1
+					keeps it identical to serieses so the Deduplicate toggle stays hidden and a stray
+					q.deduplicate cannot select an empty series set. set here, where every row passes,
+					rather than where each row is built, since the geneVariant paths set only key1. a
+					copy, since a condition term below converts the keys of both lists in place */
+					if (d.key == 'key1' && !row.dedupkey1) row.dedupkey1 = [...row.key1]
 
 					if (d.term.type == 'condition') {
 						if (d.q.bar_by_grade) {
