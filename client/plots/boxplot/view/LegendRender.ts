@@ -40,7 +40,7 @@ export class LegendRenderer {
                 <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"/>
                 </svg>`)
 		}
-		legendItem
+		const textDiv = legendItem
 			.append('div')
 			.style('display', 'inline-block')
 			.style('color', this.textColor)
@@ -52,6 +52,7 @@ export class LegendRenderer {
 			legendItem.attr('aria-label', `Click to unhide plot`).on('click', () => {
 				this.interactions.unhidePlot(item)
 			})
+			textDiv.attr('data-testid', (item.isHidden ? 'sjpp-htmlLegend-hidden-' : 'sjpp-htmlLegend-') + item.key)
 		}
 	}
 }

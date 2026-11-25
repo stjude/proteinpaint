@@ -53,6 +53,7 @@ export class View {
 				chartDom.assocTableDiv = chartWrapper
 					.append('div')
 					.attr('class', 'sjpp-boxplot-wilcoxon')
+					.attr('data-testid', 'sjpp-boxplot-wilcoxon')
 					.style('display', 'inline-block')
 			}
 

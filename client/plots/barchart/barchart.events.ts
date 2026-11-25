@@ -455,6 +455,7 @@ function handle_click(event, self, chart) {
 		if (self.config.term2 && hasMultipleCells && (data.dataId || data.dataId === 0)) {
 			options.push({
 				label: 'Hide "' + escapeHtml(dataLabel) + '" ' + icon,
+				testId: `sjpp-barchart-hide-overlay-${data.dataId}`,
 				callback: () => {
 					const term2 = self.config.term2
 					self.app.dispatch({
