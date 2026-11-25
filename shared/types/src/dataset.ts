@@ -3062,6 +3062,18 @@ export type isSupportedChartCallbacks = {
 	[chartType: string]: boolean | ((f: any) => boolean | undefined)
 }
 
+/** the xfetch() options of the requests to a url substring, see server/src/xfetch.hostpath.ts */
+export type FetchHostpathOptions = {
+	/** the message of an error when the API is busy or not responding, such as one that names the API,
+	 * instead of the default message */
+	networkErrorMessage?: string
+}
+
+/** url substring, such as a host or a host and path -> xfetch() options */
+export type FetchOptionsByHostpath = {
+	[hostpath: string]: FetchHostpathOptions
+}
+
 export type Mds3 = BaseMds & {
 	/** set in initGenomesDs.js during launch, should use .genomename instead of .genome */
 	genomename?: string // use this
@@ -3075,6 +3087,9 @@ export type Mds3 = BaseMds & {
 	isMds3: boolean
 	loadWithoutBlocking?: boolean
 	preInit?: PreInit
+	/** the xfetch() options of the requests that this dataset makes to an external API, which mds3.init
+	 * registers before the dataset's first request, see server/src/xfetch.hostpath.ts */
+	fetchOptionsByHostpath?: FetchOptionsByHostpath
 	init?: {
 		/** number of milliseconds to wait before calling th preInit.getStatus() again */
 		retryDelay?: number
