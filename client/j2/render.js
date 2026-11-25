@@ -839,8 +839,9 @@ function mouseoverSpanBackground(j, tk, block, viewpxwidth) {
 }
 
 function mouseoverBoxplot(j, tk) {
-	// mouse over disc show boxplot for read count
-	if (!j.readcountBoxplot) return
+	// mouse over disc show boxplot for read count, only on a read count axis: on another, e.g. the Δ share of a group test,
+	// read counts placed by its scale land outside the track
+	if (!j.readcountBoxplot || tk.rows.jug.yAxisKey != 'medianReadCount') return
 	const color = 'black'
 	// p95 is below p5 with tk.pointDown
 	const yscale = sectionYscale(tk)
