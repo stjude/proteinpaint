@@ -147,7 +147,11 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			this.toggleLoadingDiv('block', 'block')
 			const data = await model.getData()
 			if (isErrorResponse(data)) throw new Error(data.error)
-			if (!data.charts || !Object.keys(data.charts).length) {
+			if (
+				!Object.values(data.charts || {}).some(chart =>
+					chart.plots.some(plot => !('isHidden' in plot && plot.isHidden))
+				)
+			) {
 				this.dom.banner.html(`<span>No visible box plot data to render</span>`).style('display', 'block')
 			} else {
 				this.dom.banner.style('display', 'none').html('')
