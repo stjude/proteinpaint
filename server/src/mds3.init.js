@@ -3948,7 +3948,11 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		sampleTypes: q.sampleTypes,
 		sessionid: q.sessionid
 	}
-	if (ds.queries.svfusion.byrange && ds.queries.svfusion.byname) {
+	/* byname matches events by the gene name of the entry, which an entry over a region has none
+	of, so a region is queried by range alone. Its events have no breakpoint positions to place in
+	the region either, see svfusionByNameGetter_file() */
+	const isRegion = !term.gene
+	if (ds.queries.svfusion.byrange && ds.queries.svfusion.byname && !isRegion) {
 		await mayMapGeneName2coord(term, genome)
 		// tw.term.chr/start/stop are set
 		arg.rglst = [term]
@@ -3963,6 +3967,7 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		arg.rglst = [term]
 		return await ds.queries.svfusion.byrange.get(arg)
 	}
+	if (isRegion) throw 'queries.svfusion.byrange is missing, which a region is queried by'
 	if (ds.queries.svfusion.byname) {
 		// tw.term.chr/start/stop are set
 		arg.rglst = [term]

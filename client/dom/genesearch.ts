@@ -1,14 +1,13 @@
 import { keyupEnter, gmlst2loci } from '#src/client'
 import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
-import { invalidcoord, string2pos } from '#src/coord'
+import { invalidcoord, string2pos, string2exactCoord } from '#shared/common.js'
 import type { ClientGenome } from '../types/clientGenome'
 
 /*
 exports:
 
 addGeneSearchbox()
-string2exactCoord()
 string2variant()
 
 typical usage:
@@ -62,8 +61,8 @@ type GeneSearchBoxArg = {
 	searchOnly?: 'gene' | 'snp' | 'genes'
 	/** only with searchOnly='gene': an input that matches no gene may instead be a coordinate,
 	chr:start-stop or chr:pos, resolving to {chr, start, stop} with no geneSymbol, see
-	string2exactCoord(). A matched gene still resolves to {geneSymbol} alone, unlike a missing
-	searchOnly, which maps it to coordinates */
+	string2exactCoord() in shared/utils/src/common.ts. A matched gene still resolves to
+	{geneSymbol} alone, unlike a missing searchOnly, which maps it to coordinates */
 	allowCoord?: boolean
 	/** If true, user must click on search box and enter instead of automatically 
     focusing on search box. Use to render d3 animations smoothly. */
@@ -358,7 +357,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				}
 
 				// try to parse as coord
-				const pos = string2pos(v, arg.genome)
+				const pos = string2pos(v, arg.genome, false)
 				if (pos) {
 					getResult(pos, 'Valid coordinate')
 					searchbox.property('disabled', false)
@@ -736,24 +735,6 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 	}
 
 	return result
-}
-
-/* the coordinate typed for allowCoord, chr:start-stop or chr:pos, as {chr, start, stop} that
-are 1-based and inclusive as typed, so chr:pos gives start = stop = pos. Commas in a position
-are ignored. Returns undefined for anything else, including a bare chromosome name.
-
-Not string2pos(), which is for the genome browser: it widens a single position to 400bp, and
-maps a bare chromosome name to its middle, neither of which is the region typed. */
-export function string2exactCoord(v: string, genome: ClientGenome) {
-	const [chrName, ...positions] = v
-		.replace(/,/g, '')
-		.trim()
-		.split(/[-:\s]+/)
-	if (positions.length != 1 && positions.length != 2) return
-	if (!positions.every(p => /^\d+$/.test(p))) return
-	const [start, stop = start] = positions.map(Number)
-	if (start < 1 || invalidcoord(genome, chrName, start, stop)) return
-	return { chr: genome.chrlookup[chrName.toUpperCase()].name, start, stop }
 }
 
 export async function string2variant(v: string, genome: ClientGenome) {

@@ -3279,6 +3279,60 @@ test('mayGetGeneVariantData: a region is queried by snvindel.byrange over byisof
 	}
 })
 
+/* byname matches events by the gene name of the entry, which a region has none of, so a region
+is queried by range alone, as in the mds3 track, see query_svfusion() in mds3.load.js */
+test('mayGetGeneVariantData: a region is queried by svfusion.byrange alone', async t => {
+	t.plan(5)
+	const calls = [] // getter of every call
+	const fusion = [
+		{
+			dt: 2,
+			class: 'Fuserna',
+			mname: 'BCR::ABL1',
+			pairlst: [{ a: { name: 'BCR' }, b: { name: 'ABL1' } }],
+			pairlstIdx: 0,
+			samples: [{ sample_id: 'case-1' }]
+		}
+	]
+	const ds = {
+		genomename: 'hg38',
+		cohort: { termdb: {} },
+		queries: {
+			svfusion: {
+				dtLst: [2],
+				byrange: { get: async () => (calls.push('byrange'), fusion) },
+				byname: { get: async () => (calls.push('byname'), []) }
+			}
+		}
+	}
+	mayAdd_mayGetGeneVariantData(ds, null) // genome is not consulted: both entries carry coordinates
+
+	const coord = { chr: 'chr22', start: 23180000, stop: 23320000 }
+	const name = 'chr22:23180001-23320000'
+	const region = { kind: 'coord', id: name, name, type: 'geneVariant', ...coord }
+	const regionTerm = { type: 'geneVariant', name, genes: [region], groupsetting: { disabled: false } }
+	const results = await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
+	t.deepEqual(calls, ['byrange'], 'a region is not queried by name')
+	t.equal(results.get('r')['case-1'].values[0].mname, 'BCR::ABL1', 'the event of the region is returned')
+
+	calls.length = 0
+	const gene = { kind: 'gene', id: 'BCR', gene: 'BCR', name: 'BCR', type: 'geneVariant', ...coord }
+	const geneTerm = { type: 'geneVariant', name: 'BCR', genes: [gene], groupsetting: { disabled: false } }
+	await ds.mayGetGeneVariantData({ $id: 'g', term: geneTerm, q: { type: 'values' } }, {})
+	t.deepEqual(calls, ['byrange', 'byname'], 'a gene is still queried both by range and by name')
+
+	// a ds offering only byname cannot query a region, and says so rather than returning nothing
+	delete ds.queries.svfusion.byrange
+	calls.length = 0
+	try {
+		await ds.mayGetGeneVariantData({ $id: 'r', term: regionTerm, q: { type: 'values' } }, {})
+		t.fail('should throw for a region without byrange')
+	} catch (e) {
+		t.equal(e, 'queries.svfusion.byrange is missing, which a region is queried by', 'throws for a region')
+		t.deepEqual(calls, [], 'does not query by name')
+	}
+})
+
 test('mayGetGeneVariantData: ungrouped term returns every origin', async t => {
 	t.plan(3)
 	const ds = {

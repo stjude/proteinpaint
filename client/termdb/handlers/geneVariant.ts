@@ -402,7 +402,7 @@ export class SearchHandler {
 			})
 		} else if (geneSearch.chr && Number.isInteger(geneSearch.start) && Number.isInteger(geneSearch.stop)) {
 			const { chr } = geneSearch
-			// typed 1-based and inclusive, see string2exactCoord() in client/dom/genesearch.ts
+			// typed 1-based and inclusive, see string2exactCoord() in shared/utils/src/common.ts
 			const start = geneSearch.start - 1
 			const stop = geneSearch.stop
 			// name should be 1-based coordinate, which is the coordinate as typed

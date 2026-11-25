@@ -57,13 +57,20 @@ async function fillMenu(self, div, tvs) {
 			if (data?.error) throw data.error
 			return data?.gmlst || []
 		}
-		// a range on the term's own gene is not scoped to a gene (see BreakpointRange),
-		// so is only offered when the term has a single gene
-		const genes = term.parentTerm?.genes
-		if (genes?.length == 1) arg.gene = genes[0].gene || genes[0].name
+		const gene = getSelfBreakpointGene(term.parentTerm)
+		if (gene) arg.gene = gene
 		arg.selfBreakpointRange = tvs.selfBreakpointRange
 	}
 	renderVariantConfig(arg)
+}
+
+/* the gene of the term whose own breakpoints an sv/fusion range may be placed on, which is charted
+over the isoform models of that gene. A range is not scoped to a gene (see BreakpointRange), so
+only a term of a single gene has one, and a region names no gene to chart */
+export function getSelfBreakpointGene(parentTerm) {
+	const genes = parentTerm?.genes
+	if (genes?.length != 1 || genes[0].kind == 'coord') return
+	return genes[0].gene || genes[0].name
 }
 
 function term_name_gen(d) {
