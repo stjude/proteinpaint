@@ -52,6 +52,8 @@ const missingColor = '#bbb'
 // the isoforms shown apart in the makeup of the gene's expression; the rest are one gray part
 const maxIsoformParts = 5
 const otherIsoformColor = '#ccc'
+// a sample without a share: near white, as an empty row, apart from the gray of the other isoforms
+const noShareColor = '#eee'
 // the colors of an annotation's categories that its term gives none
 const annotationColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#17becf']
 /* a sample whose isoforms sum to less (in their unit, e.g. TPM) has no makeup: near 0, a read or two decides a share,
@@ -433,7 +435,12 @@ function render(tk: any, block: any): number {
 	if (isoforms)
 		annotations.push({
 			label: 'Isoform share',
-			parts: idx.map(j => isoforms.shares[j].map((width, k) => ({ width, color: isoforms.colors[k] })))
+			// a sample with no makeup, its isoforms under minIsoformTotal, is a pale row across
+			parts: idx.map(j =>
+				isoforms.shares[j].length
+					? isoforms.shares[j].map((width, k) => ({ width, color: isoforms.colors[k] }))
+					: [{ width: 1, color: noShareColor }]
+			)
 		})
 	if (groups.length)
 		annotations.push({
@@ -486,7 +493,9 @@ function render(tk: any, block: any): number {
 				if (hasGene) table.addRow(exprLabel, round(s.value!))
 				if (s.group !== undefined) table.addRow('Group', s.group)
 				if (annotation) table.addRow(annotation.label, annotation.text(s))
-				if (isoforms)
+				if (isoforms && !isoforms.shares[idx[row]].length)
+					table.addRow('Isoform share', `none: isoforms under ${minIsoformTotal} ${isoforms.unit} in all`)
+				else if (isoforms)
 					isoforms.labels.forEach((label, k) => {
 						const share = isoforms.shares[idx[row]][k]
 						if (share) table.addRow(label, `${Math.round(share * 100)}% of the isoforms' ${isoforms.unit}`)
@@ -804,6 +813,11 @@ function renderLegend(
 						: '')
 			)
 		})
+		if (isoforms.shares.some(x => !x.length))
+			item(
+				`width:12px;height:12px;background:${noShareColor};border:1px solid #ccc;box-sizing:border-box`,
+				`isoforms under ${minIsoformTotal} ${isoforms.unit} in all: no share, too little expression to split`
+			)
 		if (usage) {
 			// the makeup of each group, as the column draws one sample's
 			const box = div.append('div').style('margin-top', '4px')
