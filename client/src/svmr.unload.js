@@ -1,4 +1,4 @@
-import { genomic2gm } from './coord'
+import { genomic2gm } from '#shared/gmcoord.js'
 import {
 	dtitd,
 	dtdel,

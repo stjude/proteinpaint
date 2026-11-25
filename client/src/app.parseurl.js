@@ -1,7 +1,7 @@
 import blockinit from './block.init'
 import * as client from './client'
 import { loadstudycohort } from './tp.init'
-import { string2pos } from './coord'
+import { string2pos } from '#shared/common.js'
 import * as mdsjson from './app.mdsjson'
 import { getSavedToken } from '#common/dofetch'
 import urlmap from '#common/urlmap'

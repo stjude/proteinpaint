@@ -3,7 +3,7 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { rgb as d3rgb } from 'd3-color'
 import * as d3force from 'd3-force'
 import * as client from './client'
-import * as coord from './coord'
+import { genomic2gm, rna2gmcoord } from '#shared/gmcoord.js'
 import hm2legend from './hm2.legend'
 import { dofetch3 } from '../common/dofetch'
 import { Menu } from '#dom'
@@ -154,7 +154,7 @@ export default function (arg) {
 				} else {
 					prev.gm = curr.gm
 					err('In multi-segment at ' + i + ", 5' breakpoint is joined to the same gene model of 3'")
-					const t = coord.genomic2gm(prev.position, curr.gm, 5) /// XXX 5 is tempoff!! must remove later
+					const t = genomic2gm(prev.position, curr.gm, 5) /// XXX 5 is tempoff!! must remove later
 					prev.exonbp = t.rnapos
 					prev.codon = t.aapos
 					prev.atintron = t.atintron
@@ -168,7 +168,7 @@ export default function (arg) {
 				if (prev.gm) {
 					curr.gm = prev.gm
 					err('In multi-segment at ' + i + ", 3' breakpoint is joined to the same gene model of 5'")
-					const t = coord.genomic2gm(curr.position, prev.gm, 5) /// XXX 5 is tempoff!! must remove later
+					const t = genomic2gm(curr.position, prev.gm, 5) /// XXX 5 is tempoff!! must remove later
 					curr.exonbp = t.rnapos
 					curr.codon = t.aapos
 					curr.atintron = t.atintron
@@ -1727,10 +1727,10 @@ function nodecheck(n) {
 				n.rnaposition = (n.gm.utr5 ? n.gm.utr5.reduce((i, j) => i + j[1] - j[0], 0) : 0) + n.codon * 3 - 1
 			}
 			if (!Number.isFinite(n.rnaposition)) return 'neither genomic or rna position given for node'
-			n.position = coord.rna2gmcoord(n.rnaposition, n.gm)
+			n.position = rna2gmcoord(n.rnaposition, n.gm)
 			if (n.position == null) return 'cannot map rnaposition ' + n.rnaposition + ' to ' + n.gm.isoform
 		}
-		const t = coord.genomic2gm(n.position, n.gm, 5) // XXX tempoff must remove later
+		const t = genomic2gm(n.position, n.gm, 5) // XXX tempoff must remove later
 		n.exonbp = t.rnapos
 		if (!Number.isFinite(n.codon)) n.codon = t.aapos
 		n.atintron = t.atintron

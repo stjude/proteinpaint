@@ -3,7 +3,7 @@ import { arc as d3arc } from 'd3-shape'
 import { select as d3select } from 'd3-selection'
 import { itemtable } from './block.ds.itemtable'
 import * as client from './client'
-import * as coord from './coord'
+import { aa2gmcoord, genomic2gm, rna2gmcoord } from '#shared/gmcoord.js'
 import * as common from '#shared/common.js'
 import { duplicate as svduplicate } from '#shared/bulk.sv.js'
 import * as vcftk from './block.ds.vcf'
@@ -565,7 +565,7 @@ function renderskewertk(tk, block, originhidden) {
 						if (Number.isFinite(m.aapos)) aapos = m.aapos
 					}
 					if (aapos == undefined) {
-						aapos = coord.genomic2gm(mlst[0].pos, block.usegm).aapos
+						aapos = genomic2gm(mlst[0].pos, block.usegm).aapos
 					}
 					if (aapos == undefined) {
 						console.error('data item cannot map to aaposition')
@@ -938,7 +938,7 @@ custom mclass from vcfinfofilter
 			let pxspan = null
 			if (block.usegm) {
 				const rnapos = g.mlst[0].rnapos // rnapos should always be available!
-				const genomicpos = coord.rna2gmcoord(rnapos + rnaspan, block.usegm)
+				const genomicpos = rna2gmcoord(rnapos + rnaspan, block.usegm)
 				const hits = block.seekcoord(block.usegm.chr, genomicpos)
 				if (hits.length > 0) {
 					pxspan = hits[0].x - d.x
@@ -2148,7 +2148,7 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 		switch (m.dt) {
 			case common.dtsnvindel:
 				if (block.usegm) {
-					const t = coord.genomic2gm(m.pos, block.usegm)
+					const t = genomic2gm(m.pos, block.usegm)
 					m.rnapos = t.rnapos
 					m.aapos = t.aapos
 				}
@@ -2204,11 +2204,11 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 										console.error('no position/rnaposition/codon available for ' + block.usegm.isoform)
 										break
 									} else {
-										m.pos = coord.aa2gmcoord(pair.a.codon, block.usegm)
+										m.pos = aa2gmcoord(pair.a.codon, block.usegm)
 										pair.a.position = m.pos
 									}
 								} else {
-									m.pos = coord.rna2gmcoord(pair.a.rnaposition - 1, block.usegm)
+									m.pos = rna2gmcoord(pair.a.rnaposition - 1, block.usegm)
 									if (m.pos == null) {
 										console.error('failed to convert rnaposition to genomic position: ' + pair.a.rnaposition)
 										break
@@ -2218,7 +2218,7 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 							} else {
 								m.pos = pair.a.position
 							}
-							const t = coord.genomic2gm(m.pos, block.usegm)
+							const t = genomic2gm(m.pos, block.usegm)
 							m.rnapos = t.rnapos
 							m.aapos = t.aapos
 							if (pair.a.codon) {
@@ -2238,11 +2238,11 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 										console.error('no position/rnaposition/codon available for ' + block.usegm.isoform)
 										break
 									} else {
-										m.pos = coord.aa2gmcoord(pair.b.codon, block.usegm)
+										m.pos = aa2gmcoord(pair.b.codon, block.usegm)
 										pair.b.position = m.pos
 									}
 								} else {
-									m.pos = coord.rna2gmcoord(pair.b.rnaposition - 1, block.usegm)
+									m.pos = rna2gmcoord(pair.b.rnaposition - 1, block.usegm)
 									if (m.pos == null) {
 										console.error('failed to convert rnaposition to genomic')
 										break
@@ -2252,7 +2252,7 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 							} else {
 								m.pos = pair.b.position
 							}
-							const t = coord.genomic2gm(m.pos, block.usegm)
+							const t = genomic2gm(m.pos, block.usegm)
 							m.rnapos = t.rnapos
 							m.aapos = t.aapos
 							if (pair.b.codon) {
@@ -2321,9 +2321,9 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 			case common.dtdel:
 				if (m.chrpos1 && m.chrpos2) {
 					// translate genomic pos1/pos2 to rna span
-					let t = coord.genomic2gm(m.chrpos1, block.usegm)
+					let t = genomic2gm(m.chrpos1, block.usegm)
 					const rnapos1 = t.rnapos
-					t = coord.genomic2gm(m.chrpos2, block.usegm)
+					t = genomic2gm(m.chrpos2, block.usegm)
 					const rnapos2 = t.rnapos
 					if (rnapos1 < rnapos2) {
 						m.pos = m.chrpos1
@@ -2357,7 +2357,7 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 				if (!m.pos) {
 					if (m.rnaposition) {
 						if (block.usegm) {
-							m.pos = coord.rna2gmcoord(m.rnaposition - 1, block.usegm)
+							m.pos = rna2gmcoord(m.rnaposition - 1, block.usegm)
 							m.chr = block.usegm.chr
 							if (m.pos == null) {
 								console.error('failed to convert rnaposition to genomic position: ' + m.rnaposition)
@@ -2373,7 +2373,7 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 					break
 				}
 				if (block.usegm) {
-					const t = coord.genomic2gm(m.pos, block.usegm)
+					const t = genomic2gm(m.pos, block.usegm)
 					if (m.rnaposition) {
 						m.rnapos = m.rnaposition
 					} else {
@@ -2403,7 +2403,7 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 				if (!m.pos) {
 					if (m.rnaposition) {
 						if (block.usegm) {
-							m.pos = coord.rna2gmcoord(m.rnaposition - 1, block.usegm)
+							m.pos = rna2gmcoord(m.rnaposition - 1, block.usegm)
 							m.chr = block.usegm.chr
 							if (m.pos == null) {
 								console.error('failed to convert rnaposition to genomic position: ' + m.rnaposition)
@@ -2419,7 +2419,7 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 					break
 				}
 				if (block.usegm) {
-					const t = coord.genomic2gm(m.pos, block.usegm)
+					const t = genomic2gm(m.pos, block.usegm)
 					if (m.rnaposition) {
 						m.rnapos = m.rnaposition
 					} else {
@@ -2471,7 +2471,7 @@ function hlaachange_addnewtrack(tk, block) {
 		m.mname = m.name
 		delete m.name
 		m.chr = block.usegm.chr
-		m.pos = coord.aa2gmcoord(m.codon, block.usegm)
+		m.pos = aa2gmcoord(m.codon, block.usegm)
 		delete m.codon
 		m.dt = common.dtsnvindel
 		m.isoform = block.usegm.isoform

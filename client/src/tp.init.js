@@ -1,7 +1,7 @@
 import * as client from './client'
 import vcf2dstk from './vcf.tkconvert'
 import { bulkin } from './bulk.ui'
-import { string2pos, invalidcoord } from './coord'
+import { string2pos, invalidcoord } from '#shared/common.js'
 import { scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import * as common from '#shared/common.js'

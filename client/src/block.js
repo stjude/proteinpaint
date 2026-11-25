@@ -20,7 +20,8 @@ import {
 } from '#dom'
 import { dofetch3 } from '../common/dofetch'
 import * as common from '#shared/common.js'
-import * as coord from './coord'
+import { invalidcoord, string2pos } from '#shared/common.js'
+import { aa2gmcoord } from '#shared/gmcoord.js'
 import vcf2dstk from './vcf.tkconvert'
 import blockinit from './block.init'
 import * as Legend from './block.legend'
@@ -230,7 +231,7 @@ export class Block {
 			this.regionspace = 10
 		} else {
 			// single region
-			const e = coord.invalidcoord(this.genome, arg.chr, arg.start, arg.stop)
+			const e = invalidcoord(this.genome, arg.chr, arg.start, arg.stop)
 			if (e) {
 				this.error(e)
 				return
@@ -386,8 +387,8 @@ export class Block {
 			// fills this.rglst[], this.startidx, this.stopidx
 			this.setgmmode(arg.gmmode || client.gmmode.genomic)
 			if (arg.aarange) {
-				const a = coord.aa2gmcoord(arg.aarange[0], this.usegm)
-				const b = coord.aa2gmcoord(arg.aarange[1], this.usegm)
+				const a = aa2gmcoord(arg.aarange[0], this.usegm)
+				const b = aa2gmcoord(arg.aarange[1], this.usegm)
 				if (!Number.isInteger(a) || !Number.isInteger(b)) throw new Error('invalid aarange')
 				for (const [i, r] of this.rglst.entries()) {
 					if (a >= r.start && a <= r.stop) {
@@ -1786,7 +1787,7 @@ reverseorient() {
 		this.resized = false
 
 		if (typeof s == 'string') {
-			const pos = coord.string2pos(s, this.genome)
+			const pos = string2pos(s, this.genome)
 			if (pos) {
 				this.rglst = [
 					{
@@ -1886,7 +1887,7 @@ reverseorient() {
 			if (locs.length == 1) {
 				// all isoforms are on the same locus
 				const r = locs[0]
-				const e = coord.invalidcoord(this.genome, r.chr, r.start, r.stop)
+				const e = invalidcoord(this.genome, r.chr, r.start, r.stop)
 				if (e) {
 					this.inputerr('this should not happen: gene error: ' + e)
 					return
@@ -4589,7 +4590,7 @@ seekrange(chr,start,stop) {
 							for (const line of str.split('\n')) {
 								const l = line.split(' ')
 								if (!l[0]) continue
-								const r = coord.string2pos(
+								const r = string2pos(
 									l[0],
 									this.genome,
 									true // do not extend

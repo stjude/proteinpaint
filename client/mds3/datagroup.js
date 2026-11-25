@@ -1,5 +1,5 @@
 import { gmmode, dtsnvindel, dtsv, dtfusionrna } from '#shared/common.js'
-import * as coord from '#src/coord'
+import { genomic2gm } from '#shared/gmcoord.js'
 
 /* method shared by skewer and numeric mode
 
@@ -85,7 +85,7 @@ export function make_datagroup(tk, rawmlst, block) {
 					if (Number.isFinite(m.aapos)) aapos = m.aapos
 				}
 				if (aapos == undefined) {
-					aapos = coord.genomic2gm(mlst[0].pos, block.usegm).aapos
+					aapos = genomic2gm(mlst[0].pos, block.usegm).aapos
 				}
 				if (aapos == undefined) {
 					console.error('data item cannot map to aaposition')
@@ -230,7 +230,7 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 	for (const m of lst) {
 		if (block.usegm) {
 			// m.pos must always be set
-			const t = coord.genomic2gm(m.pos, block.usegm)
+			const t = genomic2gm(m.pos, block.usegm)
 			m.rnapos = t.rnapos
 			m.aapos = t.aapos
 		}

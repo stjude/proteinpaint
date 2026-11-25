@@ -1,6 +1,6 @@
 import { select as d3select } from 'd3-selection'
 import * as client from './client'
-import { genomic2gm } from './coord'
+import { genomic2gm } from '#shared/gmcoord.js'
 import { bplen as bplength } from '#shared/common.js'
 import * as unload from './svmr.unload'
 import { scaleLinear } from 'd3-scale'

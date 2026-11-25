@@ -1,7 +1,7 @@
 import { dofetch3 } from '#common/dofetch'
 import { openSandbox } from '../../appdrawer/adSandbox'
 import { newSandboxDiv, throwMsgWithFilePathAndFnName } from '#dom'
-import { string2pos } from '../coord'
+import { string2pos } from '#shared/common.js'
 import * as parseurl from '../app.parseurl'
 import urlmap from '#common/urlmap'
 import { first_genetrack_tolist } from '#common/1stGenetk'
