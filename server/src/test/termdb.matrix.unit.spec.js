@@ -18,7 +18,8 @@ import {
 	dropRowsWithoutAnnotation,
 	transformContinuousValues,
 	shouldMapChildren2Parent,
-	mayMapNonDictionaryData
+	mayMapNonDictionaryData,
+	getSampleTypeName
 } from '../termdb.matrix.js'
 import { getAuthApi, authApi } from '../auth.js'
 import { init } from './load.testds.js'
@@ -112,6 +113,37 @@ tape('\n', function (test) {
 })
 
 const emptyDs = { cohort: { termdb: {} } }
+
+tape('getSampleTypeName: selects labels from query and returned sample types', t => {
+	const sampleTypes = {
+		1: { name: 'patient', plural_name: 'patients', parent_id: null },
+		2: { name: 'child', plural_name: 'children', parent_id: 1 },
+		3: { name: 'other child', plural_name: 'other children', parent_id: 1 }
+	}
+	const ds = { cohort: { termdb: { sampleTypes } }, sampleId2Type: new Map([[20, 2]]) }
+
+	t.deepEqual(
+		getSampleTypeName({ terms: [] }, ds, {}, true),
+		{ name: 'cell', plural_name: 'cells' },
+		'uses cell labels for single-cell data'
+	)
+	t.deepEqual(
+		getSampleTypeName({ terms: [{ term: { sampleTypeLabel: 'patient' } }], sampleTypes: [2] }, ds, {}),
+		{ name: 'sample', plural_name: 'samples' },
+		'uses generic labels for labeled terms at non-root sample types'
+	)
+	t.deepEqual(
+		getSampleTypeName({ terms: [], sampleTypes: [2, 3] }, ds, {}),
+		{ name: 'child / other child', plural_name: 'children / other children' },
+		'combines labels for configured sample types'
+	)
+	t.equal(
+		getSampleTypeName({ terms: [] }, ds, { 20: { sampleId: 20 } }),
+		sampleTypes[2],
+		'infers the type from a returned sample ID'
+	)
+	t.end()
+})
 
 tape('divideTerms: sorts terms by type', t => {
 	const dictTerm = { term: { type: 'categorical', id: 'd1' } }

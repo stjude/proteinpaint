@@ -474,7 +474,12 @@ async function getSampleData(q, ds) {
 		if (ref) bySampleId[sid] = ref
 	}
 
-	// determine the sample type
+	const sampleType = getSampleTypeName(q, ds, samples, processedSingleCellTerm)
+
+	return { samples, refs: { byTermId, bySampleId }, sampleType }
+}
+
+export function getSampleTypeName(q, ds, samples, processedSingleCellTerm = false) {
 	let sampleType
 	if (processedSingleCellTerm === true) {
 		// work around for single cell cases
@@ -482,7 +487,7 @@ async function getSampleData(q, ds) {
 		// sample type in ds.cohort.termdb.sampleTypes
 		sampleType = { name: 'cell', plural_name: 'cells' }
 	} else if (
-		q.terms.some(tw => tw.term.sampleTypeLabel != null) &&
+		q.terms?.some(tw => tw.term.sampleTypeLabel != null) &&
 		q.sampleTypes?.every(st => Number.isInteger(ds.cohort.termdb.sampleTypes[st].parent_id))
 	) {
 		// sample type label defined and all query sample types are
@@ -493,7 +498,7 @@ async function getSampleData(q, ds) {
 		const names: any[] = []
 		const plural_names: any[] = []
 		for (const st of q.sampleTypes) {
-			const config = q.ds.cohort.termdb.sampleTypes[st]
+			const config = ds.cohort.termdb.sampleTypes[st]
 			names.push(config.name)
 			plural_names.push(config.plural_name)
 		}
@@ -507,14 +512,13 @@ async function getSampleData(q, ds) {
 		if (sids.length) {
 			const firstComparableId = samples[sids[0]]?.sampleId
 			const sid = Number(firstComparableId ?? sids[0]) || firstComparableId || sids[0]
-			const stid = q.ds.sampleId2Type?.get?.(sid)
-			if (stid !== undefined && q.ds.cohort?.termdb?.sampleTypes) {
-				sampleType = q.ds.cohort.termdb.sampleTypes[stid]
+			const stid = ds.sampleId2Type?.get?.(sid)
+			if (stid !== undefined && ds.cohort?.termdb?.sampleTypes) {
+				sampleType = ds.cohort.termdb.sampleTypes[stid]
 			}
 		}
 	}
-
-	return { samples, refs: { byTermId, bySampleId }, sampleType }
+	return sampleType
 }
 
 /** map sample hierarchy for non-dictionary data */

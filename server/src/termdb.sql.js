@@ -10,7 +10,7 @@ import { isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { authApi } from '#src/auth.js'
 // circular import with termdb.matrix.js (it imports get_samples etc from this file); safe
 // because the binding is only dereferenced at runtime, never during module evaluation
-import { resolveSampleMapping } from './termdb.matrix.js'
+import { getSampleTypeName, resolveSampleMapping } from './termdb.matrix.js'
 import { sql } from './sql.ts'
 import { parseJsonParam } from './routes/common.ts'
 
@@ -144,28 +144,41 @@ export async function get_samplecount(q, ds) {
 	mayResolveSampleMapping(fq, ds)
 	const filter = await getFilterCTEs(j, ds, fq.sampleMapping, fq.sampleTypes)
 	let statement, row
-	let sample_type
-	//the filters either return a sample type or none as the samples are converted to the common type.
-	// For example, if you have a filter that returns patients, like a gender filter in PNET, and another filter that returns samples, the patients filter will be forced to return samples
-	//  if another sample filter is present in order to build a common filter with the samples intersected.
-	if (ds.cohort.db.tableColumns['sampleidmap'].includes('sample_type')) {
-		statement = sql`WITH ${filter.filters}
-		SELECT count (distinct sample) as count, sample_type
-		FROM ${sql.id(filter.CTEname)} join sampleidmap on sample = sampleidmap.id group by sample_type`
-		row = ds.cohort.db.connection.prepare(statement).get()
-		if (!row) return { count: '0 samples' } //no samples found
-		sample_type = ds.cohort.termdb.sampleTypes[row.sample_type]
-		sample_type = row.count > 1 ? sample_type.plural_name : sample_type.name
-	} else {
-		statement = sql`WITH ${filter.filters}
-		SELECT count (distinct sample) as count
-		FROM ${sql.id(filter.CTEname)} join sampleidmap on sample = sampleidmap.id`
-		row = ds.cohort.db.connection.prepare(statement).get()
-		if (!row) return { count: '0 samples' } //no samples found
-		sample_type = row.count > 1 ? 'samples' : 'sample'
-	}
+	// count distinct filtered samples and retain
+	// one sample id to infer sample type
+	statement = sql`WITH ${filter.filters}
+	SELECT count (distinct sample) as count, min(sample) as sample
+	FROM ${sql.id(filter.CTEname)} join sampleidmap on sample = sampleidmap.id`
+	row = ds.cohort.db.connection.prepare(statement).get()
+	if (!row || row.count === 0) return { count: '0 samples' } //no samples found
 
-	return { count: `${row.count} ${sample_type}` }
+	const terms = collectFilterTerms(fq.filter)
+	const samples = { [row.sample]: { sampleId: row.sample } }
+	const sampleType = getSampleTypeName({ ...fq, terms }, ds, samples)
+	const sampleTypeName = sampleType
+		? row.count > 1
+			? sampleType.plural_name
+			: sampleType.name
+		: row.count > 1
+		? 'samples'
+		: 'sample'
+
+	return { count: `${row.count} ${sampleTypeName}` }
+}
+
+function collectFilterTerms(filter) {
+	const terms = []
+	function visitFilter(filter) {
+		for (const item of filter.lst || []) {
+			if (item.tvs?.term) {
+				const t = item.tvs.term.parentTerm ?? item.tvs.term
+				terms.push({ term: t })
+			}
+			if (item.type === 'tvslst') visitFilter(item)
+		}
+	}
+	visitFilter(filter)
+	return terms
 }
 
 /* for a ds with a patient-sample hierarchy (ds.cohort.termdb.hasSampleAncestry), describe a set of
