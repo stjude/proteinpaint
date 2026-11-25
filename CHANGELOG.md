@@ -13,12 +13,15 @@ Features:
 - The methylation track shows each sample's isoform share of the gene (its top 5 isoforms and the rest) next to its expression
 - The methylation track's statistics are two rows: mean β of each group with the gap between them shaded by direction, and the correlation with the gene's expression, within the groups when there are groups (each group's ρ pooled), faded where not significant
 - The methylation track draws the DMRs of a two-group scan at their genomic length in a row under the heatmap, colored by direction, and cuts long column labels to fit with the whole label on hover
+- Sunburst: selected wedges can be explored together or compared as groups of one or more wedges, regrouped by dragging, and saved as a custom variable,
+- Sunburst and custome variable share the same menu of available data and analyses
 
 Fixes:
 - GRIN2: the top-genes table no longer shows a "GRIN2 top genes" label wherever the mouse hovers over it
 - GRIN2: the top-genes table's "Restore row order" button is now "Reset table"; it appears when the table is sorted or filtered and clears both
 - Barchart: hiding an overlay value from the bar click menu no longer shows an error, including for a term collection overlay
 - do not call renderGSEA() when the subtab is hidden
+- Custom variable menu: a row of the available data that only one group has data for no longer opens a plot; the samples with DNA methylation data of each group are counted in every element class, not only in the default one, so a group whose samples have methylation data in another class no longer shows 0; Differential DNA Methylation Analysis" is offered only when both groups have samples with methylation data
 
 
 ## 2.230.0
