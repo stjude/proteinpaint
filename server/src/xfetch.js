@@ -45,14 +45,10 @@ export async function xfetch(url, opts = {}) {
 		.then(async r => {
 			const contentType = r.headers.get('content-type')
 			const payload = contentType == 'application/json' ? await r.json() : await r.text()
+			// a non-2xx response is reached here only with the ky option throwHttpErrors: false, which no caller
+			// sets; otherwise ky throws an HTTPError, which mayReplaceNetworkError() may replace
 			if (!r.ok || (typeof r?.status == 'number' && r?.status > 399 && r.status < 500)) {
-				// catch HTTP 4xx that are due to client request,
-				// not network or server errors that are considered recoverable
 				throw `error from ${url}: ` + (payload.message || payload.error || JSON.stringify(payload))
-			} else if (r?.status >= 500) {
-				// server-side error, such as during maintenance period;
-				// may use isRecoverableError() above to detect
-				throw e
 			}
 			return payload
 		})
@@ -63,8 +59,51 @@ export async function xfetch(url, opts = {}) {
 			// Promise.all() will fail anyway
 			if (!opts.signal?.aborted) abortCtrlBy.signal.get(opts.signal)?.abort()
 			removeCredentials(e)
-			throw e
+			throw mayReplaceNetworkError(e, url)
 		})
+}
+
+const unavailableStatus = new Set([429, 500, 502, 503, 504])
+
+/* An external API that is busy, or a connection to it that fails or is cut off, gives an error with a message
+from a native library, such as 'terminated' or 'fetch failed', which is not meaningful to a user. That error is
+logged with its cause and replaced with one that a user can act on, which serverconfig.features.networkErrorMessage
+may set. The replacement keeps the network error code, such as ECONNRESET, that isRecoverableError() checks, and
+the HTTP response that a caller may check. */
+export function mayReplaceNetworkError(e, url) {
+	if (!isNetworkError(e)) return e
+	// the message of a ky error has the full request url, so only the name and the cause or status are logged
+	const detail = e instanceof TypeError ? `: ${e.message}` : ''
+	console.log(
+		`xfetch ${getUrlPath(url)}: ${e.name}${detail}`,
+		e.cause?.code || e.cause?.message || e.response?.status || ''
+	)
+	const err = new Error(getNetworkErrorMessage(), { cause: e })
+	err.name = 'NetworkError'
+	const code = e.code || e.cause?.code
+	if (code) err.code = code
+	if (e.response) err.response = e.response
+	return err
+}
+
+function isNetworkError(e) {
+	if (!e || typeof e != 'object' || isAbortError(e)) return false
+	if (e.name == 'TimeoutError') return true
+	if (e.name == 'HTTPError') return unavailableStatus.has(e.response?.status)
+	return e instanceof TypeError && (e.message == 'terminated' || e.message == 'fetch failed')
+}
+
+// a dataset-specific message, such as one that names the API, may be set as serverconfig.features.networkErrorMessage
+const defaultNetworkErrorMessage = 'The server is busy or not responding. Please try again in a few minutes.'
+
+function getNetworkErrorMessage() {
+	const message = serverconfig.features?.networkErrorMessage
+	return typeof message == 'string' && message.trim() ? message : defaultNetworkErrorMessage
+}
+
+// the url without its query string, which may have identifiers that should not be logged
+function getUrlPath(url) {
+	return String(url).split('?')[0]
 }
 
 // the request headers that can have a user credential, such as those of getHostHeaders() of the GDC dataset
