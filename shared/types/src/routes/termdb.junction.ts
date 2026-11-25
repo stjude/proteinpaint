@@ -31,6 +31,14 @@ export type Junction = {
 	this avoids making another request to get the sample name
 	*/
 	sampleName?: string | number
+	/** with the request's groupTw of two groups: the Wilcoxon rank-sum p of the junction's share of each sample's reads
+	of the junctions of its gene (in groupRegion, else in view) between the groups, its BH q over the junctions tested,
+	each group's mean share, in the order of the response's groups[], and the gene. groupShares without p: not tested, as
+	its share is below the least that is tested in both groups; none of them for a junction of no gene or of two */
+	p?: number
+	q?: number
+	groupShares?: [number, number]
+	gene?: string
 }
 
 //////////////////// list junctions from rglst
@@ -48,6 +56,11 @@ export type TermdbJunctionsRequest = {
 	sampleTypes?: number[]
 	/** also return matrix{} of read counts by sample, for this many junctions found in the most samples */
 	matrixTop?: number
+	/** a samplelst tw of two groups, the first the reference: each junction gets p, q and groupShares, see Junction */
+	groupTw?: any
+	/** with groupTw, the region whose junction reads are a sample's total, e.g. the gene the view was opened on, so that
+	the shares and their tests do not change as the view moves; absent, the junctions in view */
+	groupRegion?: { chr: string; start: number; stop: number }
 }
 export type TermdbJunctionsDataResponse = {
 	junctions: Junction[]
@@ -57,6 +70,11 @@ export type TermdbJunctionsDataResponse = {
 	e.g. of no sample passing the filter or read count cutoff, or of hidden types; absent when no sample passes the filter */
 	totalCount?: number
 	alert?: string
+	/** with groupTw: each group with its number of samples that have junction reads in view, as tested */
+	groups?: { name: string; n: number }[]
+	/** with groupTw: a junction in fewer than minSamples samples, or with a mean share below minShare (a fraction) in both
+	groups, is not tested */
+	groupTest?: { minSamples: number; minShare: number }
 	/** read counts by sample of the junctions found in the most samples, when matrixTop was requested */
 	matrix?: {
 		/** names of the samples that the request covers; absent when the user may not see sample names */

@@ -7,6 +7,8 @@ import { renderLocusHeatmap, locusHeatmapHeight, fitLabel, type LocusHeatmapData
  *   - draws the statistics rows, heatmap, annotation columns and a line per column with an x, and reports the cell under the pointer
  *   - draws intervals at their genomic extent under the lines
  *   - draws an annotation column of parts, and widens the block's right side for it
+ *   - draws model rows under the lines, clipped to the view, with what goes with each on the right
+ *   - draws a model row with coding parts as a gene model: exons at UTR height, coding at full height, strand chevrons
  *   - fitLabel cuts a label to its room
  */
 
@@ -231,6 +233,128 @@ tape('renderLocusHeatmap: an annotation column of parts', t => {
 	t.equal(widened, 1, 'and the block is told to lay out again')
 	renderLocusHeatmap(tk, block, data)
 	t.equal(widened, 1, 'a column that fits does not lay the block out again')
+	t.end()
+})
+
+tape('renderLocusHeatmap: model rows', t => {
+	const tk = getTk()
+	let widened = 0
+	const block = { width: 300, tkleftlabel_xshift: -10, rightheadw: 50, blocksetw: () => widened++ }
+	const rights: number[] = []
+	const data: LocusHeatmapData = {
+		rows: ['s1'],
+		cols: [{ x: 10, values: [0] }],
+		color: () => 'red',
+		missingColor: 'gray',
+		models: [
+			{
+				label: 'Isoforms',
+				rowHeight: 20,
+				rightWidth: 200,
+				rows: [
+					{
+						label: 'a',
+						color: 'blue',
+						line: [10, 250],
+						exons: [
+							[10, 20],
+							[240, 250]
+						]
+					},
+					// running past the view: clipped to its right edge
+					{ label: 'b', color: 'orange', line: [100, 400], exons: [[280, 400]] }
+				],
+				right: (g, i) => {
+					rights.push(i)
+					g.append('rect').attr('class', 'right')
+				}
+			},
+			// a second block, under the first
+			{ label: 'More', rowHeight: 10, rows: [{ label: 'c', color: 'green', line: [0, 50], exons: [] }] }
+		]
+	}
+	renderLocusHeatmap(tk, block, data)
+	const { linkage, heatmap } = tk.rows
+	// heatmap 100, linkage 60, then 18 for the label and 2 rows of 20
+	t.equal(linkage.height, 60 + 18 + 40 + 18 + 10, 'the model rows of each block add to the linkage height')
+	const exons = linkage.g
+		.selectAll('rect')
+		.nodes()
+		// not the transparent rect of a row for the pointer, of a row as tall as an exon in the second block
+		.filter((r: any) => r.getAttribute('height') == '10' && r.getAttribute('fill') != 'transparent')
+		.map((r: any) => [Number(r.getAttribute('x')), Number(r.getAttribute('width')), r.getAttribute('fill')])
+	t.deepEqual(
+		exons,
+		[
+			[10, 10, 'blue'],
+			[240, 10, 'blue'],
+			[280, 20, 'orange']
+		],
+		'an exon per box at its px, cut at the edge of the view'
+	)
+	t.deepEqual(rights, [0, 1], 'right() draws each row')
+	t.equal(heatmap.rightG.selectAll('rect.right').size(), 2, 'in the right side')
+	t.equal(block.rightheadw, 210, "the block's right side is widened to hold it")
+	t.equal(widened, 1, 'and the block laid out again')
+	t.end()
+})
+
+tape('renderLocusHeatmap: a model row with coding parts and strand, as a gene model', t => {
+	const tk = getTk()
+	const block = { width: 300, tkleftlabel_xshift: -10, rightheadw: 0, blocksetw: () => {} }
+	renderLocusHeatmap(tk, block, {
+		rows: ['s1'],
+		cols: [{ x: 10, values: [0] }],
+		color: () => 'red',
+		missingColor: 'gray',
+		models: [
+			{
+				label: 'Isoforms',
+				rowHeight: 20,
+				rows: [
+					{
+						label: 'a',
+						color: 'blue',
+						line: [10, 250],
+						exons: [
+							[10, 40],
+							[200, 250]
+						],
+						coding: [
+							[30, 40],
+							[200, 230]
+						],
+						strand: '+'
+					}
+				]
+			}
+		]
+	})
+	const rects = tk.rows.linkage.g
+		.selectAll('rect')
+		.nodes()
+		.filter((r: any) => r.getAttribute('fill') == 'blue')
+		.map((r: any) => [Number(r.getAttribute('x')), Number(r.getAttribute('width')), Number(r.getAttribute('height'))])
+	t.deepEqual(
+		rects,
+		[
+			[10, 30, 6],
+			[200, 50, 6],
+			[30, 10, 10],
+			[200, 30, 10]
+		],
+		'the exons at the height of an UTR, the coding parts over them at full height'
+	)
+	const paths = tk.rows.linkage.g.selectAll('path').nodes() as SVGPathElement[]
+	const intron = paths.find(p => p.getAttribute('stroke') == 'blue')!
+	t.ok(intron, 'chevrons along the intron, in the row color')
+	const xs = [...intron.getAttribute('d')!.matchAll(/M([\d.]+)/g)].map(m => Number(m[1]))
+	t.ok(xs.length > 1 && xs.every(x => x > 40 && x < 200), 'between the exons')
+	t.ok(/M[\d.]+,[\d.]+L/.test(intron.getAttribute('d')!), 'and drawn')
+	t.ok(
+		paths.some(p => p.getAttribute('stroke') == 'white'),
+		'and white chevrons on a coding part wide enough for them'
+	)
 	t.end()
 })
 

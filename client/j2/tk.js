@@ -85,6 +85,12 @@ export function getParameter(tk, block) {
 	if (tk.filterObj?.lst?.length) par.filterObj = tk.filterObj
 	// chosen in the genome browser's sample type row; absent when every sample type is shown
 	if (tk.sampleTypes) par.sampleTypes = tk.sampleTypes
+	// two groups to test each junction between, see mayTestGroups() in makeTk.js
+	if (tk.groupTw && !tk.custom_data) {
+		par.groupTw = tk.groupTw
+		// a sample's total junction reads are of this region, e.g. the gene the browser was opened on, not of the view
+		if (tk.groupRegion) par.groupRegion = tk.groupRegion
+	}
 
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 
@@ -118,6 +124,11 @@ async function getTkData(tk, block) {
 		data = await dofetch3('termdb/junctions', { body, headers })
 	}
 	if (data.error) throw new Error(data.error)
+	if (data.groups) {
+		setGroupTest(data)
+		// what was not tested, for the legend to state
+		tk.groupTest = data.groupTest
+	}
 	return data
 }
 
@@ -160,4 +171,17 @@ async function dataFromCustomData(tk, block) {
 	if (junctions.every(j => Number.isFinite(j.medianReadCount)))
 		data.maxReadCount = Math.max(...junctions.map(j => j.medianReadCount))
 	return data
+}
+
+/* the test of each junction between the groups of tk.groupTw, as the fields of a custom junction with groups (see
+dataFromCustomData()): for y, the difference of the groups' mean shares of the junction's gene in percentage points,
+as |ΔPSI|, 0 for a junction without shares (of no gene, or of two); and the shares as its PSI, which colors it by the
+group with the larger share, only when the difference is significant (q < groupTestQ); otherwise it is pale, see
+mayTestGroups() in makeTk.js. Its height shows how large the difference is. */
+export const groupTestQ = 0.05
+export function setGroupTest(data) {
+	for (const j of data.junctions) {
+		j.absDeltaPsi = j.groupShares ? Math.abs(j.groupShares[1] - j.groupShares[0]) * 100 : 0
+		if (j.groupShares && j.q < groupTestQ) [j.psi_control, j.psi_case] = j.groupShares
+	}
 }

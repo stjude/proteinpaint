@@ -4535,6 +4535,17 @@ seekrange(chr,start,stop) {
 						p.default(this)
 					})
 				})
+			// the same with the legend under the tracks, drawn as SVG
+			if (this.legend)
+				row
+					.append('button')
+					.text('Export SVG with legend')
+					.on('click', () => {
+						tip.hide()
+						import('./block.svg').then(p => {
+							p.default(this, { legend: true })
+						})
+					})
 
 			// dna
 			row

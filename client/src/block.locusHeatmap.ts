@@ -6,7 +6,8 @@ of a block track, with a line from each column down to its place in the genomic 
 
 	tk.rows.statistics   optional rows of a value per column, each statRowHeight tall
 	tk.rows.heatmap      the matrix, with its annotation columns on the right
-	tk.rows.linkage      the lines, and under them the optional intervals row: items drawn at their genomic extent
+	tk.rows.linkage      the lines, and under them the optional intervals row: items drawn at their genomic extent, and
+	                     the optional model rows: a gene model each, with what goes with it on the right
 
 Each is { g, height, data }, with the height drawn: 0 when there is nothing to draw. The heatmap also has
 leftG and rightG for its labels and annotation columns, and leftWidth, the width of the labels on the left
@@ -41,6 +42,31 @@ export type LocusHeatmapAnnotation = {
 	parts?: { color: string; width: number }[][]
 }
 
+/** a block of rows, a model each at its genomic extent like the block's gene track, e.g. the isoforms of a gene: a line
+ * from line[0] to line[1] and a box per exon, px in the block view. With coding, as sketchGene() of client/dom/sketchGm.ts
+ * draws a gene model: the exons at the height of an UTR and the coding parts at full height (none, as of a noncoding
+ * transcript: every exon as an UTR); with strand, as it reads on screen, chevrons along the introns and, in white, the
+ * coding parts. right() draws what goes with row i in the block's right side, in g at the top of the row; rightWidth is
+ * its width there */
+export type LocusHeatmapModels = {
+	label: string
+	/** px above the first row, for its label and what right() draws there, e.g. a title and an axis; default 18 */
+	headerHeight?: number
+	rowHeight: number
+	rows: {
+		label: string
+		color: string
+		line: [number, number]
+		exons: [number, number][]
+		coding?: [number, number][]
+		strand?: '+' | '-'
+	}[]
+	right?: (g: any, i: number) => void
+	rightWidth?: number
+	onHover?: (event: any, i: number) => void
+	onOut?: () => void
+}
+
 export type LocusHeatmapData = {
 	/** row names, top to bottom */
 	rows: string[]
@@ -66,10 +92,13 @@ export type LocusHeatmapData = {
 	 * block view, at least 2 px wide), e.g. the DMRs of a scan at their full length */
 	intervals?: {
 		label: string
-		items: { x0: number; x1: number; color: string }[]
+		/** stroke, optional: an outline, e.g. a category of the item apart from what its fill shows */
+		items: { x0: number; x1: number; color: string; stroke?: string }[]
 		onHover?: (event: any, i: number) => void
 		onOut?: () => void
 	}
+	/** blocks of rows under the lines and the column labels, one under the other, see LocusHeatmapModels */
+	models?: LocusHeatmapModels[]
 	/** col and row under the pointer */
 	onHover?: (event: any, col: number, row: number) => void
 	onOut?: () => void
@@ -84,8 +113,10 @@ const annW = 12, // width of an annotation column of colors
 	linkageHeight = 60,
 	intervalHeight = 10,
 	intervalGap = 6,
+	modelGap = 18, // above the model rows, for their label
+	modelH = 10, // px of a coding exon of a model row, see LocusHeatmapModels
 	// the longest a column's label is drawn, in px; longer ones are cut with an ellipsis
-	MAX_LABEL = 110
+	MAX_LABEL = 140
 
 /** tk.rows.statistics, heatmap and linkage, in tk.glider, tk.gleft and tk.gright; other rows of tk.rows are kept */
 export function initLocusHeatmapRows(tk: any) {
@@ -247,8 +278,9 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 	}
 
 	// the block's room on the right of the tracks is fixed: more when the columns need it
-	if (ax + 10 > block.rightheadw) {
-		block.rightheadw = ax + 10
+	const rightWidth = Math.max(ax, ...(data.models || []).filter(m => m.rows.length).map(m => m.rightWidth || 0))
+	if (rightWidth + 10 > block.rightheadw) {
+		block.rightheadw = rightWidth + 10
 		block.blocksetw()
 	}
 
@@ -344,17 +376,118 @@ export function renderLocusHeatmap(tk: any, block: any, data: LocusHeatmapData):
 				.attr('width', w)
 				.attr('height', intervalHeight)
 				.attr('fill', it.color)
+				.attr('stroke', it.stroke || null)
+				.attr('stroke-width', it.stroke ? 1 : null)
 				.style('cursor', iv.onHover ? 'default' : null)
 				.on('mouseover', (event: any) => iv.onHover?.(event, i))
 				.on('mouseout', () => iv.onOut?.())
 		})
 		below = intervalGap + intervalHeight + 2
 	}
+	// the model rows, under the lines and the column labels
+	const linkageTop = Math.max(linkageHeight + below, labelBottom)
+	let modelsHeight = 0
+	// the part of x0..x1 in the view, at least 1 px
+	const clip = (x0: number, x1: number) => {
+		const a = Math.max(0, Math.min(x0, x1)),
+			b = Math.min(block.width, Math.max(x0, x1))
+		return b < 0 || a > block.width ? null : [a, Math.max(1, b - a)]
+	}
+	for (const m of data.models || []) {
+		if (!m.rows.length) continue
+		const header = m.headerHeight ?? modelGap
+		const top = y2 + linkageTop + modelsHeight + header
+		leftLabel(top - 9, m.label)
+		m.rows.forEach((r, i) => {
+			const y = top + i * m.rowHeight,
+				cy = y + m.rowHeight / 2
+			const row = linkage.g.append('g')
+			const line = clip(r.line[0], r.line[1])
+			if (line)
+				row
+					.append('line')
+					.attr('x1', line[0])
+					.attr('x2', line[0] + line[1])
+					.attr('y1', cy)
+					.attr('y2', cy)
+					.attr('stroke', r.color)
+			// full height, or an UTR's, a fifth of it less above and below, as sketchGene()
+			const box = (e: [number, number], h: number) => {
+				const c = clip(e[0], e[1])
+				if (c)
+					row
+						.append('rect')
+						.attr('x', c[0])
+						.attr('y', cy - h / 2)
+						.attr('width', c[1])
+						.attr('height', h)
+						.attr('fill', r.color)
+				return c
+			}
+			for (const e of r.exons) box(e, r.coding ? modelH - 2 * Math.ceil(modelH / 5) : modelH)
+			const coding = (r.coding || []).map(e => box(e, modelH)).filter(c => c) as number[][]
+			if (r.strand) {
+				// the introns: the line between the exons, left to right on screen
+				const ex = r.exons
+					.map(e => clip(e[0], e[1]))
+					.filter(c => c)
+					.sort((a, b) => a![0] - b![0]) as number[][]
+				const introns = ex.slice(1).map((e, k) => [ex[k][0] + ex[k][1], e[0]])
+				chevrons(row, introns, cy, r.strand, r.color)
+				chevrons(
+					row,
+					coding.map(c => [c[0], c[0] + c[1]]),
+					cy,
+					r.strand,
+					'white'
+				)
+			}
+			/* selectable, to copy e.g. a transcript id: a mousedown that reaches the block's svg or the track's drag handler
+			(tk.gleft) has its default prevented, which stops a text selection from starting */
+			leftLabel(cy, r.label, 10)
+				.style('user-select', 'text')
+				.style('cursor', 'text')
+				.on('mousedown', (event: MouseEvent) => event.stopPropagation())
+			if (m.right) m.right(heatmap.rightG.append('g').attr('transform', `translate(0,${y})`), i)
+			// the row as a whole for the pointer, over the gaps between exons too
+			row
+				.append('rect')
+				.attr('y', y)
+				.attr('width', block.width)
+				.attr('height', m.rowHeight)
+				.attr('fill', 'transparent')
+				.on('mouseover', (event: any) => m.onHover?.(event, i))
+				.on('mouseout', () => m.onOut?.())
+		})
+		modelsHeight += header + m.rows.length * m.rowHeight
+	}
 	statistics.height = y1
-	linkage.height = Math.max(linkageHeight + below, labelBottom)
+	linkage.height = linkageTop + modelsHeight
 	heatmap.leftWidth = heatmap.leftG.node().getBBox().width
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth || 0, heatmap.leftWidth)
 	return locusHeatmapHeight(tk)
+}
+
+/* chevrons pointing the way of strand ('+' rightward) along each span [x0, x1] that has room, centered on y, as
+sketchGene() draws a gene model's strand */
+function chevrons(g: any, spans: number[][], y: number, strand: '+' | '-', color: string) {
+	const h = modelH - 4,
+		w = h / 2,
+		gap = h / 2,
+		pad = 2
+	let d = ''
+	for (const [x0, x1] of spans) {
+		const len = x1 - x0
+		const n = Math.floor((len - pad * 2) / (w + gap))
+		if (n < 1) continue
+		let x = x0 + (len - n * (w + gap) + gap) / 2
+		for (let i = 0; i < n; i++, x += w + gap)
+			d +=
+				strand == '+'
+					? `M${x},${y - h / 2}L${x + w},${y}L${x},${y + h / 2}`
+					: `M${x + w},${y - h / 2}L${x},${y}L${x + w},${y + h / 2}`
+	}
+	if (d) g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1)
 }
 
 /** sets an svg text to label, cut with an ellipsis until it is at most px long as drawn */

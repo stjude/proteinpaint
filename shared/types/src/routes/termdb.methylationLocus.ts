@@ -10,6 +10,8 @@ export type MethylationLocusRequest = {
 	gene?: string
 	/** isoform of the gene that sets the locus; default is the gene's default isoform. Expression stays gene-level. */
 	isoform?: string
+	/** optional variable to annotate the rows with, read with the gene's expression: samples[].annotation */
+	annotationTw?: any
 	/** the locus to read instead of the isoform and its flanks, e.g. the view range of a genome browser track */
 	region?: { chr: string; start: number; stop: number }
 	/** number of bins the locus is cut into, default 40; a locus with no more CpGs than this gets one bin per CpG */
@@ -48,6 +50,8 @@ export type MethylationLocusSample = {
 	group?: string
 	/** expression of each of expressedIsoforms, in its order; null for an isoform the sample has no value of */
 	isoformValues?: (number | null)[]
+	/** the sample's value of request.annotationTw: a category key, or a number */
+	annotation?: string | number
 }
 
 /** an isoform as the genome's gene db stores it; each feature is a list of [start, stop] */

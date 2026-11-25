@@ -5,7 +5,7 @@ import { getCombinedTermFilter, getNormalRoot, filterJoin } from '#filter'
 import { fillTermWrapper } from '#termsetting'
 import { controlsInit } from '#plots/controls.js'
 import { Model } from './model/Model.ts'
-import { View, getGbSampleTypes } from './view/View.ts'
+import { View, getGbSampleTypes, locusOf } from './view/View.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
 import { sanitizeTrackLstConfig } from './trackLst.ts'
 
@@ -309,6 +309,11 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 	}
 
 	if (config.junction && typeof config.junction.shown != 'boolean') config.junction.shown = true
+	// the region of the junction track's tested shares, kept apart from geneSearchResult, which follows navigation
+	if (config.junction && !config.junction.groupRegion) {
+		const r = locusOf(config.geneSearchResult)
+		if (r) config.junction.groupRegion = r
+	}
 
 	if (config.trackLst) {
 		if (!config.trackLst.facets) throw 'trackLst.facets[] missing'

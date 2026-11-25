@@ -10,7 +10,7 @@ import { getData } from '#src/termdb.matrix.js'
 import { authApi } from '#src/auth.js'
 import { protectedRoutes } from '#src/auth/protectedRoutes.ts'
 import { resolveMethylationMatrix } from '#src/utils/methylationMatrix.ts'
-import { resolveGroups, buildGroupValues, samplesOfRequest } from '#src/utils/sampleGroups.ts'
+import { samplesOfRequest, groupOrder, getSampleGroups } from '#src/utils/sampleGroups.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { chiSquareLogSf, logBH } from '#src/utils/pValues.ts'
@@ -136,6 +136,7 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 			add(name, value)
 			name2id.set(name, sid)
 		}
+		if (q.annotationTw) await annotateSamples(q, ds, samples, name2id)
 		const isoforms = await getIsoformValues(ds, models, gm.chr, new Set(samples.map(s => name2id.get(s.name)!)))
 		if (isoforms) {
 			expressed = isoforms.ids
@@ -205,6 +206,37 @@ async function getLocus(q: MethylationLocusRequest, ds: any, genome: any): Promi
 		samples,
 		...groupsOf(q),
 		bins
+	}
+}
+
+/* Sets samples[].annotation, the value of q.annotationTw, e.g. a breakpoint class: read with the request's filters, so
+through the same access checks and parent-to-child mapping as the expression, but in a getData() of its own, as a
+term of some sample types only (e.g. one that describes a patient's baseline sample) narrows the samples of the terms
+read with it, which would drop rows. A sample without a value has none. */
+async function annotateSamples(
+	q: MethylationLocusRequest,
+	ds: any,
+	samples: MethylationLocusSample[],
+	name2id: Map<string, string>
+) {
+	const tw = { ...(q.annotationTw as any), $id: 'annotation' }
+	if (typeof tw.term?.id != 'string' && typeof tw.term?.type != 'string') throw new Error('invalid annotationTw')
+	const data = await getData(
+		{
+			filter: q.filter,
+			filter0: q.filter0,
+			terms: [tw],
+			__protected__: q.__protected__,
+			sampleMapping: 'parentToChildren'
+		},
+		ds
+	)
+	if (data.error) throw new Error(data.error)
+	const byId = data.samples as Record<string, any>
+	for (const s of samples) {
+		const a = byId[name2id.get(s.name)!]?.annotation
+		const v = a?.key ?? a?.value
+		if (v !== undefined && v !== null) s.annotation = v
 	}
 }
 
@@ -327,27 +359,4 @@ export function poolWithinGroups(bins: MethylationLocusBin[]) {
 		x.b.rhoWithin = x.rho
 		x.b.qWithin = Math.exp(logQ[i])
 	})
-}
-
-// group names in the order of the request's groups: the first is the reference of a two-group difference
-function groupOrder(q: MethylationLocusRequest): string[] | undefined {
-	const groups = (q.groupTw as any)?.q?.groups
-	return Array.isArray(groups) ? groups.filter(g => g.in !== false).map(g => g.name) : undefined
-}
-
-/* Each sample's group, resolved as the two-group analyses resolve their groups: a group defined by
-a filter is listed (resolveGroups), and on a dataset with sample ancestry a patient in a group stands
-for its samples (buildGroupValues). Reading the samplelst term through getData() instead labels only
-the ids the groups list, so groups of patients would label no sample. */
-async function getSampleGroups(q: MethylationLocusRequest, ds: any, eligible: Set<string>) {
-	const groups = (q.groupTw as any)?.q?.groups
-	// undefined: no groups asked for. An empty map: groups asked for, with no sample that has methylation
-	if (!Array.isArray(groups)) return
-	const sample2group = new Map<string, string>()
-	for (const g of await resolveGroups(groups, q, ds)) {
-		if (g.in === false || !Array.isArray(g.values)) continue
-		const { names } = await buildGroupValues(g.values, eligible, ds, null, null, null, null, q.__protected__)
-		for (const n of names) if (!sample2group.has(n)) sample2group.set(n, g.name)
-	}
-	return sample2group
 }

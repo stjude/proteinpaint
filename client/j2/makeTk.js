@@ -1,6 +1,6 @@
 import { Menu } from '#dom'
 import { initLegend, updateLegend } from './legend'
-import { loadTk } from './tk'
+import { loadTk, groupTestQ } from './tk'
 import { renderTk } from './render'
 import { getFilterName } from '../mds3/filterName'
 import { fillTermWrapper } from '#termsetting'
@@ -127,6 +127,7 @@ export async function makeTk(tk, block) {
 		configPanel(tk, block)
 	})
 
+	mayTestGroups(tk)
 	initLegend(tk, block)
 }
 
@@ -368,5 +369,30 @@ function configPanel(tk, block) {
 			input.property('checked', 1)
 		}
 		row.append('label').text('Use log10 for Y scale read count').attr('for', id)
+	}
+}
+
+/* tk.groupTw, a samplelst tw of two groups, the first the reference: the server tests each junction's share of each
+sample's reads of the junctions of its gene between them (testJunctionGroups() in server/src/j2/validate.ts), and the
+junctions are drawn as custom junctions with groups are, see tk.deltaPsiGroups: at the difference of the groups' mean
+shares, colored by the group with the larger share where q < 0.05. Not for custom junctions, which bring their own. */
+const groupColors = ['#1b9e77', '#d95f02']
+function mayTestGroups(tk) {
+	if (!tk.groupTw || tk.custom_data) return
+	const groups = (tk.groupTw.q?.groups || []).filter(g => g.in !== false)
+	if (groups.length != 2) throw new Error('tk.groupTw must have two groups')
+	const [control, _case] = groups.map((g, i) => ({
+		name: g.name,
+		color: tk.groupTw.term?.values?.[g.name]?.color || groupColors[i]
+	}))
+	tk.deltaPsiGroups = {
+		control,
+		case: _case,
+		label: "Share of gene's junction reads",
+		// the q below which a junction is colored, for the legend
+		q: groupTestQ,
+		noneLabel: `q ≥ ${groupTestQ} or not tested`,
+		// pale, as a group may be gray too, e.g. a reference
+		noneColor: '#e4e4e4'
 	}
 }
