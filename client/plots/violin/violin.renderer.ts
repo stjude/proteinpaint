@@ -211,6 +211,7 @@ export default function setViolinRenderer(self: any) {
 		const tableHolder = chartDiv
 			.append('div')
 			.classed('sjpp-tableHolder', true)
+			.attr('data-testid', 'sjpp-violin-pvalue-table')
 			.style('display', 'inline-block')
 			.style('padding', '10px')
 			.style('vertical-align', 'top')

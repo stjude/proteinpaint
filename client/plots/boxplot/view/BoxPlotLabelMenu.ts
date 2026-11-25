@@ -24,6 +24,7 @@ export class BoxPlotLabelMenu {
 			})
 
 		options.push({
+			testId: 'sjpp-boxplot-hide-plot-btn',
 			text: `Hide ${plot.key}`,
 			isVisible: () => true,
 			callback: () => interactions.hidePlot(plot)
@@ -33,6 +34,7 @@ export class BoxPlotLabelMenu {
 		if (app.getState().nav.header_mode === 'with_tabs')
 			options.push({
 				text: `List ${samples}`,
+				testId: 'sjpp-boxplot-list-samples-btn',
 				isVisible: (state: MassState) => state.termdbConfig.displaySampleIds && app.vocabApi.hasVerifiedToken(),
 				callback: async (event: MouseEvent) => {
 					if (isVertical) tip.clear().show(event.clientX, event.clientY)
@@ -79,6 +81,7 @@ export class BoxPlotLabelMenu {
 				tip.d
 					.append('div')
 					.classed('sja_menuoption', true)
+					.attr('data-testid', opt.testId)
 					.text(opt.text)
 					.on('click', (event: MouseEvent) => {
 						tip.hide()

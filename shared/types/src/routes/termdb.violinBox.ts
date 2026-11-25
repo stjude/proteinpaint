@@ -96,7 +96,7 @@ interface PValueEntries {
 	html?: string
 }
 
-type ViolinDensity = {
+export type ViolinDensity = {
 	bins: BinsEntries[]
 	densityMax: number
 	densityMin: number

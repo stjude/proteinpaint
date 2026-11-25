@@ -28,6 +28,7 @@ export function drawBoxplot({ bp, g, color, scale, rowheight, labpad, labColor =
 	if (bp.label) {
 		bp.labelG = g
 			.append('text')
+			.attr('data-testid', 'sjpp-boxplot-series-label-' + bp.label.split(',').shift())
 			.attr('font-family', 'Arial')
 			.attr('text-anchor', 'end')
 			.attr('dominant-baseline', 'central')
