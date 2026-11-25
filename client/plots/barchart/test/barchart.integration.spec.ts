@@ -64,6 +64,7 @@ click custom subcondition group bar to add filter SKIPPED NO LONGER SUPPORTED
 click custom categorical group bar to add filter
 click bar to add as group
 click overlay bar segment to hide the overlay value
+hover and click overlay bar segment to show the term rows
 numeric exclude range
 numeric filter - only special value
 custom vocab: categorical terms with numeric filter
@@ -1983,10 +1984,7 @@ tape('click overlay bar segment to hide the overlay value', function (test) {
 		const { dataId } = rect.__data__
 		rect.dispatchEvent(new Event('click', { bubbles: true }))
 		await detectLst({ elem: bar.app.tip.d.node(), selector: '.sja_menuoption', count: 1, matchAs: '>=' })
-		const hideOpt = bar.app.tip.d
-			.selectAll('.sja_menuoption')
-			.filter(d => d?.label?.startsWith('Hide') && !d.testId)
-			.node()
+		const hideOpt = bar.app.tip.dnode.querySelector(`[data-testid="sjpp-barchart-hide-overlay-${dataId}"]`)
 		test.ok(hideOpt, 'should show a menu option to hide the clicked overlay value')
 		if (!hideOpt) return test.end()
 
@@ -2006,6 +2004,111 @@ tape('click overlay bar segment to hide the overlay value', function (test) {
 		test.notOk(errorbar?.innerText, 'should not show an error after hiding an overlay value')
 		if (test['_ok']) bar.app.destroy()
 		test.end()
+	}
+})
+
+tape('hover and click overlay bar segment to show the term rows', function (test) {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'diaggrp' },
+					// term2 has a name of over 15 characters, to test that the term label is shortened
+					term2: { id: 'genetic_race' },
+					settings: { barchart: { showAssociationTests: true } }
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		const bar = barchart.Inner
+		const barDiv = bar.dom.barDiv.node()
+		await detectOne({ elem: barDiv, selector: '.pp-bars-svg' })
+
+		const rect = barDiv.querySelector('.bars-cell rect')
+		rect.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+		const tipNode = bar.dom.tip.dnode
+		const table = tipNode.querySelector('[data-testid=sja_simpletable]')
+		test.ok(table, 'should render the 2-column table in the tooltip')
+		const rows = getRows(table)
+		test.equal(rows.length, 5, 'should show 5 rows in the 2-column table')
+		const termRows = rows.slice(0, 2)
+		const term1Name = bar.config.term.term.name
+		const term2Name = bar.config.term2.term.name
+		test.equal(term1Name.length, 15, 'should use a term1 name of exactly 15 characters')
+		test.deepEqual(
+			termRows.map(r => r.key),
+			[term1Name, term2Name.slice(0, 14) + '…'],
+			'should show the term1 and term2 labels in the first 2 rows, shortened to 15 characters'
+		)
+		test.deepEqual(
+			termRows.map(r => r.title),
+			['', term2Name],
+			'should show the full term label on hover only for a shortened label'
+		)
+		test.ok(
+			termRows.every(r => r.fontSize == '0.8em'),
+			'should show the term labels in font-size 0.8em'
+		)
+		test.ok(
+			termRows.every(r => r.value),
+			'should show the term values next to the term labels'
+		)
+		test.ok(rows[2].key.startsWith('#'), 'should show the sample count after the term rows')
+		test.deepEqual(
+			rows.slice(3).map(r => r.key),
+			['percent', 'p-value'],
+			'should show percent and p-value as the last rows'
+		)
+		const contingencyRows = tipNode.querySelectorAll('table:not([data-testid=sja_simpletable]) tr')
+		test.equal(contingencyRows.length, 3, 'should render a 3-row contingency table after the 2-column table')
+		bar.dom.tip.hide()
+
+		rect.dispatchEvent(new Event('click', { bubbles: true }))
+		await detectLst({ elem: bar.app.tip.d.node(), selector: '.sja_menuoption', count: 1, matchAs: '>=' })
+		const clickTable = bar.app.tip.dnode.querySelector('[data-testid=sja_simpletable]')
+		const clickRows = getRows(clickTable)
+		test.deepEqual(clickRows, termRows, 'should show the same term rows in the click menu as in the tooltip')
+		test.deepEqual(
+			getHideBtns(clickTable).map(btn => btn.closest('tr').firstChild.textContent),
+			termRows.map(r => r.key),
+			'should show a hide button in each term row of the click menu'
+		)
+		test.ok(
+			getHideBtns(clickTable).every(btn => btn.textContent == 'Hide'),
+			'should label the hide buttons as "Hide"'
+		)
+		const optionsDiv = clickTable.parentNode.nextSibling
+		test.notOk(optionsDiv.textContent.includes('Hide'), 'should not list the hide options below the term rows')
+		bar.app.tip.hide()
+		if (test['_ok']) bar.app.destroy()
+		test.end()
+	}
+
+	// the term label and value of each row, without any hide button next to the value
+	function getRows(table) {
+		return Array.from(table?.querySelectorAll('tr') || []).map((tr: any) => ({
+			key: tr.children[0].textContent,
+			fontSize: tr.children[0].style.fontSize,
+			title: tr.children[0].title,
+			value: Array.from(tr.children[1].querySelectorAll(':scope > span'))
+				.map((span: any) => span.textContent)
+				.join('')
+		}))
+	}
+
+	function getHideBtns(table): any[] {
+		return Array.from(table.querySelectorAll('.sja_menuoption'))
 	}
 })
 

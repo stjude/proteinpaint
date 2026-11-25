@@ -1,4 +1,4 @@
-import { Menu, renderTable, type TableRow, getChartTitle, escapeHtml } from '#dom'
+import { Menu, renderTable, type TableRow, getChartTitle, escapeHtml, table2col } from '#dom'
 // import { dofetch3 } from '#common/dofetch'
 import { mclass } from '#shared/common.js'
 // import { /*newpane,*/ export_data } from '#src/client'
@@ -23,6 +23,13 @@ import {
 	isGroupsDisabled
 } from '#mass/groups'
 
+/* an option in the bar click menu */
+type MenuOption = {
+	label: string
+	testId?: string
+	callback: (self, tvslst) => void | Promise<void>
+}
+
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
 	self.dom.tip = tip
@@ -45,38 +52,13 @@ export default function getHandlers(self) {
 				const hasOverlay = self.config.term2 || self.hasMultiCategoryKeys || self.hasMembershipOverlay
 				let percent = hasOverlay ? (d.total / d.seriesTotal) * 100 : (d.seriesTotal / d.chartTotal) * 100
 				percent = parseFloat(percent.toFixed(1))
-				const t1 = self.config.term.term
 				const t2 = self.config.term2 && self.config.term2.term
-				// const term1unit = t1.unit
-				const seriesLabel =
-					(t1.values && d.seriesId in t1.values ? t1.values[d.seriesId].label : d.seriesId) +
-					(t1.unit ? ' ' + t1.unit : '')
-				let dataLabel
-				if (t2) {
-					dataLabel =
-						(t2.values && d.dataId in t2.values ? t2.values[d.dataId].label : d.dataId) + (t2.unit ? ' ' + t2.unit : '')
-				} else if (self.hasMultiCategoryKeys) {
-					dataLabel = self.getCategoryKeyLabel(self.config.term, null, d.dataId)
-				} else {
-					dataLabel = d.dataId
-				}
-				const icon = !hasOverlay ? '' : swatchHtml(d.color)
-				const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${escapeHtml(seriesLabel)}</td></tr>`]
-				if (hasOverlay) {
-					rows.push(
-						`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${escapeHtml(
-							dataLabel
-						)}</span></td></tr>`
-					)
-				}
-
 				const uiLabels = self.config.controlLabels || self.app.vocabApi.termdbConfig.uiLabels
-				rows.push(
-					`<tr><td style='padding:3px; color:#aaa'>#${
-						uiLabels.Samples || 'Individuals'
-					}</td><td style='padding:3px; text-align:center'>${d.total}</td></tr>`,
-					`<tr><td style='padding:3px; color:#aaa'>percent</td><td style='padding:3px; text-align:center'>${percent}%</td></tr>`
-				)
+				tip.clear()
+				const table = table2col({ holder: tip.d })
+				addTermValueRows(table, self, d)
+				table.addRow(`#${uiLabels.Samples || 'Individuals'}`, d.total)
+				table.addRow('percent', `${percent}%`)
 
 				//mouse-over p-value and 2x2 table
 				if (t2) {
@@ -111,42 +93,18 @@ export default function getHandlers(self) {
 					//when the user enabled association tests
 					//from control panel
 					if (self.settings.showAssociationTests) {
-						rows.push(
-							`<tr>
-							<td style='padding:3px; color:#aaa'>p-value</td>
-							<td style='padding:3px; text-align:center'>${
-								skipped ? 'N/A' : pvalue > 1e-4 ? Number(pvalue.toFixed(4)) : roundValueAuto(Number(pvalue))
-							}</td>
-						</tr>
-						<table style="margin: 5px; text-align:left; font-size: 0.8em; border-spacing: 5px; border-collapse: separate;"
-							<tr>
-								<td style='color:#aaa'></td>
-								<td style='color:#aaa'>${escapeHtml(term2Label)}</td>
-								<td style='color:#aaa'>${escapeHtml(negateTerm2Label)}</td>
-							</tr>
-							<tr>
-								<td style='color:#aaa'>${escapeHtml(term1Label)}</td>
-								<td>${tableValues.R1C1}</td>
-								<td>${tableValues.R1C2}</td>
-							</tr>
-							<tr>
-								<td style='color:#aaa'>${escapeHtml(negateTerm1Label)}</td>
-								<td>${tableValues.R2C1}</td>
-								<td>${tableValues.R2C2}</td>
-							</tr>
-						</table>`
+						table.addRow(
+							'p-value',
+							skipped ? 'N/A' : pvalue > 1e-4 ? Number(pvalue.toFixed(4)) : roundValueAuto(Number(pvalue))
 						)
+						renderContingencyTable(tip.d, [
+							['', term2Label, negateTerm2Label],
+							[term1Label, tableValues.R1C1, tableValues.R1C2],
+							[negateTerm1Label, tableValues.R2C1, tableValues.R2C2]
+						])
 					}
 				}
-				if (t1.type != 'condition' && (!t2 || t2.type != 'condition')) {
-					rows.push(
-						`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(
-							(100 * d.total) /
-							(t2 ? d.seriesTotal : d.chartTotal)
-						).toFixed(1)}%</td></tr>`
-					)
-				}
-				tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+				tip.show(event.clientX, event.clientY)
 			},
 			mouseout: () => {
 				tip.hide()
@@ -402,33 +360,17 @@ function handle_click(event, self, chart) {
 	const d = event.target.__data__ || event.target.parentNode.__data__
 	// bar label data only has {id,label},
 	// while bar data has all required data including seriesId
-	const term1 = self.config.term.term
-	const term2 = self.config.term2 ? self.config.term2.term : null
-	const uncomp_term1 = term1.values ? Object.values(term1.values).map((v: any) => v.label) : []
-	const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map((v: any) => v.label) : []
-	const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
-	const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId || d.id) ? ' ' + term2.unit : ''
-	const seriesId = d.seriesId || d.id
-	const seriesLabel = (term1.values && seriesId in term1.values ? term1.values[seriesId].label : seriesId) + term1unit
-	const dataLabel =
-		(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
-		term2unit
-	const icon = !term2 ? '' : swatchHtml(d.color)
-	const header =
-		`<div style='padding:2px'><b>${escapeHtml(term1.name)}</b>: ${escapeHtml(seriesLabel)}</div>` +
-		(d.seriesId && term2
-			? `<div style='padding:2px'><b>${escapeHtml(term2.name)}</b>: ${escapeHtml(dataLabel)} ${icon}</div>`
-			: '')
-
 	const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
 
-	const options: unknown[] = []
+	const options: MenuOption[] = []
+	// the hide options are shown as buttons in the term rows, instead of in the list of options
+	let hideSeries: MenuOption | undefined, hideOverlay: MenuOption | undefined
 	if (self.opts.bar_click_opts.includes('hide_bar')) {
 		const chartId = chart.chartId === undefined ? '' : chart.chartId
 		const visibleSerieses = chart.visibleSerieses || self.charts.find(c => c.chartId === chartId)?.visibleSerieses || []
 		if (visibleSerieses.length > 1) {
-			options.push({
-				label: data.seriesId ? 'Hide "' + escapeHtml(seriesLabel) + '"' : 'Hide',
+			hideSeries = {
+				label: 'Hide',
 				testId: `sjpp-barchart-hide-series-${data.seriesId}`,
 				callback: () => {
 					const term = self.config.term
@@ -446,15 +388,16 @@ function handle_click(event, self, chart) {
 						}
 					})
 				}
-			})
+			}
 		}
 
 		const hasMultipleCells = visibleSerieses.some(s => s.visibleData.length > 1)
 		// the hide callback edits config.term2.q, so a synthetic overlay (dataId
 		// present without a term2, e.g. membership multivalue) cannot offer it
 		if (self.config.term2 && hasMultipleCells && (data.dataId || data.dataId === 0)) {
-			options.push({
-				label: 'Hide "' + escapeHtml(dataLabel) + '" ' + icon,
+			hideOverlay = {
+				label: 'Hide',
+				testId: `sjpp-barchart-hide-overlay-${data.dataId}`,
 				callback: () => {
 					const term2 = self.config.term2
 					self.app.dispatch({
@@ -472,7 +415,7 @@ function handle_click(event, self, chart) {
 						}
 					})
 				}
-			})
+			}
 		}
 	}
 
@@ -545,12 +488,19 @@ function handle_click(event, self, chart) {
 	// 	})
 	// }
 
-	if (!options.length) return
-	self.app.tip.clear()
-	if (header) {
-		self.app.tip.d.append('div').html(header)
-	}
+	if (!options.length && !hideSeries && !hideOverlay) return
 	const tvslst = getTermValues(data, self)
+	const optionClick = async (event, d: MenuOption) => {
+		if (event.target._clicked) return
+		event.target._clicked = true
+		event.target.textContent = 'Loading...'
+		await d.callback(self, tvslst)
+		self.app.tip.hide()
+	}
+	self.app.tip.clear()
+	const [seriesTd, overlayTd] = addTermValueRows(table2col({ holder: self.app.tip.d }), self, d)
+	if (hideSeries) appendHideBtn(seriesTd, hideSeries, optionClick)
+	if (hideOverlay && overlayTd) appendHideBtn(overlayTd, hideOverlay, optionClick)
 	self.app.tip.d
 		.append('div')
 		.selectAll('div')
@@ -560,13 +510,7 @@ function handle_click(event, self, chart) {
 		.attr('class', 'sja_menuoption')
 		.attr('data-testid', d => d.testId || null)
 		.html(d => d.label)
-		.on('click', async (event, d) => {
-			if (event.target._clicked) return
-			event.target._clicked = true
-			event.target.textContent = 'Loading...'
-			await d.callback(self, tvslst)
-			self.app.tip.hide()
-		})
+		.on('click', optionClick)
 	self.app.tip.show(event.clientX, event.clientY)
 }
 
@@ -1228,6 +1172,85 @@ function getTermValues(d, self) {
 		}
 	}
 	return termValues.map(f => wrapTvs(f))
+}
+
+/* add the "term label: term value" rows of a bar or bar segment to a table2col table,
+so that the hover tooltip and the click menu show them the same way
+d: bar segment data, or bar label data that only has {id, label}
+returns the value cells of the term1 row and, if any, of the overlay row */
+function addTermValueRows(table, self, d) {
+	const t1 = self.config.term.term
+	const t2 = self.config.term2?.term
+	const isSegment = d.seriesId || d.seriesId === 0
+	const valueTds = [addTermValueRow(table, t1.name, getValueLabel(t1, isSegment ? d.seriesId : d.id))]
+	if (!isSegment) return valueTds
+	if (t2) {
+		valueTds.push(addTermValueRow(table, t2.name, getValueLabel(t2, d.dataId), d.color))
+	} else if (self.hasMultiCategoryKeys || self.hasMembershipOverlay) {
+		// same overlay name as in the legend
+		const overlayName = self.hasMultiCategoryKeys ? 'Category' : t1.name
+		const valueLabel = self.getCategoryKeyLabel(self.config.term, null, d.dataId)
+		valueTds.push(addTermValueRow(table, overlayName, valueLabel, d.color))
+	}
+	return valueTds
+}
+
+// show up to this many characters of a term label, and the full label on hover when it is longer
+const maxTermLabelLength = 15
+
+function addTermValueRow(table, termLabel: string, valueLabel: string, color?: string) {
+	const [td1, td2] = table.addRow()
+	td1.style('font-size', '0.8em')
+	if (termLabel.length > maxTermLabelLength) {
+		td1.attr('title', termLabel).text(termLabel.slice(0, maxTermLabelLength - 1) + '…')
+	} else {
+		td1.text(termLabel)
+	}
+	if (color) td2.append('span').html(swatchHtml(color))
+	td2.append('span').text(valueLabel)
+	return td2
+}
+
+// a menu option as a small button next to a term value, keeping the option as bound data like the other options
+function appendHideBtn(td, option: MenuOption, onClick: (event, d: MenuOption) => void) {
+	td.append('div')
+		.datum(option)
+		.attr('class', 'sja_menuoption')
+		.attr('data-testid', option.testId || null)
+		.style('display', 'inline-block')
+		.style('margin-left', '10px')
+		.style('padding', '2px 8px')
+		.text(option.label)
+		.on('click', onClick)
+}
+
+/* label of a term value, with the term unit except for an uncomputable value
+id: a key of term.values, or a bin or category label */
+function getValueLabel(term, id) {
+	if (term.values && id in term.values) return term.values[id].label
+	const isUncomputable = term.values && Object.values(term.values).some((v: any) => v.label == id)
+	return id + (term.unit && !isUncomputable ? ' ' + term.unit : '')
+}
+
+/* render a 2x2 contingency table, where the header row and the header column are in gray text
+rows: 3 arrays of 3 cells each; the first array is the header row,
+and the first cell of each array is in the header column */
+function renderContingencyTable(holder, rows: (string | number)[][]) {
+	const table = holder
+		.append('table')
+		.style('margin', '5px')
+		.style('text-align', 'left')
+		.style('font-size', '0.8em')
+		.style('border-spacing', '5px')
+		.style('border-collapse', 'separate')
+	for (const [i, row] of rows.entries()) {
+		const tr = table.append('tr')
+		for (const [j, cell] of row.entries()) {
+			tr.append('td')
+				.style('color', i == 0 || j == 0 ? '#555' : null)
+				.text(cell)
+		}
+	}
 }
 
 // a color square as HTML: the color is set through the element style, which drops any value that is not a valid color
