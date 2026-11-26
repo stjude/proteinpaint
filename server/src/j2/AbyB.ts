@@ -8,6 +8,10 @@ import { resolveSampleMapping } from '#src/termdb.matrix.js'
 get junction A median read count for the same set of samples with junction B
 */
 
+/* the most A junctions of a request: of an exon skip, one per skipped exon and one more, fewer than the exons of any
+gene; as many as the regions of a request, see utils.validateRglst() */
+export const maxJunctionAposlst = 1000
+
 const payload: RoutePayload = {
 	// only set up when at least one mds3 ds has a junction query, see junctions.ts
 	get init() {
@@ -42,6 +46,8 @@ export function init({ genomes }) {
 			if (!Number.isInteger(stop)) throw 'q.junctionB.stop not int'
 
 			if (!Array.isArray(q.junctionAposlst)) throw 'q.junctionAposlst not array'
+			if (q.junctionAposlst.length > maxJunctionAposlst)
+				throw `q.junctionAposlst has more than ${maxJunctionAposlst} junctions`
 			const keepLst: { start: number; stop: number; strand: string }[] = [
 				{
 					start: q.junctionB.start,

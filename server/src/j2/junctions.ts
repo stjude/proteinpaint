@@ -3,6 +3,7 @@ import { genomes } from '#src/initGenomesDs.js'
 import { authApi } from '#src/auth.js'
 import { resolveSampleMapping } from '#src/termdb.matrix.js'
 import { groupOrder, getSampleGroups } from '#src/utils/sampleGroups.ts'
+import { maxJunctionRegion } from './validate.ts'
 
 /*
 list junctions from a locus
@@ -66,6 +67,11 @@ reference; resolved as the methylation locus view resolves its groups */
 async function junctionGroups(q: TermdbJunctionsRequest, ds: any) {
 	const names = groupOrder(q)
 	if (names?.length != 2) throw new Error('groupTw must have two groups')
+	const r = q.groupRegion
+	if (r && (typeof r.chr != 'string' || !Number.isInteger(r.start) || !Number.isInteger(r.stop) || r.start > r.stop))
+		throw new Error('groupRegion must be {chr, start, stop}')
+	if (r && r.stop - r.start > maxJunctionRegion)
+		throw new Error(`groupRegion must be at most ${maxJunctionRegion / 1e6} Mb`)
 	const samples: { name: string | number }[] = ds.queries.junction.samples
 	const nameOf = (id: string | number) => String(ds.cohort?.termdb?.q?.id2sampleName?.(id) ?? id)
 	const byName = (await getSampleGroups(q, ds, new Set(samples.map(s => nameOf(s.name)))))!
@@ -74,8 +80,5 @@ async function junctionGroups(q: TermdbJunctionsRequest, ds: any) {
 		const g = byName.get(nameOf(s.name))
 		if (g) groupOf.set(s.name, g)
 	}
-	const r = q.groupRegion
-	if (r && (typeof r.chr != 'string' || !Number.isInteger(r.start) || !Number.isInteger(r.stop) || r.start > r.stop))
-		throw new Error('groupRegion must be {chr, start, stop}')
 	return { groupOf, names: names as [string, string], ...(r ? { region: r } : {}) }
 }
