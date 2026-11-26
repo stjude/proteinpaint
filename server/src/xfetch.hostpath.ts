@@ -12,7 +12,7 @@ xfetch() defaults.
 // apply before the options of only its host
 let optionsByHostpath: Map<string, { owner: string; options: FetchHostpathOptions }> = new Map()
 
-/* register the options of an owner, such as a dataset label; a hostpath that another owner registered throws,
+/* register the options of an owner, such as a genome name and dataset label; a hostpath that another owner registered throws,
 so that a dataset cannot change the options of another dataset's requests, and an owner that registers again,
 such as after a dataset init retry, replaces its own options */
 export function setHostpathOptions(byHostpath: FetchOptionsByHostpath, owner: string) {
