@@ -136,8 +136,9 @@ const unannotatedKey = 'Unannotated'
 export async function init(ds, genome, totalDsLst = 0) {
 	// optional features/settings supplied by ds, when missing from serverconfig.features{}, are centralized here.
 	mergeDsFeatures(serverconfig, ds)
-	// before the dataset's first request, so that every xfetch() call to a hostpath uses its options
-	if (ds.fetchOptionsByHostpath) setHostpathOptions(ds.fetchOptionsByHostpath, ds.label)
+	// before the dataset's first request, so that every xfetch() call to a hostpath uses its options; a dataset
+	// label is unique only within a genome, so the owner of the options has both
+	if (ds.fetchOptionsByHostpath) setHostpathOptions(ds.fetchOptionsByHostpath, `${ds.genomename}/${ds.label}`)
 
 	if (ds.preInit?.getStatus) {
 		const response = await ds.preInit.getStatus(ds).catch(e => {
