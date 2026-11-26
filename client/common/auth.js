@@ -71,7 +71,7 @@ export function mayAddJwtToRequest(init, body, url) {
 }
 
 const dsAuthOk = new Set()
-let dsAuth, authUi, authUiHolder
+let dsAuth, authUi, authUiHolder, getDatasetAccessToken
 
 export let includeEmbedder = false
 
@@ -83,6 +83,7 @@ export let includeEmbedder = false
 */
 export async function setDsAuthOk(opts) {
 	dsAuth = opts.dsAuth
+	getDatasetAccessToken = opts.getDatasetAccessToken
 	authUi = opts.ui || defaultAuthUi
 	authUiHolder = opts.holder || select('body')
 	for (const auth of dsAuth) {
@@ -176,8 +177,12 @@ export async function mayShowAuthUi(init, path, opts = {}) {
 			else if (a.route != '/**') return ok
 			else if (a.type == 'basic') return await authUi(a.dslabel, a, opts)
 			else if (a.type == 'jwt') {
-				// assume the embedder/portal provides the login UI
-				// so no need to do anything here
+				// the embedder provides the login UI; if it supplied getDatasetAccessToken(),
+				// exchange its token for a session token. Share one in-flight login across concurrent requests
+				if (getDatasetAccessToken) {
+					a.login ||= loginWithEmbedderToken(a).finally(() => delete a.login)
+					await a.login
+				}
 			} else if (a.type == 'forbidden') {
 				alert('Forbidden access')
 				// don't do anything
@@ -187,6 +192,20 @@ export async function mayShowAuthUi(init, path, opts = {}) {
 	return ok
 }
 
+// mirrors the /jwt-status exchange in Vocab.js
+async function loginWithEmbedderToken(a) {
+	const token = await getDatasetAccessToken(a.route)
+	if (!token) return
+	const { dofetch2 } = await import('./dofetch')
+	const data = await dofetch2('/jwt-status', {
+		method: 'POST',
+		headers: { [a.headerKey]: token, authorization: `Bearer ${btoa(token)}` },
+		body: { dslabel: a.dslabel, route: a.route, embedder: location.hostname }
+	})
+	if (data.error) throw data.error
+	if (data.jwt) setTokenByDsRoute(a.dslabel, data.route, data.jwt)
+	dsAuthOk.add(a)
+}
 /*
 	this is the default login UI, may be overriden
 	by an optional different form, for example if PP 

@@ -168,7 +168,7 @@ export function runproteinpaint(arg) {
 	app.sandbox_header = arg.sandbox_header || undefined
 
 	if (arg.jwt) {
-		sessionStorage.setItem('jwt', arg.jwt)
+		throw 'the jwt argument is no longer supported, use getDatasetAccessToken() instead'
 	}
 
 	// replace the stored value for this option
@@ -223,7 +223,7 @@ export function runproteinpaint(arg) {
 			app.launchDate = data.launchdate
 			// notify if this page's client code does not match the client bundle that the server currently serves
 			checkBundleVersion(clientVersion, data.clientVersion)
-			await setAuth({ dsAuth: data.dsAuth, holder: app.holder })
+			await setAuth({ dsAuth: data.dsAuth, holder: app.holder, getDatasetAccessToken: arg.getDatasetAccessToken })
 
 			if (data.commonOverrides || arg.commonOverrides) {
 				const commonOverrides = Object.assign(data.commonOverrides || {}, arg.commonOverrides || {})
