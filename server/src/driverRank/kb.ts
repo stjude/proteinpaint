@@ -31,8 +31,8 @@ export type GeneLoc = {
 
 /** the gene db lookups of compileKb(); from the genome's gene db (getGeneLookup()), or fakes in tests */
 export type GeneLookup = {
-	/** whether the symbol is a gene name of the gene db */
-	isName: (name: string) => boolean
+	/** a gene name of the gene db as the gene db has it, e.g. KRAS of kras, or null for a symbol that is not one */
+	canonicalName: (name: string) => string | null
 	/** the gene name of an alias, or null */
 	aliasToName: (alias: string) => string | null
 	/** the default RefSeq isoform of a gene, else its default isoform */
@@ -103,9 +103,9 @@ export type DriverKb = {
 	enhancerByChr: Map<string, EnhancerRule[]>
 	/** the gene name of an alias, to match an event that names a gene by an alias */
 	aliasToName: (alias: string) => string | null
-	/** whether a symbol is a gene name of the gene db, which an alias lookup must not change, e.g. FLG of
-	filaggrin, an old alias of FGFR1 */
-	isGeneName: (name: string) => boolean
+	/** a gene name of the gene db as the gene db has it, e.g. KRAS of kras, or null; a gene name is not changed by
+	an alias lookup, e.g. FLG of filaggrin, an old alias of FGFR1 */
+	canonicalName: (name: string) => string | null
 	/** the rules left out of the compiled kb, e.g. a cnv rule of a gene that the gene db lacks */
 	skipped: string[]
 }
@@ -267,7 +267,7 @@ export function compileKb(input: KbInput, lookup: GeneLookup): DriverKb {
 		cnvByChr: new Map(),
 		enhancerByChr: new Map(),
 		aliasToName: lookup.aliasToName,
-		isGeneName: lookup.isName,
+		canonicalName: lookup.canonicalName,
 		skipped: []
 	}
 	const names = new Map<string, string>()
@@ -373,7 +373,7 @@ export function compileKb(input: KbInput, lookup: GeneLookup): DriverKb {
 export function getGeneLookup(genedb: any): GeneLookup {
 	if (!genedb?.getjsonbyname) {
 		return {
-			isName: () => false,
+			canonicalName: () => null,
 			aliasToName: () => null,
 			gene: () => null,
 			isoform: () => null,
@@ -385,7 +385,11 @@ export function getGeneLookup(genedb: any): GeneLookup {
 	const lookup: GeneLookup = {
 		// in memory, from genedbLookups.ts, as a ranking checks every event gene that has no rules; case-insensitive,
 		// as is the sql of the gene db
-		isName: name => (genedb.mapByName ? genedb.mapByName.has(name.toUpperCase()) : !!genedb.getjsonbyname.get(name)),
+		canonicalName: name => {
+			if (genedb.mapByName) return genedb.mapByName.get(name.toUpperCase()) ?? null
+			const row = genedb.getjsonbyname.get(name)
+			return row ? toGeneLoc(row.genemodel)?.name || name : null
+		},
 		aliasToName: alias => genedb.getNameByAlias?.get(alias)?.name || null,
 		gene: name => {
 			if (!geneCache.has(name)) geneCache.set(name, pickDefaultIsoform(genedb.getjsonbyname.all(name)))
@@ -509,8 +513,7 @@ function toSource(id: string, meta: { [key: string]: string }): KbSource {
 }
 
 function officialName(name: string, lookup: GeneLookup): string {
-	if (lookup.isName(name)) return name
-	return lookup.aliasToName(name) || name
+	return lookup.canonicalName(name) || lookup.aliasToName(name) || name
 }
 
 /** the regions of a locus, else of a gene */

@@ -93,7 +93,7 @@ const SPLICE_PAD = 50
 
 /** returns the tag of each event of mlst, null for an event that is not a driver */
 export function rankEvents(mlst: any[], kb: DriverKb, ctx: RankContext): RankResult {
-	const snvindelCount = ctx.snvindelTotal ?? mlst.reduce((n, m) => (m?.dt == dtsnvindel ? n + 1 : n), 0)
+	const snvindelCount = ctx.snvindelTotal ?? countSnvindel(mlst)
 	const threshold = kb.match.hypermutated.minSnvindel
 	const hypermutated = snvindelCount > threshold
 	const sourceOrder = new Map(kb.sources.map((s, i) => [s.id, i]))
@@ -112,8 +112,10 @@ export function rankEvents(mlst: any[], kb: DriverKb, ctx: RankContext): RankRes
 .driverRank; with driversOnly, mlst[] has only the driver events. The result of the getter is not changed, as a
 getter may return an object that it caches: a tagged event is a copy */
 export function rankMutationResult(result: any, kb: DriverKb, ctx: RankContext, driversOnly: boolean): any {
-	const snvindelTotal = result.dt2total?.find((d: any) => d.dt == dtsnvindel)?.total
-	const { tags, hypermutated } = rankEvents(result.mlst, kb, { ...ctx, snvindelTotal })
+	// the snvindels of the sample, by which an alternative set of the sample is hypermutated as the main one is
+	const snvindelTotal = result.dt2total?.find((d: any) => d.dt == dtsnvindel)?.total ?? countSnvindel(result.mlst)
+	const sampleCtx = { ...ctx, snvindelTotal }
+	const { tags, hypermutated } = rankEvents(result.mlst, kb, sampleCtx)
 	const ranked = orderByDriver(result.mlst, tags)
 	const out = { ...result, mlst: driversOnly ? ranked.filter(m => m.driver) : ranked }
 	const shown = [out.mlst]
@@ -125,7 +127,7 @@ export function rankMutationResult(result: any, kb: DriverKb, ctx: RankContext, 
 		for (const [dt, sets] of Object.entries<any>(result.alternativeDataByDt)) {
 			out.alternativeDataByDt[dt] = sets.map((set: any) => {
 				if (!Array.isArray(set?.mlst)) return set
-				const setTags = rankEvents(set.mlst, kb, ctx).tags
+				const setTags = rankEvents(set.mlst, kb, sampleCtx).tags
 				const mlst = set.mlst.map((m: any, i: number) => (setTags[i] ? { ...m, driver: setTags[i] } : m))
 				shown.push(mlst)
 				return { ...set, mlst }
@@ -187,7 +189,9 @@ function matchSnvindel(m: any, kb: DriverKb): Match[] {
 		}
 	} else if (aa?.kind == 'inframe') {
 		for (const r of kb.inframe.get(gene) || []) {
-			if (aa.pos <= (r.end ?? r.start!) && aa.end >= r.start!) rules.push(r)
+			const overlaps = aa.pos <= (r.end ?? r.start!) && aa.end >= r.start!
+			// as for a frameshift, the reference amino acid guards an event that starts at the residue of the rule
+			if (overlaps && (!r.ref || aa.pos != r.start || r.ref == aa.ref)) rules.push(r)
 		}
 	}
 	if (Number.isFinite(m.pos)) {
@@ -355,7 +359,7 @@ function isOfLocus(name: string, locusName: string, kb: DriverKb): boolean {
 	if (name == locusName) return true
 	const locus = kb.loci.get(locusName)
 	if (!locus) return false
-	return kb.isGeneName(name) ? locus.members.has(name.toUpperCase()) : locus.pattern.test(name)
+	return kb.canonicalName(name) ? locus.members.has(name.toUpperCase()) : locus.pattern.test(name)
 }
 
 /** the gene names of an event, e.g. geneA of a fusion, as kb gene names where an alias maps to one, and as the
@@ -382,8 +386,10 @@ function locusOf(name: string, kb: DriverKb): string | null {
 function kbGene(name: unknown, kb: DriverKb): string | null {
 	if (typeof name != 'string' || !name) return null
 	if (kb.genes.has(name)) return name
-	// a gene of its own, e.g. FLG of filaggrin, is not the gene that it is an old alias of, FGFR1
-	if (kb.isGeneName(name)) return null
+	// a gene of the gene db, in its casing, e.g. KRAS of kras; a gene of its own, e.g. FLG of filaggrin, is not the
+	// gene that it is an old alias of, FGFR1
+	const canonical = kb.canonicalName(name)
+	if (canonical) return kb.genes.has(canonical) ? canonical : null
 	const official = kb.aliasToName(name)
 	return official && kb.genes.has(official) ? official : null
 }
@@ -438,6 +444,10 @@ function orderByDriver(mlst: any[], tags: (DriverTag | null)[]): any[] {
 		return ta - tb || a.germline - b.germline || b.vaf - a.vaf || a.i - b.i
 	})
 	return keyed.map(k => k.m)
+}
+
+function countSnvindel(mlst: any[]): number {
+	return mlst.reduce((n, m) => (m?.dt == dtsnvindel ? n + 1 : n), 0)
 }
 
 function isGermline(m: any): boolean {

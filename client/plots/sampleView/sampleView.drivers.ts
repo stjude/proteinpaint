@@ -37,7 +37,9 @@ export type DriverData = { mlst: any[]; driverRank?: DriverRankInfo }
 /** rows on the face of the tile */
 const FACE_ROWS = 5
 
-const TIER_COLOR = { 1: '#b91c1c', 2: '#d97706' }
+/** of 4.5:1 contrast or more on white and on the striped rows of the table, for the white text of a badge, and as the
+color of text: 6.5:1 and 5:1 on white */
+const TIER_COLOR = { 1: '#b91c1c', 2: '#b45309' }
 const TIER_TITLE = { 1: 'Tier 1: a known driver alteration', 2: 'Tier 2: a likely driver' }
 
 const CNV_LABEL = { amp: 'amplification', del: 'deletion', deepDel: 'homozygous deletion' }
@@ -100,6 +102,8 @@ export function renderDriverFace(face: any, data: DriverData) {
 	const div = face.append('div').attr('data-testid', 'sjpp-sampleview-drivers-face').style('padding', '6px 4px 0')
 	if (!rows.length) {
 		div.append('div').style('color', '#6b7280').text('No known driver alterations recognized')
+		// a hypermutated sample may have no driver left, as its tier 2 snvindel evidence is not used
+		renderHypermutated(div, data.driverRank)
 		return
 	}
 	for (const row of rows.slice(0, FACE_ROWS)) {

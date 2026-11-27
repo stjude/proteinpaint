@@ -85,7 +85,7 @@ export const lociDefs = {
 }
 
 export const lookup: GeneLookup = {
-	isName: name => name in genes,
+	canonicalName: name => Object.keys(genes).find(g => g.toUpperCase() == name.toUpperCase()) || null,
 	aliasToName: alias => ({ OLDKRAS: 'KRAS', FLG: 'FGFR1' }[alias] || null),
 	gene: name => genes[name] || null,
 	isoform: isoform => Object.values(genes).find(g => g.isoform == isoform.replace(/\.\d+$/, '')) || null,
@@ -124,7 +124,8 @@ export const rules: { [source: string]: Rule[] } = {
 		{ id: 'civic:8', kind: 'amp', gene: 'MYCN', tier: 1 },
 		{ id: 'civic:9', kind: 'del', gene: 'CDKN2A', tier: 1 },
 		{ id: 'civic:10', kind: 'fusion', gene: 'IGH', partner: 'CRLF2', tier: 1 },
-		{ id: 'civic:11', kind: 'fusion', gene: '*', partner: 'FGFR1', tier: 1 }
+		{ id: 'civic:11', kind: 'fusion', gene: '*', partner: 'FGFR1', tier: 1 },
+		{ id: 'civic:12', kind: 'inframe', gene: 'KRAS', start: 10, ref: 'G', tier: 1 }
 	],
 	curated: [
 		{ id: 'curated:1', kind: 'itd', gene: 'UBTF', exon: '13', isoform: 'NM_014233', tier: 1 },

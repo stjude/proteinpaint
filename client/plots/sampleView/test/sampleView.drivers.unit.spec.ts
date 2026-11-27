@@ -12,6 +12,8 @@ Tests:
 	getDriverRows(): germline origin codes, VAF of a totalCount and of string counts
 	renderDriverFace(): top events, more count, credit line without links, hypermutated note
 	renderDriverFace() and renderDriverTable() of a sample without driver events
+	renderDriverFace() of a hypermutated sample without driver events
+	renderDriverTable(): the color of tier 2, of enough contrast
 	renderDriverTable(): rows, VAF and origin columns, credit links, hypermutated note
 	renderDriverTable(): the VAF of the first field with reads, named when the sample has several fields
 	getSampleTools(): the drivers tool only for a dataset that ranks drivers
@@ -216,6 +218,22 @@ tape('a sample without driver events', test => {
 	test.end()
 })
 
+tape('renderDriverFace() of a hypermutated sample without drivers', test => {
+	const holder = getHolder()
+	renderDriverFace(holder, {
+		mlst: [{ dt: dtsnvindel, gene: 'ABC', mname: 'R1H', class: 'M' }],
+		driverRank: { kbVersion: 'v1', sources: [], hypermutated: { snvindelCount: 812, threshold: 500 } }
+	})
+	test.ok(holder.text().startsWith('No known driver alterations recognized'), 'Should say so')
+	test.equal(
+		holder.selectAll('[data-testid="sjpp-sampleview-drivers-hypermutated"]').size(),
+		1,
+		'Should note the hypermutated sample, whose tier 2 evidence is not used'
+	)
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 tape('renderDriverTable()', test => {
 	const holder = getHolder().style('width', '900px')
 	const data = getData({
@@ -234,6 +252,12 @@ tape('renderDriverTable()', test => {
 	)
 	test.equal(table.selectAll('tbody tr').size(), 7, 'Should have a row per alteration')
 	test.ok(table.text().includes('KMT2A rearrangement (2 events)'), 'Should count the events of an alteration')
+	const tier2 = (table.selectAll('tbody td').nodes() as HTMLElement[]).find(td => td.textContent == 'Tier 2')
+	test.equal(
+		tier2?.style.color,
+		'rgb(180, 83, 9)',
+		'Should color tier 2 with an orange of 4.5:1 contrast or more on the rows'
+	)
 	const links = holder
 		.selectAll('[data-testid="sjpp-sampleview-drivers-sources"] a')
 		.nodes()

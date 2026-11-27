@@ -22,6 +22,8 @@ Tests:
 	event of another dt, or malformed, is not ranked
 	rankMutationResult(): order, germline, VAF, drivers only, alternativeDataByDt, sources, input not changed
 	rankMutationResult(): germline origin codes, VAF of string counts and of totalCount
+	rankMutationResult(): an alternative snvindel set of a hypermutated sample
+	snvindel: the reference amino acid of an in-frame rule, a gene name in another case
 	getGeneLookup(): gene names checked in memory, without a query of the gene db
 	compileDsDriverKb(): disabled source and rule, changed match, invalid match, disabled rules of the dataset file
 */
@@ -455,6 +457,48 @@ tape('rankMutationResult(): origin codes and VAF formats', test => {
 	test.end()
 })
 
+tape('rankMutationResult(): alternative set of a hypermutated sample', test => {
+	const out = rankMutationResult(
+		{
+			mlst: [snv('KRAS', 'G12C', 'M')],
+			dt2total: [{ dt: dtsnvindel, total: 1000 }],
+			alternativeDataByDt: { [dtsnvindel]: [{ name: 'other', mlst: [snv('KRAS', 'G12C', 'M')] }] }
+		},
+		kb,
+		ctx,
+		false
+	)
+	test.ok(out.driverRank.hypermutated, 'should note the hypermutated sample, of 1000 snvindels by dt2total')
+	test.equal(out.mlst[0].driver, undefined, 'should drop the tier 2 snvindel tag of the main set')
+	test.equal(
+		out.alternativeDataByDt[dtsnvindel][0].mlst[0].driver,
+		undefined,
+		'should drop it in an alternative set of the sample too'
+	)
+	test.end()
+})
+
+tape('snvindel: in-frame reference, gene name case', test => {
+	test.deepEqual(
+		tagOf(snv('KRAS', 'G10dup', 'I'))?.ruleIds,
+		['civic:12', 'civic:6'],
+		'KRAS G10dup should match the in-frame rule of G10'
+	)
+	test.deepEqual(
+		tagOf(snv('KRAS', 'A10dup', 'I'))?.ruleIds,
+		['civic:6'],
+		'an in-frame event at 10 of another reference amino acid should not match the rule of G10'
+	)
+	test.equal(tagOf(snv('kras', 'G12D', 'M'))?.tier, 1, 'kras G12D should match the KRAS hotspot')
+	test.deepEqual(tagOf(snv('kras', 'G12D', 'M'))?.genes, ['KRAS'], 'should name the gene as the gene db has it')
+	test.deepEqual(
+		tagOf({ dt: dtfusionrna, geneA: 'bcr', geneB: 'abl1' })?.ruleIds,
+		['civic:1'],
+		'a bcr::abl1 fusion should match BCR::ABL1'
+	)
+	test.end()
+})
+
 tape('getGeneLookup()', test => {
 	let queries = 0
 	const genedb = {
@@ -462,9 +506,13 @@ tape('getGeneLookup()', test => {
 		getjsonbyname: { get: () => ++queries && undefined }
 	}
 	const lookup = getGeneLookup(genedb)
-	test.equal(lookup.isName('TP53'), true, 'should know a gene name')
-	test.equal(lookup.isName('tp53'), true, 'should know it in another case, as does the sql of the gene db')
-	test.equal(lookup.isName('NOTAGENE'), false, 'should not know another name')
+	test.equal(lookup.canonicalName('TP53'), 'TP53', 'should know a gene name')
+	test.equal(
+		lookup.canonicalName('tp53'),
+		'TP53',
+		'should give it as the gene db has it, as its sql is case-insensitive'
+	)
+	test.equal(lookup.canonicalName('NOTAGENE'), null, 'should not know another name')
 	test.equal(queries, 0, 'should check the names in memory, without a query of the gene db')
 	test.end()
 })
