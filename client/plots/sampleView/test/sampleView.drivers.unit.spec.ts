@@ -176,8 +176,11 @@ tape('renderDriverTable()', test => {
 		.selectAll('[data-testid="sjpp-sampleview-drivers-sources"] a')
 		.nodes()
 		.map((a: any) => a.href)
-	test.ok(links.includes('https://www.cancerhotspots.org/'), 'Should link to Cancer Hotspots')
-	test.ok(links.includes('https://opendatacommons.org/licenses/odbl/1-0/'), 'Should link to the ODbL')
+	test.deepEqual(
+		links,
+		['https://www.cancerhotspots.org/', 'https://opendatacommons.org/licenses/odbl/1-0/', 'https://civicdb.org/'],
+		'Should link to the sources, and to the license of a source with a license url'
+	)
 	test.ok(
 		holder.select('[data-testid="sjpp-sampleview-drivers-hypermutated"]').text().startsWith('Hypermutated sample (812'),
 		'Should note a hypermutated sample'
