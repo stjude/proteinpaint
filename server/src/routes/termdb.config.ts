@@ -6,6 +6,7 @@ import { get_ds_tdb } from '#src/termdb.js'
 import { filterTerms } from '#src/termdb.server.init.ts'
 import { typeGroup } from '#shared/terms.js'
 import { getUnavailableAnalysesOnce } from '#src/utils/unavailableAnalyses.ts'
+import { getDriverKb } from '#src/driverRank/kb.ts'
 import { getGvQueryMethods } from '#src/mds3.gvQueryMethods.ts'
 import {
 	SINGLECELL_CELLTYPE,
@@ -364,6 +365,8 @@ export function addNonDictionaryQueries(c, ds: Mds3, genome): void {
 			sample_id_key: q.singleSampleMutation.sample_id_key,
 			discoPlot: q.singleSampleMutation.discoPlot
 		}
+		// the route ranks the driver events of a sample, see driverRank/; e.g. sample view then shows a driver table
+		if (getDriverKb(ds, genome)) q2.singleSampleMutation.driverRank = true
 		// supported cnv file types (e.g. GDC masked vs allele-specific). GRIN2 renders these as radios.
 		if (Array.isArray(q.singleSampleMutation.cnvTypes) && q.singleSampleMutation.cnvTypes.length) {
 			q2.singleSampleMutation.cnvTypes = q.singleSampleMutation.cnvTypes.map(t => ({

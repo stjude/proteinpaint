@@ -22,6 +22,7 @@ import { combineSamplesById } from './mds3.variant2samples.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { cacheOrRecompute, cacheFilePath, generateHash } from './utils/cacheOrRecompute.ts'
 import { shouldMapParent2Children } from './termdb.matrix.js'
+import { loadGenomeDriverKb } from './driverRank/kb.ts'
 
 // a module-local copy, since serverconfig.cachedir is deleted before the server starts listening
 const cachedir = serverconfig.cachedir
@@ -328,6 +329,11 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 				g.genedb.tableSize[table] = g.genedb.db.prepare(sql`select count(*) as size from ${sql.id(table)}`).get().size
 			}
 		}
+
+		// driverKb is optional: the driver knowledge base, by which the termdb/singleSampleMutation route ranks the
+		// driver events of a sample, see driverRank/kb.ts; loaded after the gene db, whose coordinates it uses.
+		// An invalid kb file throws, so that a broken edit fails the launch
+		if (g.driverKb) g.__driverKb = loadGenomeDriverKb(g)
 
 		// termdbs{} is optional
 		if (g.termdbs) {

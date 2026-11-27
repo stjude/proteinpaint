@@ -1,0 +1,15 @@
+#format=driverKb/1
+#source=ProteinPaint curated
+#license=ProteinPaint LICENSE
+#note=Rules for drivers that the other sources lack, edited by hand: one row per alteration, with a ref or note in info. The server checks every row at launch.
+id	kind	gene	partner	start	end	ref	alt	exon	isoform	region	window	tier	label	info
+curated:CDKN2A-deepDel	deepDel	CDKN2A										1	CDKN2A homozygous deletion	
+curated:IGH-MYC	sv	IGH	MYC								1000000	1	IGH::MYC rearrangement	note=the translocation of chromosomes 8 and 14 in Burkitt lymphoma, IGH is a locus of index.json
+curated:IGK-MYC	sv	IGK	MYC								1000000	1	IGK::MYC rearrangement	note=the translocation of chromosomes 2 and 8, a variant translocation of Burkitt lymphoma, IGK is a locus of index.json
+curated:IGL-MYC	sv	IGL	MYC								1000000	1	IGL::MYC rearrangement	note=the translocation of chromosomes 8 and 22, a variant translocation of Burkitt lymphoma, IGL is a locus of index.json
+curated:MYC-amp	amp	MYC										1	MYC amplification	
+curated:MYC-N-Me	enhancer	MYC	N-Me				gain			hg19=chr8:130180065-130180972,hg38=chr8:129167819-129168726		2	MYC enhancer (N-Me) gain	ref=Herranz et al. 2014, Nature Medicine 20:1130;note=T-ALL: focal duplications of the NOTCH1-bound enhancer 1.43 Mb 3' of MYC, in 8 of 160 cases;region=the NOTCH1 ChIP-seq peak in the 40 kb segment that the duplications share, hg19 from the Methods of the paper, hg38 by the Ensembl GRCh37 to GRCh38 assembly mapping
+curated:PAX5-del	del	PAX5										1	PAX5 deletion	note=B-ALL
+curated:TCF3-PBX1	fusion	TCF3	PBX1									1	TCF3::PBX1 fusion	note=the translocation of chromosomes 1 and 19 in B-ALL
+curated:TERT-rearr	sv	TERT	*								50000	1	TERT rearrangement	ref=Peifer et al. 2015, Nature;note=neuroblastoma
+curated:UBTF-TD	itd	UBTF						13	NM_014233			1	UBTF exon 13 tandem duplication	ref=Umeda et al. 2022, Blood Cancer Discovery;note=pediatric AML

@@ -685,6 +685,22 @@ morigin[morigingermlinenonpathogenic] = {
 	hidden: true
 }
 
+/** the codes and the texts of a germline variant origin, as bulk.ts reads the origin of an event */
+const germlineOrigins = new Set([
+	'g',
+	'germline',
+	'gp',
+	'germline pathogenic',
+	'gnp',
+	'germline nonpathogenic',
+	'germline non-pathogenic'
+])
+
+/** whether the origin of a variant, a code of morigin (G, GP, GNP) or its text, such as germline, is germline */
+export function isGermlineOrigin(origin: unknown): boolean {
+	return typeof origin == 'string' && germlineOrigins.has(origin.trim().toLowerCase())
+}
+
 export const tkt = {
 	usegm: 'usegm',
 	ds: 'dataset',

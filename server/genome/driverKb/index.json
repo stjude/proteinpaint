@@ -1,0 +1,26 @@
+{
+	"format": "driverKb/1",
+	"sources": [
+		{ "id": "hotspots", "file": "cancerHotspot.txt" },
+		{ "id": "civic", "file": "civic.txt" },
+		{ "id": "curated", "file": "curated.txt" }
+	],
+	"loci": {
+		"IGH": { "genePattern": "^IGH(@|[VDJAEG](?!.*OR)|M$)", "chr": "chr14" },
+		"IGK": { "genePattern": "^IGK(@|[VJ](?!.*OR)|C$)", "chr": "chr2" },
+		"IGL": { "genePattern": "^IGL(@|[VJ](?!.*OR)|C\\d$)", "chr": "chr22" }
+	},
+	"match": {
+		"fusion": { "geneAIs5prime": true },
+		"sv": { "wildcardTier": 2 },
+		"cnv": {
+			"focalMaxLength": 3000000,
+			"calls": {
+				"log2ratio": { "amp": 1, "gain": 0.2, "del": -0.3, "deepDel": -1.3 },
+				"segmean": { "amp": 1, "gain": 0.2, "del": -0.3, "deepDel": -1.3 },
+				"copyNumber": { "amp": 6, "gain": 3, "del": 1, "deepDel": 0 }
+			}
+		},
+		"hypermutated": { "minSnvindel": 500 }
+	}
+}
