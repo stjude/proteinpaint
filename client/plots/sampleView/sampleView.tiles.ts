@@ -12,6 +12,7 @@ import {
 	renderSingleCellFace,
 	renderWsiFace
 } from './sampleView.faces.ts'
+import { renderDriverFace, renderDriverTable } from './sampleView.drivers.ts'
 
 /*********************************************************************
  * sampleView tool tiles
@@ -75,14 +76,8 @@ export function getSampleTools(termdbConfig: any): SampleTool[] {
 			title: 'Disco plot',
 			scope: 'sample',
 			load: async ([sample], ctx) => {
-				const { getSingleSampleMutation } = await import('../plot.disco.js')
 				try {
-					const data = await getSingleSampleMutation(
-						ctx.termdbConfig,
-						ctx.vocab.dslabel,
-						toDiscoSample(sample),
-						ctx.genome
-					)
+					const data = await getSampleMutations(sample, ctx)
 					return data.mlst.length ? data : null
 				} catch (e) {
 					// as before the tiles, a sample without a mutation file is reported as an error by the route
@@ -113,6 +108,25 @@ export function getSampleTools(termdbConfig: any): SampleTool[] {
 				discoDestroyers.set(data, destroy)
 				ctx.onDestroy(destroy)
 			}
+		})
+	}
+	if (q.singleSampleMutation?.driverRank) {
+		tools.push({
+			key: 'drivers',
+			title: 'Driver alterations',
+			scope: 'sample',
+			// the events of the disco plot, of which the server ranks the driver events first
+			load: async ([sample], ctx) => {
+				try {
+					const data = await getSampleMutations(sample, ctx)
+					return data.mlst.length && data.driverRank ? data : null
+				} catch (_e) {
+					// reported by the disco tool, which loads the same data
+					return null
+				}
+			},
+			renderFace: (face, data) => renderDriverFace(face, data),
+			renderExpanded: (holder, data) => renderDriverTable(holder, data)
 		})
 	}
 	for (const k in q.singleSampleGenomeQuantification || {}) {
@@ -542,6 +556,30 @@ function toSsgqSample(sample: Sample) {
 }
 
 /** the sample argument of plot.disco.js */
+/** the pending termdb/singleSampleMutation requests of sample view, by app and sample, which the tools that show the
+ * mutations of a sample (disco, drivers) share: their loads start in the same render, and each keeps the data */
+const mutationRequests = new WeakMap<object, Map<string, Promise<any>>>()
+
+function getSampleMutations(sample: Sample, ctx: ToolContext): Promise<any> {
+	let requests = mutationRequests.get(ctx.app)
+	if (!requests) {
+		requests = new Map()
+		mutationRequests.set(ctx.app, requests)
+	}
+	const key = ctx.vocab.dslabel + '\t' + sample.sampleName
+	let request = requests.get(key)
+	if (!request) {
+		request = import('../plot.disco.js').then(({ getSingleSampleMutation }) =>
+			getSingleSampleMutation(ctx.termdbConfig, ctx.vocab.dslabel, toDiscoSample(sample), ctx.genome)
+		)
+		// a later load, e.g. after the filter changes, makes a new request
+		const pending = requests
+		request.finally(() => pending.delete(key)).catch(() => {})
+		requests.set(key, request)
+	}
+	return request
+}
+
 function toDiscoSample(sample: Sample) {
 	return { sample_id: sample.sampleName }
 }

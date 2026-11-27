@@ -2,6 +2,8 @@ import path from 'path'
 import { read_file, file_is_readable, fileurl, illegalpath } from '#src/utils.js'
 import { validGenomeDs } from '#routes/common.ts'
 import { genomes } from '#src/initGenomesDs.js'
+import { getDriverKb } from '#src/driverRank/kb.ts'
+import { rankMutationResult } from '#src/driverRank/rank.ts'
 import type {
 	TermdbSingleSampleMutationRequest,
 	TermdbSingleSampleMutationResponse,
@@ -44,7 +46,8 @@ function validTermdbSingleSampleMutationRequest(input): TermdbSingleSampleMutati
 	if (vt != 'string' && vt != 'number') throw 'sample must be a string or number'
 	const sample = String(input.sample)
 	if (!sample) throw 'sample is blank'
-	return { ...validGenomeDs(input), sample }
+	if (input.drivers !== undefined && input.drivers !== 'only') throw 'drivers must be "only" when given'
+	return { ...validGenomeDs(input), sample, ...(input.drivers ? { drivers: input.drivers } : {}) }
 }
 
 export const api: RouteApi = {
@@ -64,7 +67,10 @@ function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
 			if (!ds.queries?.singleSampleMutation) throw 'not supported on this dataset'
+			const kb = getDriverKb(ds, g)
+			if (q.drivers == 'only' && !kb) throw 'driver ranking is not available for this dataset'
 			result = await ds.queries.singleSampleMutation.get(q)
+			if (kb && Array.isArray(result?.mlst)) result = mayRankDrivers(result, kb, ds, q.drivers == 'only')
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			result = {
@@ -73,6 +79,19 @@ function init({ genomes }) {
 			}
 		}
 		res.send(result satisfies TermdbSingleSampleMutationResponse)
+	}
+}
+
+/* tags the driver events of the response and sorts them first, see driverRank/rank.ts. A ranking error leaves
+the events as the getter returned them, so that a view of all events, such as the disco plot, still works; only a
+request for the driver events alone fails with it */
+function mayRankDrivers(result: any, kb: any, ds: any, driversOnly: boolean) {
+	try {
+		return rankMutationResult(result, kb, { cnvType: ds.queries?.cnv?.type ?? 'log2ratio' }, driversOnly)
+	} catch (e: any) {
+		console.error(`driver ranking failed for ${ds.label}:`, e?.stack || e)
+		if (driversOnly) throw 'driver ranking failed'
+		return result
 	}
 }
 

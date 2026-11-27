@@ -1,4 +1,5 @@
 import type { Mclass } from './Mclass.ts'
+import type { DriverKbOverlay } from './driverKb.ts'
 import type { BaseTerm } from './terms/term.ts'
 import type { CategoryKey } from './terms/termCollection.ts'
 import type { TermdbSingleCellSamplesRequest, CountsFilePreview } from './index.ts'
@@ -3100,6 +3101,9 @@ export type FetchOptionsByHostpath = {
 }
 
 export type Mds3 = BaseMds & {
+	/** changes to the driver knowledge base of the genome, by which the server ranks the driver events of a
+	sample of this dataset; false for no ranking. Absent: the genome kb as is */
+	driverKb?: false | DriverKbOverlay
 	/** set in initGenomesDs.js during launch, should use .genomename instead of .genome */
 	genomename?: string // use this
 	genome?: string // avoid using it

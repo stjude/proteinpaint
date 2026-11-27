@@ -1,4 +1,5 @@
 import type { Cohort } from './dataset.ts'
+import type { GenomeDriverKb } from './driverKb.ts'
 
 /********* server/genome ********
  
@@ -116,6 +117,9 @@ export type MinGenome = {
 
 export type Genome = MinGenome & {
 	termdbs?: TermDbs
+	/** the driver knowledge base by which the server ranks the driver events of a sample; see
+	server/genome/driverKb/README.md */
+	driverKb?: GenomeDriverKb
 	proteindomain?: DbStatement
 	repeatmasker?: DbStatement
 	snp?: Snp

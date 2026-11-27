@@ -1,0 +1,1075 @@
+#format=driverKb/1
+#source=CIViC
+#url=https://civicdb.org/downloads/nightly/
+#license=CC0-1.0
+#licenseUrl=https://creativecommons.org/publicdomain/zero/1.0/
+#licenseStatement=The content of CIViC is released under the Creative Commons Public Domain Dedication (CC0 1.0 Universal) (https://civic.readthedocs.io/en/latest/about/faq.html)
+#attribution=CIViC, Clinical Interpretation of Variants in Cancer, https://civicdb.org
+#note=From the nightly files: variants with accepted somatic evidence and a parsed name, and fusion variants grouped by gene pair.
+#retrieved=2026-11-26
+#inputs=nightly-VariantSummaries.tsv sha256:13dc4ececa68dbee6e74a7e49e4684ffaf57d324bddda18fe577ba9cc00f2528,nightly-ClinicalEvidenceSummaries.tsv sha256:d529cc91c0dfec9cc3c1b84e743195875ef1319c34d2562584569e3a03e8e779
+#generatedBy=driverKb intake, civic.py
+id	kind	gene	partner	start	end	ref	alt	exon	isoform	region	window	tier	label	info
+civic:feature:61757	fusion	*	NRG1									1	*::NRG1 fusion	featureId=61757;variantIds=2286;evidence=Predictive:A:2,Predictive:C:2
+civic:feature:61770	fusion	*	PDGFRA									1	*::PDGFRA fusion	featureId=61770;variantIds=567;evidence=Diagnostic:A:2
+civic:feature:61771	fusion	*	PDGFRB									1	*::PDGFRB fusion	featureId=61771;variantIds=568;evidence=Diagnostic:A:2,Predictive:A:1
+civic:feature:61790	fusion	*	NTRK3									1	*::NTRK3 fusion	featureId=61790;variantIds=1277;evidence=Predictive:A:2,Predictive:B:1
+civic:feature:61869	fusion	*	JAK2									1	*::JAK2 fusion	featureId=61869;variantIds=2572;evidence=Diagnostic:A:2,Diagnostic:B:1
+civic:feature:61879	fusion	*	RET									1	*::RET fusion	featureId=61879;variantIds=1687;evidence=Predictive:A:4,Predictive:B:6,Predictive:C:1
+civic:feature:61911	fusion	*	TFE3									1	*::TFE3 fusion	featureId=61911;variantIds=3730;evidence=Diagnostic:B:4,Diagnostic:C:1
+civic:feature:61964	fusion	*	NCOA2									1	*::NCOA2 fusion	featureId=61964;variantIds=4587;evidence=Diagnostic:B:3,Diagnostic:C:1,Prognostic:B:1
+civic:feature:61986	fusion	*	TFEB									1	*::TFEB fusion	featureId=61986;variantIds=4646;evidence=Diagnostic:B:2,Diagnostic:C:1
+civic:feature:62000	fusion	*	NUTM1									1	*::NUTM1 fusion	featureId=62000;variantIds=4972;evidence=Diagnostic:B:5,Diagnostic:C:1
+civic:feature:62017	fusion	*	MITF									1	*::MITF fusion	featureId=62017;variantIds=5035;evidence=Diagnostic:C:1
+civic:feature:62024	fusion	*	ALK									1	*::ALK fusion	featureId=62024;variantIds=499;evidence=Diagnostic:C:1,Predictive:A:11,Predictive:B:16,Predictive:C:8,Predictive:E:2
+civic:feature:62025	fusion	*	FGFR1									1	*::FGFR1 fusion	featureId=62025;variantIds=569;evidence=Diagnostic:A:2,Predictive:D:1
+civic:feature:62026	fusion	*	NTRK1									1	*::NTRK1 fusion	featureId=62026;variantIds=419;evidence=Diagnostic:B:1,Predictive:A:3,Predictive:B:1,Predictive:C:1,Predictive:D:1
+civic:feature:62028	fusion	*	ROS1									1	*::ROS1 fusion	featureId=62028;variantIds=2693;evidence=Predictive:A:6,Predictive:C:1,Predictive:E:1
+civic:feature:62051	fusion	*	IRF4									1	*::IRF4 fusion	featureId=62051;variantIds=5079;evidence=Diagnostic:B:3
+civic:feature:62055	fusion	*	TFCP2									1	*::TFCP2 fusion	featureId=62055;variantIds=5113;evidence=Diagnostic:B:1,Diagnostic:C:1
+civic:feature:62058	fusion	*	NR4A3									1	*::NR4A3 fusion	featureId=62058;variantIds=5115;evidence=Diagnostic:B:3,Diagnostic:C:1
+civic:feature:62076	fusion	*	ZNF384									1	*::ZNF384 fusion	featureId=62076;variantIds=5187;evidence=Diagnostic:B:3
+civic:feature:62109	fusion	*	MAML2									1	*::MAML2 fusion	featureId=62109;variantIds=5364;evidence=Diagnostic:B:3
+civic:feature:62114	fusion	*	TYK2									1	*::TYK2 fusion	featureId=62114;variantIds=5402;evidence=Diagnostic:C:1
+civic:feature:62116	fusion	*	LYN									1	*::LYN fusion	featureId=62116;variantIds=5404;evidence=Diagnostic:C:3
+civic:407	amp	ABCC3										1	ABCC3 Amplification	variantId=407;mpId=403;evidence=Predictive:D:1;civicTranscript=ENST00000285238.8
+civic:1506	snv	ABL1		298		L	V					1	ABL1 L298V	variantId=1506;mpId=1414;evidence=Predictive:C:1;civicTranscript=ENST00000318560.5
+civic:1657	snv	ABL1		340		G	L					1	ABL1 G340L	variantId=1657;mpId=1565;evidence=Predictive:D:1;civicTranscript=ENST00000372348.2
+civic:1656	snv	ABL1		351		R	W					1	ABL1 R351W	variantId=1656;mpId=1564;evidence=Predictive:D:2;civicTranscript=ENST00000372348.2
+civic:1609	snv	ABL1		379		V	I					1	ABL1 V379I	variantId=1609;mpId=1517;evidence=Predictive:C:1;civicTranscript=ENST00000318560.5
+civic:3688	snv	ABL2		469		W	C					1	ABL2 W469C	variantId=3688;mpId=3556;evidence=Predictive:D:1
+civic:feature:61799	fusion	ACTB	GLI1									1	ACTB::GLI1 fusion	featureId=61799;variantIds=780;evidence=Diagnostic:B:1
+civic:feature:63144	fusion	ACTB	FOSB									1	ACTB::FOSB fusion	featureId=63144;variantIds=5694;evidence=Diagnostic:B:1
+civic:2061	gene	ACVR1					any					2	ACVR1 Gain-of-Function	variantId=2061;mpId=1937;evidence=Diagnostic:B:2
+civic:2983	gene	ACVR1					any					2	ACVR1 Mutation	variantId=2983;mpId=2852;evidence=Diagnostic:B:1
+civic:3661	snv	ACVR1		206		R	H					1	ACVR1 R206H	variantId=3661;mpId=3529;evidence=Diagnostic:C:1
+civic:1686	snv	ACVR1		328		G	V					1	ACVR1 G328V	variantId=1686;mpId=1594;evidence=Diagnostic:B:1,Diagnostic:C:1;civicTranscript=ENST00000434821.1
+civic:2280	snv	ACVR1		328		G	W					1	ACVR1 G328W	variantId=2280;mpId=2156;evidence=Diagnostic:C:1;civicTranscript=ENST00000263640.3
+civic:2283	snv	ACVR1		328		G	E					1	ACVR1 G328E	variantId=2283;mpId=2159;evidence=Diagnostic:C:1
+civic:3662	snv	ACVR1		356		G	D					1	ACVR1 G356D	variantId=3662;mpId=3530;evidence=Diagnostic:C:1
+civic:feature:61897	fusion	ADAD2-AS1	ABL1									1	ADAD2-AS1::ABL1 fusion	featureId=61897;variantIds=3287;evidence=Diagnostic:C:1,Oncogenic:C:3,Predictive:C:1
+civic:feature:62929	fusion	AGAP3	BRAF									1	AGAP3::BRAF fusion	featureId=62929;variantIds=5544;evidence=Predictive:C:1
+civic:feature:61787	fusion	AGK	BRAF									1	AGK::BRAF fusion	featureId=61787;variantIds=285;evidence=Predictive:C:2,Predictive:D:1
+civic:feature:61759	fusion	AKAP9	BRAF									1	AKAP9::BRAF fusion	featureId=61759;variantIds=184;evidence=Diagnostic:B:1
+civic:4	snv	AKT1		17		E	K					1	AKT1 E17K	variantId=4;mpId=4;evidence=Predictive:B:1,Predictive:C:1,Predictive:D:2;civicTranscript=ENST00000407796.2
+civic:169	snv	AKT1		79		Q	K					1	AKT1 Q79K	variantId=169;mpId=169;evidence=Predictive:C:1,Predictive:D:2;civicTranscript=ENST00000407796.2
+civic:1227	snv	AKT3		17		E	K					1	AKT3 E17K	variantId=1227;mpId=1201;evidence=Predictive:D:1;civicTranscript=ENST00000366539.1
+civic:550	exon	ALK					del	4-11				1	ALK Exon 4-11 Deletion	variantId=550;mpId=546;evidence=Predictive:D:1;civicTranscript=ENST00000389048.3
+civic:512	gene	ALK					any					2	ALK Mutation	variantId=512;mpId=508;evidence=Predictive:B:1;civicTranscript=ENST00000389048.3
+civic:8	snv	ALK		1174		F	L					1	ALK F1174L	variantId=8;mpId=8;evidence=Predictive:C:1,Predictive:D:6;civicTranscript=ENST00000389048.3
+civic:1295	snv	ALK		1245		F	V					1	ALK F1245V	variantId=1295;mpId=1269;evidence=Predictive:C:1;civicTranscript=ENST00000389048.3
+civic:549	snv	ALK		1245		F	C					1	ALK F1245C	variantId=549;mpId=545;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000389048.3
+civic:9	snv	ALK		1275		R	Q					1	ALK R1275Q	variantId=9;mpId=9;evidence=Predictive:C:1,Predictive:D:3;civicTranscript=ENST00000389048.3
+civic:feature:62014	fusion	ANO10	RAF1									1	ANO10::RAF1 fusion	featureId=62014;variantIds=5030;evidence=Predictive:C:1
+civic:174	gene	APC					any					2	APC Mutation	variantId=174;mpId=174;evidence=Predictive:D:2;civicTranscript=ENST00000457016.1
+civic:600	gene	AR					any					2	AR Mutation	variantId=600;mpId=596;evidence=Predictive:B:1;civicTranscript=ENST00000374690.3
+civic:3716	snv	AR		726		R	L					1	AR R726L	variantId=3716;mpId=3584;evidence=Functional:D:1
+civic:176	snv	AR		742		W						1	AR W742	variantId=176;mpId=176;evidence=Predictive:D:1;civicTranscript=ENST00000374690.3
+civic:175	snv	AR		877		F	L					1	AR F877L	variantId=175;mpId=175;evidence=Predictive:D:1;civicTranscript=ENST00000374690.3
+civic:4411	snv	ARAF		145		V	L					1	ARAF V145L	variantId=4411;mpId=4339;evidence=Oncogenic:D:1
+civic:10	snv	ARAF		214		S	C					1	ARAF S214C	variantId=10;mpId=10;evidence=Oncogenic:D:1,Predictive:C:1,Predictive:D:2;civicTranscript=ENST00000377045.4
+civic:4410	snv	ARAF		214		S	F					1	ARAF S214F	variantId=4410;mpId=4338;evidence=Functional:B:1,Oncogenic:D:1
+civic:1293	del	ARID1A										2	ARID1A Loss	variantId=1293;mpId=1267;evidence=Predictive:D:2;civicTranscript=ENST00000324856.7
+civic:1682	fs	ARID1A		1175		P						1	ARID1A P1175FS*5	variantId=1682;mpId=1590;evidence=Predictive:D:1
+civic:1510	snv	ARID1A		456		Q	*					1	ARID1A Q456*	variantId=1510;mpId=1418;evidence=Predictive:D:1;civicTranscript=ENST00000324856.7
+civic:409	amp	ASNS										1	ASNS Amplification	variantId=409;mpId=405;evidence=Predictive:D:1;civicTranscript=ENST00000175506.4
+civic:feature:61907	fusion	ASPSCR1	TFE3									1	ASPSCR1::TFE3 fusion	featureId=61907;variantIds=3622;evidence=Diagnostic:B:4
+civic:2230	del	ASS1										2	ASS1 Loss	variantId=2230;mpId=2106;evidence=Predictive:D:1
+civic:557	exon	ASXL1					any	12				1	ASXL1 EXON 12 MUTATION	variantId=557;mpId=553;evidence=Prognostic:B:1;civicTranscript=ENST00000375687.4
+civic:177	gene	ASXL1					any					2	ASXL1 Mutation	variantId=177;mpId=177;evidence=Diagnostic:B:1,Prognostic:B:5;civicTranscript=ENST00000375687.4
+civic:feature:61853	fusion	ATF7IP	JAK2									1	ATF7IP::JAK2 fusion	featureId=61853;variantIds=2846;evidence=Diagnostic:C:2
+civic:1166	fs	ATM		468		K						1	ATM K468FS	variantId=1166;mpId=1140;evidence=Predictive:D:1;civicTranscript=ENST00000278616.4
+civic:178	gene	ATM					any					2	ATM Mutation	variantId=178;mpId=178;evidence=Predictive:D:5,Prognostic:B:1;civicTranscript=ENST00000278616.4
+civic:1155	snv	ATM		293		K	*					1	ATM K293*	variantId=1155;mpId=1129;evidence=Predictive:D:1;civicTranscript=ENST00000278616.4
+civic:1158	snv	ATM		1025		F	L					1	ATM F1025L	variantId=1158;mpId=1132;evidence=Predictive:D:1;civicTranscript=ENST00000278616.4
+civic:1168	snv	ATM		1682		D	H					1	ATM D1682H	variantId=1168;mpId=1142;evidence=Predictive:D:1;civicTranscript=ENST00000278616.4
+civic:1160	snv	ATM		1930		D	V					1	ATM D1930V	variantId=1160;mpId=1134;evidence=Predictive:D:1;civicTranscript=ENST00000278616.4
+civic:1169	snv	ATM		2062		A	V					1	ATM A2062V	variantId=1169;mpId=1143;evidence=Predictive:D:1;civicTranscript=ENST00000278616.4
+civic:1162	snv	ATM		2187		E	*					1	ATM E2187*	variantId=1162;mpId=1136;evidence=Predictive:D:1;civicTranscript=ENST00000278616.4
+civic:243	snv	ATM		2289		S	*					1	ATM S2289*	variantId=243;mpId=239;evidence=Predictive:C:1;civicTranscript=ENST00000278616.4
+civic:901	snv	ATM		2666		T	A					1	ATM T2666A	variantId=901;mpId=875;evidence=Predictive:D:1;civicTranscript=ENST00000278616.4
+civic:1164	snv	ATM		2732		F	V					1	ATM F2732V	variantId=1164;mpId=1138;evidence=Predictive:D:1;civicTranscript=ENST00000278616.4
+civic:244	snv	ATM		2875		N	H					1	ATM N2875H	variantId=244;mpId=240;evidence=Predictive:C:1;civicTranscript=ENST00000278616.4
+civic:903	snv	ATM		3008		R	C					1	ATM R3008C	variantId=903;mpId=877;evidence=Predictive:D:1;civicTranscript=ENST00000278616.4
+civic:feature:61880	fusion	ATP1B1	NRG1									1	ATP1B1::NRG1 fusion	featureId=61880;variantIds=2178;evidence=Predictive:C:1
+civic:271	fs	ATR		774		I						1	ATR I774FS	variantId=271;mpId=267;evidence=Prognostic:B:1;civicTranscript=ENST00000350721.4
+civic:3203	gene	ATRX					any					2	ATRX Mutation	variantId=3203;mpId=3072;evidence=Diagnostic:B:1;civicTranscript=ENST00000373344.5
+civic:180	amp	AURKA										1	AURKA Amplification	variantId=180;mpId=180;evidence=Predictive:E:1;civicTranscript=ENST00000395913.3
+civic:616	fs	B2M		14		S						1	B2M S14FS	variantId=616;mpId=612;evidence=Predictive:C:1;civicTranscript=ENST00000558401.1
+civic:2212	del	BAP1										2	BAP1 Loss	variantId=2212;mpId=2088;evidence=Predictive:E:1
+civic:183	gene	BAP1					any					2	BAP1 Mutation	variantId=183;mpId=183;evidence=Predictive:B:1,Predictive:D:1,Prognostic:B:3;civicTranscript=ENST00000460680.1
+civic:2219	gene	BARD1					trunc					2	BARD1 Loss-of-function	variantId=2219;mpId=2095;evidence=Predictive:D:1
+civic:5573	snv	BARD1		320		G	*					1	BARD1 G320*	variantId=5573;mpId=6066;evidence=Predictive:C:1
+civic:2233	gene	BCL2					any					2	BCL2 Mutation	variantId=2233;mpId=2109;evidence=Prognostic:B:1;civicTranscript=ENST00000398117.1
+civic:2960	snv	BCL2		101		G	V					1	BCL2 G101V	variantId=2960;mpId=2829;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000398117.1
+civic:3082	snv	BCL2		104		F	I					1	BCL2 F104I	variantId=3082;mpId=2951;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000398117.1
+civic:feature:61890	fusion	BCOR	CCNB3									1	BCOR::CCNB3 fusion	featureId=61890;variantIds=3251;evidence=Diagnostic:B:3,Diagnostic:C:3
+civic:663	gene	BCOR					any					2	BCOR Mutation	variantId=663;mpId=659;evidence=Prognostic:B:1;civicTranscript=ENST00000342274.4
+civic:4527	itd	BCOR										1	BCOR ITD	variantId=4527;mpId=4547;evidence=Diagnostic:B:7,Oncogenic:B:2
+civic:feature:61802	fusion	BCR	ABL1									1	BCR::ABL1 fusion	featureId=61802;variantIds=1;evidence=Diagnostic:A:1,Diagnostic:B:9,Diagnostic:C:1,Predictive:A:4,Predictive:C:2,Predictive:D:2
+civic:feature:61859	fusion	BCR	JAK2									1	BCR::JAK2 fusion	featureId=61859;variantIds=2860;evidence=Diagnostic:C:4
+civic:feature:61872	fusion	BCR	PDGFRA									1	BCR::PDGFRA fusion	featureId=61872;variantIds=2971;evidence=Predictive:C:1
+civic:feature:61999	fusion	BCR	NTRK2									1	BCR::NTRK2 fusion	featureId=61999;variantIds=4941;evidence=Predictive:C:2
+civic:590	gene	BIRC3					trunc					2	BIRC3 TRUNCATING MUTATION	variantId=590;mpId=586;evidence=Prognostic:B:1;civicTranscript=ENST00000263464.3
+civic:251	amp	BIRC7										1	BIRC7 Amplification	variantId=251;mpId=247;evidence=Predictive:D:1;civicTranscript=ENST00000217169.3
+civic:1269	amp	BRAF										1	BRAF Amplification	variantId=1269;mpId=1243;evidence=Predictive:C:1;civicTranscript=ENST00000288602.6
+civic:2650	exon	BRAF					any	15				1	BRAF Exon 15 Mutation	variantId=2650;mpId=2519;evidence=Predictive:C:2
+civic:feature:61776	fusion	BRAF	CUL1									1	BRAF::CUL1 fusion	featureId=61776;variantIds=656;evidence=Predictive:C:1
+civic:399	gene	BRAF					any					2	BRAF Mutation	variantId=399;mpId=395;evidence=Predictive:B:6,Predictive:D:2,Prognostic:B:4;civicTranscript=ENST00000288602.6
+civic:522	inframe	BRAF		485	490	L						1	BRAF L485_P490del	variantId=522;mpId=518;evidence=Predictive:D:1;civicTranscript=ENST00000288602.6
+civic:2794	inframe	BRAF		486	490	N						1	BRAF N486_P490del	variantId=2794;mpId=2663;evidence=Predictive:C:1
+civic:1298	inframe	BRAF		599		T						1	BRAF T599dup	variantId=1298;mpId=1272;evidence=Predictive:C:1;civicTranscript=ENST00000288602.6
+civic:1106	snv	BRAF		464		G	V					1	BRAF G464V	variantId=1106;mpId=1080;evidence=Predictive:C:1;civicTranscript=ENST00000288602.6
+civic:2222	snv	BRAF		466		G	V					1	BRAF G466V	variantId=2222;mpId=2098;evidence=Predictive:C:1,Predictive:D:4;civicTranscript=ENST00000288602.6
+civic:2822	snv	BRAF		469		G						1	BRAF G469	variantId=2822;mpId=2691;evidence=Predictive:B:1
+civic:992	snv	BRAF		469		G	A					1	BRAF G469A	variantId=992;mpId=966;evidence=Predictive:C:1;civicTranscript=ENST00000288602.6
+civic:993	snv	BRAF		469		G	E					1	BRAF G469E	variantId=993;mpId=967;evidence=Predictive:D:2;civicTranscript=ENST00000288602.6
+civic:581	snv	BRAF		483		K	M					1	BRAF K483M	variantId=581;mpId=577;evidence=Predictive:E:1;civicTranscript=ENST00000288602.6
+civic:2221	snv	BRAF		496		G	A					1	BRAF G496A	variantId=2221;mpId=2097;evidence=Predictive:C:1
+civic:658	snv	BRAF		505		L	H					1	BRAF L505H	variantId=658;mpId=654;evidence=Predictive:B:1,Predictive:D:1;civicTranscript=ENST00000288602.6
+civic:2793	snv	BRAF		525		L	R					1	BRAF L525R	variantId=2793;mpId=2662;evidence=Functional:D:1,Predictive:D:1;civicTranscript=ENST00000288602.6
+civic:1186	snv	BRAF		581		N	S					1	BRAF N581S	variantId=1186;mpId=1160;evidence=Predictive:C:1;civicTranscript=ENST00000288602.6
+civic:5659	snv	BRAF		581		N	Y					1	BRAF N581Y	variantId=5659;mpId=6164;evidence=Predictive:D:1
+civic:2398	snv	BRAF		594		D	K					1	BRAF D594K	variantId=2398;mpId=2271;evidence=Predictive:B:2
+civic:579	snv	BRAF		594		D	A					1	BRAF D594A	variantId=579;mpId=575;evidence=Predictive:E:1;civicTranscript=ENST00000288602.6
+civic:580	snv	BRAF		594		D	V					1	BRAF D594V	variantId=580;mpId=576;evidence=Predictive:E:1;civicTranscript=ENST00000288602.6
+civic:611	snv	BRAF		594		D	G					1	BRAF D594G	variantId=611;mpId=607;evidence=Predictive:C:4,Predictive:D:3,Prognostic:B:2;civicTranscript=ENST00000288602.6
+civic:1627	snv	BRAF		596		G	R					1	BRAF G596R	variantId=1627;mpId=1535;evidence=Predictive:C:1,Predictive:D:3;civicTranscript=ENST00000288602.6
+civic:694	snv	BRAF		596		G	C					1	BRAF G596C	variantId=694;mpId=675;evidence=Predictive:D:1;civicTranscript=ENST00000288602.6
+civic:288	snv	BRAF		597		L	R					1	BRAF L597R	variantId=288;mpId=284;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000288602.6
+civic:582	snv	BRAF		597		L	S					1	BRAF L597S	variantId=582;mpId=578;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000288602.6
+civic:583	snv	BRAF		597		L	Q					1	BRAF L597Q	variantId=583;mpId=579;evidence=Predictive:C:2,Predictive:D:1;civicTranscript=ENST00000288602.6
+civic:585	snv	BRAF		597		L	V					1	BRAF L597V	variantId=585;mpId=581;evidence=Predictive:C:1;civicTranscript=ENST00000288602.6
+civic:2826	snv	BRAF		598		A	V					1	BRAF A598V	variantId=2826;mpId=2695;evidence=Predictive:C:1;civicTranscript=ENST00000288602.6
+civic:11	snv	BRAF		600		V	D					1	BRAF V600D	variantId=11;mpId=11;evidence=Predictive:B:1,Predictive:C:2,Predictive:D:2;civicTranscript=ENST00000288602.6
+civic:12	snv	BRAF		600		V	E					1	BRAF V600E	variantId=12;mpId=12;evidence=Diagnostic:B:3,Predictive:A:6,Predictive:B:42,Predictive:C:16,Predictive:D:12,Prognostic:B:17,Prognostic:C:1;civicTranscript=ENST00000288602.6
+civic:17	snv	BRAF		600		V						1	BRAF V600	variantId=17;mpId=17;evidence=Diagnostic:B:1,Predictive:A:4,Predictive:B:16,Predictive:C:2;civicTranscript=ENST00000288602.6
+civic:563	snv	BRAF		600		V	K					1	BRAF V600K	variantId=563;mpId=559;evidence=Predictive:B:9,Predictive:C:1;civicTranscript=ENST00000288602.6
+civic:584	snv	BRAF		601		K	E					1	BRAF K601E	variantId=584;mpId=580;evidence=Predictive:D:1;civicTranscript=ENST00000288602.6
+civic:2223	snv	BRAF		606		G	E					1	BRAF G606E	variantId=2223;mpId=2099;evidence=Predictive:C:1;civicTranscript=ENST00000288602.6
+civic:2224	snv	BRAF		731		P	T					1	BRAF P731T	variantId=2224;mpId=2100;evidence=Predictive:C:1;civicTranscript=ENST00000288602.6
+civic:131	gene	BRCA1					trunc					2	BRCA1 Loss-of-function	variantId=131;mpId=131;evidence=Predictive:C:1;civicTranscript=ENST00000471181.2
+civic:185	gene	BRCA1					any					2	BRCA1 Mutation	variantId=185;mpId=185;evidence=Predictive:A:2,Predictive:B:2;civicTranscript=ENST00000471181.2
+civic:1246	snv	BRCA1		1467		Q	*					1	BRCA1 Q1467*	variantId=1246;mpId=1220;evidence=Predictive:C:1;civicTranscript=ENST00000357654.3
+civic:1555	snv	BRCA1		1815		W	*					1	BRCA1 W1815X	variantId=1555;mpId=1463;evidence=Predictive:D:1
+civic:132	gene	BRCA2					trunc					2	BRCA2 Loss-of-function	variantId=132;mpId=132;evidence=Predictive:B:1;civicTranscript=ENST00000380152.3
+civic:186	gene	BRCA2					any					2	BRCA2 Mutation	variantId=186;mpId=186;evidence=Predictive:A:1,Predictive:B:2;civicTranscript=ENST00000380152.3
+civic:1247	snv	BRCA2		1		M	R					1	BRCA2 M1R	variantId=1247;mpId=1221;evidence=Predictive:C:1;civicTranscript=ENST00000544455.1
+civic:1248	snv	BRCA2		1		M						1	BRCA2 M1?	variantId=1248;mpId=1222;evidence=Predictive:C:1;civicTranscript=ENST00000544455.1
+civic:1249	snv	BRCA2		159		V	M					1	BRCA2 V159M	variantId=1249;mpId=1223;evidence=Predictive:C:1;civicTranscript=ENST00000544455.1
+civic:1250	snv	BRCA2		211		V	L					1	BRCA2 V211L	variantId=1250;mpId=1224;evidence=Predictive:C:1;civicTranscript=ENST00000380152.3
+civic:1251	snv	BRCA2		211		V	I					1	BRCA2 V211I	variantId=1251;mpId=1225;evidence=Predictive:C:1
+civic:1252	snv	BRCA2		2336		R	P					1	BRCA2 R2336P	variantId=1252;mpId=1226;evidence=Predictive:C:1;civicTranscript=ENST00000544455.1
+civic:feature:62001	fusion	BRD4	NUTM1									1	BRD4::NUTM1 fusion	featureId=62001;variantIds=4973;evidence=Diagnostic:B:2,Predictive:C:1,Predictive:D:2
+civic:2169	gene	BTK					any					2	BTK MUTATION	variantId=2169;mpId=2045;evidence=Prognostic:B:1
+civic:870	snv	BTK		316		T	A					1	BTK T316A	variantId=870;mpId=844;evidence=Predictive:C:1;civicTranscript=ENST00000308731.7
+civic:168	snv	BTK		481		C	S					1	BTK C481S	variantId=168;mpId=168;evidence=Predictive:B:2;civicTranscript=ENST00000308731.7
+civic:feature:61846	fusion	CAD	ALK									1	CAD::ALK fusion	featureId=61846;variantIds=2769;evidence=Predictive:C:1
+civic:559	exon	CALR					fs	9				1	CALR EXON 9 FRAMESHIFT	variantId=559;mpId=555;evidence=Predictive:B:1,Prognostic:A:1,Prognostic:B:1;civicTranscript=ENST00000316448.5
+civic:2388	gene	CALR					any					2	CALR Mutation	variantId=2388;mpId=2261;evidence=Diagnostic:A:1
+civic:feature:61827	fusion	CBFA2T3	GLIS2									1	CBFA2T3::GLIS2 fusion	featureId=61827;variantIds=2630;evidence=Diagnostic:B:4
+civic:feature:61760	fusion	CBFB	MYH11									1	CBFB::MYH11 fusion	featureId=61760;variantIds=431;evidence=Diagnostic:B:3,Prognostic:B:1
+civic:feature:61775	fusion	CCDC6	RET									1	CCDC6::RET fusion	featureId=61775;variantIds=626;evidence=Predictive:C:2
+civic:18	amp	CCND1										1	CCND1 Amplification	variantId=18;mpId=18;evidence=Predictive:B:2,Predictive:D:3,Prognostic:B:1;civicTranscript=ENST00000227507.2
+civic:23	del	CCND3										2	CCND3 Loss	variantId=23;mpId=23;evidence=Predictive:D:1;civicTranscript=ENST00000372991.4
+civic:187	amp	CCNE1										1	CCNE1 Amplification	variantId=187;mpId=187;evidence=Predictive:D:3,Prognostic:B:1;civicTranscript=ENST00000262643.3
+civic:feature:62039	fusion	CD72	ROS1									1	CD72::ROS1 fusion	featureId=62039;variantIds=5012;evidence=Predictive:C:1
+civic:feature:62932	fusion	CD74	PDGFRB									1	CD74::PDGFRB fusion	featureId=62932;variantIds=5557;evidence=Predictive:C:1
+civic:664	gene	CDH1					any					2	CDH1 MUTATION	variantId=664;mpId=660;evidence=Prognostic:E:1;civicTranscript=ENST00000261769.5
+civic:236	gene	CDK12					trunc					2	CDK12 Loss-of-function	variantId=236;mpId=232;evidence=Predictive:D:1;civicTranscript=ENST00000447079.4
+civic:553	amp	CDK4										1	CDK4 Amplification	variantId=553;mpId=549;evidence=Predictive:B:2;civicTranscript=ENST00000257904.6
+civic:556	snv	CDK4		24		R	C					1	CDK4 R24C	variantId=556;mpId=552;evidence=Predictive:D:1;civicTranscript=ENST00000257904.6
+civic:2654	del	CDKN2A										1	CDKN2A Deletion	variantId=2654;mpId=2523;evidence=Prognostic:B:1
+civic:554	del	CDKN2A										2	CDKN2A Loss	variantId=554;mpId=550;evidence=Predictive:B:2,Predictive:C:1,Predictive:D:5,Prognostic:B:1;civicTranscript=ENST00000579755.1
+civic:2704	gene	CDKN2A					any					2	CDKN2A Mutation	variantId=2704;mpId=2573;evidence=Predictive:B:2;civicTranscript=ENST00000498124.1
+civic:555	del	CDKN2B										2	CDKN2B Loss	variantId=555;mpId=551;evidence=Predictive:D:2;civicTranscript=ENST00000276925.6
+civic:29	gene	CEBPA					any					2	CEBPA Mutation	variantId=29;mpId=29;evidence=Diagnostic:B:3,Diagnostic:D:1,Predictive:B:1,Prognostic:B:6;civicTranscript=ENST00000498907.2
+civic:feature:61894	fusion	CENPC	ABL1									1	CENPC::ABL1 fusion	featureId=61894;variantIds=3270;evidence=Diagnostic:C:1
+civic:feature:61938	fusion	CHD7	BEND2									1	CHD7::BEND2 fusion	featureId=61938;variantIds=4337;evidence=Oncogenic:C:1
+civic:feature:61891	fusion	CIC	DUX4									1	CIC::DUX4 fusion	featureId=61891;variantIds=3252;evidence=Diagnostic:B:3,Oncogenic:C:1
+civic:feature:61797	fusion	CLTC	ALK									1	CLTC::ALK fusion	featureId=61797;variantIds=520;evidence=Predictive:C:1,Predictive:D:1,Prognostic:C:1
+civic:feature:62892	fusion	CNTRL	ABL1									1	CNTRL::ABL1 fusion	featureId=62892;variantIds=5492;evidence=Oncogenic:C:2
+civic:feature:61873	fusion	COL1A1	PDGFB									1	COL1A1::PDGFB fusion	featureId=61873;variantIds=2972;evidence=Diagnostic:B:4,Diagnostic:C:1,Oncogenic:B:1,Predictive:C:1
+civic:feature:62891	fusion	CRABP2	NTRK1									1	CRABP2::NTRK1 fusion	featureId=62891;variantIds=5488;evidence=Oncogenic:C:1
+civic:713	gene	CRBN					any					2	CRBN Mutation	variantId=713;mpId=694;evidence=Predictive:C:1;civicTranscript=ENST00000231948.4
+civic:560	gene	CSF3R					any					2	CSF3R Mutation	variantId=560;mpId=556;evidence=Diagnostic:B:2;civicTranscript=ENST00000373106.1
+civic:2387	snv	CSF3R		618		T	I					1	CSF3R T618I	variantId=2387;mpId=2260;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000373103.1
+civic:feature:61798	fusion	CTLA4	CD28									1	CTLA4::CD28 fusion	featureId=61798;variantIds=599;evidence=Predictive:C:1
+civic:2892	exon	CTNNB1					any	3				1	CTNNB1 Exon 3 Mutation	variantId=2892;mpId=2761;evidence=Diagnostic:B:2,Prognostic:B:1;civicTranscript=ENST00000349496.5
+civic:1296	gene	CTNNB1					any					2	CTNNB1 Activating Mutation	variantId=1296;mpId=1270;evidence=Predictive:D:1;civicTranscript=ENST00000349496.5
+civic:1285	snv	CTNNB1		41		T	A					1	CTNNB1 T41A	variantId=1285;mpId=1259;evidence=Diagnostic:B:2,Prognostic:B:1;civicTranscript=ENST00000349496.5
+civic:1286	snv	CTNNB1		45		S	F					1	CTNNB1 S45F	variantId=1286;mpId=1260;evidence=Diagnostic:B:2,Predictive:C:1,Prognostic:B:2;civicTranscript=ENST00000349496.5
+civic:1287	snv	CTNNB1		45		S	P					1	CTNNB1 S45P	variantId=1287;mpId=1261;evidence=Diagnostic:B:2,Prognostic:B:1;civicTranscript=ENST00000349496.5
+civic:feature:61810	fusion	CUX1	BRAF									1	CUX1::BRAF fusion	featureId=61810;variantIds=2229;evidence=Predictive:C:1
+civic:feature:61949	fusion	DCTN1	ALK									1	DCTN1::ALK fusion	featureId=61949;variantIds=4495;evidence=Predictive:C:1
+civic:feature:61817	fusion	DDR2	NTRK1									1	DDR2::NTRK1 fusion	featureId=61817;variantIds=2394;evidence=Predictive:E:1
+civic:139	snv	DDR2		63		L	V					1	DDR2 L63V	variantId=139;mpId=139;evidence=Predictive:D:1;civicTranscript=ENST00000367922.3
+civic:140	snv	DDR2		239		L	R					1	DDR2 L239R	variantId=140;mpId=140;evidence=Predictive:D:1;civicTranscript=ENST00000367922.3
+civic:141	snv	DDR2		253		G	C					1	DDR2 G253C	variantId=141;mpId=141;evidence=Predictive:D:1;civicTranscript=ENST00000367922.3
+civic:142	snv	DDR2		505		G	S					1	DDR2 G505S	variantId=142;mpId=142;evidence=Predictive:D:1;civicTranscript=ENST00000367922.3
+civic:143	snv	DDR2		638		I	F					1	DDR2 I638F	variantId=143;mpId=143;evidence=Predictive:D:1;civicTranscript=ENST00000367922.3
+civic:144	snv	DDR2		774		G	V					1	DDR2 G774V	variantId=144;mpId=144;evidence=Predictive:D:1;civicTranscript=ENST00000367922.3
+civic:feature:62007	fusion	DEK	NUP214									1	DEK::NUP214 fusion	featureId=62007;variantIds=5010;evidence=Diagnostic:B:3,Prognostic:B:3
+civic:2050	snv	DICER1		1705		E	K					1	DICER1 E1705K	variantId=2050;mpId=1926;evidence=Diagnostic:B:1,Diagnostic:C:1;civicTranscript=ENST00000526495.1
+civic:2051	snv	DICER1		1709		D	N					1	DICER1 D1709N	variantId=2051;mpId=1927;evidence=Diagnostic:B:1,Oncogenic:C:1
+civic:2195	snv	DICER1		1709		D	G					1	DICER1 D1709G	variantId=2195;mpId=2071;evidence=Oncogenic:C:1
+civic:2196	snv	DICER1		1709		D	E					1	DICER1 D1709E	variantId=2196;mpId=2072;evidence=Oncogenic:C:1
+civic:2052	snv	DICER1		1813		E	Q					1	DICER1 E1813Q	variantId=2052;mpId=1928;evidence=Diagnostic:B:1,Oncogenic:C:1;civicTranscript=ENST00000526495.1
+civic:feature:61800	fusion	DNAJB1	PRKACA									1	DNAJB1::PRKACA fusion	featureId=61800;variantIds=31;evidence=Diagnostic:B:3,Diagnostic:C:1
+civic:189	gene	DNMT3A					any					2	DNMT3A Mutation	variantId=189;mpId=189;evidence=Predictive:B:2,Prognostic:B:5;civicTranscript=ENST00000264709.3
+civic:32	snv	DNMT3A		882		R						1	DNMT3A R882	variantId=32;mpId=32;evidence=Diagnostic:B:6,Predictive:B:2,Prognostic:B:19;civicTranscript=ENST00000264709.3
+civic:feature:62895	fusion	DPP10	NTRK3									1	DPP10::NTRK3 fusion	featureId=62895;variantIds=5506;evidence=Oncogenic:C:1
+civic:2893	exon	DPYD					del	11-19				1	DPYD EXON 11-19 DELETION	variantId=2893;mpId=2762;evidence=Predictive:C:1;civicTranscript=ENST00000370192.3
+civic:feature:61768	fusion	DUX4	*									1	DUX4::* fusion	featureId=61768;variantIds=524;evidence=Diagnostic:D:1,Prognostic:C:1
+civic:feature:61769	fusion	EBF1	PDGFRB									1	EBF1::PDGFRB fusion	featureId=61769;variantIds=535;evidence=Predictive:C:5
+civic:feature:61854	fusion	EBF1	JAK2									1	EBF1::JAK2 fusion	featureId=61854;variantIds=2847;evidence=Diagnostic:C:1
+civic:feature:61992	fusion	EEF1G	ROS1									1	EEF1G::ROS1 fusion	featureId=61992;variantIds=4778;evidence=Predictive:C:1
+civic:190	amp	EGFR										1	EGFR Amplification	variantId=190;mpId=190;evidence=Predictive:B:7,Predictive:D:1,Prognostic:B:4;civicTranscript=ENST00000275493.2
+civic:133	exon	EGFR					del	19				1	EGFR Exon 19 Deletion	variantId=133;mpId=133;evidence=Predictive:A:2,Predictive:B:12,Predictive:C:1,Predictive:D:3;civicTranscript=ENST00000275493.2
+civic:252	exon	EGFR					del	4				1	EGFR Exon 4 Deletion	variantId=252;mpId=248;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:726	exon	EGFR					ins	20				1	EGFR Exon 20 Insertion	variantId=726;mpId=707;evidence=Predictive:A:4,Predictive:B:2,Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:feature:61806	fusion	EGFR	RAD51									1	EGFR::RAD51 fusion	featureId=61806;variantIds=2203;evidence=Predictive:C:7
+civic:feature:61928	fusion	EGFR	PURB									1	EGFR::PURB fusion	featureId=61928;variantIds=4282;evidence=Predictive:C:1
+civic:feature:62071	fusion	EGFR	USP42									1	EGFR::USP42 fusion	featureId=62071;variantIds=5167;evidence=Oncogenic:C:1
+civic:1765	gene	EGFR					any					2	EGFR Gain-of-function	variantId=1765;mpId=1641;evidence=Predictive:B:1
+civic:442	gene	EGFR					any					2	EGFR Mutation	variantId=442;mpId=438;evidence=Predictive:A:2,Predictive:B:12,Predictive:C:1,Prognostic:B:2;civicTranscript=ENST00000275493.2
+civic:1002	inframe	EGFR		746	750	E						1	EGFR E746_A750del	variantId=1002;mpId=976;evidence=Predictive:C:2,Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1012	inframe	EGFR		747	753	L						1	EGFR L747_P753delinsS	variantId=1012;mpId=986;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1580	inframe	EGFR		747	752	L						1	EGFR L747_S752delinsQ	variantId=1580;mpId=1488;evidence=Predictive:C:1
+civic:1515	inframe	EGFR		763	764	A						1	EGFR A763_Y764insFQEA	variantId=1515;mpId=1423;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1665	inframe	EGFR		764	765	Y						1	EGFR Y764_V765insHH	variantId=1665;mpId=1573;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1664	inframe	EGFR		766	767	M						1	EGFR M766_A767insAI	variantId=1664;mpId=1572;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:2213	inframe	EGFR		766	767	M						1	EGFR M766_A767insASV	variantId=2213;mpId=2089;evidence=Predictive:C:1
+civic:1511	inframe	EGFR		768	770	S						1	EGFR S768_D770dup	variantId=1511;mpId=1419;evidence=Predictive:C:1
+civic:1445	inframe	EGFR		770	771	D						1	EGFR D770_N771insSVD	variantId=1445;mpId=1353;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1512	inframe	EGFR		770	771	D						1	EGFR D770_N771insG	variantId=1512;mpId=1420;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1514	inframe	EGFR		770	771	D						1	EGFR D770_N771insGL	variantId=1514;mpId=1422;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1566	inframe	EGFR		770	771	D						1	EGFR D770_N771insGT	variantId=1566;mpId=1474;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1569	inframe	EGFR		770	771	D						1	EGFR D770_N771insNPG	variantId=1569;mpId=1477;evidence=Predictive:D:1
+civic:2214	inframe	EGFR		770		D						1	EGFR D770delinsGY	variantId=2214;mpId=2090;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:3304	inframe	EGFR		771	772	N						1	EGFR N771_P772insL	variantId=3304;mpId=3172;evidence=Predictive:C:1
+civic:1667	inframe	EGFR		772	773	P						1	EGFR P772_H773insYNP	variantId=1667;mpId=1575;evidence=Predictive:C:1
+civic:1668	inframe	EGFR		772	774	P						1	EGFR P772_V774insPHV	variantId=1668;mpId=1576;evidence=Predictive:C:1
+civic:1446	inframe	EGFR		773	774	H						1	EGFR H773_V774insH	variantId=1446;mpId=1354;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1513	inframe	EGFR		773	774	H						1	EGFR H773_V774insNPH	variantId=1513;mpId=1421;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:994	snv	EGFR		108		R	K					1	EGFR R108K	variantId=994;mpId=968;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:3464	snv	EGFR		114		E	K					1	EGFR E114K	variantId=3464;mpId=3332;evidence=Functional:D:1;civicTranscript=ENST00000275493.2
+civic:3344	snv	EGFR		222		R	C					1	EGFR R222C	variantId=3344;mpId=3212;evidence=Functional:D:1;civicTranscript=ENST00000275493.2
+civic:995	snv	EGFR		263		T	P					1	EGFR T263P	variantId=995;mpId=969;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:996	snv	EGFR		289		A	V					1	EGFR A289V	variantId=996;mpId=970;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:2613	snv	EGFR		441		V	F					1	EGFR V441F	variantId=2613;mpId=2486;evidence=Predictive:E:1;civicTranscript=ENST00000275493.2
+civic:454	snv	EGFR		451		R	C					1	EGFR R451C	variantId=454;mpId=450;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:443	snv	EGFR		465		G	R					1	EGFR G465R	variantId=443;mpId=439;evidence=Predictive:C:2;civicTranscript=ENST00000275493.2
+civic:455	snv	EGFR		467		K	T					1	EGFR K467T	variantId=455;mpId=451;evidence=Predictive:D:2;civicTranscript=ENST00000275493.2
+civic:453	snv	EGFR		492		S	R					1	EGFR S492R	variantId=453;mpId=449;evidence=Predictive:C:2,Predictive:D:2;civicTranscript=ENST00000275493.2
+civic:997	snv	EGFR		598		G	V					1	EGFR G598V	variantId=997;mpId=971;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:4408	snv	EGFR		645		S	C					1	EGFR S645C	variantId=4408;mpId=4336;evidence=Oncogenic:D:1
+civic:2333	snv	EGFR		705		R	K					1	EGFR R705K	variantId=2333;mpId=2206;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:134	snv	EGFR		719		G	S					1	EGFR G719S	variantId=134;mpId=134;evidence=Predictive:B:1,Predictive:D:3;civicTranscript=ENST00000275493.2
+civic:1420	snv	EGFR		719		G	D					1	EGFR G719D	variantId=1420;mpId=1328;evidence=Predictive:C:1
+civic:718	snv	EGFR		719		G						1	EGFR G719	variantId=718;mpId=699;evidence=Predictive:B:2;civicTranscript=ENST00000275493.2
+civic:999	snv	EGFR		719		G	A					1	EGFR G719A	variantId=999;mpId=973;evidence=Predictive:C:2;civicTranscript=ENST00000275493.2
+civic:720	snv	EGFR		720		S						1	EGFR S720	variantId=720;mpId=701;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:317	snv	EGFR		724		G	S					1	EGFR G724S	variantId=317;mpId=313;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1571	snv	EGFR		731		W	L					1	EGFR W731L	variantId=1571;mpId=1479;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1572	snv	EGFR		734		E	Q					1	EGFR E734Q	variantId=1572;mpId=1480;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1001	snv	EGFR		742		V	A					1	EGFR V742A	variantId=1001;mpId=975;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:724	snv	EGFR		746		E	G					1	EGFR E746G	variantId=724;mpId=705;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1891	snv	EGFR		747		L	P					1	EGFR L747P	variantId=1891;mpId=1767;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:460	snv	EGFR		753		P	S					1	EGFR P753S	variantId=460;mpId=456;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:4409	snv	EGFR		754		K	E					1	EGFR K754E	variantId=4409;mpId=4337;evidence=Oncogenic:D:1
+civic:723	snv	EGFR		757		K	R					1	EGFR K757R	variantId=723;mpId=704;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:712	snv	EGFR		761		D	Y					1	EGFR D761Y	variantId=712;mpId=693;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:562	snv	EGFR		768		S	I					1	EGFR S768I	variantId=562;mpId=558;evidence=Predictive:C:4,Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1892	snv	EGFR		774		V	A					1	EGFR V774A	variantId=1892;mpId=1768;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1894	snv	EGFR		774		V	M					1	EGFR V774M	variantId=1894;mpId=1770;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1181	snv	EGFR		776		R	C					1	EGFR R776C	variantId=1181;mpId=1155;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1573	snv	EGFR		785		T	A					1	EGFR T785A	variantId=1573;mpId=1481;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:34	snv	EGFR		790		T	M					1	EGFR T790M	variantId=34;mpId=34;evidence=Oncogenic:D:1,Predictive:A:3,Predictive:B:9,Predictive:C:4,Predictive:D:11,Predictive:E:1,Prognostic:B:2;civicTranscript=ENST00000275493.2
+civic:1574	snv	EGFR		797		C	Y					1	EGFR C797Y	variantId=1574;mpId=1482;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:415	snv	EGFR		797		C	S					1	EGFR C797S	variantId=415;mpId=411;evidence=Predictive:B:1;civicTranscript=ENST00000275493.2
+civic:1575	snv	EGFR		801		Y	H					1	EGFR Y801H	variantId=1575;mpId=1483;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1895	snv	EGFR		806		K	E					1	EGFR K806E	variantId=1895;mpId=1771;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1188	snv	EGFR		826		N	S					1	EGFR N826S	variantId=1188;mpId=1162;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1896	snv	EGFR		826		N	Y					1	EGFR N826Y	variantId=1896;mpId=1772;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1017	snv	EGFR		831		R	H					1	EGFR R831H	variantId=1017;mpId=991;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1897	snv	EGFR		834		V	I					1	EGFR V834I	variantId=1897;mpId=1773;evidence=Predictive:C:1
+civic:1018	snv	EGFR		838		L	V					1	EGFR L838V	variantId=1018;mpId=992;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1457	snv	EGFR		838		L	P					1	EGFR L838P	variantId=1457;mpId=1365;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1899	snv	EGFR		842		N	S					1	EGFR N842S	variantId=1899;mpId=1775;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1463	snv	EGFR		847		T	I					1	EGFR T847I	variantId=1463;mpId=1371;evidence=Predictive:C:1
+civic:1466	snv	EGFR		851		V	I					1	EGFR V851I	variantId=1466;mpId=1374;evidence=Predictive:C:1
+civic:33	snv	EGFR		858		L	R					1	EGFR L858R	variantId=33;mpId=33;evidence=Predictive:A:2,Predictive:B:12,Predictive:C:3,Predictive:D:19,Prognostic:B:1;civicTranscript=ENST00000275493.2
+civic:1020	snv	EGFR		861		L	Q					1	EGFR L861Q	variantId=1020;mpId=994;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1477	snv	EGFR		861		L	R					1	EGFR L861R	variantId=1477;mpId=1385;evidence=Predictive:C:1;civicTranscript=ENST00000275493.2
+civic:1866	snv	EGFR		861		L						1	EGFR L861	variantId=1866;mpId=1742;evidence=Predictive:B:1
+civic:1187	snv	EGFR		864		A	T					1	EGFR A864T	variantId=1187;mpId=1161;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:1482	snv	EGFR		868		E	G					1	EGFR E868G	variantId=1482;mpId=1390;evidence=Predictive:D:1;civicTranscript=ENST00000275493.2
+civic:674	gene	EIF1AX					any					2	EIF1AX MUTATION	variantId=674;mpId=670;evidence=Prognostic:C:1;civicTranscript=ENST00000379607.5
+civic:feature:61993	fusion	EML1	NTRK2									1	EML1::NTRK2 fusion	featureId=61993;variantIds=4779;evidence=Predictive:C:1
+civic:feature:61755	fusion	EML4	ALK									1	EML4::ALK fusion	featureId=61755;variantIds=5,500,501,503;evidence=Predictive:C:7,Predictive:D:12,Predictive:E:2
+civic:feature:61933	fusion	EML4	NTRK3									1	EML4::NTRK3 fusion	featureId=61933;variantIds=4299;evidence=Diagnostic:C:3,Oncogenic:C:5,Oncogenic:D:2,Predictive:C:5
+civic:5162	sv	EPOR	*									1	EPOR rearrangements	variantId=5162;mpId=5442;evidence=Diagnostic:B:1
+civic:306	amp	ERBB2										1	ERBB2 Amplification	variantId=306;mpId=302;evidence=Predictive:A:3,Predictive:B:29,Predictive:C:4,Predictive:D:12,Prognostic:B:1;civicTranscript=ENST00000269571.5
+civic:2854	exon	ERBB2					ins	20				1	ERBB2 Exon 20 Insertion	variantId=2854;mpId=2723;evidence=Predictive:A:1,Predictive:B:1
+civic:2657	gene	ERBB2					any					2	ERBB2 Activating Mutation	variantId=2657;mpId=2526;evidence=Predictive:B:1
+civic:666	gene	ERBB2					any					2	ERBB2 Mutation	variantId=666;mpId=662;evidence=Predictive:A:2,Predictive:B:2,Predictive:C:1;civicTranscript=ENST00000269571.5
+civic:37	inframe	ERBB2		755	759	L						1	ERBB2 L755_T759del	variantId=37;mpId=37;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:414	inframe	ERBB2		772	775	Y						1	ERBB2 Y772_A775DUP	variantId=414;mpId=410;evidence=Predictive:A:1,Predictive:B:1,Predictive:C:3,Predictive:D:2;civicTranscript=ENST00000269571.5
+civic:818	inframe	ERBB2		774		M						1	ERBB2 M774DELINSWLV	variantId=818;mpId=796;evidence=Predictive:C:1;civicTranscript=ENST00000269571.5
+civic:4485	inframe	ERBB2		775	776	A						1	ERBB2 A775_G776insYVMA	variantId=4485;mpId=4463;evidence=Predictive:A:1
+civic:4723	inframe	ERBB2		775	776	A						1	ERBB2 A775_G776insTVMA	variantId=4723;mpId=4852;evidence=Predictive:A:1
+civic:4724	inframe	ERBB2		775	776	A						1	ERBB2 A775_G776insV	variantId=4724;mpId=4853;evidence=Predictive:A:1
+civic:4725	inframe	ERBB2		775	776	A						1	ERBB2 A775_G776insVVMA	variantId=4725;mpId=4854;evidence=Predictive:A:1
+civic:4489	inframe	ERBB2		776		G						1	ERBB2 G776delinsVC	variantId=4489;mpId=4467;evidence=Predictive:A:1
+civic:4726	inframe	ERBB2		776	777	G						1	ERBB2 G776_V777delinsVCD	variantId=4726;mpId=4855;evidence=Predictive:A:1
+civic:4727	inframe	ERBB2		776		G						1	ERBB2 G776delinsCV	variantId=4727;mpId=4856;evidence=Predictive:C:1
+civic:4728	inframe	ERBB2		776		G						1	ERBB2 G776delinsLC	variantId=4728;mpId=4857;evidence=Predictive:A:1
+civic:4486	inframe	ERBB2		778	780	G						1	ERBB2 G778_P780dup	variantId=4486;mpId=4464;evidence=Predictive:A:1,Predictive:C:3,Predictive:D:1
+civic:4729	inframe	ERBB2		778	779	G						1	ERBB2 G778_S779insLPS	variantId=4729;mpId=4858;evidence=Predictive:A:1
+civic:4663	snv	ERBB2		292		G	R					1	ERBB2 G292R	variantId=4663;mpId=4772;evidence=Predictive:B:1;civicTranscript=ENST00000269571.5
+civic:38	snv	ERBB2		309		G	A					1	ERBB2 G309A	variantId=38;mpId=38;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:4492	snv	ERBB2		310		S	F					1	ERBB2 S310F	variantId=4492;mpId=4470;evidence=Predictive:A:1,Predictive:C:1;civicTranscript=ENST00000269571.5
+civic:497	snv	ERBB2		310		S	F,Y					1	ERBB2 S310F/Y	variantId=497;mpId=493;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:42	snv	ERBB2		678		R	Q					1	ERBB2 R678Q	variantId=42;mpId=42;evidence=Predictive:B:3,Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:1304	snv	ERBB2		755		L	P					1	ERBB2 L755P	variantId=1304;mpId=1278;evidence=Predictive:A:1,Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:39	snv	ERBB2		755		L	S					1	ERBB2 L755S	variantId=39;mpId=39;evidence=Predictive:C:1,Predictive:D:5;civicTranscript=ENST00000269571.5
+civic:40	snv	ERBB2		755		L	W					1	ERBB2 L755W	variantId=40;mpId=40;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:4670	snv	ERBB2		755		L	A					1	ERBB2 L755A	variantId=4670;mpId=4780;evidence=Predictive:A:1
+civic:4673	snv	ERBB2		755		L	M					1	ERBB2 L755M	variantId=4673;mpId=4783;evidence=Predictive:A:1;civicTranscript=ENST00000269571.5
+civic:35	snv	ERBB2		769		D	H					1	ERBB2 D769H	variantId=35;mpId=35;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:36	snv	ERBB2		769		D	Y					1	ERBB2 D769Y	variantId=36;mpId=36;evidence=Predictive:C:2,Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:872	snv	ERBB2		773		V	A					1	ERBB2 V773A	variantId=872;mpId=846;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:816	snv	ERBB2		776		G	L					1	ERBB2 G776L	variantId=816;mpId=794;evidence=Predictive:C:1;civicTranscript=ENST00000269571.5
+civic:44	snv	ERBB2		777		V	L					1	ERBB2 V777L	variantId=44;mpId=44;evidence=Predictive:C:1,Predictive:D:4;civicTranscript=ENST00000269571.5
+civic:1305	snv	ERBB2		798		T	M					1	ERBB2 T798M	variantId=1305;mpId=1279;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:2331	snv	ERBB2		798		T	I					1	ERBB2 T798I	variantId=2331;mpId=2204;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:45	snv	ERBB2		842		V	I					1	ERBB2 V842I	variantId=45;mpId=45;evidence=Predictive:D:2;civicTranscript=ENST00000269571.5
+civic:873	snv	ERBB2		857		N	S					1	ERBB2 N857S	variantId=873;mpId=847;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:871	snv	ERBB2		862		T	A					1	ERBB2 T862A	variantId=871;mpId=845;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:496	snv	ERBB2		866		L	M					1	ERBB2 L866M	variantId=496;mpId=492;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:874	snv	ERBB2		878		H	Y					1	ERBB2 H878Y	variantId=874;mpId=848;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:43	snv	ERBB2		896		R	C					1	ERBB2 R896C	variantId=43;mpId=43;evidence=Predictive:D:1;civicTranscript=ENST00000269571.5
+civic:702	snv	ERBB3		103		R	G					1	ERBB3 R103G	variantId=702;mpId=683;evidence=Predictive:B:1;civicTranscript=ENST00000267101.3
+civic:701	snv	ERBB3		104		V	M					1	ERBB3 V104M	variantId=701;mpId=682;evidence=Predictive:B:1;civicTranscript=ENST00000267101.3
+civic:703	snv	ERBB3		284		G	R					1	ERBB3 G284R	variantId=703;mpId=684;evidence=Predictive:B:1;civicTranscript=ENST00000267101.3
+civic:781	snv	ERBB3		855		V	A					1	ERBB3 V855A	variantId=781;mpId=762;evidence=Predictive:D:1;civicTranscript=ENST00000267101.3
+civic:310	gene	ERBB4					any					2	ERBB4 Mutation	variantId=310;mpId=306;evidence=Predictive:D:1;civicTranscript=ENST00000342788.4
+civic:691	snv	ERRFI1		384		E	*					1	ERRFI1 E384*	variantId=691;mpId=672;evidence=Predictive:C:1;civicTranscript=ENST00000377482.5
+civic:3910	gene	ESR1					any					2	ESR1 Mutation	variantId=3910;mpId=3778;evidence=Predictive:A:2
+civic:692	snv	ESR1		463		S	P					1	ESR1 S463P	variantId=692;mpId=673;evidence=Predictive:D:1;civicTranscript=ENST00000440973.1
+civic:46	snv	ESR1		536		L	Q					1	ESR1 L536Q	variantId=46;mpId=46;evidence=Predictive:D:2;civicTranscript=ENST00000440973.1
+civic:48	snv	ESR1		537		Y	C					1	ESR1 Y537C	variantId=48;mpId=48;evidence=Predictive:D:2;civicTranscript=ENST00000206249.3
+civic:49	snv	ESR1		537		Y	N					1	ESR1 Y537N	variantId=49;mpId=49;evidence=Predictive:D:2;civicTranscript=ENST00000206249.3
+civic:50	snv	ESR1		537		Y	S					1	ESR1 Y537S	variantId=50;mpId=50;evidence=Predictive:D:2;civicTranscript=ENST00000206249.3
+civic:47	snv	ESR1		538		D	G					1	ESR1 D538G	variantId=47;mpId=47;evidence=Predictive:C:1,Predictive:D:2;civicTranscript=ENST00000206249.3
+civic:feature:61785	fusion	ETV6	NTRK3									1	ETV6::NTRK3 fusion	featureId=61785;variantIds=801;evidence=Diagnostic:A:1,Diagnostic:B:8,Oncogenic:C:1,Oncogenic:D:2,Predictive:A:2,Predictive:C:12,Predictive:D:3,Prognostic:B:1
+civic:feature:61819	fusion	ETV6	NTRK2									1	ETV6::NTRK2 fusion	featureId=61819;variantIds=2396;evidence=Predictive:C:1,Predictive:D:1
+civic:feature:61820	fusion	ETV6	ABL1									1	ETV6::ABL1 fusion	featureId=61820;variantIds=2575;evidence=Diagnostic:B:1,Predictive:C:2
+civic:feature:61858	fusion	ETV6	JAK2									1	ETV6::JAK2 fusion	featureId=61858;variantIds=2859;evidence=Diagnostic:C:3
+civic:feature:61886	fusion	ETV6	RUNX1									1	ETV6::RUNX1 fusion	featureId=61886;variantIds=3140;evidence=Diagnostic:A:1,Diagnostic:B:2,Predictive:B:1
+civic:feature:61778	fusion	EWSR1	DDIT3									1	EWSR1::DDIT3 fusion	featureId=61778;variantIds=717;evidence=Diagnostic:C:1
+civic:feature:61796	fusion	EWSR1	FLI1									1	EWSR1::FLI1 fusion	featureId=61796;variantIds=164,706;evidence=Diagnostic:B:5,Predictive:D:1,Prognostic:B:1
+civic:feature:61868	fusion	EWSR1	WT1									1	EWSR1::WT1 fusion	featureId=61868;variantIds=2941;evidence=Diagnostic:B:2,Diagnostic:C:1
+civic:feature:61881	fusion	EWSR1	ATF1									1	EWSR1::ATF1 fusion	featureId=61881;variantIds=3054;evidence=Diagnostic:B:3
+civic:feature:61969	fusion	EWSR1	ERG									1	EWSR1::ERG fusion	featureId=61969;variantIds=4602;evidence=Diagnostic:B:1,Diagnostic:C:2
+civic:feature:61970	fusion	EWSR1	NFATC2									1	EWSR1::NFATC2 fusion	featureId=61970;variantIds=4603;evidence=Diagnostic:B:1,Diagnostic:C:2
+civic:feature:62002	fusion	EWSR1	CREB3L1									1	EWSR1::CREB3L1 fusion	featureId=62002;variantIds=4974;evidence=Diagnostic:B:1,Diagnostic:C:2
+civic:feature:62111	fusion	EWSR1	PATZ1									1	EWSR1::PATZ1 fusion	featureId=62111;variantIds=5373;evidence=Diagnostic:C:3
+civic:feature:62120	fusion	EWSR1	TFCP2									1	EWSR1::TFCP2 fusion	featureId=62120;variantIds=5414;evidence=Diagnostic:C:3
+civic:feature:62878	fusion	EWSR1	*									1	EWSR1::* fusion	featureId=62878;variantIds=5450;evidence=Diagnostic:B:3,Diagnostic:C:1
+civic:feature:62882	fusion	EWSR1	CREB1									1	EWSR1::CREB1 fusion	featureId=62882;variantIds=5479;evidence=Diagnostic:B:2,Diagnostic:C:1
+civic:feature:62890	fusion	EWSR1	KLF15									1	EWSR1::KLF15 fusion	featureId=62890;variantIds=5485;evidence=Diagnostic:C:1
+civic:163	gene	EZH2					any					2	EZH2 Mutation	variantId=163;mpId=163;evidence=Prognostic:B:2;civicTranscript=ENST00000320356.2
+civic:3737	gene	EZH2					any					2	EZH2 Activating Mutation	variantId=3737;mpId=3605;evidence=Predictive:A:1
+civic:165	snv	EZH2		646		Y						1	EZH2 Y646	variantId=165;mpId=165;evidence=Diagnostic:B:2,Functional:D:1,Predictive:D:1;civicTranscript=ENST00000320356.2
+civic:2666	snv	EZH2		646		Y	S					1	EZH2 Y646S	variantId=2666;mpId=2535;evidence=Functional:D:1;civicTranscript=ENST00000320356.2
+civic:2989	snv	EZH2		646		Y	F					1	EZH2 Y646F	variantId=2989;mpId=2858;evidence=Functional:D:2,Oncogenic:D:1;civicTranscript=ENST00000320356.2
+civic:3364	snv	EZH2		646		Y	H					1	EZH2 Y646H	variantId=3364;mpId=3232;evidence=Functional:D:1,Predictive:C:1;civicTranscript=ENST00000320356.2
+civic:4090	snv	EZH2		646		Y	N					1	EZH2 Y646N	variantId=4090;mpId=3958;evidence=Functional:D:2,Oncogenic:D:1;civicTranscript=ENST00000320356.7
+civic:4415	snv	EZH2		682		A	G					1	EZH2 A682G	variantId=4415;mpId=4343;evidence=Functional:D:1,Oncogenic:B:1,Oncogenic:C:1;civicTranscript=ENST00000320356.2
+civic:281	gene	FBXW7					any					2	FBXW7 Mutation	variantId=281;mpId=277;evidence=Predictive:B:2;civicTranscript=ENST00000281708.4
+civic:637	gene	FBXW7					trunc					2	FBXW7 Loss-of-function	variantId=637;mpId=633;evidence=Predictive:D:1;civicTranscript=ENST00000281708.4
+civic:5577	amp	FGF19										1	FGF19 Amplification	variantId=5577;mpId=6070;evidence=Predictive:B:1
+civic:267	amp	FGFR1										1	FGFR1 Amplification	variantId=267;mpId=263;evidence=Predictive:B:8,Predictive:C:2,Predictive:D:7,Prognostic:B:8;civicTranscript=ENST00000425967.3
+civic:feature:61978	fusion	FGFR1	TACC1									1	FGFR1::TACC1 fusion	featureId=61978;variantIds=4619;evidence=Predictive:C:1
+civic:2659	itd	FGFR1										1	FGFR1 Internal Duplication	variantId=2659;mpId=2528;evidence=Diagnostic:B:1
+civic:515	snv	FGFR1		546		N	K					1	FGFR1 N546K	variantId=515;mpId=511;evidence=Predictive:C:1,Predictive:E:1;civicTranscript=ENST00000341462.5
+civic:5578	snv	FGFR1		602		S	F					1	FGFR1 S602F	variantId=5578;mpId=6071;evidence=Predictive:C:1
+civic:feature:61844	fusion	FGFR1OP2	FGFR1									1	FGFR1OP2::FGFR1 fusion	featureId=61844;variantIds=2743;evidence=Predictive:D:1
+civic:feature:61754	fusion	FGFR2	*									1	FGFR2::* fusion	featureId=61754;variantIds=2202;evidence=Predictive:B:1
+civic:feature:61764	fusion	FGFR2	TACC3									1	FGFR2::TACC3 fusion	featureId=61764;variantIds=54;evidence=Predictive:C:1
+civic:feature:61782	fusion	FGFR2	BICC1									1	FGFR2::BICC1 fusion	featureId=61782;variantIds=782;evidence=Diagnostic:B:1,Predictive:C:2,Predictive:D:1
+civic:feature:61783	fusion	FGFR2	AHCYL1									1	FGFR2::AHCYL1 fusion	featureId=61783;variantIds=783;evidence=Diagnostic:B:1,Predictive:C:1,Predictive:D:1
+civic:feature:61803	fusion	FGFR2	OGA									1	FGFR2::OGA fusion	featureId=61803;variantIds=52;evidence=Predictive:C:1
+civic:feature:62931	fusion	FGFR2	ACOT11									1	FGFR2::ACOT11 fusion	featureId=62931;variantIds=5549;evidence=Predictive:C:1
+civic:511	gene	FGFR2					any					2	FGFR2 Mutation	variantId=511;mpId=507;evidence=Predictive:B:1,Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000457416.2
+civic:5548	snv	FGFR2		252		S	W					1	FGFR2 S252W	variantId=5548;mpId=6041;evidence=Predictive:C:1
+civic:2905	snv	FGFR2		253		P	R					1	FGFR2 P253R	variantId=2905;mpId=2774;evidence=Predictive:C:1
+civic:2945	snv	FGFR2		290		W	C					1	FGFR2 W290C	variantId=2945;mpId=2814;evidence=Oncogenic:D:1
+civic:5579	snv	FGFR2		538		M	I					1	FGFR2 M538I	variantId=5579;mpId=6072;evidence=Predictive:C:1
+civic:545	snv	FGFR2		550		N	K					1	FGFR2 N550K	variantId=545;mpId=541;evidence=Predictive:D:1;civicTranscript=ENST00000457416.2
+civic:2906	amp	FGFR3										1	FGFR3 Amplification	variantId=2906;mpId=2775;evidence=Predictive:C:1
+civic:feature:61756	fusion	FGFR3	BAIAP2L1									1	FGFR3::BAIAP2L1 fusion	featureId=61756;variantIds=53;evidence=Predictive:D:1
+civic:feature:61813	fusion	FGFR3	TACC3									1	FGFR3::TACC3 fusion	featureId=61813;variantIds=830;evidence=Predictive:B:1,Predictive:C:2
+civic:827	gene	FGFR3					any					2	FGFR3 Mutation	variantId=827;mpId=805;evidence=Predictive:A:1,Predictive:B:2;civicTranscript=ENST00000340107.4
+civic:4034	snv	FGFR3		187		S	Y					1	FGFR3 S187Y	variantId=4034;mpId=3902;evidence=Oncogenic:D:1;civicTranscript=ENST00000440486.8
+civic:2403	snv	FGFR3		248		R	C					1	FGFR3 R248C	variantId=2403;mpId=2276;evidence=Predictive:D:1;civicTranscript=ENST00000440486.2
+civic:628	snv	FGFR3		249		S	C					1	FGFR3 S249C	variantId=628;mpId=624;evidence=Oncogenic:D:3,Predictive:C:2,Predictive:D:3;civicTranscript=ENST00000340107.4
+civic:4038	snv	FGFR3		274		H	Y					1	FGFR3 H274Y	variantId=4038;mpId=3906;evidence=Oncogenic:D:1;civicTranscript=ENST00000440486.8
+civic:2406	snv	FGFR3		370		G	C					1	FGFR3 G370C	variantId=2406;mpId=2279;evidence=Predictive:D:1;civicTranscript=ENST00000440486.2
+civic:2404	snv	FGFR3		373		Y	C					1	FGFR3 Y373C	variantId=2404;mpId=2277;evidence=Diagnostic:B:1,Oncogenic:D:2,Predictive:D:1;civicTranscript=ENST00000440486.2
+civic:2405	snv	FGFR3		380		G	R					1	FGFR3 G380R	variantId=2405;mpId=2278;evidence=Functional:D:1,Oncogenic:C:1;civicTranscript=ENST00000440486.2
+civic:4023	snv	FGFR3		391		A	E					1	FGFR3 A391E	variantId=4023;mpId=3891;evidence=Functional:D:1;civicTranscript=ENST00000440486.2
+civic:4049	snv	FGFR3		500		A	T					1	FGFR3 A500T	variantId=4049;mpId=3917;evidence=Functional:D:1;civicTranscript=ENST00000440486.8
+civic:4050	snv	FGFR3		508		K	M					1	FGFR3 K508M	variantId=4050;mpId=3918;evidence=Functional:D:1;civicTranscript=ENST00000440486.8
+civic:3693	snv	FGFR3		540		N	K					1	FGFR3 N540K	variantId=3693;mpId=3561;evidence=Functional:D:2,Oncogenic:D:1;civicTranscript=ENST00000440486.2
+civic:2400	snv	FGFR3		555		V	M					1	FGFR3 V555M	variantId=2400;mpId=2273;evidence=Functional:D:2,Oncogenic:D:1,Predictive:D:1;civicTranscript=ENST00000440486.2
+civic:1400	snv	FGFR3		650		K	E					1	FGFR3 K650E	variantId=1400;mpId=1308;evidence=Predictive:D:1;civicTranscript=ENST00000440486.2
+civic:3695	snv	FGFR3		650		K	N					1	FGFR3 K650N	variantId=3695;mpId=3563;evidence=Functional:D:1;civicTranscript=ENST00000440486.2
+civic:4019	snv	FGFR3		650		K	Q					1	FGFR3 K650Q	variantId=4019;mpId=3887;evidence=Functional:D:2;civicTranscript=ENST00000440486.2
+civic:4024	snv	FGFR3		650		K	D					1	FGFR3 K650D	variantId=4024;mpId=3892;evidence=Functional:D:1;civicTranscript=ENST00000440486.2
+civic:4025	snv	FGFR3		650		K	L					1	FGFR3 K650L	variantId=4025;mpId=3893;evidence=Functional:D:1;civicTranscript=ENST00000440486.2
+civic:4030	snv	FGFR3		697		G	C					1	FGFR3 G697C	variantId=4030;mpId=3898;evidence=Functional:B:1,Oncogenic:D:2;civicTranscript=ENST00000440486.2
+civic:4069	snv	FGFR3		805		R	Q					1	FGFR3 R805Q	variantId=4069;mpId=3937;evidence=Oncogenic:D:1;civicTranscript=ENST00000440486.8
+civic:5580	snv	FGFR4		665		G	E					1	FGFR4 G665E	variantId=5580;mpId=6073;evidence=Predictive:C:1
+civic:feature:61773	fusion	FIP1L1	PDGFRA									1	FIP1L1::PDGFRA fusion	featureId=61773;variantIds=574;evidence=Predictive:A:1,Predictive:B:1,Predictive:C:1,Predictive:D:2
+civic:2619	amp	FLT3										1	FLT3 Amplification	variantId=2619;mpId=2492;evidence=Predictive:B:1
+civic:519	gene	FLT3					any					2	FLT3 Mutation	variantId=519;mpId=515;evidence=Predictive:A:1,Predictive:B:1,Prognostic:B:1;civicTranscript=ENST00000241453.7
+civic:4341	inframe	FLT3		593		D						1	FLT3 D593del	variantId=4341;mpId=4250;evidence=Predictive:D:1
+civic:55	itd	FLT3										1	FLT3 ITD	variantId=55;mpId=55;evidence=Diagnostic:B:1,Predictive:B:6,Predictive:C:1,Predictive:D:7,Prognostic:A:1,Prognostic:B:15;civicTranscript=ENST00000241453.7
+civic:3071	snv	FLT3		691		F	L					1	FLT3 F691L	variantId=3071;mpId=2940;evidence=Predictive:D:2
+civic:5481	snv	FLT3		737		M	I					1	FLT3 M737I	variantId=5481;mpId=5955;evidence=Oncogenic:D:1
+civic:1302	snv	FLT3		835		D	V					1	FLT3 D835V	variantId=1302;mpId=1276;evidence=Predictive:C:1,Predictive:D:7;civicTranscript=ENST00000241453.7
+civic:3011	snv	FLT3		835		D	Y					1	FLT3 D835Y	variantId=3011;mpId=2880;evidence=Predictive:D:5;civicTranscript=ENST00000241453.7
+civic:3075	snv	FLT3		835		D	I					1	FLT3 D835I	variantId=3075;mpId=2944;evidence=Predictive:D:1;civicTranscript=ENST00000241453.7
+civic:437	snv	FLT3		835		D						1	FLT3 D835	variantId=437;mpId=433;evidence=Predictive:B:2,Predictive:D:2,Prognostic:C:1;civicTranscript=ENST00000241453.7
+civic:612	snv	FLT3		835		D	H					1	FLT3 D835H	variantId=612;mpId=608;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000241453.7
+civic:613	snv	FLT3		835		D	H,Y					1	FLT3 D835H/Y	variantId=613;mpId=609;evidence=Predictive:D:1;civicTranscript=ENST00000241453.7
+civic:3572	snv	FLT3		836		I	S					1	FLT3 I836S	variantId=3572;mpId=3440;evidence=Oncogenic:D:1
+civic:3573	snv	FLT3		836		I	T					1	FLT3 I836T	variantId=3573;mpId=3441;evidence=Oncogenic:D:1
+civic:3201	snv	FLT3		841		N	I					1	FLT3 N841I	variantId=3201;mpId=3070;evidence=Predictive:D:1;civicTranscript=ENST00000241453.7
+civic:3070	snv	FLT3		842		Y	C					1	FLT3 Y842C	variantId=3070;mpId=2939;evidence=Predictive:D:6
+civic:feature:62023	fusion	FOS	*									1	FOS::* fusion	featureId=62023;variantIds=739;evidence=Diagnostic:C:1
+civic:4595	sv	FOS	*									1	FOS Rearrangement	variantId=4595;mpId=4657;evidence=Diagnostic:B:2
+civic:feature:62112	fusion	FOSB	WWTR1									1	FOSB::WWTR1 fusion	featureId=62112;variantIds=5386;evidence=Diagnostic:C:1
+civic:4596	sv	FOSB	*									1	FOSB Rearrangement	variantId=4596;mpId=4658;evidence=Diagnostic:C:1
+civic:198	snv	FOXL2		134		C	W					1	FOXL2 C134W	variantId=198;mpId=198;evidence=Diagnostic:A:1,Diagnostic:B:1;civicTranscript=ENST00000330315.3
+civic:153	amp	FOXP1										1	FOXP1 AMPLIFICATION	variantId=153;mpId=153;evidence=Diagnostic:B:1;civicTranscript=ENST00000318789.4
+civic:feature:61837	fusion	FOXP1	ABL1									1	FOXP1::ABL1 fusion	featureId=61837;variantIds=2682;evidence=Diagnostic:C:1,Oncogenic:C:1,Predictive:C:1,Prognostic:C:1
+civic:4575	sv	FOXR2	*									1	FOXR2 Rearrangement	variantId=4575;mpId=4620;evidence=Diagnostic:B:3
+civic:feature:61779	fusion	FUS	DDIT3									1	FUS::DDIT3 fusion	featureId=61779;variantIds=722;evidence=Diagnostic:B:1,Diagnostic:C:1,Diagnostic:D:2
+civic:feature:61967	fusion	FUS	ERG									1	FUS::ERG fusion	featureId=61967;variantIds=4600;evidence=Diagnostic:B:2,Diagnostic:C:1
+civic:feature:61971	fusion	FUS	NFATC2									1	FUS::NFATC2 fusion	featureId=61971;variantIds=4604;evidence=Diagnostic:B:1,Diagnostic:C:2
+civic:feature:62003	fusion	FUS	CREB3L2									1	FUS::CREB3L2 fusion	featureId=62003;variantIds=4975;evidence=Diagnostic:B:2,Diagnostic:C:1
+civic:feature:62056	fusion	FUS	TFCP2									1	FUS::TFCP2 fusion	featureId=62056;variantIds=5114;evidence=Diagnostic:C:1
+civic:feature:62927	fusion	GCC2	RAF1									1	GCC2::RAF1 fusion	featureId=62927;variantIds=5542;evidence=Predictive:C:1
+civic:506	gene	GNA11					any					2	GNA11 Mutation	variantId=506;mpId=502;evidence=Predictive:B:1,Predictive:C:1,Predictive:D:2;civicTranscript=ENST00000078429.4
+civic:558	snv	GNA11		209		Q						1	GNA11 Q209	variantId=558;mpId=554;evidence=Predictive:B:1;civicTranscript=ENST00000078429.4
+civic:505	gene	GNAQ					any					2	GNAQ Mutation	variantId=505;mpId=501;evidence=Predictive:B:2,Predictive:D:2;civicTranscript=ENST00000286548.4
+civic:507	snv	GNAQ		209		Q						1	GNAQ Q209	variantId=507;mpId=503;evidence=Predictive:B:1,Predictive:C:1;civicTranscript=ENST00000286548.4
+civic:604	snv	GNAQ		209		Q	P					1	GNAQ Q209P	variantId=604;mpId=600;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000286548.4
+civic:4507	gene	GNAS					any					2	GNAS Mutation	variantId=4507;mpId=4494;evidence=Predictive:B:1,Predictive:D:1
+civic:1319	snv	GNAS		201		R	H					1	GNAS R201H	variantId=1319;mpId=1293;evidence=Predictive:C:1;civicTranscript=ENST00000371085.3
+civic:876	snv	GNAS		201		R						1	GNAS R201	variantId=876;mpId=850;evidence=Prognostic:B:1
+civic:feature:62013	fusion	GOLGA4	RAF1									1	GOLGA4::RAF1 fusion	featureId=62013;variantIds=5029;evidence=Predictive:C:2
+civic:feature:61889	fusion	GOLGA5	JAK2									1	GOLGA5::JAK2 fusion	featureId=61889;variantIds=3214;evidence=Predictive:C:1
+civic:feature:61818	fusion	GON4L	NTRK1									1	GON4L::NTRK1 fusion	featureId=61818;variantIds=2395;evidence=Predictive:E:1
+civic:feature:61847	fusion	GOPC	ROS1									1	GOPC::ROS1 fusion	featureId=61847;variantIds=2770,5150;evidence=Predictive:C:3,Predictive:D:1
+civic:2652	gene	H3-3A					any					2	H3-3A MUTATION	variantId=2652;mpId=2521;evidence=Prognostic:B:1
+civic:2416	snv	H3-3A		28		K	M					1	H3-3A K28M	variantId=2416;mpId=2289;evidence=Diagnostic:A:1,Diagnostic:B:4,Oncogenic:B:1,Predictive:A:1,Predictive:B:1,Prognostic:B:1;civicTranscript=ENST00000366815.3
+civic:2421	snv	H3-3A		35		G	W					1	H3-3A G35W	variantId=2421;mpId=2294;evidence=Diagnostic:B:3;civicTranscript=ENST00000366815.3
+civic:3378	snv	H3-3A		35		G	V					1	H3-3A G35V	variantId=3378;mpId=3246;evidence=Diagnostic:B:1,Functional:D:1,Prognostic:B:3;civicTranscript=ENST00000366815.3
+civic:3379	snv	H3-3A		35		G	R					1	H3-3A G35R	variantId=3379;mpId=3247;evidence=Diagnostic:B:4,Functional:D:1,Prognostic:B:3;civicTranscript=ENST00000366815.3
+civic:3587	snv	H3-3A		35		G						1	H3-3A G35	variantId=3587;mpId=3455;evidence=Oncogenic:D:2;civicTranscript=ENST00000366815.3
+civic:2420	snv	H3-3B		36		K	M					1	H3-3B K36M	variantId=2420;mpId=2293;evidence=Diagnostic:B:1
+civic:2815	snv	H3C2		27		K	M					1	H3C2 K27M	variantId=2815;mpId=2684;evidence=Diagnostic:B:1,Diagnostic:C:1,Functional:D:1,Oncogenic:B:1
+civic:5517	snv	H3C4		28		K	M					1	H3C4 K28M	variantId=5517;mpId=5999;evidence=Oncogenic:C:1
+civic:feature:61822	fusion	HEY1	NCOA2									1	HEY1::NCOA2 fusion	featureId=61822;variantIds=2581;evidence=Diagnostic:B:4,Predictive:C:1
+civic:275	gene	HRAS					any					2	HRAS Mutation	variantId=275;mpId=271;evidence=Predictive:B:2;civicTranscript=ENST00000451590.1
+civic:274	snv	HRAS		13		G	D					1	HRAS G13D	variantId=274;mpId=270;evidence=Predictive:C:2,Predictive:D:1;civicTranscript=ENST00000451590.1
+civic:2570	snv	HRAS		61		Q						1	HRAS Q61	variantId=2570;mpId=2443;evidence=Prognostic:B:1
+civic:645	gene	IDH1					any					2	IDH1 Mutation	variantId=645;mpId=641;evidence=Predictive:A:1,Predictive:B:1,Predictive:C:1,Predictive:D:1,Prognostic:B:2;civicTranscript=ENST00000415913.1
+civic:420	snv	IDH1		132		R	H					1	IDH1 R132H	variantId=420;mpId=416;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000415913.1
+civic:58	snv	IDH1		132		R						1	IDH1 R132	variantId=58;mpId=58;evidence=Diagnostic:B:1,Predictive:A:1,Predictive:B:1,Predictive:D:1,Prognostic:B:7;civicTranscript=ENST00000415913.1
+civic:59	snv	IDH1		132		R	C					1	IDH1 R132C	variantId=59;mpId=59;evidence=Diagnostic:B:1,Predictive:B:2,Predictive:D:4,Prognostic:B:1;civicTranscript=ENST00000415913.1
+civic:570	gene	IDH2					any					2	IDH2 Mutation	variantId=570;mpId=566;evidence=Predictive:A:1,Predictive:C:1,Predictive:D:1,Prognostic:B:3;civicTranscript=ENST00000330062.3
+civic:62	snv	IDH2		140		R						1	IDH2 R140	variantId=62;mpId=62;evidence=Prognostic:B:5;civicTranscript=ENST00000330062.3
+civic:199	snv	IDH2		172		R						1	IDH2 R172	variantId=199;mpId=199;evidence=Diagnostic:B:1,Prognostic:B:4;civicTranscript=ENST00000330062.3
+civic:63	snv	IDH2		172		R	K					1	IDH2 R172K	variantId=63;mpId=63;evidence=Prognostic:B:3;civicTranscript=ENST00000330062.3
+civic:5020	del	IFNGR1										2	IFNGR1 Loss	variantId=5020;mpId=5233;evidence=Predictive:D:1
+civic:feature:61834	fusion	IGH	CRLF2									1	IGH::CRLF2 fusion	featureId=61834;variantIds=2663;evidence=Diagnostic:B:1,Diagnostic:C:2,Prognostic:B:2
+civic:feature:61914	fusion	IGH	EPOR									1	IGH::EPOR fusion	featureId=61914;variantIds=3954;evidence=Diagnostic:B:1,Diagnostic:C:3
+civic:feature:62053	fusion	IGH	IL3									1	IGH::IL3 fusion	featureId=62053;variantIds=5084;evidence=Diagnostic:B:1,Diagnostic:C:2
+civic:feature:62054	fusion	IGH	DUX4									1	IGH::DUX4 fusion	featureId=62054;variantIds=5106;evidence=Diagnostic:B:4
+civic:feature:62066	fusion	IGH	MYC									1	IGH::MYC fusion	featureId=62066;variantIds=5148;evidence=Diagnostic:B:1,Diagnostic:C:2
+civic:200	del	IKZF1										1	IKZF1 Deletion	variantId=200;mpId=200;evidence=Predictive:B:1,Prognostic:A:2,Prognostic:B:7;civicTranscript=ENST00000331340.3
+civic:2744	gene	IKZF1					trunc					2	IKZF1 Loss-of-function	variantId=2744;mpId=2613;evidence=Prognostic:B:1
+civic:614	snv	JAK1		503		Q	*					1	JAK1 Q503*	variantId=614;mpId=610;evidence=Predictive:C:1;civicTranscript=ENST00000342505.4
+civic:822	snv	JAK1		703		S	I					1	JAK1 S703I	variantId=822;mpId=800;evidence=Predictive:D:1;civicTranscript=ENST00000342505.4
+civic:64	snv	JAK2		617		V	F					1	JAK2 V617F	variantId=64;mpId=64;evidence=Diagnostic:B:4,Predictive:B:1,Predictive:D:1;civicTranscript=ENST00000381652.3
+civic:2587	snv	JAK2		694		F	L					1	JAK2 F694L	variantId=2587;mpId=2460;evidence=Predictive:C:1;civicTranscript=ENST00000381652.4
+civic:feature:61887	fusion	KANK1	NTRK2									1	KANK1::NTRK2 fusion	featureId=61887;variantIds=3158;evidence=Diagnostic:C:1,Oncogenic:C:2,Predictive:C:3
+civic:feature:61920	fusion	KANK4	ALK									1	KANK4::ALK fusion	featureId=61920;variantIds=4001;evidence=Predictive:C:1
+civic:feature:62022	fusion	KAT6A	CREBBP									1	KAT6A::CREBBP fusion	featureId=62022;variantIds=5042;evidence=Diagnostic:B:2,Diagnostic:C:1
+civic:468	snv	KDR		717		D	V					1	KDR D717V	variantId=468;mpId=464;evidence=Predictive:D:1;civicTranscript=ENST00000263923.4
+civic:502	snv	KDR		961		R	W					1	KDR R961W	variantId=502;mpId=498;evidence=Predictive:C:1;civicTranscript=ENST00000263923.4
+civic:467	snv	KDR		1065		A	T					1	KDR A1065T	variantId=467;mpId=463;evidence=Predictive:D:1;civicTranscript=ENST00000263923.4
+civic:5116	gene	KEAP1					any					2	KEAP1 Mutation	variantId=5116;mpId=5386;evidence=Predictive:D:1
+civic:feature:61795	fusion	KIAA1549	BRAF									1	KIAA1549::BRAF fusion	featureId=61795;variantIds=618;evidence=Diagnostic:B:2,Oncogenic:D:1,Predictive:C:3,Predictive:D:4,Prognostic:B:2
+civic:feature:61786	fusion	KIF5B	RET									1	KIF5B::RET fusion	featureId=61786;variantIds=273;evidence=Predictive:C:2
+civic:feature:61934	fusion	KIF5B	EGFR									1	KIF5B::EGFR fusion	featureId=61934;variantIds=4300;evidence=Predictive:C:1
+civic:2643	exon	KIT					any	13				1	KIT Exon 13 Mutation	variantId=2643;mpId=2512;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:509	exon	KIT					any	9				1	KIT Exon 9 Mutation	variantId=509;mpId=505;evidence=Predictive:A:1,Predictive:B:6,Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:66	exon	KIT					any	11				1	KIT Exon 11 Mutation	variantId=66;mpId=66;evidence=Diagnostic:B:1,Predictive:A:1,Predictive:B:6,Predictive:C:1,Prognostic:B:4;civicTranscript=ENST00000288135.5
+civic:69	exon	KIT					any	14				1	KIT Exon 14 Mutation	variantId=69;mpId=69;evidence=Prognostic:B:1;civicTranscript=ENST00000288135.5
+civic:388	gene	KIT					any					2	KIT Mutation	variantId=388;mpId=384;evidence=Predictive:B:1,Predictive:D:1;civicTranscript=ENST00000288135.5
+civic:2620	inframe	KIT		417	419	T						1	KIT T417_D419delinsY	variantId=2620;mpId=2493;evidence=Predictive:C:1
+civic:2622	inframe	KIT		484	487	K						1	KIT K484_G487DEL	variantId=2622;mpId=2495;evidence=Predictive:C:1
+civic:1558	inframe	KIT		502	503	A						1	KIT A502_Y503insAY	variantId=1558;mpId=1466;evidence=Predictive:D:2
+civic:5366	inframe	KIT		502	503	A						1	KIT A502_Y503dup	variantId=5366;mpId=5805;evidence=Predictive:D:1
+civic:2621	inframe	KIT		506	508	F						1	KIT F506_F508DUP	variantId=2621;mpId=2494;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:2696	inframe	KIT		550	559	K						1	KIT K550_K559DEL	variantId=2696;mpId=2565;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:948	inframe	KIT		550	557	K						1	KIT K550_W557del	variantId=948;mpId=922;evidence=Predictive:D:1;civicTranscript=ENST00000288135.5
+civic:949	inframe	KIT		550	558	K						1	KIT K550_K558del	variantId=949;mpId=923;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:1497	inframe	KIT		551	554	P						1	KIT P551_E554delPMYE	variantId=1497;mpId=1405;evidence=Predictive:D:2
+civic:2695	inframe	KIT		555	559	V						1	KIT V555_V559DEL	variantId=2695;mpId=2564;evidence=Predictive:C:1
+civic:961	inframe	KIT		557	558	W						1	KIT W557_K558del	variantId=961;mpId=935;evidence=Predictive:C:1,Predictive:D:3;civicTranscript=ENST00000288135.5
+civic:1549	inframe	KIT		558		K						1	KIT K558delinsNP	variantId=1549;mpId=1457;evidence=Predictive:D:1
+civic:964	inframe	KIT		558	559	K						1	KIT K558_V559del	variantId=964;mpId=938;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:1550	inframe	KIT		560	576	V						1	KIT V560_L576del	variantId=1550;mpId=1458;evidence=Predictive:D:2
+civic:977	inframe	KIT		579		D						1	KIT D579del	variantId=977;mpId=951;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:67	itd	KIT										1	KIT Internal Duplication	variantId=67;mpId=67;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:201	snv	KIT		541		M	L					1	KIT M541L	variantId=201;mpId=201;evidence=Predictive:C:1,Predictive:E:1;civicTranscript=ENST00000288135.5
+civic:968	snv	KIT		559		V	D					1	KIT V559D	variantId=968;mpId=942;evidence=Predictive:C:1,Predictive:D:2;civicTranscript=ENST00000288135.5
+civic:971	snv	KIT		560		V	D					1	KIT V560D	variantId=971;mpId=945;evidence=Predictive:C:1,Predictive:D:3;civicTranscript=ENST00000288135.5
+civic:972	snv	KIT		560		V	G					1	KIT V560G	variantId=972;mpId=946;evidence=Predictive:D:2;civicTranscript=ENST00000288135.5
+civic:72	snv	KIT		576		L	P					1	KIT L576P	variantId=72;mpId=72;evidence=Predictive:C:1,Predictive:D:4;civicTranscript=ENST00000288135.5
+civic:1659	snv	KIT		628		S	N					1	KIT S628N	variantId=1659;mpId=1567;evidence=Predictive:C:1,Predictive:D:1
+civic:978	snv	KIT		642		K	E					1	KIT K642E	variantId=978;mpId=952;evidence=Predictive:C:2,Predictive:D:2;civicTranscript=ENST00000288135.5
+civic:73	snv	KIT		654		V	A					1	KIT V654A	variantId=73;mpId=73;evidence=Predictive:B:1,Predictive:D:1;civicTranscript=ENST00000288135.5
+civic:1267	snv	KIT		670		T	I					1	KIT T670I	variantId=1267;mpId=1241;evidence=Predictive:C:1,Predictive:D:3;civicTranscript=ENST00000288135.5
+civic:1264	snv	KIT		809		C	G					1	KIT C809G	variantId=1264;mpId=1238;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:1559	snv	KIT		816		D	E					1	KIT D816E	variantId=1559;mpId=1467;evidence=Predictive:D:1;civicTranscript=ENST00000288135.5
+civic:65	snv	KIT		816		D	V					1	KIT D816V	variantId=65;mpId=65;evidence=Predictive:B:1,Predictive:D:3,Prognostic:B:2;civicTranscript=ENST00000288135.5
+civic:983	snv	KIT		816		D	H					1	KIT D816H	variantId=983;mpId=957;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:1265	snv	KIT		820		D	A					1	KIT D820A	variantId=1265;mpId=1239;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:1266	snv	KIT		820		D	G					1	KIT D820G	variantId=1266;mpId=1240;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:986	snv	KIT		820		D	Y					1	KIT D820Y	variantId=986;mpId=960;evidence=Predictive:C:2,Predictive:D:1;civicTranscript=ENST00000288135.5
+civic:1263	snv	KIT		822		N	K					1	KIT N822K	variantId=1263;mpId=1237;evidence=Predictive:C:2,Predictive:D:4;civicTranscript=ENST00000288135.5
+civic:987	snv	KIT		822		N	H					1	KIT N822H	variantId=987;mpId=961;evidence=Predictive:D:1
+civic:989	snv	KIT		823		Y	D					1	KIT Y823D	variantId=989;mpId=963;evidence=Predictive:C:1;civicTranscript=ENST00000288135.5
+civic:990	snv	KIT		829		A	P					1	KIT A829P	variantId=990;mpId=964;evidence=Predictive:D:2;civicTranscript=ENST00000288135.5
+civic:4306	snv	KLF5		419		E	K					1	KLF5 E419K	variantId=4306;mpId=4182;evidence=Functional:D:1
+civic:4307	snv	KLF5		419		E	Q					1	KLF5 E419Q	variantId=4307;mpId=4183;evidence=Functional:D:1
+civic:feature:61851	fusion	KMT2A	*									1	KMT2A::* fusion	featureId=61851;variantIds=2806;evidence=Diagnostic:A:1,Diagnostic:B:6
+civic:4326	del	KMT2C										2	KMT2C Loss	variantId=4326;mpId=4215;evidence=Predictive:B:1
+civic:668	gene	KMT2C					any					2	KMT2C Mutation	variantId=668;mpId=664;evidence=Prognostic:B:1;civicTranscript=ENST00000262189.6
+civic:167	gene	KMT2D					trunc					2	KMT2D Loss-of-function	variantId=167;mpId=167;evidence=Diagnostic:B:1;civicTranscript=ENST00000301067.7
+civic:592	amp	KRAS										1	KRAS Amplification	variantId=592;mpId=588;evidence=Predictive:D:1,Prognostic:B:1;civicTranscript=ENST00000256078.4
+civic:75	exon	KRAS					any	2				1	KRAS Exon 2 Mutation	variantId=75;mpId=75;evidence=Predictive:A:1,Predictive:B:6,Predictive:D:1,Prognostic:B:3;civicTranscript=ENST00000256078.4
+civic:336	gene	KRAS					any					2	KRAS Mutation	variantId=336;mpId=332;evidence=Predictive:A:2,Predictive:B:22,Predictive:C:1,Predictive:D:15,Predictive:E:1,Prognostic:B:3;civicTranscript=ENST00000256078.4
+civic:3341	inframe	KRAS		10	11	G						1	KRAS G10_A11insG	variantId=3341;mpId=3209;evidence=Oncogenic:D:1
+civic:3342	inframe	KRAS		11	12	A						1	KRAS A11_G12insGA	variantId=3342;mpId=3210;evidence=Oncogenic:D:1
+civic:148	snv	KRAS		12		G	A					1	KRAS G12A	variantId=148;mpId=148;evidence=Predictive:B:4,Predictive:C:1,Predictive:D:4;civicTranscript=ENST00000256078.4
+civic:425	snv	KRAS		12		G	V					1	KRAS G12V	variantId=425;mpId=421;evidence=Predictive:B:2,Predictive:C:5,Predictive:D:4,Prognostic:B:1;civicTranscript=ENST00000256078.4
+civic:530	snv	KRAS		12		G	R					1	KRAS G12R	variantId=530;mpId=526;evidence=Predictive:C:2,Predictive:D:2,Prognostic:B:1;civicTranscript=ENST00000256078.4
+civic:76	snv	KRAS		12		G						1	KRAS G12	variantId=76;mpId=76;evidence=Diagnostic:B:2,Prognostic:B:5;civicTranscript=ENST00000256078.4
+civic:78	snv	KRAS		12		G	C					1	KRAS G12C	variantId=78;mpId=78;evidence=Diagnostic:B:1,Predictive:A:3,Predictive:B:5,Predictive:D:7,Prognostic:B:1;civicTranscript=ENST00000256078.4
+civic:79	snv	KRAS		12		G	D					1	KRAS G12D	variantId=79;mpId=79;evidence=Diagnostic:B:1,Predictive:B:2,Predictive:C:7,Predictive:D:7,Prognostic:B:4;civicTranscript=ENST00000256078.4
+civic:913	snv	KRAS		12		G	S					1	KRAS G12S	variantId=913;mpId=887;evidence=Predictive:B:2,Predictive:C:2,Predictive:D:4;civicTranscript=ENST00000256078.4
+civic:1517	snv	KRAS		13		G	V					1	KRAS G13V	variantId=1517;mpId=1425;evidence=Predictive:C:1;civicTranscript=ENST00000256078.4
+civic:80	snv	KRAS		13		G						1	KRAS G13	variantId=80;mpId=80;evidence=Prognostic:B:1;civicTranscript=ENST00000256078.4
+civic:81	snv	KRAS		13		G	D					1	KRAS G13D	variantId=81;mpId=81;evidence=Predictive:B:6,Predictive:C:3,Predictive:D:5;civicTranscript=ENST00000256078.4
+civic:479	snv	KRAS		22		Q	*					1	KRAS Q22*	variantId=479;mpId=475;evidence=Predictive:C:1;civicTranscript=ENST00000256078.4
+civic:203	snv	KRAS		61		Q						1	KRAS Q61	variantId=203;mpId=203;evidence=Predictive:B:1,Prognostic:B:1;civicTranscript=ENST00000256078.4
+civic:907	snv	KRAS		61		Q	H					1	KRAS Q61H	variantId=907;mpId=881;evidence=Oncogenic:D:1,Predictive:C:2;civicTranscript=ENST00000256078.4
+civic:908	snv	KRAS		61		Q	L					1	KRAS Q61L	variantId=908;mpId=882;evidence=Predictive:C:1;civicTranscript=ENST00000256078.4
+civic:909	snv	KRAS		61		Q	R					1	KRAS Q61R	variantId=909;mpId=883;evidence=Predictive:C:1;civicTranscript=ENST00000256078.4
+civic:910	snv	KRAS		61		Q	K					1	KRAS Q61K	variantId=910;mpId=884;evidence=Predictive:C:1;civicTranscript=ENST00000256078.4
+civic:2979	snv	KRAS		146		A						1	KRAS A146	variantId=2979;mpId=2848;evidence=Predictive:B:1
+civic:322	snv	KRAS		146		A	V					1	KRAS A146V	variantId=322;mpId=318;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000256078.4
+civic:905	snv	KRAS		146		A	P					1	KRAS A146P	variantId=905;mpId=879;evidence=Predictive:C:1;civicTranscript=ENST00000256078.4
+civic:906	snv	KRAS		146		A	T					1	KRAS A146T	variantId=906;mpId=880;evidence=Oncogenic:D:1,Predictive:B:1,Predictive:D:2;civicTranscript=ENST00000256078.4
+civic:1207	snv	KRAS		164		R	Q					1	KRAS R164Q	variantId=1207;mpId=1181;evidence=Oncogenic:D:1;civicTranscript=ENST00000311936.3
+civic:feature:61791	fusion	LMNA	NTRK1									1	LMNA::NTRK1 fusion	featureId=61791;variantIds=1278;evidence=Diagnostic:C:5,Oncogenic:D:2,Predictive:C:8
+civic:266	exon	LRP1B					del	12-22				1	LRP1B Exon 12-22 Deletion	variantId=266;mpId=262;evidence=Predictive:D:1;civicTranscript=ENST00000389484.3
+civic:5081	gene	LRP1B					trunc					2	LRP1B Loss-of-function	variantId=5081;mpId=5328;evidence=Predictive:B:1
+civic:5667	gene	LRP1B					any					2	LRP1B Mutation	variantId=5667;mpId=6173;evidence=Predictive:B:1
+civic:feature:61896	fusion	LSM14A	ABL1									1	LSM14A::ABL1 fusion	featureId=61896;variantIds=3272;evidence=Diagnostic:C:1,Prognostic:C:1
+civic:feature:61809	fusion	MACF1	BRAF									1	MACF1::BRAF fusion	featureId=61809;variantIds=2227;evidence=Predictive:C:1
+civic:feature:62004	fusion	MALAT1	GLI1									1	MALAT1::GLI1 fusion	featureId=62004;variantIds=4994;evidence=Diagnostic:C:4
+civic:655	inframe	MAP2K1		56	60	Q						1	MAP2K1 Q56_V60del	variantId=655;mpId=651;evidence=Predictive:C:1;civicTranscript=ENST00000307102.5
+civic:83	snv	MAP2K1		56		Q	P					1	MAP2K1 Q56P	variantId=83;mpId=83;evidence=Predictive:D:1;civicTranscript=ENST00000307102.5
+civic:1272	snv	MAP2K1		57		K	N					1	MAP2K1 K57N	variantId=1272;mpId=1246;evidence=Predictive:D:1,Prognostic:B:1;civicTranscript=ENST00000307102.5
+civic:627	snv	MAP2K1		121		C	S					1	MAP2K1 C121S	variantId=627;mpId=623;evidence=Predictive:C:1;civicTranscript=ENST00000307102.5
+civic:82	snv	MAP2K1		124		P	S					1	MAP2K1 P124S	variantId=82;mpId=82;evidence=Oncogenic:D:1,Predictive:D:1;civicTranscript=ENST00000307102.5
+civic:2842	snv	MAP2K2		46		L	F					1	MAP2K2 L46F	variantId=2842;mpId=2711;evidence=Predictive:D:1
+civic:2840	snv	MAP2K2		125		C	S					1	MAP2K2 C125S	variantId=2840;mpId=2709;evidence=Predictive:D:1
+civic:2843	snv	MAP2K2		126		N	D					1	MAP2K2 N126D	variantId=2843;mpId=2712;evidence=Predictive:D:1
+civic:321	amp	MAPK1										1	MAPK1 Amplification	variantId=321;mpId=317;evidence=Predictive:D:1;civicTranscript=ENST00000215832.6
+civic:320	snv	MAPK1		322		E	K					1	MAPK1 E322K	variantId=320;mpId=316;evidence=Predictive:C:1;civicTranscript=ENST00000215832.6
+civic:5168	sv	MECOM	*									1	MECOM rearrangement	variantId=5168;mpId=5448;evidence=Diagnostic:B:3,Prognostic:B:2
+civic:feature:61753	fusion	MEF2D	CSF1R									1	MEF2D::CSF1R fusion	featureId=61753;variantIds=30;evidence=Predictive:C:1,Predictive:D:1
+civic:feature:62045	fusion	MEF2D	*									1	MEF2D::* fusion	featureId=62045;variantIds=5055;evidence=Diagnostic:B:3
+civic:667	gene	MEN1					fs					2	MEN1 FRAMESHIFT TRUNCATION	variantId=667;mpId=663;evidence=Diagnostic:C:1;civicTranscript=ENST00000337652.1
+civic:270	amp	MET										1	MET Amplification	variantId=270;mpId=266;evidence=Predictive:B:1,Predictive:C:6,Predictive:D:2;civicTranscript=ENST00000318493.6
+civic:324	exon	MET					splice	14				1	MET Exon 14 Skipping Mutation	variantId=324;mpId=320;evidence=Predictive:A:1,Predictive:B:3,Predictive:C:8,Predictive:D:2;civicTranscript=ENST00000318493.6
+civic:2774	snv	MET		1004		R	G					1	MET R1004G	variantId=2774;mpId=2643;evidence=Predictive:C:1;civicTranscript=ENST00000397752.8
+civic:649	snv	MET		1228		D	N					1	MET D1228N	variantId=649;mpId=645;evidence=Predictive:C:1;civicTranscript=ENST00000397752.3
+civic:798	snv	MET		1228		D	V					1	MET D1228V	variantId=798;mpId=776;evidence=Predictive:C:2;civicTranscript=ENST00000397752.3
+civic:feature:62930	fusion	MIPOL1	RAF1									1	MIPOL1::RAF1 fusion	featureId=62930;variantIds=5545;evidence=Predictive:C:1
+civic:725	fs	MLH1		13		E						1	MLH1 E13fs	variantId=725;mpId=706;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:750	fs	MLH1		213		V						1	MLH1 V213FS	variantId=750;mpId=731;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:744	fs	MLH1		426		Q						1	MLH1 Q426FS	variantId=744;mpId=725;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:756	fs	MLH1		536		P						1	MLH1 P536FS	variantId=756;mpId=737;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:730	fs	MLH1		606		G						1	MLH1 G606FS*2	variantId=730;mpId=711;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:746	fs	MLH1		667		D						1	MLH1 D667FS	variantId=746;mpId=727;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:735	fs	MLH1		687		R						1	MLH1 R687FS	variantId=735;mpId=716;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:733	inframe	MLH1		618		K						1	MLH1 K618DEL	variantId=733;mpId=714;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:747	snv	MLH1		1		M	L					1	MLH1 M1L	variantId=747;mpId=728;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:745	snv	MLH1		49		V	A					1	MLH1 V49A	variantId=745;mpId=726;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:759	snv	MLH1		65		G	D					1	MLH1 G65D	variantId=759;mpId=740;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:757	snv	MLH1		67		G	R					1	MLH1 G67R	variantId=757;mpId=738;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:758	snv	MLH1		68		I	S					1	MLH1 I68S	variantId=758;mpId=739;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:741	snv	MLH1		100		R	*					1	MLH1 R100*	variantId=741;mpId=722;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:743	snv	MLH1		117		T	M					1	MLH1 T117M	variantId=743;mpId=724;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:753	snv	MLH1		149		Q	*					1	MLH1 Q149*	variantId=753;mpId=734;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:754	snv	MLH1		226		R	*					1	MLH1 R226*	variantId=754;mpId=735;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:749	snv	MLH1		265		R	G					1	MLH1 R265G	variantId=749;mpId=730;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:752	snv	MLH1		424		A	T					1	MLH1 A424T	variantId=752;mpId=733;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:769	snv	MLH1		490		M	T					1	MLH1 M490T	variantId=769;mpId=750;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:728	snv	MLH1		534		V	R					1	MLH1 V534R	variantId=728;mpId=709;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:751	snv	MLH1		551		N	T					1	MLH1 N551T	variantId=751;mpId=732;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:760	snv	MLH1		681		A	V					1	MLH1 A681V	variantId=760;mpId=741;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:748	snv	MLH1		757		*	L					1	MLH1 *757L	variantId=748;mpId=729;evidence=Oncogenic:C:1;civicTranscript=ENST00000231790.2
+civic:feature:61958	fusion	MN1	ZFTA									1	MN1::ZFTA fusion	featureId=61958;variantIds=4535;evidence=Diagnostic:C:1
+civic:feature:62005	fusion	MN1	BEND2									1	MN1::BEND2 fusion	featureId=62005;variantIds=4995;evidence=Diagnostic:B:1
+civic:4993	sv	MN1	*									1	MN1 Rearrangement	variantId=4993;mpId=5187;evidence=Diagnostic:B:2,Prognostic:B:1
+civic:feature:62006	fusion	MNX1	ETV6									1	MNX1::ETV6 fusion	featureId=62006;variantIds=4999;evidence=Diagnostic:B:3
+civic:428	gene	MRE11					fs					2	MRE11 Frameshift	variantId=428;mpId=424;evidence=Predictive:B:1;civicTranscript=ENST00000323929.3
+civic:4018	gene	MS4A1					any					2	MS4A1 Mutation	variantId=4018;mpId=3886;evidence=Predictive:B:1
+civic:808	del	MSH2										2	MSH2 Loss	variantId=808;mpId=786;evidence=Predictive:C:1;civicTranscript=ENST00000233146.2
+civic:763	fs	MSH2		28		E						1	MSH2 E28FS	variantId=763;mpId=744;evidence=Oncogenic:C:1;civicTranscript=ENST00000233146.2
+civic:762	fs	MSH2		273		V						1	MSH2 V273FS	variantId=762;mpId=743;evidence=Oncogenic:C:1;civicTranscript=ENST00000233146.2
+civic:770	snv	MSH2		172		K	*					1	MSH2 K172*	variantId=770;mpId=751;evidence=Oncogenic:C:1;civicTranscript=ENST00000233146.2
+civic:727	snv	MSH2		383		R	*					1	MSH2 R383*	variantId=727;mpId=708;evidence=Oncogenic:C:1;civicTranscript=ENST00000233146.2
+civic:773	snv	MSH2		483		E	G					1	MSH2 E483G	variantId=773;mpId=754;evidence=Oncogenic:C:1;civicTranscript=ENST00000233146.2
+civic:809	del	MSH6										2	MSH6 LOSS	variantId=809;mpId=787;evidence=Predictive:C:1;civicTranscript=ENST00000234420.5
+civic:765	fs	MSH6		891		I						1	MSH6 I891FS	variantId=765;mpId=746;evidence=Oncogenic:C:1;civicTranscript=ENST00000234420.5
+civic:761	snv	MSH6		138		P	T					1	MSH6 P138T	variantId=761;mpId=742;evidence=Oncogenic:C:1;civicTranscript=ENST00000234420.5
+civic:775	snv	MSH6		352		V	I					1	MSH6 V352I	variantId=775;mpId=756;evidence=Oncogenic:C:1;civicTranscript=ENST00000234420.5
+civic:767	snv	MSH6		1242		R	H					1	MSH6 R1242H	variantId=767;mpId=748;evidence=Oncogenic:C:1;civicTranscript=ENST00000234420.5
+civic:776	snv	MSH6		1242		R	C					1	MSH6 R1242C	variantId=776;mpId=757;evidence=Oncogenic:C:1;civicTranscript=ENST00000234420.5
+civic:4585	del	MTAP										1	MTAP Deletion	variantId=4585;mpId=4644;evidence=Predictive:B:1
+civic:277	gene	MTOR					any					2	MTOR Mutation	variantId=277;mpId=273;evidence=Predictive:C:1,Prognostic:B:1;civicTranscript=ENST00000361445.4
+civic:543	snv	MTOR		1483		C	Y					1	MTOR C1483Y	variantId=543;mpId=539;evidence=Predictive:D:1;civicTranscript=ENST00000361445.4
+civic:544	snv	MTOR		1799		E	K					1	MTOR E1799K	variantId=544;mpId=540;evidence=Predictive:D:1;civicTranscript=ENST00000361445.4
+civic:283	snv	MTOR		1968		H	Y					1	MTOR H1968Y	variantId=283;mpId=279;evidence=Predictive:D:1;civicTranscript=ENST00000361445.4
+civic:2712	snv	MTOR		1977		T	K					1	MTOR T1977K	variantId=2712;mpId=2581;evidence=Functional:D:1
+civic:610	snv	MTOR		2034		A	V					1	MTOR A2034V	variantId=610;mpId=606;evidence=Predictive:D:2;civicTranscript=ENST00000361445.4
+civic:470	snv	MTOR		2108		F	L					1	MTOR F2108L	variantId=470;mpId=466;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000361445.4
+civic:3439	snv	MTOR		2152		R	C					1	MTOR R2152C	variantId=3439;mpId=3307;evidence=Functional:D:1
+civic:284	snv	MTOR		2213		P	S					1	MTOR P2213S	variantId=284;mpId=280;evidence=Predictive:D:1;civicTranscript=ENST00000361445.4
+civic:542	snv	MTOR		2215		S	Y					1	MTOR S2215Y	variantId=542;mpId=538;evidence=Predictive:D:1;civicTranscript=ENST00000361445.4
+civic:609	snv	MTOR		2327		M	I					1	MTOR M2327I	variantId=609;mpId=605;evidence=Predictive:D:2;civicTranscript=ENST00000361445.4
+civic:2655	amp	MYB										1	MYB AMPLIFICATION	variantId=2655;mpId=2524;evidence=Prognostic:B:1
+civic:feature:61937	fusion	MYB	QKI									1	MYB::QKI fusion	featureId=61937;variantIds=4327;evidence=Diagnostic:B:3
+civic:feature:62119	fusion	MYB	TYK2									1	MYB::TYK2 fusion	featureId=62119;variantIds=5408;evidence=Diagnostic:C:1
+civic:4882	gene	MYB					trunc					2	MYB Truncation	variantId=4882;mpId=5040;evidence=Diagnostic:C:1
+civic:4328	sv	MYB	*									1	MYB Rearrangement	variantId=4328;mpId=4218;evidence=Diagnostic:B:2,Diagnostic:C:3
+civic:4743	sv	MYBL1	*									1	MYBL1 Rearrangement	variantId=4743;mpId=4878;evidence=Diagnostic:B:2,Diagnostic:C:1
+civic:298	amp	MYCN										1	MYCN Amplification	variantId=298;mpId=294;evidence=Predictive:D:2,Prognostic:A:1;civicTranscript=ENST00000281043.3
+civic:424	snv	MYD88		265		L	P					1	MYD88 L265P	variantId=424;mpId=420;evidence=Predictive:B:1,Predictive:D:1,Prognostic:B:1;civicTranscript=ENST00000396334.3
+civic:3032	snv	MYOD1		122		L	R					1	MYOD1 L122R	variantId=3032;mpId=2901;evidence=Diagnostic:B:4,Prognostic:B:5;civicTranscript=ENST00000250003.3
+civic:204	amp	NCOA3										1	NCOA3 AMPLIFICATION	variantId=204;mpId=204;evidence=Prognostic:B:1;civicTranscript=ENST00000372004.3
+civic:698	del	NF1										2	NF1 Loss	variantId=698;mpId=679;evidence=Predictive:D:1;civicTranscript=ENST00000358273.4
+civic:587	gene	NF1					any					2	NF1 Mutation	variantId=587;mpId=583;evidence=Predictive:C:1,Predictive:D:3;civicTranscript=ENST00000358273.4
+civic:697	del	NF2										2	NF2 Loss	variantId=697;mpId=678;evidence=Predictive:D:1;civicTranscript=ENST00000338641.4
+civic:279	fs	NF2		159		K						1	NF2 K159fs	variantId=279;mpId=275;evidence=Predictive:C:1;civicTranscript=ENST00000338641.4
+civic:245	fs	NF2		177		Y						1	NF2 Y177fs	variantId=245;mpId=241;evidence=Predictive:C:1;civicTranscript=ENST00000338641.4
+civic:2749	gene	NFE2L2					any					2	NFE2L2 Mutation	variantId=2749;mpId=2618;evidence=Predictive:B:1
+civic:5644	del	NFKBIA										1	NFKBIA Deletion	variantId=5644;mpId=6143;evidence=Prognostic:B:1
+civic:330	amp	NOTCH1										1	NOTCH1 Amplification	variantId=330;mpId=326;evidence=Predictive:D:1,Prognostic:B:1;civicTranscript=ENST00000277541.6
+civic:138	fs	NOTCH1		2275		S						1	NOTCH1 S2275FS	variantId=138;mpId=138;evidence=Prognostic:B:1;civicTranscript=ENST00000277541.6
+civic:137	fs	NOTCH1		2444		V						1	NOTCH1 V2444FS	variantId=137;mpId=137;evidence=Prognostic:B:1;civicTranscript=ENST00000277541.6
+civic:207	fs	NOTCH1		2514		P						1	NOTCH1 P2514FS	variantId=207;mpId=207;evidence=Prognostic:B:2;civicTranscript=ENST00000277541.6
+civic:206	gene	NOTCH1					any					2	NOTCH1 Mutation	variantId=206;mpId=206;evidence=Prognostic:A:1,Prognostic:B:2;civicTranscript=ENST00000277541.6
+civic:601	gene	NOTCH1					trunc					2	NOTCH1 Loss-of-function	variantId=601;mpId=597;evidence=Predictive:D:1;civicTranscript=ENST00000277541.6
+civic:135	snv	NOTCH1		1642		D	H					1	NOTCH1 D1642H	variantId=135;mpId=135;evidence=Prognostic:B:1;civicTranscript=ENST00000277541.6
+civic:136	snv	NOTCH1		2327		R	W					1	NOTCH1 R2327W	variantId=136;mpId=136;evidence=Prognostic:B:1;civicTranscript=ENST00000277541.6
+civic:86	exon	NPM1					any	11				1	NPM1 EXON 11 MUTATION	variantId=86;mpId=86;evidence=Diagnostic:A:1,Diagnostic:B:5,Predictive:B:4,Predictive:D:1,Predictive:E:2,Prognostic:B:16;civicTranscript=ENST00000517671.1
+civic:87	fs	NPM1		288		W						1	NPM1 W288FS	variantId=87;mpId=87;evidence=Predictive:D:1,Predictive:E:1,Prognostic:B:1;civicTranscript=ENST00000517671.1
+civic:feature:61766	fusion	NPM1	ALK									1	NPM1::ALK fusion	featureId=61766;variantIds=513;evidence=Predictive:B:1,Predictive:D:2
+civic:feature:62008	fusion	NPM1	MLF1									1	NPM1::MLF1 fusion	featureId=62008;variantIds=5011;evidence=Diagnostic:B:1,Diagnostic:C:2
+civic:3138	gene	NPM1					any					2	NPM1 MUTATION	variantId=3138;mpId=3007;evidence=Diagnostic:B:3
+civic:5415	sv	NR4A3	*									1	NR4A3 rearrangement	variantId=5415;mpId=5875;evidence=Diagnostic:B:1
+civic:208	gene	NRAS					any					2	NRAS Mutation	variantId=208;mpId=208;evidence=Predictive:A:1,Predictive:B:7,Predictive:C:1,Predictive:D:5,Prognostic:B:4;civicTranscript=ENST00000369535.4
+civic:4711	snv	NRAS		12		G	A					1	NRAS G12A	variantId=4711;mpId=4827;evidence=Predictive:C:1;civicTranscript=ENST00000369535.5
+civic:878	snv	NRAS		12		G	D					1	NRAS G12D	variantId=878;mpId=852;evidence=Predictive:B:1,Predictive:C:1;civicTranscript=ENST00000369535.4
+civic:897	snv	NRAS		12		G	C					1	NRAS G12C	variantId=897;mpId=871;evidence=Predictive:C:1;civicTranscript=ENST00000369535.4
+civic:92	snv	NRAS		12		G						1	NRAS G12	variantId=92;mpId=92;evidence=Prognostic:B:1;civicTranscript=ENST00000369535.4
+civic:896	snv	NRAS		13		G	R					1	NRAS G13R	variantId=896;mpId=870;evidence=Predictive:C:3;civicTranscript=ENST00000369535.4
+civic:93	snv	NRAS		13		G	D					1	NRAS G13D	variantId=93;mpId=93;evidence=Predictive:C:1;civicTranscript=ENST00000369535.4
+civic:427	snv	NRAS		61		Q	K					1	NRAS Q61K	variantId=427;mpId=423;evidence=Predictive:C:4,Predictive:D:5;civicTranscript=ENST00000369535.4
+civic:893	snv	NRAS		61		Q	H					1	NRAS Q61H	variantId=893;mpId=867;evidence=Predictive:C:2;civicTranscript=ENST00000369535.4
+civic:94	snv	NRAS		61		Q						1	NRAS Q61	variantId=94;mpId=94;evidence=Diagnostic:B:1,Predictive:B:4,Predictive:C:1,Prognostic:B:2;civicTranscript=ENST00000369535.4
+civic:95	snv	NRAS		61		Q	L					1	NRAS Q61L	variantId=95;mpId=95;evidence=Predictive:C:3;civicTranscript=ENST00000369535.4
+civic:96	snv	NRAS		61		Q	R					1	NRAS Q61R	variantId=96;mpId=96;evidence=Predictive:C:4;civicTranscript=ENST00000369535.4
+civic:1654	snv	NRAS		179		Q	*					1	NRAS Q179*	variantId=1654;mpId=1562;evidence=Predictive:B:1;civicTranscript=ENST00000369535.4
+civic:feature:61865	fusion	NRF1	BRAF									1	NRF1::BRAF fusion	featureId=61865;variantIds=2883;evidence=Predictive:C:1
+civic:2898	gene	NT5C2					any					2	NT5C2 Mutation	variantId=2898;mpId=2767;evidence=Prognostic:B:1
+civic:2896	snv	NT5C2		238		R	W					1	NT5C2 R238W	variantId=2896;mpId=2765;evidence=Predictive:D:2,Prognostic:C:1;civicTranscript=ENST00000343289.5
+civic:239	snv	NT5C2		359		K	Q					1	NT5C2 K359Q	variantId=239;mpId=235;evidence=Predictive:D:2,Prognostic:B:1;civicTranscript=ENST00000343289.5
+civic:238	snv	NT5C2		367		R	Q					1	NT5C2 R367Q	variantId=238;mpId=234;evidence=Predictive:C:1,Predictive:D:4;civicTranscript=ENST00000343289.5
+civic:240	snv	NT5C2		407		D	A					1	NT5C2 D407A	variantId=240;mpId=236;evidence=Predictive:D:2;civicTranscript=ENST00000343289.5
+civic:2897	snv	NT5C2		445		S	F					1	NT5C2 S445F	variantId=2897;mpId=2766;evidence=Predictive:D:2,Prognostic:C:1;civicTranscript=ENST00000343289.5
+civic:1280	amp	NTRK1										1	NTRK1 Amplification	variantId=1280;mpId=1254;evidence=Predictive:C:2;civicTranscript=ENST00000524377.1
+civic:1281	amp	NTRK3										1	NTRK3 Amplification	variantId=1281;mpId=1255;evidence=Predictive:B:1;civicTranscript=ENST00000394480.2
+civic:feature:61925	fusion	NTRK3	SCAPER									1	NTRK3::SCAPER fusion	featureId=61925;variantIds=4252;evidence=Oncogenic:C:1
+civic:3468	snv	NTRK3		617		F	L					1	NTRK3 F617L	variantId=3468;mpId=3336;evidence=Predictive:C:1
+civic:feature:61895	fusion	NUP153	ABL1									1	NUP153::ABL1 fusion	featureId=61895;variantIds=3271;evidence=Diagnostic:C:1
+civic:feature:61832	fusion	NUP214	ABL1									1	NUP214::ABL1 fusion	featureId=61832;variantIds=2660;evidence=Diagnostic:C:1,Predictive:C:2,Predictive:D:1,Prognostic:B:1
+civic:feature:61826	fusion	NUP98	NSD1									1	NUP98::NSD1 fusion	featureId=61826;variantIds=2593;evidence=Prognostic:B:1
+civic:feature:62065	fusion	NUP98	*									1	NUP98::* fusion	featureId=62065;variantIds=5145;evidence=Diagnostic:B:4
+civic:feature:61874	fusion	OFD1	JAK2									1	OFD1::JAK2 fusion	featureId=61874;variantIds=2974;evidence=Diagnostic:C:2
+civic:feature:61814	fusion	P2RY8	CRLF2									1	P2RY8::CRLF2 fusion	featureId=61814;variantIds=2350;evidence=Diagnostic:C:1
+civic:feature:61788	fusion	PAPSS1	BRAF									1	PAPSS1::BRAF fusion	featureId=61788;variantIds=286;evidence=Predictive:D:2
+civic:feature:61823	fusion	PAX3	FOXO1									1	PAX3::FOXO1 fusion	featureId=61823;variantIds=2582;evidence=Diagnostic:B:3,Predictive:D:1,Prognostic:B:1
+civic:feature:61860	fusion	PAX5	JAK2									1	PAX5::JAK2 fusion	featureId=61860;variantIds=2861;evidence=Diagnostic:B:1,Diagnostic:C:2
+civic:feature:62866	fusion	PAX5	*									1	PAX5::* fusion	featureId=62866;variantIds=5425;evidence=Diagnostic:B:3
+civic:feature:62880	fusion	PAX5	AUTS2									1	PAX5::AUTS2 fusion	featureId=62880;variantIds=5477;evidence=Prognostic:B:1
+civic:2697	snv	PAX5		80		P	R					1	PAX5 P80R	variantId=2697;mpId=2566;evidence=Diagnostic:B:3;civicTranscript=ENST00000358127.4
+civic:feature:61824	fusion	PAX7	FOXO1									1	PAX7::FOXO1 fusion	featureId=61824;variantIds=2583;evidence=Diagnostic:B:3,Prognostic:B:1
+civic:feature:61793	fusion	PAX8	PPARG									1	PAX8::PPARG fusion	featureId=61793;variantIds=209;evidence=Diagnostic:B:1
+civic:161	gene	PBRM1					any					2	PBRM1 Mutation	variantId=161;mpId=161;evidence=Prognostic:B:2;civicTranscript=ENST00000394830.3
+civic:feature:61772	fusion	PCM1	JAK2									1	PCM1::JAK2 fusion	featureId=61772;variantIds=571;evidence=Diagnostic:A:1,Diagnostic:C:1
+civic:feature:61812	fusion	PDE4DIP	NTRK1									1	PDE4DIP::NTRK1 fusion	featureId=61812;variantIds=2289;evidence=Predictive:C:2
+civic:716	amp	PDGFRA										1	PDGFRA Amplification	variantId=716;mpId=697;evidence=Predictive:D:1;civicTranscript=ENST00000257290.5
+civic:2623	exon	PDGFRA					any	18				1	PDGFRA Exon 18 Mutation	variantId=2623;mpId=2496;evidence=Predictive:C:1
+civic:3274	gene	PDGFRA					any					2	PDGFRA Mutation	variantId=3274;mpId=3143;evidence=Predictive:C:1
+civic:102	inframe	PDGFRA		842	843	D						1	PDGFRA D842_I843delinsVM	variantId=102;mpId=102;evidence=Predictive:D:1;civicTranscript=ENST00000257290.5
+civic:943	inframe	PDGFRA		842	845	D						1	PDGFRA D842_H845DELDIMH	variantId=943;mpId=917;evidence=Predictive:D:1
+civic:101	inframe	PDGFRA		843		I						1	PDGFRA I843DEL	variantId=101;mpId=101;evidence=Predictive:D:2;civicTranscript=ENST00000257290.5
+civic:247	snv	PDGFRA		561		V	A					1	PDGFRA V561A	variantId=247;mpId=243;evidence=Predictive:D:1;civicTranscript=ENST00000257290.5
+civic:941	snv	PDGFRA		561		V	D					1	PDGFRA V561D	variantId=941;mpId=915;evidence=Predictive:C:1,Predictive:D:3;civicTranscript=ENST00000257290.5
+civic:862	snv	PDGFRA		577		P	S					1	PDGFRA P577S	variantId=862;mpId=836;evidence=Predictive:D:1;civicTranscript=ENST00000257290.5
+civic:863	snv	PDGFRA		841		R	K					1	PDGFRA R841K	variantId=863;mpId=837;evidence=Predictive:D:1;civicTranscript=ENST00000257290.5
+civic:100	snv	PDGFRA		842		D	Y					1	PDGFRA D842Y	variantId=100;mpId=100;evidence=Predictive:D:1;civicTranscript=ENST00000257290.5
+civic:98	snv	PDGFRA		842		D	I					1	PDGFRA D842I	variantId=98;mpId=98;evidence=Predictive:D:1;civicTranscript=ENST00000257290.5
+civic:99	snv	PDGFRA		842		D	V					1	PDGFRA D842V	variantId=99;mpId=99;evidence=Diagnostic:B:1,Predictive:B:3,Predictive:C:2,Predictive:D:5;civicTranscript=ENST00000257290.5
+civic:864	snv	PDGFRA		845		H	Y					1	PDGFRA H845Y	variantId=864;mpId=838;evidence=Predictive:D:1;civicTranscript=ENST00000257290.5
+civic:865	snv	PDGFRA		853		G	D					1	PDGFRA G853D	variantId=865;mpId=839;evidence=Predictive:D:1;civicTranscript=ENST00000257290.5
+civic:212	amp	PIK3CA										1	PIK3CA Amplification	variantId=212;mpId=212;evidence=Predictive:C:1,Predictive:D:3,Prognostic:B:1;civicTranscript=ENST00000263967.3
+civic:105	exon	PIK3CA					any	21				1	PIK3CA Exon 21 Mutation	variantId=105;mpId=105;evidence=Predictive:B:1,Prognostic:B:2;civicTranscript=ENST00000263967.3
+civic:106	exon	PIK3CA					any	10				1	PIK3CA Exon 10 Mutation	variantId=106;mpId=106;evidence=Predictive:B:1,Prognostic:B:2;civicTranscript=ENST00000263967.3
+civic:311	gene	PIK3CA					any					2	PIK3CA Mutation	variantId=311;mpId=307;evidence=Predictive:A:1,Predictive:B:21,Predictive:C:1,Predictive:D:14,Prognostic:B:4;civicTranscript=ENST00000263967.3
+civic:1500	snv	PIK3CA		81		E	K					1	PIK3CA E81K	variantId=1500;mpId=1408;evidence=Predictive:C:1;civicTranscript=ENST00000263967.3
+civic:929	snv	PIK3CA		88		R	Q					1	PIK3CA R88Q	variantId=929;mpId=903;evidence=Predictive:A:1,Predictive:C:1;civicTranscript=ENST00000263967.3
+civic:1178	snv	PIK3CA		93		R	W					1	PIK3CA R93W	variantId=1178;mpId=1152;evidence=Predictive:C:1;civicTranscript=ENST00000263967.3
+civic:1234	snv	PIK3CA		111		K	N					1	PIK3CA K111N	variantId=1234;mpId=1208;evidence=Predictive:D:6;civicTranscript=ENST00000263967.3
+civic:1499	snv	PIK3CA		158		S	L					1	PIK3CA S158L	variantId=1499;mpId=1407;evidence=Predictive:C:1;civicTranscript=ENST00000263967.3
+civic:930	snv	PIK3CA		345		N	K					1	PIK3CA N345K	variantId=930;mpId=904;evidence=Predictive:C:1;civicTranscript=ENST00000263967.3
+civic:1653	snv	PIK3CA		350		D	G					1	PIK3CA D350G	variantId=1653;mpId=1561;evidence=Predictive:D:1;civicTranscript=ENST00000263967.3
+civic:3338	snv	PIK3CA		350		D	N					1	PIK3CA D350N	variantId=3338;mpId=3206;evidence=Functional:D:1
+civic:1235	snv	PIK3CA		391		I	M					1	PIK3CA I391M	variantId=1235;mpId=1209;evidence=Predictive:D:2;civicTranscript=ENST00000263967.3
+civic:931	snv	PIK3CA		420		C	R					1	PIK3CA C420R	variantId=931;mpId=905;evidence=Predictive:A:1,Predictive:C:1,Predictive:D:3;civicTranscript=ENST00000263967.3
+civic:294	snv	PIK3CA		471		P	L					1	PIK3CA P471L	variantId=294;mpId=290;evidence=Predictive:C:1;civicTranscript=ENST00000263967.3
+civic:103	snv	PIK3CA		542		E	K					1	PIK3CA E542K	variantId=103;mpId=103;evidence=Predictive:A:1,Predictive:B:2,Predictive:C:2,Predictive:D:9;civicTranscript=ENST00000263967.3
+civic:104	snv	PIK3CA		545		E	K					1	PIK3CA E545K	variantId=104;mpId=104;evidence=Predictive:C:5,Predictive:D:19,Prognostic:B:1;civicTranscript=ENST00000263967.3
+civic:881	snv	PIK3CA		545		E	Q					1	PIK3CA E545Q	variantId=881;mpId=855;evidence=Predictive:C:1;civicTranscript=ENST00000263967.3
+civic:883	snv	PIK3CA		545		E	G					1	PIK3CA E545G	variantId=883;mpId=857;evidence=Predictive:D:1;civicTranscript=ENST00000263967.3
+civic:885	snv	PIK3CA		546		Q	K					1	PIK3CA Q546K	variantId=885;mpId=859;evidence=Predictive:C:1;civicTranscript=ENST00000263967.3
+civic:3337	snv	PIK3CA		604		C	R					1	PIK3CA C604R	variantId=3337;mpId=3205;evidence=Functional:D:1
+civic:3667	snv	PIK3CA		930		F	S					1	PIK3CA F930S	variantId=3667;mpId=3535;evidence=Predictive:C:1
+civic:3670	snv	PIK3CA		938		L	*					1	PIK3CA L938*	variantId=3670;mpId=3538;evidence=Predictive:C:1
+civic:3666	snv	PIK3CA		944		K	N					1	PIK3CA K944N	variantId=3666;mpId=3534;evidence=Predictive:C:1
+civic:3001	snv	PIK3CA		955		V	I					1	PIK3CA V955I	variantId=3001;mpId=2870;evidence=Predictive:C:1;civicTranscript=ENST00000263967.3
+civic:3668	snv	PIK3CA		955		V	G					1	PIK3CA V955G	variantId=3668;mpId=3536;evidence=Predictive:C:1
+civic:3669	snv	PIK3CA		966		K	E					1	PIK3CA K966E	variantId=3669;mpId=3537;evidence=Predictive:C:1
+civic:3437	snv	PIK3CA		1007		G	R					1	PIK3CA G1007R	variantId=3437;mpId=3305;evidence=Functional:D:1
+civic:3438	snv	PIK3CA		1044		N	K					1	PIK3CA N1044K	variantId=3438;mpId=3306;evidence=Functional:D:1
+civic:107	snv	PIK3CA		1047		H	R					1	PIK3CA H1047R	variantId=107;mpId=107;evidence=Predictive:B:2,Predictive:C:3,Predictive:D:20,Prognostic:B:2;civicTranscript=ENST00000263967.3
+civic:1151	snv	PIK3CA		1047		H	L					1	PIK3CA H1047L	variantId=1151;mpId=1125;evidence=Predictive:C:1,Predictive:D:3;civicTranscript=ENST00000263967.3
+civic:940	snv	PIK3CA		1049		G	R					1	PIK3CA G1049R	variantId=940;mpId=914;evidence=Predictive:C:1;civicTranscript=ENST00000263967.3
+civic:633	gene	PIK3R1					any					2	PIK3R1 Mutation	variantId=633;mpId=629;evidence=Predictive:D:1;civicTranscript=ENST00000521381.1
+civic:3643	snv	PIM1		2		L	V					1	PIM1 L2V	variantId=3643;mpId=3511;evidence=Predictive:D:1
+civic:3644	snv	PIM1		81		P	S					1	PIM1 P81S	variantId=3644;mpId=3512;evidence=Predictive:D:1
+civic:3645	snv	PIM1		97		S	N					1	PIM1 S97N	variantId=3645;mpId=3513;evidence=Predictive:D:1
+civic:2170	gene	PLCG2					any					2	PLCG2 MUTATION	variantId=2170;mpId=2046;evidence=Prognostic:B:1
+civic:feature:61801	fusion	PML	RARA									1	PML::RARA fusion	featureId=61801;variantIds=108;evidence=Diagnostic:A:1,Diagnostic:B:2,Diagnostic:C:3,Predictive:A:1,Predictive:B:1,Predictive:C:1
+civic:768	snv	PMS2		315		R	*					1	PMS2 R315*	variantId=768;mpId=749;evidence=Oncogenic:C:1;civicTranscript=ENST00000265849.7
+civic:1647	snv	POLD1		284		C	Y					1	POLD1 C284Y	variantId=1647;mpId=1555;evidence=Predictive:C:1;civicTranscript=ENST00000440232.2
+civic:1648	snv	POLD1		374		E	K					1	POLD1 E374K	variantId=1648;mpId=1556;evidence=Predictive:C:1;civicTranscript=ENST00000440232.2
+civic:797	gene	POLE					any					2	POLE Mutation	variantId=797;mpId=775;evidence=Predictive:C:1;civicTranscript=ENST00000320574.5
+civic:1830	snv	POLE		286		P	R					1	POLE P286R	variantId=1830;mpId=1706;evidence=Prognostic:B:1;civicTranscript=ENST00000320574.10
+civic:1831	snv	POLE		411		V	L					1	POLE V411L	variantId=1831;mpId=1707;evidence=Prognostic:B:1;civicTranscript=ENST00000320574.10
+civic:1832	snv	POLE		459		S	F					1	POLE S459F	variantId=1832;mpId=1708;evidence=Prognostic:B:1;civicTranscript=ENST00000320574.5
+civic:623	gene	POT1					any					2	POT1 MUTATION	variantId=623;mpId=619;evidence=Prognostic:B:1;civicTranscript=ENST00000357628.3
+civic:feature:61855	fusion	PPFIBP1	JAK2									1	PPFIBP1::JAK2 fusion	featureId=61855;variantIds=2848;evidence=Diagnostic:C:2
+civic:feature:61794	fusion	PPFIBP2	BRAF									1	PPFIBP2::BRAF fusion	featureId=61794;variantIds=617;evidence=Predictive:C:1
+civic:3299	snv	PPP2R1A		179		P	R					1	PPP2R1A P179R	variantId=3299;mpId=3167;evidence=Functional:D:1
+civic:644	gene	PRDM1					any					2	PRDM1 MUTATION	variantId=644;mpId=640;evidence=Prognostic:B:2;civicTranscript=ENST00000369096.4
+civic:2468	snv	PRKCB		427		D	N					1	PRKCB D427N	variantId=2468;mpId=2341;evidence=Diagnostic:D:1
+civic:4860	gene	PRKDC					any					2	PRKDC Mutation	variantId=4860;mpId=5016;evidence=Predictive:B:2
+civic:2916	gene	PRPS1					any					2	PRPS1 MUTATION	variantId=2916;mpId=2785;evidence=Prognostic:B:1
+civic:2938	snv	PRPS1		53		V	A					1	PRPS1 V53A	variantId=2938;mpId=2807;evidence=Predictive:D:1
+civic:2937	snv	PRPS1		72		I	V					1	PRPS1 I72V	variantId=2937;mpId=2806;evidence=Predictive:D:1
+civic:2936	snv	PRPS1		77		C	S					1	PRPS1 C77S	variantId=2936;mpId=2805;evidence=Predictive:D:1
+civic:2939	snv	PRPS1		87		A	T					1	PRPS1 A87T	variantId=2939;mpId=2808;evidence=Predictive:D:1
+civic:2925	snv	PRPS1		103		S	I					1	PRPS1 S103I	variantId=2925;mpId=2794;evidence=Predictive:D:1
+civic:2926	snv	PRPS1		103		S	N					1	PRPS1 S103N	variantId=2926;mpId=2795;evidence=Predictive:D:2
+civic:2927	snv	PRPS1		103		S	T					1	PRPS1 S103T	variantId=2927;mpId=2796;evidence=Predictive:D:2
+civic:2940	snv	PRPS1		115		M	T					1	PRPS1 M115T	variantId=2940;mpId=2809;evidence=Predictive:D:1
+civic:2935	snv	PRPS1		139		D	G					1	PRPS1 D139G	variantId=2935;mpId=2804;evidence=Predictive:D:1
+civic:2923	snv	PRPS1		144		N	S					1	PRPS1 N144S	variantId=2923;mpId=2792;evidence=Predictive:D:3
+civic:2921	snv	PRPS1		176		K	N					1	PRPS1 K176N	variantId=2921;mpId=2790;evidence=Predictive:D:2
+civic:2920	snv	PRPS1		183		D	E					1	PRPS1 D183E	variantId=2920;mpId=2789;evidence=Predictive:D:2
+civic:2929	snv	PRPS1		190		A	T					1	PRPS1 A190T	variantId=2929;mpId=2798;evidence=Predictive:D:3,Prognostic:B:1
+civic:2919	snv	PRPS1		191		L	F					1	PRPS1 L191F	variantId=2919;mpId=2788;evidence=Predictive:D:3
+civic:2918	snv	PRPS1		303		T	S					1	PRPS1 T303S	variantId=2918;mpId=2787;evidence=Predictive:D:2
+civic:301	gene	PTCH1					any					2	PTCH1 Mutation	variantId=301;mpId=297;evidence=Predictive:B:2;civicTranscript=ENST00000331920.6
+civic:213	del	PTEN										1	PTEN Deletion	variantId=213;mpId=213;evidence=Predictive:B:1,Prognostic:B:2;civicTranscript=ENST00000371953.3
+civic:214	del	PTEN										2	PTEN Loss	variantId=214;mpId=214;evidence=Predictive:B:13,Predictive:C:2,Predictive:D:15;civicTranscript=ENST00000371953.3
+civic:605	fs	PTEN		317		V						1	PTEN V317FS	variantId=605;mpId=601;evidence=Predictive:D:1;civicTranscript=ENST00000371953.3
+civic:510	gene	PTEN					any					2	PTEN Mutation	variantId=510;mpId=506;evidence=Diagnostic:C:1,Predictive:B:1,Predictive:D:4;civicTranscript=ENST00000371953.3
+civic:838	snv	PTEN		173		R	C					1	PTEN R173C	variantId=838;mpId=812;evidence=Oncogenic:C:1;civicTranscript=ENST00000371953.3
+civic:110	snv	PTEN		233		R	*					1	PTEN R233*	variantId=110;mpId=110;evidence=Predictive:D:1,Prognostic:B:1;civicTranscript=ENST00000371953.3
+civic:819	gene	PTPRB					trunc					2	PTPRB Loss-of-function	variantId=819;mpId=797;evidence=Diagnostic:B:1,Predictive:D:1;civicTranscript=ENST00000334414.6
+civic:327	gene	PTPRD					any					2	PTPRD Mutation	variantId=327;mpId=323;evidence=Predictive:D:1;civicTranscript=ENST00000381196.4
+civic:feature:61919	fusion	QKI	RAF1									1	QKI::RAF1 fusion	featureId=61919;variantIds=4000;evidence=Predictive:C:1
+civic:feature:61959	fusion	QKI	NTRK2									1	QKI::NTRK2 fusion	featureId=61959;variantIds=4536;evidence=Oncogenic:C:3
+civic:367	snv	RAC1		29		P	S					1	RAC1 P29S	variantId=367;mpId=363;evidence=Predictive:D:1;civicTranscript=ENST00000356142.4
+civic:2168	snv	RAD50		1237		L	F					1	RAD50 L1237F	variantId=2168;mpId=2044;evidence=Predictive:C:1
+civic:591	amp	RAF1										1	RAF1 Amplification	variantId=591;mpId=587;evidence=Predictive:B:1;civicTranscript=ENST00000251849.4
+civic:5484	snv	RAF1		257		S	L					1	RAF1 S257L	variantId=5484;mpId=5958;evidence=Oncogenic:D:1
+civic:1680	snv	RAF1		391		R	W					1	RAF1 R391W	variantId=1680;mpId=1588;evidence=Functional:D:1;civicTranscript=ENST00000251849.4
+civic:feature:61988	fusion	RALGPS2	NTRK3									1	RALGPS2::NTRK3 fusion	featureId=61988;variantIds=4750;evidence=Oncogenic:C:1
+civic:feature:61767	fusion	RANBP2	ALK									1	RANBP2::ALK fusion	featureId=61767;variantIds=514;evidence=Predictive:C:1
+civic:feature:61892	fusion	RANBP2	ABL1									1	RANBP2::ABL1 fusion	featureId=61892;variantIds=3268;evidence=Diagnostic:C:1,Predictive:C:1
+civic:2235	gene	RASA1					trunc					2	RASA1 Loss-of-function	variantId=2235;mpId=2111;evidence=Predictive:D:1
+civic:638	fs	RB1		695		M						1	RB1 M695FS*26	variantId=638;mpId=634;evidence=Predictive:D:1;civicTranscript=ENST00000267163.4
+civic:606	gene	RB1					trunc					2	RB1 Loss-of-function	variantId=606;mpId=602;evidence=Predictive:D:2;civicTranscript=ENST00000267163.4
+civic:799	gene	RB1					any					2	RB1 Mutation	variantId=799;mpId=777;evidence=Predictive:B:1;civicTranscript=ENST00000267163.4
+civic:feature:62030	fusion	RBM15	MRTFA									1	RBM15::MRTFA fusion	featureId=62030;variantIds=3116;evidence=Diagnostic:B:3
+civic:feature:61903	fusion	RCSD1	ABL2									1	RCSD1::ABL2 fusion	featureId=61903;variantIds=3526;evidence=Predictive:D:1
+civic:feature:62027	fusion	RCSD1	ABL1									1	RCSD1::ABL1 fusion	featureId=62027;variantIds=2681;evidence=Diagnostic:C:4,Predictive:C:8,Predictive:D:1
+civic:154	amp	REL										1	REL AMPLIFICATION	variantId=154;mpId=154;evidence=Diagnostic:B:1;civicTranscript=ENST00000295025.8
+civic:1690	gene	RET					any					2	RET Mutation	variantId=1690;mpId=1598;evidence=Predictive:B:1,Prognostic:B:1;civicTranscript=ENST00000355710.3
+civic:4785	inframe	RET		632	633	E						1	RET E632_L633del	variantId=4785;mpId=4938;evidence=Oncogenic:D:1;civicTranscript=ENST00000355710.3
+civic:112	snv	RET		634		C	W					1	RET C634W	variantId=112;mpId=112;evidence=Predictive:D:1;civicTranscript=ENST00000355710.3
+civic:1700	snv	RET		634		C	R					1	RET C634R	variantId=1700;mpId=1608;evidence=Oncogenic:D:1
+civic:113	snv	RET		918		M	T					1	RET M918T	variantId=113;mpId=113;evidence=Oncogenic:B:1,Oncogenic:D:1,Predictive:B:2,Predictive:D:3;civicTranscript=ENST00000355710.3
+civic:feature:61864	fusion	RFX3	JAK2									1	RFX3::JAK2 fusion	featureId=61864;variantIds=2865;evidence=Diagnostic:C:1
+civic:665	gene	RHOA					any					2	RHOA MUTATION	variantId=665;mpId=661;evidence=Prognostic:E:1;civicTranscript=ENST00000418115.1
+civic:573	amp	RICTOR										1	RICTOR Amplification	variantId=573;mpId=569;evidence=Predictive:C:2;civicTranscript=ENST00000357387.3
+civic:297	gene	RIT1					any					2	RIT1 Mutation	variantId=297;mpId=293;evidence=Predictive:D:1;civicTranscript=ENST00000368322.3
+civic:1271	snv	ROS1		2032		G	R					1	ROS1 G2032R	variantId=1271;mpId=1245;evidence=Predictive:C:1;civicTranscript=ENST00000368508.3
+civic:358	amp	RSF1										1	RSF1 Amplification	variantId=358;mpId=354;evidence=Predictive:B:1;civicTranscript=ENST00000308488.6
+civic:feature:62928	fusion	RUFY1	RAF1									1	RUFY1::RAF1 fusion	featureId=62928;variantIds=5543;evidence=Predictive:C:1
+civic:feature:61884	fusion	RUNX1	RUNX1T1									1	RUNX1::RUNX1T1 fusion	featureId=61884;variantIds=3126;evidence=Diagnostic:A:1,Diagnostic:B:3,Prognostic:A:1
+civic:155	gene	RUNX1					any					2	RUNX1 Mutation	variantId=155;mpId=155;evidence=Predictive:B:1,Prognostic:B:5;civicTranscript=ENST00000300305.3
+civic:feature:61926	fusion	SCP2	NTRK1									1	SCP2::NTRK1 fusion	featureId=61926;variantIds=4253;evidence=Oncogenic:C:2
+civic:feature:61805	fusion	SDC4	NRG1									1	SDC4::NRG1 fusion	featureId=61805;variantIds=2179;evidence=Predictive:C:1
+civic:feature:62009	fusion	SDC4	ROS1									1	SDC4::ROS1 fusion	featureId=62009;variantIds=5013;evidence=Predictive:C:1
+civic:feature:62037	fusion	SERPINE1	FOSB									1	SERPINE1::FOSB fusion	featureId=62037;variantIds=4745;evidence=Diagnostic:B:1
+civic:350	exon	SETBP1					any	4				1	SETBP1 Exon 4 Mutation	variantId=350;mpId=346;evidence=Prognostic:B:1;civicTranscript=ENST00000282030.5
+civic:351	snv	SETBP1		870		G	S					1	SETBP1 G870S	variantId=351;mpId=347;evidence=Oncogenic:D:1;civicTranscript=ENST00000282030.5
+civic:215	gene	SF3B1					any					2	SF3B1 Mutation	variantId=215;mpId=215;evidence=Prognostic:A:1,Prognostic:B:4;civicTranscript=ENST00000335508.6
+civic:114	snv	SF3B1		666		K	N					1	SF3B1 K666N	variantId=114;mpId=114;evidence=Predictive:D:1;civicTranscript=ENST00000335508.6
+civic:4312	snv	SMAD2		276		S	L					1	SMAD2 S276L	variantId=4312;mpId=4190;evidence=Functional:D:1
+civic:564	del	SMAD4										2	SMAD4 LOSS	variantId=564;mpId=560;evidence=Prognostic:B:1;civicTranscript=ENST00000342988.3
+civic:216	gene	SMAD4					any					2	SMAD4 Mutation	variantId=216;mpId=216;evidence=Predictive:B:1,Prognostic:B:1;civicTranscript=ENST00000342988.3
+civic:217	gene	SMARCA4					any					2	SMARCA4 Mutation	variantId=217;mpId=217;evidence=Diagnostic:B:1;civicTranscript=ENST00000358026.2
+civic:218	gene	SMARCA4					trunc					2	SMARCA4 INACTIVATING MUTATION	variantId=218;mpId=218;evidence=Diagnostic:B:1,Prognostic:B:1;civicTranscript=ENST00000358026.2
+civic:3202	del	SMARCB1										2	SMARCB1 Loss	variantId=3202;mpId=3071;evidence=Diagnostic:B:2;civicTranscript=ENST00000344921.6
+civic:696	del	SMARCB1										1	SMARCB1 Deletion	variantId=696;mpId=677;evidence=Predictive:D:1;civicTranscript=ENST00000344921.6
+civic:300	gene	SMO					any					2	SMO Mutation	variantId=300;mpId=296;evidence=Predictive:B:3,Predictive:D:1;civicTranscript=ENST00000249373.3
+civic:1570	snv	SMO		412		L	F					1	SMO L412F	variantId=1570;mpId=1478;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000249373.3
+civic:299	snv	SMO		473		D	H					1	SMO D473H	variantId=299;mpId=295;evidence=Predictive:C:1,Predictive:D:2;civicTranscript=ENST00000249373.3
+civic:feature:61875	fusion	SMU1	JAK2									1	SMU1::JAK2 fusion	featureId=61875;variantIds=2975;evidence=Diagnostic:C:1
+civic:feature:61836	fusion	SNX2	ABL1									1	SNX2::ABL1 fusion	featureId=61836;variantIds=2678;evidence=Diagnostic:C:2,Predictive:C:2,Predictive:D:1,Prognostic:C:2
+civic:feature:61876	fusion	SNX29	JAK2									1	SNX29::JAK2 fusion	featureId=61876;variantIds=2976;evidence=Diagnostic:C:1
+civic:3343	snv	SPOP		47		E	K					1	SPOP E47K	variantId=3343;mpId=3211;evidence=Functional:D:1
+civic:3345	snv	SPOP		50		E	K					1	SPOP E50K	variantId=3345;mpId=3213;evidence=Functional:D:1
+civic:3346	snv	SPOP		75		G	R					1	SPOP G75R	variantId=3346;mpId=3214;evidence=Functional:D:1
+civic:3347	snv	SPOP		80		S	R					1	SPOP S80R	variantId=3347;mpId=3215;evidence=Functional:D:1
+civic:3280	snv	SPOP		117		M	V					1	SPOP M117V	variantId=3280;mpId=3149;evidence=Functional:D:1
+civic:3301	snv	SPOP		117		M	I					1	SPOP M117I	variantId=3301;mpId=3169;evidence=Functional:D:1
+civic:3300	snv	SPOP		121		R	Q					1	SPOP R121Q	variantId=3300;mpId=3168;evidence=Functional:D:1
+civic:3349	snv	SPOP		140		D	G					1	SPOP D140G	variantId=3349;mpId=3217;evidence=Functional:D:1
+civic:feature:61784	fusion	SQSTM1	NTRK1									1	SQSTM1::NTRK1 fusion	featureId=61784;variantIds=800;evidence=Predictive:C:6
+civic:feature:62087	fusion	SRF	*									1	SRF::* fusion	featureId=62087;variantIds=5209;evidence=Diagnostic:B:2,Diagnostic:C:2
+civic:595	gene	SRSF2					any					2	SRSF2 MUTATION	variantId=595;mpId=591;evidence=Prognostic:B:1;civicTranscript=ENST00000392485.2
+civic:4303	snv	SRSF2		95		P	L					1	SRSF2 P95L	variantId=4303;mpId=4179;evidence=Predictive:D:1;civicTranscript=ENST00000359995.5
+civic:4304	snv	SRSF2		95		P	H					1	SRSF2 P95H	variantId=4304;mpId=4180;evidence=Predictive:D:1;civicTranscript=ENST00000359995.10
+civic:feature:61761	fusion	SS18	SSX1									1	SS18::SSX1 fusion	featureId=61761;variantIds=448;evidence=Diagnostic:A:1,Diagnostic:B:5,Prognostic:B:2
+civic:feature:61762	fusion	SS18	SSX2									1	SS18::SSX2 fusion	featureId=61762;variantIds=449;evidence=Diagnostic:A:1,Diagnostic:B:1,Prognostic:B:2
+civic:feature:61763	fusion	SS18	SSX4									1	SS18::SSX4 fusion	featureId=61763;variantIds=450;evidence=Diagnostic:C:1
+civic:feature:61833	fusion	SSBP2	JAK2									1	SSBP2::JAK2 fusion	featureId=61833;variantIds=2661;evidence=Diagnostic:C:2,Predictive:C:1
+civic:669	gene	STAG2					any					2	STAG2 MUTATION	variantId=669;mpId=665;evidence=Prognostic:B:1;civicTranscript=ENST00000218089.9
+civic:485	del	STK11										2	STK11 Loss	variantId=485;mpId=481;evidence=Predictive:D:3;civicTranscript=ENST00000326873.7
+civic:303	exon	STK11					any	1-2				1	STK11 EXON 1-2 MUTATION	variantId=303;mpId=299;evidence=Prognostic:B:1;civicTranscript=ENST00000326873.7
+civic:715	gene	STK11					any					2	STK11 Mutation	variantId=715;mpId=696;evidence=Predictive:B:2;civicTranscript=ENST00000326873.7
+civic:feature:61808	fusion	STRN	ALK									1	STRN::ALK fusion	featureId=61808;variantIds=2218;evidence=Predictive:C:1
+civic:feature:61811	fusion	STRN	NTRK2									1	STRN::NTRK2 fusion	featureId=61811;variantIds=2287;evidence=Predictive:C:1
+civic:feature:61856	fusion	STRN3	JAK2									1	STRN3::JAK2 fusion	featureId=61856;variantIds=2849;evidence=Diagnostic:C:1
+civic:feature:61899	fusion	TBL1XR1	CSF1R									1	TBL1XR1::CSF1R fusion	featureId=61899;variantIds=3359;evidence=Diagnostic:C:1
+civic:feature:62052	fusion	TCF3	HLF									1	TCF3::HLF fusion	featureId=62052;variantIds=5083;evidence=Diagnostic:B:2,Diagnostic:C:1
+civic:feature:61861	fusion	TERF2	JAK2									1	TERF2::JAK2 fusion	featureId=61861;variantIds=2862;evidence=Diagnostic:C:1
+civic:219	amp	TERT										1	TERT Amplification	variantId=219;mpId=219;evidence=Prognostic:B:1;civicTranscript=ENST00000310581.5
+civic:248	snv	TERT		228		C	T					1	TERT C228T	variantId=248;mpId=244;evidence=Diagnostic:B:1,Prognostic:B:1;civicTranscript=ENST00000310581.5
+civic:157	gene	TET2					any					2	TET2 Mutation	variantId=157;mpId=157;evidence=Prognostic:B:6;civicTranscript=ENST00000513237.1
+civic:feature:61774	fusion	TFG	ROS1									1	TFG::ROS1 fusion	featureId=61774;variantIds=576;evidence=Predictive:C:3
+civic:2240	amp	TLK2										1	TLK2 Amplification	variantId=2240;mpId=2116;evidence=Predictive:D:1
+civic:feature:61765	fusion	TMPRSS2	ERG									1	TMPRSS2::ERG fusion	featureId=61765;variantIds=195;evidence=Diagnostic:B:1
+civic:feature:61781	fusion	TNKS2	PDGFRA									1	TNKS2::PDGFRA fusion	featureId=61781;variantIds=774;evidence=Predictive:C:1
+civic:371	amp	TOP1										1	TOP1 Amplification	variantId=371;mpId=367;evidence=Predictive:B:2;civicTranscript=ENST00000361337.2
+civic:4452	del	TP53										2	TP53 Loss	variantId=4452;mpId=4407;evidence=Predictive:D:1
+civic:222	gene	TP53					any					2	TP53 Mutation	variantId=222;mpId=222;evidence=Predictive:B:4,Predictive:C:2,Predictive:D:2,Prognostic:A:1,Prognostic:B:17;civicTranscript=ENST00000269305.4
+civic:223	gene	TP53					trunc					2	TP53 Truncating Mutation	variantId=223;mpId=223;evidence=Prognostic:B:2;civicTranscript=ENST00000269305.4
+civic:4106	snv	TP53		68		E	G					1	TP53 E68G	variantId=4106;mpId=3974;evidence=Functional:D:1
+civic:3760	snv	TP53		98		P	S					1	TP53 P98S	variantId=3760;mpId=3628;evidence=Functional:D:1
+civic:3761	snv	TP53		98		P	L					1	TP53 P98L	variantId=3761;mpId=3629;evidence=Functional:D:1
+civic:4111	snv	TP53		111		L	R					1	TP53 L111R	variantId=4111;mpId=3979;evidence=Functional:D:1
+civic:4112	snv	TP53		115		H	Y					1	TP53 H115Y	variantId=4112;mpId=3980;evidence=Functional:D:1
+civic:4113	snv	TP53		124		C	R					1	TP53 C124R	variantId=4113;mpId=3981;evidence=Functional:D:1
+civic:3762	snv	TP53		126		Y	D					1	TP53 Y126D	variantId=3762;mpId=3630;evidence=Functional:D:1
+civic:3763	snv	TP53		126		Y	S					1	TP53 Y126S	variantId=3763;mpId=3631;evidence=Functional:D:1
+civic:5576	snv	TP53		126		Y	C					1	TP53 Y126C	variantId=5576;mpId=6069;evidence=Functional:D:2
+civic:924	snv	TP53		135		C	W					1	TP53 C135W	variantId=924;mpId=898;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:3764	snv	TP53		139		K	E					1	TP53 K139E	variantId=3764;mpId=3632;evidence=Functional:D:1
+civic:4114	snv	TP53		139		L	N					1	TP53 L139N	variantId=4114;mpId=3982;evidence=Functional:D:1
+civic:3777	snv	TP53		144		Q	P					1	TP53 Q144P	variantId=3777;mpId=3645;evidence=Functional:D:1
+civic:1093	snv	TP53		151		P	H					1	TP53 P151H	variantId=1093;mpId=1067;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:3765	snv	TP53		151		P	S					1	TP53 P151S	variantId=3765;mpId=3633;evidence=Functional:D:1
+civic:3767	snv	TP53		152		P	L					1	TP53 P152L	variantId=3767;mpId=3635;evidence=Functional:D:2
+civic:3794	snv	TP53		152		P	T					1	TP53 P152T	variantId=3794;mpId=3662;evidence=Functional:D:1
+civic:3419	snv	TP53		154		G	S					1	TP53 G154S	variantId=3419;mpId=3287;evidence=Functional:D:1
+civic:3795	snv	TP53		156		R	P					1	TP53 R156P	variantId=3795;mpId=3663;evidence=Functional:D:1
+civic:4102	snv	TP53		156		R	H					1	TP53 R156H	variantId=4102;mpId=3970;evidence=Functional:D:1
+civic:1092	snv	TP53		157		V	F					1	TP53 V157F	variantId=1092;mpId=1066;evidence=Predictive:D:1;civicTranscript=ENST00000269305.4
+civic:1695	snv	TP53		158		R	H					1	TP53 R158H	variantId=1695;mpId=1603;evidence=Functional:D:2,Predictive:D:1;civicTranscript=ENST00000269305.4
+civic:1699	snv	TP53		158		R	L					1	TP53 R158L	variantId=1699;mpId=1607;evidence=Predictive:D:1;civicTranscript=ENST00000269305.4
+civic:4115	snv	TP53		158		R	G					1	TP53 R158G	variantId=4115;mpId=3983;evidence=Functional:D:1
+civic:1114	snv	TP53		161		A	T					1	TP53 A161T	variantId=1114;mpId=1088;evidence=Functional:D:1
+civic:3768	snv	TP53		162		I	F					1	TP53 I162F	variantId=3768;mpId=3636;evidence=Functional:D:1
+civic:3769	snv	TP53		163		Y	H					1	TP53 Y163H	variantId=3769;mpId=3637;evidence=Functional:D:1
+civic:3800	snv	TP53		163		Y	N					1	TP53 Y163N	variantId=3800;mpId=3668;evidence=Functional:D:1
+civic:3783	snv	TP53		168		H	Y					1	TP53 H168Y	variantId=3783;mpId=3651;evidence=Functional:D:1
+civic:116	snv	TP53		175		R	H					1	TP53 R175H	variantId=116;mpId=116;evidence=Functional:D:1,Predictive:C:1,Predictive:D:3,Prognostic:B:1;civicTranscript=ENST00000269305.4
+civic:3784	snv	TP53		177		P	S					1	TP53 P177S	variantId=3784;mpId=3652;evidence=Functional:D:1
+civic:3785	snv	TP53		177		P	F					1	TP53 P177F	variantId=3785;mpId=3653;evidence=Functional:D:1
+civic:3786	snv	TP53		177		P	H					1	TP53 P177H	variantId=3786;mpId=3654;evidence=Functional:D:1
+civic:4103	snv	TP53		178		H	P					1	TP53 H178P	variantId=4103;mpId=3971;evidence=Functional:D:1
+civic:1082	snv	TP53		179		H	R					1	TP53 H179R	variantId=1082;mpId=1056;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:1083	snv	TP53		179		H	Y					1	TP53 H179Y	variantId=1083;mpId=1057;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:3390	snv	TP53		181		R	P					1	TP53 R181P	variantId=3390;mpId=3258;evidence=Functional:D:1
+civic:3796	snv	TP53		181		R	C					1	TP53 R181C	variantId=3796;mpId=3664;evidence=Functional:D:1
+civic:3797	snv	TP53		181		R	G					1	TP53 R181G	variantId=3797;mpId=3665;evidence=Functional:D:1
+civic:3798	snv	TP53		181		R	H					1	TP53 R181H	variantId=3798;mpId=3666;evidence=Functional:D:1
+civic:1109	snv	TP53		213		R	P					1	TP53 R213P	variantId=1109;mpId=1083;evidence=Predictive:C:1;civicTranscript=ENST00000269305.4
+civic:3778	snv	TP53		219		P	H					1	TP53 P219H	variantId=3778;mpId=3646;evidence=Functional:D:1
+civic:3779	snv	TP53		220		Y	H					1	TP53 Y220H	variantId=3779;mpId=3647;evidence=Functional:D:1
+civic:922	snv	TP53		220		Y	C					1	TP53 Y220C	variantId=922;mpId=896;evidence=Predictive:C:1,Predictive:D:1;civicTranscript=ENST00000269305.4
+civic:3780	snv	TP53		224		E	K					1	TP53 E224K	variantId=3780;mpId=3648;evidence=Functional:D:1
+civic:3782	snv	TP53		230		T	S					1	TP53 T230S	variantId=3782;mpId=3650;evidence=Functional:D:1
+civic:1068	snv	TP53		234		Y	C					1	TP53 Y234C	variantId=1068;mpId=1042;evidence=Predictive:C:1;civicTranscript=ENST00000269305.4
+civic:3781	snv	TP53		234		Y	H					1	TP53 Y234H	variantId=3781;mpId=3649;evidence=Functional:D:1
+civic:3770	snv	TP53		236		Y	S					1	TP53 Y236S	variantId=3770;mpId=3638;evidence=Functional:D:1
+civic:1066	snv	TP53		237		M	I					1	TP53 M237I	variantId=1066;mpId=1040;evidence=Predictive:D:1;civicTranscript=ENST00000269305.4
+civic:2648	snv	TP53		238		C	Y					1	TP53 C238Y	variantId=2648;mpId=2517;evidence=Prognostic:E:1;civicTranscript=ENST00000269305.4
+civic:3787	snv	TP53		239		N	S					1	TP53 N239S	variantId=3787;mpId=3655;evidence=Functional:D:1
+civic:2777	snv	TP53		241		S	F					1	TP53 S241F	variantId=2777;mpId=2646;evidence=Functional:D:1
+civic:3788	snv	TP53		241		S	T					1	TP53 S241T	variantId=3788;mpId=3656;evidence=Functional:D:1
+civic:1062	snv	TP53		242		C	F					1	TP53 C242F	variantId=1062;mpId=1036;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:1063	snv	TP53		242		C	S					1	TP53 C242S	variantId=1063;mpId=1037;evidence=Functional:D:1
+civic:1064	snv	TP53		242		C	Y					1	TP53 C242Y	variantId=1064;mpId=1038;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:1060	snv	TP53		244		G	S					1	TP53 G244S	variantId=1060;mpId=1034;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:1036	snv	TP53		245		G	D					1	TP53 G245D	variantId=1036;mpId=1010;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:879	snv	TP53		245		G	S					1	TP53 G245S	variantId=879;mpId=853;evidence=Functional:D:2,Predictive:D:1;civicTranscript=ENST00000269305.4
+civic:3789	snv	TP53		246		M	L					1	TP53 M246L	variantId=3789;mpId=3657;evidence=Functional:D:1
+civic:117	snv	TP53		248		R	Q					1	TP53 R248Q	variantId=117;mpId=117;evidence=Predictive:D:1,Prognostic:B:2;civicTranscript=ENST00000269305.4
+civic:118	snv	TP53		248		R	W					1	TP53 R248W	variantId=118;mpId=118;evidence=Functional:D:1,Predictive:D:1,Prognostic:B:1;civicTranscript=ENST00000269305.4
+civic:119	snv	TP53		249		R						1	TP53 R249	variantId=119;mpId=119;evidence=Predictive:B:1;civicTranscript=ENST00000269305.4
+civic:1696	snv	TP53		249		R	S					1	TP53 R249S	variantId=1696;mpId=1604;evidence=Functional:D:1,Predictive:D:1;civicTranscript=ENST00000269305.4
+civic:3771	snv	TP53		252		L	F					1	TP53 L252F	variantId=3771;mpId=3639;evidence=Functional:D:1
+civic:3801	snv	TP53		257		L	P					1	TP53 L257P	variantId=3801;mpId=3669;evidence=Functional:D:1
+civic:3772	snv	TP53		258		E	K					1	TP53 E258K	variantId=3772;mpId=3640;evidence=Functional:D:1
+civic:3401	snv	TP53		259		D	V					1	TP53 D259V	variantId=3401;mpId=3269;evidence=Functional:D:1
+civic:3773	snv	TP53		262		G	D					1	TP53 G262D	variantId=3773;mpId=3641;evidence=Functional:D:1
+civic:1055	snv	TP53		266		G	R					1	TP53 G266R	variantId=1055;mpId=1029;evidence=Functional:D:1
+civic:3774	snv	TP53		266		G	E					1	TP53 G266E	variantId=3774;mpId=3642;evidence=Functional:D:2
+civic:4122	snv	TP53		266		G	V					1	TP53 G266V	variantId=4122;mpId=3990;evidence=Functional:D:1
+civic:1053	snv	TP53		270		F	S					1	TP53 F270S	variantId=1053;mpId=1027;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:4123	snv	TP53		272		V	G					1	TP53 V272G	variantId=4123;mpId=3991;evidence=Functional:D:1
+civic:121	snv	TP53		273		R	C					1	TP53 R273C	variantId=121;mpId=121;evidence=Functional:D:1,Predictive:C:1,Predictive:D:1,Prognostic:B:2;civicTranscript=ENST00000269305.4
+civic:122	snv	TP53		273		R	H					1	TP53 R273H	variantId=122;mpId=122;evidence=Predictive:D:2,Prognostic:B:2;civicTranscript=ENST00000269305.4
+civic:918	snv	TP53		273		R	L					1	TP53 R273L	variantId=918;mpId=892;evidence=Predictive:C:1;civicTranscript=ENST00000269305.4
+civic:3790	snv	TP53		274		V	F					1	TP53 V274F	variantId=3790;mpId=3658;evidence=Functional:D:1
+civic:1050	snv	TP53		276		A	V					1	TP53 A276V	variantId=1050;mpId=1024;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:1049	snv	TP53		278		P	S					1	TP53 P278S	variantId=1049;mpId=1023;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:3791	snv	TP53		279		G	E					1	TP53 G279E	variantId=3791;mpId=3659;evidence=Functional:D:1
+civic:1697	snv	TP53		280		R	K					1	TP53 R280K	variantId=1697;mpId=1605;evidence=Predictive:D:1;civicTranscript=ENST00000269305.4
+civic:1698	snv	TP53		280		R	T					1	TP53 R280T	variantId=1698;mpId=1606;evidence=Predictive:D:1;civicTranscript=ENST00000269305.4
+civic:1044	snv	TP53		281		D	E					1	TP53 D281E	variantId=1044;mpId=1018;evidence=Functional:D:1
+civic:3792	snv	TP53		281		D	N					1	TP53 D281N	variantId=3792;mpId=3660;evidence=Functional:D:1
+civic:1108	snv	TP53		282		R	L					1	TP53 R282L	variantId=1108;mpId=1082;evidence=Predictive:C:1;civicTranscript=ENST00000269305.4
+civic:3799	snv	TP53		283		R	H					1	TP53 R283H	variantId=3799;mpId=3667;evidence=Functional:D:1
+civic:1043	snv	TP53		285		E	K					1	TP53 E285K	variantId=1043;mpId=1017;evidence=Functional:D:1;civicTranscript=ENST00000269305.4
+civic:915	snv	TP53		286		E	K					1	TP53 E286K	variantId=915;mpId=889;evidence=Functional:D:1
+civic:3775	snv	TP53		308		L	M					1	TP53 L308M	variantId=3775;mpId=3643;evidence=Functional:D:1
+civic:3776	snv	TP53		323		L	P					1	TP53 L323P	variantId=3776;mpId=3644;evidence=Functional:D:1
+civic:feature:61878	fusion	TPM3	NTRK1									1	TPM3::NTRK1 fusion	featureId=61878;variantIds=2992;evidence=Predictive:A:1,Predictive:C:5,Predictive:D:1
+civic:feature:61857	fusion	TPR	JAK2									1	TPR::JAK2 fusion	featureId=61857;variantIds=2850;evidence=Diagnostic:C:1
+civic:feature:61900	fusion	TPR	NTRK1									1	TPR::NTRK1 fusion	featureId=61900;variantIds=3465;evidence=Oncogenic:C:2,Predictive:C:7
+civic:feature:61789	fusion	TRIM24	BRAF									1	TRIM24::BRAF fusion	featureId=61789;variantIds=287;evidence=Predictive:D:2
+civic:feature:61816	fusion	TRIM63	NTRK1									1	TRIM63::NTRK1 fusion	featureId=61816;variantIds=2393;evidence=Predictive:E:1
+civic:feature:62070	fusion	TRPS1	PLAG1									1	TRPS1::PLAG1 fusion	featureId=62070;variantIds=5165;evidence=Diagnostic:B:1
+civic:124	gene	TSC1					fs					2	TSC1 Frameshift Truncation	variantId=124;mpId=124;evidence=Predictive:C:1;civicTranscript=ENST00000298552.3
+civic:125	gene	TSC1					trunc					2	TSC1 Loss-of-function	variantId=125;mpId=125;evidence=Predictive:B:1;civicTranscript=ENST00000298552.3
+civic:469	snv	TSC2		1178		Q	*					1	TSC2 Q1178*	variantId=469;mpId=465;evidence=Predictive:C:1;civicTranscript=ENST00000219476.3
+civic:224	amp	TTF1										1	TTF1 AMPLIFICATION	variantId=224;mpId=224;evidence=Prognostic:B:1;civicTranscript=ENST00000334270.2
+civic:379	amp	TYMS										1	TYMS Amplification	variantId=379;mpId=375;evidence=Predictive:B:1;civicTranscript=ENST00000323274.10
+civic:521	gene	U2AF1					any					2	U2AF1 MUTATION	variantId=521;mpId=517;evidence=Prognostic:B:1;civicTranscript=ENST00000291552.4
+civic:128	snv	U2AF1		34		S	Y,F					1	U2AF1 S34Y/F	variantId=128;mpId=128;evidence=Prognostic:B:2;civicTranscript=ENST00000291552.4
+civic:127	snv	U2AF1		157		Q	P,R					1	U2AF1 Q157P/R	variantId=127;mpId=127;evidence=Prognostic:B:3;civicTranscript=ENST00000291552.4
+civic:feature:61987	fusion	UFD1	NTRK2									1	UFD1::NTRK2 fusion	featureId=61987;variantIds=4880;evidence=Oncogenic:C:1
+civic:feature:61862	fusion	USP25	JAK2									1	USP25::JAK2 fusion	featureId=61862;variantIds=2863;evidence=Diagnostic:C:1
+civic:feature:62034	fusion	VGLL2	*									1	VGLL2::* fusion	featureId=62034;variantIds=4586;evidence=Diagnostic:B:1,Diagnostic:C:2,Prognostic:B:1
+civic:436	del	VHL										2	VHL Loss	variantId=436;mpId=432;evidence=Predictive:D:1;civicTranscript=ENST00000256474.2
+civic:846	fs	VHL		1		M						1	VHL M1FS	variantId=846;mpId=820;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:829	fs	VHL		54		M						1	VHL M54IFS	variantId=829;mpId=807;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:764	fs	VHL		55		E						1	VHL E55FS	variantId=764;mpId=745;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:852	fs	VHL		98		Y						1	VHL Y98FS	variantId=852;mpId=826;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:2561	fs	VHL		150		N						1	VHL N150fs	variantId=2561;mpId=2434;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:159	gene	VHL					trunc					2	VHL Loss-of-function	variantId=159;mpId=159;evidence=Prognostic:B:1;civicTranscript=ENST00000256474.2
+civic:160	gene	VHL					any					2	VHL Mutation	variantId=160;mpId=160;evidence=Predictive:B:3,Prognostic:B:2;civicTranscript=ENST00000256474.2
+civic:2265	inframe	VHL		56	59	A						1	VHL A56_P59del	variantId=2265;mpId=2141;evidence=Predisposing:C:1
+civic:2553	inframe	VHL		121	122	D						1	VHL D121_A122del	variantId=2553;mpId=2426;evidence=Oncogenic:C:1
+civic:847	snv	VHL		1		M						1	VHL M1?	variantId=847;mpId=821;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:848	snv	VHL		1		M						1	VHL M1?	variantId=848;mpId=822;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:849	snv	VHL		7		N	D					1	VHL N7D	variantId=849;mpId=823;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:1294	snv	VHL		8		W	*					1	VHL W8*	variantId=1294;mpId=1268;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:1788	snv	VHL		65		S	L					1	VHL S65L	variantId=1788;mpId=1664;evidence=Oncogenic:C:2;civicTranscript=ENST00000256474.2
+civic:1798	snv	VHL		118		L	P					1	VHL L118P	variantId=1798;mpId=1674;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:2440	snv	VHL		138		P	R					1	VHL P138R	variantId=2440;mpId=2313;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:1845	snv	VHL		164		Q	*					1	VHL Q164*	variantId=1845;mpId=1721;evidence=Oncogenic:C:1;civicTranscript=ENST00000256474.2
+civic:1776	snv	VHL		184		L	P					1	VHL L184P	variantId=1776;mpId=1652;evidence=Diagnostic:C:2;civicTranscript=ENST00000256474.2
+civic:feature:61997	fusion	VPS18	NTRK3									1	VPS18::NTRK3 fusion	featureId=61997;variantIds=4881,5063;evidence=Oncogenic:C:2
+civic:129	exon	WT1					any	7				1	WT1 Exon 7 Mutation	variantId=129;mpId=129;evidence=Predictive:B:1,Prognostic:B:8;civicTranscript=ENST00000332351.3
+civic:130	exon	WT1					any	9				1	WT1 Exon 9 Mutation	variantId=130;mpId=130;evidence=Prognostic:B:2;civicTranscript=ENST00000332351.3
+civic:feature:61780	fusion	WWTR1	CAMTA1									1	WWTR1::CAMTA1 fusion	featureId=61780;variantIds=742;evidence=Diagnostic:B:3
+civic:feature:61963	fusion	YAP1	TFE3									1	YAP1::TFE3 fusion	featureId=61963;variantIds=4577;evidence=Diagnostic:B:2,Diagnostic:C:1,Oncogenic:B:1
+civic:feature:61994	fusion	YAP1	MAMLD1									1	YAP1::MAMLD1 fusion	featureId=61994;variantIds=4796;evidence=Diagnostic:B:1
+civic:feature:61995	fusion	YAP1	SIRAL1									1	YAP1::SIRAL1 fusion	featureId=61995;variantIds=4797;evidence=Diagnostic:C:1
+civic:feature:61996	fusion	YAP1	*									1	YAP1::* fusion	featureId=61996;variantIds=4798;evidence=Diagnostic:B:1
+civic:feature:61954	fusion	ZFTA	RELA									1	ZFTA::RELA fusion	featureId=61954;variantIds=4528;evidence=Diagnostic:A:1,Diagnostic:B:3,Prognostic:B:1
+civic:feature:61955	fusion	ZFTA	NCOA1									1	ZFTA::NCOA1 fusion	featureId=61955;variantIds=4532;evidence=Diagnostic:C:1
+civic:feature:61956	fusion	ZFTA	NCOA2									1	ZFTA::NCOA2 fusion	featureId=61956;variantIds=4533;evidence=Diagnostic:C:1
+civic:feature:61957	fusion	ZFTA	MAML2									1	ZFTA::MAML2 fusion	featureId=61957;variantIds=4534;evidence=Diagnostic:C:1
+civic:feature:61777	fusion	ZKSCAN1	BRAF									1	ZKSCAN1::BRAF fusion	featureId=61777;variantIds=657;evidence=Predictive:C:1
+civic:feature:61893	fusion	ZMIZ1	ABL1									1	ZMIZ1::ABL1 fusion	featureId=61893;variantIds=3269;evidence=Diagnostic:C:3,Oncogenic:C:1,Prognostic:B:1
+civic:feature:61950	fusion	ZMYM2	FGFR1									1	ZMYM2::FGFR1 fusion	featureId=61950;variantIds=4496;evidence=Predictive:C:1
+civic:feature:61863	fusion	ZNF274	JAK2									1	ZNF274::JAK2 fusion	featureId=61863;variantIds=2864;evidence=Diagnostic:C:1
+civic:feature:61877	fusion	ZNF430	JAK2									1	ZNF430::JAK2 fusion	featureId=61877;variantIds=2977;evidence=Diagnostic:C:1

@@ -1,0 +1,1341 @@
+#format=driverKb/1
+#source=Cancer Hotspots
+#url=https://www.cancerhotspots.org
+#license=ODbL-1.0
+#licenseUrl=https://opendatacommons.org/licenses/odbl/1-0/
+#licenseStatement=The data are available under the ODC Open Database License (ODbL) (https://www.cancerhotspots.org/#/about)
+#attribution=Cancer Hotspots, https://www.cancerhotspots.org
+#note=Adapted from the source list: each hotspot is reformatted as a driverKb row, and the columns "Tumor Type Composition" and "Found in" (a copy of "Samples") are left out. This file is under ODbL 1.0, not under the license of the software it is distributed with.
+#retrieved=2026-11-26
+#inputs=hotspots.txt sha256:25f0917d2dd5891c7eee4fc71772c2827c0f4e4191b60f95df53d499bed8feea
+#generatedBy=driverKb intake, hotspots.py
+id	kind	gene	partner	start	end	ref	alt	exon	isoform	region	window	tier	label	info
+hotspots:ACVR1:R206	snv	ACVR1		206		R	H					1	ACVR1 R206	samples=8;qvalue=3.09527109977675e-06;variants=H:8
+hotspots:ACVR1:R258	snv	ACVR1		258		R	G,M					1	ACVR1 R258	samples=6;qvalue=6.8256854220096e-08;variants=G:5,M:1
+hotspots:ACVR1:G328	snv	ACVR1		328		G	E,V					1	ACVR1 G328	samples=7;qvalue=2.17276202583146e-10;variants=E:5,V:2
+hotspots:AKT1:65-77	inframe	AKT1		65	77							1	AKT1 65-77 in-frame indel	samples=2;qvalue=0.0899335437451499;variants=P68_C77dup:1,T65_I75dup:1
+hotspots:AKT1:E17	snv	AKT1		17		E	K,*					1	AKT1 E17	samples=149;qvalue=1.14602579830599e-288;variants=K:148,*:1
+hotspots:AKT1:E40	snv	AKT1		40		E	K,A					1	AKT1 E40	samples=9;qvalue=5.15261605803937e-05;variants=K:8,A:1
+hotspots:AKT1:L52	snv	AKT1		52		L	R,H					1	AKT1 L52	samples=5;qvalue=3.30992340624556e-06;variants=R:4,H:1
+hotspots:AKT1:Q79	snv	AKT1		79		Q	K					1	AKT1 Q79	samples=6;qvalue=0.000879321560858086;variants=K:6
+hotspots:AKT1:W80	snv	AKT1		80		W	R					1	AKT1 W80	samples=11;qvalue=2.55653235095282e-12;variants=R:11
+hotspots:AKT1:D323	snv	AKT1		323		D	G,Y,N					1	AKT1 D323	samples=5;qvalue=0.0198991094867804;variants=G:2,Y:2,N:1
+hotspots:AKT2:60-84	inframe	AKT2		60	84							1	AKT2 60-84 in-frame indel	samples=4;qvalue=2.07162746898975e-05;variants=C60_I75dup:1,L78_Q79insHANTFVIRCL:1,R67_L78dup:1,R76_I84dup:1
+hotspots:AKT3:E17	snv	AKT3		17		E	K,*					1	AKT3 E17	samples=10;qvalue=0.00407836413892336;variants=K:9,*:1
+hotspots:ALK:R395	snv	ALK		395		R	H,R					1	ALK R395	samples=7;qvalue=0.035124603778631;variants=H:6,R:1
+hotspots:ALK:R401	snv	ALK		401		R	*,L,Q					1	ALK R401	samples=11;qvalue=0.0038099485803712;variants=*:9,L:1,Q:1
+hotspots:ALK:F1174	snv	ALK		1174		F	L,C,V					1	ALK F1174	samples=14;qvalue=1.9674160903607e-27;variants=L:11,C:2,V:1
+hotspots:ALK:F1245	snv	ALK		1245		F	I,V					1	ALK F1245	samples=3;qvalue=0.000975062354863964;variants=I:2,V:1
+hotspots:ALK:R1275	snv	ALK		1275		R	Q,*,L					1	ALK R1275	samples=18;qvalue=6.65371720051819e-28;variants=Q:16,*:1,L:1
+hotspots:ANKRD11:1008-1015	inframe	ANKRD11		1008	1015							1	ANKRD11 1008-1015 in-frame indel	samples=3;qvalue=0.0372217722530266;variants=K1012del:2,E1008_P1015del:1
+hotspots:ANKRD11:1461	inframe	ANKRD11		1461								1	ANKRD11 1461 in-frame indel	samples=4;qvalue=0.000507033000622495;variants=K1461del:4
+hotspots:ANKRD11:K369	snv	ANKRD11		369		K	R					1	ANKRD11 K369	samples=5;qvalue=0.0204755008151429;variants=R:5
+hotspots:APC:R213	snv	APC		213		R	*					1	APC R213	samples=51;qvalue=0.00809179351097399;variants=*:51
+hotspots:APC:Y935	snv	APC		935		Y	*					1	APC Y935	samples=13;qvalue=2.58293837594006e-06;variants=*:13
+hotspots:APC:Q1294	snv	APC		1294		Q	*					1	APC Q1294	samples=7;qvalue=0.00828700389539349;variants=*:7
+hotspots:APC:Q1303	snv	APC		1303		Q	*					1	APC Q1303	samples=10;qvalue=0.00828700389539349;variants=*:10
+hotspots:APC:S1315	snv	APC		1315		S	*					1	APC S1315	samples=8;qvalue=0.0850521110220947;variants=*:8
+hotspots:APC:Q1328	snv	APC		1328		Q	*					1	APC Q1328	samples=8;qvalue=0.00828700389539349;variants=*:8
+hotspots:APC:Q1338	snv	APC		1338		Q	*					1	APC Q1338	samples=17;qvalue=2.62621150209083e-05;variants=*:17
+hotspots:APC:E1353	snv	APC		1353		E	*					1	APC E1353	samples=15;qvalue=0.000102562550865421;variants=*:15
+hotspots:APC:Q1367	snv	APC		1367		Q	*,E					1	APC Q1367	samples=29;qvalue=5.92530901182497e-10;variants=*:28,E:1
+hotspots:APC:Q1378	snv	APC		1378		Q	*					1	APC Q1378	samples=23;qvalue=6.87808957232797e-08;variants=*:23
+hotspots:APC:E1379	snv	APC		1379		E	*					1	APC E1379	samples=11;qvalue=0.00245822451409422;variants=*:11
+hotspots:APC:E1397	snv	APC		1397		E	*					1	APC E1397	samples=19;qvalue=2.58293837594006e-06;variants=*:19
+hotspots:APC:Q1406	snv	APC		1406		Q	*,H					1	APC Q1406	samples=19;qvalue=1.71142192081097e-05;variants=*:18,H:1
+hotspots:APC:E1408	snv	APC		1408		E	*					1	APC E1408	samples=13;qvalue=0.000733406551801644;variants=*:13
+hotspots:APC:Q1429	snv	APC		1429		Q	*,R					1	APC Q1429	samples=23;qvalue=1.21477020884371e-11;variants=*:22,R:1
+hotspots:AR:L702	snv	AR		702		L	H,L					1	AR L702	samples=19;qvalue=2.56839664672137e-43;variants=H:18,L:1
+hotspots:AR:W742	snv	AR		742		W	C,L					1	AR W742	samples=7;qvalue=4.10229788253528e-11;variants=C:6,L:1
+hotspots:AR:H875	snv	AR		875		H	Y					1	AR H875	samples=16;qvalue=7.63404370123561e-34;variants=Y:16
+hotspots:AR:T878	snv	AR		878		T	A,S					1	AR T878	samples=15;qvalue=8.20730580930317e-35;variants=A:14,S:1
+hotspots:ARAF:S214	snv	ARAF		214		S	F,A,P,C,S,Y					1	ARAF S214	samples=12;qvalue=1.11680470351445e-07;variants=F:4,A:3,P:2,C:1,S:1,Y:1
+hotspots:ARAF:P216	snv	ARAF		216		P	L,R					1	ARAF P216	samples=4;qvalue=0.000593515828701691;variants=L:3,R:1
+hotspots:ARID1A:R693	snv	ARID1A		693		R	*					1	ARID1A R693	samples=16;qvalue=8.62350035432213e-10;variants=*:16
+hotspots:ARID1A:X911	snv	ARID1A		911		X	sp					1	ARID1A X911 splice	samples=5;qvalue=0.0734346156772229;variants=sp:5
+hotspots:ARID1A:Q1142	snv	ARID1A		1142		Q	*					1	ARID1A Q1142	samples=6;qvalue=0.0366563874985603;variants=*:6
+hotspots:ARID1A:R1276	snv	ARID1A		1276		R	*,Q					1	ARID1A R1276	samples=15;qvalue=1.08597311260384e-08;variants=*:14,Q:1
+hotspots:ARID1A:R1335	snv	ARID1A		1335		R	*					1	ARID1A R1335	samples=12;qvalue=4.97635912481126e-06;variants=*:12
+hotspots:ARID1A:R1461	snv	ARID1A		1461		R	*,Q					1	ARID1A R1461	samples=10;qvalue=0.00133954357898348;variants=*:9,Q:1
+hotspots:ARID1A:R1721	snv	ARID1A		1721		R	*					1	ARID1A R1721	samples=13;qvalue=1.45530511496136e-06;variants=*:13
+hotspots:ARID1A:R1722	snv	ARID1A		1722		R	*					1	ARID1A R1722	samples=10;qvalue=0.000675573097921338;variants=*:10
+hotspots:ARID1A:R1989	snv	ARID1A		1989		R	*,Q					1	ARID1A R1989	samples=29;qvalue=3.62855909355564e-19;variants=*:28,Q:1
+hotspots:ARID1A:G2087	snv	ARID1A		2087		G	R,E					1	ARID1A G2087	samples=13;qvalue=3.82110215304271e-06;variants=R:10,E:3
+hotspots:ARID1A:R2158	snv	ARID1A		2158		R	*,Q,R					1	ARID1A R2158	samples=15;qvalue=1.61815343802636e-09;variants=*:12,Q:2,R:1
+hotspots:ARID1B:G966	snv	ARID1B		966		G	D					1	ARID1B G966	samples=4;qvalue=0.0223082832237321;variants=D:4
+hotspots:ARID1B:Q1179	snv	ARID1B		1179		Q	*,P					1	ARID1B Q1179	samples=5;qvalue=0.0366275919271872;variants=*:4,P:1
+hotspots:ARID1B:T1652	snv	ARID1B		1652		T	M,A,T					1	ARID1B T1652	samples=5;qvalue=0.0938231260288271;variants=M:3,A:1,T:1
+hotspots:ARID2:S297	snv	ARID2		297		S	F,S					1	ARID2 S297	samples=20;qvalue=2.22766268353864e-12;variants=F:16,S:4
+hotspots:ARID2:R314	snv	ARID2		314		R	C,S					1	ARID2 R314	samples=9;qvalue=0.00383083238325229;variants=C:8,S:1
+hotspots:ASXL2:M1	snv	ASXL2		1		M	T,I					1	ASXL2 M1	samples=6;qvalue=0.000968286986342165;variants=T:5,I:1
+hotspots:ASXL2:E330	snv	ASXL2		330		E	K,Q,D					1	ASXL2 E330	samples=10;qvalue=9.4223821280924e-05;variants=K:7,Q:2,D:1
+hotspots:ASXL2:R357	snv	ASXL2		357		R	*					1	ASXL2 R357	samples=9;qvalue=0.0174219164329083;variants=*:9
+hotspots:ATM:R250	snv	ATM		250		R	*,P					1	ATM R250	samples=15;qvalue=5.72626267800822e-07;variants=*:14,P:1
+hotspots:ATM:R337	snv	ATM		337		R	C,H					1	ATM R337	samples=40;qvalue=3.53306905480388e-41;variants=C:31,H:9
+hotspots:ATM:R1466	snv	ATM		1466		R	*,Q,P					1	ATM R1466	samples=9;qvalue=0.0114010066702172;variants=*:4,Q:3,P:2
+hotspots:ATM:Y2019	snv	ATM		2019		Y	C,H					1	ATM Y2019	samples=9;qvalue=2.37274478632093e-07;variants=C:8,H:1
+hotspots:ATM:E2039	snv	ATM		2039		E	K,*,G					1	ATM E2039	samples=13;qvalue=6.503179954128571e-05;variants=K:10,*:2,G:1
+hotspots:ATM:R2526	snv	ATM		2526		R	G,K,S					1	ATM R2526	samples=10;qvalue=0.0007338353863124;variants=G:4,K:3,S:3
+hotspots:ATM:R2832	snv	ATM		2832		R	C,S					1	ATM R2832	samples=7;qvalue=0.066057625068094;variants=C:6,S:1
+hotspots:ATM:N2875	snv	ATM		2875		N	S,T,K					1	ATM N2875	samples=8;qvalue=1.70075948226044e-06;variants=S:5,T:2,K:1
+hotspots:ATM:I2888	snv	ATM		2888		I	T,L					1	ATM I2888	samples=4;qvalue=0.0178317087176485;variants=T:3,L:1
+hotspots:ATM:L2890	snv	ATM		2890		L	P,I,R,V					1	ATM L2890	samples=5;qvalue=0.0068729555794163;variants=P:2,I:1,R:1,V:1
+hotspots:ATM:R3008	snv	ATM		3008		R	H,C,L					1	ATM R3008	samples=15;qvalue=1.74669303192438e-09;variants=H:7,C:6,L:2
+hotspots:ATRX:X199	snv	ATRX		199		X	sp					1	ATRX X199 splice	samples=4;qvalue=0.0145598381914334;variants=sp:4
+hotspots:ATRX:R907	snv	ATRX		907		R	*					1	ATRX R907	samples=6;qvalue=0.0576614283782519;variants=*:6
+hotspots:ATRX:R1426	snv	ATRX		1426		R	*,R					1	ATRX R1426	samples=12;qvalue=0.000182976033441754;variants=*:11,R:1
+hotspots:AXIN1:X652	snv	AXIN1		652		X	sp					1	AXIN1 X652 splice	samples=3;qvalue=0.0296833082515064;variants=sp:3
+hotspots:AXL:A273	snv	AXL		273		A	V,P					1	AXL A273	samples=4;qvalue=0.0057559976089476;variants=V:3,P:1
+hotspots:AXL:T443	snv	AXL		443		T	T					1	AXL T443	samples=2;qvalue=0.0400800119264523;variants=T:2
+hotspots:B2M:M1	snv	B2M		1		M	I,L,V,T,K,R					1	B2M M1	samples=41;qvalue=3.76576315904147e-56;variants=I:11,L:11,V:9,T:4,K:3,R:3
+hotspots:B2M:L7	snv	B2M		7		L	*,S					1	B2M L7	samples=5;qvalue=0.00770415024339667;variants=*:3,S:2
+hotspots:B2M:L12	snv	B2M		12		L	P,Q,L					1	B2M L12	samples=7;qvalue=0.000115092463101106;variants=P:4,Q:2,L:1
+hotspots:B2M:X23	snv	B2M		23		X	sp					1	B2M X23 splice	samples=17;qvalue=1.71517108741211e-09;variants=sp:17
+hotspots:BAP1:25-34	inframe	BAP1		25	34							1	BAP1 25-34 in-frame indel	samples=5;qvalue=0.0475318811088585;variants=E31del:2,K25_D34delinsN:1,K25_Q28del:1,Y33del:1
+hotspots:BAP1:C91	snv	BAP1		91		C	F,G,R					1	BAP1 C91	samples=7;qvalue=0.0004743660307697;variants=F:3,G:3,R:1
+hotspots:BAP1:F170	snv	BAP1		170		F	C,V,L,S					1	BAP1 F170	samples=11;qvalue=4.415824904470891e-09;variants=C:5,V:4,L:1,S:1
+hotspots:BCL10:N173	snv	BCL10		173		N	H					1	BCL10 N173	samples=2;qvalue=0.0244964388236978;variants=H:2
+hotspots:BCL10:L174	snv	BCL10		174		L	*					1	BCL10 L174	samples=3;qvalue=0.00283328439617831;variants=*:3
+hotspots:BCL10:E178	snv	BCL10		178		E	E,D					1	BCL10 E178	samples=3;qvalue=0.0416290007485654;variants=E:2,D:1
+hotspots:BCL2:K22	snv	BCL2		22		K	K,*,R					1	BCL2 K22	samples=10;qvalue=0.0009664695729283;variants=K:8,*:1,R:1
+hotspots:BCL2:G33	snv	BCL2		33		G	R,G					1	BCL2 G33	samples=6;qvalue=0.0137911686286346;variants=R:5,G:1
+hotspots:BCL2:A131	snv	BCL2		131		A	D,T,V					1	BCL2 A131	samples=10;qvalue=0.000338355303555859;variants=D:7,T:2,V:1
+hotspots:BCL2:N172	snv	BCL2		172		N	S,N,Q					1	BCL2 N172	samples=6;qvalue=0.0692871398183635;variants=S:3,N:2,Q:1
+hotspots:BCL2L11:G156	snv	BCL2L11		156		G	R,E,*					1	BCL2L11 G156	samples=6;qvalue=0.061848349524064;variants=R:3,E:2,*:1
+hotspots:BCL6:R594	snv	BCL6		594		R	Q,G					1	BCL6 R594	samples=12;qvalue=1.36919837925192e-06;variants=Q:10,G:2
+hotspots:BCL6:R618	snv	BCL6		618		R	C,H					1	BCL6 R618	samples=7;qvalue=0.00748624177672911;variants=C:6,H:1
+hotspots:BCOR:N1459	snv	BCOR		1459		N	S					1	BCOR N1459	samples=36;qvalue=2.0435075018722e-67;variants=S:36
+hotspots:BRAF:486-494	inframe	BRAF		486	494							1	BRAF 486-494 in-frame indel	samples=7;qvalue=3.95006537267761e-09;variants=N486_P490del:3,N486_A489delinsK:1,P490_Q494del:1,T488_P492del:1,T488_Q493delinsK:1
+hotspots:BRAF:592-604	inframe	BRAF		592	604							1	BRAF 592-604 in-frame indel	samples=8;qvalue=6.86065772143357e-11;variants=T599dup:3,V600_K601delinsE:2,I592_A598dup:1,K601_W604del:1,V600_R603del:1
+hotspots:BRAF:X327	snv	BRAF		327		X	sp					1	BRAF X327 splice	samples=3;qvalue=0.0717947351386339;variants=sp:3
+hotspots:BRAF:G464	snv	BRAF		464		G	V,E,R,A					1	BRAF G464	samples=15;qvalue=7.5227138283354e-10;variants=V:9,E:3,R:2,A:1
+hotspots:BRAF:G466	snv	BRAF		466		G	V,E,A					1	BRAF G466	samples=34;qvalue=6.72195069896094e-35;variants=V:17,E:14,A:3
+hotspots:BRAF:G469	snv	BRAF		469		G	A,V,R,E,S,*,G					1	BRAF G469	samples=61;qvalue=3.65455186277771e-82;variants=A:34,V:11,R:8,E:4,S:2,*:1,G:1
+hotspots:BRAF:L485	snv	BRAF		485		L	W,*,F,S					1	BRAF L485	samples=6;qvalue=0.000333433570458539;variants=W:3,*:1,F:1,S:1
+hotspots:BRAF:N581	snv	BRAF		581		N	S,I,T,D,H,Y					1	BRAF N581	samples=21;qvalue=3.87360672866837e-36;variants=S:13,I:3,T:2,D:1,H:1,Y:1
+hotspots:BRAF:D594	snv	BRAF		594		D	N,G,V,Y,E,H					1	BRAF D594	samples=51;qvalue=9.78698184667661e-70;variants=N:24,G:21,V:2,Y:2,E:1,H:1
+hotspots:BRAF:F595	snv	BRAF		595		F	L,I					1	BRAF F595	samples=11;qvalue=2.2122366791988297e-12;variants=L:10,I:1
+hotspots:BRAF:G596	snv	BRAF		596		G	R,C,D,S,V					1	BRAF G596	samples=8;qvalue=0.000495016870209048;variants=R:4,C:1,D:1,S:1,V:1
+hotspots:BRAF:L597	snv	BRAF		597		L	Q,R,S,L,V					1	BRAF L597	samples=10;qvalue=3.69731390598529e-08;variants=Q:3,R:3,S:2,L:1,V:1
+hotspots:BRAF:V600	snv	BRAF		600		V	E,M,K,R,V,G					1	BRAF V600	samples=897;qvalue=0;variants=E:833,M:29,K:24,R:4,V:4,G:3
+hotspots:BRAF:K601	snv	BRAF		601		K	E,N,T					1	BRAF K601	samples=38;qvalue=1.94975462848428e-70;variants=E:32,N:5,T:1
+hotspots:BRCA2:S2303	snv	BRCA2		2303		S	S,F					1	BRCA2 S2303	samples=5;qvalue=0.0384535851439601;variants=S:3,F:2
+hotspots:BRD4:P1065	snv	BRD4		1065		P	P,R					1	BRD4 P1065	samples=4;qvalue=0.0743406064704526;variants=P:3,R:1
+hotspots:CARD11:E93	snv	CARD11		93		E	D,K,Q					1	CARD11 E93	samples=4;qvalue=0.0182330764776687;variants=D:2,K:1,Q:1
+hotspots:CARD11:K215	snv	CARD11		215		K	T,M,N					1	CARD11 K215	samples=5;qvalue=0.0013161682155681;variants=T:3,M:1,N:1
+hotspots:CARD11:L251	snv	CARD11		251		L	P					1	CARD11 L251	samples=3;qvalue=0.00409188109411549;variants=P:3
+hotspots:CARD11:R337	snv	CARD11		337		R	Q,*					1	CARD11 R337	samples=5;qvalue=0.0317184527354723;variants=Q:3,*:2
+hotspots:CARD11:D357	snv	CARD11		357		D	V,N					1	CARD11 D357	samples=4;qvalue=0.0114332958492849;variants=V:3,N:1
+hotspots:CARD11:D401	snv	CARD11		401		D	N					1	CARD11 D401	samples=3;qvalue=0.017237006488171;variants=N:3
+hotspots:CARD11:R423	snv	CARD11		423		R	Q,W,R					1	CARD11 R423	samples=6;qvalue=0.0866304024478113;variants=Q:3,W:2,R:1
+hotspots:CARD11:E626	snv	CARD11		626		E	K,*,Q					1	CARD11 E626	samples=6;qvalue=0.0317184527354723;variants=K:4,*:1,Q:1
+hotspots:CASP8:R127	snv	CASP8		127		R	Q,*					1	CASP8 R127	samples=13;qvalue=0.000302848994448202;variants=Q:8,*:5
+hotspots:CASP8:X243	snv	CASP8		243		X	sp					1	CASP8 X243 splice	samples=7;qvalue=0.0339327707674888;variants=sp:7
+hotspots:CASP8:R292	snv	CASP8		292		R	W,Q					1	CASP8 R292	samples=13;qvalue=4.27696951759218e-06;variants=W:9,Q:4
+hotspots:CASP8:R491	snv	CASP8		491		R	*,Q					1	CASP8 R491	samples=10;qvalue=0.00730591712309491;variants=*:9,Q:1
+hotspots:CASP8:R494	snv	CASP8		494		R	*					1	CASP8 R494	samples=8;qvalue=0.0886117863611851;variants=*:8
+hotspots:CBFB:M1	snv	CBFB		1		M	T,I,K					1	CBFB M1	samples=4;qvalue=0.0223684139186518;variants=T:2,I:1,K:1
+hotspots:CBFB:Q67	snv	CBFB		67		Q	H,*,K					1	CBFB Q67	samples=7;qvalue=0.0010831488016303;variants=H:5,*:1,K:1
+hotspots:CBFB:W73	snv	CBFB		73		W	*					1	CBFB W73	samples=4;qvalue=0.0469416259904556;variants=*:4
+hotspots:CBL:C384	snv	CBL		384		C	R,W					1	CBL C384	samples=4;qvalue=0.0780706952247139;variants=R:3,W:1
+hotspots:CCND1:E9	snv	CCND1		9		E	E,D,K					1	CCND1 E9	samples=5;qvalue=0.0910705118800777;variants=E:3,D:1,K:1
+hotspots:CCND1:Y44	snv	CCND1		44		Y	D,*,C,F,H,S					1	CCND1 Y44	samples=8;qvalue=1.6522455227078e-11;variants=D:3,*:1,C:1,F:1,H:1,S:1
+hotspots:CCND1:C47	snv	CCND1		47		C	S,G					1	CCND1 C47	samples=4;qvalue=0.0733365452924601;variants=S:3,G:1
+hotspots:CCND1:T286	snv	CCND1		286		T	I,A					1	CCND1 T286	samples=9;qvalue=2.39494812952936e-10;variants=I:8,A:1
+hotspots:CCND1:P287	snv	CCND1		287		P	S,L,A,R,T					1	CCND1 P287	samples=12;qvalue=5.65945826265419e-11;variants=S:5,L:4,A:1,R:1,T:1
+hotspots:CCND3:Q276	snv	CCND3		276		Q	*					1	CCND3 Q276	samples=4;qvalue=0.0408951890448411;variants=*:4
+hotspots:CCND3:I290	snv	CCND3		290		I	K,R					1	CCND3 I290	samples=4;qvalue=7.73194808545737e-06;variants=K:3,R:1
+hotspots:CD79B:X185	snv	CD79B		185		X	sp					1	CD79B X185 splice	samples=3;qvalue=0.031280397627826;variants=sp:3
+hotspots:CD79B:Y197	snv	CD79B		197		Y	H,C,D,F,N,S,R					1	CD79B Y197	samples=16;qvalue=1.2515091895722e-33;variants=H:5,C:2,D:2,F:2,N:2,S:2,R:1
+hotspots:CDH1:Q23	snv	CDH1		23		Q	*					1	CDH1 Q23	samples=19;qvalue=5.17732153717184e-25;variants=*:19
+hotspots:CDH1:R63	snv	CDH1		63		R	*,G,P					1	CDH1 R63	samples=8;qvalue=0.0187372466896063;variants=*:6,G:1,P:1
+hotspots:CDH1:W156	snv	CDH1		156		W	R,C,G					1	CDH1 W156	samples=6;qvalue=0.0061836327212545;variants=R:4,C:1,G:1
+hotspots:CDH1:X177	snv	CDH1		177		X	sp					1	CDH1 X177 splice	samples=6;qvalue=5.36416082793524e-05;variants=sp:6
+hotspots:CDH1:Y190	snv	CDH1		190		Y	C					1	CDH1 Y190	samples=3;qvalue=0.0839076552994752;variants=C:3
+hotspots:CDH1:D254	snv	CDH1		254		D	N,Y,E					1	CDH1 D254	samples=11;qvalue=3.46819951743406e-09;variants=N:5,Y:4,E:2
+hotspots:CDH1:D257	snv	CDH1		257		D	Y,G,N,A,V					1	CDH1 D257	samples=9;qvalue=7.84357915561454e-06;variants=Y:3,G:2,N:2,A:1,V:1
+hotspots:CDH1:X278	snv	CDH1		278		X	sp					1	CDH1 X278 splice	samples=6;qvalue=1.38818265516344e-06;variants=sp:6
+hotspots:CDH1:D288	snv	CDH1		288		D	V,N					1	CDH1 D288	samples=5;qvalue=0.0017736054696059;variants=V:4,N:1
+hotspots:CDH1:R335	snv	CDH1		335		R	*,Q					1	CDH1 R335	samples=7;qvalue=0.00296596686937428;variants=*:6,Q:1
+hotspots:CDH1:X440	snv	CDH1		440		X	sp					1	CDH1 X440 splice	samples=7;qvalue=6.09866366931617e-05;variants=sp:7
+hotspots:CDH1:X722	snv	CDH1		722		X	sp					1	CDH1 X722 splice	samples=4;qvalue=0.00296596686937428;variants=sp:4
+hotspots:CDH1:R732	snv	CDH1		732		R	Q,W					1	CDH1 R732	samples=12;qvalue=0.0012697127326597;variants=Q:9,W:3
+hotspots:CDK12:R882	snv	CDK12		882		R	W,Q,G,L					1	CDK12 R882	samples=14;qvalue=1.32798979136243e-05;variants=W:9,Q:3,G:1,L:1
+hotspots:CDK12:R890	snv	CDK12		890		R	H					1	CDK12 R890	samples=5;qvalue=0.0234944216172339;variants=H:5
+hotspots:CDK4:K22	snv	CDK4		22		K	M,Q					1	CDK4 K22	samples=7;qvalue=8.18881825213307e-13;variants=M:5,Q:2
+hotspots:CDK4:R24	snv	CDK4		24		R	L,H,C,S					1	CDK4 R24	samples=23;qvalue=5.35320558359261e-35;variants=L:10,H:7,C:4,S:2
+hotspots:CDK6:L65	snv	CDK6		65		L	L					1	CDK6 L65	samples=9;qvalue=2.88833961402471e-07;variants=L:9
+hotspots:CDKN1A:M1	snv	CDKN1A		1		M	V,I,R					1	CDKN1A M1	samples=4;qvalue=0.0534198544524845;variants=V:2,I:1,R:1
+hotspots:CDKN1B:G72	snv	CDKN1B		72		G	D,G,A					1	CDKN1B G72	samples=6;qvalue=0.0331705164414828;variants=D:3,G:2,A:1
+hotspots:CDKN1B:X159	snv	CDKN1B		159		X	sp					1	CDKN1B X159 splice	samples=8;qvalue=0.0331705164414828;variants=sp:8
+hotspots:CDKN2A:27-42	inframe	CDKN2A		27	42							1	CDKN2A 27-42 in-frame indel	samples=12;qvalue=8.77193090544841e-05;variants=V28_E33del:4,L32_L37del:3,A36_N39delinsD:1,E27del:1,G35_A36del:1,N39_N42del:1,R29_A34del:1
+hotspots:CDKN2A:S12	snv	CDKN2A		12		S	*,L					1	CDKN2A S12	samples=12;qvalue=0.0102315474126578;variants=*:8,L:4
+hotspots:CDKN2A:N42	snv	CDKN2A		42		N	H,I,K,Y					1	CDKN2A N42	samples=5;qvalue=0.00666274404041663;variants=H:2,I:1,K:1,Y:1
+hotspots:CDKN2A:P48	snv	CDKN2A		48		P	L,R					1	CDKN2A P48	samples=12;qvalue=0.00610553972408702;variants=L:10,R:2
+hotspots:CDKN2A:Q50	snv	CDKN2A		50		Q	*,H,R					1	CDKN2A Q50	samples=23;qvalue=9.45718518403517e-14;variants=*:16,H:4,R:3
+hotspots:CDKN2A:X51	snv	CDKN2A		51		X	sp					1	CDKN2A X51 splice	samples=20;qvalue=3.09188955285343e-11;variants=sp:20
+hotspots:CDKN2A:R58	snv	CDKN2A		58		R	*,R					1	CDKN2A R58	samples=62;qvalue=2.55970323759759e-57;variants=*:61,R:1
+hotspots:CDKN2A:D74	snv	CDKN2A		74		D	N,Y,G,V					1	CDKN2A D74	samples=8;qvalue=0.0289475395986871;variants=N:3,Y:3,G:1,V:1
+hotspots:CDKN2A:R80	snv	CDKN2A		80		R	*,Q					1	CDKN2A R80	samples=99;qvalue=1.17629157106748e-111;variants=*:97,Q:2
+hotspots:CDKN2A:P81	snv	CDKN2A		81		P	L,H,R,S,T					1	CDKN2A P81	samples=24;qvalue=1.841671392433061e-11;variants=L:18,H:2,R:2,S:1,T:1
+hotspots:CDKN2A:H83	snv	CDKN2A		83		H	Y,D,R,N,Q					1	CDKN2A H83	samples=62;qvalue=1.3094103357572e-75;variants=Y:48,D:6,R:4,N:2,Q:2
+hotspots:CDKN2A:D84	snv	CDKN2A		84		D	N,Y,G,V,A,D					1	CDKN2A D84	samples=26;qvalue=6.27026193952657e-17;variants=N:12,Y:6,G:3,V:3,A:1,D:1
+hotspots:CDKN2A:E88	snv	CDKN2A		88		E	*,K,E					1	CDKN2A E88	samples=27;qvalue=3.70241974704799e-09;variants=*:18,K:8,E:1
+hotspots:CDKN2A:D108	snv	CDKN2A		108		D	Y,N,H,G,V					1	CDKN2A D108	samples=29;qvalue=5.41040232412513e-17;variants=Y:14,N:9,H:4,G:1,V:1
+hotspots:CDKN2A:W110	snv	CDKN2A		110		W	*					1	CDKN2A W110	samples=45;qvalue=5.2042461618899e-39;variants=*:45
+hotspots:CDKN2A:R112	snv	CDKN2A		112		R	C,H,P,G,S					1	CDKN2A R112	samples=22;qvalue=2.00742352854399e-10;variants=C:12,H:4,P:4,G:1,S:1
+hotspots:CDKN2A:P114	snv	CDKN2A		114		P	L,P,T,F,H,S					1	CDKN2A P114	samples=31;qvalue=6.37256811718714e-18;variants=L:24,P:2,T:2,F:1,H:1,S:1
+hotspots:CDKN2A:E120	snv	CDKN2A		120		E	*,D,K					1	CDKN2A E120	samples=18;qvalue=3.4869234152267e-07;variants=*:16,D:1,K:1
+hotspots:CDKN2A:Y129	snv	CDKN2A		129		Y	*,C					1	CDKN2A Y129	samples=9;qvalue=6.02822296383367e-05;variants=*:6,C:3
+hotspots:CDKN2A:L130	snv	CDKN2A		130		L	Q,R,V					1	CDKN2A L130	samples=8;qvalue=6.02822296383367e-05;variants=Q:4,R:3,V:1
+hotspots:CDKN2A:X153	snv	CDKN2A		153		X	sp					1	CDKN2A X153 splice	samples=16;qvalue=2.19076953414902e-06;variants=sp:16
+hotspots:CEBPA:307-311	inframe	CEBPA		307	311							1	CEBPA 307-311 in-frame indel	samples=4;qvalue=0.00506139021814322;variants=N307_E309delinsK:1,T310_Q311insKQNP:1,T310_Q311insW:1,V308dup:1
+hotspots:CHEK2:R346	snv	CHEK2		346		R	C,G,S,H					1	CHEK2 R346	samples=8;qvalue=0.00106946994093738;variants=C:3,G:2,S:2,H:1
+hotspots:CIC:X151	snv	CIC		151		X	sp					1	CIC X151 splice	samples=6;qvalue=0.0353206266313835;variants=sp:6
+hotspots:CIC:R201	snv	CIC		201		R	W,R					1	CIC R201	samples=7;qvalue=0.000256730145082327;variants=W:6,R:1
+hotspots:CIC:R202	snv	CIC		202		R	W,Q					1	CIC R202	samples=13;qvalue=8.48771778696607e-14;variants=W:11,Q:2
+hotspots:CIC:P203	snv	CIC		203		P	S,A,L					1	CIC P203	samples=4;qvalue=0.0647601453800692;variants=S:2,A:1,L:1
+hotspots:CIC:N205	snv	CIC		205		N	S					1	CIC N205	samples=3;qvalue=0.00300209188506545;variants=S:3
+hotspots:CIC:R215	snv	CIC		215		R	W,Q,R					1	CIC R215	samples=25;qvalue=5.57740350592312e-40;variants=W:17,Q:7,R:1
+hotspots:CIC:S231	snv	CIC		231		S	N,G,I					1	CIC S231	samples=4;qvalue=0.000799845943361296;variants=N:2,G:1,I:1
+hotspots:CIC:W238	snv	CIC		238		W	*,R					1	CIC W238	samples=3;qvalue=0.00939318796151452;variants=*:2,R:1
+hotspots:CIC:R1512	snv	CIC		1512		R	H,L,C,S					1	CIC R1512	samples=11;qvalue=6.01782827522399e-11;variants=H:5,L:3,C:2,S:1
+hotspots:CIC:R1515	snv	CIC		1515		R	C,H					1	CIC R1515	samples=10;qvalue=3.21216725843384e-10;variants=C:5,H:5
+hotspots:CREBBP:1680	inframe	CREBBP		1680								1	CREBBP 1680 in-frame indel	samples=16;qvalue=3.38918085369556e-29;variants=S1680del:16
+hotspots:CREBBP:I1431	snv	CREBBP		1431		I	I,N,S,V					1	CREBBP I1431	samples=4;qvalue=0.0936694562481603;variants=I:1,N:1,S:1,V:1
+hotspots:CREBBP:D1435	snv	CREBBP		1435		D	G,H,N,Y					1	CREBBP D1435	samples=9;qvalue=0.00117499563003119;variants=G:3,H:2,N:2,Y:2
+hotspots:CREBBP:R1446	snv	CREBBP		1446		R	C,H,L,G,P,S					1	CREBBP R1446	samples=33;qvalue=1.12282141286262e-33;variants=C:14,H:10,L:6,G:1,P:1,S:1
+hotspots:CREBBP:Y1450	snv	CREBBP		1450		Y	D,N,C					1	CREBBP Y1450	samples=5;qvalue=0.00236925569277985;variants=D:2,N:2,C:1
+hotspots:CREBBP:W1472	snv	CREBBP		1472		W	C,R,G,S					1	CREBBP W1472	samples=6;qvalue=0.0475077738779973;variants=C:2,R:2,G:1,S:1
+hotspots:CREBBP:Y1482	snv	CREBBP		1482		Y	C,D,H,N					1	CREBBP Y1482	samples=4;qvalue=0.0475077738779973;variants=C:1,D:1,H:1,N:1
+hotspots:CREBBP:L1499	snv	CREBBP		1499		L	P,Q,R					1	CREBBP L1499	samples=4;qvalue=0.0171122100701789;variants=P:2,Q:1,R:1
+hotspots:CREBBP:W1502	snv	CREBBP		1502		W	C,*,L,R					1	CREBBP W1502	samples=6;qvalue=0.0102805884281454;variants=C:3,*:1,L:1,R:1
+hotspots:CREBBP:Y1503	snv	CREBBP		1503		Y	H,N,C,D,S					1	CREBBP Y1503	samples=9;qvalue=1.40143294855795e-14;variants=H:4,N:2,C:1,D:1,S:1
+hotspots:CRLF2:S128	snv	CRLF2		128		S	L,S					1	CRLF2 S128	samples=7;qvalue=0.0130680865115582;variants=L:4,S:3
+hotspots:CTCF:M1	snv	CTCF		1		M	V,I,T					1	CTCF M1	samples=4;qvalue=0.0997648063724961;variants=V:2,I:1,T:1
+hotspots:CTCF:Y226	snv	CTCF		226		Y	C					1	CTCF Y226	samples=4;qvalue=1.65503913101184e-05;variants=C:4
+hotspots:CTCF:H284	snv	CTCF		284		H	Y,N,P					1	CTCF H284	samples=6;qvalue=0.000216979970306031;variants=Y:4,N:1,P:1
+hotspots:CTCF:H288	snv	CTCF		288		H	D,R,Y					1	CTCF H288	samples=3;qvalue=0.0444979719260984;variants=D:1,R:1,Y:1
+hotspots:CTCF:S354	snv	CTCF		354		S	F,Y					1	CTCF S354	samples=10;qvalue=0.00367325788101451;variants=F:9,Y:1
+hotspots:CTCF:R377	snv	CTCF		377		R	C,H					1	CTCF R377	samples=12;qvalue=1.65354504881555e-07;variants=C:9,H:3
+hotspots:CTCF:R448	snv	CTCF		448		R	*					1	CTCF R448	samples=8;qvalue=1.11848029874604e-05;variants=*:8
+hotspots:CTLA4:T17	snv	CTLA4		17		T	A					1	CTLA4 T17	samples=5;qvalue=0.0243721545716862;variants=A:5
+hotspots:CTNNB1:23-71	inframe	CTNNB1		23	71							1	CTNNB1 23-71 in-frame indel	samples=27;qvalue=6.5334508895157e-60;variants=S45del:6,Y30_S33del:2,A43_P44dup:1,D32_I35delinsV:1,D32_S33del:1,D32_S37delinsA:1,G34_S71del:1,G38_P44del:1,L31_I35del:1,L31_S33del:1,P44_S60del:1,Q26_D32delinsH:1,Q28_D32delinsH:1,S23_S33del:1,S33_A39del:1,S45_P52del:1,T41_S45del:1,T41_S47del:1,T42_K49del:1,W25_D32del:1,W25_H36del:1
+hotspots:CTNNB1:D32	snv	CTNNB1		32		D	Y,N,G,V,H,A					1	CTNNB1 D32	samples=81;qvalue=8.30436601169097e-155;variants=Y:22,N:18,G:16,V:16,H:6,A:3
+hotspots:CTNNB1:S33	snv	CTNNB1		33		S	C,F,P,Y,A,T					1	CTNNB1 S33	samples=96;qvalue=1.29715714396544e-144;variants=C:32,F:29,P:16,Y:11,A:7,T:1
+hotspots:CTNNB1:G34	snv	CTNNB1		34		G	R,V,E,*,A,L					1	CTNNB1 G34	samples=53;qvalue=2.2102778557963e-79;variants=R:28,V:14,E:8,*:1,A:1,L:1
+hotspots:CTNNB1:I35	snv	CTNNB1		35		I	S,I					1	CTNNB1 I35	samples=8;qvalue=2.1250479736793e-05;variants=S:7,I:1
+hotspots:CTNNB1:H36	snv	CTNNB1		36		H	P,Y					1	CTNNB1 H36	samples=8;qvalue=1.23306160353623e-09;variants=P:7,Y:1
+hotspots:CTNNB1:S37	snv	CTNNB1		37		S	F,C,A,P,Y					1	CTNNB1 S37	samples=103;qvalue=2.59381163737272e-157;variants=F:55,C:27,A:9,P:7,Y:5
+hotspots:CTNNB1:T41	snv	CTNNB1		41		T	A,I,N					1	CTNNB1 T41	samples=66;qvalue=1.16454574986485e-135;variants=A:45,I:19,N:2
+hotspots:CTNNB1:S45	snv	CTNNB1		45		S	F,P,C,Y,A					1	CTNNB1 S45	samples=71;qvalue=2.67102961964491e-111;variants=F:31,P:29,C:5,Y:4,A:2
+hotspots:CTNNB1:K292	snv	CTNNB1		292		K	E,T					1	CTNNB1 K292	samples=4;qvalue=0.0105287083300164;variants=E:3,T:1
+hotspots:CTNNB1:K335	snv	CTNNB1		335		K	I,T					1	CTNNB1 K335	samples=19;qvalue=1.26036406875161e-27;variants=I:16,T:3
+hotspots:CTNNB1:W383	snv	CTNNB1		383		W	R,C,G,S					1	CTNNB1 W383	samples=6;qvalue=0.00034738723293938;variants=R:3,C:1,G:1,S:1
+hotspots:CTNNB1:N387	snv	CTNNB1		387		N	K,I,Y					1	CTNNB1 N387	samples=11;qvalue=2.74228910619457e-14;variants=K:9,I:1,Y:1
+hotspots:CTNNB1:R535	snv	CTNNB1		535		R	*,Q					1	CTNNB1 R535	samples=7;qvalue=0.0258177624043666;variants=*:5,Q:2
+hotspots:CUL3:A20	snv	CUL3		20		A	A					1	CUL3 A20	samples=5;qvalue=0.0414950238120077;variants=A:5
+hotspots:CUL3:M299	snv	CUL3		299		M	R,V					1	CUL3 M299	samples=5;qvalue=0.00104496519960921;variants=R:4,V:1
+hotspots:CYSLTR2:L129	snv	CYSLTR2		129		L	Q					1	CYSLTR2 L129	samples=3;qvalue=0.00248880623374966;variants=Q:3
+hotspots:DAXX:457	inframe	DAXX		457								1	DAXX 457 in-frame indel	samples=5;qvalue=8.61079815107147e-06;variants=E457del:4,E457dup:1
+hotspots:DICER1:S1344	snv	DICER1		1344		S	L,I					1	DICER1 S1344	samples=7;qvalue=0.0280566878520535;variants=L:6,I:1
+hotspots:DICER1:E1705	snv	DICER1		1705		E	K,Q,A,V					1	DICER1 E1705	samples=17;qvalue=1.27708583832538e-07;variants=K:12,Q:3,A:1,V:1
+hotspots:DICER1:D1709	snv	DICER1		1709		D	N					1	DICER1 D1709	samples=10;qvalue=0.0129764974536984;variants=N:10
+hotspots:DICER1:G1809	snv	DICER1		1809		G	R,W,V					1	DICER1 G1809	samples=12;qvalue=1.21472485036542e-06;variants=R:9,W:2,V:1
+hotspots:DICER1:D1810	snv	DICER1		1810		D	N,V,Y,A,H					1	DICER1 D1810	samples=9;qvalue=8.22450136351905e-05;variants=N:3,V:2,Y:2,A:1,H:1
+hotspots:DICER1:E1813	snv	DICER1		1813		E	G,Q,A,K					1	DICER1 E1813	samples=11;qvalue=1.03770440524625e-10;variants=G:6,Q:3,A:1,K:1
+hotspots:DIS3:R382	snv	DIS3		382		R	Q,G					1	DIS3 R382	samples=9;qvalue=0.00674087265617022;variants=Q:8,G:1
+hotspots:DIS3:D479	snv	DIS3		479		D	Y,G,H,V					1	DIS3 D479	samples=5;qvalue=0.00626223765902431;variants=Y:2,G:1,H:1,V:1
+hotspots:DIS3:D488	snv	DIS3		488		D	N,A,G,H,Y					1	DIS3 D488	samples=11;qvalue=3.46224146992256e-09;variants=N:7,A:1,G:1,H:1,Y:1
+hotspots:DIS3:R689	snv	DIS3		689		R	Q,G					1	DIS3 R689	samples=9;qvalue=0.00674087265617022;variants=Q:8,G:1
+hotspots:DIS3:L767	snv	DIS3		767		L	F					1	DIS3 L767	samples=4;qvalue=0.00674087265617022;variants=F:4
+hotspots:DIS3:R780	snv	DIS3		780		R	K,T,G,S					1	DIS3 R780	samples=6;qvalue=0.00133003215812735;variants=K:2,T:2,G:1,S:1
+hotspots:DNAJB1:L190	snv	DNAJB1		190		L	L					1	DNAJB1 L190	samples=4;qvalue=0.00208705078434093;variants=L:4
+hotspots:DNMT1:E51	snv	DNMT1		51		E	K					1	DNMT1 E51	samples=5;qvalue=0.000457369167019088;variants=K:5
+hotspots:DNMT1:E432	snv	DNMT1		432		E	K					1	DNMT1 E432	samples=7;qvalue=0.0293011171345867;variants=K:7
+hotspots:DNMT3A:R736	snv	DNMT3A		736		R	H,C,L					1	DNMT3A R736	samples=16;qvalue=2.90079991441275e-06;variants=H:9,C:6,L:1
+hotspots:DNMT3A:R882	snv	DNMT3A		882		R	H,C,P					1	DNMT3A R882	samples=39;qvalue=1.73894288218144e-67;variants=H:28,C:10,P:1
+hotspots:DNMT3B:V229	snv	DNMT3B		229		V	M,V,L					1	DNMT3B V229	samples=7;qvalue=0.00184129930922227;variants=M:3,V:3,L:1
+hotspots:EGFR:709-710	inframe	EGFR		709	710							1	EGFR 709-710 in-frame indel	samples=9;qvalue=2.4645533400901e-13;variants=E709_T710delinsD:9
+hotspots:EGFR:745-759	inframe	EGFR		745	759							1	EGFR 745-759 in-frame indel	samples=155;qvalue=0;variants=E746_A750del:123,L747_T751del:9,L747_P753delinsS:8,E746_T751delinsA:3,L747_E749del:3,S752_I759del:3,L747_S752del:2,K745_E746insVPVAIK:1,K754_I759del:1,T751_A755del:1,T751_E758del:1
+hotspots:EGFR:764-774	inframe	EGFR		764	774							1	EGFR 764-774 in-frame indel	samples=33;qvalue=1.49808764272147e-72;variants=N771_H773dup:7,A767_V769dup:5,H773dup:5,S768_D770dup:4,D770_N771insG:1,D770_N771insGF:1,D770_N771insGL:1,D770_N771insY:1,D770_P772dup:1,H773_V774dup:1,N771_P772insH:1,N771_P772insHH:1,N771_P772insV:1,P772_H773dup:1,P772_H773insTPNP:1,Y764_D770dup:1
+hotspots:EGFR:L62	snv	EGFR		62		L	R					1	EGFR L62	samples=10;qvalue=1.90253284860552e-09;variants=R:10
+hotspots:EGFR:R108	snv	EGFR		108		R	K,G					1	EGFR R108	samples=19;qvalue=5.53217157202984e-24;variants=K:17,G:2
+hotspots:EGFR:R222	snv	EGFR		222		R	C,H					1	EGFR R222	samples=16;qvalue=1.97405001559138e-12;variants=C:15,H:1
+hotspots:EGFR:R252	snv	EGFR		252		R	C,H,P					1	EGFR R252	samples=16;qvalue=1.97405001559138e-12;variants=C:9,H:4,P:3
+hotspots:EGFR:T263	snv	EGFR		263		T	P,I					1	EGFR T263	samples=4;qvalue=0.000443937077361959;variants=P:3,I:1
+hotspots:EGFR:A289	snv	EGFR		289		A	V,T,D,I,N					1	EGFR A289	samples=59;qvalue=5.81115249692553e-116;variants=V:37,T:14,D:6,I:1,N:1
+hotspots:EGFR:H304	snv	EGFR		304		H	Y					1	EGFR H304	samples=5;qvalue=7.43524648342889e-05;variants=Y:5
+hotspots:EGFR:T363	snv	EGFR		363		T	I,A,N					1	EGFR T363	samples=7;qvalue=7.43524648342889e-05;variants=I:4,A:2,N:1
+hotspots:EGFR:P596	snv	EGFR		596		P	L,S,P,R					1	EGFR P596	samples=8;qvalue=0.000132911422078455;variants=L:4,S:2,P:1,R:1
+hotspots:EGFR:G598	snv	EGFR		598		G	V,A,E					1	EGFR G598	samples=33;qvalue=6.32187956175441e-57;variants=V:27,A:5,E:1
+hotspots:EGFR:E709	snv	EGFR		709		E	K,A,Q					1	EGFR E709	samples=16;qvalue=3.57278117431548e-10;variants=K:13,A:2,Q:1
+hotspots:EGFR:G719	snv	EGFR		719		G	A,C,S,D					1	EGFR G719	samples=33;qvalue=1.15873816487001e-45;variants=A:18,C:7,S:5,D:3
+hotspots:EGFR:L747	snv	EGFR		747		L	L,P,F,S					1	EGFR L747	samples=8;qvalue=1.56584028674065e-10;variants=L:3,P:3,F:1,S:1
+hotspots:EGFR:A750	snv	EGFR		750		A	A,P					1	EGFR A750	samples=4;qvalue=0.00114853660633903;variants=A:2,P:2
+hotspots:EGFR:K754	snv	EGFR		754		K	E,I,K					1	EGFR K754	samples=3;qvalue=0.00841607903718246;variants=E:1,I:1,K:1
+hotspots:EGFR:A755	snv	EGFR		755		A	G,D					1	EGFR A755	samples=5;qvalue=0.0022299969731389;variants=G:4,D:1
+hotspots:EGFR:S768	snv	EGFR		768		S	I,T					1	EGFR S768	samples=15;qvalue=1.19234002187539e-21;variants=I:14,T:1
+hotspots:EGFR:R776	snv	EGFR		776		R	H,C,G,L					1	EGFR R776	samples=13;qvalue=4.91378792512742e-08;variants=H:6,C:5,G:1,L:1
+hotspots:EGFR:T790	snv	EGFR		790		T	M,T					1	EGFR T790	samples=60;qvalue=1.11200956013873e-133;variants=M:59,T:1
+hotspots:EGFR:C797	snv	EGFR		797		C	S					1	EGFR C797	samples=13;qvalue=5.55417953932295e-18;variants=S:13
+hotspots:EGFR:L833	snv	EGFR		833		L	F,V,M					1	EGFR L833	samples=5;qvalue=0.0101972498092972;variants=F:2,V:2,M:1
+hotspots:EGFR:V834	snv	EGFR		834		V	L					1	EGFR V834	samples=7;qvalue=8.306140783633621e-07;variants=L:7
+hotspots:EGFR:L838	snv	EGFR		838		L	M,P					1	EGFR L838	samples=3;qvalue=0.00715263397573601;variants=M:2,P:1
+hotspots:EGFR:L858	snv	EGFR		858		L	R					1	EGFR L858	samples=144;qvalue=0;variants=R:144
+hotspots:EGFR:L861	snv	EGFR		861		L	Q					1	EGFR L861	samples=21;qvalue=7.90212878554118e-32;variants=Q:21
+hotspots:EIF1AX:P2	snv	EIF1AX		2		P	L,S,P					1	EIF1AX P2	samples=7;qvalue=0.0072542682644841;variants=L:4,S:2,P:1
+hotspots:EIF1AX:N4	snv	EIF1AX		4		N	S,I,Y					1	EIF1AX N4	samples=4;qvalue=0.0232127972275248;variants=S:2,I:1,Y:1
+hotspots:EIF1AX:G6	snv	EIF1AX		6		G	D,C,R,S					1	EIF1AX G6	samples=7;qvalue=0.00204928105723417;variants=D:4,C:1,R:1,S:1
+hotspots:EIF1AX:X6	snv	EIF1AX		6		X	sp					1	EIF1AX X6 splice	samples=5;qvalue=0.0232127972275248;variants=sp:5
+hotspots:EIF1AX:G8	snv	EIF1AX		8		G	R,E					1	EIF1AX G8	samples=6;qvalue=0.0479490680133651;variants=R:5,E:1
+hotspots:EIF1AX:G9	snv	EIF1AX		9		G	D,R,V					1	EIF1AX G9	samples=11;qvalue=1.14561094279715e-08;variants=D:6,R:3,V:2
+hotspots:EIF1AX:K10	snv	EIF1AX		10		K	E,T					1	EIF1AX K10	samples=4;qvalue=0.0159902632702165;variants=E:3,T:1
+hotspots:EIF1AX:R13	snv	EIF1AX		13		R	H,L,C,G,P					1	EIF1AX R13	samples=12;qvalue=0.000161841956275204;variants=H:4,L:4,C:2,G:1,P:1
+hotspots:EIF1AX:G15	snv	EIF1AX		15		G	D,G,V					1	EIF1AX G15	samples=7;qvalue=0.00013328049767376;variants=D:4,G:2,V:1
+hotspots:EIF1AX:X113	snv	EIF1AX		113		X	sp					1	EIF1AX X113 splice	samples=11;qvalue=1.63796513654497e-21;variants=sp:11
+hotspots:EIF4A2:M1	snv	EIF4A2		1		M	I,K,R,V					1	EIF4A2 M1	samples=4;qvalue=0.0913429534541545;variants=I:1,K:1,R:1,V:1
+hotspots:EP300:L415	snv	EP300		415		L	P					1	EP300 L415	samples=3;qvalue=0.0954266946248702;variants=P:3
+hotspots:EP300:C1164	snv	EP300		1164		C	Y,S					1	EP300 C1164	samples=6;qvalue=0.000497503425615413;variants=Y:5,S:1
+hotspots:EP300:D1399	snv	EP300		1399		D	N,Y,E					1	EP300 D1399	samples=23;qvalue=6.88350174669892e-22;variants=N:20,Y:2,E:1
+hotspots:EP300:Y1414	snv	EP300		1414		Y	C,D					1	EP300 Y1414	samples=7;qvalue=4.30606176073522e-07;variants=C:6,D:1
+hotspots:EP300:X1429	snv	EP300		1429		X	sp					1	EP300 X1429 splice	samples=6;qvalue=1.24478126439434e-05;variants=sp:6
+hotspots:EP300:H1451	snv	EP300		1451		H	H,L,P,Q,R					1	EP300 H1451	samples=5;qvalue=0.000628378364028597;variants=H:1,L:1,P:1,Q:1,R:1
+hotspots:EP300:Q1455	snv	EP300		1455		Q	H,Q,R					1	EP300 Q1455	samples=6;qvalue=0.0189801339276453;variants=H:4,Q:1,R:1
+hotspots:EP300:W1466	snv	EP300		1466		W	L,C,*,G,R					1	EP300 W1466	samples=8;qvalue=4.82359795206628e-07;variants=L:3,C:2,*:1,G:1,R:1
+hotspots:EP300:Y1467	snv	EP300		1467		Y	D,N,C,H,K,S					1	EP300 Y1467	samples=8;qvalue=4.82359795206628e-07;variants=D:2,N:2,C:1,H:1,K:1,S:1
+hotspots:EP300:X1539	snv	EP300		1539		X	sp					1	EP300 X1539 splice	samples=5;qvalue=0.0102558590758561;variants=sp:5
+hotspots:EPAS1:P531	snv	EPAS1		531		P	L,A,S					1	EPAS1 P531	samples=4;qvalue=2.7458396480587e-06;variants=L:2,A:1,S:1
+hotspots:EPAS1:Y532	snv	EPAS1		532		Y	C					1	EPAS1 Y532	samples=2;qvalue=0.0308917177568844;variants=C:2
+hotspots:EPHA3:R136	snv	EPHA3		136		R	*					1	EPHA3 R136	samples=11;qvalue=0.0785022930658572;variants=*:11
+hotspots:EPHA7:G656	snv	EPHA7		656		G	E,G,R,W					1	EPHA7 G656	samples=11;qvalue=0.0608812153658397;variants=E:6,G:3,R:1,W:1
+hotspots:EPHB1:R743	snv	EPHB1		743		R	W,Q,R					1	EPHB1 R743	samples=9;qvalue=0.00851534342722432;variants=W:4,Q:3,R:2
+hotspots:ERBB2:772-775	inframe	ERBB2		772	775							1	ERBB2 772-775 in-frame indel	samples=34;qvalue=1.41703102521153e-86;variants=Y772_A775dup:33,M774dup:1
+hotspots:ERBB2:778-780	inframe	ERBB2		778	780							1	ERBB2 778-780 in-frame indel	samples=12;qvalue=7.40770850939387e-24;variants=G778_P780dup:12
+hotspots:ERBB2:R103	snv	ERBB2		103		R	Q					1	ERBB2 R103	samples=6;qvalue=0.00522897959822954;variants=Q:6
+hotspots:ERBB2:R138	snv	ERBB2		138		R	Q,W					1	ERBB2 R138	samples=3;qvalue=0.0204568143885468;variants=Q:2,W:1
+hotspots:ERBB2:D277	snv	ERBB2		277		D	Y,H,G,V					1	ERBB2 D277	samples=8;qvalue=0.00753448990574709;variants=Y:4,H:2,G:1,V:1
+hotspots:ERBB2:A293	snv	ERBB2		293		A	T,P,V					1	ERBB2 A293	samples=6;qvalue=0.0736415328665745;variants=T:4,P:1,V:1
+hotspots:ERBB2:S310	snv	ERBB2		310		S	F,Y,S					1	ERBB2 S310	samples=113;qvalue=1.98484785043436e-185;variants=F:95,Y:17,S:1
+hotspots:ERBB2:V659	snv	ERBB2		659		V	E,V,D					1	ERBB2 V659	samples=5;qvalue=0.000268822656434572;variants=E:2,V:2,D:1
+hotspots:ERBB2:G660	snv	ERBB2		660		G	D,G,R					1	ERBB2 G660	samples=5;qvalue=0.00493020193582609;variants=D:3,G:1,R:1
+hotspots:ERBB2:R678	snv	ERBB2		678		R	Q,W					1	ERBB2 R678	samples=32;qvalue=9.16633419802267e-37;variants=Q:31,W:1
+hotspots:ERBB2:V697	snv	ERBB2		697		V	L					1	ERBB2 V697	samples=4;qvalue=0.0611219878744376;variants=L:4
+hotspots:ERBB2:T733	snv	ERBB2		733		T	I					1	ERBB2 T733	samples=4;qvalue=0.0223243040785117;variants=I:4
+hotspots:ERBB2:L755	snv	ERBB2		755		L	S,P,M,A,L,W					1	ERBB2 L755	samples=44;qvalue=1.41038891943129e-85;variants=S:31,P:5,M:3,A:2,L:2,W:1
+hotspots:ERBB2:I767	snv	ERBB2		767		I	M					1	ERBB2 I767	samples=9;qvalue=0.074155571453423;variants=M:9
+hotspots:ERBB2:D769	snv	ERBB2		769		D	Y,H					1	ERBB2 D769	samples=18;qvalue=4.15162464558809e-12;variants=Y:12,H:6
+hotspots:ERBB2:G776	snv	ERBB2		776		G	V,S					1	ERBB2 G776	samples=6;qvalue=0.000214743024488163;variants=V:4,S:2
+hotspots:ERBB2:V777	snv	ERBB2		777		V	L,M					1	ERBB2 V777	samples=20;qvalue=2.19804285674572e-29;variants=L:17,M:3
+hotspots:ERBB2:V842	snv	ERBB2		842		V	I					1	ERBB2 V842	samples=26;qvalue=2.90199531502456e-27;variants=I:26
+hotspots:ERBB2:T862	snv	ERBB2		862		T	A					1	ERBB2 T862	samples=4;qvalue=0.00960995949933103;variants=A:4
+hotspots:ERBB2:L869	snv	ERBB2		869		L	R					1	ERBB2 L869	samples=4;qvalue=1.8308455270165e-05;variants=R:4
+hotspots:ERBB3:M60	snv	ERBB3		60		M	K,R					1	ERBB3 M60	samples=4;qvalue=0.0162084155769783;variants=K:3,R:1
+hotspots:ERBB3:M91	snv	ERBB3		91		M	I					1	ERBB3 M91	samples=12;qvalue=5.89385412710216e-06;variants=I:12
+hotspots:ERBB3:R103	snv	ERBB3		103		R	H,R,G					1	ERBB3 R103	samples=5;qvalue=0.0184874894301309;variants=H:2,R:2,G:1
+hotspots:ERBB3:V104	snv	ERBB3		104		V	M,L					1	ERBB3 V104	samples=61;qvalue=2.90075860561392e-90;variants=M:40,L:21
+hotspots:ERBB3:N126	snv	ERBB3		126		N	K,I					1	ERBB3 N126	samples=4;qvalue=0.0570727711745951;variants=K:3,I:1
+hotspots:ERBB3:F219	snv	ERBB3		219		F	L,C					1	ERBB3 F219	samples=5;qvalue=0.0103410425708807;variants=L:4,C:1
+hotspots:ERBB3:H228	snv	ERBB3		228		H	Q,R					1	ERBB3 H228	samples=8;qvalue=4.40384663213664e-10;variants=Q:6,R:2
+hotspots:ERBB3:A232	snv	ERBB3		232		A	V,T					1	ERBB3 A232	samples=15;qvalue=1.11785460538783e-13;variants=V:14,T:1
+hotspots:ERBB3:P262	snv	ERBB3		262		P	H,S,A,L,R					1	ERBB3 P262	samples=10;qvalue=9.51712510483098e-06;variants=H:5,S:2,A:1,L:1,R:1
+hotspots:ERBB3:G284	snv	ERBB3		284		G	R					1	ERBB3 G284	samples=13;qvalue=4.0960348053e-12;variants=R:13
+hotspots:ERBB3:D297	snv	ERBB3		297		D	Y,A,H,N,V					1	ERBB3 D297	samples=22;qvalue=8.04884338962201e-23;variants=Y:18,A:1,H:1,N:1,V:1
+hotspots:ERBB3:G325	snv	ERBB3		325		G	R					1	ERBB3 G325	samples=6;qvalue=0.0018495652935557;variants=R:6
+hotspots:ERBB3:K329	snv	ERBB3		329		K	E,T,R					1	ERBB3 K329	samples=12;qvalue=3.29864591429092e-17;variants=E:9,T:2,R:1
+hotspots:ERBB3:E332	snv	ERBB3		332		E	K,Q					1	ERBB3 E332	samples=14;qvalue=4.75403254856063e-07;variants=K:13,Q:1
+hotspots:ERBB3:G337	snv	ERBB3		337		G	R					1	ERBB3 G337	samples=8;qvalue=1.31625883859806e-06;variants=R:8
+hotspots:ERBB3:T355	snv	ERBB3		355		T	I,A,P					1	ERBB3 T355	samples=6;qvalue=0.000144623354388927;variants=I:4,A:1,P:1
+hotspots:ERBB3:T389	snv	ERBB3		389		T	K,I,R					1	ERBB3 T389	samples=6;qvalue=0.0004546577384556;variants=K:3,I:2,R:1
+hotspots:ERBB3:R475	snv	ERBB3		475		R	W					1	ERBB3 R475	samples=8;qvalue=0.0325525423143691;variants=W:8
+hotspots:ERBB3:S846	snv	ERBB3		846		S	I					1	ERBB3 S846	samples=10;qvalue=2.5930810120753e-11;variants=I:10
+hotspots:ERBB3:E928	snv	ERBB3		928		E	G,K					1	ERBB3 E928	samples=17;qvalue=8.04884338962201e-23;variants=G:15,K:2
+hotspots:ERBB4:Q707	snv	ERBB4		707		Q	E,Q					1	ERBB4 Q707	samples=11;qvalue=2.78828635378649e-14;variants=E:6,Q:5
+hotspots:ERBB4:S774	snv	ERBB4		774		S	G,N,R					1	ERBB4 S774	samples=4;qvalue=0.0732416810636865;variants=G:2,N:1,R:1
+hotspots:ERBB4:L798	snv	ERBB4		798		L	R,P,H,L					1	ERBB4 L798	samples=11;qvalue=1.05290421298124e-06;variants=R:7,P:2,H:1,L:1
+hotspots:ERBB4:K1002	snv	ERBB4		1002		K	T,R					1	ERBB4 K1002	samples=6;qvalue=0.0116020936023758;variants=T:5,R:1
+hotspots:ERBB4:F1102	snv	ERBB4		1102		F	C,F					1	ERBB4 F1102	samples=5;qvalue=0.0659327405024936;variants=C:4,F:1
+hotspots:ERBB4:K1223	snv	ERBB4		1223		K	T,R,M					1	ERBB4 K1223	samples=6;qvalue=0.0116020936023758;variants=T:3,R:2,M:1
+hotspots:ERBB4:S1289	snv	ERBB4		1289		S	A					1	ERBB4 S1289	samples=12;qvalue=8.08817732031978e-32;variants=A:12
+hotspots:ERCC2:Y14	snv	ERCC2		14		Y	C					1	ERCC2 Y14	samples=3;qvalue=0.00185831947498718;variants=C:3
+hotspots:ERCC2:Y24	snv	ERCC2		24		Y	C					1	ERCC2 Y24	samples=5;qvalue=9.89549248621122e-08;variants=C:5
+hotspots:ERCC2:S44	snv	ERCC2		44		S	L					1	ERCC2 S44	samples=11;qvalue=3.73863383002761e-08;variants=L:11
+hotspots:ERCC2:Y72	snv	ERCC2		72		Y	C					1	ERCC2 Y72	samples=4;qvalue=1.6086225598154e-05;variants=C:4
+hotspots:ERCC2:S74	snv	ERCC2		74		S	L,P					1	ERCC2 S74	samples=6;qvalue=0.0058919177604576;variants=L:5,P:1
+hotspots:ERCC2:N238	snv	ERCC2		238		N	S					1	ERCC2 N238	samples=16;qvalue=2.0595128011563e-31;variants=S:16
+hotspots:ERCC2:S246	snv	ERCC2		246		S	Y,F,S					1	ERCC2 S246	samples=7;qvalue=0.000220631227265414;variants=Y:3,F:2,S:2
+hotspots:ERCC2:P463	snv	ERCC2		463		P	L,Q,S					1	ERCC2 P463	samples=6;qvalue=0.00240750708339393;variants=L:4,Q:1,S:1
+hotspots:ERCC2:T484	snv	ERCC2		484		T	A,M					1	ERCC2 T484	samples=8;qvalue=5.94542228261946e-10;variants=A:4,M:4
+hotspots:ERCC2:E606	snv	ERCC2		606		E	Q,G					1	ERCC2 E606	samples=6;qvalue=0.00281270456279724;variants=Q:4,G:2
+hotspots:ERCC2:D609	snv	ERCC2		609		D	E,G					1	ERCC2 D609	samples=3;qvalue=0.00281270456279724;variants=E:2,G:1
+hotspots:ERCC3:L713	snv	ERCC3		713		L	L					1	ERCC3 L713	samples=2;qvalue=0.083015618806217;variants=L:2
+hotspots:ERG:R354	snv	ERG		354		R	R					1	ERG R354	samples=6;qvalue=7.20192472847528e-10;variants=R:6
+hotspots:ERRFI1:K116	snv	ERRFI1		116		K	*					1	ERRFI1 K116	samples=2;qvalue=0.0452215429932304;variants=*:2
+hotspots:ERRFI1:K409	snv	ERRFI1		409		K	N,Q					1	ERRFI1 K409	samples=3;qvalue=0.0212231821625514;variants=N:2,Q:1
+hotspots:ESR1:422	inframe	ESR1		422								1	ESR1 422 in-frame indel	samples=3;qvalue=0.0451045963756131;variants=V422del:3
+hotspots:ESR1:E380	snv	ESR1		380		E	Q					1	ESR1 E380	samples=14;qvalue=2.06583810918944e-17;variants=Q:14
+hotspots:ESR1:S463	snv	ESR1		463		S	P,F					1	ESR1 S463	samples=8;qvalue=0.0005941069761832;variants=P:7,F:1
+hotspots:ESR1:L536	snv	ESR1		536		L	H,P,L,R,Q					1	ESR1 L536	samples=14;qvalue=2.9652701136616e-20;variants=H:6,P:3,L:2,R:2,Q:1
+hotspots:ESR1:Y537	snv	ESR1		537		Y	S,C,N,D					1	ESR1 Y537	samples=47;qvalue=6.21076412839154e-115;variants=S:25,C:11,N:10,D:1
+hotspots:ESR1:D538	snv	ESR1		538		D	G					1	ESR1 D538	samples=46;qvalue=1.28855707547783e-123;variants=G:46
+hotspots:ETV6:X11	snv	ETV6		11		X	sp					1	ETV6 X11 splice	samples=5;qvalue=1.46221405832525e-07;variants=sp:5
+hotspots:ETV6:S284	snv	ETV6		284		S	S,F					1	ETV6 S284	samples=6;qvalue=0.0332331004976096;variants=S:4,F:2
+hotspots:ETV6:R369	snv	ETV6		369		R	W,L,Q,R					1	ETV6 R369	samples=9;qvalue=0.0227397135597969;variants=W:6,L:1,Q:1,R:1
+hotspots:EZH2:K515	snv	EZH2		515		K	R					1	EZH2 K515	samples=8;qvalue=5.87241204357667e-06;variants=R:8
+hotspots:EZH2:Y646	snv	EZH2		646		Y	F,N,H,S,C,Y					1	EZH2 Y646	samples=38;qvalue=6.87377238358676e-69;variants=F:13,N:13,H:6,S:4,C:1,Y:1
+hotspots:EZH2:K665	snv	EZH2		665		K	E,R					1	EZH2 K665	samples=2;qvalue=0.0620628563514022;variants=E:1,R:1
+hotspots:FAM58A:X141	snv	FAM58A		141		X	sp					1	FAM58A X141 splice	samples=4;qvalue=0.0186113922627832;variants=sp:4
+hotspots:FAT1:R1627	snv	FAT1		1627		R	*,Q					1	FAT1 R1627	samples=12;qvalue=0.000802593850312719;variants=*:7,Q:5
+hotspots:FBXW7:R14	snv	FBXW7		14		R	Q,*					1	FBXW7 R14	samples=9;qvalue=0.0122075449025547;variants=Q:6,*:3
+hotspots:FBXW7:X195	snv	FBXW7		195		X	sp					1	FBXW7 X195 splice	samples=5;qvalue=0.052851995591814;variants=sp:5
+hotspots:FBXW7:R224	snv	FBXW7		224		R	*,Q					1	FBXW7 R224	samples=10;qvalue=0.00102350502188112;variants=*:5,Q:5
+hotspots:FBXW7:R278	snv	FBXW7		278		R	*					1	FBXW7 R278	samples=10;qvalue=0.000882677384534049;variants=*:10
+hotspots:FBXW7:E287	snv	FBXW7		287		E	D,Q,V,K					1	FBXW7 E287	samples=7;qvalue=0.00774127307000243;variants=D:2,Q:2,V:2,K:1
+hotspots:FBXW7:R367	snv	FBXW7		367		R	*,P					1	FBXW7 R367	samples=17;qvalue=1.29019937681228e-08;variants=*:16,P:1
+hotspots:FBXW7:T385	snv	FBXW7		385		T	K,I,P					1	FBXW7 T385	samples=4;qvalue=0.0999935786199138;variants=K:2,I:1,P:1
+hotspots:FBXW7:R393	snv	FBXW7		393		R	*,Q					1	FBXW7 R393	samples=7;qvalue=0.0999935786199138;variants=*:4,Q:3
+hotspots:FBXW7:G423	snv	FBXW7		423		G	V,*,A					1	FBXW7 G423	samples=10;qvalue=2.07099491720386e-06;variants=V:8,*:1,A:1
+hotspots:FBXW7:G437	snv	FBXW7		437		G	V,*,E,G					1	FBXW7 G437	samples=6;qvalue=0.0122075449025547;variants=V:3,*:1,E:1,G:1
+hotspots:FBXW7:R441	snv	FBXW7		441		R	W,G,L,Q					1	FBXW7 R441	samples=7;qvalue=0.052851995591814;variants=W:3,G:2,L:1,Q:1
+hotspots:FBXW7:R465	snv	FBXW7		465		R	C,H,S,G,L,P					1	FBXW7 R465	samples=128;qvalue=1.92461558472193e-192;variants=C:64,H:59,S:2,G:1,L:1,P:1
+hotspots:FBXW7:R479	snv	FBXW7		479		R	Q,*,G,P,L,R					1	FBXW7 R479	samples=57;qvalue=4.37689458184735e-63;variants=Q:31,*:8,G:8,P:7,L:2,R:1
+hotspots:FBXW7:A503	snv	FBXW7		503		A	V,T					1	FBXW7 A503	samples=8;qvalue=0.0001122754260369;variants=V:7,T:1
+hotspots:FBXW7:R505	snv	FBXW7		505		R	C,G,H,L,P,S					1	FBXW7 R505	samples=83;qvalue=5.90349136748716e-120;variants=C:41,G:31,H:4,L:4,P:2,S:1
+hotspots:FBXW7:D520	snv	FBXW7		520		D	N,Y,G,H,V					1	FBXW7 D520	samples=11;qvalue=5.41988026669828e-05;variants=N:6,Y:2,G:1,H:1,V:1
+hotspots:FBXW7:T532	snv	FBXW7		532		T	P,I					1	FBXW7 T532	samples=3;qvalue=0.00116715416078893;variants=P:2,I:1
+hotspots:FBXW7:Y545	snv	FBXW7		545		Y	C,*					1	FBXW7 Y545	samples=7;qvalue=9.29532572203721e-07;variants=C:6,*:1
+hotspots:FBXW7:S546	snv	FBXW7		546		S	L,*,P					1	FBXW7 S546	samples=9;qvalue=0.0203093632196684;variants=L:7,*:1,P:1
+hotspots:FBXW7:S582	snv	FBXW7		582		S	L,P,S					1	FBXW7 S582	samples=12;qvalue=4.01507799087038e-07;variants=L:10,P:1,S:1
+hotspots:FBXW7:D600	snv	FBXW7		600		D	Y,N,E					1	FBXW7 D600	samples=7;qvalue=0.0067780620795622;variants=Y:4,N:2,E:1
+hotspots:FBXW7:R658	snv	FBXW7		658		R	*,Q,R					1	FBXW7 R658	samples=20;qvalue=3.79187313312857e-11;variants=*:15,Q:4,R:1
+hotspots:FBXW7:R689	snv	FBXW7		689		R	W,Q					1	FBXW7 R689	samples=19;qvalue=6.54359310325598e-11;variants=W:14,Q:5
+hotspots:FGFR1:N577	snv	FGFR1		577		N	K,D					1	FGFR1 N577	samples=19;qvalue=5.27840065160741e-25;variants=K:17,D:2
+hotspots:FGFR1:K687	snv	FGFR1		687		K	E,*,K,N					1	FGFR1 K687	samples=11;qvalue=6.61101232218435e-12;variants=E:8,*:1,K:1,N:1
+hotspots:FGFR2:R203	snv	FGFR2		203		R	H,C					1	FGFR2 R203	samples=6;qvalue=0.000229894911861478;variants=H:4,C:2
+hotspots:FGFR2:S252	snv	FGFR2		252		S	W,L,S					1	FGFR2 S252	samples=22;qvalue=4.17409859833416e-24;variants=W:18,L:2,S:2
+hotspots:FGFR2:P253	snv	FGFR2		253		P	R,L					1	FGFR2 P253	samples=6;qvalue=0.0694872697601985;variants=R:4,L:2
+hotspots:FGFR2:F276	snv	FGFR2		276		F	C,I					1	FGFR2 F276	samples=3;qvalue=0.0435896107854571;variants=C:2,I:1
+hotspots:FGFR2:W290	snv	FGFR2		290		W	C,L,R					1	FGFR2 W290	samples=3;qvalue=0.003546166142713;variants=C:1,L:1,R:1
+hotspots:FGFR2:Y375	snv	FGFR2		375		Y	C					1	FGFR2 Y375	samples=5;qvalue=0.000502673004420345;variants=C:5
+hotspots:FGFR2:C382	snv	FGFR2		382		C	R,Y					1	FGFR2 C382	samples=15;qvalue=4.7730084036351e-18;variants=R:14,Y:1
+hotspots:FGFR2:N549	snv	FGFR2		549		N	K,H,S,T					1	FGFR2 N549	samples=26;qvalue=2.63567113536069e-44;variants=K:21,H:3,S:1,T:1
+hotspots:FGFR2:K659	snv	FGFR2		659		K	E,N,M,Q					1	FGFR2 K659	samples=21;qvalue=1.10970024299734e-14;variants=E:13,N:6,M:1,Q:1
+hotspots:FGFR3:L8	snv	FGFR3		8		L	L					1	FGFR3 L8	samples=4;qvalue=0.0302990211029827;variants=L:4
+hotspots:FGFR3:R248	snv	FGFR3		248		R	C					1	FGFR3 R248	samples=31;qvalue=2.24097601387903e-52;variants=C:31
+hotspots:FGFR3:S249	snv	FGFR3		249		S	C					1	FGFR3 S249	samples=114;qvalue=3.49459925534527e-229;variants=C:114
+hotspots:FGFR3:G370	snv	FGFR3		370		G	C					1	FGFR3 G370	samples=8;qvalue=4.34020637676127e-13;variants=C:8
+hotspots:FGFR3:S371	snv	FGFR3		371		S	C					1	FGFR3 S371	samples=5;qvalue=2.53645379864409e-07;variants=C:5
+hotspots:FGFR3:Y373	snv	FGFR3		373		Y	C					1	FGFR3 Y373	samples=32;qvalue=7.46580235069588e-83;variants=C:32
+hotspots:FGFR3:G380	snv	FGFR3		380		G	R					1	FGFR3 G380	samples=11;qvalue=1.20520209570854e-08;variants=R:11
+hotspots:FGFR3:K650	snv	FGFR3		650		K	E,M,N,T					1	FGFR3 K650	samples=10;qvalue=2.00679702410257e-12;variants=E:7,M:1,N:1,T:1
+hotspots:FGFR4:N535	snv	FGFR4		535		N	K					1	FGFR4 N535	samples=3;qvalue=0.00224497777269147;variants=K:3
+hotspots:FGFR4:V550	snv	FGFR4		550		V	L,M					1	FGFR4 V550	samples=11;qvalue=2.94821142153483e-09;variants=L:7,M:4
+hotspots:FH:M336	snv	FH		336		M	I,L					1	FH M336	samples=2;qvalue=0.0475803468275849;variants=I:1,L:1
+hotspots:FLT3:578-613	inframe	FLT3		578	613							1	FLT3 578-613 in-frame indel	samples=27;qvalue=9.64508469262637e-58;variants=F594_D600dup:5,D586_E596dup:1,D593_F594insSPEDNEYFYVD:1,E598_F612dup:1,E598_Y599insSGSSDNEYFYVDFREYE:1,E598_Y599insVAYVDFREYE:1,E604_F605insSPRGGNEYFYVDFREYEYDLKWE:1,F594_R595insGTGSSDNEYFYVDF:1,F612_G613insQGFYVDFREYEYDLKWEFPRENLEF:1,L601_K602insNVDFREYEYDL:1,M578_E598dup:1,N587_D600dup:1,R595_E596insDYVDFR:1,R595_L601dup:1,S584_D600dup:1,S584_F605dup:1,S585_F594dup:1,Y597_E598insAGSSDNEYFYVDFREY:1,Y597_E598insDEYFYVDFREY:1,Y597_K602dup:1,Y599_D600insEYEYEYEY:1,Y599_D600insPAPQIMSTSTLISENMNIA:1,Y599_E604dup:1
+hotspots:FLT3:D835	snv	FLT3		835		D	Y,E,H,V					1	FLT3 D835	samples=17;qvalue=1.02500063276241e-41;variants=Y:11,E:3,H:2,V:1
+hotspots:FOXA1:249-409	inframe	FOXA1		249	409							1	FOXA1 249-409 in-frame indel	samples=40;qvalue=6.25580148545088e-73;variants=F254_N256delinsY:6,E255_N256del:2,G251_F254del:2,G251_G257del:2,S250_Y259del:2,A323_P326del:1,C258_R261del:1,D249_F254del:1,D249_N252del:1,F254_E255del:1,F254_G257delinsC:1,F254_L260del:1,G284_G290del:1,K264_K267del:1,K264dup:1,K267dup:1,M253_N256del:1,M253_Y259del:1,N252_C258del:1,N252_G257del:1,N252_S408del:1,N397_F400del:1,Q263_C268del:1,Q263_D296delinsH:1,Q263_G281del:1,Q263del:1,R265_K270del:1,S250_F254del:1,S250_N252del:1,S282_G283dup:1,S409del:1
+hotspots:FOXA1:I176	snv	FOXA1		176		I	V,M					1	FOXA1 I176	samples=11;qvalue=7.65741901652142e-11;variants=V:7,M:4
+hotspots:FOXA1:R219	snv	FOXA1		219		R	C,S,G,R					1	FOXA1 R219	samples=8;qvalue=0.0270600943919014;variants=C:3,S:3,G:1,R:1
+hotspots:FOXA1:D226	snv	FOXA1		226		D	N,G					1	FOXA1 D226	samples=9;qvalue=0.00504815371636297;variants=N:5,G:4
+hotspots:FOXA1:S242	snv	FOXA1		242		S	C,F,Y					1	FOXA1 S242	samples=5;qvalue=0.00206253182693294;variants=C:3,F:1,Y:1
+hotspots:FOXA1:H247	snv	FOXA1		247		H	Y,R,Q,L					1	FOXA1 H247	samples=10;qvalue=8.78143675660237e-10;variants=Y:4,R:3,Q:2,L:1
+hotspots:FOXA1:D249	snv	FOXA1		249		D	V,A,G,N,Y					1	FOXA1 D249	samples=7;qvalue=8.948566481804759e-05;variants=V:3,A:1,G:1,N:1,Y:1
+hotspots:FOXA1:S250	snv	FOXA1		250		S	F,Y					1	FOXA1 S250	samples=6;qvalue=0.000517133957868793;variants=F:5,Y:1
+hotspots:FOXA1:M253	snv	FOXA1		253		M	K,R,T					1	FOXA1 M253	samples=7;qvalue=1.06201814393352e-08;variants=K:4,R:2,T:1
+hotspots:FOXA1:Y259	snv	FOXA1		259		Y	C,S,F					1	FOXA1 Y259	samples=5;qvalue=0.00135085457803862;variants=C:2,S:2,F:1
+hotspots:FOXA1:R261	snv	FOXA1		261		R	G,C,H,S					1	FOXA1 R261	samples=9;qvalue=8.57798327208341e-07;variants=G:4,C:3,H:1,S:1
+hotspots:FOXA1:F266	snv	FOXA1		266		F	L,C,F,I,S,V					1	FOXA1 F266	samples=11;qvalue=1.05845615051602e-13;variants=L:5,C:2,F:1,I:1,S:1,V:1
+hotspots:FOXL2:E118	snv	FOXL2		118		E	K,Q					1	FOXL2 E118	samples=7;qvalue=0.00808298632412623;variants=K:6,Q:1
+hotspots:FOXL2:C134	snv	FOXL2		134		C	W					1	FOXL2 C134	samples=12;qvalue=4.37607216698428e-31;variants=W:12
+hotspots:FOXO1:S22	snv	FOXO1		22		S	P,W,S					1	FOXO1 S22	samples=7;qvalue=0.000262158567401401;variants=P:3,W:3,S:1
+hotspots:FOXO1:T24	snv	FOXO1		24		T	I,M					1	FOXO1 T24	samples=3;qvalue=0.0102244267593044;variants=I:2,M:1
+hotspots:FOXO1:S205	snv	FOXO1		205		S	N,S,Y					1	FOXO1 S205	samples=5;qvalue=0.00070080979931149;variants=N:2,S:2,Y:1
+hotspots:FOXP1:S448	snv	FOXP1		448		S	L,S					1	FOXP1 S448	samples=10;qvalue=0.0106173709484405;variants=L:8,S:2
+hotspots:FOXP1:X511	snv	FOXP1		511		X	sp					1	FOXP1 X511 splice	samples=11;qvalue=0.00505681355917067;variants=sp:11
+hotspots:FOXP1:R514	snv	FOXP1		514		R	H,C					1	FOXP1 R514	samples=9;qvalue=0.00189103885682882;variants=H:6,C:3
+hotspots:FUBP1:R430	snv	FUBP1		430		R	C,H					1	FUBP1 R430	samples=12;qvalue=1.92218538564378e-06;variants=C:11,H:1
+hotspots:GATA2:C352	snv	GATA2		352		C	*,C,F,R					1	GATA2 C352	samples=4;qvalue=0.000386130527618172;variants=*:1,C:1,F:1,R:1
+hotspots:GATA3:M293	snv	GATA3		293		M	K,R					1	GATA3 M293	samples=9;qvalue=1.77835401903853e-14;variants=K:8,R:1
+hotspots:GATA3:R364	snv	GATA3		364		R	S,T,G					1	GATA3 R364	samples=5;qvalue=0.00354740691184041;variants=S:2,T:2,G:1
+hotspots:GATA3:R366	snv	GATA3		366		R	*,Q					1	GATA3 R366	samples=5;qvalue=0.0141725794141758;variants=*:4,Q:1
+hotspots:GLI1:R380	snv	GLI1		380		R	Q,*,R					1	GLI1 R380	samples=8;qvalue=0.0067835673540912;variants=Q:6,*:1,R:1
+hotspots:GNA11:R183	snv	GNA11		183		R	C,H,R					1	GNA11 R183	samples=7;qvalue=0.00595910002721709;variants=C:5,H:1,R:1
+hotspots:GNA11:Q209	snv	GNA11		209		Q	L,H,P					1	GNA11 Q209	samples=59;qvalue=3.53820080128409e-183;variants=L:57,H:1,P:1
+hotspots:GNAQ:G48	snv	GNAQ		48		G	*,L,V					1	GNAQ G48	samples=3;qvalue=0.0178075460389295;variants=*:1,L:1,V:1
+hotspots:GNAQ:T96	snv	GNAQ		96		T	S					1	GNAQ T96	samples=9;qvalue=6.19698434219041e-09;variants=S:9
+hotspots:GNAQ:R183	snv	GNAQ		183		R	Q,*					1	GNAQ R183	samples=10;qvalue=0.000622969148509286;variants=Q:6,*:4
+hotspots:GNAQ:Q209	snv	GNAQ		209		Q	P,L,H					1	GNAQ Q209	samples=65;qvalue=4.59257795185295e-172;variants=P:42,L:22,H:1
+hotspots:GNAS:R160	snv	GNAS		160		R	C,H,P					1	GNAS R160	samples=9;qvalue=0.00218412256499689;variants=C:7,H:1,P:1
+hotspots:GNAS:R201	snv	GNAS		201		R	H,C,S,L					1	GNAS R201	samples=139;qvalue=7.46750176711196e-257;variants=H:69,C:65,S:3,L:2
+hotspots:GNAS:Q227	snv	GNAS		227		Q	H,L,K					1	GNAS Q227	samples=11;qvalue=9.92974560347528e-10;variants=H:4,L:4,K:3
+hotspots:GPS2:X242	snv	GPS2		242		X	sp					1	GPS2 X242 splice	samples=2;qvalue=0.0118955414082871;variants=sp:2
+hotspots:GSK3B:X239	snv	GSK3B		239		X	sp					1	GSK3B X239 splice	samples=3;qvalue=0.000748704539069988;variants=sp:3
+hotspots:GTF2I:L424	snv	GTF2I		424		L	H					1	GTF2I L424	samples=68;qvalue=3.8165837042307e-165;variants=H:68
+hotspots:GTF2I:N440	snv	GTF2I		440		N	S					1	GTF2I N440	samples=19;qvalue=7.49957559915763e-38;variants=S:19
+hotspots:GTF2I:F641	snv	GTF2I		641		F	F,C					1	GTF2I F641	samples=4;qvalue=0.0209524305200254;variants=F:3,C:1
+hotspots:H3F3A:K28	snv	H3F3A		28		K	M,R					1	H3F3A K28	samples=33;qvalue=5.3294455724506e-83;variants=M:32,R:1
+hotspots:H3F3A:G35	snv	H3F3A		35		G	R,V,W					1	H3F3A G35	samples=12;qvalue=1.61532856518637e-15;variants=R:9,V:2,W:1
+hotspots:HGF:G229	snv	HGF		229		G	A,D					1	HGF G229	samples=3;qvalue=0.0500918154904944;variants=A:2,D:1
+hotspots:HIST1H1C:23	inframe	HIST1H1C		23								1	HIST1H1C 23 in-frame indel	samples=4;qvalue=0.0155813440448199;variants=K23del:4
+hotspots:HIST1H1C:E115	snv	HIST1H1C		115		E	K					1	HIST1H1C E115	samples=4;qvalue=0.079068457929701;variants=K:4
+hotspots:HIST1H1C:A180	snv	HIST1H1C		180		A	A,P					1	HIST1H1C A180	samples=22;qvalue=3.16251091470805e-12;variants=A:21,P:1
+hotspots:HIST1H3B:K28	snv	HIST1H3B		28		K	M,E					1	HIST1H3B K28	samples=12;qvalue=1.52283836674349e-25;variants=M:11,E:1
+hotspots:HIST1H3B:E51	snv	HIST1H3B		51		E	K,E,Q,D					1	HIST1H3B E51	samples=12;qvalue=0.00676671353335492;variants=K:4,E:3,Q:3,D:2
+hotspots:HIST1H3B:E106	snv	HIST1H3B		106		E	K,Q,E					1	HIST1H3B E106	samples=14;qvalue=0.0101928202808917;variants=K:8,Q:5,E:1
+hotspots:HIST1H3C:K37	snv	HIST1H3C		37		K	M,K					1	HIST1H3C K37	samples=6;qvalue=4.31460935771132e-05;variants=M:5,K:1
+hotspots:HIST1H3H:K37	snv	HIST1H3H		37		K	M,E					1	HIST1H3H K37	samples=4;qvalue=0.0613363986989126;variants=M:3,E:1
+hotspots:HLA-A:L180	snv	HLA-A		180		L	L					1	HLA-A L180	samples=7;qvalue=0.0104831562927601;variants=L:7
+hotspots:HLA-B:E69	snv	HLA-B		69		E	A,K					1	HLA-B E69	samples=5;qvalue=0.00998841609209048;variants=A:3,K:2
+hotspots:HNF1A:I27	snv	HNF1A		27		I	L					1	HNF1A I27	samples=4;qvalue=0.0328297064281064;variants=L:4
+hotspots:HNF1A:R114	snv	HNF1A		114		R	H,C,L					1	HNF1A R114	samples=5;qvalue=0.049626346636423;variants=H:3,C:1,L:1
+hotspots:HNF1A:G288	snv	HNF1A		288		G	G					1	HNF1A G288	samples=3;qvalue=0.00100775596981065;variants=G:3
+hotspots:HNF1A:G338	snv	HNF1A		338		G	G,A					1	HNF1A G338	samples=4;qvalue=0.0514682162685184;variants=G:3,A:1
+hotspots:HNF1A:S591	snv	HNF1A		591		S	S,Y					1	HNF1A S591	samples=3;qvalue=0.0197331659963799;variants=S:2,Y:1
+hotspots:HRAS:G12	snv	HRAS		12		G	D,S,C,V,A,N					1	HRAS G12	samples=38;qvalue=4.29398355982767e-56;variants=D:14,S:14,C:4,V:3,A:2,N:1
+hotspots:HRAS:G13	snv	HRAS		13		G	R,V,D,C,S,I,N					1	HRAS G13	samples=50;qvalue=5.5041445937963e-80;variants=R:22,V:15,D:6,C:3,S:2,I:1,N:1
+hotspots:HRAS:Q61	snv	HRAS		61		Q	R,K,L,H					1	HRAS Q61	samples=102;qvalue=8.14542563277525e-210;variants=R:56,K:28,L:16,H:2
+hotspots:HRAS:K117	snv	HRAS		117		K	N,R					1	HRAS K117	samples=9;qvalue=1.3704997221253e-09;variants=N:8,R:1
+hotspots:IDH1:R132	snv	IDH1		132		R	H,C,G,S,L,I					1	IDH1 R132	samples=766;qvalue=0;variants=H:570,C:139,G:28,S:16,L:12,I:1
+hotspots:IDH2:R140	snv	IDH2		140		R	Q,W,L					1	IDH2 R140	samples=23;qvalue=1.57907449279138e-48;variants=Q:20,W:2,L:1
+hotspots:IDH2:R172	snv	IDH2		172		R	K,G,S,W,M,R,T					1	IDH2 R172	samples=63;qvalue=1.20402527166582e-117;variants=K:33,G:9,S:8,W:7,M:4,R:1,T:1
+hotspots:IGF1R:G129	snv	IGF1R		129		G	A,G,R					1	IGF1R G129	samples=3;qvalue=0.011524838515816;variants=A:1,G:1,R:1
+hotspots:IKZF1:E304	snv	IKZF1		304		E	K,Q					1	IKZF1 E304	samples=8;qvalue=0.0875564839666501;variants=K:7,Q:1
+hotspots:IL7R:R206	snv	IL7R		206		R	*,Q					1	IL7R R206	samples=9;qvalue=0.0272338648312328;variants=*:8,Q:1
+hotspots:IL7R:I241	snv	IL7R		241		I	V,F,L,M					1	IL7R I241	samples=5;qvalue=0.00254942980031351;variants=V:2,F:1,L:1,M:1
+hotspots:IL7R:K395	snv	IL7R		395		K	R,T,K,N,M					1	IL7R K395	samples=12;qvalue=3.44668089191901e-06;variants=R:4,T:3,K:2,N:2,M:1
+hotspots:INPPL1:R70	snv	INPPL1		70		R	H					1	INPPL1 R70	samples=4;qvalue=0.0222950140334926;variants=H:4
+hotspots:INPPL1:A1185	snv	INPPL1		1185		A	D					1	INPPL1 A1185	samples=11;qvalue=1.76182303850515e-11;variants=D:11
+hotspots:IRF4:C99	snv	IRF4		99		C	R,C,Y					1	IRF4 C99	samples=7;qvalue=0.000227652714506587;variants=R:4,C:2,Y:1
+hotspots:IRF4:K123	snv	IRF4		123		K	R					1	IRF4 K123	samples=3;qvalue=9.97106212012724e-05;variants=R:3
+hotspots:IRF4:Y428	snv	IRF4		428		Y	*,H					1	IRF4 Y428	samples=2;qvalue=0.0553803010201321;variants=*:1,H:1
+hotspots:IRS2:G1057	snv	IRS2		1057		G	D					1	IRS2 G1057	samples=3;qvalue=0.0854265037781273;variants=D:3
+hotspots:JAK1:L910	snv	JAK1		910		L	L,P,S					1	JAK1 L910	samples=3;qvalue=0.00697986479202836;variants=L:1,P:1,S:1
+hotspots:JUN:E112	snv	JUN		112		E	K,Q					1	JUN E112	samples=7;qvalue=0.00366249429213643;variants=K:5,Q:2
+hotspots:KDM6A:X76	snv	KDM6A		76		X	sp					1	KDM6A X76 splice	samples=3;qvalue=0.0657879846054171;variants=sp:3
+hotspots:KDM6A:X129	snv	KDM6A		129		X	sp					1	KDM6A X129 splice	samples=5;qvalue=0.0772719082059661;variants=sp:5
+hotspots:KDM6A:G526	snv	KDM6A		526		G	*,E,G,V					1	KDM6A G526	samples=4;qvalue=0.0113277605529172;variants=*:1,E:1,G:1,V:1
+hotspots:KDM6A:Q555	snv	KDM6A		555		Q	*					1	KDM6A Q555	samples=16;qvalue=1.37232724382867e-09;variants=*:16
+hotspots:KDM6A:Q1003	snv	KDM6A		1003		Q	*,P					1	KDM6A Q1003	samples=3;qvalue=0.0794831369685882;variants=*:2,P:1
+hotspots:KDM6A:X1246	snv	KDM6A		1246		X	sp					1	KDM6A X1246 splice	samples=4;qvalue=0.0416332513899781;variants=sp:4
+hotspots:KDM6A:X1293	snv	KDM6A		1293		X	sp					1	KDM6A X1293 splice	samples=5;qvalue=0.00305903400488818;variants=sp:5
+hotspots:KDM6A:X1336	snv	KDM6A		1336		X	sp					1	KDM6A X1336 splice	samples=6;qvalue=0.000181209491771618;variants=sp:6
+hotspots:KDR:C482	snv	KDR		482		C	R,*					1	KDR C482	samples=3;qvalue=0.0557974190648336;variants=R:2,*:1
+hotspots:KDR:T771	snv	KDR		771		T	R,A,K					1	KDR T771	samples=9;qvalue=0.0003630257286868;variants=R:5,A:2,K:2
+hotspots:KDR:R1032	snv	KDR		1032		R	Q,*					1	KDR R1032	samples=12;qvalue=0.00584924439117527;variants=Q:8,*:4
+hotspots:KDR:S1037	snv	KDR		1037		S	S,L,T					1	KDR S1037	samples=11;qvalue=0.00584924439117527;variants=S:6,L:4,T:1
+hotspots:KEAP1:R71	snv	KEAP1		71		R	L,Q,W					1	KEAP1 R71	samples=9;qvalue=0.0022102203062696;variants=L:6,Q:2,W:1
+hotspots:KEAP1:M110	snv	KEAP1		110		M	I,V					1	KEAP1 M110	samples=6;qvalue=0.00338070344003822;variants=I:3,V:3
+hotspots:KEAP1:V155	snv	KEAP1		155		V	F,A					1	KEAP1 V155	samples=5;qvalue=0.0299449285971264;variants=F:4,A:1
+hotspots:KEAP1:M161	snv	KEAP1		161		M	I,V					1	KEAP1 M161	samples=8;qvalue=0.0012931980307233;variants=I:6,V:2
+hotspots:KEAP1:G186	snv	KEAP1		186		G	C,S,D,V					1	KEAP1 G186	samples=14;qvalue=1.04018395463998e-06;variants=C:6,S:6,D:1,V:1
+hotspots:KEAP1:R234	snv	KEAP1		234		R	W,G,P					1	KEAP1 R234	samples=12;qvalue=1.36563257171265e-05;variants=W:8,G:2,P:2
+hotspots:KEAP1:D236	snv	KEAP1		236		D	N,E,V,H,Y					1	KEAP1 D236	samples=13;qvalue=5.6267490520912e-06;variants=N:7,E:2,V:2,H:1,Y:1
+hotspots:KEAP1:R260	snv	KEAP1		260		R	L,Q,*					1	KEAP1 R260	samples=10;qvalue=0.000128688268304168;variants=L:4,Q:4,*:2
+hotspots:KEAP1:V271	snv	KEAP1		271		V	L,M					1	KEAP1 V271	samples=17;qvalue=8.91509690990649e-12;variants=L:13,M:4
+hotspots:KEAP1:R272	snv	KEAP1		272		R	C,H,P,L					1	KEAP1 R272	samples=8;qvalue=0.00338070344003822;variants=C:3,H:2,P:2,L:1
+hotspots:KEAP1:H274	snv	KEAP1		274		H	R,L,P,Q					1	KEAP1 H274	samples=9;qvalue=2.02190694306499e-08;variants=R:5,L:2,P:1,Q:1
+hotspots:KEAP1:P278	snv	KEAP1		278		P	L,S,R,Q					1	KEAP1 P278	samples=14;qvalue=8.89671647826602e-07;variants=L:6,S:5,R:2,Q:1
+hotspots:KEAP1:H311	snv	KEAP1		311		H	R,Y,L,P,Q					1	KEAP1 H311	samples=10;qvalue=1.71266910473257e-06;variants=R:5,Y:2,L:1,P:1,Q:1
+hotspots:KEAP1:R320	snv	KEAP1		320		R	L,Q,M,P,W					1	KEAP1 R320	samples=8;qvalue=0.0522547519433849;variants=L:3,Q:2,M:1,P:1,W:1
+hotspots:KEAP1:G332	snv	KEAP1		332		G	C,D,S,R,V					1	KEAP1 G332	samples=14;qvalue=2.01702272456213e-07;variants=C:8,D:2,S:2,R:1,V:1
+hotspots:KEAP1:G333	snv	KEAP1		333		G	C,S,F					1	KEAP1 G333	samples=7;qvalue=0.0137807717512058;variants=C:4,S:2,F:1
+hotspots:KEAP1:R362	snv	KEAP1		362		R	Q,P,W					1	KEAP1 R362	samples=20;qvalue=4.19855989746715e-12;variants=Q:18,P:1,W:1
+hotspots:KEAP1:G364	snv	KEAP1		364		G	C,D					1	KEAP1 G364	samples=8;qvalue=0.0002942190703955;variants=C:7,D:1
+hotspots:KEAP1:R413	snv	KEAP1		413		R	L,C,H,S					1	KEAP1 R413	samples=16;qvalue=2.12615419088428e-09;variants=L:7,C:5,H:3,S:1
+hotspots:KEAP1:G417	snv	KEAP1		417		G	V,E,R,W					1	KEAP1 G417	samples=7;qvalue=0.0163931870611199;variants=V:4,E:1,R:1,W:1
+hotspots:KEAP1:D422	snv	KEAP1		422		D	N,Y,H					1	KEAP1 D422	samples=15;qvalue=6.73878810712106e-07;variants=N:12,Y:2,H:1
+hotspots:KEAP1:R470	snv	KEAP1		470		R	C,H,S					1	KEAP1 R470	samples=10;qvalue=0.000575237923548754;variants=C:7,H:2,S:1
+hotspots:KEAP1:G480	snv	KEAP1		480		G	W,G,V					1	KEAP1 G480	samples=9;qvalue=0.00262221927300804;variants=W:7,G:1,V:1
+hotspots:KEAP1:E488	snv	KEAP1		488		E	K,V,*,D					1	KEAP1 E488	samples=10;qvalue=0.0006027442602716;variants=K:4,V:3,*:2,D:1
+hotspots:KEAP1:G509	snv	KEAP1		509		G	W,V,R,A,E					1	KEAP1 G509	samples=11;qvalue=7.66250500750912e-05;variants=W:4,V:3,R:2,A:1,E:1
+hotspots:KEAP1:R601	snv	KEAP1		601		R	L,W					1	KEAP1 R601	samples=6;qvalue=0.0615590624356438;variants=L:4,W:2
+hotspots:KEAP1:G603	snv	KEAP1		603		G	V,W,E					1	KEAP1 G603	samples=9;qvalue=0.000189084763061;variants=V:4,W:3,E:2
+hotspots:KIT:502-503	inframe	KIT		502	503							1	KIT 502-503 in-frame indel	samples=8;qvalue=1.06961034696328e-12;variants=A502_Y503dup:8
+hotspots:KIT:550-580	inframe	KIT		550	580							1	KIT 550-580 in-frame indel	samples=49;qvalue=1.9774818328683e-126;variants=W557_K558del:10,D579del:7,N566_P573del:2,Q556_D572del:2,V559_E561del:2,G565_T574delinsA:1,K550_P551del:1,K558_V560del:1,K558_V560delinsN:1,L576_H580dup:1,L576del:1,M552_E554delinsI:1,M552_V555del:1,M552_V555delinsI:1,M552_W557del:1,M552_Y570del:1,P551_M552delinsL:1,P551_V555del:1,P551_Y553delinsH:1,Q556_V560delinsH:1,Q575del:1,T574_H580dup:1,V559_G565del:1,V559_N566delinsD:1,V559_P573del:1,V560del:1,W557_E561del:1,W557_V559delinsF:1,Y553_E554del:1,Y570_L576del:1,Y578_D579insEQQLPY:1
+hotspots:KIT:W557	snv	KIT		557		W	R,G,S,C					1	KIT W557	samples=12;qvalue=9.16539228195011e-13;variants=R:6,G:3,S:2,C:1
+hotspots:KIT:V559	snv	KIT		559		V	A,D,G					1	KIT V559	samples=14;qvalue=5.59843123930108e-17;variants=A:6,D:5,G:3
+hotspots:KIT:V560	snv	KIT		560		V	D,V,A,G					1	KIT V560	samples=7;qvalue=2.5201075105254e-05;variants=D:3,V:2,A:1,G:1
+hotspots:KIT:L576	snv	KIT		576		L	P					1	KIT L576	samples=14;qvalue=6.10110567747655e-16;variants=P:14
+hotspots:KIT:K642	snv	KIT		642		K	E,N,Q					1	KIT K642	samples=14;qvalue=1.33539003985944e-19;variants=E:12,N:1,Q:1
+hotspots:KIT:V654	snv	KIT		654		V	A					1	KIT V654	samples=8;qvalue=6.35339710250059e-16;variants=A:8
+hotspots:KIT:D816	snv	KIT		816		D	V,H,Y,A					1	KIT D816	samples=22;qvalue=1.55789397481015e-28;variants=V:11,H:5,Y:5,A:1
+hotspots:KIT:D820	snv	KIT		820		D	Y,V,E,A,G					1	KIT D820	samples=11;qvalue=1.92130177530644e-09;variants=Y:4,V:3,E:2,A:1,G:1
+hotspots:KIT:N822	snv	KIT		822		N	K,Y,I					1	KIT N822	samples=21;qvalue=2.30956061262686e-35;variants=K:14,Y:6,I:1
+hotspots:KIT:Y823	snv	KIT		823		Y	D,C					1	KIT Y823	samples=6;qvalue=1.19299853504738e-06;variants=D:5,C:1
+hotspots:KIT:R888	snv	KIT		888		R	Q,W,R					1	KIT R888	samples=7;qvalue=0.0873753872499497;variants=Q:3,W:3,R:1
+hotspots:KLF4:K409	snv	KLF4		409		K	Q,N					1	KLF4 K409	samples=7;qvalue=0.0040215756215764;variants=Q:5,N:2
+hotspots:KMT2A:R1264	snv	KMT2A		1264		R	*					1	KMT2A R1264	samples=5;qvalue=0.0567129807987362;variants=*:5
+hotspots:KMT2C:R56	snv	KMT2C		56		R	Q,*					1	KMT2C R56	samples=10;qvalue=0.0649389721368166;variants=Q:6,*:4
+hotspots:KMT2C:R4549	snv	KMT2C		4549		R	C,H,S					1	KMT2C R4549	samples=9;qvalue=0.0649389721368166;variants=C:7,H:1,S:1
+hotspots:KMT2D:L1375	snv	KMT2D		1375		L	L,I					1	KMT2D L1375	samples=3;qvalue=0.00240632662871761;variants=L:2,I:1
+hotspots:KMT2D:R1903	snv	KMT2D		1903		R	*,R					1	KMT2D R1903	samples=5;qvalue=0.00273839857417312;variants=*:4,R:1
+hotspots:KMT2D:R2685	snv	KMT2D		2685		R	*,R					1	KMT2D R2685	samples=8;qvalue=0.00628779581431989;variants=*:7,R:1
+hotspots:KMT2D:R5179	snv	KMT2D		5179		R	H,C,L,P					1	KMT2D R5179	samples=10;qvalue=5.54656680344052e-06;variants=H:5,C:2,L:2,P:1
+hotspots:KMT2D:R5432	snv	KMT2D		5432		R	W,Q,R					1	KMT2D R5432	samples=8;qvalue=0.0163159021207786;variants=W:4,Q:3,R:1
+hotspots:KNSTRN:V12	snv	KNSTRN		12		V	G,V					1	KNSTRN V12	samples=5;qvalue=2.11447649416683e-05;variants=G:3,V:2
+hotspots:KNSTRN:C22	snv	KNSTRN		22		C	Y,S					1	KNSTRN C22	samples=4;qvalue=0.0449961288692079;variants=Y:3,S:1
+hotspots:KNSTRN:S24	snv	KNSTRN		24		S	F					1	KNSTRN S24	samples=13;qvalue=1.46994689964654e-10;variants=F:13
+hotspots:KNSTRN:P28	snv	KNSTRN		28		P	L,S					1	KNSTRN P28	samples=5;qvalue=0.0151833562317312;variants=L:3,S:2
+hotspots:KRAS:K5	snv	KRAS		5		K	E					1	KRAS K5	samples=3;qvalue=0.060055464862559;variants=E:3
+hotspots:KRAS:A11	snv	KRAS		11		A	A,T					1	KRAS A11	samples=8;qvalue=0.000725138589585693;variants=A:6,T:2
+hotspots:KRAS:G12	snv	KRAS		12		G	D,V,C,R,A,S,F,G,I,L					1	KRAS G12	samples=2175;qvalue=0;variants=D:757,V:657,C:384,R:166,A:134,S:68,F:6,G:1,I:1,L:1
+hotspots:KRAS:G13	snv	KRAS		13		G	D,C,G,V,E,R,A					1	KRAS G13	samples=264;qvalue=0;variants=D:214,C:32,G:6,V:6,E:3,R:2,A:1
+hotspots:KRAS:V14	snv	KRAS		14		V	I,A					1	KRAS V14	samples=18;qvalue=8.39625628760232e-10;variants=I:17,A:1
+hotspots:KRAS:L19	snv	KRAS		19		L	F					1	KRAS L19	samples=12;qvalue=3.71800769373073e-05;variants=F:12
+hotspots:KRAS:Q22	snv	KRAS		22		Q	K,H					1	KRAS Q22	samples=6;qvalue=0.0019130164353186;variants=K:5,H:1
+hotspots:KRAS:D33	snv	KRAS		33		D	E					1	KRAS D33	samples=4;qvalue=0.00545510994623059;variants=E:4
+hotspots:KRAS:A59	snv	KRAS		59		A	T,G,A,E					1	KRAS A59	samples=12;qvalue=3.18311796039066e-09;variants=T:5,G:4,A:2,E:1
+hotspots:KRAS:G60	snv	KRAS		60		G	G,D,V,S					1	KRAS G60	samples=24;qvalue=2.36547550250116e-28;variants=G:19,D:2,V:2,S:1
+hotspots:KRAS:Q61	snv	KRAS		61		Q	H,R,L,K,P,A,E					1	KRAS Q61	samples=190;qvalue=0;variants=H:108,R:37,L:21,K:20,P:2,A:1,E:1
+hotspots:KRAS:K117	snv	KRAS		117		K	N,R					1	KRAS K117	samples=18;qvalue=5.40950832194339e-24;variants=N:17,R:1
+hotspots:KRAS:A146	snv	KRAS		146		A	T,V,P					1	KRAS A146	samples=86;qvalue=5.76478689994657e-140;variants=T:65,V:16,P:5
+hotspots:LATS2:479-480	inframe	LATS2		479	480							1	LATS2 479-480 in-frame indel	samples=13;qvalue=5.22537914260909e-29;variants=P479_A480dup:12,P479_A480insPP:1
+hotspots:LYN:I364	snv	LYN		364		I	L,N					1	LYN I364	samples=2;qvalue=0.0246336640316435;variants=L:1,N:1
+hotspots:MAP2K1:99-107	inframe	MAP2K1		99	107							1	MAP2K1 99-107 in-frame indel	samples=8;qvalue=3.29106622127611e-12;variants=E102_I103del:4,I103_K104del:1,I99_K104del:1,P105_A106del:1,P105_I107delinsL:1
+hotspots:MAP2K1:F53	snv	MAP2K1		53		F	L,C,V,I					1	MAP2K1 F53	samples=17;qvalue=7.28455410553735e-23;variants=L:12,C:2,V:2,I:1
+hotspots:MAP2K1:Q56	snv	MAP2K1		56		Q	P					1	MAP2K1 Q56	samples=5;qvalue=0.00292307151816356;variants=P:5
+hotspots:MAP2K1:K57	snv	MAP2K1		57		K	N,T,E					1	MAP2K1 K57	samples=29;qvalue=1.73493302101363e-43;variants=N:16,T:7,E:6
+hotspots:MAP2K1:D67	snv	MAP2K1		67		D	N,Y					1	MAP2K1 D67	samples=16;qvalue=2.67605802531597e-08;variants=N:15,Y:1
+hotspots:MAP2K1:C121	snv	MAP2K1		121		C	S,C					1	MAP2K1 C121	samples=6;qvalue=0.000271001007196765;variants=S:5,C:1
+hotspots:MAP2K1:N122	snv	MAP2K1		122		N	D					1	MAP2K1 N122	samples=3;qvalue=0.089479789390335;variants=D:3
+hotspots:MAP2K1:P124	snv	MAP2K1		124		P	S,L,M,P,Q,R					1	MAP2K1 P124	samples=25;qvalue=5.99241948540617e-27;variants=S:15,L:6,M:1,P:1,Q:1,R:1
+hotspots:MAP2K1:G128	snv	MAP2K1		128		G	D,V,R					1	MAP2K1 G128	samples=10;qvalue=2.50287570681096e-08;variants=D:5,V:4,R:1
+hotspots:MAP2K1:Y130	snv	MAP2K1		130		Y	C,H,N					1	MAP2K1 Y130	samples=5;qvalue=0.000390930809868608;variants=C:3,H:1,N:1
+hotspots:MAP2K1:E203	snv	MAP2K1		203		E	K,V					1	MAP2K1 E203	samples=16;qvalue=6.86894927003352e-11;variants=K:14,V:2
+hotspots:MAP2K1:T386	snv	MAP2K1		386		T	T					1	MAP2K1 T386	samples=3;qvalue=0.000512968367623452;variants=T:3
+hotspots:MAP2K2:F57	snv	MAP2K2		57		F	L,V					1	MAP2K2 F57	samples=6;qvalue=9.70235389918942e-05;variants=L:4,V:2
+hotspots:MAP2K4:R110	snv	MAP2K4		110		R	*,Q,L,P					1	MAP2K4 R110	samples=8;qvalue=0.0625969845163816;variants=*:4,Q:2,L:1,P:1
+hotspots:MAP2K4:R134	snv	MAP2K4		134		R	W,L,Q					1	MAP2K4 R134	samples=11;qvalue=0.00744286485556026;variants=W:9,L:1,Q:1
+hotspots:MAP2K4:S184	snv	MAP2K4		184		S	L,S,W					1	MAP2K4 S184	samples=9;qvalue=0.00461638383133961;variants=L:7,S:1,W:1
+hotspots:MAP2K4:X297	snv	MAP2K4		297		X	sp					1	MAP2K4 X297 splice	samples=6;qvalue=0.00744286485556026;variants=sp:6
+hotspots:MAP2K4:X347	snv	MAP2K4		347		X	sp					1	MAP2K4 X347 splice	samples=5;qvalue=0.0340442289468374;variants=sp:5
+hotspots:MAP3K1:L380	snv	MAP3K1		380		L	S					1	MAP3K1 L380	samples=3;qvalue=0.00275840785948893;variants=S:3
+hotspots:MAP3K1:S1330	snv	MAP3K1		1330		S	L,W					1	MAP3K1 S1330	samples=10;qvalue=0.000515913573968169;variants=L:8,W:2
+hotspots:MAP3K13:X502	snv	MAP3K13		502		X	sp					1	MAP3K13 X502 splice	samples=4;qvalue=0.0818345274306637;variants=sp:4
+hotspots:MAPK1:E322	snv	MAPK1		322		E	K,*,A					1	MAPK1 E322	samples=26;qvalue=2.78211627645888e-30;variants=K:24,*:1,A:1
+hotspots:MAX:H28	snv	MAX		28		H	R					1	MAX H28	samples=6;qvalue=8.97388616000743e-08;variants=R:6
+hotspots:MAX:R36	snv	MAX		36		R	W					1	MAX R36	samples=2;qvalue=0.039885672997618;variants=W:2
+hotspots:MAX:R60	snv	MAX		60		R	Q,R,W					1	MAX R60	samples=23;qvalue=1.63574150622726e-18;variants=Q:21,R:1,W:1
+hotspots:MDC1:1020-1028	inframe	MDC1		1020	1028							1	MDC1 1020-1028 in-frame indel	samples=3;qvalue=0.0133207140057804;variants=K1025del:2,I1020_R1028del:1
+hotspots:MED12:41-55	inframe	MED12		41	55							1	MED12 41-55 in-frame indel	samples=5;qvalue=7.95052431352778e-07;variants=G44_F45del:1,K42_N46del:1,N46_S52del:1,P49_E55del:1,V41_S52del:1
+hotspots:MED12:D23	snv	MED12		23		D	Y,N					1	MED12 D23	samples=18;qvalue=1.2024174774915501e-10;variants=Y:17,N:1
+hotspots:MED12:G44	snv	MED12		44		G	S,D,C,A,V					1	MED12 G44	samples=25;qvalue=1.20697083885738e-32;variants=S:8,D:6,C:5,A:4,V:2
+hotspots:MED12:R521	snv	MED12		521		R	H,C					1	MED12 R521	samples=13;qvalue=2.9344863075475104e-05;variants=H:7,C:6
+hotspots:MED12:V1223	snv	MED12		1223		V	L,V					1	MED12 V1223	samples=3;qvalue=0.00387330885595878;variants=L:2,V:1
+hotspots:MED12:L1224	snv	MED12		1224		L	F,V					1	MED12 L1224	samples=18;qvalue=1.98093425904712e-31;variants=F:16,V:2
+hotspots:MEF2B:K4	snv	MEF2B		4		K	E					1	MEF2B K4	samples=4;qvalue=0.065125088740109;variants=E:4
+hotspots:MET:T222	snv	MET		222		T	T					1	MET T222	samples=7;qvalue=0.0714242435038856;variants=T:7
+hotspots:MET:Y1003	snv	MET		1003		Y	*,C,F					1	MET Y1003	samples=3;qvalue=0.0296559961244166;variants=*:1,C:1,F:1
+hotspots:MET:D1010	snv	MET		1010		D	H,N,Y					1	MET D1010	samples=14;qvalue=3.42669514641377e-19;variants=H:6,N:6,Y:2
+hotspots:MET:X1010	snv	MET		1010		X	sp					1	MET X1010 splice	samples=19;qvalue=3.32303024415133e-36;variants=sp:19
+hotspots:MET:V1070	snv	MET		1070		V	A,E,R					1	MET V1070	samples=5;qvalue=5.23737105519572e-07;variants=A:2,E:2,R:1
+hotspots:MET:H1094	snv	MET		1094		H	Y,R					1	MET H1094	samples=4;qvalue=0.0248978857348268;variants=Y:3,R:1
+hotspots:MET:F1200	snv	MET		1200		F	I,V					1	MET F1200	samples=4;qvalue=1.50401186839176e-05;variants=I:3,V:1
+hotspots:MET:D1228	snv	MET		1228		D	H,N,A,Y					1	MET D1228	samples=10;qvalue=0.0047669844288456;variants=H:4,N:4,A:1,Y:1
+hotspots:MET:Y1230	snv	MET		1230		Y	H,C,S					1	MET Y1230	samples=4;qvalue=2.26527320268023e-05;variants=H:2,C:1,S:1
+hotspots:MET:M1250	snv	MET		1250		M	T					1	MET M1250	samples=6;qvalue=5.23737105519572e-07;variants=T:6
+hotspots:MGA:R1242	snv	MGA		1242		R	*					1	MGA R1242	samples=9;qvalue=0.00652467442006238;variants=*:9
+hotspots:MSH2:E580	snv	MSH2		580		E	*					1	MSH2 E580	samples=6;qvalue=0.0248537133655945;variants=*:6
+hotspots:MST1:G673	snv	MST1		673		G	S					1	MST1 G673	samples=6;qvalue=0.000504582989691505;variants=S:6
+hotspots:MTOR:1450-1468	inframe	MTOR		1450	1468							1	MTOR 1450-1468 in-frame indel	samples=5;qvalue=4.14767933010376e-08;variants=A1459_D1468del:1,E1455_D1458dup:1,E1455_E1457dup:1,W1456_L1460delinsC:1,Y1450_W1456del:1
+hotspots:MTOR:Y1450	snv	MTOR		1450		Y	D					1	MTOR Y1450	samples=7;qvalue=1.93936255882023e-05;variants=D:7
+hotspots:MTOR:A1459	snv	MTOR		1459		A	D,P,V					1	MTOR A1459	samples=6;qvalue=0.0209022099858904;variants=D:4,P:1,V:1
+hotspots:MTOR:L1460	snv	MTOR		1460		L	P					1	MTOR L1460	samples=4;qvalue=0.0109744673866623;variants=P:4
+hotspots:MTOR:C1483	snv	MTOR		1483		C	F,R,Y,W					1	MTOR C1483	samples=7;qvalue=0.000130995916923082;variants=F:2,R:2,Y:2,W:1
+hotspots:MTOR:E1799	snv	MTOR		1799		E	K					1	MTOR E1799	samples=12;qvalue=5.32869235354167e-06;variants=K:12
+hotspots:MTOR:F1888	snv	MTOR		1888		F	I,L,V					1	MTOR F1888	samples=8;qvalue=1.9720024293449e-06;variants=I:4,L:3,V:1
+hotspots:MTOR:A1971	snv	MTOR		1971		A	T,P,S					1	MTOR A1971	samples=6;qvalue=0.00966713792920051;variants=T:4,P:1,S:1
+hotspots:MTOR:I1973	snv	MTOR		1973		I	F,M,V					1	MTOR I1973	samples=7;qvalue=0.0001562075420057;variants=F:5,M:1,V:1
+hotspots:MTOR:T1977	snv	MTOR		1977		T	K,I,R,S					1	MTOR T1977	samples=14;qvalue=7.60484276660308e-16;variants=K:7,I:3,R:3,S:1
+hotspots:MTOR:V2006	snv	MTOR		2006		V	F,I,L,V					1	MTOR V2006	samples=7;qvalue=0.000143429913832681;variants=F:4,I:1,L:1,V:1
+hotspots:MTOR:S2215	snv	MTOR		2215		S	Y,F,T					1	MTOR S2215	samples=22;qvalue=1.24086584913819e-16;variants=Y:12,F:9,T:1
+hotspots:MTOR:M2327	snv	MTOR		2327		M	I,V					1	MTOR M2327	samples=6;qvalue=0.000446236341703313;variants=I:5,V:1
+hotspots:MTOR:E2419	snv	MTOR		2419		E	K,D,A,G					1	MTOR E2419	samples=9;qvalue=0.0022352914808796;variants=K:5,D:2,A:1,G:1
+hotspots:MTOR:L2427	snv	MTOR		2427		L	Q,R					1	MTOR L2427	samples=7;qvalue=1.9720024293449e-06;variants=Q:4,R:3
+hotspots:MTOR:I2500	snv	MTOR		2500		I	F,M,N					1	MTOR I2500	samples=10;qvalue=2.29333311583453e-13;variants=F:5,M:4,N:1
+hotspots:MYC:298	inframe	MYC		298								1	MYC 298 in-frame indel	samples=3;qvalue=0.0205825305218148;variants=S298del:3
+hotspots:MYC:V7	snv	MYC		7		V	M					1	MYC V7	samples=4;qvalue=0.0166440841859353;variants=M:4
+hotspots:MYC:A59	snv	MYC		59		A	V,T					1	MYC A59	samples=14;qvalue=8.36168398694585e-09;variants=V:13,T:1
+hotspots:MYC:T73	snv	MYC		73		T	I,P,A					1	MYC T73	samples=6;qvalue=0.00170415109295424;variants=I:3,P:2,A:1
+hotspots:MYC:P74	snv	MYC		74		P	L,S,T,Q,R					1	MYC P74	samples=12;qvalue=1.17925450406565e-07;variants=L:4,S:4,T:2,Q:1,R:1
+hotspots:MYC:S161	snv	MYC		161		S	L					1	MYC S161	samples=11;qvalue=3.61888337278651e-05;variants=L:11
+hotspots:MYCN:P44	snv	MYCN		44		P	L,F					1	MYCN P44	samples=20;qvalue=7.3609248682335e-21;variants=L:19,F:1
+hotspots:MYD88:P166	snv	MYD88		166		P	L,P					1	MYD88 P166	samples=4;qvalue=0.0177532694963659;variants=L:3,P:1
+hotspots:MYD88:M232	snv	MYD88		232		M	T					1	MYD88 M232	samples=3;qvalue=0.0134687878326664;variants=T:3
+hotspots:MYD88:S243	snv	MYD88		243		S	N					1	MYD88 S243	samples=7;qvalue=4.78040181622355e-09;variants=N:7
+hotspots:MYD88:L265	snv	MYD88		265		L	P					1	MYD88 L265	samples=37;qvalue=1.26353661666745e-60;variants=P:37
+hotspots:MYOD1:L122	snv	MYOD1		122		L	R,L,M					1	MYOD1 L122	samples=7;qvalue=6.09833928477344e-10;variants=R:5,L:1,M:1
+hotspots:NCOA3:R80	snv	NCOA3		80		R	C,H					1	NCOA3 R80	samples=3;qvalue=0.00503087688152371;variants=C:2,H:1
+hotspots:NF1:R440	snv	NF1		440		R	*,Q					1	NF1 R440	samples=19;qvalue=1.55777425916696e-10;variants=*:17,Q:2
+hotspots:NF1:R461	snv	NF1		461		R	*,Q					1	NF1 R461	samples=9;qvalue=0.0230323354914211;variants=*:7,Q:2
+hotspots:NF1:R1241	snv	NF1		1241		R	*					1	NF1 R1241	samples=7;qvalue=0.00343576164649043;variants=*:7
+hotspots:NF1:R1870	snv	NF1		1870		R	Q,W					1	NF1 R1870	samples=8;qvalue=0.0602895567764422;variants=Q:7,W:1
+hotspots:NF1:R2450	snv	NF1		2450		R	*,Q					1	NF1 R2450	samples=17;qvalue=5.45596275682394e-08;variants=*:16,Q:1
+hotspots:NFE2L2:21-42	inframe	NFE2L2		21	42							1	NFE2L2 21-42 in-frame indel	samples=12;qvalue=7.43864692260498e-23;variants=D21_I22delinsE:1,D27del:1,E35_R42del:1,F37del:1,G31del:1,I22_D29del:1,I28dup:1,L30_S33del:1,R34_F37delinsL:1,R34_S40del:1,S33_R34del:1,W24_D29delinsY:1
+hotspots:NFE2L2:73-87	inframe	NFE2L2		73	87							1	NFE2L2 73-87 in-frame indel	samples=4;qvalue=0.00016858469436721;variants=E79del:1,L74_Q87del:1,L76_E82del:1,Q73_T80del:1
+hotspots:NFE2L2:W24	snv	NFE2L2		24		W	R,C,S					1	NFE2L2 W24	samples=11;qvalue=1.25844116981492e-09;variants=R:7,C:3,S:1
+hotspots:NFE2L2:Q26	snv	NFE2L2		26		Q	K,P,H,L,R					1	NFE2L2 Q26	samples=9;qvalue=2.81197869371358e-09;variants=K:4,P:2,H:1,L:1,R:1
+hotspots:NFE2L2:I28	snv	NFE2L2		28		I	T					1	NFE2L2 I28	samples=3;qvalue=0.0834734884151312;variants=T:3
+hotspots:NFE2L2:D29	snv	NFE2L2		29		D	H,Y,G,N					1	NFE2L2 D29	samples=30;qvalue=1.19589215959561e-29;variants=H:19,Y:7,G:2,N:2
+hotspots:NFE2L2:L30	snv	NFE2L2		30		L	F,H,P,R					1	NFE2L2 L30	samples=12;qvalue=3.26181329917381e-10;variants=F:7,H:2,P:2,R:1
+hotspots:NFE2L2:G31	snv	NFE2L2		31		G	A,E,R,V					1	NFE2L2 G31	samples=21;qvalue=2.43250010760161e-23;variants=A:9,E:7,R:4,V:1
+hotspots:NFE2L2:R34	snv	NFE2L2		34		R	G,Q,P,*,L					1	NFE2L2 R34	samples=34;qvalue=9.73572135889331e-44;variants=G:16,Q:11,P:5,*:1,L:1
+hotspots:NFE2L2:D77	snv	NFE2L2		77		D	G,H,V,Y					1	NFE2L2 D77	samples=7;qvalue=0.000440112681913558;variants=G:3,H:2,V:1,Y:1
+hotspots:NFE2L2:E79	snv	NFE2L2		79		E	Q,K,*,V,D,G					1	NFE2L2 E79	samples=34;qvalue=7.468598929185e-37;variants=Q:17,K:11,*:2,V:2,D:1,G:1
+hotspots:NFE2L2:T80	snv	NFE2L2		80		T	R,K,A,P,I					1	NFE2L2 T80	samples=15;qvalue=2.59468886654441e-20;variants=R:5,K:4,A:3,P:2,I:1
+hotspots:NFE2L2:G81	snv	NFE2L2		81		G	S,V,D,R,C,A					1	NFE2L2 G81	samples=19;qvalue=2.60359287698573e-23;variants=S:6,V:4,D:3,R:3,C:2,A:1
+hotspots:NFE2L2:E82	snv	NFE2L2		82		E	D,A,G,Q					1	NFE2L2 E82	samples=21;qvalue=4.89627732972955e-33;variants=D:13,A:3,G:3,Q:2
+hotspots:NOTCH1:338	inframe	NOTCH1		338								1	NOTCH1 338 in-frame indel	samples=4;qvalue=0.0110220456602372;variants=D338del:4
+hotspots:NOTCH1:356-359	inframe	NOTCH1		356	359							1	NOTCH1 356-359 in-frame indel	samples=21;qvalue=3.46745075162572e-40;variants=F357del:17,S356del:2,C359del:1,Y358del:1
+hotspots:NOTCH1:G310	snv	NOTCH1		310		G	R,E					1	NOTCH1 G310	samples=7;qvalue=0.0322228079201374;variants=R:6,E:1
+hotspots:NOTCH1:R365	snv	NOTCH1		365		R	C,S					1	NOTCH1 R365	samples=8;qvalue=0.0280924657963512;variants=C:6,S:2
+hotspots:NOTCH1:G394	snv	NOTCH1		394		G	D,V,C,S					1	NOTCH1 G394	samples=7;qvalue=0.005114922050396;variants=D:3,V:2,C:1,S:1
+hotspots:NOTCH1:C440	snv	NOTCH1		440		C	F,R,S,W					1	NOTCH1 C440	samples=5;qvalue=0.0322228079201374;variants=F:2,R:1,S:1,W:1
+hotspots:NOTCH1:E455	snv	NOTCH1		455		E	K,E					1	NOTCH1 E455	samples=7;qvalue=0.0354105169074645;variants=K:6,E:1
+hotspots:NOTCH1:A465	snv	NOTCH1		465		A	T					1	NOTCH1 A465	samples=17;qvalue=9.253292521878852e-07;variants=T:17
+hotspots:NOTCH1:I471	snv	NOTCH1		471		I	T					1	NOTCH1 I471	samples=4;qvalue=0.098353622293025;variants=T:4
+hotspots:NOTCH1:F853	snv	NOTCH1		853		F	C,I					1	NOTCH1 F853	samples=4;qvalue=0.00015082022409177;variants=C:2,I:2
+hotspots:NOTCH2:T235	snv	NOTCH2		235		T	S					1	NOTCH2 T235	samples=10;qvalue=2.89150962196842e-10;variants=S:10
+hotspots:NOTCH2:R2400	snv	NOTCH2		2400		R	*					1	NOTCH2 R2400	samples=6;qvalue=7.27895549355608e-05;variants=*:6
+hotspots:NRAS:G12	snv	NRAS		12		G	D,C,S,A,V,R					1	NRAS G12	samples=74;qvalue=3.67050868081457e-130;variants=D:41,C:11,S:8,A:6,V:5,R:3
+hotspots:NRAS:G13	snv	NRAS		13		G	R,D,S,C,F,V					1	NRAS G13	samples=41;qvalue=3.59718742726763e-58;variants=R:18,D:16,S:3,C:2,F:1,V:1
+hotspots:NRAS:G60	snv	NRAS		60		G	G,E,V					1	NRAS G60	samples=7;qvalue=0.00014613533141846;variants=G:5,E:1,V:1
+hotspots:NRAS:Q61	snv	NRAS		61		Q	R,K,L,H,P,*					1	NRAS Q61	samples=422;qvalue=0;variants=R:204,K:142,L:46,H:27,P:2,*:1
+hotspots:NRAS:A146	snv	NRAS		146		A	V,S,T					1	NRAS A146	samples=7;qvalue=0.0091925298984136;variants=V:3,S:2,T:2
+hotspots:NSD1:F392	snv	NSD1		392		F	F					1	NSD1 F392	samples=7;qvalue=0.0119254817879873;variants=F:7
+hotspots:NSD1:C1710	snv	NSD1		1710		C	*,S,Y					1	NSD1 C1710	samples=3;qvalue=0.0438691837339285;variants=*:1,S:1,Y:1
+hotspots:NUP93:E14	snv	NUP93		14		E	K					1	NUP93 E14	samples=16;qvalue=8.46294727163906e-12;variants=K:16
+hotspots:NUP93:Q15	snv	NUP93		15		Q	*,K					1	NUP93 Q15	samples=16;qvalue=7.3825565595655e-22;variants=*:15,K:1
+hotspots:NUP93:A733	snv	NUP93		733		A	A					1	NUP93 A733	samples=2;qvalue=0.0475973579366498;variants=A:2
+hotspots:PAK7:M173	snv	PAK7		173		M	I					1	PAK7 M173	samples=12;qvalue=9.55412663311122e-05;variants=I:12
+hotspots:PARP1:G500	snv	PARP1		500		G	G					1	PARP1 G500	samples=6;qvalue=1.14977828803329e-09;variants=G:6
+hotspots:PAX5:V26	snv	PAX5		26		V	G					1	PAX5 V26	samples=9;qvalue=3.7223934800935e-07;variants=G:9
+hotspots:PBRM1:R710	snv	PBRM1		710		R	*,G					1	PBRM1 R710	samples=11;qvalue=0.000109397947270069;variants=*:10,G:1
+hotspots:PBRM1:X856	snv	PBRM1		856		X	sp					1	PBRM1 X856 splice	samples=4;qvalue=0.0256762205674686;variants=sp:4
+hotspots:PBRM1:R921	snv	PBRM1		921		R	*					1	PBRM1 R921	samples=7;qvalue=0.0788067006506364;variants=*:7
+hotspots:PBRM1:R1160	snv	PBRM1		1160		R	*,P,Q					1	PBRM1 R1160	samples=13;qvalue=6.01371567508865e-06;variants=*:11,P:1,Q:1
+hotspots:PDGFRA:E229	snv	PDGFRA		229		E	K,*,V					1	PDGFRA E229	samples=7;qvalue=0.00025793882615122;variants=K:5,*:1,V:1
+hotspots:PDGFRA:C235	snv	PDGFRA		235		C	Y,R,S					1	PDGFRA C235	samples=4;qvalue=0.0823670577038415;variants=Y:2,R:1,S:1
+hotspots:PDGFRA:N659	snv	PDGFRA		659		N	K,S,Y					1	PDGFRA N659	samples=6;qvalue=0.00278269713630747;variants=K:4,S:1,Y:1
+hotspots:PDGFRA:D842	snv	PDGFRA		842		D	V,D,H,I					1	PDGFRA D842	samples=12;qvalue=1.11042381548794e-20;variants=V:9,D:1,H:1,I:1
+hotspots:PDGFRB:N666	snv	PDGFRB		666		N	K,H					1	PDGFRB N666	samples=7;qvalue=0.0057250398173091;variants=K:6,H:1
+hotspots:PDPK1:P499	snv	PDPK1		499		P	S,L					1	PDPK1 P499	samples=5;qvalue=0.00133636572478297;variants=S:3,L:2
+hotspots:PGR:R836	snv	PGR		836		R	Q,*					1	PGR R836	samples=9;qvalue=0.0776186817443919;variants=Q:8,*:1
+hotspots:PIK3CA:10-18	inframe	PIK3CA		10	18							1	PIK3CA 10-18 in-frame indel	samples=3;qvalue=0.0184009618681251;variants=L10_M16del:1,W11_H14delinsY:1,W11_P18del:1
+hotspots:PIK3CA:102-108	inframe	PIK3CA		102	108							1	PIK3CA 102-108 in-frame indel	samples=8;qvalue=5.94659702796749e-13;variants=G106_R108del:3,G106_N107del:1,I102_E103delinsK:1,I102del:1,P104_V105del:1,R108del:1
+hotspots:PIK3CA:110-114	inframe	PIK3CA		110	114							1	PIK3CA 110-114 in-frame indel	samples=26;qvalue=2.94617710868453e-59;variants=E110del:17,K111del:4,E110_K111dup:1,I112_L113del:1,K111_I112del:1,L113del:1,N114del:1
+hotspots:PIK3CA:419-422	inframe	PIK3CA		419	422							1	PIK3CA 419-422 in-frame indel	samples=4;qvalue=0.00024116143603727;variants=H419_C420del:3,H419_L422del:1
+hotspots:PIK3CA:436-466	inframe	PIK3CA		436	466							1	PIK3CA 436-466 in-frame indel	samples=17;qvalue=4.11312718295531e-35;variants=E453del:4,E453_D454del:1,E453_P466del:1,E453_T462del:1,G451_D454del:1,G463_N465delinsD:1,H450_L455del:1,L436_P449dup:1,L452_G460del:1,L452_P458del:1,L455_G460delinsF:1,P447_L455del:1,P449_L452del:1,P449_L456del:1
+hotspots:PIK3CA:M1	snv	PIK3CA		1		M	V					1	PIK3CA M1	samples=6;qvalue=6.05536749909866e-07;variants=V:6
+hotspots:PIK3CA:R38	snv	PIK3CA		38		R	H,C,G,L,S					1	PIK3CA R38	samples=22;qvalue=3.16459873021845e-19;variants=H:11,C:8,G:1,L:1,S:1
+hotspots:PIK3CA:E39	snv	PIK3CA		39		E	K,G					1	PIK3CA E39	samples=6;qvalue=0.00110112193556633;variants=K:5,G:1
+hotspots:PIK3CA:Q75	snv	PIK3CA		75		Q	E,H,L,P					1	PIK3CA Q75	samples=13;qvalue=4.14074262276213e-06;variants=E:10,H:1,L:1,P:1
+hotspots:PIK3CA:E81	snv	PIK3CA		81		E	K,*					1	PIK3CA E81	samples=25;qvalue=4.01643559943444e-18;variants=K:24,*:1
+hotspots:PIK3CA:R88	snv	PIK3CA		88		R	Q					1	PIK3CA R88	samples=75;qvalue=7.11268347015126e-94;variants=Q:75
+hotspots:PIK3CA:C90	snv	PIK3CA		90		C	G,R,S,Y					1	PIK3CA C90	samples=4;qvalue=0.00868121273346674;variants=G:1,R:1,S:1,Y:1
+hotspots:PIK3CA:R93	snv	PIK3CA		93		R	Q,W,L					1	PIK3CA R93	samples=31;qvalue=1.87724928790338e-31;variants=Q:18,W:12,L:1
+hotspots:PIK3CA:P104	snv	PIK3CA		104		P	L,R					1	PIK3CA P104	samples=11;qvalue=1.61020365998658e-07;variants=L:10,R:1
+hotspots:PIK3CA:G106	snv	PIK3CA		106		G	V,R,C,S					1	PIK3CA G106	samples=22;qvalue=6.87260103192609e-26;variants=V:14,R:6,C:1,S:1
+hotspots:PIK3CA:N107	snv	PIK3CA		107		N	S,I,N					1	PIK3CA N107	samples=6;qvalue=8.25147220432943e-05;variants=S:3,I:2,N:1
+hotspots:PIK3CA:R108	snv	PIK3CA		108		R	H,L,S					1	PIK3CA R108	samples=29;qvalue=2.1807379100544e-30;variants=H:25,L:3,S:1
+hotspots:PIK3CA:K111	snv	PIK3CA		111		K	E,N,Q,R					1	PIK3CA K111	samples=38;qvalue=3.93686007081858e-47;variants=E:22,N:14,Q:1,R:1
+hotspots:PIK3CA:I112	snv	PIK3CA		112		I	F,T					1	PIK3CA I112	samples=9;qvalue=8.338983797037663e-10;variants=F:8,T:1
+hotspots:PIK3CA:R115	snv	PIK3CA		115		R	L,P,Q					1	PIK3CA R115	samples=11;qvalue=3.87074236670905e-05;variants=L:7,P:3,Q:1
+hotspots:PIK3CA:G118	snv	PIK3CA		118		G	D					1	PIK3CA G118	samples=40;qvalue=1.608288709768e-65;variants=D:40
+hotspots:PIK3CA:V344	snv	PIK3CA		344		V	G,M,A					1	PIK3CA V344	samples=26;qvalue=5.84970496650592e-33;variants=G:13,M:11,A:2
+hotspots:PIK3CA:N345	snv	PIK3CA		345		N	K,I,T,H,Y,D,N					1	PIK3CA N345	samples=98;qvalue=3.86928187806421e-219;variants=K:79,I:7,T:4,H:3,Y:3,D:1,N:1
+hotspots:PIK3CA:D350	snv	PIK3CA		350		D	N,G,V					1	PIK3CA D350	samples=12;qvalue=2.16867928564548e-08;variants=N:6,G:5,V:1
+hotspots:PIK3CA:R357	snv	PIK3CA		357		R	Q,*,G,L					1	PIK3CA R357	samples=7;qvalue=0.036188804599893;variants=Q:4,*:1,G:1,L:1
+hotspots:PIK3CA:G364	snv	PIK3CA		364		G	R,A					1	PIK3CA G364	samples=6;qvalue=0.00666202370596311;variants=R:5,A:1
+hotspots:PIK3CA:E365	snv	PIK3CA		365		E	K,V					1	PIK3CA E365	samples=13;qvalue=9.15583894618766e-06;variants=K:11,V:2
+hotspots:PIK3CA:C378	snv	PIK3CA		378		C	F,R,Y					1	PIK3CA C378	samples=9;qvalue=9.90900884246927e-09;variants=F:4,R:3,Y:2
+hotspots:PIK3CA:E418	snv	PIK3CA		418		E	K,D					1	PIK3CA E418	samples=25;qvalue=1.13802402056285e-20;variants=K:24,D:1
+hotspots:PIK3CA:C420	snv	PIK3CA		420		C	R					1	PIK3CA C420	samples=46;qvalue=2.5982410627491e-80;variants=R:46
+hotspots:PIK3CA:P449	snv	PIK3CA		449		P	S,R,A,L					1	PIK3CA P449	samples=10;qvalue=4.842666513616971e-07;variants=S:6,R:2,A:1,L:1
+hotspots:PIK3CA:E453	snv	PIK3CA		453		E	K,Q,D					1	PIK3CA E453	samples=42;qvalue=3.19949611689526e-39;variants=K:31,Q:10,D:1
+hotspots:PIK3CA:P471	snv	PIK3CA		471		P	L,A					1	PIK3CA P471	samples=7;qvalue=0.0022910753942165;variants=L:5,A:2
+hotspots:PIK3CA:P539	snv	PIK3CA		539		P	R					1	PIK3CA P539	samples=6;qvalue=0.0127676568720805;variants=R:6
+hotspots:PIK3CA:E542	snv	PIK3CA		542		E	K,A,Q,V,G					1	PIK3CA E542	samples=372;qvalue=0;variants=K:356,A:6,Q:5,V:3,G:2
+hotspots:PIK3CA:E545	snv	PIK3CA		545		E	K,G,Q,A,D					1	PIK3CA E545	samples=633;qvalue=0;variants=K:575,G:21,Q:20,A:12,D:5
+hotspots:PIK3CA:Q546	snv	PIK3CA		546		Q	K,R,P,H,E,L					1	PIK3CA Q546	samples=93;qvalue=1.38151348550833e-185;variants=K:35,R:31,P:19,H:5,E:2,L:1
+hotspots:PIK3CA:C604	snv	PIK3CA		604		C	R					1	PIK3CA C604	samples=5;qvalue=0.00134821997922493;variants=R:5
+hotspots:PIK3CA:D725	snv	PIK3CA		725		D	G,N,E					1	PIK3CA D725	samples=12;qvalue=1.20079384820189e-10;variants=G:7,N:4,E:1
+hotspots:PIK3CA:E726	snv	PIK3CA		726		E	K,A					1	PIK3CA E726	samples=55;qvalue=1.11290833591147e-57;variants=K:53,A:2
+hotspots:PIK3CA:C901	snv	PIK3CA		901		C	F					1	PIK3CA C901	samples=13;qvalue=1.63044244852762e-14;variants=F:13
+hotspots:PIK3CA:G914	snv	PIK3CA		914		G	R,E					1	PIK3CA G914	samples=9;qvalue=3.02801037325792e-06;variants=R:8,E:1
+hotspots:PIK3CA:D939	snv	PIK3CA		939		D	G					1	PIK3CA D939	samples=4;qvalue=0.00289242577603165;variants=G:4
+hotspots:PIK3CA:E970	snv	PIK3CA		970		E	K					1	PIK3CA E970	samples=9;qvalue=0.0189638488402124;variants=K:9
+hotspots:PIK3CA:M1004	snv	PIK3CA		1004		M	I,V					1	PIK3CA M1004	samples=9;qvalue=0.000967541604830105;variants=I:8,V:1
+hotspots:PIK3CA:G1007	snv	PIK3CA		1007		G	R,D					1	PIK3CA G1007	samples=10;qvalue=5.22206675389205e-09;variants=R:9,D:1
+hotspots:PIK3CA:Y1021	snv	PIK3CA		1021		Y	C,H					1	PIK3CA Y1021	samples=14;qvalue=1.32809167941191e-19;variants=C:11,H:3
+hotspots:PIK3CA:T1025	snv	PIK3CA		1025		T	A,S					1	PIK3CA T1025	samples=8;qvalue=8.49323741228694e-09;variants=A:7,S:1
+hotspots:PIK3CA:M1043	snv	PIK3CA		1043		M	I,V,L,T					1	PIK3CA M1043	samples=58;qvalue=1.37438573866737e-88;variants=I:25,V:25,L:4,T:4
+hotspots:PIK3CA:N1044	snv	PIK3CA		1044		N	K,Y					1	PIK3CA N1044	samples=14;qvalue=1.63185954246621e-18;variants=K:12,Y:2
+hotspots:PIK3CA:H1047	snv	PIK3CA		1047		H	R,L,Y,Q					1	PIK3CA H1047	samples=647;qvalue=0;variants=R:537,L:85,Y:18,Q:7
+hotspots:PIK3CA:G1049	snv	PIK3CA		1049		G	R,A					1	PIK3CA G1049	samples=17;qvalue=2.7633032404138e-20;variants=R:16,A:1
+hotspots:PIK3CA:T1052	snv	PIK3CA		1052		T	K					1	PIK3CA T1052	samples=5;qvalue=0.00312237313750376;variants=K:5
+hotspots:PIK3CA:H1065	snv	PIK3CA		1065		H	Y,L					1	PIK3CA H1065	samples=5;qvalue=0.00632321990539015;variants=Y:4,L:1
+hotspots:PIK3CA:A1066	snv	PIK3CA		1066		A	V,T					1	PIK3CA A1066	samples=6;qvalue=0.0017250126588901;variants=V:5,T:1
+hotspots:PIK3CB:R321	snv	PIK3CB		321		R	Q					1	PIK3CB R321	samples=9;qvalue=0.0210357822915523;variants=Q:9
+hotspots:PIK3CB:E470	snv	PIK3CB		470		E	K					1	PIK3CB E470	samples=14;qvalue=4.5520285628288895e-05;variants=K:14
+hotspots:PIK3CB:E1051	snv	PIK3CB		1051		E	K,G					1	PIK3CB E1051	samples=11;qvalue=5.95653540276479e-08;variants=K:9,G:2
+hotspots:PIK3CB:D1067	snv	PIK3CB		1067		D	V,Y,A,H					1	PIK3CB D1067	samples=13;qvalue=2.84754684617547e-13;variants=V:8,Y:3,A:1,H:1
+hotspots:PIK3CD:C416	snv	PIK3CD		416		C	R					1	PIK3CD C416	samples=2;qvalue=0.0177652807514415;variants=R:2
+hotspots:PIK3CD:R894	snv	PIK3CD		894		R	R,Q					1	PIK3CD R894	samples=5;qvalue=0.0656422395683915;variants=R:4,Q:1
+hotspots:PIK3CD:E1021	snv	PIK3CD		1021		E	K					1	PIK3CD E1021	samples=8;qvalue=7.49932571758753e-06;variants=K:8
+hotspots:PIK3R1:378-380	inframe	PIK3R1		378	380							1	PIK3R1 378-380 in-frame indel	samples=5;qvalue=0.00935831892553836;variants=L380del:3,K379del:1,N378del:1
+hotspots:PIK3R1:397-420	inframe	PIK3R1		397	420							1	PIK3R1 397-420 in-frame indel	samples=10;qvalue=4.95223936988698e-10;variants=I405del:2,E403_L404del:1,E403_L404delinsV:1,I405_L420del:1,S399_L404del:1,T397_V401del:1,V401_H407del:1,V401_N406del:1,V402_L413del:1
+hotspots:PIK3R1:439-470	inframe	PIK3R1		439	470							1	PIK3R1 439-470 in-frame indel	samples=88;qvalue=9.34522866603558e-183;variants=E451_Y452del:6,D464_Y467del:4,F456_Q457del:3,K459del:3,L449del:3,N441_T454del:3,E458del:2,E462_R465del:2,H450_E451insVH:2,K448_N453del:2,N453del:2,Q455_F456insL:2,Q457_S460del:2,R461_E462delinsQ:2,Y452_Q457del:2,Y452dup:2,D440_E451del:1,D440_K448del:1,D440del:1,D464_E468dup:1,D464_Y470dup:1,E439del:1,E451del:1,E458_K459del:1,E458_Y463dup:1,E462_Y463delinsD:1,E462dup:1,E468_E469insGEYDRLYE:1,E468_E469insGLYE:1,E468_Y470dup:1,F456_K459del:1,G446_E451del:1,G446_L449delinsV:1,H450_E451del:1,H450_E451dup:1,H450_E451insD:1,H450_K459del:1,H450_Q455dup:1,H450_T454del:1,H450del:1,I442_E443delinsK:1,I442_N453del:1,K448_Y452del:1,L449_H450insQ:1,L449_K459del:1,L449_Q455del:1,L466_E469del:1,L466_Y470delinsF:1,L466del:1,N453_D464dup:1,N453_Q455delinsK:1,N453_Q457del:1,N453_Y463del:1,Q455_K459del:1,Q455_S460dup:1,Q457_E462del:1,R465_Y467del:1,R465dup:1,S460_D464del:1,Y452_N453insF:1,Y463_E468dup:1,Y467_Y470del:1
+hotspots:PIK3R1:558-582	inframe	PIK3R1		558	582							1	PIK3R1 558-582 in-frame indel	samples=49;qvalue=8.12893453430381e-89;variants=T576del:6,K567_L570del:4,R574del:4,K567del:3,K575_R577del:2,R577del:2,D569_L570delinsV:1,D569_L581delinsE:1,D569dup:1,D578_M582delinsE:1,E558_K561del:1,E558_R562del:1,I566_P568delinsT:1,I571_K575del:1,I571_L581del:1,I571_Q572insR:1,I571_R574del:1,K567_I571del:1,K575_L581delinsM:1,K575_R577dup:1,K575_T576del:1,L570_D578del:1,L570_I571insY:1,L573_K575del:1,L573_R574del:1,L573del:1,M563_L570delinsI:1,M563_N564delinsI:1,N564_P568delinsT:1,P568_L573del:1,Q579_Y580delinsH:1,R577_D578del:1,R577_L581del:1,Y580_L581insF:1
+hotspots:PIK3R1:R348	snv	PIK3R1		348		R	*					1	PIK3R1 R348	samples=16;qvalue=7.67867632604416e-07;variants=*:16
+hotspots:PIK3R1:G376	snv	PIK3R1		376		G	R					1	PIK3R1 G376	samples=18;qvalue=1.67548192695841e-19;variants=R:18
+hotspots:PIK3R1:K379	snv	PIK3R1		379		K	E,N					1	PIK3R1 K379	samples=4;qvalue=0.0051280355068743;variants=E:2,N:2
+hotspots:PIK3R1:X434	snv	PIK3R1		434		X	sp					1	PIK3R1 X434 splice	samples=5;qvalue=0.0447131965725729;variants=sp:5
+hotspots:PIK3R1:Y452	snv	PIK3R1		452		Y	C,H,N					1	PIK3R1 Y452	samples=4;qvalue=0.0137524642529949;variants=C:2,H:1,N:1
+hotspots:PIK3R1:X475	snv	PIK3R1		475		X	sp					1	PIK3R1 X475 splice	samples=5;qvalue=0.0153614035834394;variants=sp:5
+hotspots:PIK3R1:D560	snv	PIK3R1		560		D	G,H,Y,N					1	PIK3R1 D560	samples=8;qvalue=0.00650808905211078;variants=G:3,H:2,Y:2,N:1
+hotspots:PIK3R1:N564	snv	PIK3R1		564		N	D					1	PIK3R1 N564	samples=17;qvalue=1.08334499567202e-23;variants=D:17
+hotspots:PIK3R1:K567	snv	PIK3R1		567		K	E					1	PIK3R1 K567	samples=12;qvalue=3.34660265701711e-17;variants=E:12
+hotspots:PIK3R1:X582	snv	PIK3R1		582		X	sp					1	PIK3R1 X582 splice	samples=14;qvalue=3.86307734142432e-13;variants=sp:14
+hotspots:PIK3R2:G373	snv	PIK3R2		373		G	R					1	PIK3R2 G373	samples=9;qvalue=1.37716918085153e-05;variants=R:9
+hotspots:PIK3R2:D557	snv	PIK3R2		557		D	Y,N,G,H					1	PIK3R2 D557	samples=9;qvalue=1.37716918085153e-05;variants=Y:5,N:2,G:1,H:1
+hotspots:PIK3R2:N561	snv	PIK3R2		561		N	D,T,Y					1	PIK3R2 N561	samples=7;qvalue=3.22157812672297e-06;variants=D:5,T:1,Y:1
+hotspots:PIM1:L2	snv	PIM1		2		L	F,V					1	PIM1 L2	samples=6;qvalue=0.0269741273167823;variants=F:5,V:1
+hotspots:PIM1:N7	snv	PIM1		7		N	N					1	PIM1 N7	samples=4;qvalue=0.0854284093090971;variants=N:4
+hotspots:PIM1:K24	snv	PIM1		24		K	N,K					1	PIM1 K24	samples=7;qvalue=0.00528607615357521;variants=N:4,K:3
+hotspots:PIM1:G28	snv	PIM1		28		G	D,A,V					1	PIM1 G28	samples=8;qvalue=0.000171510114503651;variants=D:6,A:1,V:1
+hotspots:PIM1:Q37	snv	PIM1		37		Q	H,Q					1	PIM1 Q37	samples=5;qvalue=0.00912235538516294;variants=H:3,Q:2
+hotspots:PIM1:E79	snv	PIM1		79		E	D,E					1	PIM1 E79	samples=6;qvalue=0.0274181876571439;variants=D:4,E:2
+hotspots:PIM1:S97	snv	PIM1		97		S	N,S,R,T					1	PIM1 S97	samples=10;qvalue=0.000100262103792936;variants=N:4,S:3,R:2,T:1
+hotspots:PLK2:L208	snv	PLK2		208		L	P,V					1	PLK2 L208	samples=3;qvalue=0.0580752072255424;variants=P:2,V:1
+hotspots:PMS2:K651	snv	PMS2		651		K	R					1	PMS2 K651	samples=4;qvalue=0.089408084970774;variants=R:4
+hotspots:POLE:E18	snv	POLE		18		E	K					1	POLE E18	samples=7;qvalue=0.0316821444512517;variants=K:7
+hotspots:POLE:P286	snv	POLE		286		P	R,H,L,S,T					1	POLE P286	samples=27;qvalue=1.11888229227845e-33;variants=R:23,H:1,L:1,S:1,T:1
+hotspots:POLE:V411	snv	POLE		411		V	L					1	POLE V411	samples=18;qvalue=2.55791309710685e-25;variants=L:18
+hotspots:PPM1D:E525	snv	PPM1D		525		E	*					1	PPM1D E525	samples=8;qvalue=0.0280916443660421;variants=*:8
+hotspots:PPP2R1A:P179	snv	PPP2R1A		179		P	R,L					1	PPP2R1A P179	samples=30;qvalue=3.79894395598156e-66;variants=R:29,L:1
+hotspots:PPP2R1A:R182	snv	PPP2R1A		182		R	W,R					1	PPP2R1A R182	samples=7;qvalue=0.0450904673732307;variants=W:6,R:1
+hotspots:PPP2R1A:R183	snv	PPP2R1A		183		R	W,Q,G					1	PPP2R1A R183	samples=51;qvalue=9.6264551563176e-61;variants=W:33,Q:17,G:1
+hotspots:PPP2R1A:S219	snv	PPP2R1A		219		S	L,A					1	PPP2R1A S219	samples=13;qvalue=2.36774600562266e-05;variants=L:12,A:1
+hotspots:PPP2R1A:S256	snv	PPP2R1A		256		S	F,Y					1	PPP2R1A S256	samples=14;qvalue=3.21769293190453e-18;variants=F:11,Y:3
+hotspots:PPP2R1A:W257	snv	PPP2R1A		257		W	L,C,S,*					1	PPP2R1A W257	samples=22;qvalue=7.99466696941904e-29;variants=L:12,C:6,S:3,*:1
+hotspots:PPP4R2:*418	snv	PPP4R2		418		*	L,Y					1	PPP4R2 *418	samples=2;qvalue=0.0652217461803095;variants=L:1,Y:1
+hotspots:PPP6C:R264	snv	PPP6C		264		R	C					1	PPP6C R264	samples=19;qvalue=1.18595587087755e-19;variants=C:19
+hotspots:PPP6C:S270	snv	PPP6C		270		S	L					1	PPP6C S270	samples=7;qvalue=0.00226807160027759;variants=L:7
+hotspots:PRDM14:F204	snv	PRDM14		204		F	F,V					1	PRDM14 F204	samples=6;qvalue=0.011513819119626;variants=F:5,V:1
+hotspots:PRDM14:R505	snv	PRDM14		505		R	H,C					1	PRDM14 R505	samples=6;qvalue=0.0330881832795661;variants=H:4,C:2
+hotspots:PREX2:L50	snv	PREX2		50		L	V,L					1	PREX2 L50	samples=9;qvalue=4.17095917701041e-05;variants=V:5,L:4
+hotspots:PRKCI:R480	snv	PRKCI		480		R	C,S,H					1	PRKCI R480	samples=10;qvalue=1.24954912334541e-05;variants=C:5,S:3,H:2
+hotspots:PTEN:R15	snv	PTEN		15		R	K,*,S,I,T,G					1	PTEN R15	samples=18;qvalue=1.28795861106498e-06;variants=K:6,*:4,S:3,I:2,T:2,G:1
+hotspots:PTEN:Y16	snv	PTEN		16		Y	*,D,Y					1	PTEN Y16	samples=5;qvalue=0.00677821009113384;variants=*:3,D:1,Y:1
+hotspots:PTEN:L23	snv	PTEN		23		L	V,*,S					1	PTEN L23	samples=7;qvalue=0.0001206090677898;variants=V:4,*:2,S:1
+hotspots:PTEN:D24	snv	PTEN		24		D	G,E,H,V,N					1	PTEN D24	samples=10;qvalue=0.00530937503240004;variants=G:3,E:2,H:2,V:2,N:1
+hotspots:PTEN:Y27	snv	PTEN		27		Y	D,C,N,*,H					1	PTEN Y27	samples=10;qvalue=2.97185296362565e-06;variants=D:4,C:2,N:2,*:1,H:1
+hotspots:PTEN:M35	snv	PTEN		35		M	I,V,L					1	PTEN M35	samples=8;qvalue=0.00168869830239239;variants=I:4,V:3,L:1
+hotspots:PTEN:G36	snv	PTEN		36		G	R,E,*,V					1	PTEN G36	samples=23;qvalue=5.897122692855911e-17;variants=R:15,E:4,*:3,V:1
+hotspots:PTEN:P38	snv	PTEN		38		P	S,L,F					1	PTEN P38	samples=11;qvalue=0.00565128852492496;variants=S:7,L:3,F:1
+hotspots:PTEN:N48	snv	PTEN		48		N	K,Y,I,S					1	PTEN N48	samples=11;qvalue=1.02641616015345e-07;variants=K:7,Y:2,I:1,S:1
+hotspots:PTEN:H61	snv	PTEN		61		H	R,N,Y					1	PTEN H61	samples=6;qvalue=0.0179437943852943;variants=R:4,N:1,Y:1
+hotspots:PTEN:Y65	snv	PTEN		65		Y	*					1	PTEN Y65	samples=5;qvalue=0.0955805982587405;variants=*:5
+hotspots:PTEN:I67	snv	PTEN		67		I	T,K,V					1	PTEN I67	samples=4;qvalue=0.0651819173076579;variants=T:2,K:1,V:1
+hotspots:PTEN:Y68	snv	PTEN		68		Y	H,*,C,N					1	PTEN Y68	samples=11;qvalue=5.27636707238447e-09;variants=H:6,*:2,C:2,N:1
+hotspots:PTEN:X70	snv	PTEN		70		X	sp					1	PTEN X70 splice	samples=15;qvalue=5.42733937707976e-12;variants=sp:15
+hotspots:PTEN:C71	snv	PTEN		71		C	Y,*,F					1	PTEN C71	samples=7;qvalue=0.0100439635759994;variants=Y:5,*:1,F:1
+hotspots:PTEN:X85	snv	PTEN		85		X	sp					1	PTEN X85 splice	samples=8;qvalue=0.000639515145732353;variants=sp:8
+hotspots:PTEN:D92	snv	PTEN		92		D	E,G,H,N,V,Y					1	PTEN D92	samples=18;qvalue=2.81113657455673e-09;variants=E:7,G:3,H:2,N:2,V:2,Y:2
+hotspots:PTEN:H93	snv	PTEN		93		H	R,Y,L,P					1	PTEN H93	samples=12;qvalue=2.90249120822907e-08;variants=R:6,Y:4,L:1,P:1
+hotspots:PTEN:P95	snv	PTEN		95		P	L,S					1	PTEN P95	samples=11;qvalue=0.0001838258703194;variants=L:8,S:3
+hotspots:PTEN:P96	snv	PTEN		96		P	Q,S,T,A,L,R					1	PTEN P96	samples=10;qvalue=5.42444368903802e-05;variants=Q:3,S:2,T:2,A:1,L:1,R:1
+hotspots:PTEN:I101	snv	PTEN		101		I	T					1	PTEN I101	samples=4;qvalue=0.083264069890969;variants=T:4
+hotspots:PTEN:C105	snv	PTEN		105		C	Y,*,G,R,S,W					1	PTEN C105	samples=7;qvalue=0.000363990202363233;variants=Y:2,*:1,G:1,R:1,S:1,W:1
+hotspots:PTEN:D107	snv	PTEN		107		D	Y,E,H,G,N,V					1	PTEN D107	samples=15;qvalue=0.0026200928688952;variants=Y:8,E:2,H:2,G:1,N:1,V:1
+hotspots:PTEN:L108	snv	PTEN		108		L	R,F,H,P					1	PTEN L108	samples=8;qvalue=0.008148013646967;variants=R:4,F:2,H:1,P:1
+hotspots:PTEN:W111	snv	PTEN		111		W	*,G,R,S					1	PTEN W111	samples=9;qvalue=0.0100439635759994;variants=*:6,G:1,R:1,S:1
+hotspots:PTEN:V119	snv	PTEN		119		V	F,A,G,L					1	PTEN V119	samples=7;qvalue=0.0066782873134018;variants=F:4,A:1,G:1,L:1
+hotspots:PTEN:H123	snv	PTEN		123		H	Y,D,R,L,Q					1	PTEN H123	samples=15;qvalue=2.92236376653922e-06;variants=Y:6,D:3,R:3,L:2,Q:1
+hotspots:PTEN:C124	snv	PTEN		124		C	S,Y,G,R					1	PTEN C124	samples=8;qvalue=0.000369460106003662;variants=S:4,Y:2,G:1,R:1
+hotspots:PTEN:K125	snv	PTEN		125		K	T,E,N,*					1	PTEN K125	samples=10;qvalue=6.1931671169423e-07;variants=T:4,E:3,N:2,*:1
+hotspots:PTEN:A126	snv	PTEN		126		A	S,D,V,G					1	PTEN A126	samples=11;qvalue=0.000355422424396546;variants=S:4,D:3,V:3,G:1
+hotspots:PTEN:G127	snv	PTEN		127		G	E,R,V,*					1	PTEN G127	samples=14;qvalue=3.07055801003565e-05;variants=E:5,R:5,V:3,*:1
+hotspots:PTEN:K128	snv	PTEN		128		K	N,M,Q,T					1	PTEN K128	samples=14;qvalue=4.624463478473191e-07;variants=N:9,M:2,Q:2,T:1
+hotspots:PTEN:G129	snv	PTEN		129		G	E,R,G,V,*					1	PTEN G129	samples=12;qvalue=5.95070750294617e-05;variants=E:4,R:3,G:2,V:2,*:1
+hotspots:PTEN:R130	snv	PTEN		130		R	Q,G,*,P,L,R,S					1	PTEN R130	samples=168;qvalue=1.91658796865309e-210;variants=Q:72,G:44,*:38,P:6,L:5,R:2,S:1
+hotspots:PTEN:G132	snv	PTEN		132		G	D,A,S,V					1	PTEN G132	samples=17;qvalue=1.52906668939568e-11;variants=D:8,A:3,S:3,V:3
+hotspots:PTEN:I135	snv	PTEN		135		I	V,K,R					1	PTEN I135	samples=11;qvalue=4.312307890589449e-10;variants=V:7,K:2,R:2
+hotspots:PTEN:C136	snv	PTEN		136		C	R,F,Y,*					1	PTEN C136	samples=14;qvalue=1.52906668939568e-11;variants=R:9,F:2,Y:2,*:1
+hotspots:PTEN:Y138	snv	PTEN		138		Y	C,S					1	PTEN Y138	samples=7;qvalue=2.798269800349551e-05;variants=C:6,S:1
+hotspots:PTEN:L140	snv	PTEN		140		L	*,F					1	PTEN L140	samples=4;qvalue=0.0146528812265087;variants=*:3,F:1
+hotspots:PTEN:L146	snv	PTEN		146		L	*					1	PTEN L146	samples=4;qvalue=0.0164604834364009;variants=*:4
+hotspots:PTEN:Y155	snv	PTEN		155		Y	C,H					1	PTEN Y155	samples=5;qvalue=0.00100344772445177;variants=C:4,H:1
+hotspots:PTEN:R159	snv	PTEN		159		R	S,G,K					1	PTEN R159	samples=10;qvalue=0.0011577303252437;variants=S:6,G:2,K:2
+hotspots:PTEN:G165	snv	PTEN		165		G	E,R,*					1	PTEN G165	samples=12;qvalue=0.000639515145732353;variants=E:6,R:5,*:1
+hotspots:PTEN:S170	snv	PTEN		170		S	N,G,I					1	PTEN S170	samples=8;qvalue=0.00205793039150722;variants=N:6,G:1,I:1
+hotspots:PTEN:Q171	snv	PTEN		171		Q	*,R,K					1	PTEN Q171	samples=16;qvalue=0.000888705070997375;variants=*:13,R:2,K:1
+hotspots:PTEN:R173	snv	PTEN		173		R	H,C,P					1	PTEN R173	samples=32;qvalue=1.02111146115902e-14;variants=H:17,C:14,P:1
+hotspots:PTEN:Y174	snv	PTEN		174		Y	*,D,H					1	PTEN Y174	samples=4;qvalue=0.07120415463729;variants=*:2,D:1,H:1
+hotspots:PTEN:Y177	snv	PTEN		177		Y	*,C,D,F					1	PTEN Y177	samples=5;qvalue=0.00758644893706279;variants=*:2,C:1,D:1,F:1
+hotspots:PTEN:Y178	snv	PTEN		178		Y	*,C,H					1	PTEN Y178	samples=5;qvalue=0.00335970330625585;variants=*:3,C:1,H:1
+hotspots:PTEN:P204	snv	PTEN		204		P	L,R,S					1	PTEN P204	samples=10;qvalue=5.240459074625561e-05;variants=L:7,R:2,S:1
+hotspots:PTEN:X212	snv	PTEN		212		X	sp					1	PTEN X212 splice	samples=19;qvalue=1.13062485515142e-08;variants=sp:19
+hotspots:PTEN:R233	snv	PTEN		233		R	*,Q					1	PTEN R233	samples=46;qvalue=1.42029736852695e-34;variants=*:45,Q:1
+hotspots:PTEN:L247	snv	PTEN		247		L	*,F					1	PTEN L247	samples=4;qvalue=0.0240582123723414;variants=*:3,F:1
+hotspots:PTEN:G251	snv	PTEN		251		G	V,A,D					1	PTEN G251	samples=6;qvalue=0.043019639792546;variants=V:4,A:1,D:1
+hotspots:PTEN:D252	snv	PTEN		252		D	V,G,Y,N					1	PTEN D252	samples=10;qvalue=0.0029916920834122;variants=V:4,G:3,Y:2,N:1
+hotspots:PTEN:X267	snv	PTEN		267		X	sp					1	PTEN X267 splice	samples=5;qvalue=0.0584505522716062;variants=sp:5
+hotspots:PTEN:X268	snv	PTEN		268		X	sp					1	PTEN X268 splice	samples=12;qvalue=5.16990792357805e-05;variants=sp:12
+hotspots:PTEN:W274	snv	PTEN		274		W	*,S					1	PTEN W274	samples=7;qvalue=0.0955805982587405;variants=*:6,S:1
+hotspots:PTEN:N276	snv	PTEN		276		N	K,T,D,H,S					1	PTEN N276	samples=11;qvalue=1.0662625817787401e-07;variants=K:6,T:2,D:1,H:1,S:1
+hotspots:PTEN:T277	snv	PTEN		277		T	I,*,A,N					1	PTEN T277	samples=6;qvalue=0.043019639792546;variants=I:3,*:1,A:1,N:1
+hotspots:PTEN:L320	snv	PTEN		320		L	*,S,V					1	PTEN L320	samples=4;qvalue=0.0469972383599729;variants=*:2,S:1,V:1
+hotspots:PTEN:D326	snv	PTEN		326		D	G,H,V,Y					1	PTEN D326	samples=12;qvalue=4.34791085096334e-06;variants=G:6,H:4,V:1,Y:1
+hotspots:PTEN:R335	snv	PTEN		335		R	*,G,P					1	PTEN R335	samples=14;qvalue=0.000501373788906304;variants=*:12,G:1,P:1
+hotspots:PTEN:Y336	snv	PTEN		336		Y	*					1	PTEN Y336	samples=7;qvalue=0.0055022798880087;variants=*:7
+hotspots:PTEN:X342	snv	PTEN		342		X	sp					1	PTEN X342 splice	samples=8;qvalue=0.00142850248666773;variants=sp:8
+hotspots:PTEN:X343	snv	PTEN		343		X	sp					1	PTEN X343 splice	samples=15;qvalue=3.31241208014574e-09;variants=sp:15
+hotspots:PTEN:Y346	snv	PTEN		346		Y	*,D,C,H					1	PTEN Y346	samples=6;qvalue=0.00758644893706279;variants=*:2,D:2,C:1,H:1
+hotspots:PTPN11:D61	snv	PTPN11		61		D	Y,N					1	PTPN11 D61	samples=4;qvalue=0.0318523642648974;variants=Y:3,N:1
+hotspots:PTPN11:E69	snv	PTPN11		69		E	K,D					1	PTPN11 E69	samples=11;qvalue=1.80787202544705e-06;variants=K:9,D:2
+hotspots:PTPN11:A72	snv	PTPN11		72		A	T,V,D,G,S					1	PTPN11 A72	samples=18;qvalue=3.59179236148491e-21;variants=T:6,V:6,D:3,G:2,S:1
+hotspots:PTPN11:E76	snv	PTPN11		76		E	K,G,A,Q					1	PTPN11 E76	samples=13;qvalue=1.05060575176458e-10;variants=K:7,G:3,A:2,Q:1
+hotspots:PTPN11:F285	snv	PTPN11		285		F	S,V					1	PTPN11 F285	samples=4;qvalue=0.00866741098637617;variants=S:3,V:1
+hotspots:PTPN11:N308	snv	PTPN11		308		N	D,S					1	PTPN11 N308	samples=3;qvalue=0.00866741098637617;variants=D:2,S:1
+hotspots:PTPN11:A461	snv	PTPN11		461		A	T,G					1	PTPN11 A461	samples=5;qvalue=0.0426694130573166;variants=T:4,G:1
+hotspots:PTPN11:T468	snv	PTPN11		468		T	M,T					1	PTPN11 T468	samples=7;qvalue=0.0231427297174703;variants=M:6,T:1
+hotspots:PTPN11:S502	snv	PTPN11		502		S	L,P,A					1	PTPN11 S502	samples=15;qvalue=7.519067372474442e-13;variants=L:7,P:7,A:1
+hotspots:PTPN11:G503	snv	PTPN11		503		G	V,G					1	PTPN11 G503	samples=9;qvalue=3.59243867419399e-06;variants=V:8,G:1
+hotspots:PTPN11:T507	snv	PTPN11		507		T	K					1	PTPN11 T507	samples=3;qvalue=0.0318523642648974;variants=K:3
+hotspots:PTPN11:Q510	snv	PTPN11		510		Q	L,H,E					1	PTPN11 Q510	samples=9;qvalue=1.01220941991159e-07;variants=L:5,H:3,E:1
+hotspots:PTPRD:S431	snv	PTPRD		431		S	L,*,S					1	PTPRD S431	samples=17;qvalue=0.000280826354999932;variants=L:15,*:1,S:1
+hotspots:PTPRS:Y398	snv	PTPRS		398		Y	Y					1	PTPRS Y398	samples=4;qvalue=0.0611495944281989;variants=Y:4
+hotspots:PTPRS:R1492	snv	PTPRS		1492		R	W,Q,R					1	PTPRS R1492	samples=8;qvalue=0.0779048132747687;variants=W:4,Q:3,R:1
+hotspots:PTPRT:R364	snv	PTPRT		364		R	Q,*,R					1	PTPRT R364	samples=12;qvalue=0.0388462009711605;variants=Q:6,*:4,R:2
+hotspots:PTPRT:E548	snv	PTPRT		548		E	K,G					1	PTPRT E548	samples=12;qvalue=1.45349357736284e-05;variants=K:11,G:1
+hotspots:PTPRT:L668	snv	PTPRT		668		L	V,L					1	PTPRT L668	samples=5;qvalue=0.000383122377927383;variants=V:3,L:2
+hotspots:PTPRT:L695	snv	PTPRT		695		L	F,L,R					1	PTPRT L695	samples=9;qvalue=0.0020269285120102;variants=F:6,L:2,R:1
+hotspots:PTPRT:R721	snv	PTPRT		721		R	C,H,S					1	PTPRT R721	samples=17;qvalue=6.095770910571129e-05;variants=C:8,H:8,S:1
+hotspots:PTPRT:R1220	snv	PTPRT		1220		R	Q,L,W					1	PTPRT R1220	samples=14;qvalue=0.0059703264892173;variants=Q:10,L:3,W:1
+hotspots:RAC1:G12	snv	RAC1		12		G	R,V					1	RAC1 G12	samples=6;qvalue=0.000661400410008793;variants=R:3,V:3
+hotspots:RAC1:C18	snv	RAC1		18		C	Y,F,S					1	RAC1 C18	samples=4;qvalue=0.0992431503740995;variants=Y:2,F:1,S:1
+hotspots:RAC1:P29	snv	RAC1		29		P	S,L,T,F					1	RAC1 P29	samples=53;qvalue=1.55867535683403e-65;variants=S:43,L:7,T:2,F:1
+hotspots:RAC1:P34	snv	RAC1		34		P	R,H,S					1	RAC1 P34	samples=5;qvalue=0.0277542866088587;variants=R:3,H:1,S:1
+hotspots:RAC1:Q61	snv	RAC1		61		Q	K,R					1	RAC1 Q61	samples=4;qvalue=0.00720141225078055;variants=K:2,R:2
+hotspots:RAC1:N111	snv	RAC1		111		N	K,I,S					1	RAC1 N111	samples=5;qvalue=0.000384600240645875;variants=K:3,I:1,S:1
+hotspots:RAC1:K135	snv	RAC1		135		K	N,R					1	RAC1 K135	samples=2;qvalue=0.0909173130305242;variants=N:1,R:1
+hotspots:RAC1:A178	snv	RAC1		178		A	V					1	RAC1 A178	samples=12;qvalue=4.64277494505764e-08;variants=V:12
+hotspots:RAD50:D69	snv	RAD50		69		D	Y,N					1	RAD50 D69	samples=6;qvalue=0.00212729720788355;variants=Y:4,N:2
+hotspots:RAD51C:P21	snv	RAD51C		21		P	S,A,T					1	RAD51C P21	samples=4;qvalue=0.0616334079268701;variants=S:2,A:1,T:1
+hotspots:RAD51C:Y224	snv	RAD51C		224		Y	H					1	RAD51C Y224	samples=2;qvalue=0.0615844369795179;variants=H:2
+hotspots:RAD52:R396	snv	RAD52		396		R	H,R					1	RAD52 R396	samples=2;qvalue=0.0481336856829914;variants=H:1,R:1
+hotspots:RAF1:S257	snv	RAF1		257		S	L,W					1	RAF1 S257	samples=25;qvalue=3.23332678171542e-24;variants=L:24,W:1
+hotspots:RAF1:S259	snv	RAF1		259		S	F,P,C,S					1	RAF1 S259	samples=12;qvalue=1.11523704110657e-07;variants=F:7,P:3,C:1,S:1
+hotspots:RAF1:P261	snv	RAF1		261		P	R,L,H,S					1	RAF1 P261	samples=10;qvalue=2.70075576168034e-05;variants=R:5,L:3,H:1,S:1
+hotspots:RARA:F286	snv	RARA		286		F	S,C,I					1	RARA F286	samples=4;qvalue=0.0121887973685868;variants=S:2,C:1,I:1
+hotspots:RB1:X46	snv	RB1		46		X	sp					1	RB1 X46 splice	samples=7;qvalue=0.000467623736978692;variants=sp:7
+hotspots:RB1:X89	snv	RB1		89		X	sp					1	RB1 X89 splice	samples=8;qvalue=0.00238216671696255;variants=sp:8
+hotspots:RB1:X127	snv	RB1		127		X	sp					1	RB1 X127 splice	samples=7;qvalue=0.000170187578635711;variants=sp:7
+hotspots:RB1:X203	snv	RB1		203		X	sp					1	RB1 X203 splice	samples=9;qvalue=0.000197456625104954;variants=sp:9
+hotspots:RB1:R251	snv	RB1		251		R	*,Q					1	RB1 R251	samples=16;qvalue=5.87879104509438e-08;variants=*:15,Q:1
+hotspots:RB1:R320	snv	RB1		320		R	*					1	RB1 R320	samples=14;qvalue=5.87879104509438e-08;variants=*:14
+hotspots:RB1:X405	snv	RB1		405		X	sp					1	RB1 X405 splice	samples=19;qvalue=1.54376720926398e-13;variants=sp:19
+hotspots:RB1:X406	snv	RB1		406		X	sp					1	RB1 X406 splice	samples=9;qvalue=0.0953651983533237;variants=sp:9
+hotspots:RB1:Q444	snv	RB1		444		Q	H,L,*,R					1	RB1 Q444	samples=9;qvalue=0.0012312939510221;variants=H:5,L:2,*:1,R:1
+hotspots:RB1:R445	snv	RB1		445		R	*					1	RB1 R445	samples=10;qvalue=0.0101372969926842;variants=*:10
+hotspots:RB1:X445	snv	RB1		445		X	sp					1	RB1 X445 splice	samples=7;qvalue=4.86028548096026e-05;variants=sp:7
+hotspots:RB1:R455	snv	RB1		455		R	*					1	RB1 R455	samples=9;qvalue=0.00379431585215353;variants=*:9
+hotspots:RB1:X463	snv	RB1		463		X	sp					1	RB1 X463 splice	samples=5;qvalue=0.038464461387127;variants=sp:5
+hotspots:RB1:R467	snv	RB1		467		R	*					1	RB1 R467	samples=9;qvalue=0.00629917353625844;variants=*:9
+hotspots:RB1:X474	snv	RB1		474		X	sp					1	RB1 X474 splice	samples=9;qvalue=1.34474780240449e-06;variants=sp:9
+hotspots:RB1:X500	snv	RB1		500		X	sp					1	RB1 X500 splice	samples=10;qvalue=2.59331922255693e-07;variants=sp:10
+hotspots:RB1:R552	snv	RB1		552		R	*					1	RB1 R552	samples=13;qvalue=4.65060954412826e-06;variants=*:13
+hotspots:RB1:R579	snv	RB1		579		R	*					1	RB1 R579	samples=11;qvalue=0.000170187578635711;variants=*:11
+hotspots:RB1:X605	snv	RB1		605		X	sp					1	RB1 X605 splice	samples=7;qvalue=0.000771125042778052;variants=sp:7
+hotspots:RB1:Y606	snv	RB1		606		Y	*,C					1	RB1 Y606	samples=4;qvalue=0.040781933771183;variants=*:2,C:2
+hotspots:RB1:X654	snv	RB1		654		X	sp					1	RB1 X654 splice	samples=8;qvalue=3.72826658507451e-05;variants=sp:8
+hotspots:RB1:R661	snv	RB1		661		R	W					1	RB1 R661	samples=16;qvalue=3.99684712110929e-07;variants=W:16
+hotspots:RB1:X702	snv	RB1		702		X	sp					1	RB1 X702 splice	samples=6;qvalue=0.000627863387091009;variants=sp:6
+hotspots:RB1:X776	snv	RB1		776		X	sp					1	RB1 X776 splice	samples=6;qvalue=0.00618941093976789;variants=sp:6
+hotspots:RB1:R787	snv	RB1		787		R	*,Q					1	RB1 R787	samples=11;qvalue=0.00888303132578564;variants=*:9,Q:2
+hotspots:RB1:X830	snv	RB1		830		X	sp					1	RB1 X830 splice	samples=11;qvalue=9.08044118841068e-06;variants=sp:11
+hotspots:RBM10:X91	snv	RBM10		91		X	sp					1	RBM10 X91 splice	samples=5;qvalue=0.0317436063416975;variants=sp:5
+hotspots:RBM10:R153	snv	RBM10		153		R	*,G					1	RBM10 R153	samples=8;qvalue=0.014058743321404;variants=*:7,G:1
+hotspots:RECQL4:X766	snv	RECQL4		766		X	sp					1	RECQL4 X766 splice	samples=6;qvalue=0.0477088999412308;variants=sp:6
+hotspots:RET:C634	snv	RET		634		C	R,W					1	RET C634	samples=3;qvalue=0.0021522065288701;variants=R:2,W:1
+hotspots:RET:M918	snv	RET		918		M	T					1	RET M918	samples=11;qvalue=3.89383943076572e-14;variants=T:11
+hotspots:RHEB:Y35	snv	RHEB		35		Y	N,C,H,S,*					1	RHEB Y35	samples=12;qvalue=4.97821246870288e-16;variants=N:5,C:2,H:2,S:2,*:1
+hotspots:RHOA:R5	snv	RHOA		5		R	Q,W,L					1	RHOA R5	samples=17;qvalue=1.52155472277533e-08;variants=Q:8,W:8,L:1
+hotspots:RHOA:G17	snv	RHOA		17		G	V,E,A					1	RHOA G17	samples=36;qvalue=4.09456295032167e-35;variants=V:16,E:15,A:5
+hotspots:RHOA:L22	snv	RHOA		22		L	R,L,P					1	RHOA L22	samples=5;qvalue=0.0143875675561847;variants=R:3,L:1,P:1
+hotspots:RHOA:Y34	snv	RHOA		34		Y	C,F					1	RHOA Y34	samples=6;qvalue=4.70657536214838e-05;variants=C:5,F:1
+hotspots:RHOA:T37	snv	RHOA		37		T	I,A,S					1	RHOA T37	samples=6;qvalue=0.00065068897287312;variants=I:4,A:1,S:1
+hotspots:RHOA:E40	snv	RHOA		40		E	Q,K,*,D,V					1	RHOA E40	samples=14;qvalue=7.89360770697566e-05;variants=Q:9,K:2,*:1,D:1,V:1
+hotspots:RHOA:Y42	snv	RHOA		42		Y	C,S,F,I					1	RHOA Y42	samples=19;qvalue=8.6265832611386e-30;variants=C:14,S:3,F:1,I:1
+hotspots:RHOA:E47	snv	RHOA		47		E	K					1	RHOA E47	samples=11;qvalue=1.69502190537709e-05;variants=K:11
+hotspots:RHOA:L57	snv	RHOA		57		L	V					1	RHOA L57	samples=6;qvalue=5.06876440826244e-05;variants=V:6
+hotspots:RHOA:G62	snv	RHOA		62		G	E,R,V					1	RHOA G62	samples=7;qvalue=0.000460203695335467;variants=E:3,R:3,V:1
+hotspots:RHOA:L69	snv	RHOA		69		L	P,R,M					1	RHOA L69	samples=5;qvalue=0.0884860446408663;variants=P:2,R:2,M:1
+hotspots:RHOA:A161	snv	RHOA		161		A	V,T					1	RHOA A161	samples=7;qvalue=4.19520880623079e-07;variants=V:5,T:2
+hotspots:RICTOR:S1101	snv	RICTOR		1101		S	L,S					1	RICTOR S1101	samples=10;qvalue=0.00198059525742831;variants=L:9,S:1
+hotspots:RIT1:A77	snv	RIT1		77		A	T,P,S					1	RIT1 A77	samples=5;qvalue=0.0651692609390733;variants=T:3,P:1,S:1
+hotspots:RIT1:F82	snv	RIT1		82		F	L,C					1	RIT1 F82	samples=4;qvalue=0.0131232804958808;variants=L:3,C:1
+hotspots:RIT1:M90	snv	RIT1		90		M	I					1	RIT1 M90	samples=11;qvalue=0.00949362579637069;variants=I:11
+hotspots:RNF43:H86	snv	RNF43		86		H	R,Y					1	RNF43 H86	samples=4;qvalue=0.000317636175436398;variants=R:2,Y:2
+hotspots:RNF43:R132	snv	RNF43		132		R	*					1	RNF43 R132	samples=11;qvalue=0.030502281384959;variants=*:11
+hotspots:RNF43:R145	snv	RNF43		145		R	*					1	RNF43 R145	samples=9;qvalue=0.030502281384959;variants=*:9
+hotspots:RNF43:R371	snv	RNF43		371		R	*					1	RNF43 R371	samples=9;qvalue=0.0109768899642112;variants=*:9
+hotspots:RPS6KA4:S236	snv	RPS6KA4		236		S	L,S					1	RPS6KA4 S236	samples=6;qvalue=0.0462995364318378;variants=L:5,S:1
+hotspots:RPS6KA4:R629	snv	RPS6KA4		629		R	C,H,R					1	RPS6KA4 R629	samples=7;qvalue=0.0462995364318378;variants=C:4,H:2,R:1
+hotspots:RPTOR:R139	snv	RPTOR		139		R	H					1	RPTOR R139	samples=8;qvalue=0.0367985047325461;variants=H:8
+hotspots:RRAS2:G23	snv	RRAS2		23		G	D,C,V,S,A					1	RRAS2 G23	samples=35;qvalue=8.0638899577784665e-47;variants=D:14,C:8,V:7,S:5,A:1
+hotspots:RRAS2:G24	snv	RRAS2		24		G	D,V,C,R					1	RRAS2 G24	samples=19;qvalue=2.9711914252235903e-19;variants=D:15,V:2,C:1,R:1
+hotspots:RRAS2:Q72	snv	RRAS2		72		Q	L,H					1	RRAS2 Q72	samples=9;qvalue=6.59079770930105e-15;variants=L:7,H:2
+hotspots:RUNX1:R162	snv	RUNX1		162		R	G,K,S					1	RUNX1 R162	samples=4;qvalue=0.000113108365223981;variants=G:2,K:1,S:1
+hotspots:RUNX1:R201	snv	RUNX1		201		R	*,Q,G					1	RUNX1 R201	samples=7;qvalue=5.51149603976628e-05;variants=*:4,Q:2,G:1
+hotspots:RUNX1:R204	snv	RUNX1		204		R	Q,*,P					1	RUNX1 R204	samples=18;qvalue=1.04722150368425e-06;variants=Q:15,*:2,P:1
+hotspots:RXRA:S427	snv	RXRA		427		S	F,Y					1	RXRA S427	samples=26;qvalue=4.52406657388826e-44;variants=F:22,Y:4
+hotspots:SDHA:S445	snv	SDHA		445		S	S,L					1	SDHA S445	samples=10;qvalue=7.30147582086515e-07;variants=S:9,L:1
+hotspots:SDHA:L639	snv	SDHA		639		L	V					1	SDHA L639	samples=7;qvalue=7.18357325737371e-09;variants=V:7
+hotspots:SDHA:V644	snv	SDHA		644		V	M,L					1	SDHA V644	samples=7;qvalue=0.00891411211670894;variants=M:6,L:1
+hotspots:SDHAF2:S10	snv	SDHAF2		10		S	L,*,A					1	SDHAF2 S10	samples=5;qvalue=0.090116860936781;variants=L:3,*:1,A:1
+hotspots:SDHAF2:X87	snv	SDHAF2		87		X	sp					1	SDHAF2 X87 splice	samples=9;qvalue=7.98189363303711e-21;variants=sp:9
+hotspots:SESN2:I425	snv	SESN2		425		I	V					1	SESN2 I425	samples=2;qvalue=0.00451586263584824;variants=V:2
+hotspots:SETD2:X1572	snv	SETD2		1572		X	sp					1	SETD2 X1572 splice	samples=6;qvalue=0.0645658226264237;variants=sp:6
+hotspots:SETD2:R1592	snv	SETD2		1592		R	Q,*,G,L					1	SETD2 R1592	samples=9;qvalue=0.0021731033225771;variants=Q:4,*:3,G:1,L:1
+hotspots:SETD2:H1603	snv	SETD2		1603		H	R,Y					1	SETD2 H1603	samples=5;qvalue=0.0393590702541361;variants=R:3,Y:2
+hotspots:SETD2:R1625	snv	SETD2		1625		R	C,H,L,S					1	SETD2 R1625	samples=13;qvalue=6.83579094550133e-09;variants=C:6,H:5,L:1,S:1
+hotspots:SETD2:Y1666	snv	SETD2		1666		Y	C,*,H					1	SETD2 Y1666	samples=6;qvalue=0.000460067179768372;variants=C:4,*:1,H:1
+hotspots:SF3B1:Y623	snv	SF3B1		623		Y	C,H,S					1	SF3B1 Y623	samples=4;qvalue=0.0377723571915572;variants=C:2,H:1,S:1
+hotspots:SF3B1:R625	snv	SF3B1		625		R	H,C,L,G					1	SF3B1 R625	samples=59;qvalue=1.5407254801883e-72;variants=H:29,C:25,L:4,G:1
+hotspots:SF3B1:N626	snv	SF3B1		626		N	Y,D,H					1	SF3B1 N626	samples=8;qvalue=3.34579354448327e-10;variants=Y:4,D:2,H:2
+hotspots:SF3B1:K666	snv	SF3B1		666		K	T,N,E,M,Q					1	SF3B1 K666	samples=13;qvalue=7.28542711318273e-13;variants=T:5,N:3,E:2,M:2,Q:1
+hotspots:SF3B1:K700	snv	SF3B1		700		K	E,K,R					1	SF3B1 K700	samples=59;qvalue=1.51874215150358e-126;variants=E:57,K:1,R:1
+hotspots:SF3B1:V701	snv	SF3B1		701		V	F,A,I					1	SF3B1 V701	samples=4;qvalue=0.0969151861465262;variants=F:2,A:1,I:1
+hotspots:SF3B1:G740	snv	SF3B1		740		G	E,V					1	SF3B1 G740	samples=9;qvalue=0.000175436453406427;variants=E:7,V:2
+hotspots:SF3B1:K741	snv	SF3B1		741		K	N,E,*,Q,T					1	SF3B1 K741	samples=10;qvalue=3.09082474257009e-08;variants=N:5,E:2,*:1,Q:1,T:1
+hotspots:SF3B1:G742	snv	SF3B1		742		G	D					1	SF3B1 G742	samples=8;qvalue=2.57040955470615e-07;variants=D:8
+hotspots:SF3B1:D894	snv	SF3B1		894		D	G,N,A,Y					1	SF3B1 D894	samples=6;qvalue=0.00868422598732493;variants=G:2,N:2,A:1,Y:1
+hotspots:SF3B1:E902	snv	SF3B1		902		E	K,Q,G					1	SF3B1 E902	samples=17;qvalue=3.68985777208901e-20;variants=K:13,Q:3,G:1
+hotspots:SMAD2:R182	snv	SMAD2		182		R	*,R					1	SMAD2 R182	samples=8;qvalue=0.068135086582833;variants=*:7,R:1
+hotspots:SMAD2:T303	snv	SMAD2		303		T	R,I					1	SMAD2 T303	samples=3;qvalue=0.0953428440091016;variants=R:2,I:1
+hotspots:SMAD2:P305	snv	SMAD2		305		P	L,Q,T					1	SMAD2 P305	samples=4;qvalue=0.0969117927764253;variants=L:2,Q:1,T:1
+hotspots:SMAD2:C312	snv	SMAD2		312		C	G,R,S,W					1	SMAD2 C312	samples=6;qvalue=0.0033521036315206;variants=G:3,R:1,S:1,W:1
+hotspots:SMAD2:R321	snv	SMAD2		321		R	Q,*					1	SMAD2 R321	samples=9;qvalue=0.0862675631729402;variants=Q:5,*:4
+hotspots:SMAD2:D450	snv	SMAD2		450		D	E,G,N,H					1	SMAD2 D450	samples=8;qvalue=5.676711740444089e-05;variants=E:3,G:2,N:2,H:1
+hotspots:SMAD2:C463	snv	SMAD2		463		C	*,F					1	SMAD2 C463	samples=4;qvalue=0.0862675631729402;variants=*:3,F:1
+hotspots:SMAD2:S464	snv	SMAD2		464		S	*					1	SMAD2 S464	samples=21;qvalue=2.59958573934364e-16;variants=*:21
+hotspots:SMAD2:S465	snv	SMAD2		465		S	N,R					1	SMAD2 S465	samples=7;qvalue=6.25956679500868e-05;variants=N:6,R:1
+hotspots:SMAD3:R268	snv	SMAD3		268		R	C,H					1	SMAD3 R268	samples=11;qvalue=0.0327038445077706;variants=C:7,H:4
+hotspots:SMAD3:R287	snv	SMAD3		287		R	W,Q					1	SMAD3 R287	samples=8;qvalue=0.0327038445077706;variants=W:6,Q:2
+hotspots:SMAD3:S423	snv	SMAD3		423		S	N,R,G,I,T					1	SMAD3 S423	samples=9;qvalue=7.82278466199621e-06;variants=N:3,R:3,G:1,I:1,T:1
+hotspots:SMAD4:357-377	inframe	SMAD4		357	377							1	SMAD4 357-377 in-frame indel	samples=8;qvalue=3.6822392551777e-06;variants=R361_G365del:2,C363del:1,F362_H371del:1,G358_D360del:1,G365_E377del:1,R361_L364del:1,S357_G365del:1
+hotspots:SMAD4:536-546	inframe	SMAD4		536	546							1	SMAD4 536-546 in-frame indel	samples=5;qvalue=0.0247790280835321;variants=L536_E538delinsQ:2,D537_E538dup:1,L540del:1,V539_A546del:1
+hotspots:SMAD4:Y95	snv	SMAD4		95		Y	C,*,H					1	SMAD4 Y95	samples=4;qvalue=0.0453956226948068;variants=C:2,*:1,H:1
+hotspots:SMAD4:C115	snv	SMAD4		115		C	S,Y,G					1	SMAD4 C115	samples=6;qvalue=0.0019001119145372;variants=S:3,Y:2,G:1
+hotspots:SMAD4:A118	snv	SMAD4		118		A	V					1	SMAD4 A118	samples=11;qvalue=0.0442845520213532;variants=V:11
+hotspots:SMAD4:S178	snv	SMAD4		178		S	*					1	SMAD4 S178	samples=9;qvalue=0.0946588953701679;variants=*:9
+hotspots:SMAD4:E330	snv	SMAD4		330		E	K,G,Q,*					1	SMAD4 E330	samples=11;qvalue=2.64651886505787e-05;variants=K:6,G:2,Q:2,*:1
+hotspots:SMAD4:D351	snv	SMAD4		351		D	Y,N,G,H,V,A					1	SMAD4 D351	samples=20;qvalue=2.31112791341444e-17;variants=Y:6,N:5,G:3,H:3,V:2,A:1
+hotspots:SMAD4:G352	snv	SMAD4		352		G	E,R,A,*,L,V					1	SMAD4 G352	samples=11;qvalue=1.37739318604283e-05;variants=E:3,R:3,A:2,*:1,L:1,V:1
+hotspots:SMAD4:Y353	snv	SMAD4		353		Y	N,C,D					1	SMAD4 Y353	samples=4;qvalue=0.0453956226948068;variants=N:2,C:1,D:1
+hotspots:SMAD4:D355	snv	SMAD4		355		D	G,V,Y					1	SMAD4 D355	samples=7;qvalue=0.000220507250911314;variants=G:4,V:2,Y:1
+hotspots:SMAD4:P356	snv	SMAD4		356		P	L,S,R,H					1	SMAD4 P356	samples=16;qvalue=2.1533538671879e-11;variants=L:10,S:3,R:2,H:1
+hotspots:SMAD4:R361	snv	SMAD4		361		R	H,C,S,G,L,P					1	SMAD4 R361	samples=124;qvalue=1.13407719335173e-154;variants=H:60,C:54,S:4,G:3,L:2,P:1
+hotspots:SMAD4:C363	snv	SMAD4		363		C	F,R,S,Y					1	SMAD4 C363	samples=6;qvalue=0.00065164187004951;variants=F:2,R:2,S:1,Y:1
+hotspots:SMAD4:G365	snv	SMAD4		365		G	D,V,R,S					1	SMAD4 G365	samples=11;qvalue=5.450544231898301e-07;variants=D:7,V:2,R:1,S:1
+hotspots:SMAD4:I383	snv	SMAD4		383		I	K,R,T,M					1	SMAD4 I383	samples=11;qvalue=6.991626160485889e-11;variants=K:4,R:4,T:2,M:1
+hotspots:SMAD4:G386	snv	SMAD4		386		G	D,V,S,R,A,C					1	SMAD4 G386	samples=22;qvalue=8.21942263343406e-22;variants=D:9,V:6,S:3,R:2,A:1,C:1
+hotspots:SMAD4:A406	snv	SMAD4		406		A	V,T,E					1	SMAD4 A406	samples=18;qvalue=5.35629101856138e-05;variants=V:13,T:4,E:1
+hotspots:SMAD4:G419	snv	SMAD4		419		G	W,V,R					1	SMAD4 G419	samples=8;qvalue=7.34281451772137e-07;variants=W:4,V:3,R:1
+hotspots:SMAD4:K428	snv	SMAD4		428		K	M,N,T					1	SMAD4 K428	samples=9;qvalue=0.0054059218138781;variants=M:3,N:3,T:3
+hotspots:SMAD4:R445	snv	SMAD4		445		R	*,Q					1	SMAD4 R445	samples=17;qvalue=1.11424475801292e-07;variants=*:16,Q:1
+hotspots:SMAD4:D493	snv	SMAD4		493		D	N,G,A,H					1	SMAD4 D493	samples=7;qvalue=0.00966195161579594;variants=N:3,G:2,A:1,H:1
+hotspots:SMAD4:R496	snv	SMAD4		496		R	H,P					1	SMAD4 R496	samples=17;qvalue=2.9256647863549307e-06;variants=H:15,P:2
+hotspots:SMAD4:G508	snv	SMAD4		508		G	D,V,S					1	SMAD4 G508	samples=9;qvalue=0.0034378759275618;variants=D:6,V:2,S:1
+hotspots:SMAD4:G510	snv	SMAD4		510		G	*,R,A,E					1	SMAD4 G510	samples=6;qvalue=0.0574589531183325;variants=*:2,R:2,A:1,E:1
+hotspots:SMAD4:W524	snv	SMAD4		524		W	C,L,R,S					1	SMAD4 W524	samples=9;qvalue=0.000523513784646524;variants=C:6,L:1,R:1,S:1
+hotspots:SMAD4:E526	snv	SMAD4		526		E	*,K,Q,A,D,V					1	SMAD4 E526	samples=11;qvalue=0.000220507250911314;variants=*:3,K:3,Q:2,A:1,D:1,V:1
+hotspots:SMAD4:L533	snv	SMAD4		533		L	I,P,F,R,V					1	SMAD4 L533	samples=9;qvalue=0.0003005177185441;variants=I:3,P:3,F:1,R:1,V:1
+hotspots:SMAD4:Q534	snv	SMAD4		534		Q	*,P					1	SMAD4 Q534	samples=10;qvalue=1.79003182508512e-05;variants=*:9,P:1
+hotspots:SMAD4:L536	snv	SMAD4		536		L	P,Q,R					1	SMAD4 L536	samples=4;qvalue=0.00311073967452292;variants=P:2,Q:1,R:1
+hotspots:SMAD4:D537	snv	SMAD4		537		D	G,H,V,E,Y,A					1	SMAD4 D537	samples=30;qvalue=6.16661226103394e-27;variants=G:10,H:6,V:5,E:4,Y:4,A:1
+hotspots:SMARCA4:546	inframe	SMARCA4		546								1	SMARCA4 546 in-frame indel	samples=5;qvalue=0.000230672905611517;variants=K546del:5
+hotspots:SMARCA4:E780	snv	SMARCA4		780		E	K,*					1	SMARCA4 E780	samples=10;qvalue=0.0015302454417842;variants=K:9,*:1
+hotspots:SMARCA4:M781	snv	SMARCA4		781		M	I,V,L					1	SMARCA4 M781	samples=9;qvalue=8.44219689247448e-07;variants=I:6,V:2,L:1
+hotspots:SMARCA4:E821	snv	SMARCA4		821		E	K,D					1	SMARCA4 E821	samples=8;qvalue=0.0348588465012058;variants=K:7,D:1
+hotspots:SMARCA4:T910	snv	SMARCA4		910		T	M,A,R,T					1	SMARCA4 T910	samples=29;qvalue=3.37629225284153e-26;variants=M:26,A:1,R:1,T:1
+hotspots:SMARCA4:E920	snv	SMARCA4		920		E	K					1	SMARCA4 E920	samples=14;qvalue=9.71774258898038e-06;variants=K:14
+hotspots:SMARCA4:R973	snv	SMARCA4		973		R	Q,W					1	SMARCA4 R973	samples=10;qvalue=0.00471444398662183;variants=Q:5,W:5
+hotspots:SMARCA4:F1102	snv	SMARCA4		1102		F	L,S					1	SMARCA4 F1102	samples=9;qvalue=0.0016559444836594;variants=L:8,S:1
+hotspots:SMARCA4:R1135	snv	SMARCA4		1135		R	W,Q					1	SMARCA4 R1135	samples=9;qvalue=0.00257748951777747;variants=W:5,Q:4
+hotspots:SMARCA4:R1157	snv	SMARCA4		1157		R	W,Q					1	SMARCA4 R1157	samples=7;qvalue=0.09557979887796;variants=W:4,Q:3
+hotspots:SMARCA4:R1189	snv	SMARCA4		1189		R	Q,G,*,L					1	SMARCA4 R1189	samples=12;qvalue=3.57045753293949e-06;variants=Q:7,G:3,*:1,L:1
+hotspots:SMARCA4:R1192	snv	SMARCA4		1192		R	C,H,P					1	SMARCA4 R1192	samples=17;qvalue=1.6996864443455e-11;variants=C:9,H:7,P:1
+hotspots:SMARCA4:G1232	snv	SMARCA4		1232		G	S,C,D,V					1	SMARCA4 G1232	samples=17;qvalue=2.11467605706404e-12;variants=S:11,C:2,D:2,V:2
+hotspots:SMARCA4:R1243	snv	SMARCA4		1243		R	W,G,L,P					1	SMARCA4 R1243	samples=12;qvalue=4.81608011502394e-05;variants=W:9,G:1,L:1,P:1
+hotspots:SMARCB1:364	inframe	SMARCB1		364								1	SMARCB1 364 in-frame indel	samples=5;qvalue=0.000385365731765089;variants=K364del:5
+hotspots:SMARCB1:R374	snv	SMARCB1		374		R	Q,W					1	SMARCB1 R374	samples=8;qvalue=0.0409234978178552;variants=Q:5,W:3
+hotspots:SMARCB1:R377	snv	SMARCB1		377		R	H,C,L					1	SMARCB1 R377	samples=17;qvalue=2.32553910162698e-13;variants=H:11,C:5,L:1
+hotspots:SMARCD1:R183	snv	SMARCD1		183		R	Q,*,L					1	SMARCD1 R183	samples=7;qvalue=0.0268785172725617;variants=Q:5,*:1,L:1
+hotspots:SMO:L412	snv	SMO		412		L	F,L					1	SMO L412	samples=6;qvalue=8.71010004332757e-06;variants=F:5,L:1
+hotspots:SMO:V414	snv	SMO		414		V	A,G,V					1	SMO V414	samples=3;qvalue=0.024540518150126;variants=A:1,G:1,V:1
+hotspots:SMO:W535	snv	SMO		535		W	L					1	SMO W535	samples=3;qvalue=0.0116503765899911;variants=L:3
+hotspots:SOCS1:A3	snv	SOCS1		3		A	T,E,P,R					1	SOCS1 A3	samples=6;qvalue=0.000842046934360504;variants=T:3,E:1,P:1,R:1
+hotspots:SOS1:A90	snv	SOS1		90		A	A,T,V					1	SOS1 A90	samples=5;qvalue=0.0949773985392201;variants=A:3,T:1,V:1
+hotspots:SOS1:N233	snv	SOS1		233		N	Y					1	SOS1 N233	samples=7;qvalue=9.34176359993697e-09;variants=Y:7
+hotspots:SOS1:M269	snv	SOS1		269		M	K,T,V,I,R					1	SOS1 M269	samples=12;qvalue=2.3884435057631302e-09;variants=K:6,T:2,V:2,I:1,R:1
+hotspots:SOX17:A96	snv	SOX17		96		A	G					1	SOX17 A96	samples=4;qvalue=0.0031058778949461;variants=G:4
+hotspots:SOX17:S403	snv	SOX17		403		S	I					1	SOX17 S403	samples=8;qvalue=7.18958994628799e-12;variants=I:8
+hotspots:SOX9:152-167	inframe	SOX9		152	167							1	SOX9 152-167 in-frame indel	samples=5;qvalue=0.0645000415402425;variants=K167del:3,R152_K167del:1,R152del:1
+hotspots:SPOP:E47	snv	SPOP		47		E	K,A,*,Q					1	SPOP E47	samples=15;qvalue=3.6658296182275503e-10;variants=K:11,A:2,*:1,Q:1
+hotspots:SPOP:E50	snv	SPOP		50		E	K,D					1	SPOP E50	samples=17;qvalue=1.32821875362239e-13;variants=K:16,D:1
+hotspots:SPOP:S80	snv	SPOP		80		S	R					1	SPOP S80	samples=7;qvalue=4.269900963059849e-05;variants=R:7
+hotspots:SPOP:Y87	snv	SPOP		87		Y	N,S,C,D					1	SPOP Y87	samples=14;qvalue=1.9688757329735e-13;variants=N:8,S:3,C:2,D:1
+hotspots:SPOP:F102	snv	SPOP		102		F	C,V,L,S,I					1	SPOP F102	samples=24;qvalue=1.62286422111738e-18;variants=C:12,V:7,L:2,S:2,I:1
+hotspots:SPOP:F104	snv	SPOP		104		F	I,C,L,S					1	SPOP F104	samples=8;qvalue=1.61449224848364e-06;variants=I:3,C:2,L:2,S:1
+hotspots:SPOP:M117	snv	SPOP		117		M	V					1	SPOP M117	samples=7;qvalue=6.81660266090703e-06;variants=V:7
+hotspots:SPOP:F125	snv	SPOP		125		F	L,C,I,V					1	SPOP F125	samples=6;qvalue=0.00017822188506056;variants=L:3,C:1,I:1,V:1
+hotspots:SPOP:K129	snv	SPOP		129		K	E					1	SPOP K129	samples=3;qvalue=0.086449492395681;variants=E:3
+hotspots:SPOP:D130	snv	SPOP		130		D	H,N,E,V					1	SPOP D130	samples=16;qvalue=8.967429251306048e-10;variants=H:9,N:3,E:2,V:2
+hotspots:SPOP:W131	snv	SPOP		131		W	G,C,L,S,R					1	SPOP W131	samples=23;qvalue=1.9688757329735e-13;variants=G:12,C:4,L:3,S:3,R:1
+hotspots:SPOP:F133	snv	SPOP		133		F	L,V,C,S,I					1	SPOP F133	samples=67;qvalue=9.29184493038497e-48;variants=L:32,V:19,C:8,S:5,I:3
+hotspots:SPRED1:R349	snv	SPRED1		349		R	S,W					1	SPRED1 R349	samples=2;qvalue=0.0638652407183754;variants=S:1,W:1
+hotspots:SRSF2:92-117	inframe	SRSF2		92	117							1	SRSF2 92-117 in-frame indel	samples=5;qvalue=0.000120846881165768;variants=P95_H99del:1,P95_R102del:1,P95_R117del:1,Y92_H100del:1,Y92_H99del:1
+hotspots:SRSF2:P95	snv	SRSF2		95		P	L,H,R					1	SRSF2 P95	samples=6;qvalue=0.00121973194958252;variants=L:3,H:2,R:1
+hotspots:STAG2:R216	snv	STAG2		216		R	*,Q,R					1	STAG2 R216	samples=14;qvalue=2.21331571472827e-07;variants=*:11,Q:2,R:1
+hotspots:STAT3:616	inframe	STAT3		616								1	STAT3 616 in-frame indel	samples=6;qvalue=1.28595780031276e-08;variants=E616del:6
+hotspots:STAT3:F384	snv	STAT3		384		F	L,V,Y					1	STAT3 F384	samples=4;qvalue=0.014884260303677;variants=L:2,V:1,Y:1
+hotspots:STAT3:H410	snv	STAT3		410		H	R,P					1	STAT3 H410	samples=6;qvalue=3.91618125206497e-07;variants=R:4,P:2
+hotspots:STAT3:S614	snv	STAT3		614		S	R					1	STAT3 S614	samples=5;qvalue=0.000238843518230703;variants=R:5
+hotspots:STAT3:D661	snv	STAT3		661		D	V,Y					1	STAT3 D661	samples=5;qvalue=0.0151718798921814;variants=V:3,Y:2
+hotspots:STK11:K84	snv	STK11		84		K	*					1	STK11 K84	samples=4;qvalue=0.00790318256508381;variants=*:4
+hotspots:STK11:X97	snv	STK11		97		X	sp					1	STK11 X97 splice	samples=8;qvalue=0.000549663500781769;variants=sp:8
+hotspots:STK11:X125	snv	STK11		125		X	sp					1	STK11 X125 splice	samples=5;qvalue=0.0436726212124469;variants=sp:5
+hotspots:STK11:X155	snv	STK11		155		X	sp					1	STK11 X155 splice	samples=14;qvalue=1.05267328502366e-11;variants=sp:14
+hotspots:STK11:E165	snv	STK11		165		E	*,Q,K					1	STK11 E165	samples=9;qvalue=0.00404178594646078;variants=*:6,Q:2,K:1
+hotspots:STK11:H174	snv	STK11		174		H	H,D,L,R,Y					1	STK11 H174	samples=6;qvalue=0.00114520467593057;variants=H:2,D:1,L:1,R:1,Y:1
+hotspots:STK11:P179	snv	STK11		179		P	L,Q,R					1	STK11 P179	samples=7;qvalue=0.0144151536030241;variants=L:3,Q:2,R:2
+hotspots:STK11:N181	snv	STK11		181		N	I,S,T,Y					1	STK11 N181	samples=4;qvalue=0.001605169956216;variants=I:1,S:1,T:1,Y:1
+hotspots:STK11:D194	snv	STK11		194		D	Y,N,V,G,H					1	STK11 D194	samples=14;qvalue=3.49153886629741e-11;variants=Y:7,N:3,V:2,G:1,H:1
+hotspots:STK11:G196	snv	STK11		196		G	V,G,R					1	STK11 G196	samples=6;qvalue=0.0999093296754989;variants=V:4,G:1,R:1
+hotspots:STK11:X200	snv	STK11		200		X	sp					1	STK11 X200 splice	samples=5;qvalue=0.0999093296754989;variants=sp:5
+hotspots:STK11:S216	snv	STK11		216		S	F,S					1	STK11 S216	samples=12;qvalue=1.94249168129621e-05;variants=F:11,S:1
+hotspots:STK11:Q220	snv	STK11		220		Q	*,P					1	STK11 Q220	samples=10;qvalue=6.68914447317085e-05;variants=*:9,P:1
+hotspots:STK11:P221	snv	STK11		221		P	L,P,S					1	STK11 P221	samples=8;qvalue=0.00419615615814037;variants=L:6,P:1,S:1
+hotspots:STK11:E223	snv	STK11		223		E	*,K,V					1	STK11 E223	samples=15;qvalue=5.43755738494477e-12;variants=*:13,K:1,V:1
+hotspots:STK11:D237	snv	STK11		237		D	Y,H,N					1	STK11 D237	samples=15;qvalue=6.41548176859785e-09;variants=Y:10,H:4,N:1
+hotspots:STK11:W239	snv	STK11		239		W	C,*,S					1	STK11 W239	samples=5;qvalue=0.0302867868500955;variants=C:3,*:1,S:1
+hotspots:STK11:G242	snv	STK11		242		G	V,W,G,R					1	STK11 G242	samples=9;qvalue=3.43165464187048e-05;variants=V:4,W:3,G:1,R:1
+hotspots:STK11:X245	snv	STK11		245		X	sp					1	STK11 X245 splice	samples=13;qvalue=1.05267328502366e-11;variants=sp:13
+hotspots:STK11:G251	snv	STK11		251		G	V,C,R					1	STK11 G251	samples=6;qvalue=0.0363127834198724;variants=V:3,C:2,R:1
+hotspots:STK11:X288	snv	STK11		288		X	sp					1	STK11 X288 splice	samples=8;qvalue=0.000339166875807386;variants=sp:8
+hotspots:STK11:R297	snv	STK11		297		R	K,M,S,T					1	STK11 R297	samples=9;qvalue=0.0002377808109098;variants=K:4,M:2,S:2,T:1
+hotspots:STK11:R304	snv	STK11		304		R	W,P					1	STK11 R304	samples=12;qvalue=6.88703133288158e-07;variants=W:11,P:1
+hotspots:STK11:X307	snv	STK11		307		X	sp					1	STK11 X307 splice	samples=8;qvalue=4.6367505963321e-06;variants=sp:8
+hotspots:STK11:W308	snv	STK11		308		W	L,C,*					1	STK11 W308	samples=6;qvalue=0.0593665276447652;variants=L:3,C:2,*:1
+hotspots:STK19:D89	snv	STK19		89		D	N,D					1	STK19 D89	samples=18;qvalue=7.07803453190923e-31;variants=N:16,D:2
+hotspots:SUZ12:R101	snv	SUZ12		101		R	*,Q					1	SUZ12 R101	samples=6;qvalue=0.000127918810761813;variants=*:5,Q:1
+hotspots:TBX3:W113	snv	TBX3		113		W	*,R					1	TBX3 W113	samples=4;qvalue=0.0557812775205636;variants=*:3,R:1
+hotspots:TCEB1:Y79	snv	TCEB1		79		Y	C,*,F,N,S					1	TCEB1 Y79	samples=10;qvalue=2.66761546087334e-23;variants=C:6,*:1,F:1,N:1,S:1
+hotspots:TCF3:N551	snv	TCF3		551		N	K					1	TCF3 N551	samples=2;qvalue=0.04594352537914;variants=K:2
+hotspots:TCF7L2:R420	snv	TCF7L2		420		R	W,L					1	TCF7L2 R420	samples=14;qvalue=7.723804393547941e-05;variants=W:13,L:1
+hotspots:TCF7L2:R448	snv	TCF7L2		448		R	Q,W,L					1	TCF7L2 R448	samples=22;qvalue=1.74354033598205e-15;variants=Q:11,W:10,L:1
+hotspots:TCF7L2:G452	snv	TCF7L2		452		G	R					1	TCF7L2 G452	samples=13;qvalue=6.35971917959021e-05;variants=R:13
+hotspots:TCF7L2:W459	snv	TCF7L2		459		W	R,*,C,L					1	TCF7L2 W459	samples=6;qvalue=3.70773237479326e-05;variants=R:3,*:1,C:1,L:1
+hotspots:TCF7L2:C469	snv	TCF7L2		469		C	Y,W					1	TCF7L2 C469	samples=7;qvalue=0.0063150116522679;variants=Y:6,W:1
+hotspots:TCF7L2:R471	snv	TCF7L2		471		R	C,H,S					1	TCF7L2 R471	samples=14;qvalue=1.30421488952988e-08;variants=C:8,H:4,S:2
+hotspots:TET1:P1752	snv	TET1		1752		P	P,S					1	TET1 P1752	samples=10;qvalue=2.87599149463378e-09;variants=P:8,S:2
+hotspots:TET2:R550	snv	TET2		550		R	*					1	TET2 R550	samples=7;qvalue=0.0664756506292094;variants=*:7
+hotspots:TGFBR1:S241	snv	TGFBR1		241		S	L,S,*					1	TGFBR1 S241	samples=15;qvalue=3.26275109634539e-07;variants=L:12,S:2,*:1
+hotspots:TGFBR1:I259	snv	TGFBR1		259		I	I,N					1	TGFBR1 I259	samples=3;qvalue=0.0725830208046979;variants=I:2,N:1
+hotspots:TGFBR1:T375	snv	TGFBR1		375		T	I,K,R					1	TGFBR1 T375	samples=3;qvalue=0.0210047882793745;variants=I:1,K:1,R:1
+hotspots:TGFBR1:R487	snv	TGFBR1		487		R	Q,W					1	TGFBR1 R487	samples=8;qvalue=0.0420025722530218;variants=Q:5,W:3
+hotspots:TGFBR2:D471	snv	TGFBR2		471		D	N,V,Y					1	TGFBR2 D471	samples=12;qvalue=0.000365084489940418;variants=N:10,V:1,Y:1
+hotspots:TGFBR2:R520	snv	TGFBR2		520		R	*,R					1	TGFBR2 R520	samples=9;qvalue=0.0229676164484648;variants=*:8,R:1
+hotspots:TGFBR2:E544	snv	TGFBR2		544		E	K					1	TGFBR2 E544	samples=5;qvalue=0.016266709218872;variants=K:5
+hotspots:TGFBR2:D549	snv	TGFBR2		549		D	N,G,Y					1	TGFBR2 D549	samples=13;qvalue=0.000525481438947;variants=N:8,G:4,Y:1
+hotspots:TGFBR2:R553	snv	TGFBR2		553		R	H,C,L,G					1	TGFBR2 R553	samples=23;qvalue=1.73780438735199e-16;variants=H:10,C:9,L:3,G:1
+hotspots:TNFRSF14:M1	snv	TNFRSF14		1		M	I,K,T					1	TNFRSF14 M1	samples=4;qvalue=0.0100655869328098;variants=I:2,K:1,T:1
+hotspots:TNFRSF14:C111	snv	TNFRSF14		111		C	W,Y					1	TNFRSF14 C111	samples=3;qvalue=0.0888304463274096;variants=W:2,Y:1
+hotspots:TP53:128-163	inframe	TP53		128	163							1	TP53 128-163 in-frame indel	samples=39;qvalue=2.55825013475141e-22;variants=N131del:4,R156del:2,V157_R158del:2,A138_L145del:1,A138_P142del:1,A159del:1,A161_I162del:1,C135_L137delinsW:1,C141_P142del:1,D148_T150del:1,D148_T155dup:1,D148del:1,G154_T155del:1,I162_Y163delinsN:1,I162dup:1,K139_P142delinsT:1,L130_A138dup:1,L130del:1,P128_L130del:1,P128del:1,P142dup:1,P153_G154del:1,P153del:1,Q136_C141del:1,Q136del:1,R158_A159del:1,R158_A159dup:1,T150_R158del:1,T155_A161del:1,T155_R156del:1,T155_R158del:1,V143_P153del:1,V147_D148dup:1,V157_R158dup:1
+hotspots:TP53:173-187	inframe	TP53		173	187							1	TP53 173-187 in-frame indel	samples=21;qvalue=8.83278816666912e-07;variants=P177_C182del:10,H178_S183del:2,C176_H179del:1,C176dup:1,E180_D184del:1,H179_D184del:1,H179del:1,P177_H178del:1,S183_G187delinsC:1,V173_R175del:1,V173dup:1
+hotspots:TP53:191-206	inframe	TP53		191	206							1	TP53 191-206 in-frame indel	samples=20;qvalue=3.4723699042568e-06;variants=P191del:11,G199_E204del:3,E204_L206del:1,I195_G199del:1,P191_L201del:1,Q192del:1,R202_L206del:1,V197_N200del:1
+hotspots:TP53:229-292	inframe	TP53		229	292							1	TP53 229-292 in-frame indel	samples=76;qvalue=1.46521691051924e-64;variants=I255del:9,L252del:3,L265del:3,E286_E287del:2,N235del:2,N239_S240del:2,N239_S241del:2,N239dup:2,S241dup:2,T253dup:2,T256_S260del:2,V274_C275dup:2,A276_C277dup:1,A276_E285del:1,C229_H233del:1,C229_T230del:1,C238_M243del:1,C238_N239delinsY:1,C238_S240del:1,C275_R282delinsW:1,C277dup:1,D281_R282insP:1,E285_K292del:1,F270del:1,G244_M246delinsV:1,G245_P250delinsA:1,G262del:1,I254_T256del:1,I255dup:1,L252_I254del:1,L252dup:1,L264_N268del:1,M237_N239del:1,M243_I255del:1,N235_Y236dup:1,N263_N268del:1,N268_R273del:1,P250_I251delinsL:1,P250_L252del:1,R282_R283del:1,S240_C242del:1,S240_S241del:1,S260_L264dup:1,S269_E271del:1,S269_E271delinsK:1,T231_I232del:1,T231_I232insTDCTT:1,T253_L257del:1,T256del:1,V272_R273insL:1,V274_G279del:1,V274dup:1,Y234_M237del:1,Y234del:1,Y236_M237delinsL:1
+hotspots:TP53:X32	snv	TP53		32		X	sp					1	TP53 X32 splice	samples=20;qvalue=0.000127539579249016;variants=sp:20
+hotspots:TP53:X33	snv	TP53		33		X	sp					1	TP53 X33 splice	samples=35;qvalue=5.09683349058292e-16;variants=sp:35
+hotspots:TP53:W53	snv	TP53		53		W	*					1	TP53 W53	samples=22;qvalue=0.000393305860576817;variants=*:22
+hotspots:TP53:W91	snv	TP53		91		W	*					1	TP53 W91	samples=35;qvalue=7.29139525931587e-10;variants=*:35
+hotspots:TP53:Q104	snv	TP53		104		Q	*,H					1	TP53 Q104	samples=23;qvalue=0.00440344845895086;variants=*:22,H:1
+hotspots:TP53:G105	snv	TP53		105		G	C,V,D,R,S,G					1	TP53 G105	samples=28;qvalue=2.55614724011675e-05;variants=C:13,V:6,D:4,R:2,S:2,G:1
+hotspots:TP53:S106	snv	TP53		106		S	R,I					1	TP53 S106	samples=16;qvalue=1.2248837766807501e-12;variants=R:15,I:1
+hotspots:TP53:Y107	snv	TP53		107		Y	*,D,Y					1	TP53 Y107	samples=15;qvalue=0.014979632693567;variants=*:8,D:6,Y:1
+hotspots:TP53:F109	snv	TP53		109		F	S,C,V,F,I					1	TP53 F109	samples=16;qvalue=2.36567137864909e-05;variants=S:6,C:5,V:3,F:1,I:1
+hotspots:TP53:R110	snv	TP53		110		R	L,P,C,H					1	TP53 R110	samples=43;qvalue=1.12989197548727e-11;variants=L:25,P:11,C:6,H:1
+hotspots:TP53:L111	snv	TP53		111		L	P,R,Q,M					1	TP53 L111	samples=18;qvalue=0.00420150034956331;variants=P:7,R:6,Q:4,M:1
+hotspots:TP53:F113	snv	TP53		113		F	C,V,S,F,L,P					1	TP53 F113	samples=17;qvalue=0.00211656002293528;variants=C:6,V:6,S:2,F:1,L:1,P:1
+hotspots:TP53:K120	snv	TP53		120		K	E,N,*,M					1	TP53 K120	samples=9;qvalue=0.0176054406780031;variants=E:5,N:2,*:1,M:1
+hotspots:TP53:T125	snv	TP53		125		T	M,R,K,P,A					1	TP53 T125	samples=30;qvalue=2.69550487311592e-05;variants=M:16,R:6,K:3,P:3,A:2
+hotspots:TP53:X125	snv	TP53		125		X	sp					1	TP53 X125 splice	samples=43;qvalue=8.50379958533421e-22;variants=sp:43
+hotspots:TP53:X126	snv	TP53		126		X	sp					1	TP53 X126 splice	samples=75;qvalue=5.81977745695617e-59;variants=sp:75
+hotspots:TP53:Y126	snv	TP53		126		Y	C,D,*,S,H,N					1	TP53 Y126	samples=33;qvalue=1.53812159511432e-20;variants=C:11,D:8,*:7,S:3,H:2,N:2
+hotspots:TP53:S127	snv	TP53		127		S	F,Y,P,C,S,T					1	TP53 S127	samples=48;qvalue=3.33046155258552e-10;variants=F:31,Y:10,P:4,C:1,S:1,T:1
+hotspots:TP53:L130	snv	TP53		130		L	V,F,R,P,H					1	TP53 L130	samples=30;qvalue=2.06448059790326e-07;variants=V:13,F:10,R:4,P:2,H:1
+hotspots:TP53:N131	snv	TP53		131		N	I,S,K,N					1	TP53 N131	samples=13;qvalue=0.00103631572883874;variants=I:8,S:3,K:1,N:1
+hotspots:TP53:K132	snv	TP53		132		K	N,R,E,M,T,Q,*					1	TP53 K132	samples=83;qvalue=1.67435535883697e-40;variants=N:30,R:27,E:14,M:5,T:4,Q:2,*:1
+hotspots:TP53:M133	snv	TP53		133		M	K,R,I,T					1	TP53 M133	samples=10;qvalue=0.0598449339561851;variants=K:5,R:3,I:1,T:1
+hotspots:TP53:F134	snv	TP53		134		F	L,V,C,I,S					1	TP53 F134	samples=24;qvalue=8.60419732135027e-13;variants=L:12,V:5,C:4,I:2,S:1
+hotspots:TP53:C135	snv	TP53		135		C	Y,F,R,*,S,W,G					1	TP53 C135	samples=74;qvalue=3.52776955427228e-50;variants=Y:27,F:24,R:9,*:4,S:4,W:4,G:2
+hotspots:TP53:Q136	snv	TP53		136		Q	*,E,P,H,L					1	TP53 Q136	samples=31;qvalue=3.67041636006903e-10;variants=*:16,E:10,P:3,H:1,L:1
+hotspots:TP53:A138	snv	TP53		138		A	V,P,T					1	TP53 A138	samples=37;qvalue=3.239738187739e-35;variants=V:22,P:12,T:3
+hotspots:TP53:K139	snv	TP53		139		K	N,*,E,Q,T					1	TP53 K139	samples=21;qvalue=2.0364310996051104e-12;variants=N:12,*:5,E:2,Q:1,T:1
+hotspots:TP53:C141	snv	TP53		141		C	Y,W,R,G,*,F,S					1	TP53 C141	samples=47;qvalue=1.81124424263192e-22;variants=Y:25,W:9,R:5,G:4,*:2,F:1,S:1
+hotspots:TP53:V143	snv	TP53		143		V	M,A,G,E					1	TP53 V143	samples=26;qvalue=5.17740247574383e-11;variants=M:12,A:7,G:5,E:2
+hotspots:TP53:Q144	snv	TP53		144		Q	*,P,L,H					1	TP53 Q144	samples=23;qvalue=2.17738171086558e-05;variants=*:17,P:3,L:2,H:1
+hotspots:TP53:L145	snv	TP53		145		L	P,Q,R					1	TP53 L145	samples=30;qvalue=1.5388696477737296e-34;variants=P:11,Q:10,R:9
+hotspots:TP53:W146	snv	TP53		146		W	*,C,G,S					1	TP53 W146	samples=27;qvalue=8.41645737021107e-06;variants=*:24,C:1,G:1,S:1
+hotspots:TP53:V147	snv	TP53		147		V	G,D,I					1	TP53 V147	samples=12;qvalue=7.507183771504802e-11;variants=G:6,D:5,I:1
+hotspots:TP53:P151	snv	TP53		151		P	S,H,A,R,T,F,L					1	TP53 P151	samples=79;qvalue=1.30026283538923e-57;variants=S:36,H:13,A:11,R:9,T:8,F:1,L:1
+hotspots:TP53:P152	snv	TP53		152		P	L,P,R,S,T,K,Q					1	TP53 P152	samples=38;qvalue=4.46613497758463e-06;variants=L:28,P:2,R:2,S:2,T:2,K:1,Q:1
+hotspots:TP53:G154	snv	TP53		154		G	V,C,D					1	TP53 G154	samples=25;qvalue=1.14503702283721e-07;variants=V:23,C:1,D:1
+hotspots:TP53:T155	snv	TP53		155		T	N,P,I,T					1	TP53 T155	samples=18;qvalue=0.000276203605125193;variants=N:8,P:7,I:2,T:1
+hotspots:TP53:R156	snv	TP53		156		R	P,G,H,C,L,S					1	TP53 R156	samples=37;qvalue=1.0730675829727999e-32;variants=P:24,G:6,H:4,C:1,L:1,S:1
+hotspots:TP53:V157	snv	TP53		157		V	F,G,L,A,D,V					1	TP53 V157	samples=77;qvalue=1.04043861763858e-43;variants=F:67,G:4,L:3,A:1,D:1,V:1
+hotspots:TP53:R158	snv	TP53		158		R	L,H,P,G,C,S,F					1	TP53 R158	samples=106;qvalue=8.56420853444971e-57;variants=L:42,H:36,P:11,G:9,C:5,S:2,F:1
+hotspots:TP53:A159	snv	TP53		159		A	V,P,A,D					1	TP53 A159	samples=52;qvalue=4.57178660230022e-20;variants=V:27,P:23,A:1,D:1
+hotspots:TP53:A161	snv	TP53		161		A	T,D,S,V,P					1	TP53 A161	samples=26;qvalue=8.6597657861634e-06;variants=T:12,D:7,S:4,V:2,P:1
+hotspots:TP53:I162	snv	TP53		162		I	N,F,S					1	TP53 I162	samples=21;qvalue=1.70896463670878e-24;variants=N:8,F:7,S:6
+hotspots:TP53:Y163	snv	TP53		163		Y	C,H,N,D,*					1	TP53 Y163	samples=79;qvalue=6.75581008893545e-86;variants=C:54,H:11,N:9,D:3,*:2
+hotspots:TP53:K164	snv	TP53		164		K	E,*					1	TP53 K164	samples=13;qvalue=1.47223833465579e-05;variants=E:9,*:4
+hotspots:TP53:Q165	snv	TP53		165		Q	*,H					1	TP53 Q165	samples=16;qvalue=0.0355589841732736;variants=*:15,H:1
+hotspots:TP53:Q167	snv	TP53		167		Q	*					1	TP53 Q167	samples=19;qvalue=4.9172615603644e-05;variants=*:19
+hotspots:TP53:H168	snv	TP53		168		H	R,L,P,Y					1	TP53 H168	samples=19;qvalue=7.59679170174124e-06;variants=R:12,L:4,P:2,Y:1
+hotspots:TP53:V172	snv	TP53		172		V	F,D,G					1	TP53 V172	samples=18;qvalue=0.000199168992960357;variants=F:12,D:5,G:1
+hotspots:TP53:V173	snv	TP53		173		V	L,M,A,G,E					1	TP53 V173	samples=78;qvalue=7.25981161558513e-62;variants=L:42,M:27,A:4,G:4,E:1
+hotspots:TP53:R174	snv	TP53		174		R	W,G,K,S					1	TP53 R174	samples=16;qvalue=6.37491175015446e-15;variants=W:11,G:3,K:1,S:1
+hotspots:TP53:R175	snv	TP53		175		R	H,G,C,L					1	TP53 R175	samples=416;qvalue=0;variants=H:386,G:14,C:8,L:8
+hotspots:TP53:C176	snv	TP53		176		C	F,Y,S,W,G,R,*,C					1	TP53 C176	samples=115;qvalue=2.79789123298349e-94;variants=F:54,Y:30,S:9,W:7,G:5,R:5,*:4,C:1
+hotspots:TP53:P177	snv	TP53		177		P	R,L,S,H,T					1	TP53 P177	samples=25;qvalue=3.32811779722967e-18;variants=R:9,L:7,S:5,H:3,T:1
+hotspots:TP53:H178	snv	TP53		178		H	D,P,Q,H,N					1	TP53 H178	samples=12;qvalue=0.0627913608262321;variants=D:5,P:3,Q:2,H:1,N:1
+hotspots:TP53:H179	snv	TP53		179		H	R,Y,L,Q,D,N,P					1	TP53 H179	samples=149;qvalue=9.18618200580122e-150;variants=R:63,Y:41,L:14,Q:12,D:8,N:8,P:3
+hotspots:TP53:E180	snv	TP53		180		E	K,*,D					1	TP53 E180	samples=38;qvalue=2.1590027190882402e-23;variants=K:22,*:14,D:2
+hotspots:TP53:R181	snv	TP53		181		R	C,H,P					1	TP53 R181	samples=26;qvalue=0.0141746189488235;variants=C:9,H:9,P:8
+hotspots:TP53:X187	snv	TP53		187		X	sp					1	TP53 X187 splice	samples=100;qvalue=1.82472984264798e-75;variants=sp:100
+hotspots:TP53:P190	snv	TP53		190		P	L,T,R,S					1	TP53 P190	samples=17;qvalue=0.0517990181016758;variants=L:12,T:3,R:1,S:1
+hotspots:TP53:Q192	snv	TP53		192		Q	*,H,L					1	TP53 Q192	samples=45;qvalue=0.00106690268651275;variants=*:43,H:1,L:1
+hotspots:TP53:H193	snv	TP53		193		H	R,Y,L,P,D,N,Q					1	TP53 H193	samples=123;qvalue=1.47914622326681e-124;variants=R:54,Y:31,L:19,P:8,D:5,N:5,Q:1
+hotspots:TP53:L194	snv	TP53		194		L	R,F,H,P					1	TP53 L194	samples=49;qvalue=1.50602327108872e-19;variants=R:30,F:12,H:4,P:3
+hotspots:TP53:I195	snv	TP53		195		I	T,F,N,S,M,I,K					1	TP53 I195	samples=79;qvalue=5.3117975300635e-77;variants=T:42,F:19,N:10,S:4,M:2,I:1,K:1
+hotspots:TP53:R196	snv	TP53		196		R	*,P,L,Q					1	TP53 R196	samples=141;qvalue=4.00457696564295e-85;variants=*:131,P:8,L:1,Q:1
+hotspots:TP53:V197	snv	TP53		197		V	L,V,E,M,G					1	TP53 V197	samples=17;qvalue=0.057198430388418;variants=L:5,V:5,E:3,M:3,G:1
+hotspots:TP53:E198	snv	TP53		198		E	*					1	TP53 E198	samples=26;qvalue=0.00141363825086011;variants=*:26
+hotspots:TP53:G199	snv	TP53		199		G	V,E,*					1	TP53 G199	samples=53;qvalue=2.017817027298389e-50;variants=V:32,E:15,*:6
+hotspots:TP53:Y205	snv	TP53		205		Y	C,H,F,S,D,N,*					1	TP53 Y205	samples=61;qvalue=7.4725061476356e-58;variants=C:35,H:8,F:6,S:6,D:3,N:2,*:1
+hotspots:TP53:D208	snv	TP53		208		D	V,G,N,E					1	TP53 D208	samples=12;qvalue=0.0123251218508829;variants=V:7,G:2,N:2,E:1
+hotspots:TP53:T211	snv	TP53		211		T	I,A,N,P					1	TP53 T211	samples=19;qvalue=7.179311187384247e-20;variants=I:13,A:4,N:1,P:1
+hotspots:TP53:R213	snv	TP53		213		R	*,Q,L,G,P					1	TP53 R213	samples=256;qvalue=1.2909718119355e-203;variants=*:208,Q:25,L:17,G:4,P:2
+hotspots:TP53:H214	snv	TP53		214		H	R,L,Q,P					1	TP53 H214	samples=40;qvalue=3.13070819109956e-26;variants=R:35,L:2,Q:2,P:1
+hotspots:TP53:S215	snv	TP53		215		S	I,R,G,N,C,T					1	TP53 S215	samples=50;qvalue=1.43787287066506e-36;variants=I:20,R:13,G:8,N:7,C:1,T:1
+hotspots:TP53:V216	snv	TP53		216		V	M,L,G,E					1	TP53 V216	samples=42;qvalue=7.05793465485541e-22;variants=M:24,L:9,G:5,E:4
+hotspots:TP53:V218	snv	TP53		218		V	G,E,L,M,V					1	TP53 V218	samples=9;qvalue=0.0643906580986468;variants=G:5,E:1,L:1,M:1,V:1
+hotspots:TP53:Y220	snv	TP53		220		Y	C,S,H,*,D,N					1	TP53 Y220	samples=152;qvalue=4.53756860311655e-208;variants=C:127,S:8,H:6,*:4,D:4,N:3
+hotspots:TP53:E224	snv	TP53		224		E	D,*					1	TP53 E224	samples=42;qvalue=6.363075034985277e-38;variants=D:28,*:14
+hotspots:TP53:X224	snv	TP53		224		X	sp					1	TP53 X224 splice	samples=39;qvalue=2.23757783098521e-19;variants=sp:39
+hotspots:TP53:X225	snv	TP53		225		X	sp					1	TP53 X225 splice	samples=46;qvalue=9.76065282760022e-23;variants=sp:46
+hotspots:TP53:I232	snv	TP53		232		I	S,F,N,T,I					1	TP53 I232	samples=14;qvalue=0.0262978898298508;variants=S:4,F:3,N:3,T:3,I:1
+hotspots:TP53:Y234	snv	TP53		234		Y	C,H,*,N,S,D					1	TP53 Y234	samples=68;qvalue=4.21073846121301e-68;variants=C:42,H:9,*:6,N:6,S:3,D:2
+hotspots:TP53:Y236	snv	TP53		236		Y	C,*,D,N,H,S					1	TP53 Y236	samples=59;qvalue=1.29867077765943e-56;variants=C:40,*:5,D:5,N:5,H:2,S:2
+hotspots:TP53:M237	snv	TP53		237		M	I,K,V					1	TP53 M237	samples=64;qvalue=8.54847258220565e-45;variants=I:55,K:5,V:4
+hotspots:TP53:C238	snv	TP53		238		C	Y,F,R,G,S,W					1	TP53 C238	samples=77;qvalue=7.74651843586856e-62;variants=Y:40,F:23,R:5,G:4,S:4,W:1
+hotspots:TP53:N239	snv	TP53		239		N	S,D,K,H,T					1	TP53 N239	samples=41;qvalue=3.83729752034833e-34;variants=S:19,D:18,K:2,H:1,T:1
+hotspots:TP53:S240	snv	TP53		240		S	G,R,C					1	TP53 S240	samples=23;qvalue=6.821235117748399e-25;variants=G:13,R:8,C:2
+hotspots:TP53:S241	snv	TP53		241		S	F,C,Y,P,S,A,T					1	TP53 S241	samples=97;qvalue=7.17889662377449e-46;variants=F:51,C:19,Y:15,P:6,S:3,A:2,T:1
+hotspots:TP53:C242	snv	TP53		242		C	F,Y,S,W,G,R,*,C					1	TP53 C242	samples=59;qvalue=1.17967885828529e-33;variants=F:27,Y:12,S:9,W:4,G:3,R:2,*:1,C:1
+hotspots:TP53:G244	snv	TP53		244		G	D,C,S,V,A,F,G,R					1	TP53 G244	samples=65;qvalue=1.00026964688445e-31;variants=D:21,C:19,S:15,V:6,A:1,F:1,G:1,R:1
+hotspots:TP53:G245	snv	TP53		245		G	S,D,V,C,R,A,N					1	TP53 G245	samples=242;qvalue=8.54722719468586e-208;variants=S:128,D:50,V:31,C:22,R:7,A:3,N:1
+hotspots:TP53:M246	snv	TP53		246		M	V,I,K,L,T,R					1	TP53 M246	samples=37;qvalue=1.10580578627633e-11;variants=V:16,I:10,K:3,L:3,T:3,R:2
+hotspots:TP53:N247	snv	TP53		247		N	I,N					1	TP53 N247	samples=15;qvalue=0.0141746189488235;variants=I:8,N:7
+hotspots:TP53:R248	snv	TP53		248		R	Q,W,L,P,G,R					1	TP53 R248	samples=560;qvalue=0;variants=Q:292,W:222,L:21,P:11,G:8,R:6
+hotspots:TP53:R249	snv	TP53		249		R	S,M,G,T,W,K,I					1	TP53 R249	samples=102;qvalue=1.28532741635959e-72;variants=S:45,M:17,G:15,T:11,W:11,K:2,I:1
+hotspots:TP53:P250	snv	TP53		250		P	L,P,R					1	TP53 P250	samples=24;qvalue=5.99198048007855e-05;variants=L:22,P:1,R:1
+hotspots:TP53:I251	snv	TP53		251		I	F,N,S,I,M					1	TP53 I251	samples=15;qvalue=0.00655470239847348;variants=F:5,N:5,S:3,I:1,M:1
+hotspots:TP53:T253	snv	TP53		253		T	A,P,I,N,S					1	TP53 T253	samples=25;qvalue=8.407231149468499e-28;variants=A:9,P:7,I:4,N:4,S:1
+hotspots:TP53:I254	snv	TP53		254		I	S,V,F,L,M,N					1	TP53 I254	samples=13;qvalue=0.0184452967314114;variants=S:7,V:2,F:1,L:1,M:1,N:1
+hotspots:TP53:I255	snv	TP53		255		I	F,N,S,T,I					1	TP53 I255	samples=32;qvalue=6.05480414387033e-20;variants=F:12,N:7,S:6,T:6,I:1
+hotspots:TP53:L257	snv	TP53		257		L	Q,P,R,L,V					1	TP53 L257	samples=17;qvalue=0.000534067822950071;variants=Q:7,P:4,R:4,L:1,V:1
+hotspots:TP53:E258	snv	TP53		258		E	*,K,D,A,G,Q,E,V					1	TP53 E258	samples=47;qvalue=1.50604967554599e-14;variants=*:14,K:14,D:5,A:4,G:4,Q:4,E:1,V:1
+hotspots:TP53:D259	snv	TP53		259		D	Y,V,H,N,D					1	TP53 D259	samples=31;qvalue=0.00592807649110612;variants=Y:19,V:7,H:2,N:2,D:1
+hotspots:TP53:X261	snv	TP53		261		X	sp					1	TP53 X261 splice	samples=51;qvalue=6.79062733955428e-33;variants=sp:51
+hotspots:TP53:G262	snv	TP53		262		G	V					1	TP53 G262	samples=17;qvalue=0.00203376888510967;variants=V:17
+hotspots:TP53:L265	snv	TP53		265		L	P,L,R,M					1	TP53 L265	samples=19;qvalue=0.00103631572883874;variants=P:8,L:6,R:4,M:1
+hotspots:TP53:G266	snv	TP53		266		G	R,E,V,*,K,T					1	TP53 G266	samples=117;qvalue=1.57992511675724e-74;variants=R:40,E:35,V:26,*:14,K:1,T:1
+hotspots:TP53:R267	snv	TP53		267		R	W,P,L,Q,G,R					1	TP53 R267	samples=36;qvalue=8.41645737021107e-06;variants=W:15,P:8,L:5,Q:4,G:3,R:1
+hotspots:TP53:F270	snv	TP53		270		F	L,V,S,C,I					1	TP53 F270	samples=30;qvalue=1.26152260238551e-15;variants=L:8,V:8,S:6,C:4,I:4
+hotspots:TP53:E271	snv	TP53		271		E	K,*,Q,V					1	TP53 E271	samples=53;qvalue=7.50411582407331e-05;variants=K:27,*:14,Q:7,V:5
+hotspots:TP53:V272	snv	TP53		272		V	M,L,G,E,K,A,V					1	TP53 V272	samples=66;qvalue=9.58986476133168e-43;variants=M:34,L:20,G:5,E:3,K:2,A:1,V:1
+hotspots:TP53:R273	snv	TP53		273		R	C,H,L,S,P,G					1	TP53 R273	samples=609;qvalue=0;variants=C:283,H:251,L:56,S:12,P:5,G:2
+hotspots:TP53:V274	snv	TP53		274		V	F,A,G,D,L					1	TP53 V274	samples=46;qvalue=9.09067281233547e-31;variants=F:14,A:12,G:8,D:7,L:5
+hotspots:TP53:C275	snv	TP53		275		C	F,Y,R,S,*,W,G					1	TP53 C275	samples=70;qvalue=9.26247541784713e-52;variants=F:25,Y:24,R:7,S:6,*:3,W:3,G:2
+hotspots:TP53:A276	snv	TP53		276		A	D,P,G,V,T,S					1	TP53 A276	samples=33;qvalue=1.3277326884573502e-31;variants=D:10,P:10,G:7,V:3,T:2,S:1
+hotspots:TP53:C277	snv	TP53		277		C	F,*,Y,G,W					1	TP53 C277	samples=28;qvalue=5.26918784417401e-10;variants=F:20,*:3,Y:3,G:1,W:1
+hotspots:TP53:P278	snv	TP53		278		P	S,L,A,R,T,H,F					1	TP53 P278	samples=100;qvalue=5.74722717996462e-50;variants=S:37,L:17,A:13,R:12,T:12,H:6,F:3
+hotspots:TP53:G279	snv	TP53		279		G	E,R,V					1	TP53 G279	samples=28;qvalue=1.1380384822434601e-24;variants=E:26,R:1,V:1
+hotspots:TP53:R280	snv	TP53		280		R	K,T,G,I,S,*					1	TP53 R280	samples=109;qvalue=8.52038865841413e-39;variants=K:36,T:34,G:17,I:12,S:8,*:2
+hotspots:TP53:D281	snv	TP53		281		D	E,N,Y,H,V,D,G,A,P					1	TP53 D281	samples=69;qvalue=3.56196704807636e-22;variants=E:14,N:14,Y:13,H:9,V:9,D:4,G:4,A:1,P:1
+hotspots:TP53:R282	snv	TP53		282		R	W,G,P,Q,L,R					1	TP53 R282	samples=219;qvalue=5.73631626869356e-160;variants=W:201,G:9,P:4,Q:3,L:1,R:1
+hotspots:TP53:R283	snv	TP53		283		R	P,H,C,G,L					1	TP53 R283	samples=38;qvalue=1.118280245077e-30;variants=P:27,H:5,C:4,G:1,L:1
+hotspots:TP53:E285	snv	TP53		285		E	K,*,V,E,Q					1	TP53 E285	samples=99;qvalue=1.42429549670277e-26;variants=K:68,*:15,V:9,E:4,Q:3
+hotspots:TP53:E286	snv	TP53		286		E	K,*,Q,G,V,A					1	TP53 E286	samples=73;qvalue=7.08380811769577e-25;variants=K:41,*:14,Q:7,G:6,V:3,A:2
+hotspots:TP53:R290	snv	TP53		290		R	H,C,L					1	TP53 R290	samples=16;qvalue=4.9053382030779905e-09;variants=H:12,C:3,L:1
+hotspots:TP53:E294	snv	TP53		294		E	*					1	TP53 E294	samples=32;qvalue=4.16264146157168e-05;variants=*:32
+hotspots:TP53:E298	snv	TP53		298		E	*,Q					1	TP53 E298	samples=37;qvalue=1.49796774432529e-09;variants=*:36,Q:1
+hotspots:TP53:R306	snv	TP53		306		R	*,Q					1	TP53 R306	samples=86;qvalue=1.86197213934107e-26;variants=*:85,Q:1
+hotspots:TP53:X307	snv	TP53		307		X	sp					1	TP53 X307 splice	samples=77;qvalue=1.53643954111284e-62;variants=sp:77
+hotspots:TP53:Q317	snv	TP53		317		Q	*					1	TP53 Q317	samples=32;qvalue=3.10292683399654e-07;variants=*:32
+hotspots:TP53:L330	snv	TP53		330		L	P,R,H,I					1	TP53 L330	samples=11;qvalue=6.599157829345079e-09;variants=P:4,R:4,H:2,I:1
+hotspots:TP53:Q331	snv	TP53		331		Q	*,H					1	TP53 Q331	samples=47;qvalue=0.000393305860576817;variants=*:39,H:8
+hotspots:TP53:X331	snv	TP53		331		X	sp					1	TP53 X331 splice	samples=49;qvalue=4.86590998582027e-29;variants=sp:49
+hotspots:TP53:X332	snv	TP53		332		X	sp					1	TP53 X332 splice	samples=48;qvalue=1.24919927952202e-07;variants=sp:48
+hotspots:TP53:G334	snv	TP53		334		G	V,W,A					1	TP53 G334	samples=20;qvalue=2.5901191774888502e-14;variants=V:13,W:6,A:1
+hotspots:TP53:R337	snv	TP53		337		R	C,L,H,S,P,G					1	TP53 R337	samples=68;qvalue=8.69771954614254e-22;variants=C:36,L:20,H:4,S:4,P:3,G:1
+hotspots:TP53:F341	snv	TP53		341		F	Y,C,L,S,V					1	TP53 F341	samples=8;qvalue=3.7218334786405895e-05;variants=Y:3,C:2,L:1,S:1,V:1
+hotspots:TP53:R342	snv	TP53		342		R	*,P					1	TP53 R342	samples=137;qvalue=1.47220591463954e-85;variants=*:129,P:8
+hotspots:TP53:L344	snv	TP53		344		L	P,R,M,Q					1	TP53 L344	samples=7;qvalue=0.0005713392898264;variants=P:3,R:2,M:1,Q:1
+hotspots:TP53:A347	snv	TP53		347		A	D,P,T,V					1	TP53 A347	samples=8;qvalue=0.0040643903662397;variants=D:3,P:2,T:2,V:1
+hotspots:TP63:X194	snv	TP63		194		X	sp					1	TP63 X194 splice	samples=5;qvalue=3.99900800749029e-07;variants=sp:5
+hotspots:TP63:S365	snv	TP63		365		S	L,S,*					1	TP63 S365	samples=12;qvalue=0.00847835763366027;variants=L:7,S:3,*:2
+hotspots:TP63:R379	snv	TP63		379		R	C,H,S					1	TP63 R379	samples=17;qvalue=8.73352761228577e-08;variants=C:14,H:2,S:1
+hotspots:TP63:E609	snv	TP63		609		E	K					1	TP63 E609	samples=11;qvalue=0.00654115661493069;variants=K:11
+hotspots:TRAF7:R189	snv	TRAF7		189		R	L,P,R,W					1	TRAF7 R189	samples=4;qvalue=0.086969413826998;variants=L:1,P:1,R:1,W:1
+hotspots:TRAF7:N520	snv	TRAF7		520		N	S,Y					1	TRAF7 N520	samples=4;qvalue=0.0171380664656178;variants=S:3,Y:1
+hotspots:TSC1:X797	snv	TSC1		797		X	sp					1	TSC1 X797 splice	samples=4;qvalue=0.0580126611145658;variants=sp:4
+hotspots:U2AF1:222-223	inframe	U2AF1		222	223							1	U2AF1 222-223 in-frame indel	samples=3;qvalue=0.006574587762757;variants=G222_G223del:1,G223del:1,G223dup:1
+hotspots:U2AF1:I24	snv	U2AF1		24		I	T,V					1	U2AF1 I24	samples=5;qvalue=0.000965907644734733;variants=T:4,V:1
+hotspots:U2AF1:S34	snv	U2AF1		34		S	F,Y					1	U2AF1 S34	samples=85;qvalue=4.3504059017074e-116;variants=F:81,Y:4
+hotspots:U2AF1:R156	snv	U2AF1		156		R	H,C					1	U2AF1 R156	samples=13;qvalue=1.35224941230428e-07;variants=H:10,C:3
+hotspots:U2AF1:Q157	snv	U2AF1		157		Q	P,R					1	U2AF1 Q157	samples=4;qvalue=1.6150389142363e-06;variants=P:2,R:2
+hotspots:VHL:70-80	inframe	VHL		70	80							1	VHL 70-80 in-frame indel	samples=7;qvalue=0.0935986091028419;variants=F76del:4,E70_R79dup:1,I75_C77del:1,R79_S80del:1
+hotspots:VHL:S65	snv	VHL		65		S	*,L,P,T,W					1	VHL S65	samples=17;qvalue=7.40697442383436e-13;variants=*:7,L:6,P:2,T:1,W:1
+hotspots:VHL:S68	snv	VHL		68		S	*,P					1	VHL S68	samples=8;qvalue=7.74714398748904e-05;variants=*:7,P:1
+hotspots:VHL:V74	snv	VHL		74		V	D,G,V					1	VHL V74	samples=7;qvalue=8.08917220235343e-05;variants=D:5,G:1,V:1
+hotspots:VHL:N78	snv	VHL		78		N	S,D,Y,K					1	VHL N78	samples=9;qvalue=3.06267165122873e-06;variants=S:4,D:2,Y:2,K:1
+hotspots:VHL:S80	snv	VHL		80		S	R,N,I,S					1	VHL S80	samples=11;qvalue=4.73394777910565e-08;variants=R:5,N:4,I:1,S:1
+hotspots:VHL:P86	snv	VHL		86		P	S,L,T,R					1	VHL P86	samples=9;qvalue=8.08917220235343e-05;variants=S:4,L:2,T:2,R:1
+hotspots:VHL:W88	snv	VHL		88		W	*,L,R					1	VHL W88	samples=9;qvalue=5.74074593167752e-05;variants=*:5,L:2,R:2
+hotspots:VHL:L89	snv	VHL		89		L	H,P,L					1	VHL L89	samples=15;qvalue=2.84655898510653e-10;variants=H:9,P:5,L:1
+hotspots:VHL:S111	snv	VHL		111		S	N,R,P,S					1	VHL S111	samples=10;qvalue=1.145547139501e-06;variants=N:6,R:2,P:1,S:1
+hotspots:VHL:Y112	snv	VHL		112		Y	*,C,D,Y					1	VHL Y112	samples=5;qvalue=0.094271768237484;variants=*:2,C:1,D:1,Y:1
+hotspots:VHL:G114	snv	VHL		114		G	A,R,C					1	VHL G114	samples=7;qvalue=0.00271531464293943;variants=A:4,R:2,C:1
+hotspots:VHL:X114	snv	VHL		114		X	sp					1	VHL X114 splice	samples=16;qvalue=4.1399817297452e-13;variants=sp:16
+hotspots:VHL:H115	snv	VHL		115		H	N,Y,Q					1	VHL H115	samples=7;qvalue=0.00743191624202421;variants=N:4,Y:2,Q:1
+hotspots:VHL:W117	snv	VHL		117		W	L,*,C					1	VHL W117	samples=6;qvalue=0.094271768237484;variants=L:3,*:2,C:1
+hotspots:VHL:D121	snv	VHL		121		D	Y,G,V					1	VHL D121	samples=9;qvalue=5.25111408060234e-05;variants=Y:6,G:2,V:1
+hotspots:VHL:L135	snv	VHL		135		L	*,F					1	VHL L135	samples=4;qvalue=0.0482434197400611;variants=*:2,F:2
+hotspots:VHL:I151	snv	VHL		151		I	N,T,F,S					1	VHL I151	samples=6;qvalue=0.000898333934521553;variants=N:2,T:2,F:1,S:1
+hotspots:VHL:X155	snv	VHL		155		X	sp					1	VHL X155 splice	samples=14;qvalue=7.83200669499252e-12;variants=sp:14
+hotspots:VHL:L158	snv	VHL		158		L	V,P,L,Q					1	VHL L158	samples=9;qvalue=8.08917220235343e-05;variants=V:4,P:3,L:1,Q:1
+hotspots:VHL:R161	snv	VHL		161		R	*,Q,L					1	VHL R161	samples=10;qvalue=0.000554684648130705;variants=*:7,Q:2,L:1
+hotspots:VHL:C162	snv	VHL		162		C	Y,R,*,F,W					1	VHL C162	samples=8;qvalue=0.00122944432376974;variants=Y:3,R:2,*:1,F:1,W:1
+hotspots:VHL:R167	snv	VHL		167		R	Q,W,G					1	VHL R167	samples=11;qvalue=0.0003850017619303;variants=Q:4,W:4,G:3
+hotspots:VHL:L169	snv	VHL		169		L	P					1	VHL L169	samples=5;qvalue=0.0448753895749222;variants=P:5
+hotspots:VHL:L188	snv	VHL		188		L	P,Q,R					1	VHL L188	samples=8;qvalue=1.3599182926043002e-06;variants=P:4,Q:3,R:1
+hotspots:WHSC1:T1150	snv	WHSC1		1150		T	A					1	WHSC1 T1150	samples=3;qvalue=0.0946426518532276;variants=A:3
+hotspots:XPO1:E571	snv	XPO1		571		E	K,A,V					1	XPO1 E571	samples=27;qvalue=3.18647292377788e-30;variants=K:25,A:1,V:1
+hotspots:XPO1:R749	snv	XPO1		749		R	Q,*					1	XPO1 R749	samples=11;qvalue=0.000146532020311594;variants=Q:10,*:1

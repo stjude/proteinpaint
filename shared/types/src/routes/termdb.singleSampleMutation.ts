@@ -1,4 +1,5 @@
 import type { ErrorResponse } from './errorResponse.ts'
+import type { DriverRankInfo } from '../driverKb.ts'
 
 export type TermdbSingleSampleMutationRequest = {
 	/** Genome id */
@@ -11,10 +12,17 @@ export type TermdbSingleSampleMutationRequest = {
 	a subset of mutation types. Server-internal only — not sent over HTTP, so it's a Set rather than JSON.
 	When omitted, all dt are returned. */
 	skipDt?: Set<number>
+	/** 'only': respond with the driver events of the sample only (mlst[] of the events with .driver), without
+	alternativeDataByDt; for a list of driver events, e.g. on clicking a sample in a plot. Without it, mlst[] has
+	all events, with the driver events first, when the dataset has a driver knowledge base */
+	drivers?: 'only'
 }
 type ValidResponse = {
 	/** List of mutation data points from this sample TODO change to type of M elements */
 	mlst: object[]
+	/** present when the events are ranked by the driver knowledge base of the dataset; a driver event has
+	.driver, a DriverTag, and the driver events are first in mlst[] */
+	driverRank?: DriverRankInfo
 	/** total number of items for each dt, useful to indicate snvindel limited to 10k for a hypermutator */
 	dt2total?: { dt: number; total: number }[]
 	/** declares presence of alternative data for some dt, e.g. a gdc case has cnv results from both snp array and wgs

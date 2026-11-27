@@ -155,6 +155,9 @@ export function getHg38(): Genome {
 			{ name: 'Common germline CNVs (DGV)', file: 'anno/dgvCommon.hg38.bed.gz' }
 		],
 
+		// the driver knowledge base, see genome/driverKb/README.md
+		driverKb: { file: 'genome/driverKb/index.json', build: 'hg38' },
+
 		geneset: [
 			{
 				name: 'Cancer Gene Census',

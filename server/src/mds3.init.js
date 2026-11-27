@@ -46,6 +46,7 @@ import { initAggregateMethods } from './aggregateMatrix/aggregateMethods.ts'
 import { validate_query_proteome } from './routes/termdb.proteome.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
+import { initDsDriverKb } from './driverRank/kb.ts'
 import { validate_query_geneExpression, validateQueryIsoformExpression } from './routes/termdb.cluster.ts'
 import { validateSkipGeneNameValidation } from './geneRefValidation.ts'
 import { validateCheckAccessToSampleData } from './termdb.sampleAccess.ts'
@@ -181,6 +182,8 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_rnaseqGeneCount(ds, genome)
 			await validate_query_isoformExpressionCount(ds)
 			await validate_query_singleSampleMutation(ds, genome)
+			// the driver kb of the ds, by which the singleSampleMutation route ranks the driver events of a sample
+			if (ds.queries.singleSampleMutation) initDsDriverKb(ds, genome)
 			await validate_query_singleSampleGenomeQuantification(ds, genome)
 			await validate_query_singleSampleGbtk(ds, genome)
 			await validate_query_singleCell(ds, genome)
