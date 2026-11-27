@@ -7,7 +7,9 @@ import {
 	mclasscnvloss,
 	mclasscnvgain,
 	mclasscnvAmp,
-	mclasscnvHomozygousDel
+	mclasscnvHomozygousDel,
+	isGermlineOrigin,
+	getVafCounts
 } from '#shared'
 import type { DriverTag, DriverRankInfo } from '#types'
 import type { DriverKb, EnhancerRule, Region, SvRule } from './kb.ts'
@@ -344,8 +346,16 @@ function svRuleMatchesNames(r: SvRule, as: string[], bs: string[], kb: DriverKb)
 
 /** whether an event gene name is the gene of a rule, or a gene of its locus, e.g. IGHM of IGH */
 function nameIs(ruleName: string, name: string, kb: DriverKb): boolean {
-	if (name == ruleName) return true
-	return kb.loci.get(ruleName)?.pattern.test(name) || false
+	return name == ruleName || isOfLocus(name, ruleName, kb)
+}
+
+/** whether an event gene name is of a locus: a gene of the gene db that is a member of the locus, on its chr, so
+not IGHEP2 of chr9 for IGH; or a name that the gene db lacks and that fits the pattern of the locus, e.g. IGH@ */
+function isOfLocus(name: string, locusName: string, kb: DriverKb): boolean {
+	if (name == locusName) return true
+	const locus = kb.loci.get(locusName)
+	if (!locus) return false
+	return kb.isGeneName(name) ? locus.members.has(name.toUpperCase()) : locus.pattern.test(name)
 }
 
 /** the gene names of an event, e.g. geneA of a fusion, as kb gene names where an alias maps to one, and as the
@@ -362,9 +372,8 @@ function eventGenes(v: unknown, kb: DriverKb): string[] {
 
 /** the locus of index.json that an event gene name is, or is a gene of, or null */
 function locusOf(name: string, kb: DriverKb): string | null {
-	if (kb.loci.has(name)) return name
-	for (const [locus, l] of kb.loci) {
-		if (l.pattern.test(name)) return locus
+	for (const locus of kb.loci.keys()) {
+		if (isOfLocus(name, locus, kb)) return locus
 	}
 	return null
 }
@@ -432,15 +441,14 @@ function orderByDriver(mlst: any[], tags: (DriverTag | null)[]): any[] {
 }
 
 function isGermline(m: any): boolean {
-	const origin = m.origin ?? m.vorigin
-	return typeof origin == 'string' && origin.toLowerCase() == 'germline'
+	return isGermlineOrigin(m.origin ?? m.vorigin)
 }
 
 function maxVaf(m: any): number {
 	let max = -1
 	for (const v of Array.isArray(m.vafs) ? m.vafs : []) {
-		const depth = (v?.altCount ?? 0) + (v?.refCount ?? 0)
-		if (depth > 0) max = Math.max(max, v.altCount / depth)
+		const c = getVafCounts(v)
+		if (c) max = Math.max(max, c.altCount / c.totalCount)
 	}
 	return max
 }

@@ -53,7 +53,14 @@ export type LocusDef = {
 	segment, is not in its region */
 	chr?: string
 }
-export type Locus = { pattern: RegExp; chr?: string }
+export type Locus = {
+	pattern: RegExp
+	chr?: string
+	/** the uppercased names of the genes of the gene db that are of the locus: fit its pattern, on its chr */
+	members: Set<string>
+	/** one region per chromosome, spanning the member genes there */
+	regions: Region[]
+}
 
 /** a named region of genes, e.g. IGH, or of a locus with coordinates, e.g. an enhancer */
 export type Region = { name: string; chr: string; start: number; stop: number }
@@ -197,7 +204,8 @@ export function compileDsDriverKb(
 	genomeKb: DriverKb,
 	cfg: DsDriverKb,
 	lookup: GeneLookup,
-	tpmasterdir: string
+	tpmasterdir: string,
+	readText: (file: string) => string = file => fs.readFileSync(file, 'utf8')
 ): DriverKb {
 	if (typeof cfg != 'object') throw 'ds.driverKb must be false or an object'
 	const disable = new Set(cfg.disable || [])
@@ -210,11 +218,12 @@ export function compileDsDriverKb(
 		.update(JSON.stringify(cfg.disable || []))
 	if (cfg.file) {
 		if (typeof cfg.file != 'string' || cfg.file.split('/').includes('..')) throw 'invalid ds.driverKb.file'
-		const text = fs.readFileSync(path.join(tpmasterdir, cfg.file), 'utf8')
+		const text = readText(path.join(tpmasterdir, cfg.file))
 		hash.update(text)
 		const f = parseKbText(text, cfg.file, 'ds')
-		sources.push(toSource('ds', f.meta))
-		rows.push(...f.rows)
+		// disable applies to the rules of the dataset too, by their ids or by the source id ds
+		if (!disable.has('ds')) sources.push(toSource('ds', f.meta))
+		rows.push(...f.rows.filter(r => !isOff(r)))
 	}
 	const match = mergeMatch(genomeKb.match, cfg.match)
 	hash.update(JSON.stringify(match))
@@ -242,9 +251,7 @@ export function compileKb(input: KbInput, lookup: GeneLookup): DriverKb {
 		rows: input.rows,
 		build: input.build,
 		lociDefs: input.lociDefs,
-		loci: new Map(
-			Object.entries(input.lociDefs).map(([name, d]) => [name, { pattern: new RegExp(d.genePattern), chr: d.chr }])
-		),
+		loci: new Map(Object.entries(input.lociDefs).map(([name, d]) => [name, compileLocus(name, d, lookup)])),
 		genes: new Set(),
 		snv: new Map(),
 		fs: new Map(),
@@ -376,7 +383,9 @@ export function getGeneLookup(genedb: any): GeneLookup {
 	const geneCache = new Map<string, GeneLoc | null>()
 	let names: string[] | undefined
 	const lookup: GeneLookup = {
-		isName: name => !!genedb.getjsonbyname.get(name),
+		// in memory, from genedbLookups.ts, as a ranking checks every event gene that has no rules; case-insensitive,
+		// as is the sql of the gene db
+		isName: name => (genedb.mapByName ? genedb.mapByName.has(name.toUpperCase()) : !!genedb.getjsonbyname.get(name)),
 		aliasToName: alias => genedb.getNameByAlias?.get(alias)?.name || null,
 		gene: name => {
 			if (!geneCache.has(name)) geneCache.set(name, pickDefaultIsoform(genedb.getjsonbyname.all(name)))
@@ -504,17 +513,21 @@ function officialName(name: string, lookup: GeneLookup): string {
 	return lookup.aliasToName(name) || name
 }
 
-/** the regions of a locus (by its gene name pattern, on its chr), else of a gene */
+/** the regions of a locus, else of a gene */
 function getRegions(name: string, loci: Map<string, Locus>, lookup: GeneLookup): Region[] {
 	const locus = loci.get(name)
-	if (!locus) {
-		const loc = lookup.gene(name)
-		return loc ? [{ name, chr: loc.chr, start: loc.start, stop: loc.stop }] : []
-	}
+	if (locus) return locus.regions
+	const loc = lookup.gene(name)
+	return loc ? [{ name, chr: loc.chr, start: loc.start, stop: loc.stop }] : []
+}
+
+/** the member genes and the regions of a locus: the genes of the gene db that fit its pattern, on its chr */
+function compileLocus(name: string, d: LocusDef, lookup: GeneLookup): Locus {
+	const pattern = new RegExp(d.genePattern)
+	const genes = lookup.genesMatching(pattern).filter(g => !d.chr || g.chr == d.chr)
 	// one region per chromosome, spanning the genes of the locus there
 	const byChr = new Map<string, Region>()
-	for (const g of lookup.genesMatching(locus.pattern)) {
-		if (locus.chr && g.chr != locus.chr) continue
+	for (const g of genes) {
 		const r = byChr.get(g.chr)
 		if (!r) byChr.set(g.chr, { name, chr: g.chr, start: g.start, stop: g.stop })
 		else {
@@ -522,7 +535,7 @@ function getRegions(name: string, loci: Map<string, Locus>, lookup: GeneLookup):
 			r.stop = Math.max(r.stop, g.stop)
 		}
 	}
-	return [...byChr.values()]
+	return { pattern, chr: d.chr, members: new Set(genes.map(g => g.name.toUpperCase())), regions: [...byChr.values()] }
 }
 
 function exonIntervals(loc: GeneLoc, exon: [number, number]): [number, number][] | null {

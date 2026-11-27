@@ -1,5 +1,6 @@
 import { renderTable, escapeHtml } from '#dom'
-import { dtsnvindel, dtfusionrna, dtsv, dtitd, dtcnv, dt2label, mclass } from '#shared/common.js'
+import { dtsnvindel, dtfusionrna, dtsv, dtitd, dtcnv, dt2label, mclass, isGermlineOrigin } from '#shared/common.js'
+import { getVafCounts } from '#shared/vaf.js'
 import type { DriverTag, DriverRankInfo, DriverKbSource } from '#types'
 
 /*********************************************************************
@@ -57,7 +58,8 @@ const REASON = {
 	enhancer: 'Gain of a known enhancer'
 }
 
-/** the rows of the driver events, in the server's order, one per alteration */
+/** the rows of the driver events, in the server's order, one per alteration; the row of an alteration of several
+events, e.g. the two records of a translocation, has the first, best ranked one */
 export function getDriverRows(data: DriverData): DriverRow[] {
 	const names = new Map((data.driverRank?.sources || []).map(s => [s.id, s.label || s.id]))
 	const rows: DriverRow[] = []
@@ -65,8 +67,7 @@ export function getDriverRows(data: DriverData): DriverRow[] {
 	for (const m of data.mlst || []) {
 		const tag: DriverTag | undefined = m?.driver
 		if (!tag) continue
-		const label = getEventLabel(m, tag)
-		const key = label + '\t' + tag.tier
+		const { label, key } = describeEvent(m, tag)
 		const seen = byKey.get(key)
 		if (seen) {
 			seen.count++
@@ -86,7 +87,7 @@ export function getDriverRows(data: DriverData): DriverRow[] {
 			if (vaf.id) row.vafId = vaf.id
 		}
 		const origin = m.origin ?? m.vorigin
-		if (typeof origin == 'string' && origin) row.origin = origin.toLowerCase() == 'germline' ? 'germline' : 'somatic'
+		if (typeof origin == 'string' && origin) row.origin = isGermlineOrigin(origin) ? 'germline' : 'somatic'
 		byKey.set(key, row)
 		rows.push(row)
 	}
@@ -179,27 +180,67 @@ export function renderDriverTable(holder: any, data: DriverData) {
 	renderAttribution(div, data.driverRank?.sources || [], false)
 }
 
-function getEventLabel(m: any, tag: DriverTag): string {
+/** the label of a driver event, and the identity of its alteration, by which the events of one alteration share a
+row: the gene and change of an snvindel; the two genes of a fusion or an sv, in either order, as of the two
+records of a translocation; the breakpoints of an sv of an unknown partner; the segment of a cnv or an itd */
+function describeEvent(m: any, tag: DriverTag): { label: string; key: string } {
 	const genes = tag.genes || []
 	// a cnv or sv over an enhancer, e.g. 1.4 Mb from MYC, by the gene that it activates
 	if (tag.reason == 'enhancer') {
 		const locus = tag.locus ? ` (${tag.locus})` : ''
-		return `${genes.join(', ')} enhancer${locus} ${m.dt == dtsv ? 'duplication' : 'gain'}`
+		const label = `${genes.join(', ')} enhancer${locus} ${m.dt == dtsv ? 'duplication' : 'gain'}`
+		return { label, key: m.dt == dtsv ? breakpointsKey(m) : segmentKey(m) }
 	}
 	switch (m.dt) {
-		case dtsnvindel:
-			return `${m.gene} ${m.mname}`
-		case dtfusionrna:
-			return `${m.geneA || genes[0] || '?'}::${m.geneB || genes[1] || '?'} fusion`
-		case dtsv:
-			return (genes.length ? genes.join('::') : `${m.chrA}:${m.posA}::${m.chrB}:${m.posB}`) + ' rearrangement'
+		case dtsnvindel: {
+			const label = `${m.gene} ${m.mname}`
+			return { label, key: `${m.dt}\t${label}` }
+		}
+		case dtfusionrna: {
+			const pair = [geneName(m.geneA) || genes[0] || '?', geneName(m.geneB) || genes[1] || '?']
+			return { label: `${pair.join('::')} fusion`, key: pairKey(m.dt, pair) }
+		}
+		case dtsv: {
+			const pair = getSvGenes(m, genes)
+			if (pair) return { label: `${pair.join('::')} rearrangement`, key: pairKey(m.dt, pair) }
+			const where = genes.length ? genes.join('::') : `${m.chrA}:${m.posA}::${m.chrB}:${m.posB}`
+			return { label: `${where} rearrangement`, key: breakpointsKey(m) }
+		}
 		case dtitd:
-			return `${genes.join(', ') || m.chr} ITD`
+			return { label: `${genes.join(', ') || m.chr} ITD`, key: segmentKey(m) }
 		case dtcnv:
-			return `${genes.join(', ')} ${CNV_LABEL[tag.reason] || 'copy number change'}`
-		default:
-			return genes.join(', ') || String(dt2label[m.dt] || m.dt)
+			return { label: `${genes.join(', ')} ${CNV_LABEL[tag.reason] || 'copy number change'}`, key: segmentKey(m) }
+		default: {
+			const label = genes.join(', ') || String(dt2label[m.dt] || m.dt)
+			return { label, key: `${m.dt}\t${label}` }
+		}
 	}
+}
+
+/** the two genes of an sv: those of its rule, e.g. IGH::MYC of breakpoints in IGHV3-53 and PVT1; else those that the
+event names, e.g. ETV6::PDGFRA of a match to *::PDGFRA, whose tag names PDGFRA only; null for an sv of one gene */
+function getSvGenes(m: any, genes: string[]): string[] | null {
+	if (genes.length >= 2) return genes.slice(0, 2)
+	const a = geneName(m.geneA)
+	const b = geneName(m.geneB)
+	return a && b ? [a, b] : null
+}
+
+/** a gene name of an event, without the strand of the gene that some datasets add to an sv breakpoint, e.g. ETV6(+) */
+function geneName(v: unknown): string {
+	return typeof v == 'string' ? v.replace(/\([+-]\)$/, '').trim() : ''
+}
+
+function pairKey(dt: number, pair: string[]): string {
+	return `${dt}\t${[...pair].sort().join('\t')}`
+}
+
+function breakpointsKey(m: any): string {
+	return `${m.dt}\t${[`${m.chrA}:${m.posA}`, `${m.chrB}:${m.posB}`].sort().join('\t')}`
+}
+
+function segmentKey(m: any): string {
+	return `${m.dt}\t${m.chr}:${m.start}-${m.stop}`
 }
 
 function getEventType(m: any): string {
@@ -223,10 +264,10 @@ function getEvidence(tag: DriverTag): string {
 before tumor RNA and germline DNA */
 function getVaf(m: any): { vaf: number; id?: string } | undefined {
 	for (const v of Array.isArray(m.vafs) ? m.vafs : []) {
-		const alt = Number(v?.altCount)
-		const ref = Number(v?.refCount)
-		if (!(alt >= 0 && ref >= 0 && alt + ref > 0)) continue
-		return { vaf: alt / (alt + ref), id: typeof v.id == 'string' && v.id ? v.id : undefined }
+		// {altCount, refCount} or {altCount, totalCount}, of integers or integer strings
+		const c = getVafCounts(v)
+		if (!c) continue
+		return { vaf: c.altCount / c.totalCount, id: typeof v.id == 'string' && v.id ? v.id : undefined }
 	}
 }
 

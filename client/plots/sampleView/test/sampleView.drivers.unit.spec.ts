@@ -8,6 +8,8 @@ import { getSampleTools } from '../sampleView.tiles.ts'
 Tests:
 	getDriverRows(): labels by dt, evidence, type, sources, VAF, origin, one row per alteration
 	getDriverRows(): an enhancer gain by cnv and by sv
+	getDriverRows(): one row per alteration, by the genes of a fusion or sv and the segment of a cnv
+	getDriverRows(): germline origin codes, VAF of a totalCount and of string counts
 	renderDriverFace(): top events, more count, credit line without links, hypermutated note
 	renderDriverFace() and renderDriverTable() of a sample without driver events
 	renderDriverTable(): rows, VAF and origin columns, credit links, hypermutated note
@@ -115,6 +117,66 @@ tape('getDriverRows() of enhancer gains', test => {
 		'Should label a cnv and an sv over the locus by the gene that it activates'
 	)
 	test.equal(rows[0].evidence, 'Gain of a known enhancer', 'Should give the evidence of an enhancer rule')
+	test.end()
+})
+
+tape('getDriverRows() by alteration', test => {
+	const kmt2a = tag(2, 'fusion', ['civic:2'], ['KMT2A'])
+	const sv = (geneA: string, geneB: string, driver: any) => ({ dt: dtsv, geneA, geneB, driver })
+	const cnv = (start: number, stop: number) => ({
+		dt: dtcnv,
+		chr: 'chr9',
+		start,
+		stop,
+		value: -2,
+		driver: tag(1, 'deepDel', ['curated:2'], ['CDKN2A'])
+	})
+	const rows = getDriverRows({
+		mlst: [
+			sv('ETV6(+)', 'PDGFRA(-)', tag(2, 'fusion', ['civic:3'], ['PDGFRA'])),
+			sv('KMT2A(+)', 'MLLT3(-)', kmt2a),
+			sv('KMT2A(+)', 'AFF1(-)', kmt2a),
+			sv('MLLT3(-)', 'KMT2A(+)', kmt2a),
+			sv('IGHV3-53(-)', 'PVT1(+)', tag(1, 'sv', ['curated:3'], ['IGH', 'MYC'])),
+			{ dt: dtfusionrna, geneA: 'IGH@', geneB: 'CRLF2', driver: tag(1, 'fusion', ['civic:10'], ['IGH', 'CRLF2']) },
+			{ dt: dtfusionrna, geneA: 'CRLF2', geneB: 'IGH@', driver: tag(1, 'fusion', ['civic:10'], ['CRLF2', 'IGH']) },
+			cnv(21900000, 22100000),
+			cnv(21900000, 22100000),
+			cnv(21950000, 22000000)
+		],
+		driverRank: { kbVersion: 'v1', sources: [] }
+	})
+	test.deepEqual(
+		rows.map(r => `${r.label} x${r.count}`),
+		[
+			'ETV6::PDGFRA rearrangement x1',
+			'KMT2A::MLLT3 rearrangement x2',
+			'KMT2A::AFF1 rearrangement x1',
+			'IGH::MYC rearrangement x1',
+			'IGH@::CRLF2 fusion x2',
+			'CDKN2A homozygous deletion x2',
+			'CDKN2A homozygous deletion x1'
+		],
+		'Should label an sv by its genes and keep apart the alterations of a gene, merging the records of one alteration'
+	)
+	test.end()
+})
+
+tape('getDriverRows() of origin codes and VAF formats', test => {
+	const driver = tag(1, 'snv', ['hotspots:KRAS:G12'], ['KRAS'])
+	const rows = getDriverRows({
+		mlst: [
+			{ dt: dtsnvindel, gene: 'KRAS', mname: 'G12D', class: 'M', vorigin: 'GP', driver },
+			{ dt: dtsnvindel, gene: 'KRAS', mname: 'G12V', class: 'M', origin: 'S', driver },
+			{ dt: dtsnvindel, gene: 'KRAS', mname: 'G12C', class: 'M', vafs: [{ altCount: 25, totalCount: 100 }], driver },
+			{ dt: dtsnvindel, gene: 'KRAS', mname: 'G12A', class: 'M', vafs: [{ altCount: '25', refCount: '75' }], driver }
+		],
+		driverRank: { kbVersion: 'v1', sources: [] }
+	})
+	test.equal(rows[0].origin, 'germline', 'Should give the germline origin of the code GP')
+	test.equal(rows[1].origin, 'somatic', 'Should give the somatic origin of the code S')
+	test.equal(rows[2].vaf, 0.25, 'Should give the VAF of an altCount and a totalCount')
+	test.equal(rows[3].vaf, 0.25, 'Should give the VAF of string counts')
 	test.end()
 })
 

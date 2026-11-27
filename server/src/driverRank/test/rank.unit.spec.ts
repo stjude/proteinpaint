@@ -1,8 +1,8 @@
 import tape from 'tape'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dtitd, dtgeneexpression, mclasscnvAmp, mclasscnvgain } from '#shared'
 import { rankEvents, rankMutationResult, parseAaChange } from '../rank.ts'
-import { compileDsDriverKb } from '../kb.ts'
-import { getKb, lookup, match, rules } from './fixture.ts'
+import { compileDsDriverKb, getGeneLookup } from '../kb.ts'
+import { getKb, lookup, match, rules, kbText } from './fixture.ts'
 
 /*
 Tests:
@@ -21,7 +21,9 @@ Tests:
 	hypermutated sample: tier 2 snvindel tags dropped, by dt2total and by count
 	event of another dt, or malformed, is not ranked
 	rankMutationResult(): order, germline, VAF, drivers only, alternativeDataByDt, sources, input not changed
-	compileDsDriverKb(): disabled source and rule, changed match, invalid match
+	rankMutationResult(): germline origin codes, VAF of string counts and of totalCount
+	getGeneLookup(): gene names checked in memory, without a query of the gene db
+	compileDsDriverKb(): disabled source and rule, changed match, invalid match, disabled rules of the dataset file
 */
 
 const kb = getKb()
@@ -245,6 +247,7 @@ tape('locus: IGK and IGL', test => {
 		['civic:1'],
 		'the gene names of an sv with their strands should match BCR::ABL1'
 	)
+	test.equal(fusion('IGHEP2', 'CRLF2'), null, 'IGHEP2, which fits the IGH pattern but is on chr9, should not be IGH')
 	test.end()
 })
 
@@ -429,6 +432,43 @@ tape('rankMutationResult()', test => {
 	test.end()
 })
 
+tape('rankMutationResult(): origin codes and VAF formats', test => {
+	const names = (mlst: any[]) => rankMutationResult({ mlst }, kb, ctx, false).mlst.map((m: any) => m.mname)
+	test.deepEqual(
+		names([
+			snv('KRAS', 'G12D', 'M', { vorigin: 'GP' }),
+			snv('KRAS', 'G12V', 'M', { origin: 'G' }),
+			snv('TP53', 'X126_splice', 'L', { vorigin: 'somatic' })
+		]),
+		['X126_splice', 'G12D', 'G12V'],
+		'should rank the germline codes GP and G after a somatic driver of the tier'
+	)
+	test.deepEqual(
+		names([
+			snv('KRAS', 'G12D', 'M', { vafs: [{ altCount: 10, totalCount: 100 }] }),
+			snv('KRAS', 'G12V', 'M', { vafs: [{ altCount: '25', refCount: '75' }] }),
+			snv('TP53', 'X126_splice', 'L', { vafs: [{ altCount: 20, refCount: 80 }] })
+		]),
+		['G12V', 'X126_splice', 'G12D'],
+		'should order by the VAF of string counts (25%) and of a totalCount (10%)'
+	)
+	test.end()
+})
+
+tape('getGeneLookup()', test => {
+	let queries = 0
+	const genedb = {
+		mapByName: new Map([['TP53', 'TP53']]),
+		getjsonbyname: { get: () => ++queries && undefined }
+	}
+	const lookup = getGeneLookup(genedb)
+	test.equal(lookup.isName('TP53'), true, 'should know a gene name')
+	test.equal(lookup.isName('tp53'), true, 'should know it in another case, as does the sql of the gene db')
+	test.equal(lookup.isName('NOTAGENE'), false, 'should not know another name')
+	test.equal(queries, 0, 'should check the names in memory, without a query of the gene db')
+	test.end()
+})
+
 tape('compileDsDriverKb()', test => {
 	const noCivic = compileDsDriverKb(kb, { disable: ['civic', 'hotspots:TP53:X126'] }, lookup, '')
 	test.equal(tagOf(snv('KRAS', 'G12C', 'M'), noCivic), null, 'a disabled source should not match')
@@ -445,6 +485,39 @@ tape('compileDsDriverKb()', test => {
 		() => compileDsDriverKb(kb, { match: { cnv: { calls: { log2ratio: { del: 2 } } } } }, lookup, ''),
 		/needs deepDel <= del < amp/,
 		'should throw on invalid cnv calls'
+	)
+
+	const dsFile = kbText(
+		[
+			{ id: 'ds:1', kind: 'gene', gene: 'TP53', alt: 'any', tier: 1 },
+			{ id: 'ds:2', kind: 'gene', gene: 'NPM1', alt: 'trunc', tier: 1 }
+		],
+		{ source: 'dataset rules' }
+	)
+	const readText = (file: string) => {
+		if (file != 'tp/ds.txt') throw 'unexpected file ' + file
+		return dsFile
+	}
+	const withDs = (disable: string[]) => compileDsDriverKb(kb, { file: 'ds.txt', disable }, lookup, 'tp', readText)
+	const oneOff = withDs(['ds:2'])
+	test.deepEqual(
+		oneOff.rows.filter(r => r.source == 'ds').map(r => r.id),
+		['ds:1'],
+		'should leave out a disabled rule of the dataset file'
+	)
+	test.ok(
+		oneOff.sources.some(s => s.id == 'ds'),
+		'should list the dataset source while some of its rules are on'
+	)
+	const dsOff = withDs(['ds'])
+	test.equal(
+		dsOff.rows.filter(r => r.source == 'ds').length,
+		0,
+		'should leave out the rules of a disabled dataset source'
+	)
+	test.notOk(
+		dsOff.sources.some(s => s.id == 'ds'),
+		'should leave out the disabled dataset source'
 	)
 	test.end()
 })
